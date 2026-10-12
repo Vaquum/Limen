@@ -732,10 +732,31 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
                        rel_tol=1e-10, abs_tol=1e-12)
     _assert_same(records(parallel), records(serial))
     assert pl.read_csv(parallel / 'results.csv')['C'].to_list() == [0.1, 0.3, 0.5, 1.0, 5.0, 10.0]
+    assert json.loads((parallel / 'metadata.json').read_text())['context_parameter_keys'] == sorted(context_params)
+    assert 'context_parameter_keys' not in json.loads((serial / 'metadata.json').read_text())
+    for name in ('context_tag', 'empty_context', 'none_context', 'missing_context_keys', 'malformed_context_keys'):
+        rejected = tmp_path / name
+        shutil.copytree(parallel, rejected)
+        if name in ('missing_context_keys', 'malformed_context_keys'):
+            metadata = json.loads((rejected / 'metadata.json').read_text())
+            if name == 'missing_context_keys':
+                metadata.pop('context_parameter_keys')
+            else:
+                metadata['context_parameter_keys'] = [None]
+            (rejected / 'metadata.json').write_text(json.dumps(metadata))
+        else:
+            saved = records(rejected)
+            for entry in saved:
+                entry['round_params'].pop(name)
+            (rejected / 'round_data.jsonl').write_text(''.join(json.dumps(entry) + '\n' for entry in saved))
+        before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
+        with pytest.raises(ValueError, match=r'context|parameter|record'):
+            run_loop(config, rejected, resume=True)
+        assert {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()} == before
     for attempt in range(2):
         warning = pytest.warns(UserWarning, match='Checkpoint had non-restorable filters') if attempt == 0 else nullcontext()
         with warning, patch.object(ProcessPoolExecutor, '_launch_processes', side_effect=AssertionError('Completed resume launched workers')):
-            resumed = run_loop(config, parallel, resume=True, context_params=context_params)
+            resumed = run_loop(config, parallel, resume=True, context_params=context_params if attempt == 0 else None)
         with (parallel / 'results.csv').open(newline='') as stream:
             rows = list(csv.DictReader(stream))
         for name, value in {'tag': '001', 'context_tag': '002', 'empty_tag': '', 'empty_context': ''}.items():

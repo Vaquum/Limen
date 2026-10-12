@@ -175,6 +175,8 @@ their successful JSONL/fold/recording evidence before resume rewrites anything.
 Strict failures retain one CSV row and no successful prediction/fold evidence.
 The checkpoint retains their typed effective parameters; resume reconstructs
 successful parameters from JSONL, preserving empty strings, nulls and overrides.
+Parallel metadata declares `context_parameter_keys`; resume requires those keys
+in every committed parameter record before restoring typed values.
 Malformed or missing committed evidence fails loudly. Other model/worker failures
 remain fatal, preserving the valid prefix and reporting identity and traceback.
 Stopped/resumed equality requires unchanged source observations, deterministic

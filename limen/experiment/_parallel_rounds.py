@@ -84,9 +84,9 @@ def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: 
     return cast(_RoundFunction | None, attributes['prep']), cast(_RoundFunction | None, attributes['model'])
 
 
-def worker_metadata(workers: int, metadata: dict[str, object]) -> dict[str, object]:
+def worker_metadata(workers: int, metadata: dict[str, object], *, context_parameter_keys: list[str] | None = None) -> dict[str, object]:
     if workers > 1:
-        metadata.update(workers=workers, worker_native_threads=1)
+        metadata.update(workers=workers, worker_native_threads=1, context_parameter_keys=context_parameter_keys or [])
     return metadata
 
 
@@ -144,7 +144,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
     elif directory is not None:
         cast(Callable[[], None], getattr(host, '_guard_stale_artifacts', None))()
         _ = cast(Callable[[Path, CheckpointManager], Path], getattr(host, '_initialize_fresh', None))(directory, checkpoint_manager)
-        cast(Callable[[Path], None], getattr(host, '_write_metadata', None))(directory)
+        cast(Callable[..., None], getattr(host, '_write_metadata', None))(directory, context_parameter_keys=sorted(key for key in (context_params or {}) if not key.startswith('_')))
     writer = ParallelCommit(host, csv_path, round_data_path, failed_round_params)
     committed = copy.deepcopy(msq.get_state())
     last = start - 1

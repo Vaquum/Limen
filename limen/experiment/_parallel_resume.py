@@ -148,6 +148,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     for key in ('record_execution', 'record_model_outputs', 'factorize'):
         if metadata.get(key, False) != attributes[f'_{key}']:
             raise ValueError(f'Cannot resume with a different {key} setting')
+    if not isinstance(context_keys := metadata.get('context_parameter_keys'), list) or any(not isinstance(key, str) or key.startswith('_') for key in cast(list[object], context_keys)) or len(set(cast(list[str], context_keys))) != len(context_keys):
+        raise ValueError('Cannot resume parallel run without valid context parameter keys')
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
@@ -195,10 +197,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     failed = failed_parameters(checkpoint, rows)
-    parameter_keys = {key for key in (*_mapping(attributes.get('params'), 'search parameters'), *(context_params or {})) if not key.startswith('_')}
+    parameter_keys = {key for key in (*_mapping(attributes.get('params'), 'search parameters'), *(context_params or {}), *cast(list[str], context_keys)) if not key.startswith('_')}
     parameter_keys.update(key for entry in [*committed, *failed] for key in _mapping(entry.get('round_params'), 'round parameters') if not key.startswith('_'))
-    objective = run_objective(manifest)
-    parameter_keys.update(key for key in header if not committed and not key.startswith('_') and key not in {'id', 'strict_mode_error', 'execution_time'} and (objective is None or key != objective.column))
     recorded_parameters: dict[int, dict[str, object]] = {}
     for entry in [*committed, *failed]:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
@@ -232,7 +232,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
     overrides.update(dict.fromkeys((key for parameters in recorded_parameters.values() for key in parameters if not key.startswith('_')), pl.String))
-    overrides.update({objective.column: pl.Float64} if objective is not None else {})
+    overrides.update({objective.column: pl.Float64} if (objective := run_objective(manifest)) is not None else {})
     log = pl.read_csv(csv_path, n_rows=start, schema_overrides=overrides).head(start)
     log = log.with_columns(pl.DataFrame([{key: value for key, value in recorded_parameters[index].items() if not key.startswith('_')} for index in range(start)], infer_schema_length=None, strict=False).get_columns())
     if '_convergence_warning' not in log.columns:

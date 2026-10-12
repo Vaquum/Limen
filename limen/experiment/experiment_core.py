@@ -1016,7 +1016,7 @@ class UniversalExperimentLoop:
         return checkpoint_manager.initialize_fresh(checkpoint_dir)
 
 
-    def _write_metadata(self, experiment_dir: Path) -> None:
+    def _write_metadata(self, experiment_dir: Path, *, context_parameter_keys: list[str] | None = None) -> None:
         '''Persist experiment provenance and effective recording settings.'''
 
         if self._sfd_module_name is None:
@@ -1028,7 +1028,7 @@ class UniversalExperimentLoop:
             'sfd_module': self._sfd_module_name,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
-        })
+        }, context_parameter_keys=context_parameter_keys)
         if self._record_execution:
             metadata['record_execution'] = True
         if self._record_model_outputs:
