@@ -16,7 +16,7 @@ from limen.experiment._parallel_worker import RoundPayload
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.experiment.manifest_core import Manifest
 
-__all__ = ['ParallelCommit']
+__all__ = ['ParallelCommit', 'failed_parameters']
 
 
 class _AppendRoundData(Protocol):
@@ -25,8 +25,8 @@ class _AppendRoundData(Protocol):
                  *, round_index: int) -> None: ...
 
 
-def _failed_parameters(checkpoint: Mapping[str, object],
-                       rows: Sequence[Mapping[str, str | None]]) -> list[dict[str, object]]:
+def failed_parameters(checkpoint: Mapping[str, object],
+                      rows: Sequence[Mapping[str, str | None]]) -> list[dict[str, object]]:
     expected = [(index, row['id']) for index, row in enumerate(rows) if row['strict_mode_error']]
     records = checkpoint.get('failed_round_params', [])
     if not isinstance(records, list) or len(cast(list[object], records)) != len(expected):

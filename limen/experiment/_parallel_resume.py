@@ -14,7 +14,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
 from limen.experiment._objective_run import finalize_objective_result, run_objective, validate_objective_resume
-from limen.experiment._parallel_commit import _failed_parameters
+from limen.experiment._parallel_commit import failed_parameters
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
@@ -194,7 +194,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     parameter_domains = _mapping(attributes.get('params'), 'search parameters')
-    failed = _failed_parameters(checkpoint, rows)
+    failed = failed_parameters(checkpoint, rows)
     recorded_parameters: dict[int, dict[str, object]] = {}
     for entry in [*committed, *failed]:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
