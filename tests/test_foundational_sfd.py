@@ -5,6 +5,9 @@ import logging
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import polars as pl
+
+from limen.data.historical_data import _aggregate_spot_klines
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
 from limen.experiment.reducer import BudgetReducer
@@ -48,6 +51,9 @@ def test_foundational_sfd():
                 ]
 
                 uel = limen.UniversalExperimentLoop(
+                    data=_aggregate_spot_klines(pl.read_parquet(
+                        Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
+                    ), 7200).tail(5000),
                     sfd=sfd_module,
                     search_strategy=strategy,
                     pruning_strategies=pruning_strategies,
