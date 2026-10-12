@@ -129,7 +129,7 @@ In the shutdown-and-resume example:
 - the first phase stopped after `2` completed rounds
 - `round_data.jsonl` and `results.csv` each contained `2` entries
 - the resumed phase finished the remaining work
-- the final files contained `4` rows with round ids `0, 1, 2, 3`
+- the final files contained `4` rows with `_round_index` values `0, 1, 2, 3`; CSV `id` and JSONL `round_id` contain the corresponding 64-character SHA-256 parameter hashes
 
 For resume to work cleanly, keep these stable:
 
@@ -153,56 +153,11 @@ Implement a strategy only when the built-ins do not meet the experiment's search
 - expose `get_state()` and `set_state()` for checkpointing
 - react to domain changes if its internal state depends on the current domain
 
-This minimal exhaustive implementation materializes the grid and is suitable for small domains:
-
-```python
-import itertools
-
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import SearchStrategy
-
-
-class MiniGrid(SearchStrategy):
-    @property
-    def is_finite(self):
-        return True
-
-    def __init__(self, domain: ParamDomain, *, seed: int | None = None):
-        super().__init__(domain, seed=seed)
-        self._combos = self._build_combos()
-        self._index = 0
-
-    def _build_combos(self):
-        params = self._domain.params
-        keys = sorted(params.keys())
-        return [
-            dict(zip(keys, vals, strict=True))
-            for vals in itertools.product(*(params[k] for k in keys))
-        ]
-
-    def __next__(self):
-        if self._index >= len(self._combos):
-            raise StopIteration
-        combo = self._combos[self._index]
-        self._index += 1
-        self._generated_count += 1
-        return combo
-
-    def on_domain_changed(self, _domain, _changed_params):
-        self._combos = self._build_combos()
-        self._index = 0
-
-    def get_state(self):
-        return {'index': self._index, 'generated_count': self._generated_count}
-
-    def set_state(self, state):
-        self._index = state['index']
-        self._generated_count = state['generated_count']
-```
+Use the shipped [GridStrategy implementation](https://github.com/Vaquum/Limen/blob/main/limen/experiment/param_search/grid_strategy.py) as the exhaustive-search reference. It checks the inherited seen set before yielding candidates, rebuilds its cursor after domain changes, and saves/restores its enumeration state. Custom strategies must preserve this deduplication behavior across feedback and resume; resetting a cursor alone can repeat completed combinations.
 
 ## Read next
 
 - Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for the intervention system that acts on the mutable search queue.
 - Continue to [Command-Line Interface](Command-Line-Interface.md) for YAML execution through the same engine.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for Python/MSQ execution and legacy compatibility reference.
-- Continue to [Trainer](Trainer.md) for promotion of finished advanced runs into reusable sensors.
+- Continue to [Trainer](Trainer.md) for promotion of saved YAML experiments into reusable sensors.

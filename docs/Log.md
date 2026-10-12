@@ -58,13 +58,14 @@ The standard sequence is:
 3. compare rounds with backtest summaries
 4. inspect which parameters move with the target metric
 
+The four-round Python/MSQ example supports the first three steps. Correlation needs a larger experiment: with the default cohorts and `min_n=10`, at least 11 rows with valid target metrics are needed for a cohort to qualify, and the metric and numeric features must vary. Continue to [parameter correlation](#parameter-correlation-surface) after that larger run.
+
 ```python
 log = uel._log
 
 round0 = log.permutation_prediction_performance(round_id=0)
 benchmark = log.experiment_confusion_metrics('price_change')
 backtest = log.experiment_backtest_results()
-correlation = log.experiment_parameter_correlation('auc', min_n=10)
 ```
 
 ## `permutation_prediction_performance(round_id)`

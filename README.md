@@ -63,7 +63,7 @@ Choose the route that fits how you define the experiment:
 | Route | Use it when | Start here |
 |---|---|---|
 | CLI | Define a manifest in YAML and run it without Python orchestration. | [First Experiment](#first-experiment) |
-| Python API, backed by MSQ | Run a Python SFD with built-in or custom search strategies, including fully custom preparation and model functions. | [Python/MSQ run](docs/Universal-Experiment-Loop.md#direct-python-run) |
+| Python API, backed by MSQ | Run a Python SFD with built-in or custom search strategies, including fully custom preparation and model functions. | [Python/MSQ run](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run) |
 
 Both routes use the Universal Experiment Loop (UEL) to execute rounds and the Mutable Search Queue (MSQ) to control parameter search. CLI saves an experiment directory automatically; Python callers enable persistence with `experiment_dir`. Adaptive feedback is optional in both routes.
 
@@ -106,7 +106,7 @@ limen run logreg-first.yaml
 - `results.csv`
 - `round_data.jsonl`
 
-For a Python experiment, follow the [Python/MSQ run](docs/Universal-Experiment-Loop.md#direct-python-run). Supply an SFD and a search strategy; custom SFDs also receive your input dataframe explicitly.
+For a Python experiment, follow the [Python/MSQ run](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run). Supply an SFD and a search strategy; custom SFDs also receive your input dataframe explicitly.
 
 ## Risk Boundary
 
