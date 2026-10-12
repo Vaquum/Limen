@@ -194,9 +194,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 committed.append(entry)
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
-    parameter_domains = _mapping(attributes.get('params'), 'search parameters')
     failed = failed_parameters(checkpoint, rows)
-    parameter_keys = {key for key in (*parameter_domains, *(context_params or {})) if not key.startswith('_')}
+    parameter_keys = {key for key in (*_mapping(attributes.get('params'), 'search parameters'), *(context_params or {})) if not key.startswith('_')}
     parameter_keys.update(key for entry in [*committed, *failed] for key in _mapping(entry.get('round_params'), 'round parameters') if not key.startswith('_'))
     objective = run_objective(manifest)
     parameter_keys.update(key for key in header if not committed and not key.startswith('_') and key not in {'id', 'strict_mode_error', 'execution_time'} and (objective is None or key != objective.column))
@@ -233,8 +232,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
     overrides.update(dict.fromkeys((key for parameters in recorded_parameters.values() for key in parameters if not key.startswith('_')), pl.String))
-    if objective is not None:
-        overrides[objective.column] = pl.Float64
+    overrides.update({objective.column: pl.Float64} if objective is not None else {})
     log = pl.read_csv(csv_path, n_rows=start, schema_overrides=overrides).head(start)
     log = log.with_columns(pl.DataFrame([{key: value for key, value in recorded_parameters[index].items() if not key.startswith('_')} for index in range(start)], infer_schema_length=None, strict=False).get_columns())
     if '_convergence_warning' not in log.columns:
