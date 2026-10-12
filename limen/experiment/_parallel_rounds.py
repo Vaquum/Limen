@@ -194,7 +194,13 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                                 _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
                         else:
                             launch()
-                    future = pool.submit(_evaluate_round, task)
+                    try:
+                        future = pool.submit(_evaluate_round, task)
+                    except BrokenProcessPool as exc:
+                        if attributes['_shutdown_requested']:
+                            break
+                        failed = pending[0][0] if pending else task
+                        raise RuntimeError(f"Parallel worker process or initializer failed while awaiting round {failed['_round_index']} ({failed['_id']}): {exc}") from exc
                     pending.append((task, future,
                                     cast(dict[str, object], copy.deepcopy(msq.get_state()))))
                 if not pending or attributes['_shutdown_requested']:
