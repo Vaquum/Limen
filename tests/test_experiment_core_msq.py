@@ -91,7 +91,7 @@ def test_run_with_msq_basic_flow():
     assert len(uel.experiment_confusion_metrics) > 0
     assert uel.experiment_backtest_results is not None
     assert len(uel.experiment_backtest_results) > 0
-    corr = uel.experiment_parameter_correlation('auc', min_n=1)
+    corr = uel.experiment_parameter_correlation('auc', min_n=1, n_boot=20)
     assert len(corr) > 0
 
 
@@ -418,7 +418,7 @@ def _shutdown_resume_full_data(strategy_cls):
         assert len(uel2.experiment_confusion_metrics) > 0
         assert uel2.experiment_backtest_results is not None
         assert len(uel2.experiment_backtest_results) > 0
-        corr = uel2.experiment_parameter_correlation('auc', min_n=1)
+        corr = uel2.experiment_parameter_correlation('auc', min_n=1, n_boot=20)
         assert len(corr) > 0
 
 

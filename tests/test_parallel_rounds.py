@@ -199,7 +199,8 @@ def _controlled_round(function, params, marker_directory, mode):
         time.sleep(15)
     if mode == 'dead' and index == 1:
         os._exit(17)
-    original = MLManifest.run_model
+    method = 'prepare_data' if mode == 'strict' else 'run_model'
+    original = getattr(MLManifest, method)
 
     def controlled(manifest, data, round_params):
         if mode == 'strict' and (index < 3 or index == 4):
@@ -208,7 +209,7 @@ def _controlled_round(function, params, marker_directory, mode):
             raise RuntimeError('recorded fatal worker control')
         return original(manifest, data, round_params)
 
-    with patch.object(MLManifest, 'run_model', controlled):
+    with patch.object(MLManifest, method, controlled):
         result = function(params)
     (directory / f'{index}.done').write_text(str(time.monotonic()))
     return result
