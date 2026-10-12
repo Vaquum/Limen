@@ -116,6 +116,8 @@ class ParallelCommit:
         row['_warnings'] = json.dumps(payload.warnings)
         row['_convergence_warning'] = payload.convergence
         _ = row.setdefault('strict_mode_error', None)
+        if not payload.succeeded and not row['strict_mode_error']:
+            row['strict_mode_error'] = 'StrictModeError'
         if getattr(self.manifest, 'ablation_config', None) is not None:
             row['_dropped_features'] = json.dumps(payload.parameters.get('_dropped_features', []))
         finalize_objective_result(self.manifest, row, payload.succeeded)

@@ -204,6 +204,8 @@ def _controlled_round(function, params, marker_directory, mode):
 
     def controlled(manifest, data, round_params):
         if mode == 'strict' and (index < 3 or index == 4):
+            if index == 0:
+                raise StrictModeError()
             raise StrictModeError(f'recorded control failure {index}')
         if mode == 'fatal' and index == 1:
             raise RuntimeError('recorded fatal worker control')
@@ -574,6 +576,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         assert f'round {frame.height} ({identities[frame.height]})' in failure_output, failure_output
     if mode == 'strict':
         assert frame.height == 3 and frame['strict_mode_error'].null_count() == 0
+        assert frame['strict_mode_error'][0] == 'StrictModeError'
         assert records(directory) == []
         sampled = build_search_strategy(config)
         assert checkpoint['failed_round_params'] == [
