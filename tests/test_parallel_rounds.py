@@ -66,7 +66,9 @@ def parallel_config(*, strategy='grid', objective=False, walk_forward=False):
         record_execution=True, record_model_outputs=True,
     )
     if objective:
-        manifest['calibration']['threshold_function']['params']['threshold_step'] = 0.1
+        manifest['calibration']['threshold_function']['params'].update(
+            threshold_min=0.5, threshold_max=0.5, threshold_step=0.1,
+        )
         config['uel']['pruning_strategies'] = [{
             'type': 'budget',
             'params': {'max_permutations': 5, 'trim_strategy': 'worst_first',
