@@ -317,7 +317,7 @@ def test_trainer_sensor_preserve_signed_exposure(yaml_experiment):
     changed._round_data[ids[0]]['learning_binding']['model']['seed'] = 999
     with pytest.raises(ReconstructionError, match='learning/source/factory'):
         changed.train([ids[0]])
-    code = 'from pathlib import Path; from limen.inference import Trainer; from tests.test_direction_sizing import recorded_source; t=Trainer(Path(__import__("sys").argv[1]),data=recorded_source(limit=200)); assert t.train(list(t._round_data))[0].prediction_mode == "target_exposure"'
+    code = 'from pathlib import Path; from limen.inference import Trainer; from tests.test_direction_sizing import recorded_source; t=Trainer(Path(__import__("sys").argv[1]),data=recorded_source(limit=200)); assert t.train([next(iter(t._round_data))])[0].prediction_mode == "target_exposure"'
     subprocess.run([sys.executable, '-c', code, str(directory)], check=True)
 
 

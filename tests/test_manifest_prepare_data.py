@@ -55,30 +55,47 @@ def test_resolve_params_uses_available_underscore_values() -> None:
     assert resolved == {'scaler': sentinel}
 
 
-@pytest.mark.parametrize('optimized', (False, True))
-@pytest.mark.parametrize('formed', (False, True))
-def test_required_bar_columns_are_enforced_without_assertions(optimized: bool, formed: bool) -> None:
+@pytest.fixture(scope='module')
+def required_bar_columns_probes() -> dict[tuple[bool, bool], str]:
     fixture = Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet'
     code = f'''
 import polars as pl
 from limen.experiment import MLManifest
 from limen.experiment.manifest_core import _process_bars
 
-data = pl.read_parquet({str(fixture)!r}).head(200)
-manifest = MLManifest().set_required_bar_columns(['close', 'volume'])
-if {formed!r}:
-    manifest.set_bar_formation(lambda df: df.drop('volume'))
-else:
-    data = data.drop('volume')
-try:
-    _process_bars(manifest, data, {{'bar_type': 'formed' if {formed!r} else 'base'}})
-except AssertionError as error:
-    if str(error) != "Required bar column 'volume' not found after bar formation":
-        raise RuntimeError(str(error)) from error
-else:
-    raise RuntimeError('Missing required volume column was accepted')
+for formed in (False, True):
+    data = pl.read_parquet({str(fixture)!r}).head(200)
+    manifest = MLManifest().set_required_bar_columns(['close', 'volume'])
+    if formed:
+        manifest.set_bar_formation(lambda df: df.drop('volume'))
+    else:
+        data = data.drop('volume')
+    try:
+        _process_bars(manifest, data, {{'bar_type': 'formed' if formed else 'base'}})
+    except AssertionError as error:
+        if str(error) != "Required bar column 'volume' not found after bar formation":
+            raise RuntimeError(str(error)) from error
+    else:
+        raise RuntimeError('Missing required volume column was accepted')
+    print(formed)
 '''
-    subprocess.run([sys.executable, *(['-O'] if optimized else []), '-c', code], check=True)
+    outputs: dict[tuple[bool, bool], str] = {}
+    for optimized in (False, True):
+        result = subprocess.run(
+            [sys.executable, *(['-O'] if optimized else []), '-c', code],
+            check=True, stdout=subprocess.PIPE, text=True,
+        )
+        for formed, output in zip((False, True), result.stdout.splitlines(), strict=True):
+            outputs[optimized, formed] = output
+    return outputs
+
+
+@pytest.mark.parametrize('optimized', (False, True))
+@pytest.mark.parametrize('formed', (False, True))
+def test_required_bar_columns_are_enforced_without_assertions(
+    optimized: bool, formed: bool, required_bar_columns_probes: dict[tuple[bool, bool], str],
+) -> None:
+    assert required_bar_columns_probes[optimized, formed] == str(formed)
 
 
 @pytest.mark.parametrize('formed', (False, True))

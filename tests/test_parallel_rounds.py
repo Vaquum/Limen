@@ -264,11 +264,14 @@ def parallel_campaigns(tmp_path_factory):
     serial_config = root / 'serial_campaigns.yaml'
     _write_yaml(configs, serial_config)
     with startup_limits():
-        subprocess.run([
-            sys.executable, '-c',
-            'from tests.test_parallel_rounds import _serial_round_proof\nimport sys\n_serial_round_proof(*sys.argv[1:])',
-            str(serial_config), str(root),
-        ], cwd=ROOT, check=True, timeout=40)
+        if pl.thread_pool_size() == 1:
+            _serial_round_proof(serial_config, root)
+        else:
+            subprocess.run([
+                sys.executable, '-c',
+                'from tests.test_parallel_rounds import _serial_round_proof\nimport sys\n_serial_round_proof(*sys.argv[1:])',
+                str(serial_config), str(root),
+            ], cwd=ROOT, check=True, timeout=40)
     for name, config in configs.items():
         prefixes = []
 
@@ -285,8 +288,9 @@ def parallel_campaigns(tmp_path_factory):
         serial_proof = json.loads((root / f'{name}_serial.json').read_text())
         assert serial_proof['polars_threads'] == 1
         assert all(pool['num_threads'] == 1 for pool in serial_proof['native_pools'])
-        with controlled_pool(markers, 'reorder'):
+        with controlled_pool(markers, 'reorder'), patch.object(_ControlledPool, '__init__', autospec=True, side_effect=ProcessPoolExecutor.__init__) as executor:
             run_loop(config, parallel, workers=4, callback=boundary)
+        assert executor.call_args.kwargs['max_workers'] == 3
         assert prefixes == serial_proof['prefixes']
         campaigns[name] = (config, serial, parallel, markers)
     return campaigns
