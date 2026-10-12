@@ -149,8 +149,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
-    saved = _mapping(checkpoint['metadata'], 'checkpoint metadata')
-    frontier = saved['experiment_round']
+    frontier = _mapping(checkpoint['metadata'], 'checkpoint metadata')['experiment_round']
     if type(frontier) is not int or frontier < -1:
         raise ValueError('Cannot resume parallel run with invalid terminal frontier')
     start = frontier + 1
@@ -194,7 +193,6 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     parameter_domains = _mapping(attributes.get('params'), 'search parameters')
-    parameter_keys = parameter_domains.keys()
     string_parameters = {key for key, values in parameter_domains.items()
                          if isinstance(values, list) and any(isinstance(value, str) for value in cast(list[object], values))
                          and all(value is None or isinstance(value, str) for value in cast(list[object], values))}
@@ -202,7 +200,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     recorded_parameters: dict[int, dict[str, object]] = {}
     for entry in committed:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
-        if not parameter_keys <= parameters.keys():
+        if not parameter_domains.keys() <= parameters.keys():
             raise ValueError('Cannot resume parallel run without all recorded search parameters')
         row = rows[cast(int, entry['_round_index'])]
         if any(not _parameter_matches(row.get(key), value) for key, value in parameters.items() if not key.startswith('_')):
@@ -210,8 +208,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         recorded_parameters[cast(int, entry['_round_index'])] = parameters
         string_parameters.update(key for key, value in parameters.items() if not key.startswith('_') and isinstance(value, str))
         if ablation is not None and forward is None:
-            raw_count = parameters.get(ablation.drop_count_key)
-            count = 0 if raw_count is None else raw_count
+            count = 0 if (raw_count := parameters.get(ablation.drop_count_key)) is None else raw_count
             dropped = parameters.get('_dropped_features', [])
             if type(count) is not int or count < 0 or not isinstance(dropped, list) or len(cast(list[object], dropped)) != count or any(not isinstance(value, str) for value in cast(list[object], dropped)) or json.loads(rows[cast(int, entry['_round_index'])]['_dropped_features']) != dropped:
                 raise ValueError('Cannot resume parallel ablation without matching dropped-feature evidence')
@@ -232,8 +229,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
     overrides.update(dict.fromkeys(string_parameters, pl.String))
-    objective = run_objective(manifest)
-    if objective is not None:
+    if (objective := run_objective(manifest)) is not None:
         overrides[objective.column] = pl.Float64
     log = pl.read_csv(csv_path, n_rows=start, schema_overrides=overrides).head(start)
     for key in string_parameters:
