@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Protocol, cast
 
@@ -24,11 +25,30 @@ class _AppendRoundData(Protocol):
                  *, round_index: int) -> None: ...
 
 
+def _failed_parameters(checkpoint: Mapping[str, object],
+                       rows: Sequence[Mapping[str, str | None]]) -> list[dict[str, object]]:
+    expected = [(index, row['id']) for index, row in enumerate(rows) if row['strict_mode_error']]
+    records = checkpoint.get('failed_round_params', [])
+    if not isinstance(records, list) or len(cast(list[object], records)) != len(expected):
+        raise ValueError('Cannot resume parallel run without typed failed-round parameter evidence')
+    failed: list[dict[str, object]] = []
+    for value, (index, identity) in zip(cast(list[object], records), expected, strict=True):
+        if not isinstance(value, dict):
+            raise ValueError('Cannot resume parallel run with malformed failed-round parameter evidence')
+        entry = cast(dict[str, object], value)
+        if type(entry.get('_round_index')) is not int or entry['_round_index'] != index or entry.get('round_id') != identity:
+            raise ValueError('Parallel checkpoint parameter evidence differs from failed CSV occurrences')
+        failed.append(entry)
+    return failed
+
+
 class ParallelCommit:
     def __init__(self, host: object, csv_path: Path,
-                 round_data_path: Path | None) -> None:
+                 round_data_path: Path | None,
+                 failed_round_params: list[dict[str, object]]) -> None:
         super().__init__()
         self.host, self.csv_path, self.round_data_path = host, csv_path, round_data_path
+        self.failed_round_params = failed_round_params
         attributes = cast(dict[str, object], vars(host))
         self.manifest = cast(Manifest | None, attributes['manifest'])
         self.params = cast(dict[str, object], attributes['params'])
@@ -104,4 +124,7 @@ class ParallelCommit:
         attributes = cast(dict[str, object], vars(self.host))
         existing = cast(pl.DataFrame | None, attributes['experiment_log'])
         attributes['experiment_log'] = batch if existing is None else pl.concat([existing, batch], how='diagonal_relaxed')
+        if not payload.succeeded:
+            self.failed_round_params.append({'_round_index': index, 'round_id': identity,
+                                             'round_params': dict(payload.parameters)})
         self._has_success = self._has_success or payload.succeeded

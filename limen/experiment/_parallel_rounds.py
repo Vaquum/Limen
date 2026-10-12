@@ -133,18 +133,19 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         raise ValueError('Parallel rounds require admitted frozen inputs and compiled YAML')
     cast(Callable[[], None], getattr(host, '_register_shutdown_handler', None))()
     start = 0
+    failed_round_params: list[dict[str, object]] = []
     if resume:
         if round_data_path is None:
             raise ValueError('Parallel resume requires persisted round data')
         start = restore_parallel(host, msq, domain, feedback_controller, checkpoint_manager,
                                  content_hash=content_hash, strategy_type=strategy_type,
                                  csv_path=csv_path, round_data_path=round_data_path,
-                                 context_params=context_params)
+                                 failed_round_params=failed_round_params)
     elif directory is not None:
         cast(Callable[[], None], getattr(host, '_guard_stale_artifacts', None))()
         _ = cast(Callable[[Path, CheckpointManager], Path], getattr(host, '_initialize_fresh', None))(directory, checkpoint_manager)
         cast(Callable[[Path], None], getattr(host, '_write_metadata', None))(directory)
-    writer = ParallelCommit(host, csv_path, round_data_path)
+    writer = ParallelCommit(host, csv_path, round_data_path, failed_round_params)
     committed = copy.deepcopy(msq.get_state())
     last = start - 1
 
@@ -155,7 +156,8 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
             checkpoint_call(msq, domain, directory, checkpoint_manager,
                             last, n_permutations, strategy_type=strategy_type,
                             content_hash=content_hash, feedback_controller=feedback_controller,
-                            pruning_strategies=cast(list[PruningStrategy], attributes['_pruning_strategies']))
+                            pruning_strategies=cast(list[PruningStrategy], attributes['_pruning_strategies']),
+                            failed_round_params=writer.failed_round_params)
 
     def barrier(index: int) -> bool:
         return feedback_controller.should_trigger(index) or checkpoint_manager.should_checkpoint(index)

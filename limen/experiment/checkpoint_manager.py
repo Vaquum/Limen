@@ -101,7 +101,8 @@ class CheckpointManager:
              strategy_type: str,
              content_hash: str,
              feedback_controller: FeedbackController | None = None,
-             pruning_strategies: list[PruningStrategy] | None = None) -> None:
+             pruning_strategies: list[PruningStrategy] | None = None,
+             failed_round_params: list[dict[str, object]] | None = None) -> None:
 
         '''
         Write a checkpoint file into checkpoint_dir.
@@ -120,6 +121,7 @@ class CheckpointManager:
             content_hash (str): SHA-256 digest of the experiment content
             feedback_controller (FeedbackController | None): FeedbackController to checkpoint
             pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
+            failed_round_params (list[dict[str, object]] | None): Committed parallel failure parameters
 
         '''
 
@@ -144,6 +146,9 @@ class CheckpointManager:
             checkpoint['pruning_strategy_states'] = [
                 ps.get_state() for ps in pruning_strategies
             ]
+
+        if failed_round_params is not None:
+            checkpoint['failed_round_params'] = failed_round_params
 
         self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 

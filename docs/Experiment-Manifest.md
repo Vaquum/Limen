@@ -173,6 +173,8 @@ metadata without these fields resumes serially. An explicit changed policy is
 rejected before truncation or rewriting. Committed CSV occurrences must join to
 their successful JSONL/fold/recording evidence before resume rewrites anything.
 Strict failures retain one CSV row and no successful prediction/fold evidence.
+The checkpoint retains their typed effective parameters; resume reconstructs
+successful parameters from JSONL, preserving empty strings, nulls and overrides.
 Malformed or missing committed evidence fails loudly. Other model/worker failures
 remain fatal, preserving the valid prefix and reporting identity and traceback.
 Stopped/resumed equality requires unchanged source observations, deterministic

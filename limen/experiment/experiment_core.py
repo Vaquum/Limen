@@ -1068,7 +1068,8 @@ class UniversalExperimentLoop:
                     strategy_type: str,
                     content_hash: str,
                     feedback_controller: FeedbackController | None = None,
-                    pruning_strategies: list[PruningStrategy] | None = None) -> None:
+                    pruning_strategies: list[PruningStrategy] | None = None,
+                    failed_round_params: list[dict[str, object]] | None = None) -> None:
 
         '''Save a checkpoint at the current experiment state.'''
 
@@ -1082,6 +1083,7 @@ class UniversalExperimentLoop:
             content_hash=content_hash,
             feedback_controller=feedback_controller,
             pruning_strategies=pruning_strategies,
+            failed_round_params=failed_round_params,
         )
 
 

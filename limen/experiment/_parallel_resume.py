@@ -14,6 +14,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
 from limen.experiment._objective_run import finalize_objective_result, run_objective, validate_objective_resume
+from limen.experiment._parallel_commit import _failed_parameters
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
@@ -133,7 +134,7 @@ def _audit_prefix(path: Path, frontier: int, count: int, controller: FeedbackCon
 def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                      feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                      *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path,
-                     context_params: Mapping[str, object] | None = None) -> int:
+                     failed_round_params: list[dict[str, object]]) -> int:
     attributes = cast(dict[str, object], vars(host))
     manifest = cast(Manifest | None, attributes['manifest'])
     directory = attributes.get('_experiment_dir')
@@ -193,12 +194,9 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     parameter_domains = _mapping(attributes.get('params'), 'search parameters')
-    string_parameters = {key for key, values in parameter_domains.items()
-                         if isinstance(values, list) and any(isinstance(value, str) for value in cast(list[object], values))
-                         and all(value is None or isinstance(value, str) for value in cast(list[object], values))}
-    string_parameters.update(key for key, value in (context_params or {}).items() if key in header and not key.startswith('_') and isinstance(value, str))
+    failed = _failed_parameters(checkpoint, rows)
     recorded_parameters: dict[int, dict[str, object]] = {}
-    for entry in committed:
+    for entry in [*committed, *failed]:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
         if not parameter_domains.keys() <= parameters.keys():
             raise ValueError('Cannot resume parallel run without all recorded search parameters')
@@ -206,7 +204,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         if any(not _parameter_matches(row.get(key), value) for key, value in parameters.items() if not key.startswith('_')):
             raise ValueError('Cannot resume parallel run with mismatched CSV/JSONL round parameters')
         recorded_parameters[cast(int, entry['_round_index'])] = parameters
-        string_parameters.update(key for key, value in parameters.items() if not key.startswith('_') and isinstance(value, str))
+        if row['strict_mode_error']:
+            continue
         if ablation is not None and forward is None:
             count = 0 if (raw_count := parameters.get(ablation.drop_count_key)) is None else raw_count
             dropped = parameters.get('_dropped_features', [])
@@ -228,14 +227,11 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 _ = _values(fold.get('preds'), 'fold predictions', len(returns))
                 _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
-    overrides.update(dict.fromkeys(string_parameters, pl.String))
+    overrides.update(dict.fromkeys((key for parameters in recorded_parameters.values() for key in parameters if not key.startswith('_')), pl.String))
     if (objective := run_objective(manifest)) is not None:
         overrides[objective.column] = pl.Float64
     log = pl.read_csv(csv_path, n_rows=start, schema_overrides=overrides).head(start)
-    for key in string_parameters:
-        domain_values = cast(list[object], parameter_domains.get(key, []))
-        empty = (context_params or {}).get(key) == '' or (key not in (context_params or {}) and bool(domain_values) and all(isinstance(value, str) for value in domain_values))
-        log = log.with_columns(pl.Series(key, [recorded_parameters.get(index, {}).get(key, rows[index][key] if rows[index][key] or empty else None) for index in range(start)], dtype=pl.String, strict=False))
+    log = log.with_columns(pl.DataFrame([{key: value for key, value in recorded_parameters[index].items() if not key.startswith('_')} for index in range(start)], infer_schema_length=None, strict=False).get_columns())
     if '_convergence_warning' not in log.columns:
         log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
     for index, row in enumerate(log.iter_rows(named=True)):
@@ -256,6 +252,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         else:
             forward.writer.clear()
     attributes['experiment_log'] = log if start else None
+    failed_round_params.extend(failed)
     _ = round_data_path.write_text(''.join(line + '\n' for line in lines))
     with csv_path.open('w', newline='') as stream:
         writer = csv.DictWriter(stream, header)

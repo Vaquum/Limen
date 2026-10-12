@@ -518,6 +518,8 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
     config = parallel_config(objective=mode == 'strict')
     config['uel'].pop('pruning_strategies')
     config['uel']['n_permutations'] = 6 if mode == 'strict' else 4
+    if mode == 'strict':
+        config['sfd']['params'].update(A_tag=['', None], context_value=['001'])
     context_params: dict[str, object] | None = {'context_tag': '002', 'context_value': 2} if mode == 'strict' else None
     directory = tmp_path / 'failure'
     if mode in ('fatal', 'dead'):
@@ -568,6 +570,32 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
     if mode == 'strict':
         assert frame.height == 3 and frame['strict_mode_error'].null_count() == 0
         assert records(directory) == []
+        sampled = build_search_strategy(config)
+        assert checkpoint['failed_round_params'] == [
+            {'_round_index': index, 'round_id': frame['id'][index],
+             'round_params': next(sampled) | (context_params or {})}
+            for index in range(3)
+        ]
+        assert [entry['round_params']['A_tag'] for entry in checkpoint['failed_round_params']] == ['', None, '']
+        for name in ('missing_failures', 'missing_failure', 'changed_failure_id', 'changed_failure_params', 'missing_failure_params'):
+            rejected = tmp_path / name
+            shutil.copytree(directory, rejected)
+            saved = json.loads((rejected / 'checkpoint.json').read_text())
+            if name == 'missing_failures':
+                saved.pop('failed_round_params')
+            elif name == 'missing_failure':
+                saved['failed_round_params'].pop(0)
+            elif name == 'changed_failure_id':
+                saved['failed_round_params'][0]['round_id'] = 'unrecorded-identity'
+            elif name == 'changed_failure_params':
+                saved['failed_round_params'][0]['round_params']['C'] *= 2
+            else:
+                saved['failed_round_params'][0]['round_params'].pop('C')
+            (rejected / 'checkpoint.json').write_text(json.dumps(saved))
+            before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
+            with pytest.raises(ValueError, match=r'failed|parameter|occurrence|record'):
+                run_loop(config, rejected, resume=True, context_params=context_params)
+            assert {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()} == before
         feedback_heights = []
 
         def numeric_feedback(log, msq):
@@ -577,6 +605,8 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             assert log['context_tag'].to_list() == ['002'] * log.height
             assert log.schema['context_value'] == pl.Int64
             assert log['context_value'].to_list() == [2] * log.height
+            assert log.schema['A_tag'] == pl.String
+            assert log['A_tag'].to_list() == ['', None, '', None, ''][:log.height]
             feedback_heights.append(log.height)
 
         with controlled_pool(tmp_path / 'resume_markers', mode):
@@ -590,10 +620,15 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         assert len(scores.drop_nulls()) == 2
         assert scores.drop_nulls().is_finite().all()
         assert resumed.experiment_log['context_tag'].to_list() == ['002'] * 6
+        assert resumed.experiment_log['context_value'].to_list() == [2] * 6
+        assert resumed.experiment_log['A_tag'].to_list() == ['', None, '', None, '', None]
         with (directory / 'results.csv').open(newline='') as stream:
             assert [row['context_tag'] for row in csv.DictReader(stream)] == ['002'] * 6
         assert [row['_round_index'] for row in records(directory)] == [3, 5]
-        assert json.loads((directory / 'checkpoint.json').read_text())['metadata']['experiment_round'] == 5
+        checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+        assert checkpoint['metadata']['experiment_round'] == 5
+        assert [entry['_round_index'] for entry in checkpoint['failed_round_params']] == [0, 1, 2, 4]
+        assert [entry['round_params']['A_tag'] for entry in checkpoint['failed_round_params']] == ['', None, '', '']
     else:
         run_loop(config, directory, resume=True)
         assert assert_artifacts(directory).height == 4
@@ -671,7 +706,8 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     config['uel'].pop('pruning_strategies')
     config['sfd']['params']['tag'] = ['001']
     config['sfd']['params']['empty_tag'] = ['']
-    context_params = {'context_tag': '002', 'empty_context': '', 'none_context': None}
+    config['sfd']['params']['numeric_tag'] = ['001']
+    context_params = {'context_tag': '002', 'empty_context': '', 'none_context': None, 'numeric_tag': 2}
     assert validate(config).valid
 
     def recorded_parameter(params):
@@ -702,6 +738,9 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
             assert [row[name] for row in rows] == [value] * 6
             assert [row['round_params'][name] for row in records(parallel)] == [value] * 6
         assert resumed.experiment_log['none_context'].to_list() == [None] * 6
+        assert resumed.experiment_log.schema['numeric_tag'] == pl.Int64
+        assert resumed.experiment_log['numeric_tag'].to_list() == [2] * 6
+        assert [row['round_params']['numeric_tag'] for row in records(parallel)] == [2] * 6
         assert [row['round_params']['none_context'] for row in records(parallel)] == [None] * 6
         assert resumed.experiment_log['strict_mode_error'].null_count() == 6
         assert_runs_equal(parallel, serial)
