@@ -670,7 +670,8 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     config = parallel_config()
     config['uel'].pop('pruning_strategies')
     config['sfd']['params']['tag'] = ['001']
-    context_params = {'context_tag': '002'}
+    config['sfd']['params']['empty_tag'] = ['']
+    context_params = {'context_tag': '002', 'empty_context': '', 'none_context': None}
     assert validate(config).valid
 
     def recorded_parameter(params):
@@ -695,10 +696,14 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
             resumed = run_loop(config, parallel, resume=True, context_params=context_params)
         with (parallel / 'results.csv').open(newline='') as stream:
             rows = list(csv.DictReader(stream))
-        for name, value in {'tag': '001', 'context_tag': '002'}.items():
+        for name, value in {'tag': '001', 'context_tag': '002', 'empty_tag': '', 'empty_context': ''}.items():
             assert resumed.experiment_log.schema[name] == pl.String
+            assert resumed.experiment_log[name].to_list() == [value] * 6
             assert [row[name] for row in rows] == [value] * 6
             assert [row['round_params'][name] for row in records(parallel)] == [value] * 6
+        assert resumed.experiment_log['none_context'].to_list() == [None] * 6
+        assert [row['round_params']['none_context'] for row in records(parallel)] == [None] * 6
+        assert resumed.experiment_log['strict_mode_error'].null_count() == 6
         assert_runs_equal(parallel, serial)
 
 
