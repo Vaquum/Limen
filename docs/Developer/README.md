@@ -38,7 +38,7 @@ Before opening or updating a Limen PR:
 3. Confirm prep semantics: preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations.
 4. Confirm the target: read [Targets](../Targets.md) and make sure fitting happens only on the training split when the target learns thresholds.
 5. Confirm hyperparameters: route search-space changes through the manifest/YAML params surface unless the task is Python-extension-only.
-6. Train through the current run surface: prefer YAML plus CLI for operator-facing work, and direct UEL only for Python extension or test work.
+6. Run YAML experiments through CLI, or Python SFDs through UEL with a search strategy (Python/MSQ). Both routes use the same MSQ execution path.
 7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
 8. Make code, docs, tests, changelog, and version changes together when they belong together.
 9. Review the full GitHub diff before requesting review.

@@ -1580,3 +1580,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Bind explicitly selected rounds from several experiment directories into one inference-only Cohort; preserve per-source reconstruction, qualified member identities and equal member weights (#906).
 - Reject mismatched participating prediction timestamps in both Cohort constructors while preserving compatible legacy identities and predictions.
+
+## [5.24.1] - 2026-10-12
+
+- Present CLI/YAML and Python/MSQ as the primary experiment routes in the root README and guides; share one built-in-strategy Python example and retain legacy execution in compatibility reference.

@@ -103,7 +103,7 @@ Major Limen pages agree on this product-specific sequence:
 2. Optional data bars, indicators, features, transforms, scalers, and targets define the research surface.
 3. A YAML manifest is the default operator-facing experiment definition.
 4. The CLI validates, profiles, dry-runs, and runs that manifest.
-5. Universal Experiment Loop is the engine beneath CLI execution and the direct Python extension surface.
+5. CLI and Python/SFD execution both use Universal Experiment Loop with MSQ. Python callers supply a search strategy; persistence and adaptive feedback are optional. Legacy execution belongs in compatibility reference material.
 6. Log, benchmark, and backtest surfaces explain experiment outcomes.
 7. Trainer replays selected rounds with their original manifest configuration, validates metrics, and returns Sensors.
 8. Cohort binds selected Sensors into a multi-member inference surface.

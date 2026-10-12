@@ -29,7 +29,7 @@ That file is the editable Design of Experiment surface. Its pipeline flows throu
 4. `target`: fit a train-only quantile target and shift it forward
 5. `scaler`: resolve scaler choice from `params.scaler_type`
 6. `params`: define target, feature, calibration, and classifier hyperparameter grids
-7. `uel`: define permutation count, search strategy, prep cadence, and output format
+7. `uel`: define permutation count, search strategy, optional recording, and output format
 
 The minimal runnable shape is:
 
@@ -38,7 +38,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_first
-  limen_version: "5.24.0"
+  limen_version: "5.24.1"
   mode: development
   description: First logistic-regression binary classifier
 
@@ -150,7 +150,7 @@ results = pd.read_csv("results/dev/logreg_first_<timestamp>/results.csv")
 print(results.sort_values("auc", ascending=False).head())
 ```
 
-For full benchmark tables, run the same SFD through a UEL-backed Python object with `post_processing=True`, then inspect `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results`.
+For full benchmark tables on a live Python object, follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run) with `post_processing=True`, then inspect `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results`.
 
 ## Read next
 

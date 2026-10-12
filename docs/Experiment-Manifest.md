@@ -10,7 +10,7 @@ The default path provides:
 - train-only fitting for targets and scalers
 - automatic data fetching
 - cleaner collaboration surfaces
-- reproducible experiment definitions and artifact-backed runs
+- reproducible experiment definitions and saved CLI/MSQ run artifacts
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.24.0"
+  limen_version: "5.24.1"
   mode: development
 
 sfd:
@@ -98,7 +98,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 |---|---|---|---|
 | `n_permutations` | int | required | round budget; rejected if bool, zero, negative, or larger than the parameter space |
 | `search_strategy.type` | `random` or `grid` | `random` | `random` lazily samples the parameter space; `grid` enumerates it exhaustively |
-| `prep_each_round` | bool | `true` | run prep every round; required for manifest-driven SFDs |
+| `prep_each_round` | bool | `true` | compatibility setting; ordinary CLI/MSQ execution always prepares each candidate |
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
@@ -176,20 +176,7 @@ def manifest() -> Manifest:
     )
 ```
 
-Run the Python-built SFD through UEL only when direct engine integration is required:
-
-```python
-import limen
-from limen import sfd
-
-uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
-
-uel.run(
-    experiment_name='manifest-demo',
-    n_permutations=25,
-    prep_each_round=True,
-)
-```
+To run a Python-built SFD, follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run). Construct a search strategy from the SFD's `params()` and pass both the SFD and strategy to UEL. A manifest-driven SFD can fetch its own data when `data=` is omitted.
 
 For ordinary runs, keep the manifest in YAML and use `limen run`.
 
@@ -346,7 +333,7 @@ One trial consumes one permutation and reaches feedback only after its folds fin
 
 `uel.fold_results` keeps the individual result rows with trial `id` and `fold` identity. The aggregate `optimal_threshold` is null: each fold has its own fitted threshold, retained in its result. Post-run `Log` backtest rows remain per fold rather than treating the concatenated test windows as one continuous position path. Prediction and confusion replay that assumes one test set rejects walk-forward trials.
 
-On the artifact-backed path, the existing `round_data.jsonl` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
+In saved CLI or Python/MSQ runs, `round_data.jsonl` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Legacy standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
 
 Every fold starts execution independently. Snapshot net returns are the existing notional-scaled `execution.net` values. Event execution samples its recorded equity at retained test-bar endpoints, including the terminal mark in the final value; each return is current equity divided by prior equity minus one, starting from the policy's initial equity. The return track is captured for walk-forward trials even when `record_execution` is off; that flag retains its existing optional JSONL fields. Existing snapshot metrics and their columns remain unchanged.
 
@@ -385,7 +372,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.24.0"
+  limen_version: "5.24.1"
   mode: development
 sfd:
   manifest:
@@ -442,7 +429,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.24.0"
+  limen_version: "5.24.1"
   mode: development
 sfd:
   manifest:
@@ -669,7 +656,7 @@ Important behavior:
 
 The selected column depends on the eligible feature set. The exact list is recorded in `round_params['_dropped_features']`.
 
-In artifact-backed runs, that `_dropped_features` payload is stored into `round_data.jsonl`, and [Trainer](Trainer.md) reproduces the same drop set during promotion.
+In saved CLI or Python/MSQ runs, that `_dropped_features` payload is stored into `round_data.jsonl`. [Trainer](Trainer.md) reproduces the same drop set when the saved YAML definition supports reconstruction.
 
 ### Scaler choice from parameters
 

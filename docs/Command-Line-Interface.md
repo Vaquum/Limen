@@ -4,7 +4,7 @@ The Limen CLI is the supported shell surface for YAML-first experiment work. It 
 
 ## Scope
 
-The CLI owns project and manifest operations around declarative YAML experiments. It does not replace the Python API for custom SFD authoring, custom feature code, or direct `UniversalExperimentLoop` integration.
+The CLI owns project and manifest operations around declarative YAML experiments. It constructs UEL with a search strategy and MSQ, the same execution path used by the [Python API](Universal-Experiment-Loop.md#direct-python-run). Use Python for fully custom SFDs, search strategies, or callbacks that YAML cannot express.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ This is the preferred user journey: create or edit YAML, validate it, profile th
 | `limen profile <yaml_file>` | Estimate parameter-space size and sample runtime against the real data source. | Complexity rating, parameter counts, per-permutation runtime estimate, and data-quality warnings. |
 | `limen run <target>` | Validate, compile, and execute a YAML file or a committed manifest (`sha256:` / `manifest://sha256:`). | Results directory with `results.csv`, optional `results.parquet`, metadata, round data, and checkpoints when configured. |
 | `limen run --dry-run <target>` | Validate and compile without executing permutations. | Compile success or validation/runtime setup errors. |
-| `limen run --resume <results_dir>` | Resume an artifact-backed run from a checkpoint directory. | Updated result artifacts in the existing run directory. |
+| `limen run --resume <results_dir>` | Resume a saved YAML/MSQ run from a checkpoint directory. | Updated result artifacts in the existing run directory. |
 | `limen init <output> [--template <name>]` | Scaffold a YAML file from a template; resolves a bare name into `manifests/` inside a project and prompts for a template when omitted. | New YAML file. |
 | `limen list-templates` | List bundled YAML templates under `limen/yaml/templates`. | Template names. |
 | `limen commit <yaml_file>` | Validate, content-address, store, index, and git-commit a manifest inside a Limen project. | Committed manifest under `manifests/committed/` plus index update. |

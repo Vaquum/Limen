@@ -47,7 +47,7 @@ reducer/
 
 - Reducers inspect the log and `MSQ` but return declarative interventions without mutating either. `FeedbackController` dispatches those interventions to `MSQ`, then notifies the active search strategy.
 - `filter_types.py` defines the `FILTER_*` constants (`FILTER_KEEP_VALUES`, `FILTER_KEEP_BETWEEN`, `FILTER_EXCLUDE_VALUE`, `FILTER_SAMPLE`) shared across reducers.
-- Reducers are opt-in through the manifest and only run on the advanced search path.
+- Reducers are optional in CLI and Python/MSQ runs, configured through YAML or the UEL constructor.
 
 ## Read next
 

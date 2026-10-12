@@ -1,12 +1,12 @@
 # Pruning strategies
 
-Pruning strategies, also called reducers, analyze completed rounds during an advanced search and return declarative interventions. `FeedbackController` applies those interventions to the mutable search queue (`MSQ`), not to the reducer itself.
+Pruning strategies, also called reducers, analyze completed rounds in a CLI or Python/MSQ run and return declarative interventions. `FeedbackController` applies those interventions to the mutable search queue (`MSQ`), not to the reducer itself.
 
 Use this page when implementing or reviewing a reducer. For user-facing configuration and behavior, start with [Reducers and Feedback](../Reducers-And-Feedback.md).
 
 ## Prerequisites
 
-- an artifact-backed advanced run with a `SearchStrategy`
+- a CLI or Python/MSQ run with a `SearchStrategy`; persistence is needed only for saved checkpoints or audit entries
 - a positive `feedback_interval`
 - enough completed rounds for the selected reducer's minimum-observation rule
 - a target metric column for reducers that analyze quality
@@ -237,5 +237,5 @@ python -m pytest -q tests/test_*_reducer.py tests/test_reducer_factory.py tests/
 ## Read next
 
 - [Reducers and Feedback](../Reducers-And-Feedback.md) for operator behavior and tuning
-- [Advanced Search](../Advanced-Search.md) for the artifact-backed execution path
+- [Advanced Search](../Advanced-Search.md) for shared search and optional persistence
 - [Universal Experiment Loop](../Universal-Experiment-Loop.md) for scheduling and persistence
