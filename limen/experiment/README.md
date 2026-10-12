@@ -47,9 +47,9 @@ experiment/
 
 ## Things to know
 
-- Manifest-driven SFDs require `prep_each_round=True`.
-- The basic `run()` path uses legacy `ParamSpace`. The advanced path adds `SearchStrategy`, `ParamDomain`, `MSQ`, checkpoints, and feedback hooks.
-- When `experiment_dir` is set, Limen writes all major artifacts under one directory, including checkpoint, audit, round-data, and results files.
+- CLI and Python/MSQ runs share UEL with `SearchStrategy`, `ParamDomain`, and MSQ; checkpoints and feedback are optional.
+- The ordinary MSQ path prepares every candidate. Omitting `search_strategy` retains the [legacy execution contract](../../docs/Universal-Experiment-Loop.md#legacy-execution-reference), including `ParamSpace` and the manifest requirement for `prep_each_round=True`.
+- When `experiment_dir` is set on the MSQ path, Limen writes results and round data there; checkpoints and audit entries appear when their configured triggers run.
 - Results are appended incrementally during a run, so experiment files should be treated as durable artifacts rather than temporary output.
 
 ## Read next

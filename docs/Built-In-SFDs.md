@@ -180,7 +180,7 @@ limen run --dry-run built-in-logreg.yaml
 limen run built-in-logreg.yaml
 ```
 
-Direct Python use is still available when you need to integrate with UEL or custom code. When `data=` is omitted on a manifest-driven SFD, the manifest fetches data using `fetch_data()`.
+The same built-in SFDs run through the [Python/MSQ route](Universal-Experiment-Loop.md#direct-python-run). Supply a built-in or custom search strategy; when `data=` is omitted on a manifest-driven SFD, the manifest fetches data using `fetch_data()`.
 
 ## How to choose
 

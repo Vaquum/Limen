@@ -19,13 +19,13 @@ This glossary defines the terms used across public docs, developer docs, package
 | UEL | Short form of Universal Experiment Loop. |
 | round / permutation | One concrete parameter combination executed by UEL. |
 | experiment artifact | A persisted run output such as `metadata.json`, `results.csv`, `round_data.jsonl`, `checkpoint.json`, or `audit.jsonl`. |
-| `Trainer` | Reconstructs and replays selected artifact-backed rounds, validates metrics, and returns Sensors. |
+| `Trainer` | Reconstructs and replays selected rounds from a saved YAML experiment, validates metrics, and returns Sensors. |
 | `Sensor` | A validated model plus manifest, fitted preprocessing state, round parameters, and inference methods. |
 | `Cohort` | A bound set of Sensors with one aggregation mode and cohort identity. |
 | selector | A callable that chooses string permutation IDs for a Cohort. |
 | `HistoricalData` | Stateful data-access class for Limen's supported market-data sources and files. |
 | reducer | A `PruningStrategy` that analyzes completed rounds and returns declarative search interventions. |
-| `MSQ` | Mutable Search Queue used by advanced search and feedback dispatch. |
+| `MSQ` | Mutable Search Queue inside UEL, used by CLI and Python search-strategy runs to select candidates and apply optional feedback. |
 | `Log` | Analysis wrapper over an experiment log and retained round artifacts. |
 | benchmark | Confusion-oriented outcome analysis; not an independent public benchmark suite or leaderboard. |
 | backtest | Long/flat per-bar research ledger with basis-point outputs; not an execution simulator. |

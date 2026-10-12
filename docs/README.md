@@ -4,7 +4,7 @@ This page routes Limen docs by task.
 
 ## Limen in one page
 
-Limen is a Bitcoin alpha research engine for turning market data into experiments, logged analytics, backtests, and decoder cohorts. Its default operator path is a YAML manifest run through the CLI; Python APIs remain the extension layer for custom decoder and engine work.
+Limen is a Bitcoin alpha research engine for turning market data into experiments, logged analytics, backtests, and decoder cohorts. Run experiments through the CLI with YAML, or through the Python API with an SFD and a search strategy. Both routes use UEL with MSQ; the CLI is the default first-run path.
 
 Limen does not perform downstream trade decisioning or execution. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
 
@@ -17,8 +17,16 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 3. Learn the manifest contract in [Experiment Manifest](Experiment-Manifest.md)
 4. Learn how data enters Limen in [Historical Data](Historical-Data.md)
 5. Review outcomes in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
-6. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the engine beneath CLI
+6. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for Python/MSQ execution and the engine shared with CLI
 7. Use [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), and [Glossary](Glossary.md) for Python extension work
+
+### Run experiments from Python
+
+1. Start with the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run) using a built-in search strategy.
+2. Supply a [built-in SFD](Built-In-SFDs.md) or define a [custom SFD](Single-File-Decoder.md); custom preparation and models do not require a YAML manifest.
+3. Choose grid or random search in [Advanced Search](Advanced-Search.md), and enable persistence when you need checkpoints or saved round artifacts.
+4. Add [Reducers And Feedback](Reducers-And-Feedback.md) only when the experiment calls for adaptive search.
+5. Inspect the live run through [Log](Log.md), or read the saved result artifacts.
 
 ### Author experiments
 
@@ -28,7 +36,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 4. Use [Single-File Decoder](Single-File-Decoder.md) for custom Python experiment modules
 5. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
 6. Strengthen the research surface with [Perturbation Strategies](Perturbation-Strategies.md) for robustness, [Fractional Differentiation](Fractional-Differentiation.md) for stationary features, and [Triple-Barrier Method](Triple-Barrier-Method.md) for path-dependent labels
-7. Adaptive search continues in [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md)
+7. Choose search in [Advanced Search](Advanced-Search.md); adaptive controls are optional in [Reducers And Feedback](Reducers-And-Feedback.md)
 8. Inspect results in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
 
 ### Review finished runs
@@ -43,7 +51,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 1. Start with [Reference Architecture](Reference-Architecture.md) and [Built-In SFDs](Built-In-SFDs.md)
 2. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for direct engine integration
-3. Continue to [Advanced Search](Advanced-Search.md) for `SearchStrategy`, `ParamDomain`, `MSQ`, and checkpoints
+3. Continue to [Advanced Search](Advanced-Search.md) for custom `SearchStrategy` implementations, `ParamDomain`, MSQ, and checkpoints
 4. Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for adaptive interventions
 5. Use [Utilities](Utilities.md) for the helper layer rather than the main workflow
 
@@ -62,8 +70,8 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 1. Data enters through [Historical Data](Historical-Data.md) or compatible external OHLC data.
 2. Data can be reshaped with [Data Bars](Data-Bars.md) when threshold bars are the right research surface.
 3. Indicators, features, transforms, and scalers define the research surface. Targets define supervised labels; calibration adjusts probabilities and thresholds after model output.
-4. An experiment is expressed as an [Experiment Manifest](Experiment-Manifest.md) and run through the [Command-Line Interface](Command-Line-Interface.md) by default.
-5. [Universal Experiment Loop](Universal-Experiment-Loop.md) is the engine beneath CLI execution; [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Advanced Search](Advanced-Search.md), and [Reducers And Feedback](Reducers-And-Feedback.md) are the Python extension layer.
+4. Define an experiment as YAML for the [CLI](Command-Line-Interface.md), or as an [SFD](Single-File-Decoder.md) for the [Python/MSQ route](Universal-Experiment-Loop.md#direct-python-run).
+5. Both routes use [Universal Experiment Loop](Universal-Experiment-Loop.md) with MSQ. [Advanced Search](Advanced-Search.md) controls candidate generation; [Reducers And Feedback](Reducers-And-Feedback.md) provides optional adaptive control.
 6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
 7. [Trainer](Trainer.md) turns selected rounds into reusable sensors.
 8. [Cohort](Cohort.md) defines selector-driven ensemble inference for multi-member decoder aggregation.
@@ -100,5 +108,5 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 - For a first real run, continue to [End-to-End Workflow](End-to-End-Workflow.md), then [Command-Line Interface](Command-Line-Interface.md)
 - For architecture and system boundaries, continue to [Trainer](Trainer.md) and [Cohort](Cohort.md)
-- For the extension layer, continue to [Built-In SFDs](Built-In-SFDs.md), [Reference Architecture](Reference-Architecture.md), and [Advanced Search](Advanced-Search.md)
+- For Python experiments, continue to the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run), [Single-File Decoder](Single-File-Decoder.md), and [Advanced Search](Advanced-Search.md)
 - For contributor work, continue to [Developer Guidelines](Developer/README.md)

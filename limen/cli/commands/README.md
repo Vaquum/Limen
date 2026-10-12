@@ -16,7 +16,7 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
 | `run.py:run_experiment()` | Compile a YAML manifest and run the Universal Experiment Loop | Backs `limen run`; accepts YAML files and `manifest://sha256:` URIs |
-| `resume.py:run_resume()` | Continue a checkpointed artifact-backed run | Backs `limen run --resume` |
+| `resume.py:run_resume()` | Continue a saved YAML/MSQ run from a checkpoint | Backs `limen run --resume` |
 | `validate.py:run_validate()` | Validate a YAML manifest | Backs `limen validate` |
 | `profile.py:run_profile()` | Parameter-space and runtime profiling | Backs `limen profile`; samples the configured data source with a covering array |
 | `init.py` / `new.py` / `list_templates.py` | Scaffold projects and discover bundled templates | Reads `limen/yaml/templates` |

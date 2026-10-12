@@ -1,8 +1,8 @@
 # Single-File Decoder
 
-A Single-File Decoder (SFD) is the Python experiment unit beneath Limen's YAML and CLI path. It packages a parameter space together with either a declarative manifest or fully custom preparation and model functions.
+A Single-File Decoder (SFD) is the experiment unit used by both CLI and Python/MSQ runs. It packages a parameter space together with either a declarative manifest or fully custom preparation and model functions.
 
-`limen run` compiles YAML into a manifest-backed SFD and passes it to `UniversalExperimentLoop`. Direct SFD authoring is the extension path for custom decoders and model code.
+`limen run` compiles YAML into a manifest-backed SFD. Python callers supply an SFD and search strategy directly. Both routes execute through UEL with MSQ; author a custom SFD when preparation or model code needs arbitrary Python logic.
 
 ## Prerequisites
 
@@ -100,9 +100,11 @@ This style is how Limen's foundational SFDs are built.
 
 ### Runtime rules for manifest-driven SFDs
 
-- `limen run` sets `prep_each_round` from YAML; direct `UniversalExperimentLoop.run(prep_each_round=True)` is required
-- `prep` and `model` cannot be overridden in `run()`
+- the ordinary MSQ path prepares data for every candidate, using the manifest's preparation and model functions
+- configure the parameter domain through the search strategy and the pipeline through the manifest
 - when `data=` is omitted, Limen fetches data from the manifest
+
+The [legacy execution reference](Universal-Experiment-Loop.md#legacy-execution-reference) records the older `prep_each_round` and callable-override rules.
 
 ## Custom SFDs
 
@@ -141,13 +143,7 @@ def model(data: dict, round_params: dict):
     return results
 ```
 
-This style passes the input dataframe explicitly:
-
-```python
-import limen
-
-uel = limen.UniversalExperimentLoop(data=data, sfd=my_custom_sfd)
-```
+Save these functions in your SFD module and follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run), supplying that module as `sfd`, your dataframe as `data`, and a strategy built from the module's `params()`. Custom functions do not require a YAML manifest or a built-in architecture.
 
 ## Function Contracts
 
