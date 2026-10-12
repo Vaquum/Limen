@@ -250,4 +250,4 @@ New-format ablation experiments resume with the same JSON column. A pre-fix CSV 
 - [Scalers](Scalers.md) for what each registry scaler does.
 - [Fractional Differentiation](Fractional-Differentiation.md) for stationarity-aware features.
 - [Log](Log.md) for `experiment_parameter_correlation` and reading perturbation impact.
-- [Search Strategies](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md) for steering the search over these parameters.
+- [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md) for steering the search over these parameters.

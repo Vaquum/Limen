@@ -29,7 +29,7 @@ That file is the editable Design of Experiment surface. Its pipeline flows throu
 4. `target`: fit a train-only quantile target and shift it forward
 5. `scaler`: resolve scaler choice from `params.scaler_type`
 6. `params`: define target, feature, calibration, and classifier hyperparameter grids
-7. `uel`: define permutation count, search strategy, prep cadence, and output format
+7. `uel`: define permutation count, search strategy, optional recording, and output format
 
 The minimal runnable shape is:
 

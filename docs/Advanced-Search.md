@@ -1,4 +1,4 @@
-# Search Strategies
+# Advanced Search
 
 Search strategies control candidate generation for both CLI and Python/MSQ experiments. The CLI builds the strategy from YAML. Python callers construct a strategy over a `ParamDomain` and pass it to UEL; UEL creates MSQ around that strategy.
 
@@ -41,7 +41,7 @@ The important mental model is:
 | `GridStrategy` | Enumerate combinations deterministically; execute up to the permutation budget. | `uel.search_strategy.type: grid` |
 | `RandomStrategy` | Lazily sample unseen combinations; accepts a candidate-generation seed. | `uel.search_strategy.type: random`, optionally with `seed` |
 
-CLI defaults to random search. In Python, select either strategy over the SFD's parameter space:
+CLI defaults to random search. YAML grid search creates an unshuffled grid and does not apply `seed`; Python `GridStrategy` additionally accepts `shuffle` and `seed`. In Python, select either strategy over the SFD's parameter space:
 
 ```python
 from limen.experiment.param_domain import ParamDomain

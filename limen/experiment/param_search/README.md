@@ -4,7 +4,7 @@
 
 ## Canonical docs
 
-- [Search Strategies](../../../docs/Advanced-Search.md)
+- [Advanced Search](../../../docs/Advanced-Search.md)
 
 ## What this package owns
 
@@ -43,5 +43,5 @@ param_search/
 
 ## Read next
 
-- [Search Strategies](../../../docs/Advanced-Search.md)
+- [Advanced Search](../../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../../docs/Reducers-And-Feedback.md)

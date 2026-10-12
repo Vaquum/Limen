@@ -6,7 +6,7 @@
 
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
-- [Search Strategies](../../docs/Advanced-Search.md)
+- [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 
 ## What this package owns
@@ -55,6 +55,6 @@ experiment/
 ## Read next
 
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
-- [Search Strategies](../../docs/Advanced-Search.md)
+- [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)

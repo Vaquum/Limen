@@ -36,6 +36,8 @@ For trials evaluated across successive test windows, see [walk-forward sweeps](E
 
 Use Python when the experiment is expressed as an SFD, when preparation or models need custom code, or when you need direct search control. A custom SFD exposes `params()`, `prep()`, and `model()` and receives `data=` explicitly; it does not need a YAML manifest or a built-in model architecture.
 
+Pass `search_strategy` explicitly to select MSQ. The constructor still defaults to `None`, which selects the supported [standard execution contract](#legacy-execution-reference).
+
 This example uses a built-in SFD and seeded random search. Replace the SFD with your own module to run custom code under the same loop.
 
 ```python
@@ -72,7 +74,7 @@ uel.experiment_backtest_results
 
 Without `post_processing=True`, UEL still populates `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset. With no `experiment_dir`, the run writes `logreg-first.csv`; it does not persist round data or checkpoints.
 
-For exhaustive search, use `GridStrategy` over the same `ParamDomain`. The random-search seed controls candidate generation, not randomness inside preparation or model code. See [Search Strategies](Advanced-Search.md) for strategy choices and optional feedback.
+For exhaustive search, use `GridStrategy` over the same `ParamDomain`. The random-search seed controls candidate generation, not randomness inside preparation or model code. See [Advanced Search](Advanced-Search.md) for strategy choices and optional feedback.
 
 The [convergence warning report](#convergence-warning-report) is available after run conclusion independently of `post_processing`.
 
@@ -132,7 +134,7 @@ uel.run(
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
-| `factorize` | opt-in reuse of deterministic signal preparation, fitting and prediction across independent snapshot economics in the artifact-backed grid path; default `false` |
+| `factorize` | opt-in reuse of deterministic signal preparation, fitting and prediction across independent snapshot economics in a persisted MSQ grid run; default `false` |
 
 ### Factorized snapshot grids
 
@@ -143,6 +145,8 @@ The cache retains predictions, price/provenance and recording evidence, and grow
 ### SFD execution contract
 
 On the ordinary MSQ path, UEL calls the SFD's preparation and model functions for each candidate. Manifest-driven SFDs supply these functions through their manifest. Custom SFDs supply them directly and require explicit `data=`. Configure candidate values in the strategy's `ParamDomain`; configure custom functions in the SFD. The `factorize` option above has a separate, narrower manifest-only contract.
+
+When `search_strategy` is set, the legacy-only `run()` arguments `prep_each_round`, `random_search`, `maintain_details_in_params`, `params`, `prep`, and `model` are accepted but ignored. Configure the strategy and SFD instead.
 
 For saved custom runs, the SFD must expose `__name__` and preparation must supply the expected `_alignment` metadata. Arbitrary custom SFD execution does not imply Trainer compatibility: Trainer reconstructs a manifest from a saved `yaml_reference`.
 
@@ -231,7 +235,7 @@ Saved state powers checkpointing and resumability. The CLI also stores the YAML 
 
 ### Record execution
 
-Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to `run()` on the artifact-backed path. This is independent of `post_processing`. Each successful round gains `execution` in `round_data.jsonl`: full-precision `pos`, `gross`, and `net` arrays in test-row order, each multiplied once by the resolved `notional_rate`. Positions include execution lag and exits; regressors may backtest directional signals rather than their continuous saved predictions. Rule-based strategies record only test execution.
+Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to a Python/MSQ run with `experiment_dir`. This is independent of `post_processing`. Each successful round gains `execution` in `round_data.jsonl`: full-precision `pos`, `gross`, and `net` arrays in test-row order, each multiplied once by the resolved `notional_rate`. Positions include execution lag and exits; regressors may backtest directional signals rather than their continuous saved predictions. Rule-based strategies record only test execution.
 
 The same flag records the sibling `market: {"ret": [...]}`: unscaled returns from the original aligned test prices, in the same order and length as `execution.pos`. Each value is `close[i] / close[i-1] - 1` since the previous retained test row; row gaps can therefore span several source bars. The first value is JSON `null`, since the evaluated window supplies no predecessor. A value is also `null` when the original open, close, close-minus-open or previous close is NaN, the previous close is zero, or the computed return is nonfinite. This uses price tradability, independently of signals, execution lag, costs, notional and TP/SL settings; it is not a finite-positive-price mask.
 
@@ -329,7 +333,7 @@ In a live shutdown-and-resume run in this repo:
 
 Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
 
-For strategy and feedback controls, continue to [Search Strategies](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md).
+For strategy and feedback controls, continue to [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md).
 
 ## Legacy execution reference
 
@@ -346,6 +350,21 @@ UEL also retains the standard `ParamSpace` execution path for existing callers. 
 The path writes `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when a directory is supplied. It uses integer round IDs and has no checkpoint/resume or MSQ feedback. `post_processing=True` enables the same live analysis attributes.
 
 With `random_search=False`, combinations follow declared parameter order, with the first parameter varying fastest. Legacy UEL random sampling exposes no seed; module-global `random.seed(...)` does not pin it. The [ParamSpace utility](Utilities.md#paramspace) exposes its own seed for direct helper use. These ordering and sampling contracts differ from the MSQ strategies.
+
+### Direct standard run
+
+For existing callers, omit `search_strategy` and use the legacy arguments. This supported contract remains available; the example uses `data` and `sfd` from the Python example above:
+
+```python
+standard = limen.UniversalExperimentLoop(data=data, sfd=sfd)
+standard.run(
+    experiment_name='standard-run',
+    n_permutations=4,
+    prep_each_round=True,
+    random_search=False,
+    post_processing=True,
+)
+```
 
 ## Common Errors
 
@@ -369,4 +388,4 @@ Calling `run(resume=True)` without a search strategy raises `resume=True is only
 
 - Continue to [Log](Log.md) to understand the analysis surfaces built on top of UEL results.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for manifest-driven SFD construction.
-- Continue to [Trainer](Trainer.md) for artifact-backed reconstruction of finished rounds into sensors.
+- Continue to [Trainer](Trainer.md) for reconstruction of saved YAML experiment rounds into sensors.

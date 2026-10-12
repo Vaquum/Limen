@@ -146,5 +146,5 @@ These are text-formatting utilities, not a canonical reporting framework.
 ## Read next
 
 - Continue to the [legacy execution reference](Universal-Experiment-Loop.md#legacy-execution-reference) for the contract that still uses `ParamSpace`.
-- Continue to [Search Strategies](Advanced-Search.md) for the strategies used by CLI and Python/MSQ runs.
+- Continue to [Advanced Search](Advanced-Search.md) for the strategies used by CLI and Python/MSQ runs.
 - Continue to [Reference Architecture](Reference-Architecture.md) for `data_dict_to_numpy()` usage inside model code.

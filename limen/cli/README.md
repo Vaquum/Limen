@@ -20,8 +20,8 @@ Does **not** own manifest semantics, experiment execution internals, model behav
 | `limen.cli.main:cli` | Click command group exported by the package script | Registered as the `limen` console script. |
 | `commands/validate.py` | YAML validation from the shell | Uses `limen.yaml` validation. |
 | `commands/profile.py` | Parameter-space and runtime profiling for YAML manifests | Fetches the configured data source and samples a covering array of permutations. |
-| `commands/run.py` | Execute a YAML experiment | Compiles YAML into a manifest and runs UEL. |
-| `commands/resume.py` | Continue a checkpointed artifact-backed run | Used through `limen run --resume`. |
+| `commands/run.py` | Execute a YAML experiment | Compiles YAML into a manifest and runs UEL with MSQ. |
+| `commands/resume.py` | Continue a saved YAML/MSQ run from a checkpoint | Used through `limen run --resume`. |
 | `commands/init.py` and `commands/list_templates.py` | Bundled template discovery or scaffolding | Reads `limen/yaml/templates`. |
 | `commands/commit.py` and `commands/ls.py` | Committed manifest storage | Writes project-local `manifests/committed` state. |
 | `commands/new.py` | New project scaffold | Clones the official project template. |

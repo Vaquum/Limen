@@ -52,7 +52,7 @@ Reducers return declarative dicts by default. The `intra_callback` receives dire
 
 `BudgetReducer` is resource-driven. It does not analyze model quality; it analyzes whether the remaining search still fits the configured budget.
 
-In an artifact-backed advanced run, `BudgetReducer(max_permutations=4)` trims a requested `6`-round experiment down to `4` completed rows and writes the trim to both:
+In a saved Python/MSQ run, `BudgetReducer(max_permutations=4)` trims a requested `6`-round experiment down to `4` completed rows and writes the trim to both:
 
 - `audit.jsonl`
 - `checkpoint.json`
@@ -312,6 +312,6 @@ uel:
 
 ## Read next
 
-- Continue to [Search Strategies](Advanced-Search.md) for candidate generation and optional persistence.
+- Continue to [Advanced Search](Advanced-Search.md) for candidate generation and optional persistence.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for where feedback triggers are scheduled during a run.
 - Continue to [Trainer](Trainer.md) for downstream use of finished artifacts.

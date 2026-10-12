@@ -19,7 +19,7 @@ This glossary defines the terms used across public docs, developer docs, package
 | UEL | Short form of Universal Experiment Loop. |
 | round / permutation | One concrete parameter combination executed by UEL. |
 | experiment artifact | A persisted run output such as `metadata.json`, `results.csv`, `round_data.jsonl`, `checkpoint.json`, or `audit.jsonl`. |
-| `Trainer` | Reconstructs and replays selected artifact-backed rounds, validates metrics, and returns Sensors. |
+| `Trainer` | Reconstructs and replays selected rounds from a saved YAML experiment, validates metrics, and returns Sensors. |
 | `Sensor` | A validated model plus manifest, fitted preprocessing state, round parameters, and inference methods. |
 | `Cohort` | A bound set of Sensors with one aggregation mode and cohort identity. |
 | selector | A callable that chooses string permutation IDs for a Cohort. |
