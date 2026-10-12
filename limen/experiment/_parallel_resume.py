@@ -192,7 +192,11 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 committed.append(entry)
                 lines.append(line.rstrip('\n'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
-    parameter_keys = _mapping(attributes.get('params'), 'search parameters').keys()
+    parameter_domains = _mapping(attributes.get('params'), 'search parameters')
+    parameter_keys = parameter_domains.keys()
+    string_parameters = {key for key, values in parameter_domains.items()
+                         if isinstance(values, list) and any(isinstance(value, str) for value in cast(list[object], values))
+                         and all(value is None or isinstance(value, str) for value in cast(list[object], values))}
     for entry in committed:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
         if not parameter_keys <= parameters.keys():
@@ -200,6 +204,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         row = rows[cast(int, entry['_round_index'])]
         if any(not _parameter_matches(row.get(key), value) for key, value in parameters.items() if not key.startswith('_')):
             raise ValueError('Cannot resume parallel run with mismatched CSV/JSONL round parameters')
+        string_parameters.update(key for key, value in parameters.items() if not key.startswith('_') and isinstance(value, str))
         if ablation is not None and forward is None:
             raw_count = parameters.get(ablation.drop_count_key)
             count = 0 if raw_count is None else raw_count
@@ -222,6 +227,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                 _ = _values(fold.get('preds'), 'fold predictions', len(returns))
                 _evidence(fold, event=event, snapshot=snapshot, execution=bool(attributes['_record_execution']), outputs=bool(attributes['_record_model_outputs']))
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
+    overrides.update(dict.fromkeys(string_parameters, pl.String))
     objective = run_objective(manifest)
     if objective is not None:
         overrides[objective.column] = pl.Float64
@@ -247,7 +253,10 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
             forward.writer.clear()
     attributes['experiment_log'] = log if start else None
     _ = round_data_path.write_text(''.join(line + '\n' for line in lines))
-    log.write_csv(csv_path)
+    with csv_path.open('w', newline='') as stream:
+        writer = csv.DictWriter(stream, header)
+        writer.writeheader()
+        writer.writerows(rows)
     if audit_path.exists():
         _ = audit_path.write_text(''.join(line + '\n' for line in audit_lines))
     return start

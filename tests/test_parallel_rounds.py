@@ -1,3 +1,4 @@
+import csv
 import faulthandler
 import io
 import json
@@ -103,7 +104,7 @@ def make_loop(config, directory, *, callback=None):
     )
 
 
-def run_loop(config, directory, *, workers=None, resume=False, callback=None):
+def run_loop(config, directory, *, workers=None, resume=False, callback=None, context_params=None):
     loop = make_loop(config, directory, callback=callback)
     with threadpool_limits(limits=1):
         loop.run(
@@ -111,7 +112,7 @@ def run_loop(config, directory, *, workers=None, resume=False, callback=None):
             n_permutations=config['uel']['n_permutations'],
             prep_each_round=True, progress_bar=False,
             record_execution=True, record_model_outputs=True,
-            workers=workers, resume=resume,
+            workers=workers, resume=resume, context_params=context_params,
         )
     return loop
 
@@ -645,20 +646,32 @@ def test_parallel_resume_rejects_null_snapshot_execution(parallel_campaigns, tmp
 def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     config = parallel_config()
     config['uel'].pop('pruning_strategies')
+    config['sfd']['params']['tag'] = ['001']
+    context_params = {'context_tag': '002'}
+    assert validate(config).valid
 
     def remove_recorded_parameter(log, msq):
         if log.height == 3:
             msq.remove_custom(lambda params: params['C'] == 3.0)
 
     serial, parallel = tmp_path / 'serial', tmp_path / 'parallel'
-    run_loop(config, serial, workers=1, callback=remove_recorded_parameter)
-    run_loop(config, parallel, workers=2, callback=remove_recorded_parameter)
+    run_loop(config, serial, workers=1, callback=remove_recorded_parameter, context_params=context_params)
+    run_loop(config, parallel, workers=2, callback=remove_recorded_parameter, context_params=context_params)
     left, right = assert_artifacts(parallel), assert_artifacts(serial)
     columns = [name for name in right.columns if name not in _TRANSIENT]
     assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
                        rel_tol=1e-10, abs_tol=1e-12)
     _assert_same(records(parallel), records(serial))
     assert pl.read_csv(parallel / 'results.csv')['C'].to_list() == [0.1, 0.3, 0.5, 1.0, 5.0, 10.0]
+    for _ in range(2):
+        resumed = run_loop(config, parallel, resume=True, context_params=context_params)
+        with (parallel / 'results.csv').open(newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        for name, value in {'tag': '001', 'context_tag': '002'}.items():
+            assert resumed.experiment_log.schema[name] == pl.String
+            assert [row[name] for row in rows] == [value] * 6
+            assert [row['round_params'][name] for row in records(parallel)] == [value] * 6
+        assert_runs_equal(parallel, serial)
 
 
 def test_parallel_serial_omitted_matches_explicit_one(tmp_path):
