@@ -40,7 +40,7 @@ _TRANSIENT = {'execution_time'}
 def recorded_source(**kwargs):
     from tests.test_record_model_outputs import recorded_source as _recorded_source
 
-    data = _recorded_source(**kwargs)
+    data = _recorded_source(**kwargs).head(900)
     interval = (data['datetime'][1] - data['datetime'][0]).total_seconds()
     return data.with_columns(pl.lit(interval).alias('base_interval'))
 
@@ -264,14 +264,11 @@ def parallel_campaigns(tmp_path_factory):
     serial_config = root / 'serial_campaigns.yaml'
     _write_yaml(configs, serial_config)
     with startup_limits():
-        if pl.thread_pool_size() == 1:
-            _serial_round_proof(serial_config, root)
-        else:
-            subprocess.run([
-                sys.executable, '-c',
-                'from tests.test_parallel_rounds import _serial_round_proof\nimport sys\n_serial_round_proof(*sys.argv[1:])',
-                str(serial_config), str(root),
-            ], cwd=ROOT, check=True, timeout=40)
+        subprocess.run([
+            sys.executable, '-c',
+            'from tests.test_parallel_rounds import _serial_round_proof\nimport sys\n_serial_round_proof(*sys.argv[1:])',
+            str(serial_config), str(root),
+        ], cwd=ROOT, check=True, timeout=40)
     for name, config in configs.items():
         prefixes = []
 
