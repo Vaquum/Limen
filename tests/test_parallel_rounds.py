@@ -573,7 +573,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         sampled = build_search_strategy(config)
         assert checkpoint['failed_round_params'] == [
             {'_round_index': index, 'round_id': frame['id'][index],
-             'round_params': next(sampled) | (context_params or {})}
+             'round_params': {key: value for key, value in (next(sampled) | (context_params or {})).items() if key != '_id'}}
             for index in range(3)
         ]
         assert [entry['round_params']['A_tag'] for entry in checkpoint['failed_round_params']] == ['', None, '']
