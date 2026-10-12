@@ -664,7 +664,8 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     _assert_same(records(parallel), records(serial))
     assert pl.read_csv(parallel / 'results.csv')['C'].to_list() == [0.1, 0.3, 0.5, 1.0, 5.0, 10.0]
     for _ in range(2):
-        resumed = run_loop(config, parallel, resume=True, context_params=context_params)
+        with patch.object(ProcessPoolExecutor, '_launch_processes', side_effect=AssertionError('Completed resume launched workers')):
+            resumed = run_loop(config, parallel, resume=True, context_params=context_params)
         with (parallel / 'results.csv').open(newline='') as stream:
             rows = list(csv.DictReader(stream))
         for name, value in {'tag': '001', 'context_tag': '002'}.items():

@@ -170,14 +170,6 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         exhausted = False
         try:
             launch = cast(Callable[[], None], getattr(pool, '_launch_processes', None))
-            if os.name == 'posix':
-                previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM))
-                try:
-                    launch()
-                finally:
-                    _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
-            else:
-                launch()
             while not attributes['_shutdown_requested']:
                 while len(pending) < workers and not exhausted and not attributes['_shutdown_requested']:
                     if pending and barrier(cast(int, pending[-1][0]['_round_index'])):
@@ -188,6 +180,15 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                         exhausted = True
                         break
                     task = parameters | (context_params or {})
+                    if not vars(pool)['_processes']:
+                        if os.name == 'posix':
+                            previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM))
+                            try:
+                                launch()
+                            finally:
+                                _ = signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                        else:
+                            launch()
                     future = pool.submit(_evaluate_round, task)
                     pending.append((task, future,
                                     cast(dict[str, object], copy.deepcopy(msq.get_state()))))
