@@ -262,10 +262,12 @@ uel:
 '''
 
 
-def yaml_experiment(tmp_path):
+@pytest.fixture(scope='module')
+def yaml_experiment(tmp_path_factory):
     from limen.cli.commands.run import run_experiment
     from limen.data.historical_data import HistoricalData
 
+    tmp_path = tmp_path_factory.mktemp('direction_sizing_campaign')
     yaml_path = tmp_path / 'strategy.yaml'
     yaml_path.write_text(YAML_SPEC)
     with patch.object(HistoricalData, 'get_spot_klines', new=staticmethod(recorded_yaml_source)):
@@ -273,11 +275,11 @@ def yaml_experiment(tmp_path):
     return next(tmp_path.rglob('metadata.json')).parent
 
 
-def test_trainer_sensor_preserve_signed_exposure(tmp_path):
+def test_trainer_sensor_preserve_signed_exposure(yaml_experiment):
     from limen.inference import Trainer, ReconstructionError
     from limen.cohort import Cohort
 
-    directory = yaml_experiment(tmp_path)
+    directory = yaml_experiment
     trainer = Trainer(directory, data=recorded_source(limit=200))
     ids = list(trainer._round_data)
     assert len(ids) == 2
@@ -319,7 +321,7 @@ def test_trainer_sensor_preserve_signed_exposure(tmp_path):
     subprocess.run([sys.executable, '-c', code, str(directory)], check=True)
 
 
-def test_inline_log_and_exported_contract_agree(tmp_path):
+def test_inline_log_and_exported_contract_agree(yaml_experiment):
     from limen.log._snapshot_backtest_round import snapshot_backtest_round
     from limen.inference import Trainer
 
@@ -340,7 +342,7 @@ def test_inline_log_and_exported_contract_agree(tmp_path):
     assert ledger.funding['recognized_delta'].sum() == pytest.approx(expected_funding)
     expected = quantity * (fill['fill_price'][0] - fill['fill_price'][1]) - fill['fee'].sum() + ledger.funding['recognized_delta'].sum()
     assert result['backtest_net_pnl'] == pytest.approx(expected)
-    directory = yaml_experiment(tmp_path)
+    directory = yaml_experiment
     rows = [json.loads(line) for line in (directory/'round_data.jsonl').read_text().splitlines()]
     assert len(rows) == 2 and rows[0]['trade_contract_digest'] != rows[1]['trade_contract_digest']
     for row in rows:
