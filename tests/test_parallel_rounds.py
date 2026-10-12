@@ -15,16 +15,11 @@ from unittest.mock import patch
 import numpy as np
 import polars as pl
 import pytest
-from click.testing import CliRunner
 from polars.testing import assert_frame_equal
 from ruamel.yaml import YAML
 from threadpoolctl import threadpool_info, threadpool_limits
 
 from limen.yaml import CompiledSFD, build_search_strategy, validate
-from limen.cli.main import cli
-from limen.cli.commands.run import run_experiment
-from limen.cli.commands.resume import run_resume
-from limen.cohort import Cohort
 from limen.backtest.execution_events import with_predictions
 from limen.backtest.trade_contract import json_value
 from limen.backtest.trade_execution import trade_execution
@@ -32,12 +27,8 @@ from limen.experiment import UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
 from limen.experiment._parallel_worker import freeze_sources, startup_limits
 from limen.experiment.manifest_core import MLManifest
-from limen.inference import Trainer
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
-from tests.test_experiment_objective import objective_config
-from tests.test_record_model_outputs import _config as output_config
-from tests.test_record_model_outputs import recorded_source as _recorded_source
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
@@ -45,12 +36,17 @@ _TRANSIENT = {'execution_time'}
 
 
 def recorded_source(**kwargs):
+    from tests.test_record_model_outputs import recorded_source as _recorded_source
+
     data = _recorded_source(**kwargs)
     interval = (data['datetime'][1] - data['datetime'][0]).total_seconds()
     return data.with_columns(pl.lit(interval).alias('base_interval'))
 
 
 def parallel_config(*, strategy='grid', objective=False, walk_forward=False):
+    from tests.test_experiment_objective import objective_config
+    from tests.test_record_model_outputs import _config as output_config
+
     config = objective_config() if objective else output_config()
     config['metadata']['name'] = 'recorded_parallel'
     manifest = config['sfd']['manifest']
@@ -324,6 +320,9 @@ def test_recorded_parallel_round_parity_and_order(parallel_campaigns, name):
 
 
 def test_parallel_artifacts_reconstruct_existing_consumers(parallel_campaigns):
+    from limen.cohort import Cohort
+    from limen.inference import Trainer
+
     _, serial, parallel, _ = parallel_campaigns['grid']
     bars = recorded_source()
     ids = assert_artifacts(parallel)['id'].to_list()[:2]
@@ -387,6 +386,10 @@ def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
 
 
 def test_parallel_cli_rejects_bad_workers_without_output(tmp_path):
+    from click.testing import CliRunner
+
+    from limen.cli.main import cli
+
     for value in ('0', '-1', 'not-an-integer'):
         result = CliRunner().invoke(cli, ['run', '--workers', value, str(tmp_path / 'unused.yaml')])
         assert result.exit_code != 0
@@ -394,6 +397,9 @@ def test_parallel_cli_rejects_bad_workers_without_output(tmp_path):
 
 
 def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_campaigns):
+    from limen.cli.commands.run import run_experiment
+    from limen.cli.commands.resume import run_resume
+
     config = parallel_config()
     config['uel']['workers'] = 4
     config['uel']['output_path'] = str(tmp_path / 'cli')
@@ -433,6 +439,8 @@ def _wait_for(path, process, *, timeout=40):
 
 
 def _subprocess_campaign(config_path, output, marker_directory, mode):
+    from limen.cli.main import cli
+
     assert CompiledSFD.__name__ == 'CompiledSFD'
     assert cli.name == 'cli'
     config = YAML(typ='safe').load(Path(config_path).read_text())
