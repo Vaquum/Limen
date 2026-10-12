@@ -193,6 +193,7 @@ def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> No
 
 
 def main() -> int:
+    os.environ['POLARS_MAX_THREADS'] = '1'
     setup_cleanup_handlers()
     try:
         slowest_tests_limit = _runtime_slowest_tests_limit()
