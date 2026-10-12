@@ -105,8 +105,6 @@ class CheckpointManager:
              failed_round_params: list[dict[str, object]] | None = None) -> None:
 
         '''
-        Write a checkpoint file into checkpoint_dir.
-
         NOTE: All state is written atomically to a single file via a
         write-then-rename pattern. The previous checkpoint remains intact
         until the new one is fully written.

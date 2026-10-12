@@ -1071,8 +1071,6 @@ class UniversalExperimentLoop:
                     pruning_strategies: list[PruningStrategy] | None = None,
                     failed_round_params: list[dict[str, object]] | None = None) -> None:
 
-        '''Save a checkpoint at the current experiment state.'''
-
         checkpoint_manager.save(
             checkpoint_dir,
             msq,
