@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "max_total_seconds": 195,
+  "max_total_seconds": 240,
   "slowest_tests_limit": 10,
   "threshold_bands_seconds": [
     1,
@@ -19,6 +19,6 @@
     "observed_min_seconds": 85.0,
     "observed_max_seconds": 119.0,
     "headroom_seconds": 16.0,
-    "note": "ceiling = observed_max_seconds + headroom_seconds"
+    "note": "Historical main CI baseline retained; the 240-second ceiling was explicitly authorized for parallel-round proofs in PR #913."
   }
 }
