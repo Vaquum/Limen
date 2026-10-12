@@ -448,9 +448,19 @@ def _subprocess_campaign(config_path, output, marker_directory, mode):
     assert CompiledSFD.__name__ == 'CompiledSFD'
     assert cli.name == 'cli'
     config = YAML(typ='safe').load(Path(config_path).read_text())
+    checkpoint = UniversalExperimentLoop._checkpoint
+
+    def await_initial_stop(loop, *args, **kwargs):
+        checkpoint(loop, *args, **kwargs)
+        deadline = time.monotonic() + 40
+        while not loop._shutdown_requested:
+            assert time.monotonic() < deadline, 'timed out waiting for initial-checkpoint SIGTERM'
+            time.sleep(0.025)
+
+    stop_boundary = patch.object(UniversalExperimentLoop, '_checkpoint', await_initial_stop) if mode == 'stop_zero' else nullcontext()
     faulthandler.dump_traceback_later(10)
     try:
-        with controlled_pool(Path(marker_directory), mode):
+        with controlled_pool(Path(marker_directory), mode), stop_boundary:
             run_loop(config, Path(output), workers=2)
     finally:
         faulthandler.cancel_dump_traceback_later()
