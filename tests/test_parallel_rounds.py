@@ -502,7 +502,11 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
     prefix = checkpoint['metadata']['experiment_round'] + 1
     assert prefix == (3 if phase == 'final' else 0)
     assert assert_artifacts(directory).height == prefix
-    resumed = run_loop(config, directory, resume=True)
+    with patch('limen.experiment._parallel_rounds.ProcessPoolExecutor', wraps=ProcessPoolExecutor) as executor:
+        resumed = run_loop(config, directory, resume=True)
+    if phase == 'final':
+        assert executor.call_args.kwargs['max_workers'] == 1
+        assert json.loads((directory / 'metadata.json').read_text())['workers'] == 2
     if phase == 'zero':
         assert resumed.experiment_log.schema['val_backtest_total_return'] == pl.Float64
         assert resumed.experiment_log['val_backtest_total_return'].is_finite().all()

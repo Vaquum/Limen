@@ -163,7 +163,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
     pending: deque[tuple[dict[str, object], Future[RoundPayload], dict[str, object]]] = deque()
     with startup_limits(), tqdm(initial=start, total=n_permutations,
                                 disable=not progress_bar) as progress:
-        pool = ProcessPoolExecutor(max_workers=workers,
+        pool = ProcessPoolExecutor(max_workers=max(1, min(workers, n_permutations - start)),
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
                                    initargs=(reference, sources, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs'])))
