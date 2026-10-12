@@ -467,7 +467,8 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
         process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
                                    stderr=subprocess.STDOUT, start_new_session=True)
         try:
-            _wait_for(markers / ('3.start' if phase == 'final' else '0.start'), process)
+            first = directory / 'checkpoint.json' if phase == 'zero' else markers / ('3.start' if phase == 'final' else '0.start')
+            _wait_for(first, process)
             if phase in ('outstanding', 'group'):
                 _wait_for(markers / '1.done', process)
             if phase == 'group':
