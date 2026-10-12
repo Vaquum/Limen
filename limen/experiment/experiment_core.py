@@ -1,4 +1,3 @@
-import copy
 import csv
 import importlib.metadata
 import json
@@ -32,6 +31,7 @@ from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 from limen.experiment.manifest_core import Manifest, RuleBasedManifest
 from limen.yaml.store import canonical_manifest_id
+import limen.experiment._parallel_rounds as _parallel
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +125,7 @@ class UniversalExperimentLoop:
         self._checkpoint_interval = checkpoint_interval
         self._experiment_dir = Path(experiment_dir) if experiment_dir else None
         self._intra_callback = intra_callback
-        self._yaml_reference = copy.deepcopy(yaml_reference)
+        self._yaml_reference, self._compiled_yaml, self._workers, self._parallel_sources = _parallel.configuration(sfd, yaml_reference)
         self._walk_forward: WalkForwardRun | None = None
         self._record_execution = False
         self._record_model_outputs = False
@@ -148,17 +148,16 @@ class UniversalExperimentLoop:
     def fold_results(self) -> pl.DataFrame:
         return self._walk_forward.results if self._walk_forward is not None else pl.DataFrame()
 
+    check_parallel_admission = _parallel.admit_parallel
+
     def run(self, experiment_name: str, n_permutations: int = 10000,
-            prep_each_round: bool = False, random_search: bool = True,
-            maintain_details_in_params: bool = False,
-            context_params: dict[str, object] | None = None,
-            params: Callable[[], dict[str, object]] | None = None,
-            prep: Callable[..., dict[str, object]] | None = None,
-            model: Callable[..., dict[str, object]] | None = None,
+            prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
+            context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
+            prep: Callable[..., dict[str, object]] | None = None, model: Callable[..., dict[str, object]] | None = None,
             resume: bool = False, post_processing: bool = False,
             progress_bar: bool = True, record_execution: bool = False,
-            record_model_outputs: bool = False, factorize: bool = False) -> None:
-        original_prep, original_model = self.prep, self.model
+            record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None) -> None:
+        original_prep, original_model = _parallel.begin_run(self, workers, prep_each_round, resume, post_processing, factorize, context_params, (params, prep, model))
         self._walk_forward = None
         self.convergence_report = None
         try:
@@ -168,7 +167,7 @@ class UniversalExperimentLoop:
                           params, prep, model, resume, post_processing, progress_bar,
                           record_execution, record_model_outputs, factorize)
         finally:
-            self._convergence_caught = []
+            self._parallel_sources, self._convergence_caught = None, []
             if self._walk_forward is not None:
                 self._walk_forward.finish()
                 self.prep, self.model = original_prep, original_model
@@ -508,6 +507,9 @@ class UniversalExperimentLoop:
         strategy_type = components['strategy_type']
         csv_path = components['csv_path']
         round_data_path = components['round_data_path']
+
+        if _parallel.dispatch(self, components, n_permutations, context_params, resume, progress_bar):
+            return
 
         self._register_shutdown_handler()
 
@@ -1014,7 +1016,7 @@ class UniversalExperimentLoop:
         return checkpoint_manager.initialize_fresh(checkpoint_dir)
 
 
-    def _write_metadata(self, experiment_dir: Path) -> None:
+    def _write_metadata(self, experiment_dir: Path, *, context_parameter_keys: list[str] | None = None) -> None:
         '''Persist experiment provenance and effective recording settings.'''
 
         if self._sfd_module_name is None:
@@ -1022,11 +1024,11 @@ class UniversalExperimentLoop:
                 'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. Trainer requires a reimportable SFD module.'
             )
 
-        metadata: dict[str, object] = {
+        metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
             'sfd_module': self._sfd_module_name,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(),
-        }
+        }, context_parameter_keys=context_parameter_keys)
         if self._record_execution:
             metadata['record_execution'] = True
         if self._record_model_outputs:
@@ -1066,9 +1068,8 @@ class UniversalExperimentLoop:
                     strategy_type: str,
                     content_hash: str,
                     feedback_controller: FeedbackController | None = None,
-                    pruning_strategies: list[PruningStrategy] | None = None) -> None:
-
-        '''Save a checkpoint at the current experiment state.'''
+                    pruning_strategies: list[PruningStrategy] | None = None,
+                    failed_round_params: list[dict[str, object]] | None = None) -> None:
 
         checkpoint_manager.save(
             checkpoint_dir,
@@ -1080,6 +1081,7 @@ class UniversalExperimentLoop:
             content_hash=content_hash,
             feedback_controller=feedback_controller,
             pruning_strategies=pruning_strategies,
+            failed_round_params=failed_round_params,
         )
 
 

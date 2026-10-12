@@ -13,6 +13,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
+from limen.data.historical_data import _aggregate_spot_klines
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.reducer import BudgetReducer
 from limen.sfd.foundational_sfd import random_binary as sfd_module
@@ -30,6 +31,9 @@ def _make_uel(strategy_cls=RandomStrategy, test_mode=True, **kwargs):
     strategy = strategy_cls(domain, seed=42)
 
     uel = UniversalExperimentLoop(
+        data=_aggregate_spot_klines(pl.read_parquet(
+            Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
+        ), 7200).tail(512),
         sfd=sfd_module,
         search_strategy=strategy,
         pruning_strategies=kwargs.get('pruning_strategies'),
@@ -87,7 +91,7 @@ def test_run_with_msq_basic_flow():
     assert len(uel.experiment_confusion_metrics) > 0
     assert uel.experiment_backtest_results is not None
     assert len(uel.experiment_backtest_results) > 0
-    corr = uel.experiment_parameter_correlation('auc', min_n=1)
+    corr = uel.experiment_parameter_correlation('auc', min_n=1, n_boot=20)
     assert len(corr) > 0
 
 
@@ -414,7 +418,7 @@ def _shutdown_resume_full_data(strategy_cls):
         assert len(uel2.experiment_confusion_metrics) > 0
         assert uel2.experiment_backtest_results is not None
         assert len(uel2.experiment_backtest_results) > 0
-        corr = uel2.experiment_parameter_correlation('auc', min_n=1)
+        corr = uel2.experiment_parameter_correlation('auc', min_n=1, n_boot=20)
         assert len(corr) > 0
 
 

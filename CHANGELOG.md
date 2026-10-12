@@ -1584,3 +1584,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.24.1] - 2026-10-12
 
 - Present CLI/YAML and Python/MSQ as the primary experiment routes in the root README and guides; share one built-in-strategy Python example and retain legacy execution in compatibility reference.
+
+## [5.25.0] - 2026-10-12
+
+- Run compiled CPU classification rounds in isolated spawned workers within one MSQ experiment; preserve ordered artifacts, feedback boundaries and consistent prefix recovery (#905).
+- Add YAML/CLI worker selection and unchanged-policy resume; retain serial execution by default and reject unsupported parallel configurations before output creation.

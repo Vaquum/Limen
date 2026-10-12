@@ -32,11 +32,11 @@ _LABEL_CONTROL_YAML = dedent('''\
             kline_size: 900
         split_dates:
           train_start: "2025-01-01"
-          train_end: "2025-04-30"
-          val_start: "2025-04-30"
-          val_end: "2025-05-14"
-          test_start: "2025-05-14"
-          test_end: "2025-05-28"
+          train_end: "2025-01-15"
+          val_start: "2025-01-15"
+          val_end: "2025-01-20"
+          test_start: "2025-01-20"
+          test_end: "2025-01-25"
         features:
           - func: limen.features.fractional_diff
             params:

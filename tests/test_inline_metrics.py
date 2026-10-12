@@ -4,8 +4,11 @@ from types import SimpleNamespace
 
 import math
 
+import polars as pl
+
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.experiment.experiment_core import UniversalExperimentLoop
+from limen.data.historical_data import _aggregate_spot_klines
 from limen.experiment.param_domain import ParamDomain
 from limen.sfd.foundational_sfd import logreg_binary as logreg_binary_sfd
 from limen.sfd.foundational_sfd import random_binary as random_binary_sfd
@@ -21,6 +24,9 @@ def _run_uel(sfd_module=random_binary_sfd,
     strategy = RandomStrategy(domain, seed=42)
 
     uel = UniversalExperimentLoop(
+        data=_aggregate_spot_klines(pl.read_parquet(
+            Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
+        ), 7200).tail(1024),
         sfd=sfd_module,
         search_strategy=strategy,
         test_mode=True,

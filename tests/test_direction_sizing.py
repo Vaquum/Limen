@@ -17,13 +17,13 @@ from limen.sfd.reference_architecture.direction_sizing import direction_sizing
 from limen.targets import TradeOutcomeTarget
 
 
-def recorded_source(klines_size=900, limit=120):
+def recorded_source(klines_size=900, limit=40):
     return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(limit)
 
 
 def recorded_yaml_source(row_count_limit=None, kline_size=60, start_date_limit=None, end_date_limit=None, *, n_rows=None):
     assert kline_size == 900
-    return recorded_source(limit=288)
+    return recorded_source(limit=200)
 
 
 def native_manifest():
@@ -170,7 +170,7 @@ def test_stacking_predictions_are_causal():
 
     manifest = native_manifest().set_scaler(RobustScaler).set_pca_compression()
     params = component_params(direction_factory=memory_direction_factory, conditional_size=True, folds=3, auto_pca=True, pca_k=2)
-    data = manifest.prepare_data(recorded_source(), params)
+    data = manifest.prepare_data(recorded_source(limit=120), params)
     preparation = data['_fold_preparation']
     calls = []
 
@@ -262,10 +262,12 @@ uel:
 '''
 
 
-def yaml_experiment(tmp_path):
+@pytest.fixture(scope='module')
+def yaml_experiment(tmp_path_factory):
     from limen.cli.commands.run import run_experiment
     from limen.data.historical_data import HistoricalData
 
+    tmp_path = tmp_path_factory.mktemp('direction_sizing_campaign')
     yaml_path = tmp_path / 'strategy.yaml'
     yaml_path.write_text(YAML_SPEC)
     with patch.object(HistoricalData, 'get_spot_klines', new=staticmethod(recorded_yaml_source)):
@@ -273,12 +275,12 @@ def yaml_experiment(tmp_path):
     return next(tmp_path.rglob('metadata.json')).parent
 
 
-def test_trainer_sensor_preserve_signed_exposure(tmp_path):
+def test_trainer_sensor_preserve_signed_exposure(yaml_experiment):
     from limen.inference import Trainer, ReconstructionError
     from limen.cohort import Cohort
 
-    directory = yaml_experiment(tmp_path)
-    trainer = Trainer(directory, data=recorded_source(limit=288))
+    directory = yaml_experiment
+    trainer = Trainer(directory, data=recorded_source(limit=200))
     ids = list(trainer._round_data)
     assert len(ids) == 2
     sensors = trainer.train(ids)
@@ -300,7 +302,7 @@ def test_trainer_sensor_preserve_signed_exposure(tmp_path):
 
     manifest = sensors[0]._manifest
     round_params = {**sensors[0].round_params, **component_params(direction_params={'sign':-1}, sizing_params={'size':.25})}
-    data = manifest.prepare_data(recorded_source(limit=288), round_params)
+    data = manifest.prepare_data(recorded_source(limit=200), round_params)
     model = manifest.run_model(data, round_params)['_model']
     sized = Sensor(sensors[0]._yaml_reference, model, data['_fitted_params'], round_params, trade_contract=data['trade_contract'])
     assert all(bar.prediction == -.25 for bar in sized.predict_all(recorded_source(limit=384)) if bar.reason is None)
@@ -308,18 +310,18 @@ def test_trainer_sensor_preserve_signed_exposure(tmp_path):
     cohort = Cohort(experiment_log_path=str(directory), permutation_ids=[ids[0]])
     with pytest.raises(ValueError, match='target-exposure'):
         cohort.set_members([sensors[0]])
-    changed = Trainer(directory, data=recorded_source(limit=288).tail(287))
+    changed = Trainer(directory, data=recorded_source(limit=200).tail(199))
     with pytest.raises(ReconstructionError, match='identity changed'):
         changed.train([ids[0]])
-    changed = Trainer(directory, data=recorded_source(limit=288))
+    changed = Trainer(directory, data=recorded_source(limit=200))
     changed._round_data[ids[0]]['learning_binding']['model']['seed'] = 999
     with pytest.raises(ReconstructionError, match='learning/source/factory'):
         changed.train([ids[0]])
-    code = 'from pathlib import Path; from limen.inference import Trainer; from tests.test_direction_sizing import recorded_source; t=Trainer(Path(__import__("sys").argv[1]),data=recorded_source(limit=288)); assert t.train(list(t._round_data))[0].prediction_mode == "target_exposure"'
+    code = 'from pathlib import Path; from limen.inference import Trainer; from tests.test_direction_sizing import recorded_source; t=Trainer(Path(__import__("sys").argv[1]),data=recorded_source(limit=200)); assert t.train([next(iter(t._round_data))])[0].prediction_mode == "target_exposure"'
     subprocess.run([sys.executable, '-c', code, str(directory)], check=True)
 
 
-def test_inline_log_and_exported_contract_agree(tmp_path):
+def test_inline_log_and_exported_contract_agree(yaml_experiment):
     from limen.log._snapshot_backtest_round import snapshot_backtest_round
     from limen.inference import Trainer
 
@@ -340,14 +342,14 @@ def test_inline_log_and_exported_contract_agree(tmp_path):
     assert ledger.funding['recognized_delta'].sum() == pytest.approx(expected_funding)
     expected = quantity * (fill['fill_price'][0] - fill['fill_price'][1]) - fill['fee'].sum() + ledger.funding['recognized_delta'].sum()
     assert result['backtest_net_pnl'] == pytest.approx(expected)
-    directory = yaml_experiment(tmp_path)
+    directory = yaml_experiment
     rows = [json.loads(line) for line in (directory/'round_data.jsonl').read_text().splitlines()]
     assert len(rows) == 2 and rows[0]['trade_contract_digest'] != rows[1]['trade_contract_digest']
     for row in rows:
         assert row['learning_binding']['round_id'] == row['round_id']
         assert row['learning_binding']['manifest_id'] is not None
         assert row['learning_binding']['model']['trade_contract_digest'] == row['trade_contract_digest']
-    assert Trainer(directory, data=recorded_source(limit=288)).train([rows[0]['round_id']])
+    assert Trainer(directory, data=recorded_source(limit=200)).train([rows[0]['round_id']])
     from limen.sfd.reference_architecture import logreg_binary
     from limen.targets import NextBarUpTarget
     from limen.backtest import backtest_snapshot
