@@ -649,7 +649,7 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
 
     serial, parallel = tmp_path / 'serial', tmp_path / 'parallel'
     run_loop(config, serial, workers=1, callback=remove_recorded_parameter)
-    run_loop(config, parallel, workers=4, callback=remove_recorded_parameter)
+    run_loop(config, parallel, workers=2, callback=remove_recorded_parameter)
     left, right = assert_artifacts(parallel), assert_artifacts(serial)
     columns = [name for name in right.columns if name not in _TRANSIENT]
     assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
