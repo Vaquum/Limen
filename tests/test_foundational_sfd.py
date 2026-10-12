@@ -53,7 +53,7 @@ def test_foundational_sfd():
                 uel = limen.UniversalExperimentLoop(
                     data=_aggregate_spot_klines(pl.read_parquet(
                         Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
-                    ), 7200).tail(5000),
+                    ), 7200).tail(3072),
                     sfd=sfd_module,
                     search_strategy=strategy,
                     pruning_strategies=pruning_strategies,

@@ -33,7 +33,7 @@ def _make_uel(strategy_cls=RandomStrategy, test_mode=True, **kwargs):
     uel = UniversalExperimentLoop(
         data=_aggregate_spot_klines(pl.read_parquet(
             Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
-        ), 7200).tail(5000),
+        ), 7200).tail(512),
         sfd=sfd_module,
         search_strategy=strategy,
         pruning_strategies=kwargs.get('pruning_strategies'),

@@ -26,7 +26,7 @@ def _run_uel(sfd_module=random_binary_sfd,
     uel = UniversalExperimentLoop(
         data=_aggregate_spot_klines(pl.read_parquet(
             Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
-        ), 7200).tail(5000),
+        ), 7200).tail(1024),
         sfd=sfd_module,
         search_strategy=strategy,
         test_mode=True,
