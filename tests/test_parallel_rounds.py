@@ -578,7 +578,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             for index in range(3)
         ]
         assert [entry['round_params']['A_tag'] for entry in checkpoint['failed_round_params']] == ['', None, '']
-        for name in ('missing_failures', 'missing_failure', 'changed_failure_id', 'changed_failure_params', 'missing_failure_params'):
+        for name in ('missing_failures', 'missing_failure', 'changed_failure_id', 'changed_failure_params', 'missing_failure_params', 'missing_one_context', 'missing_one_context_without_argument', 'missing_all_context'):
             rejected = tmp_path / name
             shutil.copytree(directory, rejected)
             saved = json.loads((rejected / 'checkpoint.json').read_text())
@@ -590,12 +590,17 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
                 saved['failed_round_params'][0]['round_id'] = 'unrecorded-identity'
             elif name == 'changed_failure_params':
                 saved['failed_round_params'][0]['round_params']['C'] *= 2
+            elif name in ('missing_one_context', 'missing_one_context_without_argument'):
+                saved['failed_round_params'][0]['round_params'].pop('context_tag')
+            elif name == 'missing_all_context':
+                for entry in saved['failed_round_params']:
+                    entry['round_params'].pop('context_tag')
             else:
                 saved['failed_round_params'][0]['round_params'].pop('C')
             (rejected / 'checkpoint.json').write_text(json.dumps(saved))
             before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
             with pytest.raises(ValueError, match=r'failed|parameter|occurrence|record'):
-                run_loop(config, rejected, resume=True, context_params=context_params)
+                run_loop(config, rejected, resume=True, context_params=None if name == 'missing_one_context_without_argument' else context_params)
             assert {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()} == before
         feedback_heights = []
 

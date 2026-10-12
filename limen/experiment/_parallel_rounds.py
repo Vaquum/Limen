@@ -140,7 +140,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         start = restore_parallel(host, msq, domain, feedback_controller, checkpoint_manager,
                                  content_hash=content_hash, strategy_type=strategy_type,
                                  csv_path=csv_path, round_data_path=round_data_path,
-                                 failed_round_params=failed_round_params)
+                                 failed_round_params=failed_round_params, context_params=context_params)
     elif directory is not None:
         cast(Callable[[], None], getattr(host, '_guard_stale_artifacts', None))()
         _ = cast(Callable[[Path, CheckpointManager], Path], getattr(host, '_initialize_fresh', None))(directory, checkpoint_manager)

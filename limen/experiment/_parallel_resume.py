@@ -134,7 +134,8 @@ def _audit_prefix(path: Path, frontier: int, count: int, controller: FeedbackCon
 def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                      feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                      *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path,
-                     failed_round_params: list[dict[str, object]]) -> int:
+                     failed_round_params: list[dict[str, object]],
+                     context_params: Mapping[str, object] | None = None) -> int:
     attributes = cast(dict[str, object], vars(host))
     manifest = cast(Manifest | None, attributes['manifest'])
     directory = attributes.get('_experiment_dir')
@@ -195,11 +196,13 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     parameter_domains = _mapping(attributes.get('params'), 'search parameters')
     failed = failed_parameters(checkpoint, rows)
+    parameter_keys = {key for key in (*parameter_domains, *(context_params or {})) if not key.startswith('_')}
+    parameter_keys.update(key for entry in [*committed, *failed] for key in _mapping(entry.get('round_params'), 'round parameters') if not key.startswith('_'))
     recorded_parameters: dict[int, dict[str, object]] = {}
     for entry in [*committed, *failed]:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
-        if not parameter_domains.keys() <= parameters.keys():
-            raise ValueError('Cannot resume parallel run without all recorded search parameters')
+        if not parameter_keys <= parameters.keys():
+            raise ValueError('Cannot resume parallel run without all recorded parameters')
         row = rows[cast(int, entry['_round_index'])]
         if any(not _parameter_matches(row.get(key), value) for key, value in parameters.items() if not key.startswith('_')):
             raise ValueError('Cannot resume parallel run with mismatched CSV/JSONL round parameters')
