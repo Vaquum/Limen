@@ -651,9 +651,12 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     context_params = {'context_tag': '002'}
     assert validate(config).valid
 
+    def recorded_parameter(params):
+        return params['C'] == 3.0
+
     def remove_recorded_parameter(log, msq):
         if log.height == 3:
-            msq.remove_custom(lambda params: params['C'] == 3.0)
+            msq.remove_custom(recorded_parameter)
 
     serial, parallel = tmp_path / 'serial', tmp_path / 'parallel'
     run_loop(config, serial, workers=1, callback=remove_recorded_parameter, context_params=context_params)
