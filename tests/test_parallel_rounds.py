@@ -184,13 +184,16 @@ def assert_runs_equal(actual, expected):
 def _controlled_round(function, params, marker_directory, mode):
     directory = Path(marker_directory)
     index = params['_round_index']
+    assert signal.getsignal(signal.SIGTERM) == signal.SIG_DFL
+    if os.name == 'posix':
+        assert os.getpgrp() != os.getpgid(os.getppid())
     (directory / f'{index}.start').write_text(str(time.monotonic()))
     if mode == 'reorder' and index == 0:
         deadline = time.monotonic() + 40
         while not (directory / '1.done').exists():
             assert time.monotonic() < deadline, 'timed out waiting for round 1 completion'
             time.sleep(0.025)
-    if mode in ('stop_zero', 'stop_outstanding') and (index == 0 or mode == 'stop_zero'):
+    if (mode in ('stop_zero', 'stop_outstanding') and (index == 0 or mode == 'stop_zero')) or (mode == 'dead' and index == 0):
         time.sleep(15)
     if mode == 'stop_final' and index == 3:
         time.sleep(15)
