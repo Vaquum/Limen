@@ -132,7 +132,8 @@ def _audit_prefix(path: Path, frontier: int, count: int, controller: FeedbackCon
 
 def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
                      feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
-                     *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path) -> int:
+                     *, content_hash: str, strategy_type: str, csv_path: Path, round_data_path: Path,
+                     context_params: Mapping[str, object] | None = None) -> int:
     attributes = cast(dict[str, object], vars(host))
     manifest = cast(Manifest | None, attributes['manifest'])
     directory = attributes.get('_experiment_dir')
@@ -197,6 +198,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     string_parameters = {key for key, values in parameter_domains.items()
                          if isinstance(values, list) and any(isinstance(value, str) for value in cast(list[object], values))
                          and all(value is None or isinstance(value, str) for value in cast(list[object], values))}
+    string_parameters.update(key for key, value in (context_params or {}).items() if key in header and not key.startswith('_') and isinstance(value, str))
     for entry in committed:
         parameters = _mapping(entry.get('round_params'), 'round parameters')
         if not parameter_keys <= parameters.keys():

@@ -518,6 +518,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
     config = parallel_config(objective=mode == 'strict')
     config['uel'].pop('pruning_strategies')
     config['uel']['n_permutations'] = 6 if mode == 'strict' else 4
+    context_params: dict[str, object] | None = {'context_tag': '002', 'context_value': 2} if mode == 'strict' else None
     directory = tmp_path / 'failure'
     if mode in ('fatal', 'dead'):
         config_path = tmp_path / 'campaign.yaml'
@@ -553,7 +554,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             loop = make_loop(config, directory, callback=stop_strict_prefix)
             loop.run(config['metadata']['name'], n_permutations=6,
                      prep_each_round=True, progress_bar=False, workers=2,
-                     record_execution=True, record_model_outputs=True)
+                     record_execution=True, record_model_outputs=True, context_params=context_params)
     frame = assert_artifacts(directory)
     checkpoint = json.loads((directory / 'checkpoint.json').read_text())
     assert checkpoint['metadata']['experiment_round'] + 1 == frame.height
@@ -572,10 +573,14 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         def numeric_feedback(log, msq):
             assert log.schema['val_backtest_total_return'] == pl.Float64
             assert log['val_backtest_total_return'].drop_nulls().is_finite().all()
+            assert log.schema['context_tag'] == pl.String
+            assert log['context_tag'].to_list() == ['002'] * log.height
+            assert log.schema['context_value'] == pl.Int64
+            assert log['context_value'].to_list() == [2] * log.height
             feedback_heights.append(log.height)
 
         with controlled_pool(tmp_path / 'resume_markers', mode):
-            resumed = run_loop(config, directory, resume=True, callback=numeric_feedback)
+            resumed = run_loop(config, directory, resume=True, callback=numeric_feedback, context_params=context_params)
         assert feedback_heights == [5]
         completed = assert_artifacts(directory)
         assert completed.height == 6
@@ -584,6 +589,9 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         assert scores.dtype == pl.Float64 and scores.null_count() == 4
         assert len(scores.drop_nulls()) == 2
         assert scores.drop_nulls().is_finite().all()
+        assert resumed.experiment_log['context_tag'].to_list() == ['002'] * 6
+        with (directory / 'results.csv').open(newline='') as stream:
+            assert [row['context_tag'] for row in csv.DictReader(stream)] == ['002'] * 6
         assert [row['_round_index'] for row in records(directory)] == [3, 5]
         assert json.loads((directory / 'checkpoint.json').read_text())['metadata']['experiment_round'] == 5
     else:
