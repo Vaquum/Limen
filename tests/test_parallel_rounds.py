@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from concurrent.futures import ProcessPoolExecutor
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -663,8 +664,9 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
                        rel_tol=1e-10, abs_tol=1e-12)
     _assert_same(records(parallel), records(serial))
     assert pl.read_csv(parallel / 'results.csv')['C'].to_list() == [0.1, 0.3, 0.5, 1.0, 5.0, 10.0]
-    for _ in range(2):
-        with patch.object(ProcessPoolExecutor, '_launch_processes', side_effect=AssertionError('Completed resume launched workers')):
+    for attempt in range(2):
+        warning = pytest.warns(UserWarning, match='Checkpoint had non-restorable filters') if attempt == 0 else nullcontext()
+        with warning, patch.object(ProcessPoolExecutor, '_launch_processes', side_effect=AssertionError('Completed resume launched workers')):
             resumed = run_loop(config, parallel, resume=True, context_params=context_params)
         with (parallel / 'results.csv').open(newline='') as stream:
             rows = list(csv.DictReader(stream))
