@@ -1,6 +1,6 @@
 # Reducers and feedback
 
-Reducers and feedback are the control layer inside Limen's advanced search path. They are what let a run react to its own results instead of sweeping the full original domain unchanged.
+Reducers and feedback are optional controls inside the MSQ execution path shared by CLI and Python. They let a run react to its own results instead of sweeping the original domain unchanged; using a search strategy does not require enabling them.
 
 This layer is coordinated by `FeedbackController`, which can collect interventions from three sources:
 
@@ -10,10 +10,10 @@ This layer is coordinated by `FeedbackController`, which can collect interventio
 
 ## Prerequisites
 
-- the artifact-backed [Advanced Search](Advanced-Search.md) path
+- a CLI or [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run)
 - a positive `feedback_interval`
 - enough completed rounds for the selected reducer's observation threshold
-- review of `audit.jsonl` after every adaptive run
+- an `experiment_dir` when file-driven interventions or a saved `audit.jsonl` are needed
 
 ## Feedback cycle order
 
@@ -246,7 +246,7 @@ Example:
 
 ## Audit trail
 
-Each feedback trigger writes one JSONL entry to `audit.jsonl` when the advanced path is using an `experiment_dir`.
+Each feedback trigger writes one JSONL entry to `audit.jsonl` when the MSQ run has an `experiment_dir`.
 
 A feedback-cycle audit entry records:
 
@@ -312,6 +312,6 @@ uel:
 
 ## Read next
 
-- Continue to [Advanced Search](Advanced-Search.md) for the full artifact-backed run path for this feedback system.
+- Continue to [Search Strategies](Advanced-Search.md) for candidate generation and optional persistence.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for where feedback triggers are scheduled during a run.
 - Continue to [Trainer](Trainer.md) for downstream use of finished artifacts.

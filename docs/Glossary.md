@@ -25,7 +25,7 @@ This glossary defines the terms used across public docs, developer docs, package
 | selector | A callable that chooses string permutation IDs for a Cohort. |
 | `HistoricalData` | Stateful data-access class for Limen's supported market-data sources and files. |
 | reducer | A `PruningStrategy` that analyzes completed rounds and returns declarative search interventions. |
-| `MSQ` | Mutable Search Queue used by advanced search and feedback dispatch. |
+| `MSQ` | Mutable Search Queue inside UEL, used by CLI and Python search-strategy runs to select candidates and apply optional feedback. |
 | `Log` | Analysis wrapper over an experiment log and retained round artifacts. |
 | benchmark | Confusion-oriented outcome analysis; not an independent public benchmark suite or leaderboard. |
 | backtest | Long/flat per-bar research ledger with basis-point outputs; not an execution simulator. |

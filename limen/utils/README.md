@@ -18,7 +18,7 @@ Does **not** own the canonical experiment, feature, metric, or backtest surfaces
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `ParamSpace` | Legacy basic `UEL.run()` path and need permutation sampling | Advanced runs use `SearchStrategy` and `ParamDomain` instead |
+| `ParamSpace` | Legacy `UEL.run()` compatibility and direct permutation sampling | CLI and Python/MSQ runs use `SearchStrategy` and `ParamDomain` |
 | `data_dict_to_numpy` | Numpy arrays from the standard Limen `data_dict` | Common inside sklearn-style model functions |
 | `confidence_filtering_system` | Post-prediction filtering based on model agreement | An optional downstream helper, not part of the main UEL contract |
 | `adf_test` | Augmented Dickey-Fuller stationarity test | Requires the `stats` extra |
@@ -49,7 +49,7 @@ utils/
 ## Things to know
 
 - This package is intentionally mixed. If a helper grows into a coherent subsystem, move it out of `utils`.
-- `ParamSpace` is the legacy path, not the long-term abstraction for advanced search.
+- `ParamSpace` retains the [legacy execution contract](../../docs/Universal-Experiment-Loop.md#legacy-execution-reference); new Python examples use MSQ.
 - `data_dict_to_numpy` assumes the standard Limen split schema and supports model code.
 
 ## Read next

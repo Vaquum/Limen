@@ -52,4 +52,4 @@ reducer/
 ## Read next
 
 - [Reducers And Feedback](../../../docs/Reducers-And-Feedback.md)
-- [Advanced Search](../../../docs/Advanced-Search.md)
+- [Search Strategies](../../../docs/Advanced-Search.md)

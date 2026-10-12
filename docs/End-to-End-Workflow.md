@@ -150,7 +150,7 @@ results = pd.read_csv("results/dev/logreg_first_<timestamp>/results.csv")
 print(results.sort_values("auc", ascending=False).head())
 ```
 
-For full benchmark tables, run the same SFD through a UEL-backed Python object with `post_processing=True`, then inspect `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results`.
+For full benchmark tables on a live Python object, follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run) with `post_processing=True`, then inspect `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results`.
 
 ## Read next
 

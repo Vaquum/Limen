@@ -2,7 +2,7 @@
 
 `Log` is Limen's post-run analysis layer. It sits on top of a finished experiment and turns raw round results into round-level prediction tables, benchmark-style summaries, backtest summaries, and parameter-correlation views.
 
-For YAML CLI runs, start from the generated result directory and `results.csv`. For direct Python UEL runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
+For YAML CLI runs, start from the generated result directory and `results.csv`. For Python/MSQ runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
 
 In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.csv` contains trial aggregates. Use the recorded fold results and per-trial net-return track to inspect the individual test windows behind those means.
 
@@ -16,23 +16,9 @@ In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.c
 
 ### UEL-backed `Log`
 
-This is the direct Python analysis path.
+Run the [Python/MSQ example](Universal-Experiment-Loop.md#direct-python-run) with `post_processing=True`, then access the live analysis object:
 
 ```python
-import limen
-from limen.data import HistoricalData
-
-historical = HistoricalData()
-data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
-
-uel = limen.UniversalExperimentLoop(data=data, sfd=limen.sfd.logreg_binary)
-uel.run(
-    experiment_name='logreg-first',
-    n_permutations=4,
-    prep_each_round=True,
-    post_processing=True,
-)
-
 log = uel._log
 ```
 
@@ -269,7 +255,7 @@ That replaces `scaler_type` with `scaler_type_robust`, `scaler_type_logreg`, …
 
 - store test predictions as `round_results['_preds']`
 - keep prep deterministic with respect to `round_params`
-- use `prep_each_round=True` when the prep stage depends on round parameters
+- Python/MSQ prepares data for every candidate; legacy callers must use `prep_each_round=True` when preparation depends on round parameters
 
 Large model or prep objects that should not be flattened into the experiment log belong under:
 
@@ -291,7 +277,7 @@ For reliable post-run analysis:
 
 - prefer deterministic prep
 - if randomness is necessary, make it explicit in `round_params`
-- use `prep_each_round=True` when round parameters affect preparation
+- retain each round's alignment metadata and predictions with `post_processing=True`
 
 ## `read_from_file(file_path)`
 

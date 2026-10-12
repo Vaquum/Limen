@@ -6,7 +6,7 @@
 
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Command-Line Interface](../../docs/Command-Line-Interface.md)
-- [Advanced Search](../../docs/Advanced-Search.md)
+- [Search Strategies](../../docs/Advanced-Search.md)
 
 ## What this package owns
 

@@ -237,5 +237,5 @@ python -m pytest -q tests/test_*_reducer.py tests/test_reducer_factory.py tests/
 ## Read next
 
 - [Reducers and Feedback](../Reducers-And-Feedback.md) for operator behavior and tuning
-- [Advanced Search](../Advanced-Search.md) for the artifact-backed execution path
+- [Search Strategies](../Advanced-Search.md) for the artifact-backed execution path
 - [Universal Experiment Loop](../Universal-Experiment-Loop.md) for scheduling and persistence

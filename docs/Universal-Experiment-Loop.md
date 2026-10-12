@@ -1,23 +1,25 @@
 # Universal Experiment Loop
 
-The Universal Experiment Loop (UEL) is Limen's execution engine. The normal operator path reaches it through `limen run`: YAML is validated, compiled into a manifest-backed SFD, executed by UEL, and written to a result directory.
+The Universal Experiment Loop (UEL) executes Limen experiments. Choose the CLI for YAML manifests or the Python API for SFDs and direct search control. Both routes use the Mutable Search Queue (MSQ) inside UEL: a search strategy generates candidates, MSQ controls which candidate runs next, and UEL prepares data and evaluates it.
 
 This page covers:
 
 - how CLI execution maps to UEL
 - what `UniversalExperimentLoop` stores after a direct Python run
-- when to use direct standard UEL versus the artifact-backed path
+- how to run a Python SFD with a built-in search strategy
+- how to enable persistence, resume, and adaptive feedback
 - which runtime rules matter for manifest-driven and custom SFDs
 
 ## Prerequisites
 
+- `pip install "vaquum-limen[data]"` for the example below and access to its market-data source
 - a validated YAML manifest for the CLI path, or an SFD plus compatible data for direct Python use
-- `prep_each_round=True` for manifest-driven SFDs
-- an `experiment_dir` and `SearchStrategy` for checkpointed advanced runs
+- a `SearchStrategy` for Python/MSQ execution
+- an `experiment_dir` when you need persisted round artifacts or checkpoints
 
 ## Preferred execution path
 
-Start with CLI unless you are extending the engine directly:
+Start with CLI for a first YAML experiment:
 
 ```bash
 limen validate logreg-first.yaml
@@ -30,40 +32,32 @@ limen run logreg-first.yaml
 
 For trials evaluated across successive test windows, see [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps). Each trial runs all configured folds before its aggregate result enters the existing feedback loop.
 
-## Direct Python execution modes
+## Direct Python run
 
-Direct UEL integration currently has two execution modes.
+Use Python when the experiment is expressed as an SFD, when preparation or models need custom code, or when you need direct search control. A custom SFD exposes `params()`, `prep()`, and `model()` and receives `data=` explicitly; it does not need a YAML manifest or a built-in model architecture.
 
-| Mode | Entry path | Fits | Outputs |
-|---|---|---|---|
-| standard run path | instantiate with `sfd=` and optionally `data=`, then call `run()` without a `search_strategy` | custom local sweeps and Python examples | in-memory UEL artifacts plus a streaming CSV at `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when `experiment_dir` is set |
-| MSQ / artifact-backed path | instantiate with a concrete `search_strategy`, optionally `experiment_dir`, then call `run()` | advanced search flows, checkpointing, resumability, trainer workflows, and the CLI YAML path | `results.csv`, `round_data.jsonl`, checkpoints, audit trail, metadata, and in-memory UEL artifacts |
-
-The standard run path is for direct Python work. The artifact-backed path is the durable engine path used by CLI YAML runs and advanced search.
-
-On the standard path, `random_search=False` enumerates the first `n_permutations` combinations in declared parameter order, with the first parameter varying fastest. Random search retains legacy sampling without exposing a seed; module-global `random.seed(...)` does not pin it. Use direct `ParamSpace(seed=...)` helper calls for seeded sampling.
-
-## Direct standard run
-
-This local Python example uses the file-backed spot-kline path with explicit `kline_size` and `row_count_limit`.
+This example uses a built-in SFD and seeded random search. Replace the SFD with your own module to run custom code under the same loop.
 
 ```python
 import limen
 from limen.data import HistoricalData
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search import RandomStrategy
 
 historical = HistoricalData()
-historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
+data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
+sfd = limen.sfd.logreg_binary
+strategy = RandomStrategy(ParamDomain(sfd.params()), seed=42)
 
 uel = limen.UniversalExperimentLoop(
-    data=historical.data,
-    sfd=limen.sfd.logreg_binary,
+    data=data,
+    sfd=sfd,
+    search_strategy=strategy,
 )
 
 uel.run(
     experiment_name='logreg-first',
     n_permutations=4,
-    prep_each_round=True,
-    random_search=False,
     post_processing=True,
 )
 ```
@@ -76,7 +70,9 @@ uel.experiment_confusion_metrics
 uel.experiment_backtest_results
 ```
 
-Without `post_processing=True`, standard UEL still writes `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset.
+Without `post_processing=True`, UEL still populates `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset. With no `experiment_dir`, the run writes `logreg-first.csv`; it does not persist round data or checkpoints.
+
+For exhaustive search, use `GridStrategy` over the same `ParamDomain`. The random-search seed controls candidate generation, not randomness inside preparation or model code. See [Search Strategies](Advanced-Search.md) for strategy choices and optional feedback.
 
 The [convergence warning report](#convergence-warning-report) is available after run conclusion independently of `post_processing`.
 
@@ -91,9 +87,9 @@ Post-processing retains:
 
 ```python
 uel = limen.UniversalExperimentLoop(
-    data=None,
-    sfd=my_sfd,
-    search_strategy=None,
+    data=data,
+    sfd=sfd,
+    search_strategy=strategy,
     experiment_dir=None,
 )
 ```
@@ -104,9 +100,9 @@ uel = limen.UniversalExperimentLoop(
 |---|---|
 | `sfd` | required SFD module |
 | `data` | optional input dataframe; required for custom SFDs, optional for manifest-driven SFDs |
-| `search_strategy` | advanced search hook; enables the MSQ execution path |
-| `experiment_dir` | optional directory for stored run outputs; standard runs write their CSV there, and advanced runs write their artifact set there |
-| `pruning_strategies`, `feedback_interval`, `checkpoint_interval`, `intra_callback` | advanced MSQ controls |
+| `search_strategy` | candidate-generation strategy; selects the MSQ execution path |
+| `experiment_dir` | optional directory for saved results, round data, metadata, and checkpoints |
+| `pruning_strategies`, `feedback_interval`, `checkpoint_interval`, `intra_callback` | optional feedback and checkpoint controls |
 | `yaml_reference` | optional parsed YAML dict stored verbatim in `metadata.json` for reproducibility |
 
 ### Data behavior
@@ -121,7 +117,6 @@ uel = limen.UniversalExperimentLoop(
 uel.run(
     experiment_name='my_experiment',
     n_permutations=100,
-    prep_each_round=True,
 )
 ```
 
@@ -129,13 +124,10 @@ uel.run(
 
 | Argument | Meaning |
 |---|---|
-| `experiment_name` | run name and CSV path stem; `my_experiment` writes `my_experiment.csv`, or `experiment_dir/my_experiment.csv` when `experiment_dir` is set on the standard path |
+| `experiment_name` | run name; without `experiment_dir`, writes `<experiment_name>.csv`; with it, writes `results.csv` there |
 | `n_permutations` | positive integer number of rounds to execute; YAML validation rejects bool, zero, negative, and values larger than the available parameter space |
-| `prep_each_round` | whether prep runs every round; required for manifest-driven SFDs |
-| `random_search` | random versus deterministic parameter generation on the standard path |
 | `context_params` | extra static keys injected into every round |
-| `params`, `prep`, `model` | optional overrides for the standard path |
-| `resume` | resume from checkpoint in the advanced path |
+| `resume` | restore a checkpoint from `experiment_dir` |
 | `post_processing` | compute terminal post-run metrics (`uel._log`, confusion metrics, backtest results) |
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
@@ -148,25 +140,15 @@ Set `uel.factorize: true` in YAML or `run(..., factorize=True)`. The existing gr
 
 The cache retains predictions, price/provenance and recording evidence, and grows with distinct successful signal keys; it has no eviction. It discards feature matrices and fitted models. Large signal grids may require ordinary execution. Context overrides must pass the same admission checks; intervention files and candidates outside the admitted domain reject.
 
-### Manifest-driven rules
+### SFD execution contract
 
-If the SFD uses `manifest()`:
+On the ordinary MSQ path, UEL calls the SFD's preparation and model functions for each candidate. Manifest-driven SFDs supply these functions through their manifest. Custom SFDs supply them directly and require explicit `data=`. Configure candidate values in the strategy's `ParamDomain`; configure custom functions in the SFD. The `factorize` option above has a separate, narrower manifest-only contract.
 
-- `prep_each_round=True` is required
-- `prep=` and `model=` overrides are not allowed
-- `params=` override is allowed
-
-### Custom-SFD rules
-
-If the SFD uses custom `prep()` and `model()`:
-
-- `data=` must be provided when UEL is instantiated
-- `prep_each_round` can be `True` or `False`, depending on whether prep depends on round params
-- `params=`, `prep=`, and `model=` overrides are available on the standard path
+For saved custom runs, the SFD must expose `__name__` and preparation must supply the expected `_alignment` metadata. Arbitrary custom SFD execution does not imply Trainer compatibility: Trainer reconstructs a manifest from a saved `yaml_reference`.
 
 ## What UEL stores after a run
 
-Primary attributes are listed below. `uel.data`, `uel.params`, `uel.experiment_log`, and `uel._log` are available after every successful run. Round artifact collections are retained only when `run(..., post_processing=True)` (or the corresponding advanced-run option) is enabled.
+Primary attributes are listed below. `uel.data`, `uel.params`, and `uel.experiment_log` are available after every successful run. `uel._log` and round artifact collections are retained only when `run(..., post_processing=True)` is enabled.
 
 | Attribute | Meaning |
 |---|---|
@@ -231,31 +213,7 @@ The inline confusion and backtest returns are price-gated: confusion counts alwa
 
 TP/SL candidates belong to `sfd.manifest.backtest` references and ordinary search-parameter lists. Each candidate repeats preparation, training, and prediction; an exit-only sweep preserves predictions only with deterministic entry behavior. Rule-based entry architectures evaluate the fixed exits per split, while UEL still omits their post-run aggregate backtest table. Configured replay depends on in-memory provenance and is unavailable for file-only/resumed runs; Trainer rebuilds a fresh round. [Backtest](Backtest.md#tunable-take-profit-and-stop-loss) defines the canonical contract.
 
-## Standard path versus artifact-backed path
-
-### Standard path
-
-The standard path writes a streaming CSV at:
-
-```text
-<experiment_name>.csv
-```
-
-When `experiment_dir` is set, the standard path writes:
-
-```text
-<experiment_dir>/<experiment_name>.csv
-```
-
-and keeps the full run state in memory on the `uel` object.
-
-This is the path to use for:
-
-- direct local research loops
-- custom Python examples
-- direct parameter sweeps
-
-### Artifact-backed path
+## Persisting Python/MSQ runs
 
 When UEL is instantiated with a concrete `search_strategy` and an `experiment_dir`, Limen stores structured artifacts there. This path uses `results.csv` as the round log filename rather than `<experiment_name>.csv`.
 
@@ -269,7 +227,7 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 | `metadata.json` | experiment metadata used by `Trainer` |
 | `convergence_report.json` | convergence warning report written at run conclusion, independently of post-processing |
 
-This path is what powers checkpointing, resumability, and the [Trainer](Trainer.md) workflow.
+Saved state powers checkpointing and resumability. The CLI also stores the YAML definition in `metadata.json`; [Trainer](Trainer.md) and CLI resume require that reconstructible `yaml_reference`. A Python run with arbitrary custom functions and an `experiment_dir` does not automatically meet this requirement.
 
 ### Record execution
 
@@ -317,22 +275,19 @@ LightGBM and XGBoost add `best_iteration` to `results.csv`: the number of boosti
 
 The option is independent of `record_execution` and `post_processing`; leaving it off preserves existing outputs. Python resume must pass the same flag; CLI resume uses the effective setting saved in metadata, including Python overrides. Metadata records an enabled setting, and a changed setting rejects resume before artifacts are rewritten. Older metadata without the flag means `false`. Probability arrays increase JSONL storage with test-window length.
 
-### Important scope note
+## Optional adaptive search
 
-Limen ships built-in strategies (`GridStrategy`, `RandomStrategy`) and the `SearchStrategy` abstraction for custom strategies. The advanced path is available with built-in strategies or a custom implementation from the caller's codebase.
-
-## One real advanced run
-
-The UEL-facing part of an advanced run looks like this with a concrete `SearchStrategy`:
+Optional reducers can adapt the search while UEL runs. This example adds a budget reducer to a built-in grid strategy:
 
 ```python
 import limen
 
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search import GridStrategy
 from limen.experiment.reducer import BudgetReducer
 
 domain = ParamDomain(limen.sfd.random_binary.params())
-strategy = MiniGrid(domain)  # see Advanced Search for a complete minimal implementation
+strategy = GridStrategy(domain)
 
 uel = limen.UniversalExperimentLoop(
     sfd=limen.sfd.random_binary,
@@ -355,7 +310,7 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 ## Resume in practice
 
-Resumption belongs only to the advanced path:
+Python/MSQ runs can resume when an `experiment_dir` and a checkpoint are available:
 
 ```python
 uel.run(
@@ -370,19 +325,35 @@ In a live shutdown-and-resume run in this repo:
 - the first phase stopped after `2` completed rounds
 - `results.csv` and `round_data.jsonl` each contained `2` entries
 - the resumed phase finished the remaining rounds
-- the final stored round ids were `0, 1, 2, 3`
+- the final stored round indices were `0, 1, 2, 3`
 
 Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
 
-For the full advanced-search contract, continue to [Advanced Search](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md).
+For strategy and feedback controls, continue to [Search Strategies](Advanced-Search.md) and [Reducers And Feedback](Reducers-And-Feedback.md).
+
+## Legacy execution reference
+
+UEL also retains the standard `ParamSpace` execution path for existing callers. Omitting `search_strategy` selects it. New examples use Python/MSQ; this reference records the legacy contract without changing its support.
+
+| Legacy `run()` argument | Behavior |
+|---|---|
+| `random_search` | random sampling, or deterministic enumeration when `False` |
+| `prep_each_round` | repeat preparation; `True` is required for manifest-driven SFDs; custom SFDs may prepare once when it is `False` |
+| `params` | callable override for the parameter space |
+| `prep`, `model` | callable overrides for custom SFDs; disallowed for manifest-driven SFDs |
+| `maintain_details_in_params` | expose `_experiment_details` to the current round |
+
+The path writes `<experiment_name>.csv`, or `<experiment_dir>/<experiment_name>.csv` when a directory is supplied. It uses integer round IDs and has no checkpoint/resume or MSQ feedback. `post_processing=True` enables the same live analysis attributes.
+
+With `random_search=False`, combinations follow declared parameter order, with the first parameter varying fastest. Legacy UEL random sampling exposes no seed; module-global `random.seed(...)` does not pin it. The [ParamSpace utility](Utilities.md#paramspace) exposes its own seed for direct helper use. These ordering and sampling contracts differ from the MSQ strategies.
 
 ## Common Errors
 
-### Manifest-driven runs require `prep_each_round=True`
+### Legacy manifest-driven runs require `prep_each_round=True`
 
 A manifest-driven SFD with `prep_each_round=False` raises `prep_each_round must be True for manifest-driven SFDs`. Set `prep_each_round=True`.
 
-### Manifest-driven runs cannot override `prep` or `model`
+### Legacy manifest-driven runs cannot override `prep` or `model`
 
 Passing `prep=` or `model=` to `run()` for a manifest-driven SFD raises `Cannot override prep/model when SFD has manifest`. Put the logic into the manifest, or switch to the custom SFD path.
 
@@ -392,7 +363,7 @@ A custom SFD with omitted `data=` raises `data parameter required for custom SFD
 
 ### Resuming requires a search strategy
 
-Resumption belongs to the advanced path. Calling `run(resume=True)` without a search strategy raises `resume=True is only supported with a search_strategy`.
+Calling `run(resume=True)` without a search strategy raises `resume=True is only supported with a search_strategy`. Python/MSQ resume also requires a saved checkpoint directory.
 
 ## Read next
 

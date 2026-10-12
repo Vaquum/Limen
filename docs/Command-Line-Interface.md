@@ -4,7 +4,7 @@ The Limen CLI is the supported shell surface for YAML-first experiment work. It 
 
 ## Scope
 
-The CLI owns project and manifest operations around declarative YAML experiments. It does not replace the Python API for custom SFD authoring, custom feature code, or direct `UniversalExperimentLoop` integration.
+The CLI owns project and manifest operations around declarative YAML experiments. It constructs UEL with a search strategy and MSQ, the same execution path used by the [Python API](Universal-Experiment-Loop.md#direct-python-run). Use Python for fully custom SFDs, search strategies, or callbacks that YAML cannot express.
 
 ## Prerequisites
 

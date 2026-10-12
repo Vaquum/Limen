@@ -176,20 +176,7 @@ def manifest() -> Manifest:
     )
 ```
 
-Run the Python-built SFD through UEL only when direct engine integration is required:
-
-```python
-import limen
-from limen import sfd
-
-uel = limen.UniversalExperimentLoop(sfd=sfd.foundational_sfd.logreg_binary)
-
-uel.run(
-    experiment_name='manifest-demo',
-    n_permutations=25,
-    prep_each_round=True,
-)
-```
+To run a Python-built SFD, follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run). Construct a search strategy from the SFD's `params()` and pass both the SFD and strategy to UEL. A manifest-driven SFD can fetch its own data when `data=` is omitted.
 
 For ordinary runs, keep the manifest in YAML and use `limen run`.
 

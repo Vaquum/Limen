@@ -10,6 +10,7 @@
   <a href="#limen">Limen</a> •
   <a href="#what-limen-is-not">What Limen Is Not</a> •
   <a href="#capabilities">Capabilities</a> •
+  <a href="#run-experiments">Run Experiments</a> •
   <a href="#first-experiment">First Experiment</a> •
   <a href="#learn-more">Learn More</a>
 </div>
@@ -55,6 +56,17 @@ In the wider Vaquum architecture, Origo sits upstream as the data layer. Nexus, 
 - Decoder cohort construction with pluggable selection
 - Reproducible runs with checkpointing, resumption, and validated round replay
 
+## Run Experiments
+
+Choose the route that fits how you define the experiment:
+
+| Route | Use it when | Start here |
+|---|---|---|
+| CLI | Define a manifest in YAML and run it without Python orchestration. | [First Experiment](#first-experiment) |
+| Python API, backed by MSQ | Run a Python SFD with built-in or custom search strategies, including fully custom preparation and model functions. | [Python/MSQ run](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run) |
+
+Both routes use the Universal Experiment Loop (UEL) to execute rounds and the Mutable Search Queue (MSQ) to control parameter search. Persistence and adaptive feedback are optional capabilities of that execution path.
+
 ## First Experiment
 
 The first runnable path is a YAML manifest executed through the `limen` CLI.
@@ -94,7 +106,7 @@ limen run logreg-first.yaml
 - `results.csv`
 - `round_data.jsonl`
 
-That path runs the manifest-backed engine without Python orchestration code. The Python API remains available for custom SFDs, custom prep/model logic, and direct UEL integration.
+For a Python experiment, follow the [Python/MSQ run](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run). Supply an SFD and a search strategy; custom SFDs also receive your input dataframe explicitly.
 
 ## Risk Boundary
 
@@ -105,7 +117,7 @@ Limen is research software. Benchmark and backtest outputs are not investment ad
 - Start with the full [documentation hub](https://docs.vaquum.fi/limen/overview/docs-hub)
 - See planned direction in the [Roadmap](https://docs.vaquum.fi/limen/overview/roadmap) and the security posture in the [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md)
 - Start with the YAML/CLI path in [Command-Line Interface](https://docs.vaquum.fi/limen/guides/command-line-interface) and [Experiment Manifest](https://docs.vaquum.fi/limen/guides/experiment-manifest)
-- Use [Universal Experiment Loop](https://docs.vaquum.fi/limen/guides/universal-experiment-loop) for the engine beneath CLI and direct Python integration
+- Use [Universal Experiment Loop](https://docs.vaquum.fi/limen/guides/universal-experiment-loop) for the Python/MSQ route and the engine shared with CLI
 - Define extension research units in [Single-File Decoder](https://docs.vaquum.fi/limen/guides/single-file-decoder) and [Built-In SFDs](https://docs.vaquum.fi/limen/guides/built-in-sfds)
 - Strengthen the research surface with [Perturbation Strategies](https://docs.vaquum.fi/limen/guides/perturbation-strategies) for robustness, [Fractional Differentiation](https://docs.vaquum.fi/limen/guides/fractional-differentiation) for stationary features, and [Triple-Barrier Method](https://docs.vaquum.fi/limen/guides/triple-barrier-method) for path-dependent labels
 - Analyze results in [Log](https://docs.vaquum.fi/limen/guides/log), [Benchmark](https://docs.vaquum.fi/limen/guides/benchmark), and [Backtest](https://docs.vaquum.fi/limen/guides/backtest)

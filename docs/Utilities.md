@@ -35,7 +35,7 @@ By default, `generate(random_search=False)` consumes the sampled pool in order. 
 
 `ParamSpace` uses an instance-local random generator. Pass `seed=` for reproducible legacy sampling; it does not read or mutate Python's module-global random state. Standard `UniversalExperimentLoop` construction does not expose that seed, so instantiate `ParamSpace` directly when you need seeded legacy helper sampling. This legacy helper is outside the artifact-backed `round_params` reproducibility contract.
 
-Use `ParamSpace` only on the legacy UEL path. The advanced path uses [Advanced Search](Advanced-Search.md) primitives instead.
+`ParamSpace` supports the [legacy execution contract](Universal-Experiment-Loop.md#legacy-execution-reference). For new Python experiments, use a strategy through the [Python/MSQ route](Universal-Experiment-Loop.md#direct-python-run).
 
 ## `data_dict_to_numpy`
 
@@ -145,6 +145,6 @@ These are text-formatting utilities, not a canonical reporting framework.
 
 ## Read next
 
-- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for the legacy path that still uses `ParamSpace`.
-- Continue to [Advanced Search](Advanced-Search.md) for the newer search abstractions that replace `ParamSpace` in artifact-backed runs.
+- Continue to the [legacy execution reference](Universal-Experiment-Loop.md#legacy-execution-reference) for the contract that still uses `ParamSpace`.
+- Continue to [Search Strategies](Advanced-Search.md) for the strategies used by CLI and Python/MSQ runs.
 - Continue to [Reference Architecture](Reference-Architecture.md) for `data_dict_to_numpy()` usage inside model code.
