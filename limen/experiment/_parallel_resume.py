@@ -148,7 +148,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     for key in ('record_execution', 'record_model_outputs', 'factorize'):
         if metadata.get(key, False) != attributes[f'_{key}']:
             raise ValueError(f'Cannot resume with a different {key} setting')
-    if not isinstance(context_keys := metadata.get('context_parameter_keys'), list) or any(not isinstance(key, str) or key.startswith('_') for key in cast(list[object], context_keys)) or len(set(cast(list[str], context_keys))) != len(context_keys):
+    if not isinstance(context_keys := metadata.get('context_parameter_keys'), list) or any(not isinstance(key, str) or key.startswith('_') for key in cast(list[object], context_keys)) or len(set(cast(list[str], context_keys))) != len(cast(list[str], context_keys)):
         raise ValueError('Cannot resume parallel run without valid context parameter keys')
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
