@@ -1597,3 +1597,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.25.2] - 2026-10-13
 
 - Reuse deterministic fitted target and RobustScaler state across model variations inside opt-in factorized snapshot grids; preserve fresh preparation for ordinary permutations (#484).
+
+## [5.25.3] - 2026-10-13
+
+- Convert prepared Polars inputs explicitly at logistic-regression, Ridge and built-in sklearn calibration boundaries; preserve feature order, prepared frames and custom calibration inputs (#689).
