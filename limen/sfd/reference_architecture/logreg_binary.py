@@ -128,9 +128,10 @@ class LogRegBinary(ReferenceModel):
                 self._fitted_calibrator, self._calibration_threshold, self._val_score = fit_calibrator(
                     self.model, self.prediction_calibration_config, data['x_val'], data['y_val']
                 )
+            predict_proba = self._fitted_calibrator.predict_proba
             sklearn_input = self._fitted_calibrator is self.model or isinstance(self._fitted_calibrator, CalibratedClassifierCV)
             test_input = np.asarray(data['x_test']) if sklearn_input else data['x_test']
-            test_proba = self._fitted_calibrator.predict_proba(test_input)[:, 1]
+            test_proba = predict_proba(test_input)[:, 1]
             preds = (test_proba >= self._calibration_threshold).astype(np.int8)
             return {
                 '_preds': preds,

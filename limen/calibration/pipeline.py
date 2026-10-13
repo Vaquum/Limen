@@ -61,9 +61,10 @@ def fit_calibrator(model: Any,
 
     fitted = (config.calibration_func(model, x_val, y_val, **config.calibration_params)
               if config.calibration_func is not None else model)
+    predict_proba = fitted.predict_proba
     val_input = (np.asarray(x_val) if isinstance(fitted, CalibratedClassifierCV)
                  or (fitted is model and isinstance(model, BaseEstimator)) else x_val)
-    val_proba = fitted.predict_proba(val_input)[:, 1]
+    val_proba = predict_proba(val_input)[:, 1]
 
     threshold, score = (config.threshold_func(y_val, val_proba, **config.threshold_params)
                         if config.threshold_func is not None else (0.5, None))
@@ -89,8 +90,9 @@ def apply_calibrated_predict(model: Any,
     '''
 
     fitted, threshold, score = fit_calibrator(model, config, data['x_val'], data['y_val'])
+    predict_proba = fitted.predict_proba
     test_input = (np.asarray(data['x_test']) if isinstance(fitted, CalibratedClassifierCV)
                   or (fitted is model and isinstance(model, BaseEstimator)) else data['x_test'])
-    test_proba = fitted.predict_proba(test_input)[:, 1]
+    test_proba = predict_proba(test_input)[:, 1]
     preds = (test_proba >= threshold).astype(np.int8)
     return {'_preds': preds, '_probs': test_proba, 'optimal_threshold': threshold, 'val_score': score}
