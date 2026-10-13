@@ -2,32 +2,23 @@ from typing import Any
 
 import pandas as pd
 
+from limen.log._experiment_backtest_results import _captured_metrics
 
-def experiment_confusion_metrics(self: Any, x: str) -> pd.DataFrame:
+_COLUMNS = ['tp', 'fp', 'tn', 'fn', 'precision', 'recall', 'tp_mean_return_pct', 'fp_mean_return_pct', 'tn_mean_return_pct', 'fn_mean_return_pct']
 
-    '''
-    Compute confusion metrics for each round of an experiment.
 
-    Args:
-        x (str): Column name to compute confusion metrics for
-
-    Returns:
-        pd.DataFrame: One-row-per-round table with confusion and long-only summary columns (see permutation_confusion_metrics)
-    '''
-
-    all_rows: list[pd.DataFrame] = []
-
-    for i in range(len(self.round_params)):
-
-        result_df = self.permutation_confusion_metrics(x=x,
-                                                       round_id=i,
-                                                       id_cols=self.round_params[i])
-
-        all_rows.append(result_df)
-
+def experiment_confusion_metrics(self: Any, x: str | None = None) -> pd.DataFrame:
+    '''Read captured confusion metrics, or retain explicit-x row analysis.'''
+    if x is None:
+        rows = _captured_metrics(self, _COLUMNS, 'confusion_')
+        if rows.empty:
+            raise ValueError('No objects to concatenate')
+        return rows
+    params = getattr(self, 'round_params', None)
+    if params is None:
+        raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
+    all_rows = [self.permutation_confusion_metrics(x=x, round_id=index, id_cols=parameters)
+                for index, parameters in enumerate(params)]
     if not all_rows:
         raise ValueError('No objects to concatenate')
-    df_all = pd.DataFrame([record for row in all_rows for record in row.to_dict('records')])
-
-    return df_all
-
+    return pd.DataFrame([record for row in all_rows for record in row.to_dict('records')])

@@ -8,7 +8,7 @@ The layer evaluates entry signals together with declared costs, sizing, and opti
 
 - aligned binary predictions and OHLC/price-change columns
 - explicit fee, slippage, notional, and execution-lag assumptions
-- retained round artifacts for post-run experiment-wide analysis
+- captured metric columns for aggregate results; retained row evidence only when constructing explicit snapshot inputs
 
 ## Risk boundary
 
@@ -21,12 +21,12 @@ Table 1. Backtest is exposed through three paths.
 | path | use |
 |---|---|
 | `uel.experiment_backtest_results` | Experiment-wide table with one row per round. |
-| `uel._log.experiment_backtest_results()` | Log-layer method that builds the experiment-wide table. |
+| `uel._log.experiment_backtest_results()` | Read captured results; see the [Log contract](Log.md#backtest-surface) for CSV and fold behavior. |
 | `limen.backtest.backtest_snapshot.backtest_snapshot` | Module function for one per-round prediction table. |
 
 ## Snapshot contract
 
-`backtest_snapshot()` returns one summary row as a metrics dict keyed by the ledger columns. Shipped reference architectures use the same execution path inline and during manifest-backed post-run replay. With configured TP/SL, replay reconstructs private OHLC inputs; the public prediction-performance table keeps its existing columns.
+`backtest_snapshot()` returns one summary row as a metrics dict keyed by the ledger columns. Shipped reference architectures compute these metrics during the round. Aggregate `Log` reads preserve those captured results without replay; [Log](Log.md#backtest-surface) defines that contract. Explicit prediction-performance tables keep their existing columns.
 
 ```python
 uel._log.permutation_prediction_performance(round_id=0)
@@ -206,7 +206,7 @@ Use the experiment-wide table to compare rounds.
 backtest = uel.experiment_backtest_results
 ```
 
-Use the module function to inspect one permutation.
+With retained live row evidence, use the module function to evaluate explicit snapshot inputs. This is separate from reading captured aggregate results.
 
 ```python
 from limen.backtest.backtest_snapshot import backtest_snapshot
@@ -336,4 +336,4 @@ Future settled funding remains private cost evidence. A funding feature requires
 
 `limen.backtest.trade_execution` accepts resolved `TradePolicy` and bound `TradeInputs`. Its `TradeLedger` separates states, intents, fills, episodes and funding. Returns and drawdown use actual marked equity; costs, funding credits/debits, gross/net PnL, completed/open episodes and mean absolute exposure are separate. Exposure samples use model availability, so shorts cannot cancel longs in an average.
 
-Each round freezes canonical `trade_contract`, SHA-256 digest, source identities/checksums, policy/adapter/preset versions, calibration and event/episode ledger in JSONL. In-memory Log replays unchanged signed predictions and verifies reconstructed bindings before accounting. Configured file-only/resumed Log replay fails explicitly: a contract cannot supply missing prices. Deployment parity remains subject to the linked Praxis/Nexus requests.
+Each round freezes canonical `trade_contract`, SHA-256 digest, source identities/checksums, policy/adapter/preset versions, calibration and event/episode ledger in JSONL. Aggregate reads use the captured results; recomputing configured execution separately requires original bound prices and provenance. A saved contract cannot supply missing prices or recreate private source bindings. See [Log](Log.md#backtest-surface) for aggregate and retained-row boundaries. Deployment parity remains subject to the linked Praxis/Nexus requests.
