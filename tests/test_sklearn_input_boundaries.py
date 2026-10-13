@@ -117,7 +117,7 @@ def test_recorded_logreg_boundary_matches_direct_sklearn(
     configured = use_calibration or use_threshold
     if use_calibration:
         fitted = CalibratedClassifierCV(FrozenEstimator(legacy), method=method).fit(
-            np.asarray(data['x_val']), np.asarray(data['y_val']),
+            data['x_val'], data['y_val'],
         )
     score, threshold = None, 0.5
     if use_threshold:
@@ -244,10 +244,13 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
         actual = model.predict(data)
         replay = model.predict({'x_test': data['x_test']})
         standalone = apply_calibrated_predict(model.model, config, data)
+        threshold_only = apply_calibrated_predict(
+            model.model, CalibrationConfig(threshold_func=threshold), data,
+        )
     assert len(calls) == 2
     assert all(frame is data['x_val'] or frame is data['x_test'] for frame in predictions)
     assert sum(frame is data['x_val'] for frame in predictions) == 2
-    for output in (replay, standalone):
+    for output in (replay, standalone, threshold_only):
         np.testing.assert_array_equal(output['_preds'], actual['_preds'])
         np.testing.assert_array_equal(output['_probs'], actual['_probs'])
         assert output['optimal_threshold'] == actual['optimal_threshold']
