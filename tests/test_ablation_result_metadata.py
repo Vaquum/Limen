@@ -14,12 +14,14 @@ from limen.experiment.errors import StrictModeError
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy
+from limen.sfd.reference_architecture._backtest_evaluation import compute_backtest
 from limen.targets import ThresholdBinaryTarget
 
 
 def _observed_model(data):
     labels = np.asarray(data['y_test'])
-    return {'positive_fraction': float(labels.mean()), '_preds': labels.tolist()}
+    return {'positive_fraction': float(labels.mean()), '_preds': labels.tolist(),
+            **compute_backtest(labels, data)}
 
 
 def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,), feedback_interval=1):
