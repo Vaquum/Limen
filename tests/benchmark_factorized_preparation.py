@@ -150,6 +150,8 @@ def _campaign(case, directory, report_path):
             raise AssertionError(f'Expected one native thread: {native_pools}')
     elapsed = time.perf_counter() - started
     captured = _captured(directory)
+    scientific_digest = digest(captured)
+    components = component_digests(captured)
     peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     report = {
         'case': case, 'limen_version': __version__, 'python': sys.version,
@@ -159,8 +161,8 @@ def _campaign(case, directory, report_path):
         'rounds': len(captured['rows']), 'stages': stages,
         'campaign_elapsed_seconds': elapsed,
         'peak_process_rss_bytes': int(peak if sys.platform == 'darwin' else peak * 1024),
-        'scientific_digest_12dp': digest(captured),
-        'component_digests_12dp': component_digests(captured),
+        'scientific_digest_12dp': scientific_digest,
+        'component_digests_12dp': components,
         'native_pools': native_pools,
         'configuration': config,
     }
