@@ -2,7 +2,7 @@ from typing import Any
 
 import pandas as pd
 
-from limen.log._experiment_backtest_results import _captured_metrics
+from limen.log._experiment_backtest_results import captured_metrics
 
 _COLUMNS = ['tp', 'fp', 'tn', 'fn', 'precision', 'recall', 'tp_mean_return_pct', 'fp_mean_return_pct', 'tn_mean_return_pct', 'fn_mean_return_pct']
 
@@ -10,7 +10,7 @@ _COLUMNS = ['tp', 'fp', 'tn', 'fn', 'precision', 'recall', 'tp_mean_return_pct',
 def experiment_confusion_metrics(self: Any, x: str | None = None) -> pd.DataFrame:
     '''Read captured confusion metrics, or retain explicit-x row analysis.'''
     if x is None:
-        rows = _captured_metrics(self, _COLUMNS, 'confusion_')
+        rows = captured_metrics(self, _COLUMNS, 'confusion_')
         if rows.empty:
             raise ValueError('No objects to concatenate')
         return rows

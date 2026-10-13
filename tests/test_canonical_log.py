@@ -172,16 +172,27 @@ def test_row_analysis_contract(captured_runs):
             expected = pd.concat(rows, ignore_index=True)
             assert_frame_equal(log.experiment_confusion_metrics('price_change'), expected)
             assert_frame_equal(loop.experiment_confusion_metrics, expected)
+            assert_frame_equal(log.permutation_prediction_performance(-1),
+                               log.permutation_prediction_performance(len(loop.round_params) - 1))
+            for evidence in ('preds', '_alignment'):
+                incomplete = Log(uel_object=loop)
+                setattr(incomplete, evidence, getattr(incomplete, evidence)[:-1])
+                with pytest.raises(ValueError, match=r'retained serial evidence.*post_processing=True'):
+                    incomplete.permutation_prediction_performance(0)
+            incomplete_scalers = Log(uel_object=loop, inverse_scaler=_forbidden)
+            incomplete_scalers.scalers = incomplete_scalers.scalers[:-1]
+            with pytest.raises(ValueError, match='fitted scaler'):
+                incomplete_scalers.permutation_prediction_performance(0)
             assert {'n_kept', 'tp_x_median', 'fp_x_median', 'precision_pct', 'recall_pct', 'tp_fp_cohen_d', 'tp_fp_ks'}.issubset(expected.columns)
             assert list(log.experiment_confusion_metrics()) == CONFUSION
             assert_frame_equal(log.experiment_confusion_metrics(), _projection(captured, CONFUSION, 'confusion_'), check_dtype=False)
         else:
             for view in (log, Log(file_path=str(csv_path))):
-                with pytest.raises(ValueError, match='retained serial evidence.*post_processing=True'):
+                with pytest.raises(ValueError, match=r'retained serial evidence.*post_processing=True'):
                     view.permutation_prediction_performance(0)
-                with pytest.raises(ValueError, match='retained serial evidence.*post_processing=True'):
+                with pytest.raises(ValueError, match=r'retained serial evidence.*post_processing=True'):
                     view.permutation_confusion_metrics('price_change', 0)
-                with pytest.raises(ValueError, match='retained serial evidence.*post_processing=True'):
+                with pytest.raises(ValueError, match=r'retained serial evidence.*post_processing=True'):
                     view.experiment_confusion_metrics('price_change')
 
 
@@ -206,7 +217,7 @@ def test_captured_fold_contract(tmp_path, monkeypatch):
     assert_frame_equal(pure.experiment_backtest_results(), expected)
     with pytest.raises(ValueError, match='fold-specific'):
         pure.permutation_prediction_performance(0)
-    with pytest.raises(ValueError, match='[Cc]aptured.*missing|[Cc]aptured.*incomplete'):
+    with pytest.raises(ValueError, match=r'[Cc]aptured.*missing|[Cc]aptured.*incomplete'):
         Log(file_path=str(tmp_path / 'results.csv')).experiment_backtest_results()
 
 
@@ -247,7 +258,7 @@ def test_capture_errors_and_occurrences(tmp_path):
                                    ('confusion_', CONFUSION, 'experiment_confusion_metrics')):
         for removed in ([prefix + names[0]], [prefix + name for name in names]):
             incomplete = Log(uel_object=SimpleNamespace(experiment_log=loop.experiment_log.drop(removed)))
-            with pytest.raises(ValueError, match='[Cc]aptured.*missing|[Cc]aptured.*incomplete'):
+            with pytest.raises(ValueError, match=r'[Cc]aptured.*missing|[Cc]aptured.*incomplete'):
                 getattr(incomplete, method)()
     empty = Log(uel_object=SimpleNamespace(experiment_log=loop.experiment_log.head(0)))
     assert empty.experiment_backtest_results().empty

@@ -4,10 +4,12 @@ import pandas as pd
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 
+__all__ = ['experiment_backtest_results', 'captured_metrics', '_prepare_snapshot_backtest_input']
+
 _EVENT_COLUMNS = ['total_return', 'ending_equity', 'max_drawdown', 'net_pnl', 'gross_pnl', 'fees', 'slippage', 'funding_pnl', 'completed_trades', 'open_trades', 'episode_win_rate', 'avg_absolute_exposure']
 
 
-def _captured_metrics(source: object, names: list[str], prefix: str) -> pd.DataFrame:
+def captured_metrics(source: object, names: list[str], prefix: str) -> pd.DataFrame:
     frame = getattr(source, '_captured_log', getattr(source, 'experiment_log', None))
     if not isinstance(frame, pd.DataFrame):
         raise ValueError('Captured experiment rows are required for aggregate metrics')
@@ -58,9 +60,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     if 'actuals' in result:
         actual = _to_numeric_strict(result['actuals'], 'actual')
         if _is_unsupported_multiclass(actual):
-            raise ValueError(
-                'snapshot backtest does not support multiclass actuals; use binary predictions or directional regression scores'
-            )
+            raise ValueError('snapshot backtest does not support multiclass actuals; use binary predictions or directional regression scores')
 
     if _is_binary(pred):
         return result
@@ -92,4 +92,4 @@ def experiment_backtest_results(self: Any) -> pd.DataFrame:
 
     frame = getattr(self, '_captured_log', getattr(self, 'experiment_log', None))
     names = _EVENT_COLUMNS if isinstance(frame, pd.DataFrame) and all(f'backtest_{name}' in frame for name in _EVENT_COLUMNS) else BACKTEST_SNAPSHOT_COLUMNS
-    return _captured_metrics(self, names, 'backtest_')
+    return captured_metrics(self, names, 'backtest_')

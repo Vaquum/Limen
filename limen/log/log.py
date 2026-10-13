@@ -27,6 +27,7 @@ class Log:
         super().__init__()
 
         self.fold_results = pl.DataFrame()
+        self.data = self.prep = self.scalers = self.round_params = self.preds = self._alignment = self.manifest = None
 
         if uel_object is not None:
 
@@ -69,7 +70,9 @@ class Log:
     def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
-        if any(getattr(self, name, None) is None for name in ('data', 'prep', 'round_params', 'preds', '_alignment')) or not callable(self.prep) or not len(self.round_params) == len(self.preds) == len(self._alignment) or not -len(self.round_params) <= round_id < len(self.round_params):
+        if self.round_params is None or self.preds is None or self._alignment is None:
+            raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
+        if self.data is None or not callable(self.prep) or not len(self.round_params) == len(self.preds) == len(self._alignment) or not -len(self.round_params) <= round_id < len(self.round_params):
             raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
         if self.inverse_scaler is not None and (self.scalers is None or len(self.scalers) != len(self.round_params)):
             raise ValueError('Row analysis requires the fitted scaler for the retained round')
@@ -78,18 +81,12 @@ class Log:
 
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
 
-        '''
-        Compute test-period rows with all columns.
-
-        Args:
-            round_id (int): Round ID
-
-        Returns:
-            pl.DataFrame: Dataset filtered down to the permutation test window
-        '''
+        '''Reconstruct a retained round's test-window columns.'''
 
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
+        if self.data is None or self.round_params is None or self._alignment is None:
+            raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
 
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']
