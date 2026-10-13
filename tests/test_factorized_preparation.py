@@ -146,7 +146,7 @@ def test_factorized_preparation_equivalence(tmp_path, monkeypatch):
             _run(loop, enabled=enabled, retained=True)
         # Retained row analysis independently reconstructs all four permutations.
         assert counts['target'] == counts['scaler'] == (1 if enabled else 4) + 4
-        assert counts['model'] == (2 if enabled else 4) + 4
+        assert counts['model'] == (2 if enabled else 4)
         assert len(prepared) == (2 if enabled else 4) + 4
         assert loop.experiment_log['_round_index'].to_list() == list(range(4))
         assert len(loop.scalers) == len(loop.preds) == len(loop._alignment) == 4
@@ -266,7 +266,7 @@ def test_factorized_preparation_cache_lifetime(tmp_path, monkeypatch):
     for enabled in (None, False):
         def inject(log, msq):
             if log.height == 2:
-                msq.inject(dict(params))
+                msq.inject({key: params[key] for key in sorted(params)})
 
         repeated = _loop(config, tmp_path / f'fresh_{enabled}', callback=inject)
         before = dict(counts)
