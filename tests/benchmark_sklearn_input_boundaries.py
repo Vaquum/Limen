@@ -190,6 +190,7 @@ def main():
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--case', choices=CASES)
     args = parser.parse_args()
+    args.output = args.output.resolve()
     if args.case is not None:
         _campaign(args.case, args.output)
         return
