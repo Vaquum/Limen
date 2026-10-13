@@ -2,7 +2,7 @@
 
 `Log` reads captured experiment metrics and supports explicit row-level analysis when the required live evidence was retained.
 
-For YAML CLI runs, start from the generated result directory and `results.csv`. For Python/MSQ runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
+For YAML CLI runs, start from the generated result directory and `results.csv`. After a Python/MSQ run, construct `limen.Log(uel_object=uel)` for captured aggregates. Use `post_processing=True` for retained row analysis and the automatic `uel._log`.
 
 In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.csv` contains trial aggregates. Use the recorded fold results and per-trial net-return track to inspect the individual test windows behind those means.
 
@@ -182,7 +182,7 @@ uel.experiment_backtest_results
 
 Snapshot captures retain the 20 bar-based backtest ledger fields in their existing column order. Event captures retain the execution engine's metric order. Recorded strict-mode failures are excluded; successful occurrences preserve their order, including repeats, valid zeros and NaNs. Missing or partial metric groups raise without replay.
 
-For walk-forward runs, a live `Log` retains the existing captured per-fold table with `id` and `fold`. These rows are distinct from the trial averages in `results.csv`; a CSV-only trial log cannot supply fold evidence.
+For walk-forward runs, a live `Log` retains the existing captured per-fold table with `id` and `fold`. These rows are distinct from the trial averages in `results.csv`. CSV input reads only its captured trial columns; it cannot supply an `id`/`fold` table. Event trial averages use the same metric names as single-split results, so their names alone cannot establish fold evidence.
 
 Per-bar distributions (`p5` / `p50` / `p95`):
 

@@ -13,8 +13,8 @@ from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest.long_flat_strategy import long_flat_strategy
-from limen.log._experiment_backtest_results import experiment_backtest_results
 from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
+from limen.log._snapshot_backtest_round import snapshot_backtest_round
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
 from limen.log._permutation_confusion_metrics import permutation_confusion_metrics
 from limen.log._permutation_prediction_performance import permutation_prediction_performance
@@ -897,10 +897,10 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
     assert next_bar['pnl_per_bar_bps'] == pytest.approx((90 / 110 - 1) * 10000 / 2)
 
 
-def test_experiment_backtest_results_directionalizes_regression_predictions() -> None:
-    result = experiment_backtest_results(
-        _DummyRegressionBacktestLog(),
-    ).iloc[0]
+def test_snapshot_backtest_round_directionalizes_regression_predictions() -> None:
+    result = snapshot_backtest_round(
+        _DummyRegressionBacktestLog(), 0, _prepare_snapshot_backtest_input,
+    )
 
     expected = backtest_snapshot(
         pd.DataFrame({

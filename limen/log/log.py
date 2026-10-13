@@ -69,9 +69,9 @@ class Log:
     def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
-        if any(getattr(self, name, None) is None for name in ('data', 'prep', 'round_params', 'preds', '_alignment')) or not self.round_params or not self.preds or not self._alignment:
+        if any(getattr(self, name, None) is None for name in ('data', 'prep', 'round_params', 'preds', '_alignment')) or not callable(self.prep) or not len(self.round_params) == len(self.preds) == len(self._alignment) or not -len(self.round_params) <= round_id < len(self.round_params):
             raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
-        if self.inverse_scaler is not None and (self.scalers is None or not -len(self.scalers) <= round_id < len(self.scalers)):
+        if self.inverse_scaler is not None and (self.scalers is None or len(self.scalers) != len(self.round_params)):
             raise ValueError('Row analysis requires the fitted scaler for the retained round')
         return self._permutation_prediction_performance(round_id)
 

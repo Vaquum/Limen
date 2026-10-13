@@ -15,7 +15,7 @@ def experiment_confusion_metrics(self: Any, x: str | None = None) -> pd.DataFram
             raise ValueError('No objects to concatenate')
         return rows
     params = getattr(self, 'round_params', None)
-    if params is None:
+    if params is None or (not params and isinstance(rows := getattr(self, '_captured_log', getattr(self, 'experiment_log', None)), pd.DataFrame) and not rows.empty):
         raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
     all_rows = [self.permutation_confusion_metrics(x=x, round_id=index, id_cols=parameters)
                 for index, parameters in enumerate(params)]
