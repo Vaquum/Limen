@@ -4,8 +4,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 from sklearn.base import BaseEstimator
-
-from limen.calibration.probability import sklearn_probability_calibrator
+from sklearn.calibration import CalibratedClassifierCV
 
 
 class CalibratorProtocol(Protocol):
@@ -62,15 +61,12 @@ def fit_calibrator(model: Any,
 
     fitted = (config.calibration_func(model, x_val, y_val, **config.calibration_params)
               if config.calibration_func is not None else model)
-    sklearn_input = config.calibration_func is sklearn_probability_calibrator or (
-        config.calibration_func is None and isinstance(model, BaseEstimator)
-    )
-    val_proba = fitted.predict_proba(np.asarray(x_val) if sklearn_input else x_val)[:, 1]
+    val_input = (np.asarray(x_val) if isinstance(fitted, CalibratedClassifierCV)
+                 or fitted is model and isinstance(model, BaseEstimator) else x_val)
+    val_proba = fitted.predict_proba(val_input)[:, 1]
 
-    if config.threshold_func is not None:
-        threshold, score = config.threshold_func(y_val, val_proba, **config.threshold_params)
-    else:
-        threshold, score = 0.5, None
+    threshold, score = (config.threshold_func(y_val, val_proba, **config.threshold_params)
+                        if config.threshold_func is not None else (0.5, None))
 
     return fitted, threshold, score
 
@@ -93,10 +89,8 @@ def apply_calibrated_predict(model: Any,
     '''
 
     fitted, threshold, score = fit_calibrator(model, config, data['x_val'], data['y_val'])
-    sklearn_input = config.calibration_func is sklearn_probability_calibrator or (
-        config.calibration_func is None and isinstance(model, BaseEstimator)
-    )
-    test_input = np.asarray(data['x_test']) if sklearn_input else data['x_test']
+    test_input = (np.asarray(data['x_test']) if isinstance(fitted, CalibratedClassifierCV)
+                  or fitted is model and isinstance(model, BaseEstimator) else data['x_test'])
     test_proba = fitted.predict_proba(test_input)[:, 1]
     preds = (test_proba >= threshold).astype(np.int8)
     return {'_preds': preds, '_probs': test_proba, 'optimal_threshold': threshold, 'val_score': score}

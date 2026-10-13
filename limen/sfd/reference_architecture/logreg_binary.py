@@ -3,10 +3,11 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
 from typing_extensions import override
 
-from limen.calibration import fit_calibrator, sklearn_probability_calibrator
+from limen.calibration import fit_calibrator
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -127,8 +128,7 @@ class LogRegBinary(ReferenceModel):
                 self._fitted_calibrator, self._calibration_threshold, self._val_score = fit_calibrator(
                     self.model, self.prediction_calibration_config, data['x_val'], data['y_val']
                 )
-            calibration_func = self.prediction_calibration_config.calibration_func
-            sklearn_input = calibration_func is None or calibration_func is sklearn_probability_calibrator
+            sklearn_input = self._fitted_calibrator is self.model or isinstance(self._fitted_calibrator, CalibratedClassifierCV)
             test_input = np.asarray(data['x_test']) if sklearn_input else data['x_test']
             test_proba = self._fitted_calibrator.predict_proba(test_input)[:, 1]
             preds = (test_proba >= self._calibration_threshold).astype(np.int8)

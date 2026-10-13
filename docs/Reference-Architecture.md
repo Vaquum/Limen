@@ -62,8 +62,10 @@ validation/test prediction. Conversion does not replace entries in the prepared
 data dictionary or change the feature names used by recording, Trainer and Sensor.
 
 Custom probability-calibration callbacks still receive the original validation
-features and labels; their returned predictors receive the original feature
-inputs. Threshold callbacks retain their original validation-label argument.
+features and labels; custom predictors receive the original feature inputs.
+Returning the original sklearn model or its built-in calibrated classifier keeps
+the array prediction boundary. Threshold callbacks retain their original
+validation-label argument.
 Backend errors and warnings continue to propagate. This boundary applies to the
 same model calls in serial and worker execution; it adds no execution mode or
 preparation reuse. The ordinary per-permutation path remains the default, and

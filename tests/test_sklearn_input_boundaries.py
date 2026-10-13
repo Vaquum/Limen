@@ -256,6 +256,67 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
         assert output['optimal_threshold'] == actual['optimal_threshold']
         assert output['val_score'] == actual['val_score']
 
+    delegated_inputs = []
+
+    def delegating_calibration(classifier, features, labels, **params):
+        assert features is data['x_val']
+        assert labels is data['y_val']
+        delegated_inputs.append((features, labels))
+        return sklearn_probability_calibrator(classifier, features, labels, **params)
+
+    delegated_config = CalibrationConfig(
+        calibration_func=delegating_calibration, calibration_params={'method': 'sigmoid'},
+        threshold_func=threshold,
+    )
+    builtin_config = CalibrationConfig(
+        calibration_func=sklearn_probability_calibrator, calibration_params={'method': 'sigmoid'},
+        threshold_func=threshold,
+    )
+    with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
+        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
+        warnings.simplefilter('always')
+        delegated_model = LogRegBinary(prediction_calibration_config=delegated_config).train(
+            data, **_LOGREG_PARAMS,
+        )
+        delegated = delegated_model.predict(data)
+        delegated_replay = delegated_model.predict({'x_test': data['x_test']})
+        delegated_standalone = apply_calibrated_predict(delegated_model.model, delegated_config, data)
+        builtin = apply_calibrated_predict(delegated_model.model, builtin_config, data)
+    _assert_boundary_warnings(caught)
+    assert len(delegated_inputs) == 2
+    for output in (delegated, delegated_replay, delegated_standalone):
+        np.testing.assert_array_equal(output['_preds'], builtin['_preds'])
+        np.testing.assert_allclose(output['_probs'], builtin['_probs'], rtol=1e-10, atol=1e-12)
+        assert output['optimal_threshold'] == builtin['optimal_threshold']
+        assert output['val_score'] == builtin['val_score']
+
+    passthrough_inputs = []
+
+    def passthrough_calibration(classifier, features, labels):
+        assert features is data['x_val']
+        assert labels is data['y_val']
+        passthrough_inputs.append((features, labels))
+        return classifier
+
+    passthrough_config = CalibrationConfig(calibration_func=passthrough_calibration,
+                                           threshold_func=threshold)
+    with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
+        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
+        warnings.simplefilter('always')
+        passthrough_model = LogRegBinary(prediction_calibration_config=passthrough_config).train(
+            data, **_LOGREG_PARAMS,
+        )
+        passthrough = passthrough_model.predict(data)
+        passthrough_replay = passthrough_model.predict({'x_test': data['x_test']})
+        passthrough_standalone = apply_calibrated_predict(passthrough_model.model, passthrough_config, data)
+    _assert_boundary_warnings(caught)
+    assert len(passthrough_inputs) == 2
+    for output in (passthrough, passthrough_replay, passthrough_standalone):
+        np.testing.assert_array_equal(output['_preds'], threshold_only['_preds'])
+        np.testing.assert_array_equal(output['_probs'], threshold_only['_probs'])
+        assert output['optimal_threshold'] == threshold_only['optimal_threshold']
+        assert output['val_score'] == threshold_only['val_score']
+
 
 @pytest.mark.parametrize('kind,method', (('logreg', None), ('logreg', 'sigmoid'),
                                         ('logreg', 'isotonic'), ('ridge', None)))
@@ -286,7 +347,10 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
     for name, value in expected.items():
         if name.startswith('_'):
             continue
-        assert saved[name] == (pytest.approx(value, nan_ok=True) if value is not None else None)
+        if value is None:
+            assert saved[name] is None
+        else:
+            assert float(saved[name]) == pytest.approx(value, nan_ok=True)
     np.testing.assert_allclose(record['preds'], expected['_preds'], rtol=1e-6, atol=1e-9)
     by_time = {item.datetime: item for item in replay if item.reason is None}
     times = data['price_data_for_backtest']['datetime'].to_list()
@@ -297,7 +361,7 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
             assert by_time[dt].probability == pytest.approx(record['probs'][index], rel=1e-6, abs=1e-9)
     if method is not None:
         assert sensor._model._calibration_threshold == pytest.approx(record['optimal_threshold'])
-        assert sensor._model._val_score == pytest.approx(saved['val_score'])
+        assert sensor._model._val_score == pytest.approx(float(saved['val_score']))
     elif kind == 'ridge':
         assert record['probs'] is None
         assert all(item.probability is None for item in by_time.values())
