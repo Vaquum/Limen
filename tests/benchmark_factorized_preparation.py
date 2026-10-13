@@ -184,7 +184,7 @@ def main():
         return
 
     args.output.mkdir(parents=True, exist_ok=False)
-    environment = {**os.environ, **{name: '1' for name in _LIMITS}}
+    environment = {**os.environ, **dict.fromkeys(_LIMITS, '1')}
     campaigns = {}
     benchmark_started = time.perf_counter()
     for case in _CASES:
@@ -216,7 +216,7 @@ def main():
     report = {
         'fixture_sha256': hashlib.sha256(FIXTURE.read_bytes()).hexdigest(),
         'comparison': 'Same current implementation with factorize=True; baseline disables only fitted-preparation reuse',
-        'thread_limits': {name: '1' for name in _LIMITS}, 'workers': 1,
+        'thread_limits': dict.fromkeys(_LIMITS, '1'), 'workers': 1,
         'campaigns': campaigns,
         'end_to_end_speedup': speedup, 'faster_on_this_workload': speedup > 1.0,
         'total_elapsed_seconds': time.perf_counter() - benchmark_started,

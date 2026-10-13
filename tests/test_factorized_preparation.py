@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import copy
-import csv
 import json
 import weakref
 from pathlib import Path
@@ -119,9 +118,7 @@ def _fitted(data):
 
 
 def _science(path):
-    with (path / 'results.csv').open(newline='') as stream:
-        rows = [{key: value for key, value in row.items() if key != 'execution_time'}
-                for row in csv.DictReader(stream)]
+    rows = pl.read_csv(path / 'results.csv', infer_schema_length=None).drop('execution_time').to_dicts()
     recorded = [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
     return [rows, recorded]
 
@@ -135,9 +132,9 @@ def test_factorized_preparation_equivalence(tmp_path, monkeypatch):
         prepared = []
         original = MLManifest._prepare_data_with_fitted
 
-        def capture(*args, **kwargs):
-            data = original(*args, **kwargs)
-            prepared.append((args[2]['n_estimators'],
+        def capture(*args, _original=original, _prepared=prepared, **kwargs):
+            data = _original(*args, **kwargs)
+            _prepared.append((args[2]['n_estimators'],
                              {key: data[key].clone() for key in
                               ('x_train', 'x_val', 'x_test', 'y_train', 'y_val', 'y_test')},
                              _fitted(data)))
@@ -147,9 +144,10 @@ def test_factorized_preparation_equivalence(tmp_path, monkeypatch):
             counts = _instrument(hooks)
             hooks.setattr(MLManifest, '_prepare_data_with_fitted', capture)
             _run(loop, enabled=enabled, retained=True)
-        assert counts['target'] == counts['scaler'] == (1 if enabled else 4)
-        assert counts['model'] == (2 if enabled else 4)
-        assert len(prepared) == (2 if enabled else 4)
+        # Retained row analysis independently reconstructs all four permutations.
+        assert counts['target'] == counts['scaler'] == (1 if enabled else 4) + 4
+        assert counts['model'] == (2 if enabled else 4) + 4
+        assert len(prepared) == (2 if enabled else 4) + 4
         assert loop.experiment_log['_round_index'].to_list() == list(range(4))
         assert len(loop.scalers) == len(loop.preds) == len(loop._alignment) == 4
         assert len({id(scaler) for scaler in loop.scalers}) == 4
@@ -230,6 +228,21 @@ def test_factorized_preparation_cache_lifetime(tmp_path, monkeypatch):
     assert counts['target'] == counts['scaler'] == counts['model'] == 4
     assert fitted[0] == fitted[1]
     assert fitted[0] != fitted[2] and fitted[0] != fitted[3]
+
+    source = _bars()
+    frozen = _rounds(config, source)
+    data, result, _, _ = frozen.evaluate(params)
+    expected = {key: data[key].clone() for key in ('x_train', 'y_train', 'x_test', 'y_test')}
+    del data, result
+    source.drop_in_place('close')
+    before = dict(counts)
+    data, result, _, _ = frozen.evaluate({**params, 'n_estimators': 8})
+    assert counts['target'] == before['target'] and counts['scaler'] == before['scaler']
+    assert counts['model'] == before['model'] + 1
+    assert 'close' in frozen.data.columns and 'close' not in source.columns
+    for key, frame in expected.items():
+        assert data[key].equals(frame)
+    del data, result
 
     full = _loop(config, tmp_path / 'full')
     _run(full, enabled=True)

@@ -235,7 +235,7 @@ class FactorizedRounds:
 
         data = dict(entry.data)
         if self.preparation is not None:
-            data.update(self.preparation.evidence(entry.data['_fitted_params']))
+            data.update(self.preparation.evidence(cast(dict[str, object], entry.data['_fitted_params'])))
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
         data['_record_execution'] = self.record_execution
         data['_record_model_outputs'] = self.record_model_outputs

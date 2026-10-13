@@ -11,24 +11,27 @@ from typing import cast
 
 import polars as pl
 
-from limen.experiment.manifest_core import MLManifest, _apply_fitted_transform, make_fitted_scaler
+from limen.experiment.manifest_core import MLManifest, make_fitted_scaler
 from limen.features.lagged_features import lag_range
 from limen.indicators.window_return import window_return
 from limen.scalers.robust_scaler import RobustScaler
 from limen.targets.next_return import NextReturnTarget
 from limen.targets.quantile_binary import QuantileBinaryTarget
 
+__all__ = ['_FittedPreparation', '_supports_preparation']
+
 
 def _supports_scaler(manifest: MLManifest) -> bool:
     if manifest.scaler is None:
         return True
     computations, transform, params = manifest.scaler
-    if len(computations) != 1 or transform is not _apply_fitted_transform:
+    if len(computations) != 1:
         return False
     name, factory, dynamic = computations[0]
-    reference = make_fitted_scaler(name, RobustScaler)[0][0][1]
-    return (isinstance(factory, FunctionType) and isinstance(reference, FunctionType)
-            and factory.__code__ is reference.__code__
+    reference = make_fitted_scaler(name, RobustScaler)
+    reference_factory = reference[0][0][1]
+    return (isinstance(factory, FunctionType) and isinstance(reference_factory, FunctionType)
+            and factory.__code__ is reference_factory.__code__ and transform is reference[1]
             and inspect.signature(factory).parameters['_cls'].default is RobustScaler
             and set(dynamic).issubset({'quantile_range'})
             and all(isinstance(value, str) for value in dynamic.values())
@@ -47,6 +50,7 @@ def _supports_preparation(manifest: MLManifest) -> bool:
 class _FittedPreparation:
     def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
                  references: Callable[[object, str], bool]) -> None:
+        super().__init__()
         self.manifest = manifest
         architecture = manifest.architecture_function
         if architecture is None:
@@ -62,8 +66,9 @@ class _FittedPreparation:
                 prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
         key = json.dumps({name: params[name] for name in self.names}, sort_keys=True, default=str)
         saved = self.cache.get(key)
+        prepare_fitted = cast(Callable[..., dict[str, object]], vars(MLManifest)['_prepare_data_with_fitted'])
         data = (prep(raw, round_params=params) if saved is None else
-                self.manifest._prepare_data_with_fitted(raw, params, copy.deepcopy(saved)))
+                prepare_fitted(self.manifest, raw, params, copy.deepcopy(saved)))
         artifacts = data.get('_fitted_params')
         if not isinstance(artifacts, dict):
             raise ValueError('Factorized preparation requires fitted artifact evidence')
@@ -73,8 +78,5 @@ class _FittedPreparation:
             raise ValueError('Factorized preparation contains an unsupported fitted artifact')
         return data, key, copy.deepcopy(fitted)
 
-    def evidence(self, artifacts: object) -> dict[str, object]:
-        if not isinstance(artifacts, dict):
-            raise ValueError('Factorized preparation requires fitted artifact evidence')
-        fitted = cast(dict[str, object], artifacts)
-        return copy.deepcopy({'_fitted_params': fitted, **fitted})
+    def evidence(self, artifacts: dict[str, object]) -> dict[str, object]:
+        return copy.deepcopy({'_fitted_params': artifacts, **artifacts})
