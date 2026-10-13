@@ -19,6 +19,7 @@ import polars as pl
 from limen.experiment.errors import StrictModeError
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
+from limen.experiment._factorized_prep import FittedPreparation, supports_preparation
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
 from limen.features.lagged_features import lag_range
@@ -29,13 +30,10 @@ from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.dlinear_regressor import dlinear_regressor
 from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
 from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
-from limen.targets.next_return import NextReturnTarget
-from limen.targets.quantile_binary import QuantileBinaryTarget
 
 _BACKTEST_FIELDS = ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
 _RESERVED = frozenset(('bar_type', 'feature_groups', 'use_calibration', 'use_threshold'))
 _FEATURES = frozenset((window_return, lag_range, dollar_bar_crash_reversal))
-_ML_FEATURES = frozenset((window_return, lag_range))
 
 
 def _fail(reason: str) -> NoReturn:
@@ -82,14 +80,8 @@ def _check_manifest(manifest: Manifest, domain: Mapping[str, list[object]], axes
     if type(manifest) is MLManifest:
         if function not in (dlinear_regressor, lightgbm_binary):
             _fail('unsupported ML architecture')
-        if manifest.target_class_config is None or manifest.target_class_config.target_class not in (NextReturnTarget, QuantileBinaryTarget):
-            _fail('unsupported ML target')
-        if (manifest.scaler is not None or manifest.ablation_config is not None
-                or manifest.pca_compression_config is not None or manifest.prediction_calibration_config is not None
-                or manifest.data_dict_extension is not None or manifest.objective is not None):
-            _fail('ML calibration, scaler, ablation, compression, extension or objective')
-        if any(entry.func not in _ML_FEATURES for entry in manifest.feature_transforms):
-            _fail('unrecognized ML feature transform')
+        if not supports_preparation(manifest):
+            _fail('unsupported ML target, scaler, feature or preparation configuration')
     elif type(manifest) is RuleBasedManifest:
         if function is not rule_based or manifest.target_class_config is not None:
             _fail('unsupported rule-based architecture')
@@ -176,10 +168,11 @@ class FactorizedRounds:
         self.intervention_path = intervention_path
         self._check_interventions()
         self.manifest = manifest
-        self.data = data
+        self.data = data.clone()
         self.prep, self.model = prep, model
         self.record_execution, self.record_model_outputs = record_execution, record_model_outputs
         self.cache: dict[str, _Cached] = {}
+        self.preparation = FittedPreparation(manifest, self.domain, self.axes, _references) if isinstance(manifest, MLManifest) else None
 
     def _check_interventions(self) -> None:
         if self.intervention_path is not None and self.intervention_path.exists():
@@ -192,11 +185,16 @@ class FactorizedRounds:
         key = json.dumps({k: v for k, v in params.items() if k not in self.axes}, sort_keys=True, default=str)
         entry = self.cache.get(key)
         if entry is None:
+            prep_key: str | None = None
+            fitted: dict[str, object] = {}
             caught: list[warnings.WarningMessage] = []
             try:
                 with warnings.catch_warnings(record=True) as caught:
                     warnings.simplefilter('always')
-                    data = self.prep(self.data, round_params=params)
+                    if self.preparation is None:
+                        data = self.prep(self.data, round_params=params)
+                    else:
+                        data, prep_key, fitted = self.preparation.prepare(self.data, params, self.prep)
                     data['_record_execution'] = self.record_execution
                     data['_record_model_outputs'] = self.record_model_outputs
                     if isinstance(data.get('_alignment'), dict):
@@ -223,15 +221,21 @@ class FactorizedRounds:
                         _fail('rule-based split must be a DataFrame')
                     positions[split] = np.asarray(logic(rule, frame, strategy_cfg).fill_null(False).to_numpy(), dtype=np.int64)
             evidence = {name: data[name] for name in ('_alignment', '_backtest_provenance', 'price_data_for_backtest') if name in data}
+            if self.preparation is not None:
+                evidence.update(self.preparation.evidence(fitted))
             if positions is not None:
                 for split in positions:
                     frame = cast(pl.DataFrame, data[split])
                     evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
             converged_warning = bool(convergence_warning(caught, True))
+            if self.preparation is not None and prep_key is not None:
+                self.preparation.cache[prep_key] = fitted
             self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions, converged_warning)
             return data, result, recorded, converged_warning
 
         data = dict(entry.data)
+        if self.preparation is not None:
+            data.update(self.preparation.evidence(cast(dict[str, object], entry.data['_fitted_params'])))
         data['_alignment'] = copy.deepcopy(entry.data['_alignment'])
         data['_record_execution'] = self.record_execution
         data['_record_model_outputs'] = self.record_model_outputs
