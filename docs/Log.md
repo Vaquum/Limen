@@ -1,8 +1,8 @@
 # Log
 
-`Log` is Limen's post-run analysis layer. It sits on top of a finished experiment and turns raw round results into round-level prediction tables, benchmark-style summaries, backtest summaries, and parameter-correlation views.
+`Log` reads captured experiment metrics and supports explicit row-level analysis when the required live evidence was retained.
 
-For YAML CLI runs, start from the generated result directory and `results.csv`. For Python/MSQ runs, pass `post_processing=True` when you need `uel._log`, confusion metrics, and backtest summaries on the live object.
+For YAML CLI runs, start from the generated result directory and `results.csv`. After a Python/MSQ run, construct `limen.Log(uel_object=uel)` for captured aggregates. Use `post_processing=True` for retained row analysis and the automatic `uel._log`.
 
 In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.csv` contains trial aggregates. Use the recorded fold results and per-trial net-return track to inspect the individual test windows behind those means.
 
@@ -10,7 +10,7 @@ In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.c
 
 - a completed `results.csv`, or a successful direct UEL run
 - `post_processing=True` when analysis needs retained predictions, scalers, alignment, or the live `uel._log`
-- compatible price columns for price-derived confusion and backtest analysis
+- complete captured metric columns for aggregate views; compatible prices and retained evidence for explicit row analysis
 
 ## Two ways to use `Log`
 
@@ -30,7 +30,7 @@ This mode has access to:
 - alignment metadata
 - prep logic needed to reconstruct per-round test windows
 
-That is why the full post-run surface works from a UEL-backed `Log`.
+Aggregate views require only the captured experiment rows. Construct `limen.Log(uel_object=uel)` after a run even when `post_processing=False`; retained state is needed only for explicit row analysis.
 
 ### File-backed `Log`
 
@@ -42,7 +42,7 @@ import limen
 log = limen.Log(file_path='my_experiment.csv')
 ```
 
-This path supports the cleaned experiment log itself and experiment-log-only analysis such as parameter correlation.
+This path supports the cleaned experiment log, captured aggregate metrics and parameter correlation. It reads only the supplied CSV; it does not discover or load sibling round or fold artifacts.
 
 Important limitation:
 
@@ -51,20 +51,14 @@ Important limitation:
 
 ## The post-run workflow
 
-The standard sequence is:
+Use captured aggregate views to compare completed rounds. Explicit row inspection is a separate path requiring retained evidence.
 
-1. inspect one round's prediction table
-2. compare rounds with benchmark summaries
-3. compare rounds with backtest summaries
-4. inspect which parameters move with the target metric
-
-The four-round Python/MSQ example supports the first three steps. Correlation needs a larger experiment: with the default cohorts and `min_n=10`, at least 11 rows with valid target metrics are needed for a cohort to qualify, and the metric and numeric features must vary. Continue to [parameter correlation](#parameter-correlation-surface) after that larger run.
+The four-round Python/MSQ example supports aggregate and retained row inspection. Correlation needs a larger experiment: with the default cohorts and `min_n=10`, at least 11 rows with valid target metrics are needed for a cohort to qualify, and the metric and numeric features must vary. Continue to [parameter correlation](#parameter-correlation-surface) after that larger run.
 
 ```python
-log = uel._log
+log = limen.Log(uel_object=uel)
 
-round0 = log.permutation_prediction_performance(round_id=0)
-benchmark = log.experiment_confusion_metrics('price_change')
+benchmark = log.experiment_confusion_metrics()
 backtest = log.experiment_backtest_results()
 ```
 
@@ -92,7 +86,9 @@ The resulting table has these columns:
 - `close`
 - `price_change`
 
-The row count follows the reconstructed test window; it is not a fixed contract.
+The row count follows the reconstructed test window; it is not a fixed contract. `round_id` is the ordinal in retained successful-round lists, not a CSV hash or `_round_index`.
+
+Row inspection requires the live serial preparation/data, predictions, round parameters and alignment retained through `post_processing=True`; inverse-scaled features also require the fitted scaler. Missing evidence raises explicitly. Parallel runs do not retain these inputs, and walk-forward row replay requires a fold-specific test set and is unsupported by this method.
 
 Use this table for round-level inspection before summary statistics. It is also a direct input to disabled-barrier snapshots. Configured TP/SL replay reconstructs private high/low columns from verified source identities; this public table remains unchanged.
 
@@ -100,9 +96,19 @@ Use this table for round-level inspection before summary statistics. It is also 
 
 The benchmark layer measures directional signal quality before translation into trading results.
 
+### `experiment_confusion_metrics()`
+
+With no `x`, this method reads the captured `confusion_*` columns and removes their prefix. It preserves stored values and units: `precision` and `recall` remain fractions, not percentages. The complete group contains `tp`, `fp`, `tn`, `fn`, `precision`, `recall`, and the four `*_mean_return_pct` fields.
+
+```python
+bench = log.experiment_confusion_metrics()
+```
+
+This untrimmed view requires no predictions, scaler, preparation or execution. It excludes recorded strict-mode failures and preserves successful occurrence order, including repeated parameter identities, zero values and valid metric NaNs. Missing or partial captured groups raise; there is no replay fallback. Raw captured columns are retained separately from optional categorical encoding used for parameter correlation.
+
 ### `experiment_confusion_metrics(x)`
 
-Produces one row per round.
+Passing `x` selects the existing row-analysis summary. It requires retained live evidence and produces one row per successful retained round.
 
 ```python
 bench = uel._log.experiment_confusion_metrics('price_change')
@@ -116,7 +122,7 @@ This table combines:
 - mean and median of `x` within TP and FP
 - TP-versus-FP separation through Cohen's d and KS
 
-The same summary is exposed directly on UEL as:
+The explicit `price_change` summary is exposed directly on UEL with `post_processing=True` as:
 
 ```python
 uel.experiment_confusion_metrics
@@ -162,19 +168,21 @@ those four fields use the same immediate-next-execution-row contract as snapshot
 
 ### `experiment_backtest_results()`
 
-Produces one snapshot backtest row per experiment round.
+Read one captured backtest row per successful single-split round, removing the `backtest_` prefix. This method performs no preparation, prediction or execution and requires no retained row arrays. It works with UEL-backed or CSV-backed `Log` when the complete metric group is available.
 
 ```python
 bt = uel._log.experiment_backtest_results()
 ```
 
-The same table is exposed directly on UEL as:
+With `post_processing=True`, the same table is exposed directly on UEL as:
 
 ```python
 uel.experiment_backtest_results
 ```
 
-The current summary columns are the 20 bar-based backtest ledger fields — every column is computed per bar over all bars in the window.
+Snapshot captures retain the 20 bar-based backtest ledger fields in their existing column order. Event captures retain the execution engine's metric order. Recorded strict-mode failures are excluded; successful occurrences preserve their order, including repeats, valid zeros and NaNs. Missing or partial metric groups raise without replay.
+
+For walk-forward runs, a live `Log` retains the existing captured per-fold table with `id` and `fold`. These rows are distinct from the trial averages in `results.csv`. CSV input reads only its captured trial columns; it cannot supply an `id`/`fold` table. Event trial averages use the same metric names as single-split results, so their names alone cannot establish fold evidence.
 
 Per-bar distributions (`p5` / `p50` / `p95`):
 
@@ -187,16 +195,7 @@ Intensive scalars:
 
 - `wins_per_bar`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
-Use this table to compare trading economics after benchmark inspection. Manifest-backed replay resolves each round's fees, slippage, sizing, TP and SL, including null barriers. This corrects older post-run summaries that used default costs/sizing.
-
-Configured replay requires an in-memory manifest-backed run with deterministic preparation and retained provenance. Missing evidence, source changes, interior censorship, and ambiguous ML timestamps raise before evaluation. File-only/resumed configured replay cannot supply this evidence. With disabled barriers, legacy ML duplicate-timestamp reconstruction differences remain outside the parity guarantee. See [Backtest](Backtest.md#tunable-take-profit-and-stop-loss) for configuration, exits, and source requirements.
-
-Post-run snapshot backtests currently support:
-
-- binary `0/1` predictions directly
-- directional regression scores via sign (`pred > 0` -> long, otherwise flat)
-
-Logged multiclass outputs are not supported on this surface and raise explicitly instead of being silently collapsed.
+The metrics were computed with each round's declared trading policy during execution; aggregate reads preserve those numbers. Source changes after capture cannot change the aggregate result. For explicit snapshot inputs, TP/SL provenance and source requirements, see [Backtest](Backtest.md#tunable-take-profit-and-stop-loss).
 
 ## Parameter correlation surface
 
@@ -268,13 +267,13 @@ UEL preserves those in `uel.extras`.
 
 ## Determinism matters
 
-`Log` reconstructs test data by replaying the relevant prep path. That means non-deterministic prep logic can break alignment between:
+Explicit row analysis reconstructs test data by replaying the relevant prep path. Captured aggregate views do not. Non-deterministic prep logic can break row alignment between:
 
 - stored predictions
 - reconstructed actuals
 - reconstructed prices
 
-For reliable post-run analysis:
+For reliable explicit row analysis:
 
 - prefer deterministic prep
 - if randomness is necessary, make it explicit in `round_params`
@@ -295,7 +294,7 @@ Use `read_from_file()` to recover or inspect an experiment log outside a live UE
 ## Read next
 
 - Continue to [Benchmark](Benchmark.md) for the prediction-quality layer built on top of `Log`.
-- Continue to [Backtest](Backtest.md) for the trading-economics layer built on top of `permutation_prediction_performance()`.
+- Continue to [Backtest](Backtest.md) for the trading-economics layer and explicit snapshot inputs.
 - Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable sensors.
 
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).

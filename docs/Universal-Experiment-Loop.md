@@ -201,7 +201,7 @@ UEL computes this report even with `post_processing=False`. With `experiment_dir
 
 ### Deeper post-run analysis
 
-UEL constructs a `Log` instance automatically at the end of a successful run. That exposes methods such as:
+With `post_processing=True`, UEL constructs a live `Log` at run conclusion. It supports explicit retained row analysis. Captured aggregates can also be read through `limen.Log(uel_object=uel)` without that option, or through a CSV-backed `Log`; see the [canonical aggregate and row contracts](Log.md). The retained path exposes methods such as:
 
 - `uel._log.permutation_prediction_performance(round_id=0)`
 - `uel._log.permutation_confusion_metrics('price_change', round_id=0)`
@@ -211,11 +211,11 @@ UEL constructs a `Log` instance automatically at the end of a successful run. Th
 
 The `confusion_*` and `backtest_*` columns in `uel.experiment_log` and `results.csv` are produced **inline** — computed once per round inside the architecture's `evaluate()` while the round runs, not by post-run processing. `evaluate(data, inline_metrics=True)` appends them to the metrics dict the model returns, and UEL merges that dict verbatim into the round row. UEL forwards no flag of its own; on the manifest-driven path the architecture wrapper pins `inline_metrics=True`, so these columns are always present.
 
-This is distinct from the two dedicated post-run frames. `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results` are separate DataFrames built by the `Log` layer during finalization, only when `post_processing=True`. On deterministic, collision-free shipped ML evaluation paths, they carry the same values as the inline columns — the per-round `experiment_log['backtest_pnl_bps_p50']` equals the post-run `experiment_backtest_results['pnl_bps_p50']` — but as standalone frames rather than columns on the round log.
+With `post_processing=True`, `uel.experiment_backtest_results` reads captured backtest columns through `Log`, while `uel.experiment_confusion_metrics` keeps the existing explicit `price_change` row summary. The latter applies trimming and additional statistics; it is distinct from the untrimmed captured confusion view returned by `Log.experiment_confusion_metrics()` with no argument. [Log](Log.md) defines their values, units, evidence requirements and walk-forward fold behavior.
 
 The inline confusion and backtest returns are price-gated: confusion counts always appear, but the price-derived `confusion_*_mean_return_pct` and `backtest_*` metrics are computed only when `price_data_for_backtest` is present for the round. Configured TP/SL requires valid prices and provenance before training, even when the current candidate resolves to null; unavailable prices raise. See [Reference Architecture](Reference-Architecture.md) for the `evaluate()` contract and the exact keys each mode adds.
 
-TP/SL candidates belong to `sfd.manifest.backtest` references and ordinary search-parameter lists. Each candidate repeats preparation, training, and prediction; an exit-only sweep preserves predictions only with deterministic entry behavior. Rule-based entry architectures evaluate the fixed exits per split, while UEL still omits their post-run aggregate backtest table. Configured replay depends on in-memory provenance and is unavailable for file-only/resumed runs; Trainer rebuilds a fresh round. [Backtest](Backtest.md#tunable-take-profit-and-stop-loss) defines the canonical contract.
+TP/SL candidates belong to `sfd.manifest.backtest` references and ordinary search-parameter lists. Each candidate repeats preparation, training, and prediction; an exit-only sweep preserves predictions only with deterministic entry behavior. Rule-based entry architectures evaluate the fixed exits per split, while UEL still omits their post-run aggregate backtest table. Captured aggregate reads preserve the recorded execution result; explicit replay has separate source-evidence requirements. [Log](Log.md#backtest-surface) defines the aggregate contract, and [Backtest](Backtest.md#tunable-take-profit-and-stop-loss) defines the trading policy.
 
 ## Persisting Python/MSQ runs
 

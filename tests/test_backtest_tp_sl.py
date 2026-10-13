@@ -22,7 +22,8 @@ from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search.random_strategy import RandomStrategy
 from limen.features import dollar_bar_crash_reversal
 from limen.inference import Trainer
-from limen.log._experiment_backtest_results import experiment_backtest_results
+from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
+from limen.log._snapshot_backtest_round import snapshot_backtest_round
 from limen.sfd import reference_architecture
 from limen.sfd.foundational_sfd import ridge_regressor as ridge_sfd
 from limen.sfd.reference_architecture.ridge_regressor import ridge_regressor
@@ -470,7 +471,8 @@ def test_tp_sl_real_fixture_inline_post_run_parity(market, tmp_path):
         assert fresh['_backtest_provenance'] == loop._alignment[i]['_backtest_provenance']
         np.testing.assert_equal(manifest.run_model(fresh, loop.round_params[i])['_preds'], loop.preds[i])
     legacy = SimpleNamespace(round_params=loop.round_params, permutation_prediction_performance=loop._log.permutation_prediction_performance)
-    old = experiment_backtest_results(legacy)
+    old = pl.DataFrame([snapshot_backtest_round(legacy, i, _prepare_snapshot_backtest_input)
+                        for i in range(4)]).to_pandas()
     assert old['inventory_per_bar'].iloc[0] != loop.experiment_backtest_results['inventory_per_bar'].iloc[0]
     baseline_inventory = float(old['inventory_per_bar'].iloc[0])
     corrected_inventory = float(loop.experiment_backtest_results['inventory_per_bar'].iloc[0])
@@ -478,12 +480,14 @@ def test_tp_sl_real_fixture_inline_post_run_parity(market, tmp_path):
     assert 'high' not in loop._log.permutation_prediction_performance(0).columns
     missing_witness = loop._log._alignment[0].pop('_backtest_provenance')
     with pytest.raises(ValueError, match='provenance'):
-        loop._log.experiment_backtest_results()
+        snapshot_backtest_round(loop._log, 0, _prepare_snapshot_backtest_input)
+    assert loop._log.experiment_backtest_results().equals(loop.experiment_backtest_results)
     loop._log._alignment[0]['_backtest_provenance'] = missing_witness
     original_data = loop._log.data
     loop._log.data = bars.reverse()
     with pytest.raises(ValueError, match='source identity'):
-        loop._log.experiment_backtest_results()
+        snapshot_backtest_round(loop._log, 0, _prepare_snapshot_backtest_input)
+    assert loop._log.experiment_backtest_results().equals(loop.experiment_backtest_results)
     loop._log.data = original_data
 
 

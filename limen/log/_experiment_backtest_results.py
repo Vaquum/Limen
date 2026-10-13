@@ -3,26 +3,32 @@ import numpy as np
 import pandas as pd
 
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
-from limen.log._snapshot_backtest_round import snapshot_backtest_round as _snapshot_backtest_round
+
+__all__ = ['_prepare_snapshot_backtest_input', 'captured_metrics', 'experiment_backtest_results']
+
+_EVENT_COLUMNS = ['total_return', 'ending_equity', 'max_drawdown', 'net_pnl', 'gross_pnl', 'fees', 'slippage', 'funding_pnl', 'completed_trades', 'open_trades', 'episode_win_rate', 'avg_absolute_exposure']
+
+
+def captured_metrics(source: object, names: list[str], prefix: str) -> pd.DataFrame:
+    frame = getattr(source, '_captured_log', getattr(source, 'experiment_log', None))
+    if not isinstance(frame, pd.DataFrame):
+        raise ValueError('Captured experiment rows are required for aggregate metrics')
+    if 'strict_mode_error' in frame:
+        frame = frame.loc[frame['strict_mode_error'].isna() | frame['strict_mode_error'].eq('')]
+    if frame.empty:
+        return pd.DataFrame()
+    columns = [prefix + name for name in names]
+    if missing := set(columns).difference(frame.columns):
+        raise ValueError(f'Captured {prefix} metrics are missing or incomplete: {sorted(missing)}')
+    required = [prefix + name for name in names if not name.endswith('_mean_return_pct') and name not in ('avg_win_bps', 'avg_loss_bps', 'cvar_95_pnl_bps')]
+    if frame[required].isna().any().any():
+        raise ValueError(f'Successful rows lack required captured {prefix} metrics')
+    return frame[columns].rename(columns=dict(zip(columns, names, strict=True))).reset_index(drop=True).copy()
 
 
 def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
-    '''
-    Normalize logged prediction outputs to the binary contract expected by snapshot.
-
-    Regression reference architectures directionalize inline with ``preds > 0`` before
-    computing backtest metrics. Post-run snapshot summaries need to mirror that same
-    contract so inline and logged backtest results stay identical.
-
-    Supports:
-    - binary 0/1 predictions directly
-    - directional regression scores via sign, mapped to the current long/flat
-      snapshot decision
-
-    Does not support multiclass snapshot backtests. Non-negative integer labels
-    with more than two classes raise explicitly instead of being collapsed.
-    '''
+    '''Normalize binary or directional predictions for explicit snapshot replay.'''
 
     def _is_binary(series: pd.Series) -> bool:
         valid = series.dropna()
@@ -33,9 +39,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         invalid = numeric.isna() & ~series.isna()
 
         if invalid.any():
-            raise ValueError(
-                f'snapshot backtest received non-numeric {name} values'
-            )
+            raise ValueError(f'snapshot backtest received non-numeric {name} values')
 
         return numeric
 
@@ -56,9 +60,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     if 'actuals' in result:
         actual = _to_numeric_strict(result['actuals'], 'actual')
         if _is_unsupported_multiclass(actual):
-            raise ValueError(
-                'snapshot backtest does not support multiclass actuals; use binary predictions or directional regression scores'
-            )
+            raise ValueError('snapshot backtest does not support multiclass actuals; use binary predictions or directional regression scores')
 
     if _is_binary(pred):
         return result
@@ -75,7 +77,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
 
 def experiment_backtest_results(self: Any) -> pd.DataFrame:
 
-    '''Return round backtests, or captured fold backtests for walk-forward.'''
+    '''Read captured round backtests, or captured fold backtests for walk-forward.'''
 
     folds = getattr(self, 'fold_results', None)
     if folds is not None and not folds.is_empty():
@@ -88,9 +90,6 @@ def experiment_backtest_results(self: Any) -> pd.DataFrame:
             metrics = {key: key.removeprefix('backtest_') for key in folds.columns if key.startswith('backtest_')}
         return folds.select('id', 'fold', *metrics).rename(metrics).to_pandas()
 
-    all_rows: list[dict[str, float]] = []
-
-    for i in range(len(self.round_params)):
-        all_rows.append(_snapshot_backtest_round(self, i, _prepare_snapshot_backtest_input))
-
-    return pd.DataFrame.from_records(all_rows)
+    frame = getattr(self, '_captured_log', getattr(self, 'experiment_log', None))
+    names = _EVENT_COLUMNS if isinstance(frame, pd.DataFrame) and all(f'backtest_{name}' in frame for name in _EVENT_COLUMNS) else BACKTEST_SNAPSHOT_COLUMNS
+    return captured_metrics(self, names, 'backtest_')

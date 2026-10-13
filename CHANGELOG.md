@@ -1589,3 +1589,7 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Run compiled CPU classification rounds in isolated spawned workers within one MSQ experiment; preserve ordered artifacts, feedback boundaries and consistent prefix recovery (#905).
 - Add YAML/CLI worker selection and unchanged-policy resume; retain serial execution by default and reject unsupported parallel configurations before output creation.
+
+## [5.25.1] - 2026-10-13
+
+- Read aggregate backtest metrics and no-argument confusion metrics from captured experiment rows; preserve explicit row analysis and walk-forward fold outputs (#485).

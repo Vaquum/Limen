@@ -27,28 +27,25 @@ class Log:
         super().__init__()
 
         self.fold_results = pl.DataFrame()
+        self.data = self.prep = self.scalers = self.round_params = self.preds = self._alignment = self.manifest = None
 
         if uel_object is not None:
 
-            self.data = uel_object.data
-            self.experiment_log = uel_object.experiment_log.to_pandas()
-            self.prep = uel_object.prep
-            self.scalers = uel_object.scalers
-            self.round_params = uel_object.round_params
-            self.preds = uel_object.preds
-            self._alignment = uel_object._alignment
+            rows = uel_object.experiment_log
+            if not isinstance(rows, (pl.DataFrame, pd.DataFrame)):
+                raise ValueError('Log requires captured experiment rows')
+            self.experiment_log = rows.to_pandas() if isinstance(rows, pl.DataFrame) else rows.copy()
+            self.data, self.prep, self.scalers, self.round_params, self.preds, self._alignment, self.manifest = (
+                getattr(uel_object, name, None) for name in ('data', 'prep', 'scalers', 'round_params', 'preds', '_alignment', 'manifest'))
             self.fold_results = getattr(uel_object, 'fold_results', pl.DataFrame()).clone()
-
-            if hasattr(uel_object, 'manifest'):
-                self.manifest = uel_object.manifest
-            else:
-                self.manifest = None
 
         elif file_path is not None:
             self.experiment_log = self.read_from_file(file_path)
 
         else:
             raise ValueError('Log Both uel_object and file_path cannot be None')
+
+        self._captured_log = self.experiment_log.copy()
 
         if cols_to_multilabel is not None:
             for col in cols_to_multilabel:
@@ -73,23 +70,23 @@ class Log:
     def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
+        if self.round_params is None or self.preds is None or self._alignment is None:
+            raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
+        if self.data is None or not callable(self.prep) or not len(self.round_params) == len(self.preds) == len(self._alignment) or not -len(self.round_params) <= round_id < len(self.round_params):
+            raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
+        if self.inverse_scaler is not None and (self.scalers is None or len(self.scalers) != len(self.round_params)):
+            raise ValueError('Row analysis requires the fitted scaler for the retained round')
         return self._permutation_prediction_performance(round_id)
 
 
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
 
-        '''
-        Compute test-period rows with all columns.
-
-        Args:
-            round_id (int): Round ID
-
-        Returns:
-            pl.DataFrame: Dataset filtered down to the permutation test window
-        '''
+        '''Reconstruct a retained round's test-window columns.'''
 
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
+        if self.data is None or self.round_params is None or self._alignment is None:
+            raise ValueError('Row analysis requires retained serial evidence; run with post_processing=True')
 
         missing_datetimes = self._alignment[round_id]['missing_datetimes']
         first_test_datetime = self._alignment[round_id]['first_test_datetime']

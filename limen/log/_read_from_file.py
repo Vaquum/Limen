@@ -39,6 +39,6 @@ def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
     for col in data.columns:
         if pd.api.types.is_object_dtype(data[col]) or pd.api.types.is_string_dtype(data[col]):
 
-            data[col] = data[col].str.strip()
+            data[col] = data[col].map(lambda value: value.strip() if isinstance(value, str) else value)
 
     return data
