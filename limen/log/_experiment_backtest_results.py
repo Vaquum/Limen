@@ -37,9 +37,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         invalid = numeric.isna() & ~series.isna()
 
         if invalid.any():
-            raise ValueError(
-                f'snapshot backtest received non-numeric {name} values'
-            )
+            raise ValueError(f'snapshot backtest received non-numeric {name} values')
 
         return numeric
 

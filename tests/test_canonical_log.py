@@ -13,7 +13,7 @@ from limen.backtest.execution_events import with_predictions
 from limen.backtest.trade_execution import trade_execution
 from limen.experiment import MLManifest, UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
-from limen.log import Log
+from limen.log.log import Log
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy, parse
 from tests.test_walk_forward_uel import _config as _fold_config
