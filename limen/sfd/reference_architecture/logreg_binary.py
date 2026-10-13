@@ -6,7 +6,7 @@ import numpy.typing as npt
 from sklearn.linear_model import LogisticRegression
 from typing_extensions import override
 
-from limen.calibration import fit_calibrator
+from limen.calibration import fit_calibrator, sklearn_probability_calibrator
 from limen.metrics.binary_metrics import binary_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
@@ -95,7 +95,7 @@ class LogRegBinary(ReferenceModel):
 
         params = _drop_removed_sklearn_params(params)
         self.model = _logistic_regression(params)
-        _ = self.model.fit(data['x_train'], data['y_train'])
+        _ = self.model.fit(np.asarray(data['x_train']), np.asarray(data['y_train']))
         self._fitted_calibrator = None
         self._calibration_threshold = 0.5
         self._val_score = None
@@ -127,7 +127,10 @@ class LogRegBinary(ReferenceModel):
                 self._fitted_calibrator, self._calibration_threshold, self._val_score = fit_calibrator(
                     self.model, self.prediction_calibration_config, data['x_val'], data['y_val']
                 )
-            test_proba = self._fitted_calibrator.predict_proba(data['x_test'])[:, 1]
+            calibration_func = self.prediction_calibration_config.calibration_func
+            sklearn_input = calibration_func is None or calibration_func is sklearn_probability_calibrator
+            test_input = np.asarray(data['x_test']) if sklearn_input else data['x_test']
+            test_proba = self._fitted_calibrator.predict_proba(test_input)[:, 1]
             preds = (test_proba >= self._calibration_threshold).astype(np.int8)
             return {
                 '_preds': preds,
@@ -136,8 +139,9 @@ class LogRegBinary(ReferenceModel):
                 'val_score': self._val_score,
             }
 
-        preds = self.model.predict(data['x_test'])
-        probs = self.model.predict_proba(data['x_test'])[:, 1]
+        x_test = np.asarray(data['x_test'])
+        preds = self.model.predict(x_test)
+        probs = self.model.predict_proba(x_test)[:, 1]
         return {'_preds': preds, '_probs': probs}
 
 

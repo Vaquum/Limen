@@ -52,6 +52,23 @@ Manifest preparation can provide:
 
 Models consume the subset of keys they need from the standard Limen shape.
 
+### Sklearn input boundary
+
+Manifest preparation retains Polars frames and series. `LogRegBinary` and
+`RidgeRegressor` convert features and labels to NumPy arrays at sklearn fit and
+prediction calls, preserving their row and feature-column order. The built-in
+sklearn probability-calibration path also uses arrays for fitting and subsequent
+validation/test prediction. Conversion does not replace entries in the prepared
+data dictionary or change the feature names used by recording, Trainer and Sensor.
+
+Custom probability-calibration callbacks still receive the original validation
+features and labels; their returned predictors receive the original feature
+inputs. Threshold callbacks retain their original validation-label argument.
+Backend errors and warnings continue to propagate. This boundary applies to the
+same model calls in serial and worker execution; it adds no execution mode or
+preparation reuse. The ordinary per-permutation path remains the default, and
+existing factorized-model admission is unchanged.
+
 ## The Built-In Model Classes
 
 | Class | Task shape | Deterministic | Notes |

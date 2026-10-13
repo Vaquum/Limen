@@ -42,13 +42,13 @@ class RidgeRegressor(ReferenceModel):
     def train(self, data: dict[str, object], **params: object) -> 'RidgeRegressor':
         """Fit sklearn Ridge using native constructor parameters."""
         self.model = _ridge(params)
-        _ = self.model.fit(data['x_train'], data['y_train'])
+        _ = self.model.fit(np.asarray(data['x_train']), np.asarray(data['y_train']))
         return self
 
     @override
     def predict(self, data: dict[str, object]) -> dict[str, _Predictions]:
         """Return continuous predictions; only x_test is required."""
-        return {'_preds': self.model.predict(data['x_test'])}
+        return {'_preds': self.model.predict(np.asarray(data['x_test']))}
 
     @override
     def evaluate(self, data: dict[str, object], inline_metrics: bool = True) -> dict[str, object]:
