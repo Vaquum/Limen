@@ -447,6 +447,7 @@
   "limen/experiment/_walk_forward_run.py": 190,
   "limen/log/_permutation_returns.py": 40,
   "limen/experiment/_factorize.py": 250,
+  "limen/experiment/_factorized_prep.py": 70,
   "limen/cohort/_round_sources.py": 140,
   "limen/experiment/_parallel_worker.py": 250,
   "limen/experiment/_parallel_rounds.py": 250,

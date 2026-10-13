@@ -20,6 +20,7 @@ from sklearn.exceptions import ConvergenceWarning
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment._factorize import FactorizedRounds
 from limen.experiment.errors import StrictModeError
+from limen.experiment.manifest_core import MLManifest
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search.random_strategy import RandomStrategy
@@ -152,7 +153,8 @@ def test_one_signal_generation_per_unique_signal_key(tmp_path: Path, monkeypatch
                            ('interleaved', 4), ('rule_based', 1)):
         loop = _loop(name, tmp_path / name)
         counts = {'prep': 0, 'model': 0}
-        orig_prep, orig_model = type(loop.manifest).prepare_data, type(loop.manifest).run_model
+        prep_name = '_prepare_data_with_fitted' if isinstance(loop.manifest, MLManifest) else 'prepare_data'
+        orig_prep, orig_model = getattr(type(loop.manifest), prep_name), type(loop.manifest).run_model
         assert orig_prep and orig_model
 
         def prep(*args: object, _counts: dict = counts, _fn: object = orig_prep,
@@ -166,7 +168,7 @@ def test_one_signal_generation_per_unique_signal_key(tmp_path: Path, monkeypatch
             return _fn(*args, **kwargs)
 
         with monkeypatch.context() as instrumentation:
-            instrumentation.setattr(type(loop.manifest), 'prepare_data', prep)
+            instrumentation.setattr(type(loop.manifest), prep_name, prep)
             instrumentation.setattr(type(loop.manifest), 'run_model', model)
             loop.run(name, n_permutations=manifest(name)['uel']['n_permutations'],
                      prep_each_round=True, factorize=True, progress_bar=False)
@@ -235,7 +237,7 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
         cfg = manifest('binary_costs')
         cfg['sfd']['params']['random_state'] = [42, None]
     elif case == 'scaler':
-        m['scaler'] = {'class': 'limen.scalers.RobustScaler'}
+        m['scaler'] = {'class': 'limen.scalers.RankGaussScaler'}
     elif case == 'calibration':
         m['calibration'] = {'threshold_function': {
             'func': 'limen.calibration.grid_threshold_optimizer',

@@ -1007,13 +1007,19 @@ class MLManifest(Manifest):
         round_params: dict[str, Any]
     ) -> dict[str, Any]:
 
+        return self._prepare_data_with_fitted(raw_data, round_params, {})
+
+    def _prepare_data_with_fitted(
+        self, raw_data: pl.DataFrame, round_params: dict[str, object],
+        fitted_params: Mapping[str, object],
+    ) -> dict[str, object]:
 
         split_data, all_datetimes, price_data_for_backtest, sources, trade = _run_prepare_setup(self, raw_data, round_params)
         outcome_target = self.target_class_config is not None and bool(getattr(self.target_class_config.target_class, 'requires_trade_context', False))
         private_labels: list[OutcomeLabels] = []
         raw_features: pl.DataFrame | None = None
 
-        all_fitted_params: dict[str, Any] = {}
+        all_fitted_params = dict(fitted_params)
         columns_to_drop: list[str] | None = None
         pre_transform_columns = frozenset(split_data[0].columns)
 
@@ -1045,7 +1051,8 @@ class MLManifest(Manifest):
 
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
-                    self, data, round_params, all_fitted_params, is_train,
+                    self, data, round_params, all_fitted_params,
+                    is_train and f'_target_cls_{self.target_column}' not in all_fitted_params,
                     trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
                 )
 

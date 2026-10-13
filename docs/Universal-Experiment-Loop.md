@@ -134,13 +134,28 @@ uel.run(
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
-| `factorize` | opt-in reuse of deterministic signal preparation, fitting and prediction across independent snapshot economics in a persisted MSQ grid run; default `false` |
+| `factorize` | opt-in reuse of fitted preparation state across model variations, and predictions across independent snapshot economics, in a deterministic persisted MSQ grid; default `false` |
 
 ### Factorized snapshot grids
 
-Set `uel.factorize: true` in YAML or `run(..., factorize=True)`. The existing grid still emits one ordinary result row per full parameter combination, with the same backtest executor and numeric results; only redundant signal work is reused. The switch is supported for unshuffled grids with independent backtest-only axes, built-in deterministic DLinear, deterministic single-thread LightGBM, or shipped rule-based snapshot architectures and supported fixed preprocessing. Ambiguous dependencies, stochastic settings, callbacks, pruning, event execution, calibration, walk-forward and custom architectures fail explicitly before UEL artifact writes. The cache lives for one sweep invocation; Log post-processing and resumed invocations retain their ordinary reconstruction work. CLI resume reads the effective enabled setting from metadata. The switch changes canonical manifest identity because the YAML changes; it never changes full-permutation round IDs.
+Set `uel.factorize: true` in YAML or `run(..., factorize=True)`. The existing grid still emits one ordinary result row per full parameter combination, with the same backtest executor and numeric results. This single switch enables two reuse boundaries:
 
-The cache retains predictions, price/provenance and recording evidence, and grows with distinct successful signal keys; it has no eviction. It discards feature matrices and fitted models. Large signal grids may require ordinary execution. Context overrides must pass the same admission checks; intervention files and candidates outside the admitted domain reject.
+- Across model variations with identical preparation inputs, reuse the fitted target and, when configured, the built-in `RobustScaler` statistics. Generate features and apply transformations again; fit and predict each distinct model afresh.
+- Across independent backtest-only variations, reuse the resulting predictions and recording evidence. Run the existing snapshot executor for every economic combination.
+
+Omitted or `false` retains fresh preparation, model fitting and prediction for every permutation, including repeated identical parameters. Default execution remains sequential. Factorization changes which computations repeat, not the experiment's round order or full-permutation identities.
+
+The switch supports unshuffled grids with independent backtest-only axes, built-in deterministic DLinear, deterministic single-thread LightGBM, or shipped rule-based snapshot architectures. Fitted preparation reuse is limited to the already supported deterministic targets and a statically declared built-in `RobustScaler`; dynamic/custom scalers and PCA remain unsupported. A change to any preparation dependency requires a fresh fit, including a model parameter also referenced by a feature, target or scaler declaration. Prepared frames and fitted models are never retained in the preparation cache.
+
+Ambiguous dependencies, stochastic settings, callbacks, pruning, event execution, calibration, walk-forward, custom architectures and `workers > 1` fail explicitly before UEL artifact writes. Context overrides pass the same admission checks; intervention files and candidates outside the admitted domain reject. Factorization does not silently substitute ordinary execution.
+
+Both caches belong to one sweep invocation and contain only successful work. Fitted artifacts are copied before use by another round. The prediction cache retains predictions, price/provenance and recording evidence; both caches grow with distinct keys and have no eviction. Large grids may require ordinary execution. Log post-processing and resumed invocations retain ordinary reconstruction work. CLI resume reads the effective setting from metadata; caches restart empty. Changing YAML `factorize` changes canonical manifest identity but never full-permutation round IDs.
+
+The recorded-data benchmark isolates the fitted-preparation extension: both campaigns use `factorize=True` and retain prediction reuse; the baseline clears only the fitted-preparation cache before each evaluation. It records actual target/scaler fits, stage timings, end-to-end elapsed time, peak process RSS and scientific-output digests. It uses fixed 2024 hourly observations, pinned splits and single-threaded LightGBM settings; its bounded workload makes no universal speedup claim.
+
+```bash
+python -m tests.benchmark_factorized_preparation --output /tmp/limen-factorized-preparation
+```
 
 ### SFD execution contract
 

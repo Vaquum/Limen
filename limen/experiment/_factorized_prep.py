@@ -1,0 +1,80 @@
+"""Invocation-local reuse of fitted preparation artifacts, never prepared data."""
+
+from __future__ import annotations
+
+import copy
+import inspect
+import json
+from collections.abc import Callable, Mapping
+from types import FunctionType
+from typing import cast
+
+import polars as pl
+
+from limen.experiment.manifest_core import MLManifest, _apply_fitted_transform, make_fitted_scaler
+from limen.features.lagged_features import lag_range
+from limen.indicators.window_return import window_return
+from limen.scalers.robust_scaler import RobustScaler
+from limen.targets.next_return import NextReturnTarget
+from limen.targets.quantile_binary import QuantileBinaryTarget
+
+
+def _supports_scaler(manifest: MLManifest) -> bool:
+    if manifest.scaler is None:
+        return True
+    computations, transform, params = manifest.scaler
+    if len(computations) != 1 or transform is not _apply_fitted_transform:
+        return False
+    name, factory, dynamic = computations[0]
+    reference = make_fitted_scaler(name, RobustScaler)[0][0][1]
+    return (isinstance(factory, FunctionType) and isinstance(reference, FunctionType)
+            and factory.__code__ is reference.__code__
+            and inspect.signature(factory).parameters['_cls'].default is RobustScaler
+            and set(dynamic).issubset({'quantile_range'})
+            and all(isinstance(value, str) for value in dynamic.values())
+            and params == {'fitted_transform': name})
+
+
+def _supports_preparation(manifest: MLManifest) -> bool:
+    target = manifest.target_class_config
+    return (target is not None and target.target_class in (NextReturnTarget, QuantileBinaryTarget)
+            and _supports_scaler(manifest) and manifest.ablation_config is None
+            and manifest.pca_compression_config is None and manifest.prediction_calibration_config is None
+            and manifest.data_dict_extension is None and manifest.objective is None
+            and all(entry.func in (window_return, lag_range) for entry in manifest.feature_transforms))
+
+
+class _FittedPreparation:
+    def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
+                 references: Callable[[object, str], bool]) -> None:
+        self.manifest = manifest
+        architecture = manifest.architecture_function
+        if architecture is None:
+            raise ValueError('Fitted preparation requires an architecture')
+        model_names = inspect.signature(architecture).parameters
+        consumers = [value for attr, value in vars(manifest).items()
+                     if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
+        self.names = frozenset(name for name in domain if name not in axes and (
+            name not in model_names or any(references(value, name) for value in consumers)))
+        self.cache: dict[str, dict[str, object]] = {}
+
+    def prepare(self, raw: pl.DataFrame, params: dict[str, object],
+                prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
+        key = json.dumps({name: params[name] for name in self.names}, sort_keys=True, default=str)
+        saved = self.cache.get(key)
+        data = (prep(raw, round_params=params) if saved is None else
+                self.manifest._prepare_data_with_fitted(raw, params, copy.deepcopy(saved)))
+        artifacts = data.get('_fitted_params')
+        if not isinstance(artifacts, dict):
+            raise ValueError('Factorized preparation requires fitted artifact evidence')
+        fitted = cast(dict[str, object], artifacts)
+        if any(type(value) not in (RobustScaler, NextReturnTarget, QuantileBinaryTarget)
+               for value in fitted.values()):
+            raise ValueError('Factorized preparation contains an unsupported fitted artifact')
+        return data, key, copy.deepcopy(fitted)
+
+    def evidence(self, artifacts: object) -> dict[str, object]:
+        if not isinstance(artifacts, dict):
+            raise ValueError('Factorized preparation requires fitted artifact evidence')
+        fitted = cast(dict[str, object], artifacts)
+        return copy.deepcopy({'_fitted_params': fitted, **fitted})

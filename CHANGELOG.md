@@ -1593,3 +1593,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.25.1] - 2026-10-13
 
 - Read aggregate backtest metrics and no-argument confusion metrics from captured experiment rows; preserve explicit row analysis and walk-forward fold outputs (#485).
+
+## [5.25.2] - 2026-10-13
+
+- Reuse deterministic fitted target and RobustScaler state across model variations inside opt-in factorized snapshot grids; preserve fresh preparation for ordinary permutations (#484).
