@@ -12,7 +12,7 @@ import sys
 import time
 import warnings
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,9 +35,12 @@ def _manifest(binary):
     manifest = (MLManifest()
                 .set_data_source(HistoricalData.get_any_file,
                                  params={'file_path_or_url': str(FIXTURE)})
-                .set_split_dates(datetime(2024, 1, 1), datetime(2024, 4, 1),
-                                 datetime(2024, 4, 1), datetime(2024, 4, 8),
-                                 datetime(2024, 4, 8), datetime(2024, 4, 15))
+                .set_split_dates(datetime(2024, 1, 1, tzinfo=timezone.utc),
+                                 datetime(2024, 4, 1, tzinfo=timezone.utc),
+                                 datetime(2024, 4, 1, tzinfo=timezone.utc),
+                                 datetime(2024, 4, 8, tzinfo=timezone.utc),
+                                 datetime(2024, 4, 8, tzinfo=timezone.utc),
+                                 datetime(2024, 4, 15, tzinfo=timezone.utc))
                 .add_indicator(window_return, period=1)
                 .add_feature(lag_range, col='ret_1', start=1, end=13))
     if binary:
@@ -223,9 +226,9 @@ def main():
               'baseline': 'Pre-change raw Polars sklearn fit, calibration fit and validation/test prediction; same installed versions and recorded observations',
               'source_base_commit': '04bc9411fde2c6fd64277212d21ae91d7d71e97e',
               'thread_limits': dict.fromkeys(LIMITS, '1'),
-              'split_dates': {'train': ['2024-01-01', '2024-04-01'],
-                              'validation': ['2024-04-01', '2024-04-08'],
-                              'test': ['2024-04-08', '2024-04-15']},
+              'split_dates': {'train': ['2024-01-01T00:00:00+00:00', '2024-04-01T00:00:00+00:00'],
+                              'validation': ['2024-04-01T00:00:00+00:00', '2024-04-08T00:00:00+00:00'],
+                              'test': ['2024-04-08T00:00:00+00:00', '2024-04-15T00:00:00+00:00']},
               'measurement': 'Fresh-process import, recorded-data loading, per-round preparation, fit/calibration/prediction, existing metric helpers and report writes; no execution-loop throughput claim',
               'interchange_warning_exact_message': INTERCHANGE_WARNING, 'campaigns': reports,
               'outputs_equal': True, 'prediction_rtol': 1e-9, 'prediction_atol': 1e-12,
