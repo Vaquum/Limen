@@ -18,7 +18,7 @@ from limen.scalers.robust_scaler import RobustScaler
 from limen.targets.next_return import NextReturnTarget
 from limen.targets.quantile_binary import QuantileBinaryTarget
 
-__all__ = ['_FittedPreparation', '_supports_preparation']
+__all__ = ['FittedPreparation', 'supports_preparation']
 
 
 def _supports_scaler(manifest: MLManifest) -> bool:
@@ -38,7 +38,7 @@ def _supports_scaler(manifest: MLManifest) -> bool:
             and params == {'fitted_transform': name})
 
 
-def _supports_preparation(manifest: MLManifest) -> bool:
+def supports_preparation(manifest: MLManifest) -> bool:
     target = manifest.target_class_config
     return (target is not None and target.target_class in (NextReturnTarget, QuantileBinaryTarget)
             and _supports_scaler(manifest) and manifest.ablation_config is None
@@ -47,7 +47,7 @@ def _supports_preparation(manifest: MLManifest) -> bool:
             and all(entry.func in (window_return, lag_range) for entry in manifest.feature_transforms))
 
 
-class _FittedPreparation:
+class FittedPreparation:
     def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
                  references: Callable[[object, str], bool]) -> None:
         super().__init__()

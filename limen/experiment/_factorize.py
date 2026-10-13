@@ -19,7 +19,7 @@ import polars as pl
 from limen.experiment.errors import StrictModeError
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
-from limen.experiment._factorized_prep import _FittedPreparation, _supports_preparation
+from limen.experiment._factorized_prep import FittedPreparation, supports_preparation
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
 from limen.features.lagged_features import lag_range
@@ -80,7 +80,7 @@ def _check_manifest(manifest: Manifest, domain: Mapping[str, list[object]], axes
     if type(manifest) is MLManifest:
         if function not in (dlinear_regressor, lightgbm_binary):
             _fail('unsupported ML architecture')
-        if not _supports_preparation(manifest):
+        if not supports_preparation(manifest):
             _fail('unsupported ML target, scaler, feature or preparation configuration')
     elif type(manifest) is RuleBasedManifest:
         if function is not rule_based or manifest.target_class_config is not None:
@@ -172,7 +172,7 @@ class FactorizedRounds:
         self.prep, self.model = prep, model
         self.record_execution, self.record_model_outputs = record_execution, record_model_outputs
         self.cache: dict[str, _Cached] = {}
-        self.preparation = _FittedPreparation(manifest, self.domain, self.axes, _references) if isinstance(manifest, MLManifest) else None
+        self.preparation = FittedPreparation(manifest, self.domain, self.axes, _references) if isinstance(manifest, MLManifest) else None
 
     def _check_interventions(self) -> None:
         if self.intervention_path is not None and self.intervention_path.exists():
