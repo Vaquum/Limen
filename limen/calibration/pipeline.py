@@ -94,5 +94,4 @@ def apply_calibrated_predict(model: Any,
     test_input = (np.asarray(data['x_test']) if isinstance(fitted, CalibratedClassifierCV)
                   or (fitted is model and isinstance(model, BaseEstimator)) else data['x_test'])
     test_proba = predict_proba(test_input)[:, 1]
-    preds = (test_proba >= threshold).astype(np.int8)
-    return {'_preds': preds, '_probs': test_proba, 'optimal_threshold': threshold, 'val_score': score}
+    return {'_preds': (test_proba >= threshold).astype(np.int8), '_probs': test_proba, 'optimal_threshold': threshold, 'val_score': score}
