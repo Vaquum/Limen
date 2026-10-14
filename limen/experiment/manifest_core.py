@@ -3,7 +3,7 @@ from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
+from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
 from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
@@ -1897,11 +1897,14 @@ def _run_prepare_setup(
     split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
     policy = manifest.resolve_trade_policy(round_params)
+    frozen_sources = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
+    if callable(frozen_sources):
+        frozen_sources = frozen_sources(manifest.backtest_config, round_params)
     trade = None
     if policy is not None and manifest.backtest_config is not None:
         interval = _source_interval(manifest.data_source_config)
         trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval,
-                                       frozen_sources=cast(tuple[pl.DataFrame | None, pl.DataFrame | None] | None, getattr(manifest, '_frozen_trade_sources', None)))
+                                       frozen_sources=frozen_sources)
         split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
     prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
     return (*prepared, trade)
