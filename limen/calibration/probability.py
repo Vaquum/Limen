@@ -1,7 +1,6 @@
 from typing import Any
 from typing import Protocol
 
-import numpy as np
 import numpy.typing as npt
 import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
@@ -40,4 +39,4 @@ def sklearn_probability_calibrator(clf: Any,
         Any: Fitted calibrated classifier with predict_proba method
     '''
 
-    return _calibrated_classifier_cv(clf, method).fit(np.asarray(x_val), np.asarray(y_val))
+    return _calibrated_classifier_cv(clf, method).fit(x_val, y_val)
