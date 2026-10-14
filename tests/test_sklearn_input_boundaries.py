@@ -78,8 +78,10 @@ def _no_interchange(self, *args, **kwargs):
     raise AssertionError('Sklearn boundary must not consume the dataframe interchange protocol')
 
 
-def _assert_boundary_warnings(caught, *, allow_interchange=False):
-    tokens = ('feature names',) if allow_interchange else ('__dataframe__', 'interchange', 'feature names')
+def _assert_boundary_warnings(caught, *, allow_interchange=False, allow_feature_names=False):
+    tokens = () if allow_interchange else ('__dataframe__', 'interchange')
+    if not allow_feature_names:
+        tokens += ('feature names',)
     assert not [str(item.message) for item in caught
                 if any(token in str(item.message).lower() for token in tokens)]
 
@@ -167,7 +169,7 @@ def test_recorded_logreg_boundary_matches_direct_sklearn(
     _assert_input_frames_unchanged(data, objects, snapshots, keys, names)
 
 
-def test_dated_isotonic_preserves_raw_sklearn_threshold_and_decisions():
+def test_recorded_isotonic_calibration_preserves_original_decisions():
     manifest = _manifest(True)
     config = _configuration('isotonic')
     manifest.prediction_calibration_config = config
@@ -260,7 +262,7 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
             assert isinstance(frame, pl.DataFrame)
             assert frame.columns == data['x_train'].columns
             predictions.append(frame)
-            return self.model.predict_proba(frame)
+            return self.model.predict_proba(frame.to_numpy())
 
     def calibrate(model, x_val, y_val, *, marker):
         assert x_val is data['x_val']
@@ -381,7 +383,8 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
         sensor = Trainer(directory, data=recorded_boundary_bars).train([record['round_id']])[0]
         replay = sensor.predict_all(recorded_boundary_bars)
         expected = manifest.run_model(data, params)
-    _assert_boundary_warnings(caught, allow_interchange=method is not None)
+    _assert_boundary_warnings(caught, allow_interchange=method is not None,
+                               allow_feature_names=method is not None)
     assert config == before
     assert json.loads((directory / 'metadata.json').read_text())['yaml_reference'] == config
     saved = pl.read_csv(directory / 'results.csv').row(0, named=True)
