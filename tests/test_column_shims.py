@@ -162,7 +162,7 @@ def test_declared_column_shims_match_native_yaml_and_recorded_formulas(recorded_
                        'reference': 'close'}]).add_feature(_numeric_outputs)
               .prepare_data(recorded_shim_bars, {}))
     raw_train = _raw_split(recorded_shim_bars, 0).head(-1)
-    assert custom['x_train'].columns == raw_train.drop('datetime').columns + ['custom_mid', 'custom_move']
+    assert custom['x_train'].columns == [*raw_train.drop('datetime').columns, 'custom_mid', 'custom_move']
     np.testing.assert_allclose(custom['x_train']['custom_mid'],
                                (raw_train['high'] + raw_train['low']) / 2 / raw_train['close'])
     np.testing.assert_allclose(custom['x_train']['custom_move'],
@@ -181,7 +181,7 @@ def test_declared_column_shims_match_native_yaml_and_recorded_formulas(recorded_
     raw_period = _raw_split(recorded_shim_bars, 0)
     expected_return = (raw_period['close'] / raw_period['close'].shift(2) - 1) / raw_period['close']
     np.testing.assert_allclose(period_native['x_train']['ret_2'], expected_return.slice(2).head(-1))
-    assert period_native['x_train'].columns == raw_train.drop('datetime').columns + ['ret_2']
+    assert period_native['x_train'].columns == [*raw_train.drop('datetime').columns, 'ret_2']
     assert window_return(recorded_shim_bars, period=2)['close'].equals(before['close'])
 
     simultaneous, _ = apply_column_shims(recorded_shim_bars, parse_shims([
@@ -434,7 +434,7 @@ def test_column_shims_reject_invalid_configuration(recorded_shim_bars, shims):
 
 @pytest.mark.parametrize('case', ('missing', 'nonnumeric', 'reference', 'zero', 'log_domain',
                                    'datetime', 'target', 'missing_parameter',
-                                   'missing_column_template', 'missing_reference_parameter'))
+                                   'missing_column_template', 'missing_reference_parameter', 'nonfinite', 'nan'))
 def test_column_shims_reject_invalid_data_domains(recorded_shim_bars, case):
     data = recorded_shim_bars
     spec = {'columns': ['volume'], 'method': 'log1p'}
@@ -449,6 +449,9 @@ def test_column_shims_reject_invalid_data_domains(recorded_shim_bars, case):
         spec = {'columns': ['open'], 'method': 'ratio', 'reference': 'close'}
     elif case == 'log_domain':
         data = data.with_columns((-pl.col('close')).alias('volume'))
+    elif case in {'nonfinite', 'nan'}:
+        numerator = pl.col('close') if case == 'nonfinite' else pl.col('close') - pl.col('close')
+        data = data.with_columns((numerator / (pl.col('close') - pl.col('close'))).alias('volume'))
     elif case == 'datetime':
         spec['columns'] = ['datetime']
     elif case == 'target':

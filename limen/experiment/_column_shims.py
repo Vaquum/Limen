@@ -219,7 +219,6 @@ def prepare_column_shims(
     manifest: MLManifest, data: pl.DataFrame, round_params: Mapping[str, object],
     fitted_params: dict[str, object], training: bool,
 ) -> pl.DataFrame:
-    data = data.fill_nan(None)
     if manifest.feature_shims:
         automatic = any(spec['method'] == 'fractional_diff' and spec.get('d') == 'auto'
                         for spec in _resolved(manifest.feature_shims, round_params))
@@ -233,4 +232,4 @@ def prepare_column_shims(
             data, manifest.feature_shims, round_params, fitted_params.get('_column_shims'),
             training=training, target=manifest.target_column,
         )
-    return data
+    return data.fill_nan(None)
