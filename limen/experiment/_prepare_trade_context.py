@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 _METADATA = ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')
-FrozenTradeSources = tuple[pl.DataFrame | None, pl.DataFrame | None] | Callable[[BacktestConfig, Mapping[str, object]], tuple[pl.DataFrame | None, pl.DataFrame | None]]
+FrozenTradeSources = tuple[pl.DataFrame | None, pl.DataFrame | None] | Callable[[BacktestConfig, Mapping[str, object]], tuple[pl.DataFrame | None, pl.DataFrame | None] | None]
 
 
 @dataclass(frozen=True)
@@ -29,12 +29,12 @@ class PreparedTradeContext:
     source_settings: tuple[tuple[Callable[..., object], JsonValue] | None, ...]
 
 
-def _source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tuple[tuple[Callable[..., object], JsonValue] | None, ...]:
+def source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tuple[tuple[Callable[..., object], JsonValue] | None, ...]:
     sources = (config.execution_data_source, config.funding.data_source if config.funding is not None else None)
     return tuple(None if source is None else (source.method, resolve_json(source.params, params)) for source in sources)
 
 
-def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
+def load_source(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     values = cast(dict[str, object], resolve_json(source.params, params))
     method = source.method
     if isfunction(method) and '.' in method.__qualname__ and '<locals>' not in method.__qualname__ and next(iter(signature(method).parameters), None) == 'self':
@@ -47,6 +47,9 @@ def _load(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:
     if not isinstance(result, pl.DataFrame):
         raise ValueError('Trade source must return a Polars DataFrame')
     return result
+
+
+_load = load_source
 
 
 def source_interval(source: SourceConfig | None) -> object:
@@ -84,7 +87,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         execution_interval = None if declared_interval is None else resolve_number(declared_interval, params, 'execution source interval')
         if callable(frozen_sources):
             frozen_sources = frozen_sources(config, params)
-        raw_execution = _load(config.execution_data_source, params) if frozen_sources is None else frozen_sources[0]
+        raw_execution = load_source(config.execution_data_source, params) if frozen_sources is None else frozen_sources[0]
         if not isinstance(raw_execution, pl.DataFrame):
             raise ValueError('Declared execution source requires its frozen observation frame')
         execution = normalize_observations(raw_execution, interval_seconds=execution_interval)
@@ -92,7 +95,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
     if config.funding is not None and config.funding.data_source is not None:
         if callable(frozen_sources):
             frozen_sources = frozen_sources(config, params)
-        history = _load(config.funding.data_source, params) if frozen_sources is None else frozen_sources[1]
+        history = load_source(config.funding.data_source, params) if frozen_sources is None else frozen_sources[1]
         if not isinstance(history, pl.DataFrame):
             raise ValueError('Declared funding source requires its frozen observation frame')
     initial = resolve_number(config.initial_equity, params, 'initial equity')
@@ -127,7 +130,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         validate_observations(partition, policy)
         inputs.append(partition)
         model_rows.append(mapping)
-    return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows), _source_settings(config, params))
+    return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows), source_settings(config, params))
 
 
 def _precision(observations: pl.DataFrame) -> int:
@@ -140,7 +143,7 @@ def validate_cached_context(config: BacktestConfig | None, policy: TradePolicy |
     inputs = data.get('_trade_inputs')
     context = data.get('_trade_context')
     equity_matches = policy is None or (config is not None and isinstance(inputs, TradeInputs) and inputs.initial_equity == resolve_number(config.initial_equity, params, 'initial equity'))
-    sources_match = policy is None or (config is not None and isinstance(context, PreparedTradeContext) and context.source_settings == _source_settings(config, params))
+    sources_match = policy is None or (config is not None and isinstance(context, PreparedTradeContext) and context.source_settings == source_settings(config, params))
     if policy != data.get('_trade_policy') or not equity_matches or not sources_match:
         raise ValueError('Cached trade preparation does not match this round; refresh preparation')
 

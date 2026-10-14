@@ -10,8 +10,9 @@ import polars as pl
 import pytest
 from threadpoolctl import threadpool_limits
 
+from limen.data import HistoricalData
 from limen.experiment import UniversalExperimentLoop
-from limen.experiment.manifest_core import DataSourceConfig
+from limen.experiment.manifest_core import DataSourceConfig, MLManifest
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy
 from tests.test_record_model_outputs import _config as _binary_config
@@ -53,8 +54,9 @@ def recorded_learning_bars():
 
 
 @pytest.fixture(autouse=True)
-def _source_calls_and_native_limit():
+def _source_calls_and_native_limit(monkeypatch):
     SOURCE_CALLS.clear()
+    monkeypatch.setattr(HistoricalData, 'get_any_file', staticmethod(recorded_source))
     with threadpool_limits(limits=1):
         yield
 
@@ -63,7 +65,7 @@ def _config(*, sources=True, walk_forward=False):
     config = _binary_config()
     config['metadata']['name'] = 'fixed_trade_sources'
     manifest = config['sfd']['manifest']
-    method = 'tests.test_fixed_trade_sources.recorded_source'
+    method = 'limen.data.HistoricalData.get_any_file'
     manifest['data_source'] = {'method': method, 'params': {'role': 'learning', 'kline_size': 3600}}
     manifest['split_dates'] = {
         'train_start': '2024-01-01', 'train_end': '2024-01-04',
@@ -246,26 +248,26 @@ def test_fixed_secondary_sources_cleanup_after_failure_or_stop(recorded_learning
     assert not hasattr(next_loop.manifest, '_frozen_trade_sources')
 
 
-@pytest.mark.parametrize('declaration,source', (
-    ('fee_bps', 'execution'), ('{fee_bps}', 'funding'),
-    ({'nested': ['{fee_bps}']}, 'execution'), ('context_source', 'execution'),
+@pytest.mark.parametrize('declaration,source,expected_markers', (
+    ('fee_bps', 'execution', ['fee_bps'] * 2),
+    ('{fee_bps}', 'funding', [3.0, 7.0]),
+    ({'nested': ['{fee_bps}']}, 'execution', [{'nested': [3.0]}, {'nested': [7.0]}]),
+    ('context_source', 'execution', ['context_source'] * 2),
+    ('{context_source}', 'execution', ['recorded-context'] * 2),
 ))
-def test_dynamic_secondary_sources_keep_whole_pair_per_round(recorded_learning_bars, tmp_path, declaration, source):
+def test_dynamic_secondary_sources_keep_whole_pair_per_round(recorded_learning_bars, tmp_path, declaration, source, expected_markers):
     config = _config()
     backtest = config['sfd']['manifest']['backtest']
     params = (backtest['execution_data_source']['params'] if source == 'execution'
               else backtest['funding']['data_source']['params'])
     params['marker'] = declaration
-    context = {'context_source': 'recorded-context'} if declaration == 'context_source' else None
+    context = {'context_source': 'recorded-context'} if declaration in ('context_source', '{context_source}') else None
     loop = _loop(config, recorded_learning_bars, tmp_path)
     _run(loop, context_params=context)
     assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 2, 'funding': 2}
     assert not hasattr(loop.manifest, '_frozen_trade_sources')
     markers = [row['marker'] for row in SOURCE_CALLS if row['role'] == source]
-    if declaration == 'context_source':
-        assert markers == ['recorded-context'] * 2
-    else:
-        assert markers[0] != markers[1]
+    assert markers == expected_markers
 
 
 def test_parameter_override_retains_loading_without_double_evaluation(recorded_learning_bars, tmp_path):
@@ -295,9 +297,21 @@ def test_walk_forward_fixed_secondary_sources_load_once_across_folds(recorded_le
     config = _config(walk_forward=True)
     fixed_path, legacy_path = tmp_path / 'fixed', tmp_path / 'legacy'
     fixed = _loop(config, recorded_learning_bars, fixed_path)
-    _run(fixed)
+    fold_manifests = []
+    original_prepare = MLManifest.prepare_data
+
+    def prepare(manifest, raw, params):
+        prepared = original_prepare(manifest, raw, params)
+        fold_manifests.append((manifest, dict(params), prepared['_trade_context'].partitions[2]))
+        return prepared
+
+    with monkeypatch.context() as capture:
+        capture.setattr(MLManifest, 'prepare_data', prepare)
+        _run(fixed)
     assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
     assert not hasattr(fixed.manifest, '_frozen_trade_sources')
+    assert len(fold_manifests) == 4
+    assert all(manifest is not fixed.manifest for manifest, _, _ in fold_manifests)
     SOURCE_CALLS.clear()
     legacy = _loop(config, recorded_learning_bars, legacy_path)
     with monkeypatch.context() as baseline:
@@ -306,6 +320,16 @@ def test_walk_forward_fixed_secondary_sources_load_once_across_folds(recorded_le
     assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 4, 'funding': 4}
     assert fixed.fold_results.height == 4
     _assert_campaigns_equal(fixed, legacy, fixed_path, legacy_path)
+    SOURCE_CALLS.clear()
+    copied_manifest, params, recorded_partition = fold_manifests[0]
+    for call_count in (1, 2):
+        prepared = copied_manifest.prepare_data(recorded_learning_bars, params)
+        partition = prepared['_trade_context'].partitions[2]
+        assert partition.observations.equals(recorded_partition.observations)
+        assert partition.funding_events.equals(recorded_partition.funding_events)
+        assert partition.sources == recorded_partition.sources
+        assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': call_count, 'funding': call_count}
+    assert not hasattr(fixed.manifest, '_frozen_trade_sources')
 
 
 def test_fixed_secondary_sources_acquisition_is_lazy_and_run_local(recorded_learning_bars, tmp_path):
@@ -343,3 +367,77 @@ def test_existing_frozen_source_tuple_remains_owned_by_its_caller(recorded_learn
         assert prepared['_trade_context'].partitions[2].funding_events.height > 0
     assert SOURCE_CALLS == []
     assert manifest._frozen_trade_sources is frozen
+
+
+def test_failed_secondary_acquisition_propagates_without_partial_snapshot(recorded_learning_bars, tmp_path, monkeypatch):
+    import limen.experiment._fixed_trade_sources as source_scope
+
+    loop = _loop(_config(), recorded_learning_bars, tmp_path / 'failed')
+    original_load = source_scope._load
+    original_train = LogRegBinary.train
+    fits = []
+
+    def failing_load(source, params):
+        if source.params['role'] == 'funding':
+            raise RuntimeError('Recorded funding acquisition failed')
+        return original_load(source, params)
+
+    def train(model, data, **params):
+        fits.append(model)
+        return original_train(model, data, **params)
+
+    monkeypatch.setattr(LogRegBinary, 'train', train)
+    with monkeypatch.context() as failed:
+        failed.setattr(source_scope, '_load', failing_load)
+        with pytest.raises(RuntimeError, match='Recorded funding acquisition failed'):
+            _run(loop)
+    assert fits == []
+    assert loop.experiment_log is None or loop.experiment_log.is_empty()
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1}
+    assert not hasattr(loop.manifest, '_frozen_trade_sources')
+    next_loop = _loop(_config(), recorded_learning_bars, tmp_path / 'next')
+    _run(next_loop)
+    assert len(fits) == 2
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 2, 'funding': 1}
+    assert not hasattr(next_loop.manifest, '_frozen_trade_sources')
+
+
+class _RecordedSourceReceiver:
+    def __init__(self):
+        self.calls = 0
+
+    def load(self, **params):
+        self.calls += 1
+        return recorded_source(**params)
+
+
+@pytest.mark.parametrize('changed_owner', ('parent', 'copied'))
+def test_fixed_source_copy_reuses_snapshot_and_rejects_declaration_drift(recorded_learning_bars, tmp_path, changed_owner):
+    from limen.experiment._fixed_trade_sources import fixed_trade_sources
+
+    loop = _loop(_config(), recorded_learning_bars, tmp_path)
+    manifest = loop.manifest
+    receiver = _RecordedSourceReceiver()
+    manifest.backtest_config = replace(
+        manifest.backtest_config,
+        execution_data_source=DataSourceConfig(receiver.load, {'role': 'execution', 'kline_size': 3600}),
+    )
+    with fixed_trade_sources(manifest, set(loop.params)):
+        first = manifest._frozen_trade_sources(manifest.backtest_config, {'fee_bps': 3.0})
+        copied = copy.deepcopy(manifest)
+        second = copied._frozen_trade_sources(copied.backtest_config, {'fee_bps': 7.0})
+        assert first[0].equals(second[0])
+        assert first[1].equals(second[1])
+        assert receiver.calls == 1
+        assert copied.backtest_config.execution_data_source.method.__self__.calls == 1
+        assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
+        changed = manifest if changed_owner == 'parent' else copied
+        source = changed.backtest_config.execution_data_source
+        changed.backtest_config = replace(
+            changed.backtest_config,
+            execution_data_source=DataSourceConfig(source.method, {**source.params, 'marker': 'changed'}),
+        )
+        with pytest.raises(ValueError, match='declaration changed'):
+            copied._frozen_trade_sources(copied.backtest_config, {'fee_bps': 7.0})
+        assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
+    assert not hasattr(manifest, '_frozen_trade_sources')

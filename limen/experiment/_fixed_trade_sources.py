@@ -6,7 +6,7 @@ from typing import cast
 import polars as pl
 
 from limen.backtest.trade_contract import JsonValue
-from limen.experiment._prepare_trade_context import _load, _source_settings
+from limen.experiment._prepare_trade_context import load_source as _load, source_settings as _source_settings
 from limen.experiment._resolve_trade_policy import BacktestConfig
 
 __all__ = ['fixed_trade_sources']
@@ -46,8 +46,10 @@ def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> I
     settings = _source_settings(config, {})
     frames: tuple[pl.DataFrame | None, pl.DataFrame | None] | None = None
 
-    def snapshot(current: BacktestConfig, params: Mapping[str, object]) -> tuple[pl.DataFrame | None, pl.DataFrame | None]:
+    def snapshot(current: BacktestConfig, params: Mapping[str, object]) -> tuple[pl.DataFrame | None, pl.DataFrame | None] | None:
         nonlocal frames
+        if vars(manifest).get('_frozen_trade_sources') is not snapshot:
+            return None
         live = getattr(manifest, 'backtest_config', None)
         if not isinstance(live, BacktestConfig) or _source_settings(live, params) != settings or not _same_sources(current, params, settings):
             raise ValueError('Fixed trade source declaration changed during this run')
@@ -60,4 +62,5 @@ def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> I
     try:
         yield
     finally:
+        frames = None
         del vars(manifest)['_frozen_trade_sources']
