@@ -12,7 +12,7 @@ from threadpoolctl import threadpool_limits
 
 from limen.data import HistoricalData
 from limen.experiment import UniversalExperimentLoop
-from limen.experiment.manifest_core import DataSourceConfig, MLManifest
+from limen.experiment.manifest_core import DataSourceConfig, MLManifest, RuleBasedManifest
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy
 from tests.test_record_model_outputs import _config as _binary_config
@@ -99,6 +99,7 @@ def _config(*, sources=True, walk_forward=False):
 
 class _NativeSFD:
     def __init__(self, config):
+        self.__name__ = __name__
         self.compiled = CompiledSFD(config)
         self.native_manifest = self.compiled.manifest()
         backtest = self.native_manifest.backtest_config
@@ -529,3 +530,36 @@ def test_removing_only_secondary_source_mid_run_fails_loudly(recorded_learning_b
     assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1}
     assert [row['_round_index'] for row in _records(tmp_path)] == [0]
     assert not hasattr(loop.manifest, '_frozen_trade_sources')
+
+
+def test_rule_based_fixed_sources_match_legacy_recorded_outputs(recorded_learning_bars, tmp_path, monkeypatch):
+    config = _config()
+    manifest = config['sfd']['manifest']
+    config['sfd']['manifest'] = {
+        'type': 'rule_based',
+        **{key: manifest[key] for key in ('data_source', 'split_dates', 'backtest')},
+        'strategy': {
+            'conditions': [{'id': 'entry', 'name': 'entry', 'type': 'relative',
+                            'column': 'close', 'operator': '>', 'other_column': 'open'}],
+            'entry': 'entry',
+        },
+        'reference_architecture': 'limen.sfd.reference_architecture.rule_based',
+    }
+    config['sfd']['params'] = {'fee_bps': [3.0, 7.0]}
+    fixed_path, legacy_path = tmp_path / 'fixed', tmp_path / 'legacy'
+    fixed = _loop(config, recorded_learning_bars, fixed_path)
+    assert isinstance(fixed.manifest, RuleBasedManifest)
+    _run(fixed)
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
+    assert not hasattr(fixed.manifest, '_frozen_trade_sources')
+    SOURCE_CALLS.clear()
+    legacy = _loop(config, recorded_learning_bars, legacy_path)
+    with monkeypatch.context() as baseline:
+        baseline.setattr('limen.experiment.experiment_core.fixed_trade_sources', lambda *args: nullcontext())
+        _run(legacy)
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 2, 'funding': 2}
+    assert fixed.experiment_log.drop('execution_time').equals(legacy.experiment_log.drop('execution_time'))
+    rows = _records(fixed_path)
+    _assert_recorded_equal(rows, _records(legacy_path))
+    assert [row['_round_index'] for row in rows] == [0, 1]
+    assert all(row['trade_contract']['policy']['funding']['approximation'] == 'recorded_exact' for row in rows)
