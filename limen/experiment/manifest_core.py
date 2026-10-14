@@ -537,22 +537,12 @@ class Manifest:
                           transform_params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
-        Configure a class-based target transform.
+        Fit a target class once on train and reuse it on validation/test.
 
-        The class must accept (train_data, target_name, **fit_params) in __init__
-        and expose transform(data, **transform_params) -> pl.DataFrame.
-        Fitting happens once on the training split; the fitted instance is reused
-        for validation and test splits.
-
-        Args:
-            target_name (str): Name of the target column to create
-            target_class (type): Target class whose __init__ accepts (train_data, target_name, **fit_params)
-                and whose transform() accepts (data, **transform_params) returning a pl.DataFrame
-            fit_params (dict[str, ParamValue]): Parameters forwarded to __init__ after train_data and target_name
-            transform_params (dict[str, ParamValue]): Parameters forwarded to transform()
-
-        Returns:
-            Manifest: Self for method chaining
+        The class accepts (train_data, target_name, **fit_params) and exposes
+        transform(data, **transform_params) -> pl.DataFrame. Both parameter
+        dictionaries support round references. Optional source_columns: list[str]
+        declares columns excluded after transform; it must not contain target_name.
         '''
 
         self.target_column = target_name
@@ -1711,6 +1701,13 @@ def _apply_class_based_target(
     if needs_context:
         resolved_transform['trade_context'] = trade_context
     data = instance.transform(data, **resolved_transform)
+    source_columns = getattr(instance, 'source_columns', [])
+    if not isinstance(source_columns, list) or not all(isinstance(name, str) for name in source_columns):
+        raise TypeError('Target source_columns must be a list of strings')
+    if target_name in source_columns:
+        raise ValueError(f'Target source_columns must not include target column {target_name!r}')
+    if source_columns:
+        data = data.drop([name for name in data.columns if name in source_columns])
     if needs_context:
         outcomes = instance.outcomes
         if not isinstance(outcomes, OutcomeLabels) or labels is None:

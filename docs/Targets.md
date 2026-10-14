@@ -395,6 +395,7 @@ A target class must follow this convention:
 
 ```python
 class MyTarget:
+    source_columns: list[str] = []
 
     def __init__(self, train_data: pl.DataFrame, target_name: str, **fit_params) -> None:
         self.target_name = target_name
@@ -407,6 +408,23 @@ class MyTarget:
 ```
 
 There is no base class to inherit from — the convention is enforced structurally, the same way scalers work. Any class that accepts `(train_data, target_name, **fit_params)` in `__init__` and exposes `transform(data, **transform_params) -> pl.DataFrame` is a valid target class.
+
+`source_columns` is optional on the target class or fitted instance. Declare a
+list of column names consumed to build labels that must not become features.
+Manifest preparation removes any declared columns still present after
+`transform()`, before scaling and feature extraction, on all three splits and
+fitted-target replay. Missing or empty declarations preserve the existing path;
+columns already removed by the target are accepted.
+
+A declaration must be a list of strings and must not include `target_name`.
+Invalid declarations raise `TypeError`; excluding the target raises `ValueError`.
+Other columns, values and retained row order remain unchanged. The declaration
+excludes only named inputs; it does not automatically detect look-ahead features.
+
+`ExitQualityTarget` declares `exit_reason` and `exit_net_return`;
+`RiskRewardRatioTarget` declares `capturable_breakout` and `max_drawdown`.
+Their directly called `transform()` methods retain their existing column removal.
+Custom targets may keep their own removal or rely on manifest enforcement.
 
 ## Read Next
 

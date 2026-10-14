@@ -1601,3 +1601,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.25.3] - 2026-10-13
 
 - Convert prepared Polars inputs explicitly at logistic-regression, Ridge and built-in sklearn calibration boundaries; preserve feature order, prepared frames and custom calibration inputs (#689).
+
+## [5.26.0] - 2026-10-14
+
+- Exclude optional target `source_columns` after transformation in manifest preparation. Validate declarations, reject target-label exclusion and preserve existing direct target output schemas, row alignment and fitted replay.
