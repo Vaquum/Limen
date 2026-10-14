@@ -40,4 +40,4 @@ def sklearn_probability_calibrator(clf: Any,
         Any: Fitted calibrated classifier with predict_proba method
     '''
 
-    return _calibrated_classifier_cv(clf, method).fit(np.asarray(x_val), np.asarray(y_val))
+    return _calibrated_classifier_cv(clf, method).fit(x_val, y_val)

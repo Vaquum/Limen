@@ -1598,6 +1598,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Reuse deterministic fitted target and RobustScaler state across model variations inside opt-in factorized snapshot grids; preserve fresh preparation for ordinary permutations (#484).
 
+## [5.25.4] - 2026-10-14
+
+- Preserve original input containers through probability-calibrated logistic regression so recorded isotonic thresholds and decisions retain their prior behavior. Keep explicit arrays for uncalibrated and threshold-only models; document the calibration boundary and add the dated recorded-data regression.
+
 ## [5.25.3] - 2026-10-13
 
 - Convert prepared Polars inputs explicitly at logistic-regression, Ridge and built-in sklearn calibration boundaries; preserve feature order, prepared frames and custom calibration inputs (#689).

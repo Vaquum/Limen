@@ -54,18 +54,22 @@ Models consume the subset of keys they need from the standard Limen shape.
 
 ### Sklearn input boundary
 
-Manifest preparation retains Polars frames and series. `LogRegBinary` and
-`RidgeRegressor` convert features and labels to NumPy arrays at sklearn fit and
-prediction calls, preserving their row and feature-column order. The built-in
-sklearn probability-calibration path also uses arrays for fitting and subsequent
-validation/test prediction. Conversion does not replace entries in the prepared
-data dictionary or change the feature names used by recording, Trainer and Sensor.
+Manifest preparation retains Polars frames and series. Uncalibrated and
+threshold-only `LogRegBinary` and `RidgeRegressor` convert features and labels to
+NumPy arrays at sklearn fit and prediction calls, preserving row and column order.
+Conversion does not replace prepared entries or recording feature names.
 
-Custom probability-calibration callbacks still receive the original validation
-features and labels; custom predictors receive the original feature inputs.
-Returning the original sklearn model or its built-in calibrated classifier keeps
-the array prediction boundary. Threshold callbacks retain their original
-validation-label argument.
+When a probability-calibration callable is configured, LogReg training and
+calibration fitting/prediction retain their original input containers. Native
+array inputs remain arrays. Sklearn's calibration fold gathers can change
+floating-point prediction arithmetic when frames are converted first; isotonic
+calibration can turn that difference into a different selected threshold.
+Frame and array calibration decisions are therefore not promised identical.
+
+Custom calibration callbacks and fitted predictors receive original feature
+inputs; threshold callbacks retain original validation labels. Calibration keeps
+its existing dataframe-protocol dependency and backend warnings, including
+feature-name warnings when a frame-trained model later receives arrays in Sensor.
 Backend errors and warnings continue to propagate. This boundary applies to the
 same model calls in serial and worker execution; it adds no execution mode or
 preparation reuse. The ordinary per-permutation path remains the default, and

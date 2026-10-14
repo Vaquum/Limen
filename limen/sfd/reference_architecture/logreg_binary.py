@@ -3,7 +3,6 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 import numpy as np
 import numpy.typing as npt
-from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
 from typing_extensions import override
 
@@ -96,7 +95,11 @@ class LogRegBinary(ReferenceModel):
 
         params = _drop_removed_sklearn_params(params)
         self.model = _logistic_regression(params)
-        _ = self.model.fit(np.asarray(data['x_train']), np.asarray(data['y_train']))
+        config = self.prediction_calibration_config
+        calibrated = config is not None and config.calibration_func is not None
+        x_train = data['x_train'] if calibrated else np.asarray(data['x_train'])
+        y_train = data['y_train'] if calibrated else np.asarray(data['y_train'])
+        _ = self.model.fit(x_train, y_train)
         self._fitted_calibrator = None
         self._calibration_threshold = 0.5
         self._val_score = None
@@ -129,7 +132,7 @@ class LogRegBinary(ReferenceModel):
                     self.model, self.prediction_calibration_config, data['x_val'], data['y_val']
                 )
             predict_proba = self._fitted_calibrator.predict_proba
-            sklearn_input = self._fitted_calibrator is self.model or isinstance(self._fitted_calibrator, CalibratedClassifierCV)
+            sklearn_input = self.prediction_calibration_config.calibration_func is None
             test_input = np.asarray(data['x_test']) if sklearn_input else data['x_test']
             test_proba = predict_proba(test_input)[:, 1]
             preds = (test_proba >= self._calibration_threshold).astype(np.int8)
