@@ -43,6 +43,7 @@ def supports_preparation(manifest: MLManifest) -> bool:
     return (target is not None and target.target_class in (NextReturnTarget, QuantileBinaryTarget)
             and _supports_scaler(manifest) and manifest.ablation_config is None
             and manifest.pca_compression_config is None and manifest.prediction_calibration_config is None
+            and not manifest.feature_shims
             and manifest.data_dict_extension is None and manifest.objective is None
             and all(entry.func in (window_return, lag_range) for entry in manifest.feature_transforms))
 

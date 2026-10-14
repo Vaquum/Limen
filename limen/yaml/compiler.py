@@ -205,6 +205,8 @@ def _apply_transforms(manifest: MLManifest, m: dict[str, Any]) -> None:
             include_if=item.get('include_if'),
             **_resolve_func_params(dict(cast(dict[str, Any], item.get('params') or {}))),
         )
+    if 'feature_shims' in m:
+        _ = manifest.set_feature_shims(cast(list[dict[str, object]], m['feature_shims']))
 
 
 def _apply_scaler(manifest: MLManifest, m: dict[str, Any]) -> None:

@@ -6,6 +6,7 @@ from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig
 from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
 from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
+from limen.experiment._column_shims import apply_column_shims, parse_shims
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
 from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
@@ -817,6 +818,11 @@ class MLManifest(Manifest):
     decoder_lookback: int = 1
     strict_mode: bool = False
     objective: ObjectiveConfig | None = None
+    feature_shims: list[dict[str, object]] = field(default_factory=list)
+
+    def set_feature_shims(self, shims: list[dict[str, object]]) -> 'MLManifest':
+        self.feature_shims = parse_shims(shims)
+        return self
 
     def set_objective(self, metric: str = 'backtest_total_return', direction: str = 'maximize') -> 'MLManifest':
         self.objective = ObjectiveConfig(metric, direction)
@@ -1046,6 +1052,13 @@ class MLManifest(Manifest):
                     trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
                 )
 
+            if self.feature_shims:
+                data, all_fitted_params['_column_shims'] = apply_column_shims(
+                    data.fill_nan(None), self.feature_shims, round_params,
+                    all_fitted_params.get('_column_shims'), training=is_train,
+                    target=self.target_column,
+                )
+
             if self.ablation_config is not None:
                 data, columns_to_drop = _apply_feature_ablation(
                     data, self, round_params, columns_to_drop, pre_transform_columns,
@@ -1188,6 +1201,12 @@ class MLManifest(Manifest):
             data = _drop_target_source_columns(data, target, self.target_column)
 
         dropped_features: list[str] = round_params.get('_dropped_features') or []
+        if self.feature_shims:
+            data, _ = apply_column_shims(
+                data.fill_nan(None), self.feature_shims, round_params,
+                fitted_params.get('_column_shims'), training=False,
+                target=self.target_column,
+            )
         if dropped_features:
             data = data.drop([c for c in dropped_features if c in data.columns])
 
