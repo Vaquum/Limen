@@ -413,7 +413,9 @@ There is no base class to inherit from — the convention is enforced structural
 list of column names consumed to build labels that must not become features.
 Manifest preparation removes any declared columns still present after
 `transform()`, before scaling and feature extraction, on all three splits and
-fitted-target replay. Missing or empty declarations preserve the existing path;
+fitted-target replay. Live Sensor preparation applies the same exclusion from
+the fitted target metadata before warm-up counting, scaling and PCA, without
+recomputing labels or fitting the target. Missing or empty declarations preserve the existing path;
 columns already removed by the target are accepted.
 
 A declaration must be a list of strings and must not include `target_name`.

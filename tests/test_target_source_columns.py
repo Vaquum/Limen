@@ -1,12 +1,18 @@
 from typing import ClassVar
 
 from pathlib import Path
+from datetime import date
 
+import numpy as np
 import polars as pl
 import pytest
+from threadpoolctl import threadpool_limits
 
 from limen.data.utils import split_sequential
 from limen.experiment import MLManifest, RuleBasedManifest
+from limen.inference import Sensor
+from limen.scalers.robust_scaler import RobustScaler
+from limen.sfd.reference_architecture import LogRegBinary
 from limen.targets import ExitQualityTarget, RiskRewardRatioTarget
 
 
@@ -192,3 +198,86 @@ def test_builtin_source_columns_preserve_direct_transform_and_preparation(
     _assert_prepared_equal(prepared, legacy, 'ml')
     for split in SPLITS:
         assert not set(source_columns) & set(prepared[f'x_{split}'].columns)
+
+
+class _InstanceVolumeTarget(_VolumeTarget):
+    def __init__(self, train_data, target_name):
+        super().__init__(train_data, target_name)
+        self.source_columns = ['volume']
+
+
+def _recorded_close_lag(data):
+    return data.with_columns(pl.col('close').shift(3).alias('close_lag_3'))
+
+
+@pytest.mark.parametrize('scaled', (False, True))
+@pytest.mark.parametrize('target_class', (_DeclaredVolumeTarget, _InstanceVolumeTarget))
+def test_target_source_columns_sensor_matches_recorded_holdouts_without_refitting(
+    recorded_source_bars, scaled, target_class,
+):
+    target_class.fit_count = 0
+    manifest = (MLManifest()
+                .set_split_dates(date(2024, 1, 1), date(2024, 1, 4),
+                                 date(2024, 1, 4), date(2024, 1, 6),
+                                 date(2024, 1, 6), date(2024, 1, 8),
+                                 val_predict_guard=False, test_predict_guard=False)
+                .add_feature(_recorded_close_lag)
+                .with_target_label('next_volume', target_class))
+    if scaled:
+        manifest.set_scaler(RobustScaler)
+    params = {'bar_type': 'base'}
+    data = manifest.prepare_data(recorded_source_bars, params)
+    fitted = data['_fitted_params']
+    target = fitted['_target_cls_next_volume']
+    assert target.source_columns == ['volume']
+    assert target_class.fit_count == 1
+    assert target.transform_count == 3
+    if target_class is _InstanceVolumeTarget:
+        assert not hasattr(target_class, 'source_columns')
+    if scaled:
+        assert 'volume' not in fitted['_scaler'].medians
+    with threadpool_limits(limits=1):
+        model = LogRegBinary().train(
+            data, C=0.3, solver='lbfgs', max_iter=200, tol=1e-7,
+            random_state=42, n_jobs=1,
+        )
+        sensor = Sensor({}, model, fitted, params)
+        sensor._manifest = manifest
+        inference, lookback = manifest.sensor_input_prep(recorded_source_bars, fitted, params)
+        assert inference.height == recorded_source_bars.height
+        assert inference['datetime'].equals(recorded_source_bars['datetime'])
+        assert inference.drop('datetime').columns == data['x_train'].columns
+        assert 'volume' not in inference.columns
+        assert lookback == 3
+        assert inference['close_lag_3'].head(3).null_count() == 3
+        observed = sensor.predict_all(recorded_source_bars)
+        assert [row.datetime for row in observed] == recorded_source_bars['datetime'].to_list()
+        assert all(row.reason == 'inside-training-window' for row in observed[:72])
+        infer_datetimes = inference['datetime'].to_list()
+        by_time = {row.datetime: row for row in observed}
+        for split in ('val', 'test'):
+            expected = model.predict({'x_test': data[f'x_{split}']})
+            start, end = ((date(2024, 1, 4), date(2024, 1, 6)) if split == 'val'
+                          else (date(2024, 1, 6), date(2024, 1, 8)))
+            times = [dt for dt in infer_datetimes if start <= dt.date() < end]
+            # Each prepared target split excludes its final forward-label row.
+            times = times[:len(data[f'x_{split}'])]
+            indices = [infer_datetimes.index(dt) for dt in times]
+            assert inference[indices].drop('datetime').equals(data[f'x_{split}'])
+            rows = [by_time[dt] for dt in times]
+            assert rows and all(row.reason is None for row in rows)
+            np.testing.assert_array_equal([row.prediction for row in rows], expected['_preds'])
+            np.testing.assert_allclose([row.probability for row in rows], expected['_probs'],
+                                       rtol=1e-10, atol=1e-12)
+            last = sensor.predict(recorded_source_bars.head(indices[-1] + 1))
+            assert last.reason is None
+            assert last.datetime == times[-1]
+            assert last.prediction == expected['_preds'][-1]
+            assert last.probability == pytest.approx(expected['_probs'][-1], rel=1e-10, abs=1e-12)
+        assert sensor.predict(recorded_source_bars.head(12)).reason == 'inside-training-window'
+        future = sensor.predict_all(recorded_source_bars.tail(24))
+        assert [row.reason for row in future[:3]] == ['warm-up'] * 3
+        assert all(row.reason is None for row in future[3:])
+        assert sensor.predict(recorded_source_bars.tail(1)).reason == 'warm-up'
+    assert target_class.fit_count == 1
+    assert target.transform_count == 3
