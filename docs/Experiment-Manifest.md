@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.26.1"
+  limen_version: "5.27.0"
   mode: development
 
 sfd:
@@ -446,7 +446,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.26.1"
+  limen_version: "5.27.0"
   mode: development
 sfd:
   manifest:
@@ -503,7 +503,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.26.1"
+  limen_version: "5.27.0"
   mode: development
 sfd:
   manifest:
@@ -883,8 +883,8 @@ rotation to validation and test. `x_train`, `x_val`, and `x_test` are replaced
 with `pc_*` columns; no parallel raw-feature dataset is retained.
 
 PCA compression requires the configured fitted scaler to be `RobustScaler`.
-The PCA input is assumed to be stationary upstream. Limen does not run
-stationarity shims or tests in this path.
+PCA does not test stationarity. Optional [feature shims](#feature-shims) transform
+selected columns upstream; their training evidence does not guarantee stationarity.
 
 ## Rule-Based Strategy
 
@@ -1143,6 +1143,47 @@ Then in `params()`:
 ```
 
 This makes feature robustness part of the search itself.
+
+## Feature Shims
+
+`MLManifest.set_feature_shims(shims)` applies explicit transformations to selected numeric feature or indicator output columns, after their creation and before feature ablation, scaling and PCA. Selected values replace their raw model-input values; original indicator/feature APIs and unselected columns remain unchanged. The declaration is optional and applies to every ordinary MSQ round.
+
+```python-fragment
+.set_feature_shims([
+    {'columns': ['sma_{sma_period}', 'close_sma_{sma_period}'],
+     'method': 'ratio', 'reference': 'close'},
+    {'columns': ['close'], 'method': 'fractional_diff', 'd': '{shim_d}'},
+])
+```
+
+The YAML equivalent belongs to `sfd.manifest`:
+
+```yaml
+feature_shims:
+  - columns: ["sma_{sma_period}", "close_sma_{sma_period}"]
+    method: ratio
+    reference: close
+  - columns: [close]
+    method: fractional_diff
+    d: "{shim_d}"
+```
+
+These columns must be produced by the configured features/indicators. Column-name templates resolve from that same round. Shim scalar settings may reference existing `sfd.params`; for example `shim_d: [0.2, 0.4, 0.6]` sweeps three declared differentiation orders. The column declaration itself stays manifest configuration. MSQ uses its existing search, parameter identity and feedback interfaces.
+
+| Method | Operation | Additional fields |
+|---|---|---|
+| `ratio` | `x / reference - 1` | required `reference` column |
+| `scale` | `x / reference` | required `reference` column |
+| `log1p` | `log(1 + x)` | none |
+| `fractional_diff` | existing fixed-width fractional difference | `d` in `[0,1]` or `auto`; `threshold` defaults to `0.001`; `significance_level` defaults to `0.05` |
+
+All ratio/scale denominators use the original frame, even when another shim replaces that reference column. Missing, nonnumeric, duplicate or overlapping selections, datetime/target/private source identity, nonfinite values, zero denominators and invalid logarithm domains raise. Temporal methods preserve leading warmup nulls and chronological row identity; they can increase the existing warmup requirement.
+
+For `d: auto` (also the default fractional-difference order), fit each selected column on the current training partition using the bounded existing grid from zero through one. Verify the selected order with ADF and raise if none qualifies. Validation, test and Sensor use the frozen training state; walk-forward fits each fold separately. Existing Trainer reconstruction uses the persisted YAML/training partition and passes fitted state to Sensor. No new run artifact is introduced. ADF evidence belongs to its training sample: these methods provide causal transformations, not a universal stationarity or performance guarantee.
+
+Automatic fractional fitting is rejected with conditional direction/sizing, whose inner training folds do not refit shims. Fixed-order and stateless shims remain available. Cumulative indicators require the same history origin for replay; a shim transforms their supplied values and does not reconcile origin resets.
+
+Ordinary sequential preparation remains fresh for each permutation. The current `factorize=True` path rejects this configuration; composing shims with factorized reuse is outside the admitted boundary.
 
 ## Data Dict Extension
 

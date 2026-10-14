@@ -5,6 +5,7 @@ from typing import cast
 
 from limen.yaml.errors import YAMLError
 from limen.yaml._objective_spec import check_objective_spec
+from limen.yaml._feature_shim_spec import FeatureShimSpec
 from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import AcceptanceSpec
 from limen.yaml.rules import BlockSpec
@@ -107,6 +108,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
     SplitSpec(),
     AcceptanceSpec(),
+    FeatureShimSpec(),
     RequiredColumnsSpec(),
     NoUnknownKeys('sfd.manifest.split_dates', SPLIT_DATES_REQUIRED | SPLIT_DATES_OPTIONAL, severity='error'),
 

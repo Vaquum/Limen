@@ -1613,3 +1613,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.26.1] - 2026-10-14
 
 - Reuse fixed execution and funding source observations within each serial UEL invocation; retain per-round loading for parameter-dependent configurations and fresh preparation and model training (#461).
+
+## [5.27.0] - 2026-10-14
+
+- Apply opt-in generic numeric-column shims before scaling and PCA; resolve ordinary MSQ parameters and retain train-fitted fractional-difference state for validation, test and inference (#518). Preserve default preparation and reject unsupported factorized composition.

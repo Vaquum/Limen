@@ -817,6 +817,9 @@ class MLManifest(Manifest):
     decoder_lookback: int = 1
     strict_mode: bool = False
     objective: ObjectiveConfig | None = None
+    feature_shims: list[dict[str, object]] = field(default_factory=list[dict[str, object]])
+
+    from limen.experiment._column_shims import prepare_column_shims as _prepare_column_shims, set_feature_shims
 
     def set_objective(self, metric: str = 'backtest_total_return', direction: str = 'maximize') -> 'MLManifest':
         self.objective = ObjectiveConfig(metric, direction)
@@ -1046,12 +1049,13 @@ class MLManifest(Manifest):
                     trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
                 )
 
+            data = self._prepare_column_shims(data, round_params, all_fitted_params, is_train)
+
             if self.ablation_config is not None:
                 data, columns_to_drop = _apply_feature_ablation(
                     data, self, round_params, columns_to_drop, pre_transform_columns,
                 )
 
-            data = data.fill_nan(None)
             feature_surface = data.drop(self.target_column) if outcome_target and self.target_column is not None else data
             n_leading = _count_leading_nulls(feature_surface)
             data = data.slice(n_leading)
@@ -1187,11 +1191,10 @@ class MLManifest(Manifest):
             target = fitted_params.get(f'_target_cls_{self.target_column}', self.target_class_config.target_class)
             data = _drop_target_source_columns(data, target, self.target_column)
 
-        dropped_features: list[str] = round_params.get('_dropped_features') or []
-        if dropped_features:
+        data = self._prepare_column_shims(data, round_params, dict(fitted_params), False)
+        if dropped_features := round_params.get('_dropped_features'):
             data = data.drop([c for c in dropped_features if c in data.columns])
 
-        data = data.fill_nan(None)
         indicator_lookback = _count_leading_nulls(data)
 
         all_fitted_params = dict(fitted_params)

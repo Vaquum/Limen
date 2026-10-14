@@ -22,7 +22,7 @@ ML_MANIFEST_OPTIONAL = {
     'objective',
     'pre_split_data_selector',
     'bar_formation',
-    'features',
+    'features', 'feature_shims',
     'scaler',
     'feature_ablation',
     'data_dict_extension',
