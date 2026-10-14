@@ -1,7 +1,6 @@
 from typing import Any
 from typing import Protocol
 
-import numpy as np
 import numpy.typing as npt
 import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
