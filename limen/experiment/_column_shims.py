@@ -96,17 +96,15 @@ def parse_shims(value: object) -> list[dict[str, object]]:
     return copy.deepcopy(result)
 
 
+def _format(value: str, params: Mapping[str, object], *, column: bool = False) -> object:
+    try:
+        return params[value[1:-1]] if not column and _is_reference(value) else value.format_map(params)
+    except KeyError as exc:
+        raise ValueError(f'feature_shims unknown parameter {exc.args[0]}') from exc
+
+
 def _resolve(value: object, params: Mapping[str, object]) -> object:
-    if not isinstance(value, str):
-        return value
-    if value in params:
-        return params[value]
-    if _is_reference(value):
-        name = value[1:-1]
-        if name not in params:
-            raise ValueError(f'feature_shims unknown parameter {name}')
-        return params[name]
-    return value.format_map(params) if '{' in value or '}' in value else value
+    return _format(value, params) if isinstance(value, str) else value
 
 
 def _resolved(specs: list[dict[str, object]], params: Mapping[str, object]) -> list[dict[str, object]]:
@@ -116,7 +114,7 @@ def _resolved(specs: list[dict[str, object]], params: Mapping[str, object]) -> l
         columns = values['columns']
         if isinstance(columns, list):
             values['columns'] = [
-                name.format_map(params) if isinstance(name, str) else name
+                _format(name, params, column=True) if isinstance(name, str) else name
                 for name in cast(list[object], columns)
             ]
         result.append(_spec(values, references=False))

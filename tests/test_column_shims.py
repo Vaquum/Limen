@@ -152,6 +152,10 @@ def test_declared_column_shims_match_native_yaml_and_recorded_formulas(recorded_
         np.testing.assert_allclose(native[f'y_{split}'], expected_labels.head(-1), atol=1e-12)
     assert recorded_shim_bars.equals(before)
     assert native['_fitted_params']['_column_shims'].specs == compiled['_fitted_params']['_column_shims'].specs
+    colliding, _ = apply_column_shims(recorded_shim_bars, parse_shims(shims),
+        {'ratio': 'log1p', 'scale': 'log1p', 'close': 'volume'}, None,
+        training=True, target='next_return')
+    assert colliding.equals(native['_fitted_params']['_column_shims'].transform(recorded_shim_bars))
 
     custom = (_native([{'columns': ['custom_mid', 'custom_move'], 'method': 'scale',
                        'reference': 'close'}]).add_feature(_numeric_outputs)
@@ -217,6 +221,12 @@ def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_sh
     ])
     second = manifest.prepare_data(changed, {})
     state = first['_fitted_params']['_column_shims']
+    collisions = manifest.prepare_data(recorded_shim_bars,
+        {'auto': 0.9, 'fractional_diff': 'log1p', 'close': 'volume'})
+    assert state.orders == collisions['_fitted_params']['_column_shims'].orders
+    assert state.specs == collisions['_fitted_params']['_column_shims'].specs
+    for split in SPLITS:
+        assert first[f'x_{split}'].equals(collisions[f'x_{split}'])
     assert state.orders == second['_fitted_params']['_column_shims'].orders
     assert 0 <= state.orders['close'] <= 1
     for split in ('train', 'val'):
@@ -355,6 +365,7 @@ def test_column_shims_walk_forward_refits_on_each_training_fold(recorded_shim_ba
 
 
 @pytest.mark.parametrize('shims', (
+    None,
     [{'columns': [], 'method': 'log1p'}],
     [{'columns': 'close', 'method': 'log1p'}],
     [{'columns': '{selected}', 'method': 'log1p'}],
@@ -373,13 +384,29 @@ def test_column_shims_walk_forward_refits_on_each_training_fold(recorded_shim_ba
     [{'columns': ['close'], 'method': 'log1p'}, {'columns': ['close'], 'method': 'log1p'}],
 ))
 def test_column_shims_reject_invalid_configuration(recorded_shim_bars, shims):
-    with pytest.raises((TypeError, ValueError)):
-        _native(shims).prepare_data(recorded_shim_bars, {})
-    assert not validate(_config(shims)).valid
+    if shims is None:
+        with pytest.raises((TypeError, ValueError)):
+            parse_shims(None)
+        with pytest.raises((TypeError, ValueError)):
+            _native().set_feature_shims(None)
+        config = _config()
+        config['sfd']['manifest']['feature_shims'] = None
+        assert not validate(config).valid
+        declared = [{'columns': ['volume'], 'method': 'log1p'}]
+        for location in ('root', 'sfd', 'uel'):
+            misplaced = _config()
+            container = misplaced if location == 'root' else misplaced[location]
+            container['feature_shims'] = copy.deepcopy(declared)
+            assert not validate(misplaced).valid
+    else:
+        with pytest.raises((TypeError, ValueError)):
+            _native(shims).prepare_data(recorded_shim_bars, {})
+        assert not validate(_config(shims)).valid
 
 
 @pytest.mark.parametrize('case', ('missing', 'nonnumeric', 'reference', 'zero', 'log_domain',
-                                   'datetime', 'target', 'missing_parameter'))
+                                   'datetime', 'target', 'missing_parameter',
+                                   'missing_column_template', 'missing_reference_parameter'))
 def test_column_shims_reject_invalid_data_domains(recorded_shim_bars, case):
     data = recorded_shim_bars
     spec = {'columns': ['volume'], 'method': 'log1p'}
@@ -400,8 +427,16 @@ def test_column_shims_reject_invalid_data_domains(recorded_shim_bars, case):
         spec['columns'] = ['next_return']
     elif case == 'missing_parameter':
         spec = {'columns': ['close'], 'method': 'fractional_diff', 'd': '{absent_parameter}'}
-    with pytest.raises((TypeError, ValueError)):
-        _native([spec]).prepare_data(data, {})
+    elif case == 'missing_column_template':
+        spec['columns'] = ['ret_{absent_period}']
+    elif case == 'missing_reference_parameter':
+        spec = {'columns': ['open'], 'method': 'ratio', 'reference': '{absent_reference}'}
+    if case in {'missing_parameter', 'missing_column_template', 'missing_reference_parameter'}:
+        with pytest.raises(ValueError, match='unknown parameter'):
+            _native([spec]).prepare_data(data, {})
+    else:
+        with pytest.raises((TypeError, ValueError)):
+            _native([spec]).prepare_data(data, {})
 
 
 def test_column_shims_reject_factorized_preparation(recorded_shim_bars, tmp_path):
