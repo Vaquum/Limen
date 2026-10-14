@@ -537,22 +537,12 @@ class Manifest:
                           transform_params: dict[str, Any] | None = None) -> 'Manifest':
 
         '''
-        Configure a class-based target transform.
+        Fit a target class once on train and reuse it on validation/test.
 
-        The class must accept (train_data, target_name, **fit_params) in __init__
-        and expose transform(data, **transform_params) -> pl.DataFrame.
-        Fitting happens once on the training split; the fitted instance is reused
-        for validation and test splits.
-
-        Args:
-            target_name (str): Name of the target column to create
-            target_class (type): Target class whose __init__ accepts (train_data, target_name, **fit_params)
-                and whose transform() accepts (data, **transform_params) returning a pl.DataFrame
-            fit_params (dict[str, ParamValue]): Parameters forwarded to __init__ after train_data and target_name
-            transform_params (dict[str, ParamValue]): Parameters forwarded to transform()
-
-        Returns:
-            Manifest: Self for method chaining
+        The class accepts (train_data, target_name, **fit_params) and exposes
+        transform(data, **transform_params) -> pl.DataFrame. Both parameter
+        dictionaries support round references. Optional source_columns: list[str]
+        declares columns excluded after transform; it must not contain target_name.
         '''
 
         self.target_column = target_name
@@ -1176,19 +1166,10 @@ class MLManifest(Manifest):
     ) -> tuple[pl.DataFrame, int]:
 
         '''
-        Prepare raw klines for live inference without splitting or dropping nulls.
+        Prepare live features using fitted target exclusions, scaler and PCA.
 
-        Args:
-            raw_klines (pl.DataFrame): Raw klines covering at least indicator warm-up + decoder window
-            fitted_params (dict[str, Any]): Scaler and PCA state stored from training
-            round_params (dict[str, Any]): Parameter values from the winning round
-
-        Returns:
-            tuple[pl.DataFrame, int]: Prepared feature DataFrame and indicator_lookback count
-
-        NOTE: Does not call drop_nulls. Leading null rows represent indicator warm-up bars.
-        The returned indicator_lookback count is the number of leading null rows so the
-        caller can determine which bars are valid for prediction.
+        Preserve null rows and return the leading indicator warm-up count.
+        Fitted target metadata takes precedence over static class declarations.
         '''
 
         _, data = _process_bars(self, raw_klines, round_params)
@@ -1202,6 +1183,9 @@ class MLManifest(Manifest):
         lazy = data.lazy()
         lazy = _apply_feature_transforms(self, lazy, round_params)
         data = lazy.collect()
+        if self.target_class_config is not None:
+            target = fitted_params.get(f'_target_cls_{self.target_column}', self.target_class_config.target_class)
+            data = _drop_target_source_columns(data, target, self.target_column)
 
         dropped_features: list[str] = round_params.get('_dropped_features') or []
         if dropped_features:
@@ -1669,6 +1653,15 @@ def _apply_fitted_transforms(
     return data, all_fitted_params
 
 
+def _drop_target_source_columns(data: pl.DataFrame, target: object, target_name: str | None) -> pl.DataFrame:
+    source_columns = getattr(target, 'source_columns', [])
+    if not isinstance(source_columns, list) or not all(isinstance(name, str) for name in cast(list[object], source_columns)):
+        raise TypeError('Target source_columns must be a list of strings')
+    if target_name in source_columns:
+        raise ValueError(f'Target source_columns must not include target column {target_name!r}')
+    return data.drop([name for name in data.columns if name in source_columns]) if source_columns else data
+
+
 def _apply_class_based_target(
         manifest: Manifest,
         data: pl.DataFrame,
@@ -1711,6 +1704,7 @@ def _apply_class_based_target(
     if needs_context:
         resolved_transform['trade_context'] = trade_context
     data = instance.transform(data, **resolved_transform)
+    data = _drop_target_source_columns(data, instance, target_name)
     if needs_context:
         outcomes = instance.outcomes
         if not isinstance(outcomes, OutcomeLabels) or labels is None:
