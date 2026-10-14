@@ -883,8 +883,8 @@ rotation to validation and test. `x_train`, `x_val`, and `x_test` are replaced
 with `pc_*` columns; no parallel raw-feature dataset is retained.
 
 PCA compression requires the configured fitted scaler to be `RobustScaler`.
-The PCA input is assumed to be stationary upstream. Limen does not run
-stationarity shims or tests in this path.
+PCA does not test stationarity. Optional [feature shims](#feature-shims) transform
+selected columns upstream; their training evidence does not guarantee stationarity.
 
 ## Rule-Based Strategy
 
@@ -1152,7 +1152,7 @@ This makes feature robustness part of the search itself.
 .set_feature_shims([
     {'columns': ['sma_{sma_period}', 'close_sma_{sma_period}'],
      'method': 'ratio', 'reference': 'close'},
-    {'columns': ['obv'], 'method': 'fractional_diff', 'd': '{shim_d}'},
+    {'columns': ['close'], 'method': 'fractional_diff', 'd': '{shim_d}'},
 ])
 ```
 
@@ -1163,7 +1163,7 @@ feature_shims:
   - columns: ["sma_{sma_period}", "close_sma_{sma_period}"]
     method: ratio
     reference: close
-  - columns: [obv]
+  - columns: [close]
     method: fractional_diff
     d: "{shim_d}"
 ```
@@ -1180,6 +1180,8 @@ These columns must be produced by the configured features/indicators. Column-nam
 All ratio/scale denominators use the original frame, even when another shim replaces that reference column. Missing, nonnumeric, duplicate or overlapping selections, datetime/target/private source identity, nonfinite values, zero denominators and invalid logarithm domains raise. Temporal methods preserve leading warmup nulls and chronological row identity; they can increase the existing warmup requirement.
 
 For `d: auto` (also the default fractional-difference order), fit each selected column on the current training partition using the bounded existing grid from zero through one. Verify the selected order with ADF and raise if none qualifies. Validation, test and Sensor use the frozen training state; walk-forward fits each fold separately. Existing Trainer reconstruction uses the persisted YAML/training partition and passes fitted state to Sensor. No new run artifact is introduced. ADF evidence belongs to its training sample: these methods provide causal transformations, not a universal stationarity or performance guarantee.
+
+Automatic fractional fitting is rejected with conditional direction/sizing, whose inner training folds do not refit shims. Fixed-order and stateless shims remain available. Cumulative indicators require the same history origin for replay; a shim transforms their supplied values and does not reconcile origin resets.
 
 Ordinary sequential preparation remains fresh for each permutation. The current `factorize=True` path rejects this configuration; composing shims with factorized reuse is outside the admitted boundary.
 

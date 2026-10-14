@@ -18,6 +18,7 @@ from limen.indicators import window_return
 from limen.inference import Trainer
 from limen.scalers import RobustScaler
 from limen.sfd.reference_architecture import ridge_regressor
+from limen.sfd.reference_architecture.direction_sizing import direction_sizing
 from limen.targets import NextReturnTarget
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 
@@ -210,7 +211,9 @@ def test_fractional_shim_matches_causal_fixed_width_definition(recorded_shim_bar
         assert actual[column].equals(recorded_shim_bars[column])
 
 
-def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_shim_bars):
+def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_shim_bars, monkeypatch):
+    import limen.experiment._column_shims as shims_module
+
     shims = [{'columns': ['close'], 'method': 'fractional_diff', 'd': 'auto', 'threshold': 0.01}]
     manifest = _native(shims)
     first = manifest.prepare_data(recorded_shim_bars, {})
@@ -239,6 +242,31 @@ def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_sh
     with pytest.raises(ValueError):
         apply_column_shims(recorded_shim_bars.head(2), parse_shims(shims), {}, None,
                            training=True, target='next_return')
+
+    conditional = _native(shims).with_reference_architecture(direction_sizing)
+
+    def forbidden_auto_fit(*args, **kwargs):
+        raise AssertionError('conditional preparation must reject before fitting an order')
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr(shims_module, 'fit_order', forbidden_auto_fit)
+        with pytest.raises(ValueError, match='conditional direction/sizing'):
+            conditional.prepare_data(recorded_shim_bars, {'conditional_size': True})
+
+    for spec in ({'columns': ['close'], 'method': 'fractional_diff', 'd': 1.0},
+                 {'columns': ['volume'], 'method': 'log1p'}):
+        conditional.set_feature_shims([spec])
+        fitted = {}
+        admitted = shims_module.prepare_column_shims(conditional, recorded_shim_bars,
+            {'conditional_size': True}, fitted, True)
+        assert admitted.columns == recorded_shim_bars.columns
+        assert admitted['datetime'].equals(recorded_shim_bars['datetime'])
+        if spec['method'] == 'fractional_diff':
+            np.testing.assert_allclose(admitted['close'].to_numpy(), recorded_shim_bars['close'].diff().to_numpy(),
+                                       equal_nan=True)
+            assert fitted['_column_shims'].orders == {'close': 1.0}
+        else:
+            np.testing.assert_allclose(admitted['volume'], np.log1p(recorded_shim_bars['volume'].to_numpy()))
 
 
 def test_column_shims_preserve_disabled_path_and_raw_feature_api(recorded_shim_bars):

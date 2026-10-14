@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 import polars as pl
 
@@ -14,7 +14,10 @@ from limen.backtest.trade_contract import finite_number
 from limen.experiment._backtest_provenance import SOURCE_ROW
 from limen.experiment._shim_fractional_diff import fractional_column, fit_order
 
-__all__ = ['FittedColumnShims', 'apply_column_shims', 'parse_shims']
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import MLManifest
+
+__all__ = ['FittedColumnShims', 'apply_column_shims', 'parse_shims', 'prepare_column_shims', 'set_feature_shims']
 
 _METHOD_FIELDS: dict[str, set[str]] = {
     'ratio': {'reference'},
@@ -205,3 +208,29 @@ def apply_column_shims(
                     )
         state = FittedColumnShims(copy.deepcopy(resolved), orders, target, fingerprint)
     return state.transform(data), state
+
+
+def set_feature_shims(self: MLManifest, shims: list[dict[str, object]]) -> MLManifest:
+    self.feature_shims = parse_shims(shims)
+    return self
+
+
+def prepare_column_shims(
+    manifest: MLManifest, data: pl.DataFrame, round_params: Mapping[str, object],
+    fitted_params: dict[str, object], training: bool,
+) -> pl.DataFrame:
+    data = data.fill_nan(None)
+    if manifest.feature_shims:
+        automatic = any(spec['method'] == 'fractional_diff' and spec.get('d') == 'auto'
+                        for spec in _resolved(manifest.feature_shims, round_params))
+        if automatic:
+            from limen.sfd.reference_architecture.direction_sizing import direction_sizing
+
+            if (manifest.architecture_function is direction_sizing
+                    and manifest.resolve_model_kwargs(dict(round_params)).get('conditional_size') is True):
+                raise ValueError('feature_shims auto fractional_diff is unsupported with conditional direction/sizing')
+        data, fitted_params['_column_shims'] = apply_column_shims(
+            data, manifest.feature_shims, round_params, fitted_params.get('_column_shims'),
+            training=training, target=manifest.target_column,
+        )
+    return data
