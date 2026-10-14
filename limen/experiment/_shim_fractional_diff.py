@@ -6,7 +6,7 @@ from limen.backtest.trade_contract import finite_number
 from limen.features.fractional_diff import FRACDIFF_SUFFIX, find_min_d, fractional_diff
 from limen.utils.adf_test import adf_test
 
-__all__ = ['fractional_column', 'fit_order']
+__all__ = ['fit_order', 'fractional_column']
 
 
 def fractional_column(data: pl.DataFrame, column: str, order: float, threshold: float) -> pl.Series:

@@ -818,7 +818,7 @@ class MLManifest(Manifest):
     decoder_lookback: int = 1
     strict_mode: bool = False
     objective: ObjectiveConfig | None = None
-    feature_shims: list[dict[str, object]] = field(default_factory=list)
+    feature_shims: list[dict[str, object]] = field(default_factory=list[dict[str, object]])
 
     def set_feature_shims(self, shims: list[dict[str, object]]) -> 'MLManifest':
         self.feature_shims = parse_shims(shims)

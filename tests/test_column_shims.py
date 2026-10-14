@@ -14,6 +14,7 @@ from limen.experiment import MLManifest, UniversalExperimentLoop
 from limen.experiment._column_shims import apply_column_shims, parse_shims
 from limen.experiment._walk_forward_split import resolve_walk_forward_split
 from limen.features import fractional_diff
+from limen.indicators import window_return
 from limen.inference import Trainer
 from limen.scalers import RobustScaler
 from limen.sfd.reference_architecture import ridge_regressor
@@ -91,6 +92,13 @@ def _raw_split(bars, index):
     return bars.filter((pl.col('datetime').dt.date() >= start) & (pl.col('datetime').dt.date() < end))
 
 
+def _numeric_outputs(data):
+    return data.with_columns(
+        ((pl.col('high') + pl.col('low')) / 2).alias('custom_mid'),
+        (pl.col('close') - pl.col('open')).alias('custom_move'),
+    )
+
+
 def _ffd_expected(values, order, threshold):
     weights = [1.0]
     for offset in range(1, len(values) + 1):
@@ -144,6 +152,41 @@ def test_declared_column_shims_match_native_yaml_and_recorded_formulas(recorded_
         np.testing.assert_allclose(native[f'y_{split}'], expected_labels.head(-1), atol=1e-12)
     assert recorded_shim_bars.equals(before)
     assert native['_fitted_params']['_column_shims'].specs == compiled['_fitted_params']['_column_shims'].specs
+
+    custom = (_native([{'columns': ['custom_mid', 'custom_move'], 'method': 'scale',
+                       'reference': 'close'}]).add_feature(_numeric_outputs)
+              .prepare_data(recorded_shim_bars, {}))
+    raw_train = _raw_split(recorded_shim_bars, 0).head(-1)
+    assert custom['x_train'].columns == raw_train.drop('datetime').columns + ['custom_mid', 'custom_move']
+    np.testing.assert_allclose(custom['x_train']['custom_mid'],
+                               (raw_train['high'] + raw_train['low']) / 2 / raw_train['close'])
+    np.testing.assert_allclose(custom['x_train']['custom_move'],
+                               (raw_train['close'] - raw_train['open']) / raw_train['close'])
+
+    period_shims = [{'columns': ['ret_{period}'], 'method': 'scale', 'reference': 'close'}]
+    period_config = _config(period_shims)
+    period_config['sfd']['manifest']['indicators'] = [
+        {'func': 'limen.indicators.window_return', 'params': {'period': '{period}'}}]
+    period_config['sfd']['params']['period'] = [2]
+    assert validate(period_config).valid
+    period_native = (_native(period_shims).add_indicator(window_return, period='period')
+                     .prepare_data(recorded_shim_bars, {'period': 2}))
+    period_yaml = CompiledSFD(period_config).manifest().prepare_data(recorded_shim_bars, {'period': 2})
+    _assert_prepared_equal(period_native, period_yaml)
+    raw_period = _raw_split(recorded_shim_bars, 0)
+    expected_return = (raw_period['close'] / raw_period['close'].shift(2) - 1) / raw_period['close']
+    np.testing.assert_allclose(period_native['x_train']['ret_2'], expected_return.slice(2).head(-1))
+    assert period_native['x_train'].columns == raw_train.drop('datetime').columns + ['ret_2']
+    assert window_return(recorded_shim_bars, period=2)['close'].equals(before['close'])
+
+    simultaneous, _ = apply_column_shims(recorded_shim_bars, parse_shims([
+        {'columns': ['close'], 'method': 'log1p'},
+        {'columns': ['open'], 'method': 'ratio', 'reference': 'close'},
+    ]), {}, None, training=True, target='next_return')
+    np.testing.assert_allclose(simultaneous['close'], np.log1p(recorded_shim_bars['close'].to_numpy()))
+    np.testing.assert_allclose(simultaneous['open'], recorded_shim_bars['open'] / recorded_shim_bars['close'] - 1)
+    for name in set(recorded_shim_bars.columns) - {'close', 'open'}:
+        assert simultaneous[name].equals(recorded_shim_bars[name])
 
 
 @pytest.mark.parametrize('order', (0.0, 0.5, 1.0))
@@ -210,7 +253,8 @@ def test_column_shims_prepare_before_scaler_pca_and_preserve_alignment(recorded_
     manifest = _native(shims, scaler=True).set_pca_compression()
     prepared = manifest.prepare_data(recorded_shim_bars, {'auto_pca': True, 'pca_k': 2})
     fitted = prepared['_fitted_params']
-    assert fitted['_scaler'].medians['volume'] == pytest.approx(unscaled['x_train']['volume'].median())
+    training_volume = np.log1p(_raw_split(recorded_shim_bars, 0)['volume'].to_numpy())
+    assert fitted['_scaler'].medians['volume'] == pytest.approx(np.median(training_volume))
     assert fitted['_pca_input_feature_names'] == unscaled['x_train'].columns
     for split in SPLITS:
         assert prepared[f'x_{split}'].columns == ['pc_0', 'pc_1']
@@ -277,7 +321,9 @@ def test_column_shims_trainer_sensor_replays_fitted_state(recorded_shim_bars, tm
         assert by_time[instant].prediction == pytest.approx(prediction, rel=1e-6, abs=1e-9)
     replayed = sensor._manifest.sensor_input_prep(recorded_shim_bars, sensor._fitted_params, record['round_params'])[0]
     expected = prepared['x_test']
-    assert replayed.filter(pl.col('datetime').is_in(times)).drop('datetime').equals(expected)
+    aligned = replayed.join(prepared['price_data_for_backtest'].select('datetime'),
+                            on='datetime', how='semi', maintain_order='left')
+    assert aligned.drop('datetime').equals(expected)
 
 
 def test_column_shims_walk_forward_refits_on_each_training_fold(recorded_shim_bars, tmp_path, monkeypatch):
@@ -311,6 +357,7 @@ def test_column_shims_walk_forward_refits_on_each_training_fold(recorded_shim_ba
 @pytest.mark.parametrize('shims', (
     [{'columns': [], 'method': 'log1p'}],
     [{'columns': 'close', 'method': 'log1p'}],
+    [{'columns': '{selected}', 'method': 'log1p'}],
     [{'columns': ['close', 3], 'method': 'log1p'}],
     [{'columns': ['close', 'close'], 'method': 'log1p'}],
     [{'columns': ['close'], 'method': 'unknown'}],

@@ -43,11 +43,10 @@ def _spec(value: Mapping[str, object], *, references: bool) -> dict[str, object]
     if set(spec) - _FIELDS or not {'columns', 'method'} <= set(spec):
         raise ValueError('feature_shims requires columns/method and only declared method fields')
     columns = spec['columns']
-    if not (references and _is_reference(columns)):
-        if not isinstance(columns, list) or not columns:
-            raise TypeError('feature_shims columns must be a nonempty list of names')
-        if not all(isinstance(name, str) and name for name in cast(list[object], columns)):
-            raise TypeError('feature_shims columns must contain nonempty strings')
+    if not isinstance(columns, list) or not columns:
+        raise TypeError('feature_shims columns must be a nonempty list of names')
+    if not all(isinstance(name, str) and name for name in cast(list[object], columns)):
+        raise TypeError('feature_shims columns must contain nonempty strings')
     method = spec['method']
     if 'reference' in spec and (not isinstance(spec['reference'], str) or not spec['reference']):
         raise ValueError('feature_shims reference must be a nonempty column name')
@@ -65,14 +64,14 @@ def _spec(value: Mapping[str, object], *, references: bool) -> dict[str, object]
         if not isinstance(reference, str) or not reference:
             raise ValueError(f'feature_shims {method} requires a reference column')
     if method == 'fractional_diff':
-        spec.setdefault('d', 'auto')
-        spec.setdefault('threshold', 0.001)
-        spec.setdefault('significance_level', 0.05)
+        _ = spec.setdefault('d', 'auto')
+        _ = spec.setdefault('threshold', 0.001)
+        _ = spec.setdefault('significance_level', 0.05)
         for name in ('d', 'threshold', 'significance_level'):
-            value = spec[name]
-            if (references and _is_reference(value)) or (name == 'd' and value == 'auto'):
+            field_value = spec[name]
+            if (references and _is_reference(field_value)) or (name == 'd' and field_value == 'auto'):
                 continue
-            spec[name] = _number(value, name)
+            spec[name] = _number(field_value, name)
     return spec
 
 
