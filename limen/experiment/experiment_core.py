@@ -17,6 +17,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
+from limen.experiment._fixed_trade_sources import fixed_trade_sources
 from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -46,8 +47,6 @@ STANDARD_RUN_LOG_BATCH_SIZE = 1000
 
 
 class UniversalExperimentLoop:
-
-    '''UniversalExperimentLoop class for running experiments.'''
 
     def __init__(self,
                  *,
@@ -94,11 +93,9 @@ class UniversalExperimentLoop:
 
             if getattr(self.manifest, 'architecture_function', None) is not None:
                 def _manifest_prep(data: Any, round_params: dict[str, Any] | None = None) -> dict[str, Any]:
-                    '''Prepare data through the manifest pipeline.'''
                     return manifest.prepare_data(data, round_params or {})
 
                 def _manifest_model(data: Any, round_params: dict[str, Any] | None) -> dict[str, Any]:
-                    '''Run the manifest reference architecture.'''
                     return manifest.run_model(data, round_params or {})
 
                 self.prep = _manifest_prep
@@ -161,7 +158,10 @@ class UniversalExperimentLoop:
         self._walk_forward = None
         self.convergence_report = None
         try:
-            with convergence_warnings() if self._search_strategy is None else nullcontext(self._convergence_caught) as self._convergence_caught:
+            parameter_names = self._search_strategy.domain.keys if self._search_strategy is not None else self.params
+            reuse_sources = self._workers == 1 and all(value is None for value in (params, prep, model)) and (self.prep, self.model) == self._manifest_functions
+            source_context = fixed_trade_sources(self.manifest, [*parameter_names, *(context_params or {})]) if reuse_sources else nullcontext()
+            with source_context, convergence_warnings() if self._search_strategy is None else nullcontext(self._convergence_caught) as self._convergence_caught:
                 self._run(experiment_name, n_permutations, prep_each_round,
                           random_search, maintain_details_in_params, context_params,
                           params, prep, model, resume, post_processing, progress_bar,
@@ -196,8 +196,7 @@ class UniversalExperimentLoop:
             record_execution: bool = False,
             record_model_outputs: bool = False, factorize: bool = False) -> None:
 
-        '''Run rounds; manifest-driven preparation requires prep_each_round=True.
-        MSQ owns sampling, parameters and execution.'''
+        '''Run manifest/custom rounds; MSQ owns sampling; manifests require prep_each_round=True.'''
 
         validate_objective_reducers(self.manifest, self._pruning_strategies)
         if type(record_execution) is not bool:

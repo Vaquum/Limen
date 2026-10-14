@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 
 
 _METADATA = ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')
+FrozenTradeSources = tuple[pl.DataFrame | None, pl.DataFrame | None] | Callable[[BacktestConfig, Mapping[str, object]], tuple[pl.DataFrame | None, pl.DataFrame | None]]
 
 
 @dataclass(frozen=True)
@@ -75,18 +76,22 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
     return timing.with_columns(pl.Series('row_id', [f'row:{index}' for index in range(data.height)]), *[data[key] for key in ('open', 'high', 'low', 'close')]).select(OBSERVATION_COLUMNS)
 
 
-def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_splits: list[pl.DataFrame], bars: list[pl.DataFrame], params: Mapping[str, object], *, interval_seconds: object = None, frozen_sources: tuple[pl.DataFrame | None, pl.DataFrame | None] | None = None) -> PreparedTradeContext:
+def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_splits: list[pl.DataFrame], bars: list[pl.DataFrame], params: Mapping[str, object], *, interval_seconds: object = None, frozen_sources: FrozenTradeSources | None = None) -> PreparedTradeContext:
     interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params, 'recorded source interval')
     execution = None
     if config.execution_data_source is not None:
         declared_interval = source_interval(config.execution_data_source)
         execution_interval = None if declared_interval is None else resolve_number(declared_interval, params, 'execution source interval')
+        if callable(frozen_sources):
+            frozen_sources = frozen_sources(config, params)
         raw_execution = _load(config.execution_data_source, params) if frozen_sources is None else frozen_sources[0]
         if not isinstance(raw_execution, pl.DataFrame):
             raise ValueError('Declared execution source requires its frozen observation frame')
         execution = normalize_observations(raw_execution, interval_seconds=execution_interval)
     history = None
     if config.funding is not None and config.funding.data_source is not None:
+        if callable(frozen_sources):
+            frozen_sources = frozen_sources(config, params)
         history = _load(config.funding.data_source, params) if frozen_sources is None else frozen_sources[1]
         if not isinstance(history, pl.DataFrame):
             raise ValueError('Declared funding source requires its frozen observation frame')

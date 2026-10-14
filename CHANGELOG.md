@@ -1609,3 +1609,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.26.0] - 2026-10-14
 
 - Exclude optional target `source_columns` after transformation in manifest preparation. Validate declarations, reject target-label exclusion and preserve existing direct target output schemas, row alignment and fitted replay.
+
+## [5.26.1] - 2026-10-14
+
+- Reuse fixed execution and funding source observations within each serial UEL invocation; retain per-round loading for parameter-dependent configurations and fresh preparation and model training (#461).
