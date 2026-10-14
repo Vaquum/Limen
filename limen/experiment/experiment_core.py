@@ -30,7 +30,7 @@ from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
-from limen.experiment.manifest_core import Manifest, RuleBasedManifest
+from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
 from limen.yaml.store import canonical_manifest_id
 import limen.experiment._parallel_rounds as _parallel
 
@@ -159,7 +159,7 @@ class UniversalExperimentLoop:
         self.convergence_report = None
         try:
             parameter_names = self._search_strategy.domain.keys if self._search_strategy is not None else self.params
-            reuse_sources = self._workers == 1 and all(value is None for value in (params, prep, model)) and (self.prep, self.model) == self._manifest_functions
+            reuse_sources = self._workers == 1 and all(value is None for value in (params, prep, model)) and (self.prep, self.model) == self._manifest_functions and isinstance(self.manifest, MLManifest) and all(getattr(method, '__self__', None) is self.manifest and getattr(method, '__func__', None) is original for method, original in ((self.manifest.prepare_data, MLManifest.prepare_data), (self.manifest.run_model, MLManifest.run_model)))
             source_context = fixed_trade_sources(self.manifest, [*parameter_names, *(context_params or {})]) if reuse_sources else nullcontext()
             with source_context, convergence_warnings() if self._search_strategy is None else nullcontext(self._convergence_caught) as self._convergence_caught:
                 self._run(experiment_name, n_permutations, prep_each_round,

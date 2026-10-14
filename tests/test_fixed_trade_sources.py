@@ -296,7 +296,6 @@ def test_absent_secondary_sources_do_not_acquire_data(recorded_learning_bars, tm
 def test_walk_forward_fixed_secondary_sources_load_once_across_folds(recorded_learning_bars, tmp_path, monkeypatch):
     config = _config(walk_forward=True)
     fixed_path, legacy_path = tmp_path / 'fixed', tmp_path / 'legacy'
-    fixed = _loop(config, recorded_learning_bars, fixed_path)
     fold_manifests = []
     original_prepare = MLManifest.prepare_data
 
@@ -307,6 +306,7 @@ def test_walk_forward_fixed_secondary_sources_load_once_across_folds(recorded_le
 
     with monkeypatch.context() as capture:
         capture.setattr(MLManifest, 'prepare_data', prepare)
+        fixed = _loop(config, recorded_learning_bars, fixed_path)
         _run(fixed)
     assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
     assert not hasattr(fixed.manifest, '_frozen_trade_sources')
@@ -441,3 +441,91 @@ def test_fixed_source_copy_reuses_snapshot_and_rejects_declaration_drift(recorde
             copied._frozen_trade_sources(copied.backtest_config, {'fee_bps': 7.0})
         assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
     assert not hasattr(manifest, '_frozen_trade_sources')
+
+
+class _RecordedSourceCallable:
+    def __init__(self):
+        self.calls = 0
+
+    def __call__(self, **params):
+        self.calls += 1
+        return recorded_source(**params)
+
+
+def test_callable_instance_sources_remain_usable_in_walk_forward(recorded_learning_bars, tmp_path):
+    loop = _loop(_config(walk_forward=True), recorded_learning_bars, tmp_path, native=True)
+    loader = _RecordedSourceCallable()
+    loop.manifest.backtest_config = replace(
+        loop.manifest.backtest_config,
+        execution_data_source=DataSourceConfig(loader, {'role': 'execution', 'kline_size': 3600}),
+    )
+    _run(loop)
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 4, 'funding': 4}
+    assert loader.calls == 0
+    assert not hasattr(loop.manifest, '_frozen_trade_sources')
+    assert loop.fold_results.height == 4
+    rows = _records(tmp_path)
+    assert [row['_round_index'] for row in rows] == [0, 1]
+    assert all(len(row['folds']) == 2 for row in rows)
+    for row in rows:
+        for fold in row['folds']:
+            assert len(fold['preds']) == len(fold['net_returns']) > 0
+            assert fold['trade_contract']['policy']['funding']['approximation'] == 'recorded_exact'
+            assert fold['trade_ledger']['states']
+
+
+@pytest.mark.parametrize('method_name,expected_markers', (
+    ('prepare_data', [3.0, 7.0]), ('run_model', [None, 3.0]),
+))
+def test_replaced_manifest_methods_preserve_per_round_source_loading(recorded_learning_bars, tmp_path, monkeypatch, method_name, expected_markers):
+    loop = _loop(_config(), recorded_learning_bars, tmp_path)
+    manifest = loop.manifest
+    original = getattr(manifest, method_name)
+    calls = []
+
+    def change_source(params):
+        source = manifest.backtest_config.execution_data_source
+        manifest.backtest_config = replace(
+            manifest.backtest_config,
+            execution_data_source=DataSourceConfig(source.method, {**source.params, 'marker': params['fee_bps']}),
+        )
+
+    def overridden(data, round_params):
+        calls.append(round_params['fee_bps'])
+        assert not hasattr(manifest, '_frozen_trade_sources')
+        if method_name == 'prepare_data':
+            change_source(round_params)
+        result = original(data, round_params)
+        if method_name == 'run_model':
+            change_source(round_params)
+        return result
+
+    monkeypatch.setattr(manifest, method_name, overridden)
+    _run(loop)
+    assert calls == [3.0, 7.0]
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 2, 'funding': 2}
+    assert [row['marker'] for row in SOURCE_CALLS if row['role'] == 'execution'] == expected_markers
+    assert [row['_round_index'] for row in _records(tmp_path)] == [0, 1]
+    assert not hasattr(manifest, '_frozen_trade_sources')
+
+
+def test_removing_only_secondary_source_mid_run_fails_loudly(recorded_learning_bars, tmp_path, monkeypatch):
+    config = _config()
+    del config['sfd']['manifest']['backtest']['funding']
+    loop = _loop(config, recorded_learning_bars, tmp_path)
+    original_train = LogRegBinary.train
+    fits = []
+
+    def train(model, data, **params):
+        fitted = original_train(model, data, **params)
+        fits.append(model)
+        loop.manifest.backtest_config = replace(loop.manifest.backtest_config, execution_data_source=None)
+        return fitted
+
+    monkeypatch.setattr(LogRegBinary, 'train', train)
+    with pytest.raises(ValueError, match='declaration changed'):
+        _run(loop)
+    assert len(fits) == 1
+    assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1}
+    assert [row['_round_index'] for row in _records(tmp_path)] == [0]
+    assert not hasattr(loop.manifest, '_frozen_trade_sources')

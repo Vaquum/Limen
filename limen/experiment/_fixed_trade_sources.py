@@ -1,5 +1,6 @@
 from collections.abc import Callable, Collection, Iterator, Mapping
 from contextlib import contextmanager
+from inspect import isfunction, ismethod
 import math
 from typing import cast
 
@@ -39,7 +40,8 @@ def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> I
         return
     sources = (config.execution_data_source, config.funding.data_source if config.funding is not None else None)
     if not any(source is not None for source in sources) or not all(
-            source is None or _fixed_params(source.params, parameter_names) for source in sources
+            source is None or ((isfunction(source.method) or ismethod(source.method))
+                               and _fixed_params(source.params, parameter_names)) for source in sources
     ) or '_frozen_trade_sources' in vars(manifest):
         yield
         return
