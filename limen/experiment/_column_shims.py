@@ -6,7 +6,7 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
-from typing import TYPE_CHECKING, cast
+from typing import Protocol, TypeVar, cast
 
 import polars as pl
 
@@ -14,10 +14,22 @@ from limen.backtest.trade_contract import finite_number
 from limen.experiment._backtest_provenance import SOURCE_ROW
 from limen.experiment._shim_fractional_diff import fractional_column, fit_order
 
-if TYPE_CHECKING:
-    from limen.experiment.manifest_core import MLManifest
-
 __all__ = ['FittedColumnShims', 'apply_column_shims', 'parse_shims', 'prepare_column_shims', 'set_feature_shims']
+
+
+class _ShimManifest(Protocol):
+    feature_shims: list[dict[str, object]]
+
+    @property
+    def architecture_function(self) -> object: ...
+
+    @property
+    def target_column(self) -> str | None: ...
+
+    def resolve_model_kwargs(self, round_params: dict[str, object]) -> Mapping[str, object]: ...
+
+
+_TManifest = TypeVar('_TManifest', bound=_ShimManifest)
 
 _METHOD_FIELDS: dict[str, set[str]] = {
     'ratio': {'reference'},
@@ -210,13 +222,13 @@ def apply_column_shims(
     return state.transform(data), state
 
 
-def set_feature_shims(self: MLManifest, shims: list[dict[str, object]]) -> MLManifest:
+def set_feature_shims(self: _TManifest, shims: list[dict[str, object]]) -> _TManifest:
     self.feature_shims = parse_shims(shims)
     return self
 
 
 def prepare_column_shims(
-    manifest: MLManifest, data: pl.DataFrame, round_params: Mapping[str, object],
+    manifest: _ShimManifest, data: pl.DataFrame, round_params: Mapping[str, object],
     fitted_params: dict[str, object], training: bool,
 ) -> pl.DataFrame:
     if manifest.feature_shims:
