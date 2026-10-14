@@ -1605,4 +1605,3 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.25.4] - 2026-10-14
 
 - Preserve original input containers through probability-calibrated logistic regression so recorded isotonic thresholds and decisions retain their prior behavior. Keep explicit arrays for uncalibrated and threshold-only models; document the calibration boundary and add the dated recorded-data regression.
-
