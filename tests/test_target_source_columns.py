@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from pathlib import Path
 
 import polars as pl
@@ -29,11 +31,11 @@ class _VolumeTarget:
 
 
 class _DeclaredVolumeTarget(_VolumeTarget):
-    source_columns = ['volume']
+    source_columns: ClassVar[list[str]] = ['volume']
 
 
 class _EmptyVolumeTarget(_VolumeTarget):
-    source_columns = []
+    source_columns: ClassVar[list[str]] = []
 
 
 class _LegacyVolumeTarget(_VolumeTarget):
@@ -42,7 +44,7 @@ class _LegacyVolumeTarget(_VolumeTarget):
 
 
 class _AlreadyDroppedVolumeTarget(_LegacyVolumeTarget):
-    source_columns = ['volume']
+    source_columns: ClassVar[list[str]] = ['volume']
 
 
 @pytest.fixture(scope='module')

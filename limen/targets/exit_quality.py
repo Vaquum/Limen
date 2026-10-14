@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import polars as pl
 
 _REQUIRED_COLUMNS = ('exit_reason', 'exit_net_return')
@@ -7,7 +9,7 @@ class ExitQualityTarget:
 
     '''Categorical target scoring trade exits by reason and net return.'''
 
-    source_columns: list[str] = list(_REQUIRED_COLUMNS)
+    source_columns: ClassVar[list[str]] = list(_REQUIRED_COLUMNS)
 
     def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 import polars as pl
 
 
@@ -9,7 +11,7 @@ class RiskRewardRatioTarget:
 
     '''Continuous target as the ratio of capturable breakout to absolute drawdown.'''
 
-    source_columns: list[str] = list(_REQUIRED_COLUMNS)
+    source_columns: ClassVar[list[str]] = list(_REQUIRED_COLUMNS)
 
     def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
