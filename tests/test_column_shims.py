@@ -139,7 +139,7 @@ def test_declared_column_shims_match_native_yaml_and_recorded_formulas(recorded_
         np.testing.assert_allclose(features['volume'], np.log1p(raw['volume'].to_numpy()), rtol=1e-13)
         for name in set(features.columns) - {'open', 'high', 'low', 'volume'}:
             assert features[name].equals(raw[name])
-        expected_labels = (_raw_split(recorded_shim_bars, index)['close'].shift(-1) / 
+        expected_labels = (_raw_split(recorded_shim_bars, index)['close'].shift(-1) /
                            _raw_split(recorded_shim_bars, index)['close'] - 1) * 100
         np.testing.assert_allclose(native[f'y_{split}'], expected_labels.head(-1), atol=1e-12)
     assert recorded_shim_bars.equals(before)
@@ -281,7 +281,7 @@ def test_column_shims_trainer_sensor_replays_fitted_state(recorded_shim_bars, tm
 
 
 def test_column_shims_walk_forward_refits_on_each_training_fold(recorded_shim_bars, tmp_path, monkeypatch):
-    import limen.experiment._column_shims as shims_module
+    import limen.experiment._shim_fractional_diff as shims_module
 
     config = _config([{'columns': ['close'], 'method': 'fractional_diff', 'd': 'auto', 'threshold': 0.01}], scaler=True)
     declaration = config['sfd']['manifest']
@@ -292,9 +292,9 @@ def test_column_shims_walk_forward_refits_on_each_training_fold(recorded_shim_ba
     observed = []
     original = shims_module.find_min_d
 
-    def fit_order(frame, column, **kwargs):
-        observed.append(frame[column].drop_nulls().to_list())
-        return original(frame, column, **kwargs)
+    def fit_order(frame, col, **kwargs):
+        observed.append(frame[col].drop_nulls().to_list())
+        return original(frame, col=col, **kwargs)
 
     monkeypatch.setattr(shims_module, 'find_min_d', fit_order)
     _run(loop)

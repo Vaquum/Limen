@@ -80,12 +80,20 @@ def parse_shims(value: object) -> list[dict[str, object]]:
     if not isinstance(value, list):
         raise TypeError('feature_shims must be a list of declarations')
     result: list[dict[str, object]] = []
+    selected: set[str] = set()
     for entry in cast(list[object], value):
         if not isinstance(entry, Mapping) or not all(
             isinstance(name, str) for name in cast(Mapping[object, object], entry)
         ):
             raise TypeError('feature_shims entries must be mappings with string fields')
-        result.append(_spec(cast(Mapping[str, object], entry), references=True))
+        spec = _spec(cast(Mapping[str, object], entry), references=True)
+        columns = spec['columns']
+        if isinstance(columns, list):
+            for column in cast(list[str], columns):
+                if column in selected or column in {'datetime', SOURCE_ROW, '_source_row'}:
+                    raise ValueError(f'feature_shims protected or overlapping column {column!r}')
+                selected.add(column)
+        result.append(spec)
     return copy.deepcopy(result)
 
 
