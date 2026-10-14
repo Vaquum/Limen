@@ -39,12 +39,12 @@ def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> I
     settings = _source_settings(config, {})
     frames: tuple[pl.DataFrame | None, pl.DataFrame | None] | None = None
 
-    def snapshot(current: BacktestConfig, params: Mapping[str, object]) -> tuple[pl.DataFrame | None, pl.DataFrame | None] | None:
+    def snapshot(current: BacktestConfig | None, params: Mapping[str, object]) -> tuple[pl.DataFrame | None, pl.DataFrame | None] | None:
         nonlocal frames
         if vars(manifest).get('_frozen_trade_sources') is not snapshot:
             return None
         live = getattr(manifest, 'backtest_config', None)
-        if not isinstance(live, BacktestConfig) or _source_settings(live, params) != settings or _source_settings(current, params) != settings:
+        if not isinstance(live, BacktestConfig) or not isinstance(current, BacktestConfig) or _source_settings(live, params) != settings or _source_settings(current, params) != settings:
             raise ValueError('Fixed trade source declaration changed during this run')
         if frames is None:
             frames = (None if sources[0] is None else _load(sources[0], params).clone(),

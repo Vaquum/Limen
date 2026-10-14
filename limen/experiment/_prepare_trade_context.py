@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 _METADATA = ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')
-FrozenTradeSources = tuple[pl.DataFrame | None, pl.DataFrame | None] | Callable[[BacktestConfig, Mapping[str, object]], tuple[pl.DataFrame | None, pl.DataFrame | None] | None]
+FrozenTradeSources = tuple[pl.DataFrame | None, pl.DataFrame | None] | Callable[[BacktestConfig | None, Mapping[str, object]], tuple[pl.DataFrame | None, pl.DataFrame | None] | None]
 
 
 @dataclass(frozen=True)

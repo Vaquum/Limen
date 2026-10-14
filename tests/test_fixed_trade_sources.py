@@ -536,7 +536,8 @@ def test_replaced_manifest_methods_preserve_per_round_source_loading(recorded_le
     assert not hasattr(manifest, '_frozen_trade_sources')
 
 
-def test_removing_only_secondary_source_mid_run_fails_loudly(recorded_learning_bars, tmp_path, monkeypatch):
+@pytest.mark.parametrize('removed', ('source', 'configuration'))
+def test_removing_only_secondary_source_mid_run_fails_loudly(recorded_learning_bars, tmp_path, monkeypatch, removed):
     config = _config()
     del config['sfd']['manifest']['backtest']['funding']
     loop = _loop(config, recorded_learning_bars, tmp_path)
@@ -546,7 +547,9 @@ def test_removing_only_secondary_source_mid_run_fails_loudly(recorded_learning_b
     def train(model, data, **params):
         fitted = original_train(model, data, **params)
         fits.append(model)
-        loop.manifest.backtest_config = replace(loop.manifest.backtest_config, execution_data_source=None)
+        loop.manifest.backtest_config = (
+            None if removed == 'configuration' else replace(loop.manifest.backtest_config, execution_data_source=None)
+        )
         return fitted
 
     monkeypatch.setattr(LogRegBinary, 'train', train)

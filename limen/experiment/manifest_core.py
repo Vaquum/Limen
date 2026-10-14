@@ -1897,11 +1897,14 @@ def _run_prepare_setup(
     split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
     policy = manifest.resolve_trade_policy(round_params)
+    frozen_sources = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
+    if callable(frozen_sources):
+        frozen_sources = frozen_sources(manifest.backtest_config, round_params)
     trade = None
     if policy is not None and manifest.backtest_config is not None:
         interval = _source_interval(manifest.data_source_config)
         trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval,
-                                       frozen_sources=cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None)))
+                                       frozen_sources=frozen_sources)
         split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
     prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
     return (*prepared, trade)
