@@ -82,8 +82,6 @@ class LogRegBinary(ReferenceModel):
             data (dict): Data dictionary with x_train, y_train
             **params: LogisticRegression hyperparameters
 
-        Returns:
-            LogRegBinary: Self with fitted model stored
         '''
 
         prediction_calibration_config = params.pop('prediction_calibration_config', None)
