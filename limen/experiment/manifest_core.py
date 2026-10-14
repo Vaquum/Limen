@@ -1702,7 +1702,7 @@ def _apply_class_based_target(
         resolved_transform['trade_context'] = trade_context
     data = instance.transform(data, **resolved_transform)
     source_columns = getattr(instance, 'source_columns', [])
-    if not isinstance(source_columns, list) or not all(isinstance(name, str) for name in source_columns):
+    if not isinstance(source_columns, list) or not all(isinstance(name, str) for name in cast(list[object], source_columns)):
         raise TypeError('Target source_columns must be a list of strings')
     if target_name in source_columns:
         raise ValueError(f'Target source_columns must not include target column {target_name!r}')
