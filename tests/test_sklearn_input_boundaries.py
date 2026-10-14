@@ -19,6 +19,7 @@ from limen.metrics.binary_metrics import binary_metrics
 from limen.metrics.continuous_metrics import continuous_metrics
 from limen.sfd.reference_architecture import LogRegBinary, RidgeRegressor
 from limen.yaml import CompiledSFD, build_search_strategy
+from tests.benchmark_sklearn_input_boundaries import _configuration, _manifest
 from tests.test_record_model_outputs import _config as _recording_config
 
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
@@ -77,10 +78,10 @@ def _no_interchange(self, *args, **kwargs):
     raise AssertionError('Sklearn boundary must not consume the dataframe interchange protocol')
 
 
-def _assert_boundary_warnings(caught):
+def _assert_boundary_warnings(caught, *, allow_interchange=False):
+    tokens = ('feature names',) if allow_interchange else ('__dataframe__', 'interchange', 'feature names')
     assert not [str(item.message) for item in caught
-                if any(token in str(item.message).lower()
-                       for token in ('__dataframe__', 'interchange', 'feature names'))]
+                if any(token in str(item.message).lower() for token in tokens)]
 
 
 def _assert_input_frames_unchanged(data, objects, snapshots, keys, names):
@@ -90,6 +91,27 @@ def _assert_input_frames_unchanged(data, objects, snapshots, keys, names):
         assert data[key] is value
         assert value.equals(snapshots[key]), key
     assert all(data[f'x_{split}'].columns == data['x_train'].columns for split in _SPLITS)
+
+
+def _direct_logreg(data, params, *, method=None, use_calibration=False, use_threshold=False,
+                   threshold_params=None):
+    model = LogisticRegression(**params).fit(data['x_train'], data['y_train'])
+    fitted = model
+    if use_calibration:
+        fitted = CalibratedClassifierCV(FrozenEstimator(model), method=method).fit(
+            data['x_val'], data['y_val'],
+        )
+    score, threshold = None, 0.5
+    if use_threshold:
+        threshold, score = grid_threshold_optimizer(
+            data['y_val'], fitted.predict_proba(data['x_val'])[:, 1], **threshold_params,
+        )
+    probabilities = fitted.predict_proba(data['x_test'])[:, 1]
+    configured = use_calibration or use_threshold
+    predictions = ((probabilities >= threshold).astype(np.int8)
+                   if configured else model.predict(data['x_test']))
+    return {'_preds': predictions, '_probs': probabilities,
+            'optimal_threshold': threshold if configured else None, 'val_score': score}
 
 
 @pytest.mark.parametrize('method,use_calibration,use_threshold', (
@@ -102,55 +124,71 @@ def test_recorded_logreg_boundary_matches_direct_sklearn(
     recorded_boundary_bars, monkeypatch, method, use_calibration, use_threshold,
 ):
     manifest, params, data = _prepared(recorded_boundary_bars, method=method)
+    threshold_params = {'threshold_min': 0.4, 'threshold_max': 0.6, 'threshold_step': 0.05}
     if method is None and use_threshold:
         manifest.with_calibration().threshold_function(
-            func=grid_threshold_optimizer, threshold_min=0.4, threshold_max=0.6, threshold_step=0.05,
+            func=grid_threshold_optimizer, **threshold_params,
         ).done()
-    params.update(use_calibration=use_calibration, use_threshold=use_threshold)
     manifest._apply_backtest_cost(data, params)
     objects = {f'{axis}_{split}': data[f'{axis}_{split}']
                for split in _SPLITS for axis in ('x', 'y')}
     snapshots = {key: value.clone() for key, value in objects.items()}
     keys, names = set(data), list(data['_feature_names'])
-    legacy = LogisticRegression(**_LOGREG_PARAMS).fit(data['x_train'], data['y_train'])
-    fitted = legacy
-    configured = use_calibration or use_threshold
-    if use_calibration:
-        fitted = CalibratedClassifierCV(FrozenEstimator(legacy), method=method).fit(
-            data['x_val'], data['y_val'],
-        )
-    score, threshold = None, 0.5
-    if use_threshold:
-        threshold, score = grid_threshold_optimizer(
-            data['y_val'], fitted.predict_proba(data['x_val'])[:, 1],
-            threshold_min=0.4, threshold_max=0.6, threshold_step=0.05,
-        )
-    probabilities = fitted.predict_proba(data['x_test'])[:, 1]
-    predictions = ((probabilities >= threshold).astype(np.int8)
-                   if configured else legacy.predict(data['x_test']))
+    arrays = _array_inputs(data)
+    expected = [_direct_logreg(inputs, _LOGREG_PARAMS, method=method,
+                               use_calibration=use_calibration, use_threshold=use_threshold,
+                               threshold_params=threshold_params) for inputs in (data, arrays)]
+    params.update(use_calibration=use_calibration, use_threshold=use_threshold)
     with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
-        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
+        if not use_calibration:
+            guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
         warnings.simplefilter('always')
         actual = manifest.run_model(data, params)
-        native = manifest.run_model(_array_inputs(data), params)
-        inference = actual['_model'].predict({'x_test': data['x_test']})
-    _assert_boundary_warnings(caught)
-    for output in (actual, native, inference):
-        np.testing.assert_array_equal(output['_preds'], predictions)
-    for model in (actual['_model'], native['_model']):
-        np.testing.assert_allclose(model.predict({'x_test': np.asarray(data['x_test'])})['_probs'],
-                                   probabilities, rtol=1e-10, atol=1e-12)
-    np.testing.assert_allclose(inference['_probs'], probabilities, rtol=1e-10, atol=1e-12)
-    assert actual['optimal_threshold'] == (pytest.approx(threshold) if configured else None)
-    assert actual['val_score'] == (pytest.approx(score) if score is not None else None)
-    expected_metrics = binary_metrics(data, predictions, probabilities)
-    expected_metrics.update(actual['_model']._compute_confusion(
-        predictions, data['y_test'], data['price_data_for_backtest'],
-    ))
-    expected_metrics.update(actual['_model']._compute_backtest(predictions, data))
-    for name, value in expected_metrics.items():
-        assert actual[name] == pytest.approx(value, nan_ok=True)
-        assert native[name] == pytest.approx(value, nan_ok=True)
+        native = manifest.run_model(arrays, params)
+        inferences = [result['_model'].predict({'x_test': inputs['x_test']})
+                      for result, inputs in ((actual, data), (native, arrays))]
+    _assert_boundary_warnings(caught, allow_interchange=use_calibration)
+    for result, inference, baseline, inputs in zip((actual, native), inferences, expected, (data, arrays), strict=True):
+        np.testing.assert_array_equal(result['_preds'], baseline['_preds'])
+        np.testing.assert_array_equal(inference['_preds'], baseline['_preds'])
+        np.testing.assert_allclose(inference['_probs'], baseline['_probs'], rtol=1e-10, atol=1e-12)
+        assert result['optimal_threshold'] == baseline['optimal_threshold']
+        assert result['val_score'] == baseline['val_score']
+        expected_metrics = binary_metrics(inputs, baseline['_preds'], baseline['_probs'])
+        expected_metrics.update(result['_model']._compute_confusion(
+            baseline['_preds'], inputs['y_test'], inputs['price_data_for_backtest'],
+        ))
+        expected_metrics.update(result['_model']._compute_backtest(baseline['_preds'], inputs))
+        for name, value in expected_metrics.items():
+            assert result[name] == pytest.approx(value, nan_ok=True)
+    if not use_calibration:
+        np.testing.assert_array_equal(actual['_preds'], native['_preds'])
+        np.testing.assert_allclose(inferences[0]['_probs'], inferences[1]['_probs'], rtol=1e-10, atol=1e-12)
+    _assert_input_frames_unchanged(data, objects, snapshots, keys, names)
+
+
+def test_dated_isotonic_preserves_raw_sklearn_threshold_and_decisions():
+    manifest = _manifest(True)
+    config = _configuration('isotonic')
+    manifest.prediction_calibration_config = config
+    params = {'C': 1.0, 'solver': 'lbfgs', 'tol': 1e-8, 'max_iter': 200, 'random_state': 42}
+    data = manifest.prepare_data(pl.read_parquet(FIXTURE), params)
+    manifest._apply_backtest_cost(data, params)
+    objects = {f'{axis}_{split}': data[f'{axis}_{split}']
+               for split in _SPLITS for axis in ('x', 'y')}
+    snapshots = {key: value.clone() for key, value in objects.items()}
+    keys, names = set(data), list(data['_feature_names'])
+    baseline = _direct_logreg(data, params, method='isotonic', use_calibration=True,
+                              use_threshold=True, threshold_params=config.threshold_params)
+    actual = manifest.run_model(data, params)
+    replay = actual['_model'].predict({'x_test': data['x_test']})
+    assert actual['optimal_threshold'] == baseline['optimal_threshold']
+    assert actual['val_score'] == baseline['val_score']
+    assert replay['optimal_threshold'] == baseline['optimal_threshold']
+    assert replay['val_score'] == baseline['val_score']
+    for result in (actual, replay):
+        np.testing.assert_array_equal(result['_preds'], baseline['_preds'])
+    np.testing.assert_allclose(replay['_probs'], baseline['_probs'], rtol=1e-10, atol=1e-12)
     _assert_input_frames_unchanged(data, objects, snapshots, keys, names)
 
 
@@ -183,29 +221,30 @@ def test_recorded_ridge_boundary_matches_direct_sklearn(recorded_boundary_bars, 
 
 
 @pytest.mark.parametrize('method', ('sigmoid', 'isotonic'))
-def test_builtin_probability_calibration_preserves_frame_array_parity(
-    recorded_boundary_bars, monkeypatch, method,
-):
+def test_builtin_probability_calibration_matches_each_input_baseline(recorded_boundary_bars, method):
     _, _, data = _prepared(recorded_boundary_bars)
-    classifier = LogisticRegression(**_LOGREG_PARAMS).fit(
-        np.asarray(data['x_train']), np.asarray(data['y_train']),
-    )
+    objects = {f'{axis}_{split}': data[f'{axis}_{split}']
+               for split in _SPLITS for axis in ('x', 'y')}
+    snapshots = {key: value.clone() for key, value in objects.items()}
+    keys, names = set(data), list(data['_feature_names'])
     config = CalibrationConfig(
         calibration_func=sklearn_probability_calibrator, calibration_params={'method': method},
         threshold_func=grid_threshold_optimizer,
         threshold_params={'threshold_min': 0.4, 'threshold_max': 0.6, 'threshold_step': 0.05},
     )
-    with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
-        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
-        warnings.simplefilter('always')
-        from_frames = apply_calibrated_predict(classifier, config, data)
-        from_arrays = apply_calibrated_predict(classifier, config, _array_inputs(data))
-    _assert_boundary_warnings(caught)
-    assert set(from_frames) == set(from_arrays)
-    for key in ('_preds', '_probs'):
-        np.testing.assert_allclose(from_frames[key], from_arrays[key], rtol=1e-10, atol=1e-12)
-    assert from_frames['optimal_threshold'] == from_arrays['optimal_threshold']
-    assert from_frames['val_score'] == from_arrays['val_score']
+    for inputs in (data, _array_inputs(data)):
+        classifier = LogisticRegression(**_LOGREG_PARAMS).fit(inputs['x_train'], inputs['y_train'])
+        baseline = _direct_logreg(inputs, _LOGREG_PARAMS, method=method, use_calibration=True,
+                                  use_threshold=True, threshold_params=config.threshold_params)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter('always')
+            actual = apply_calibrated_predict(classifier, config, inputs)
+        _assert_boundary_warnings(caught, allow_interchange=isinstance(inputs['x_val'], pl.DataFrame))
+        np.testing.assert_array_equal(actual['_preds'], baseline['_preds'])
+        np.testing.assert_allclose(actual['_probs'], baseline['_probs'], rtol=1e-10, atol=1e-12)
+        assert actual['optimal_threshold'] == baseline['optimal_threshold']
+        assert actual['val_score'] == baseline['val_score']
+    _assert_input_frames_unchanged(data, objects, snapshots, keys, names)
 
 
 def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bars, monkeypatch):
@@ -221,7 +260,7 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
             assert isinstance(frame, pl.DataFrame)
             assert frame.columns == data['x_train'].columns
             predictions.append(frame)
-            return self.model.predict_proba(frame.to_numpy())
+            return self.model.predict_proba(frame)
 
     def calibrate(model, x_val, y_val, *, marker):
         assert x_val is data['x_val']
@@ -238,14 +277,17 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
         calibration_func=calibrate, calibration_params={'marker': 'recorded-frame-interface'},
         threshold_func=threshold,
     )
+    model = LogRegBinary(prediction_calibration_config=config).train(data, **_LOGREG_PARAMS)
+    actual = model.predict(data)
+    replay = model.predict({'x_test': data['x_test']})
+    standalone = apply_calibrated_predict(model.model, config, data)
     with monkeypatch.context() as guard:
         guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
-        model = LogRegBinary(prediction_calibration_config=config).train(data, **_LOGREG_PARAMS)
-        actual = model.predict(data)
-        replay = model.predict({'x_test': data['x_test']})
-        standalone = apply_calibrated_predict(model.model, config, data)
+        threshold_model = LogRegBinary(prediction_calibration_config=CalibrationConfig(threshold_func=threshold)).train(
+            data, **_LOGREG_PARAMS,
+        )
         threshold_only = apply_calibrated_predict(
-            model.model, CalibrationConfig(threshold_func=threshold), data,
+            threshold_model.model, CalibrationConfig(threshold_func=threshold), data,
         )
     assert len(calls) == 2
     assert all(frame is data['x_val'] or frame is data['x_test'] for frame in predictions)
@@ -272,8 +314,7 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
         calibration_func=sklearn_probability_calibrator, calibration_params={'method': 'sigmoid'},
         threshold_func=threshold,
     )
-    with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
-        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
+    with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
         delegated_model = LogRegBinary(prediction_calibration_config=delegated_config).train(
             data, **_LOGREG_PARAMS,
@@ -282,7 +323,7 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
         delegated_replay = delegated_model.predict({'x_test': data['x_test']})
         delegated_standalone = apply_calibrated_predict(delegated_model.model, delegated_config, data)
         builtin = apply_calibrated_predict(delegated_model.model, builtin_config, data)
-    _assert_boundary_warnings(caught)
+    _assert_boundary_warnings(caught, allow_interchange=True)
     assert len(delegated_inputs) == 2
     for output in (delegated, delegated_replay, delegated_standalone):
         np.testing.assert_array_equal(output['_preds'], builtin['_preds'])
@@ -300,8 +341,7 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
 
     passthrough_config = CalibrationConfig(calibration_func=passthrough_calibration,
                                            threshold_func=threshold)
-    with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
-        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
+    with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter('always')
         passthrough_model = LogRegBinary(prediction_calibration_config=passthrough_config).train(
             data, **_LOGREG_PARAMS,
@@ -309,7 +349,7 @@ def test_custom_calibration_keeps_original_frame_interface(recorded_boundary_bar
         passthrough = passthrough_model.predict(data)
         passthrough_replay = passthrough_model.predict({'x_test': data['x_test']})
         passthrough_standalone = apply_calibrated_predict(passthrough_model.model, passthrough_config, data)
-    _assert_boundary_warnings(caught)
+    _assert_boundary_warnings(caught, allow_interchange=True)
     assert len(passthrough_inputs) == 2
     for output in (passthrough, passthrough_replay, passthrough_standalone):
         np.testing.assert_array_equal(output['_preds'], threshold_only['_preds'])
@@ -332,7 +372,8 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
     manifest, params, data = _prepared(recorded_boundary_bars, kind=kind, method=method)
     before = copy.deepcopy(config)
     with monkeypatch.context() as guard, warnings.catch_warnings(record=True) as caught:
-        guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
+        if method is None:
+            guard.setattr(pl.DataFrame, '__dataframe__', _no_interchange)
         warnings.simplefilter('always')
         loop.run('sklearn_input_boundary', n_permutations=1, prep_each_round=True,
                  progress_bar=False, record_execution=True, record_model_outputs=True)
@@ -340,7 +381,7 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
         sensor = Trainer(directory, data=recorded_boundary_bars).train([record['round_id']])[0]
         replay = sensor.predict_all(recorded_boundary_bars)
         expected = manifest.run_model(data, params)
-    _assert_boundary_warnings(caught)
+    _assert_boundary_warnings(caught, allow_interchange=method is not None)
     assert config == before
     assert json.loads((directory / 'metadata.json').read_text())['yaml_reference'] == config
     saved = pl.read_csv(directory / 'results.csv').row(0, named=True)

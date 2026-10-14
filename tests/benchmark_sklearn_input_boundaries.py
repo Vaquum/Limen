@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
-CASES = ('legacy_polars', 'explicit_arrays')
+CASES = ('legacy_polars', 'current_boundaries')
 LIMITS = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
           'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'POLARS_MAX_THREADS')
 INTERCHANGE_WARNING = 'Support for the dataframe interchange protocol is deprecated since version 1.40.0'
@@ -79,7 +79,7 @@ def _logreg(case, data, params, mode):
     from limen.sfd.reference_architecture import LogRegBinary
 
     config = _configuration(mode)
-    if case == 'explicit_arrays':
+    if case == 'current_boundaries':
         model = LogRegBinary(prediction_calibration_config=config).train(data, **params)
         return model, model.predict(data)
     model = LogRegBinary()
@@ -103,7 +103,7 @@ def _ridge(case, data, params):
     from limen.sfd.reference_architecture import RidgeRegressor
 
     model = RidgeRegressor()
-    if case == 'explicit_arrays':
+    if case == 'current_boundaries':
         model.train(data, **params)
         result = model.predict(data)
     else:
@@ -209,9 +209,9 @@ def main():
         reports[case] = json.loads(path.read_text())
         reports[case]['end_to_end_seconds'] = time.perf_counter() - begin
     import numpy as np
-    baseline, explicit = (reports[case] for case in CASES)
+    baseline, current = (reports[case] for case in CASES)
     for key, before in baseline['outcomes'].items():
-        after = explicit['outcomes'][key]
+        after = current['outcomes'][key]
         for field in ('feature_names', 'split_rows', 'parameters'):
             if before[field] != after[field]:
                 raise AssertionError(f'{key}/{field} changed')
@@ -220,8 +220,6 @@ def main():
                 np.testing.assert_allclose(after[field], before[field], rtol=1e-9, atol=1e-12)
         if before['metrics'] != after['metrics']:
             raise AssertionError(f'{key} metrics changed: {before["metrics"]} != {after["metrics"]}')
-    if explicit['exact_interchange_warning_count']:
-        raise AssertionError('Explicit boundary still invokes deprecated dataframe interchange')
     report = {'fixture': str(FIXTURE), 'fixture_sha256': hashlib.sha256(FIXTURE.read_bytes()).hexdigest(),
               'baseline': 'Pre-change raw Polars sklearn fit, calibration fit and validation/test prediction; same installed versions and recorded observations',
               'source_base_commit': '04bc9411fde2c6fd64277212d21ae91d7d71e97e',
@@ -232,7 +230,8 @@ def main():
               'measurement': 'Fresh-process import, recorded-data loading, per-round preparation, fit/calibration/prediction, existing metric helpers and report writes; no execution-loop throughput claim',
               'interchange_warning_exact_message': INTERCHANGE_WARNING, 'campaigns': reports,
               'outputs_equal': True, 'prediction_rtol': 1e-9, 'prediction_atol': 1e-12,
-              'end_to_end_ratio': baseline['end_to_end_seconds'] / explicit['end_to_end_seconds'],
+              'boundary_policy': 'Explicit arrays for uncalibrated and threshold-only LogReg and Ridge; preserve original containers throughout configured probability calibration',
+              'end_to_end_ratio': baseline['end_to_end_seconds'] / current['end_to_end_seconds'],
               'total_elapsed_seconds': time.perf_counter() - started}
     destination = args.output / 'benchmark.json'
     destination.write_text(json.dumps(report, indent=2, allow_nan=False))
