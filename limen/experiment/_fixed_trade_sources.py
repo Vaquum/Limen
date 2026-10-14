@@ -1,4 +1,4 @@
-from collections.abc import Callable, Collection, Iterator, Mapping
+from collections.abc import Collection, Iterator, Mapping
 from contextlib import contextmanager
 from inspect import isfunction, ismethod
 import math
@@ -6,7 +6,6 @@ from typing import cast
 
 import polars as pl
 
-from limen.backtest.trade_contract import JsonValue
 from limen.experiment._prepare_trade_context import load_source as _load, source_settings as _source_settings
 from limen.experiment._resolve_trade_policy import BacktestConfig
 
@@ -24,14 +23,6 @@ def _fixed_params(value: object, names: Collection[str]) -> bool:
     return value is None or isinstance(value, (bool, int)) or (isinstance(value, float) and math.isfinite(value))
 
 
-def _same_sources(config: BacktestConfig, params: Mapping[str, object],
-                  expected: tuple[tuple[Callable[..., object], JsonValue] | None, ...]) -> bool:
-    return all((actual is None and saved is None) or (actual is not None and saved is not None
-               and getattr(actual[0], '__func__', actual[0]) is getattr(saved[0], '__func__', saved[0])
-               and actual[1] == saved[1])
-               for actual, saved in zip(_source_settings(config, params), expected, strict=True))
-
-
 @contextmanager
 def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> Iterator[None]:
     config = getattr(manifest, 'backtest_config', None)
@@ -40,7 +31,7 @@ def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> I
         return
     sources = (config.execution_data_source, config.funding.data_source if config.funding is not None else None)
     if not any(source is not None for source in sources) or not all(
-            source is None or ((isfunction(source.method) or ismethod(source.method))
+            source is None or ((isfunction(source.method) or (ismethod(source.method) and isinstance(getattr(source.method, '__self__', None), type)))
                                and _fixed_params(source.params, parameter_names)) for source in sources
     ) or '_frozen_trade_sources' in vars(manifest):
         yield
@@ -53,7 +44,7 @@ def fixed_trade_sources(manifest: object, parameter_names: Collection[str]) -> I
         if vars(manifest).get('_frozen_trade_sources') is not snapshot:
             return None
         live = getattr(manifest, 'backtest_config', None)
-        if not isinstance(live, BacktestConfig) or _source_settings(live, params) != settings or not _same_sources(current, params, settings):
+        if not isinstance(live, BacktestConfig) or _source_settings(live, params) != settings or _source_settings(current, params) != settings:
             raise ValueError('Fixed trade source declaration changed during this run')
         if frames is None:
             frames = (None if sources[0] is None else _load(sources[0], params).clone(),

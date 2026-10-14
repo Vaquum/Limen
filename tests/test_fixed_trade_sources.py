@@ -416,21 +416,14 @@ class _RecordedSourceReceiver:
 def test_fixed_source_copy_reuses_snapshot_and_rejects_declaration_drift(recorded_learning_bars, tmp_path, changed_owner):
     from limen.experiment._fixed_trade_sources import fixed_trade_sources
 
-    loop = _loop(_config(), recorded_learning_bars, tmp_path)
+    loop = _loop(_config(), recorded_learning_bars, tmp_path, native=True)
     manifest = loop.manifest
-    receiver = _RecordedSourceReceiver()
-    manifest.backtest_config = replace(
-        manifest.backtest_config,
-        execution_data_source=DataSourceConfig(receiver.load, {'role': 'execution', 'kline_size': 3600}),
-    )
     with fixed_trade_sources(manifest, set(loop.params)):
         first = manifest._frozen_trade_sources(manifest.backtest_config, {'fee_bps': 3.0})
         copied = copy.deepcopy(manifest)
         second = copied._frozen_trade_sources(copied.backtest_config, {'fee_bps': 7.0})
         assert first[0].equals(second[0])
         assert first[1].equals(second[1])
-        assert receiver.calls == 1
-        assert copied.backtest_config.execution_data_source.method.__self__.calls == 1
         assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
         changed = manifest if changed_owner == 'parent' else copied
         source = changed.backtest_config.execution_data_source
@@ -441,6 +434,39 @@ def test_fixed_source_copy_reuses_snapshot_and_rejects_declaration_drift(recorde
         with pytest.raises(ValueError, match='declaration changed'):
             copied._frozen_trade_sources(copied.backtest_config, {'fee_bps': 7.0})
         assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': 1, 'funding': 1}
+    assert not hasattr(manifest, '_frozen_trade_sources')
+
+
+def test_mutable_bound_source_rebinding_keeps_ordinary_preparation(recorded_learning_bars, tmp_path):
+    from limen.experiment._fixed_trade_sources import fixed_trade_sources
+
+    loop = _loop(_config(), recorded_learning_bars, tmp_path, native=True)
+    manifest = loop.manifest
+    receiver = _RecordedSourceReceiver()
+    manifest.backtest_config = replace(
+        manifest.backtest_config,
+        execution_data_source=DataSourceConfig(receiver.load, {'role': 'execution', 'kline_size': 3600}),
+    )
+    params = {name: values[0] for name, values in loop.params.items()}
+    with fixed_trade_sources(manifest, set(loop.params)):
+        assert not hasattr(manifest, '_frozen_trade_sources')
+        first = manifest.prepare_data(recorded_learning_bars, params)['_trade_context'].partitions[2]
+        copied = copy.deepcopy(manifest)
+        copied_receiver = copied.backtest_config.execution_data_source.method.__self__
+        replacement = _RecordedSourceReceiver()
+        copied.backtest_config = replace(
+            copied.backtest_config,
+            execution_data_source=DataSourceConfig(replacement.load, {'role': 'execution', 'kline_size': 3600}),
+        )
+        for call_count in (1, 2):
+            prepared = copied.prepare_data(recorded_learning_bars, params)['_trade_context'].partitions[2]
+            assert prepared.observations.equals(first.observations)
+            assert prepared.funding_events.equals(first.funding_events)
+            assert prepared.sources == first.sources
+            assert receiver.calls == copied_receiver.calls == 1
+            assert replacement.calls == call_count
+            assert Counter(row['role'] for row in SOURCE_CALLS) == {'execution': call_count + 1, 'funding': call_count + 1}
+        assert not hasattr(copied, '_frozen_trade_sources')
     assert not hasattr(manifest, '_frozen_trade_sources')
 
 
