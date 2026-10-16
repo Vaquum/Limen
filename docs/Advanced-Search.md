@@ -1,5 +1,7 @@
 # Advanced Search
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 Search strategies control candidate generation for both CLI and Python/MSQ experiments. The CLI builds the strategy from YAML. Python callers construct a strategy over a `ParamDomain` and pass it to UEL; UEL creates MSQ around that strategy.
 
 This page covers:
@@ -87,7 +89,7 @@ uel.run(
 In the bundled budget-reducer example, this requested `6` permutations but finished with:
 
 - `4` rows in `results.csv`
-- `4` entries in `round_data.jsonl`
+- `4` entries in `round_data.jsonl.gz`
 - `1` feedback-cycle entry in `audit.jsonl`
 - a checkpoint saved after round `3`
 
@@ -104,7 +106,7 @@ When `experiment_dir` is set, Python/MSQ writes:
 | File | Meaning |
 |---|---|
 | `results.csv` | streaming round log |
-| `round_data.jsonl` | round params, stored predictions, and alignment metadata |
+| `round_data.jsonl.gz` | round params, stored predictions, and alignment metadata |
 | `checkpoint.json` | search state for resume |
 | `audit.jsonl` | feedback-cycle audit trail |
 | `metadata.json` | experiment metadata used by `Trainer` |
@@ -127,7 +129,7 @@ uel.run(
 In the shutdown-and-resume example:
 
 - the first phase stopped after `2` completed rounds
-- `round_data.jsonl` and `results.csv` each contained `2` entries
+- `round_data.jsonl.gz` and `results.csv` each contained `2` entries
 - the resumed phase finished the remaining work
 - the final files contained `4` rows with `_round_index` values `0, 1, 2, 3`; CSV `id` and JSONL `round_id` contain the corresponding 64-character SHA-256 parameter hashes
 

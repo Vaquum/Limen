@@ -1,5 +1,7 @@
 # Trainer
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 For [direction/sizing models](Reference-Architecture.md#direction-and-sizing), reconstruction checks frozen execution and learning identities before metric tolerance. Sensor retains signed size and actual decision availability. Altered source, factory, seed or execution assumptions require a new experiment.
 
 `Trainer` is Limen's reconstruction layer for finished experiment rounds. It takes a completed saved YAML experiment directory, reconstructs the manifest and round parameters, replays selected permutations, validates their metrics, and wraps the replayed models in reusable `Sensor` objects.
@@ -13,9 +15,9 @@ Trainer works only with YAML-based artifact directories, normally created by `li
 At minimum, the directory must contain:
 
 - `metadata.json`
-- `round_data.jsonl`
+- `round_data.jsonl.gz`
 
-Every nonblank `round_data.jsonl` line must be a valid JSON object with `round_id` and object-valued `round_params`. Trainer rejects malformed JSONL instead of skipping corrupt lines, so promotion cannot proceed from a partial artifact view.
+Every nonblank `round_data.jsonl.gz` line must be a valid JSON object with `round_id` and object-valued `round_params`. Trainer rejects malformed JSONL instead of skipping corrupt lines, so promotion cannot proceed from a partial artifact view.
 
 If `results.csv` is also present, Trainer validates replayed metrics against matching numeric columns in the original experiment log. If it is missing, Trainer skips validation and proceeds directly to creating sensors.
 
@@ -129,11 +131,11 @@ Use `data=` with an exact dataframe override. Otherwise Trainer falls back to `m
 sensors = trainer.train(top_ids)
 ```
 
-`permutation_ids` is a `list[str]` of SHA-256 round IDs from `round_data.jsonl`. These are the `id` values in `results.csv` — use that file to identify which rounds to promote.
+`permutation_ids` is a `list[str]` of SHA-256 round IDs from `round_data.jsonl.gz`. These are the `id` values in `results.csv` — use that file to identify which rounds to promote.
 
 This method:
 
-- verifies that the requested permutation IDs exist in `round_data.jsonl`
+- verifies that the requested permutation IDs exist in `round_data.jsonl.gz`
 - validates them against `results.csv` when available
 - replays them with the original manifest split and round parameters
 - returns `list[Sensor]`
@@ -211,7 +213,7 @@ Sensor callers pass raw klines, not `x_test`. The Sensor rebuilds the feature ma
 Trainer uses:
 
 - `metadata.json` — reads `yaml_reference` to reconstruct the manifest; `manifest_id` is also read and passed to each Sensor
-- `round_data.jsonl` — loads `round_params` for each permutation
+- `round_data.jsonl.gz` — loads `round_params` for each permutation
 - `results.csv` — when available, validates replayed metrics against matching numeric columns in the original experiment log
 
 ## Scope note

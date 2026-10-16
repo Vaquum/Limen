@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import inspect
 import json
@@ -540,7 +541,7 @@ def test_tp_sl_real_fixture_trainer_reconstruction(market, tmp_path, monkeypatch
     monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_fixture_source))
     assert run_experiment(yaml_path, progress_bar=False)
     path = tmp_path/'experiment'
-    record = json.loads((path/'round_data.jsonl').read_text().splitlines()[0])
+    record = json.loads(_storage.text(_storage.round_path(path)).splitlines()[0])
     trainer = Trainer(path, data=market[0])
     sensors = trainer.train([str(record['round_id'])])
     assert len(sensors) == 1

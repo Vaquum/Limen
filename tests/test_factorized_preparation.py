@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from limen.experiment import _round_storage as _storage
 import copy
 import json
 import weakref
@@ -119,7 +120,7 @@ def _fitted(data):
 
 def _science(path):
     rows = pl.read_csv(path / 'results.csv', infer_schema_length=None).drop('execution_time').to_dicts()
-    recorded = [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
+    recorded = [json.loads(line) for line in _storage.text(_storage.round_path(path)).splitlines()]
     return [rows, recorded]
 
 

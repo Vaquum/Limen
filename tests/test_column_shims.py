@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import json
 from datetime import date
@@ -125,7 +126,7 @@ def _run(loop, count=1, **kwargs):
 
 
 def _records(directory):
-    return [json.loads(line) for line in (directory / 'round_data.jsonl').read_text().splitlines()]
+    return [json.loads(line) for line in _storage.text(_storage.round_path(directory)).splitlines()]
 
 
 def test_declared_column_shims_match_native_yaml_and_recorded_formulas(recorded_shim_bars):

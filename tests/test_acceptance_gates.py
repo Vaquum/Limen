@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import json
 import math
@@ -174,7 +175,7 @@ def test_acceptance_block_and_verdicts(acceptance_runs, tmp_path):
     assert not report['verdicts']['min_deflated_sharpe_probability']
     assert loop.experiment_log.height == 2
     (tmp_path / 'trial_returns.parquet').write_bytes((path / 'trial_returns.parquet').read_bytes())
-    (tmp_path / 'round_data.jsonl').write_bytes((path / 'round_data.jsonl').read_bytes())
+    (_storage.round_path(tmp_path)).write_bytes((_storage.round_path(path)).read_bytes())
     permissive = acceptance_report(tmp_path, acceptance={
         'min_deflated_sharpe_probability': 0.0, 'max_pbo': 1.0,
     })
@@ -202,7 +203,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     trials = artifact['trial'].unique(maintain_order=True).to_list()
     matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
                        for trial in trials])
-    path = tmp_path / 'round_data.jsonl'
+    path = _storage.round_path(tmp_path)
     records = [json.loads(line) for line in path.read_text().splitlines()]
     for record in records:
         for fold in record['folds']:
@@ -263,7 +264,7 @@ def test_pbo_timestamp_identity_survives_recorded_dst_transition(tmp_path):
     trials = artifact['trial'].unique(maintain_order=True).to_list()
     matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
                        for trial in trials])
-    path = tmp_path / 'round_data.jsonl'
+    path = _storage.round_path(tmp_path)
     records = [json.loads(line) for line in path.read_text().splitlines()]
     helsinki = ZoneInfo('Europe/Helsinki')
     lexical_disorder = False
@@ -311,7 +312,7 @@ def test_report_end_to_end(acceptance_runs):
         trials = artifact['trial'].unique(maintain_order=True).to_list()
         folds = split_walk_forward(pl.read_parquet(_FIXTURE), **config['sfd']['manifest']['split_walk_forward'])
         expected_dates = [[value.isoformat() for value in test['datetime'].slice(1)] for _, test in folds]
-        records = [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
+        records = [json.loads(line) for line in _storage.text(_storage.round_path(path)).splitlines()]
         assert [record['round_id'] for record in records] == trials
         for record in records:
             for nested, dates in zip(record['folds'], expected_dates, strict=True):

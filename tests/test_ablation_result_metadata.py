@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import csv
 import json
 from pathlib import Path
@@ -83,7 +84,7 @@ def test_ablation_rows_round_trip(tmp_path, monkeypatch, msq, counts):
     uel.experiment_log.write_parquet(tmp_path / 'results.parquet')
     assert pl.read_parquet(tmp_path / 'results.parquet')['_dropped_features'].to_list() == values
     if msq:
-        records = [json.loads(line) for line in (tmp_path / 'round_data.jsonl').read_text().splitlines()]
+        records = [json.loads(line) for line in _storage.text(_storage.round_path(tmp_path)).splitlines()]
         by_id = {record['round_id']: record['round_params'].get('_dropped_features', []) for record in records}
         assert [by_id[row['id']] for row in rows] == seen
         assert [params.get('_dropped_features', []) for params in uel.round_params] == seen

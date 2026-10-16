@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import hashlib
 import json
@@ -287,7 +288,7 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
         Cohort(rounds=[(walk_forward, second.ids[0])])
     bars = _copy_campaign(second, tmp_path / 'bars')
     _edit_metadata(bars, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(bar_formation={'func': 'limen.data.bars.volume_bars', 'params': {'volume_threshold': '{C}'}}))
-    records_path = bars / 'round_data.jsonl'
+    records_path = _storage.round_path(bars)
     records = [json.loads(line) for line in records_path.read_text().splitlines()]
     for record in records:
         record['round_params']['bar_type'] = 'volume'
@@ -297,7 +298,7 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
     # Even the same function declaration must compare the selected resolved arguments.
     other_bars = _copy_campaign(first, tmp_path / 'other_bars')
     _edit_metadata(other_bars, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(bar_formation={'func': 'limen.data.bars.volume_bars', 'params': {'volume_threshold': '{C}'}}))
-    other_records_path = other_bars / 'round_data.jsonl'
+    other_records_path = _storage.round_path(other_bars)
     other_records = [json.loads(line) for line in other_records_path.read_text().splitlines()]
     for record in other_records:
         record['round_params']['bar_type'] = 'volume'

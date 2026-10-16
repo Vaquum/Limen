@@ -1,5 +1,7 @@
 # Perturbation Strategies
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 A perturbation is a parameter-controlled variation of the feature and preprocessing pipeline, searched *within* a single experiment. Instead of hand-writing a new manifest for every "what if we dropped this feature" or "what if we scaled differently" question, you declare the variation once, expose it as a parameter, and let the search compare outcomes across rounds. Perturbations are how Limen tests robustness, attributes value to feature families, and avoids over-fitting to one fixed pipeline.
 
 This guide covers the five perturbation primitives, when to reach for each, how they differ by model type, and how to read feature importance out of an ablation sweep.
@@ -195,7 +197,7 @@ Ablation drops randomly chosen feature columns so you can measure how much the m
 
 **Edge cases.** `feature_drop_count` must be a non-negative int (booleans are rejected); `feature_drop_seed` must be an int. A drop count of `0` leaves all features intact; its result row records `[]`. Requesting more drops than there are eligible columns raises `ValueError`.
 
-**What gets recorded.** When ablation is configured, every result row records `_dropped_features` as JSON text containing the sorted dropped names, or `[]` when none were dropped. CSV, the in-memory experiment log and parquet use that same encoding, including failed rounds. Successful `round_data.jsonl` records retain the prepared list under `round_params._dropped_features`; zero-drop records omit that key. Decode the result field with `json.loads` for exact membership checks. Experiments without ablation keep their existing columns.
+**What gets recorded.** When ablation is configured, every result row records `_dropped_features` as JSON text containing the sorted dropped names, or `[]` when none were dropped. CSV, the in-memory experiment log and parquet use that same encoding, including failed rounds. Successful `round_data.jsonl.gz` records retain the prepared list under `round_params._dropped_features`; zero-drop records omit that key. Decode the result field with `json.loads` for exact membership checks. Experiments without ablation keep their existing columns.
 
 If preparation fails before ablation runs, `[]` means no drop names were recorded; it does not imply successful preparation. Read `strict_mode_error` alongside the field. Keep `_dropped_features` out of explicit `Log(..., cols_to_multilabel=...)` lists.
 

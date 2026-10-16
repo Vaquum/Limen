@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import json
 from dataclasses import replace
@@ -151,7 +152,7 @@ def test_objective_reconstruction(direction, tmp_path):
                                    yaml_reference=config, search_strategy=build_search_strategy(config), checkpoint_interval=1)
     loop.run('return_objective', n_permutations=1, prep_each_round=True, progress_bar=False,
              record_execution=True, record_model_outputs=True)
-    record = json.loads((tmp_path / 'round_data.jsonl').read_text().splitlines()[0])
+    record = json.loads(_storage.text(_storage.round_path(tmp_path)).splitlines()[0])
     pid = loop.experiment_log['_id'][0]
     sensor = Trainer(tmp_path, data=bars).train([pid])[0]
     predictions = sensor.predict_all(bars)

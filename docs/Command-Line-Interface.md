@@ -1,5 +1,7 @@
 # Command-Line Interface
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 The Limen CLI is the supported shell surface for YAML-first experiment work. It provides validation, profiling, template scaffolding, committed manifests, resumable runs, and standard result directories without Python orchestration code.
 
 ## Scope
@@ -84,7 +86,7 @@ The normal result directory contains:
 | copied YAML manifest | the source manifest copied beside the run outputs; committed manifest URI runs use `manifest.yaml` |
 | `metadata.json` | experiment metadata, including `yaml_reference` for Trainer and resume flows |
 | `results.csv` | streaming round log |
-| `round_data.jsonl` | round params, predictions, alignment metadata, and [optional execution](Universal-Experiment-Loop.md#record-execution) |
+| `round_data.jsonl.gz` | round params, predictions, alignment metadata, and [optional execution](Universal-Experiment-Loop.md#record-execution) |
 | `checkpoint.json` | checkpoint state when checkpointing has run |
 | `audit.jsonl` | feedback-cycle audit trail when feedback has run |
 
@@ -167,7 +169,7 @@ Set `uel.output_format: parquet` to also write `results.parquet`. Set `uel.outpu
 
 Runtime boundaries:
 
-- `limen run --resume` requires an existing results directory with `metadata.json` containing `yaml_reference`, a readable checkpoint, consistent `round_data.jsonl` through the checkpoint round, and `results.csv`.
+- `limen run --resume` requires an existing results directory with `metadata.json` containing `yaml_reference`, a readable checkpoint, consistent `round_data.jsonl.gz` through the checkpoint round, and `results.csv`.
 - `limen run --dry-run` does not test data-source availability beyond compilation needs.
 - CLI commands report process success through exit codes; they do not write an external audit record unless the command itself creates project artifacts.
 - `limen commit` mutates git state in the target project; use it only when the manifest store commit is intended.

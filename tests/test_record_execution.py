@@ -1,3 +1,5 @@
+import gzip
+from limen.experiment import _round_storage as _storage
 import json
 import math
 from datetime import datetime
@@ -89,7 +91,7 @@ def _reject_json_constant(value):
 def _records(path):
     return [
         json.loads(line, parse_constant=_reject_json_constant)
-        for line in (path / 'round_data.jsonl').read_text().splitlines()
+        for line in _storage.text(_storage.round_path(path)).splitlines()
     ]
 
 
@@ -160,7 +162,7 @@ def test_default_and_false_preserve_round_artifacts(recorded_bars, tmp_path):
     _run(baseline)
     _run(explicit, record_execution=False)
     _run(enabled, record_execution=True)
-    assert (tmp_path / 'default/round_data.jsonl').read_bytes() == (tmp_path / 'false/round_data.jsonl').read_bytes()
+    assert (_storage.round_path((tmp_path / 'default'))).read_bytes() == (_storage.round_path((tmp_path / 'false'))).read_bytes()
     assert baseline.experiment_log.drop('execution_time').equals(explicit.experiment_log.drop('execution_time'))
     assert baseline.experiment_log.drop('execution_time').equals(enabled.experiment_log.drop('execution_time'))
     for off, on in zip(_records(tmp_path / 'default'), _records(tmp_path / 'true'), strict=True):
@@ -224,19 +226,20 @@ def test_python_resume_preserves_setting_and_rounds(record_execution, legacy_mar
         legacy = _records(tmp_path)[0]
         _assert_aligned_market(legacy, recorded_bars)
         legacy.pop('market')
-        (tmp_path / 'round_data.jsonl').write_text(json.dumps(legacy, allow_nan=False) + '\n')
-    before = (tmp_path / 'round_data.jsonl').read_bytes()
+        (_storage.round_path(tmp_path)).write_bytes(gzip.compress((json.dumps(legacy, allow_nan=False) + '\n').encode(), compresslevel=1, mtime=0))
+    original_record = _records(tmp_path)[0]
+    before = (_storage.round_path(tmp_path)).read_bytes()
     assert len(_records(tmp_path)) == 1
     wrong = _loop(config, recorded_bars, tmp_path)
     with pytest.raises(ValueError, match='record_execution'):
         _run(wrong, record_execution=not record_execution, resume=True)
-    assert (tmp_path / 'round_data.jsonl').read_bytes() == before
+    assert (_storage.round_path(tmp_path)).read_bytes() == before
     resumed = _loop(config, recorded_bars, tmp_path)
     _run(resumed, record_execution=record_execution, resume=True, post_processing=True)
-    assert (tmp_path / 'round_data.jsonl').read_bytes().startswith(before)
+    assert (_storage.round_path(tmp_path)).read_bytes().startswith(before)
     records = _records(tmp_path)
     assert len(records) == 2
-    assert records[0] == json.loads(before)
+    assert records[0] == original_record
     assert len({record['round_id'] for record in records}) == 2
     assert all(('execution' in record) == record_execution for record in records)
     for index, record in enumerate(records):

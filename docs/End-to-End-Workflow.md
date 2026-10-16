@@ -1,5 +1,7 @@
 # End-to-End Workflow
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 For a native direction/sizing model trained from simulated trade outcomes, use the [direction/sizing workflow](Reference-Architecture.md#direction-and-sizing). It preserves signed exposure through experiment export, Trainer and Sensor; downstream execution parity requires the corresponding integration.
 
 This guide takes a contributor from a fresh checkout to a benchmarked classifier using the current YAML-first surface.
@@ -142,7 +144,7 @@ Key artifacts:
 | copied YAML manifest | Exact run definition. |
 | `metadata.json` | Manifest reference and run metadata used by downstream tools. |
 | `results.csv` | One row per completed permutation. |
-| `round_data.jsonl` | Round params, predictions, and alignment metadata. |
+| `round_data.jsonl.gz` | Round params, predictions, and alignment metadata. |
 | `checkpoint.json` | Resume state when checkpointing has run. |
 | `audit.jsonl` | Feedback-cycle trail when feedback has run. |
 

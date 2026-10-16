@@ -1,5 +1,7 @@
 # Cohort
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 `Cohort` combines trained Sensors reconstructed from completed experiment artifacts. Select rounds from one experiment with the existing constructor/selectors, or explicitly select rounds across directories with `rounds`. Each Sensor retains its own fitted state and inference guards.
 
 ## What this page covers
@@ -16,7 +18,7 @@
 A Cohort requires:
 
 1. completed ordinary experiment result directories
-2. valid experiment artifacts (`metadata.json`, `round_data.jsonl`)
+2. valid experiment artifacts (`metadata.json`, `round_data.jsonl.gz`)
 3. selected permutation IDs, qualified by directory when using several sources
 4. members reconstructed separately with each source's `Trainer.train(permutation_ids)`
 
@@ -444,7 +446,7 @@ source/bar compatibility and every member's guards still apply.
 
 ## Failure cases and caveats
 
-- missing experiment artifacts (`metadata.json` / `round_data.jsonl`) raise `FileNotFoundError`
+- missing experiment artifacts (`metadata.json` / `round_data.jsonl.gz`) raise `FileNotFoundError`
 - unresolvable or ambiguous experiment ID resolution raises `ValueError`
 - no bound members at inference raises `RuntimeError`
 - healthy member lists of different lengths or participating timestamp mismatches raise `ValueError`

@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import hashlib
 import json
@@ -132,7 +133,7 @@ def _run(loop, name='fixed_sources', **kwargs):
 
 
 def _records(directory):
-    return [json.loads(line) for line in (directory / 'round_data.jsonl').read_text().splitlines()]
+    return [json.loads(line) for line in _storage.text(_storage.round_path(directory)).splitlines()]
 
 
 def _assert_recorded_equal(actual, expected):

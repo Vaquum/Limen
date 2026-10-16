@@ -1,3 +1,5 @@
+import gzip
+from limen.experiment import _round_storage as _storage
 import csv
 import faulthandler
 import io
@@ -119,8 +121,9 @@ def run_loop(config, directory, *, workers=None, resume=False, callback=None, co
 
 
 def records(directory, name='round_data.jsonl'):
-    path = directory / name
-    return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+    path = _storage.round_path(directory) if name == 'round_data.jsonl' else directory / name
+    text = _storage.text(path) if name == 'round_data.jsonl' and path.exists() else path.read_text() if path.exists() else ''
+    return [json.loads(line) for line in text.splitlines()]
 
 
 def _assert_same(actual, expected):
@@ -673,11 +676,11 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
         directory = tmp_path / name
         shutil.copytree(source, directory)
         if name == 'missing':
-            (directory / 'round_data.jsonl').unlink()
+            (_storage.round_path(directory)).unlink()
         elif name == 'corrupt':
             saved = records(directory)
             saved[0]['round_id'] = 'unrecorded-identity'
-            (directory / 'round_data.jsonl').write_text('\n'.join(json.dumps(row) for row in saved) + '\n')
+            (_storage.round_path(directory)).write_bytes(gzip.compress(('\n'.join(json.dumps(row) for row in saved) + '\n').encode(), compresslevel=1, mtime=0))
         elif name == 'duplicate':
             frame = pl.read_csv(directory / 'results.csv')
             frame.with_columns(pl.when(pl.col('_round_index') == 1).then(0).otherwise(pl.col('_round_index')).alias('_round_index')).write_csv(directory / 'results.csv')
@@ -698,7 +701,7 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
                 saved[0]['trade_ledger']['states'] = [None]
             else:
                 saved[0]['trade_ledger'] = None
-            (directory / 'round_data.jsonl').write_text('\n'.join(json.dumps(row) for row in saved) + '\n')
+            (_storage.round_path(directory)).write_bytes(gzip.compress(('\n'.join(json.dumps(row) for row in saved) + '\n').encode(), compresslevel=1, mtime=0))
         before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'worker|policy|round|evidence|record|prefix|occurrence|identity|ledger'):
             run_loop(config, directory, workers=2 if name == 'policy' else None, resume=True)
@@ -713,7 +716,7 @@ def test_parallel_resume_rejects_null_snapshot_execution(parallel_campaigns, tmp
         saved = records(directory)
         assert saved[0][field] is not None
         saved[0][field] = None
-        (directory / 'round_data.jsonl').write_text('\n'.join(json.dumps(row) for row in saved) + '\n')
+        (_storage.round_path(directory)).write_bytes(gzip.compress(('\n'.join(json.dumps(row) for row in saved) + '\n').encode(), compresslevel=1, mtime=0))
         before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'execution|market|record|evidence'):
             run_loop(config, directory, resume=True)
@@ -761,7 +764,7 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
             saved = records(rejected)
             for entry in saved:
                 entry['round_params'].pop(name)
-            (rejected / 'round_data.jsonl').write_text(''.join(json.dumps(entry) + '\n' for entry in saved))
+            (_storage.round_path(rejected)).write_bytes(gzip.compress((''.join(json.dumps(entry) + '\n' for entry in saved)).encode(), compresslevel=1, mtime=0))
         before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'context|parameter|record'):
             run_loop(config, rejected, resume=True)

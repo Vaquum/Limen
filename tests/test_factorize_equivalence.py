@@ -274,7 +274,7 @@ def test_unsafe_and_nondeterministic_paths_fail_before_writes(
                                    experiment_dir=tmp_path / case, **extra)
     with pytest.raises((ValueError, TypeError)):
         loop.run(case, n_permutations=2, prep_each_round=True, factorize=True, progress_bar=False)
-    for file in ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl'):
+    for file in ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl', 'round_data.jsonl.gz', 'round_market'):
         assert not (tmp_path / case / file).exists()
 
 
@@ -300,7 +300,7 @@ def test_formatted_non_identifier_axes_fail_before_writes(tmp_path: Path, axis: 
             with pytest.raises(ValueError, match='also consumed by the manifest'):
                 loop.run('unicode', n_permutations=2, prep_each_round=True,
                          factorize=True, progress_bar=False)
-            for file in ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl'):
+            for file in ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl', 'round_data.jsonl.gz', 'round_market'):
                 assert not (directory / file).exists()
         else:
             loop.run('unicode', n_permutations=2, prep_each_round=True, progress_bar=False)
@@ -383,7 +383,7 @@ def test_resume_and_disabled_mode_parity(tmp_path: Path, monkeypatch: pytest.Mon
     assert (tmp_path / 'split/checkpoint.json').exists()
     mismatch = _loop('rule_based', tmp_path / 'split', checkpoint_interval=1)
     files = {name: (tmp_path / 'split' / name).read_bytes() for name in
-             ('checkpoint.json','metadata.json','results.csv','round_data.jsonl')}
+             ('checkpoint.json','metadata.json','results.csv','round_data.jsonl.gz')}
     with pytest.raises(ValueError, match='factorize setting'):
         mismatch.run('resume', n_permutations=16, prep_each_round=True,
                      factorize=False, resume=True, progress_bar=False)
@@ -403,7 +403,7 @@ def test_resume_and_disabled_mode_parity(tmp_path: Path, monkeypatch: pytest.Mon
     legacy.run('legacy', n_permutations=16, prep_each_round=True,
                factorize=False, progress_bar=False)
     stored = {name: (tmp_path / 'legacy' / name).read_bytes() for name in
-              ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl')}
+              ('metadata.json', 'checkpoint.json', 'results.csv', 'round_data.jsonl.gz')}
     assert 'factorize' not in json.loads(stored['metadata.json'])
     changed = _loop('rule_based', tmp_path / 'legacy', checkpoint_interval=1)
     with pytest.raises(ValueError, match='factorize setting'):

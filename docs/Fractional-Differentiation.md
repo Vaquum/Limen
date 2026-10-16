@@ -1,5 +1,7 @@
 # Fractional Differentiation
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 Fractional differentiation makes a price series stationary while keeping as much of its memory as possible. Full first differencing (returns) is stationary but erases the level information a model can learn from; the raw price keeps all its memory but is non-stationary. Fractional differentiation sits between the two: it applies a real-valued differencing order `d` between `0` and `1` and keeps the smallest amount of differencing that passes a stationarity test.
 
 This guide covers when to reach for it, how to choose `d`, and how to wire it into an experiment. It follows Lopez de Prado's *Advances in Financial Machine Learning* (AFML), Chapter 5.
@@ -164,7 +166,7 @@ NOTE: Because the leading rows are null until the weight window fills, a short s
 
 ## Expected Artifacts
 
-After a run, the fractionally differenced column appears in the prepared feature matrix and, if you select it as a model input, in the per-round records written to `round_data.jsonl`. When `d` is swept as a parameter, each `frac_diff_d` value is one row in `results.csv`, so the effect of differencing order on the metrics is visible directly. See [Log](Log.md) for reading those results.
+After a run, the fractionally differenced column appears in the prepared feature matrix and, if you select it as a model input, in the per-round records written to `round_data.jsonl.gz`. When `d` is swept as a parameter, each `frac_diff_d` value is one row in `results.csv`, so the effect of differencing order on the metrics is visible directly. See [Log](Log.md) for reading those results.
 
 ## Where To Look
 

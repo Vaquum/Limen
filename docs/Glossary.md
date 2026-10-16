@@ -1,5 +1,7 @@
 # Glossary
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 This glossary defines the terms used across public docs, developer docs, package READMEs, and issue work.
 
 ## Core terms
@@ -18,7 +20,7 @@ This glossary defines the terms used across public docs, developer docs, package
 | Universal Experiment Loop | The experiment engine that executes parameter rounds. |
 | UEL | Short form of Universal Experiment Loop. |
 | round / permutation | One concrete parameter combination executed by UEL. |
-| experiment artifact | A persisted run output such as `metadata.json`, `results.csv`, `round_data.jsonl`, `checkpoint.json`, or `audit.jsonl`. |
+| experiment artifact | A persisted run output such as `metadata.json`, `results.csv`, `round_data.jsonl.gz`, `checkpoint.json`, or `audit.jsonl`. |
 | `Trainer` | Reconstructs and replays selected rounds from a saved YAML experiment, validates metrics, and returns Sensors. |
 | `Sensor` | A validated model plus manifest, fitted preprocessing state, round parameters, and inference methods. |
 | `Cohort` | A bound set of Sensors with one aggregation mode and cohort identity. |

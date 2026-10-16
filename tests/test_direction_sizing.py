@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 from pathlib import Path
 from dataclasses import replace
 from datetime import date
@@ -343,7 +344,7 @@ def test_inline_log_and_exported_contract_agree(yaml_experiment):
     expected = quantity * (fill['fill_price'][0] - fill['fill_price'][1]) - fill['fee'].sum() + ledger.funding['recognized_delta'].sum()
     assert result['backtest_net_pnl'] == pytest.approx(expected)
     directory = yaml_experiment
-    rows = [json.loads(line) for line in (directory/'round_data.jsonl').read_text().splitlines()]
+    rows = [json.loads(line) for line in _storage.text(_storage.round_path(directory)).splitlines()]
     assert len(rows) == 2 and rows[0]['trade_contract_digest'] != rows[1]['trade_contract_digest']
     for row in rows:
         assert row['learning_binding']['round_id'] == row['round_id']

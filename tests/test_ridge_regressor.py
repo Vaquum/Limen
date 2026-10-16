@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import inspect
 import json
 from pathlib import Path
@@ -175,7 +176,7 @@ def test_ridge_yaml_experiment_reconstructs(tmp_path, monkeypatch, market_bars):
 
     monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_load_market_bars))
     assert run_experiment(yaml_path, progress_bar=False)
-    entries = [json.loads(line) for line in (experiment_dir / 'round_data.jsonl').read_text().splitlines()]
+    entries = [json.loads(line) for line in _storage.text(_storage.round_path(experiment_dir)).splitlines()]
     assert len(entries) == 2
     log = pl.read_csv(experiment_dir / 'results.csv')
     assert log.height == 2

@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import csv
 import json
 from pathlib import Path
@@ -134,9 +135,9 @@ def test_run_with_msq_default_persists_round_data_without_memory_retention():
             n_permutations=2,
         )
 
-        round_data_path = exp_dir / 'round_data.jsonl'
+        round_data_path = _storage.round_path(exp_dir)
         assert round_data_path.exists()
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             lines = [line for line in f if line.strip()]
 
     assert len(lines) == 2
@@ -365,9 +366,9 @@ def _shutdown_resume_full_data(strategy_cls):
             resume=False,
         )
 
-        round_data_path = exp_dir / 'round_data.jsonl'
+        round_data_path = _storage.round_path(exp_dir)
         assert round_data_path.exists()
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             lines = [line for line in f if line.strip()]
         assert len(lines) == 2
 
@@ -405,7 +406,7 @@ def _shutdown_resume_full_data(strategy_cls):
             assert 'last_test_datetime' in a
             assert 'missing_datetimes' in a
 
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             lines = [line for line in f if line.strip()]
         assert len(lines) == 6
 
@@ -523,7 +524,7 @@ def test_guard_stale_artifacts_without_checkpoint_does_not_suggest_resume():
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
         (exp_dir / 'results.csv').write_text('id\n')
-        (exp_dir / 'round_data.jsonl').write_text('')
+        (_storage.round_path(exp_dir)).write_text('')
         (exp_dir / 'metadata.json').write_text('{}')
 
         uel, _, _ = _make_uel(experiment_dir=exp_dir)
@@ -540,7 +541,7 @@ def test_guard_stale_artifacts_with_checkpoint_suggests_resume():
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
         (exp_dir / 'results.csv').write_text('id\n')
-        (exp_dir / 'round_data.jsonl').write_text('')
+        (_storage.round_path(exp_dir)).write_text('')
         (exp_dir / 'checkpoint.json').write_text('{}')
 
         uel, _, _ = _make_uel(experiment_dir=exp_dir)
@@ -554,7 +555,7 @@ def test_preds_none_does_not_crash():
     with TemporaryDirectory() as tmpdir:
         exp_dir = Path(tmpdir) / 'exp'
         exp_dir.mkdir()
-        round_data_path = exp_dir / 'round_data.jsonl'
+        round_data_path = _storage.round_path(exp_dir)
 
         uel, _, _ = _make_uel(experiment_dir=exp_dir)
         sfd_params = {'random_weights': True, 'breakout_threshold': 1.2, 'shift': 1}
@@ -574,7 +575,7 @@ def test_preds_none_does_not_crash():
         )
 
         assert round_data_path.exists()
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             entry = json.loads(f.readline())
         assert entry['preds'] == []
         assert entry['_round_index'] == 0
@@ -610,12 +611,12 @@ def test_resume_truncates_stale_rounds():
             resume=False,
         )
 
-        round_data_path = exp_dir / 'round_data.jsonl'
+        round_data_path = _storage.round_path(exp_dir)
         csv_path = exp_dir / 'results.csv'
         assert round_data_path.exists()
         assert csv_path.exists()
 
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             existing_lines = [raw.strip() for raw in f if raw.strip()]
 
         # Append stale entries beyond the checkpoint to simulate crash
@@ -625,8 +626,7 @@ def test_resume_truncates_stale_rounds():
             stale_entry = dict(last_entry)
             stale_entry['round_id'] = f'stale_hash_{i}'
             stale_entry['_round_index'] = checkpoint_index + i
-            with round_data_path.open('a') as f:
-                f.write(json.dumps(stale_entry) + '\n')
+            _storage.append_record(round_data_path, stale_entry)
 
         with csv_path.open('r') as f:
             reader = csv.reader(f)
@@ -640,7 +640,7 @@ def test_resume_truncates_stale_rounds():
                 stale_row[id_idx] = f'stale_hash_{offset}'
                 writer.writerow(stale_row)
 
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             pre_resume_jsonl = [raw for raw in f if raw.strip()]
         assert len(pre_resume_jsonl) == len(existing_lines) + 2
 
@@ -659,7 +659,7 @@ def test_resume_truncates_stale_rounds():
         assert uel2.experiment_log.shape[0] == 6
         assert all(isinstance(v, str) for v in uel2.experiment_log['id'].to_list())
 
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             final_jsonl = [raw for raw in f if raw.strip()]
         assert len(final_jsonl) == 6
         for i, line in enumerate(final_jsonl):
@@ -675,7 +675,7 @@ def test_resume_truncates_stale_rounds():
 def test_truncate_round_data_unit():
 
     with TemporaryDirectory() as tmpdir:
-        path = Path(tmpdir) / 'round_data.jsonl'
+        path = _storage.round_path(Path(tmpdir))
 
         entries = [
             {'round_id': 'hash_0', '_round_index': 0, 'data': 'a'},

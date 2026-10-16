@@ -16,6 +16,10 @@ from typing import BinaryIO, cast
 
 __all__: list[str] = []
 
+class RoundStorageError(ValueError):
+    """Recorded round storage failed integrity validation."""
+
+
 FORMAT = 'gzip-jsonl-v1'
 _MEMBER_LIMIT = 512 * 1024 * 1024
 _MARKET_LIMIT = 128 * 1024 * 1024
@@ -27,13 +31,13 @@ def round_path(directory: Path, *, fresh: bool = False) -> Path:
     settings = cast(dict[str, object], json.loads(metadata.read_text())) if metadata.exists() else {}
     storage = settings.get('round_storage')
     if storage not in (None, FORMAT) or (plain.exists() and compact.exists()):
-        raise ValueError(f'Conflicting or unknown round storage in {directory}')
+        raise RoundStorageError(f'Conflicting or unknown round storage in {directory}')
     if storage is None and compact.exists():
-        raise ValueError(f'Compressed round data lacks format metadata in {directory}')
+        raise RoundStorageError(f'Compressed round data lacks format metadata in {directory}')
     if storage == FORMAT and plain.exists():
-        raise ValueError(f'Compact metadata conflicts with legacy round data in {directory}')
+        raise RoundStorageError(f'Compact metadata conflicts with legacy round data in {directory}')
     if (directory / 'round_market').exists() and not compact.exists():
-        raise ValueError(f'Market directory lacks compressed round data in {directory}')
+        raise RoundStorageError(f'Market directory lacks compressed round data in {directory}')
     return compact if storage == FORMAT or (fresh and not metadata.exists() and not plain.exists()) else plain
 
 
@@ -44,19 +48,19 @@ def _members(stream: BinaryIO, path: Path, *, tail: bool = False,
         if len(header) < 2 and tail:
             return
         if header != b'\x1f\x8b':
-            raise ValueError(f'Invalid gzip member header in {path} at byte {start}')
+            raise RoundStorageError(f'Invalid gzip member header in {path} at byte {start}')
         decoder, data, chunk = zlib.decompressobj(wbits=31), bytearray(), header
         while not decoder.eof:
             if not chunk:
                 if tail:
                     return
-                raise ValueError(f'Incomplete gzip member in {path} at byte {start}')
+                raise RoundStorageError(f'Incomplete gzip member in {path} at byte {start}')
             try:
                 data.extend(decoder.decompress(chunk, limit - len(data) + 1))
             except zlib.error as exc:
-                raise ValueError(f'Corrupt gzip member in {path} at byte {start}: {exc}') from exc
+                raise RoundStorageError(f'Corrupt gzip member in {path} at byte {start}: {exc}') from exc
             if len(data) > limit:
-                raise ValueError(f'Decompressed size limit exceeded in {path} at byte {start}')
+                raise RoundStorageError(f'Decompressed size limit exceeded in {path} at byte {start}')
             if decoder.eof:
                 stream.seek(-len(decoder.unused_data), 1)
             else:
@@ -66,12 +70,12 @@ def _members(stream: BinaryIO, path: Path, *, tail: bool = False,
 
 def _market(value: object, path: Path, count: int | None) -> dict[str, object]:
     if not isinstance(value, dict) or set(value) != {'ret'}:
-        raise ValueError(f'Invalid market payload in {path}')
+        raise RoundStorageError(f'Invalid market payload in {path}')
     values = cast(dict[str, object], value)['ret']
     if not isinstance(values, list) or (count is not None and len(cast(list[object], values)) != count):
-        raise ValueError(f'Market length differs from predictions in {path}')
+        raise RoundStorageError(f'Market length differs from predictions in {path}')
     if any(v is not None and (type(v) not in (int, float) or not math.isfinite(cast(float, v))) for v in cast(list[object], values)):
-        raise ValueError(f'Invalid market return in {path}')
+        raise RoundStorageError(f'Invalid market return in {path}')
     return cast(dict[str, object], value)
 
 
@@ -80,12 +84,12 @@ def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
         return record
     digest = record['market_ref']
     if 'market' in record or not isinstance(digest, str) or re.fullmatch('[0-9a-f]{64}', digest) is None:
-        raise ValueError(f'Invalid market reference for round {record.get("round_id")} in {directory}')
+        raise RoundStorageError(f'Invalid market reference for round {record.get("round_id")} in {directory}')
     path = directory / 'round_market' / (digest + '.json.gz')
     with path.open('rb') as stream:
         members = list(_members(stream, path, limit=_MARKET_LIMIT))
     if len(members) != 1 or hashlib.sha256(members[0][0]).hexdigest() != digest:
-        raise ValueError(f'Market digest mismatch in {path} for round {record.get("round_id")}')
+        raise RoundStorageError(f'Market digest mismatch in {path} for round {record.get("round_id")}')
     predictions = record.get('preds')
     count = len(cast(list[object], predictions)) if isinstance(predictions, list) else None
     market = _market(json.loads(members[0][0]), path, count)
@@ -124,7 +128,7 @@ def _frames(stream: BinaryIO, path: Path, *, tail: bool = False) -> Iterator[tup
     else:
         while line := stream.readline(_MEMBER_LIMIT + 1):
             if len(line) > _MEMBER_LIMIT:
-                raise ValueError(f'Round size limit exceeded in {path}')
+                raise RoundStorageError(f'Round size limit exceeded in {path}')
             if line.strip():
                 yield line, stream.tell()
 
@@ -132,24 +136,28 @@ def _frames(stream: BinaryIO, path: Path, *, tail: bool = False) -> Iterator[tup
 @contextmanager
 def open_text(path: Path, *, limit: int | None = None, tail: bool = False) -> Iterator[Iterator[str]]:
     if path.name in ('round_data.jsonl', 'round_data.jsonl.gz') and round_path(path.parent) != path:
-        raise ValueError(f'Round data path conflicts with metadata: {path}')
+        raise RoundStorageError(f'Round data path conflicts with metadata: {path}')
     with path.open('rb') as stream:
         def lines() -> Iterator[str]:
             previous = -1
             for raw, end in islice(_frames(stream, path, tail=tail), limit):
                 if path.suffix != '.gz':
+                    try:
+                        _ = json.loads(raw)
+                    except (ValueError, UnicodeDecodeError) as exc:
+                        raise RoundStorageError(f'Malformed JSON in {path} ending at byte {end}') from exc
                     yield raw.decode('utf-8')
                 else:
                     try:
                         decoded = cast(object, json.loads(raw))
                     except (ValueError, UnicodeDecodeError) as exc:
-                        raise ValueError(f'Invalid round JSON in {path} ending at byte {end}') from exc
+                        raise RoundStorageError(f'Invalid round JSON in {path} ending at byte {end}') from exc
                     if not isinstance(decoded, dict):
-                        raise ValueError(f'Round must be an object in {path} ending at byte {end}')
+                        raise RoundStorageError(f'Round must be an object in {path} ending at byte {end}')
                     record = cast(dict[str, object], decoded)
                     index = record.get('_round_index')
                     if type(index) is not int or index <= previous:
-                        raise ValueError(f'Invalid round order in {path} ending at byte {end}')
+                        raise RoundStorageError(f'Invalid round order in {path} ending at byte {end}')
                     previous = index
                     yield json.dumps(_restore(record, path.parent)) + '\n'
         yield lines()
@@ -159,17 +167,19 @@ def csv_prefix(path: Path, count: int) -> list[tuple[int, str]]:
     with (path.parent / 'results.csv').open(newline='') as stream:
         rows = list(islice(csv.DictReader(stream), count))
     if len(rows) != count:
-        raise ValueError(f'Incomplete successful CSV prefix for {path}')
+        raise RoundStorageError(f'Incomplete successful CSV prefix for {path}')
     return [(index, row['id']) for index, row in enumerate(rows) if not row.get('strict_mode_error')]
 
 
 def validate_prefix(path: Path, expected: Sequence[tuple[int, str]]) -> None:
-    if not path.exists() and not expected:
-        return
+    if not path.exists():
+        if not expected:
+            return
+        raise RoundStorageError(f'round_data.jsonl not found for committed prefix: {path}')
     with open_text(path, limit=len(expected)) as stream:
         records = [cast(dict[str, object], json.loads(line)) for line in stream]
     if [(r.get('_round_index'), r.get('round_id')) for r in records] != list(expected):
-        raise ValueError(f'Round evidence differs from successful terminal CSV occurrences in {path}')
+        raise RoundStorageError(f'Round evidence differs from successful terminal CSV occurrences in {path}')
 
 
 def truncate_rounds(path: Path, start_round: int) -> None:
@@ -183,3 +193,13 @@ def truncate_rounds(path: Path, start_round: int) -> None:
             end = offset
     with path.open('r+b') as stream:
         _ = stream.truncate(end)
+
+
+def text(path: Path) -> str:
+    with open_text(path) as lines:
+        return "".join(lines)
+
+
+def propagate(error: BaseException) -> None:
+    if isinstance(error, RoundStorageError):
+        raise error

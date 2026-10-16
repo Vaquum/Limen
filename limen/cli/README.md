@@ -1,5 +1,7 @@
 # `limen.cli`
 
+
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](../../docs/Universal-Experiment-Loop.md#round-storage-format).
 > Provide the `limen` shell command for YAML validation, profiling, execution, manifest storage, and project scaffolding.
 
 ## Canonical docs
@@ -55,7 +57,7 @@ cli/
 - `limen profile` always reports static search-space fields, then fetches the configured production `data_source` and runs a covering-array sample for timing and data-quality diagnostics. A data-load or sample failure is reported in the profile result.
 - The normal first-run loop is `limen init`, `limen validate`, `limen profile`, `limen run --dry-run`, then `limen run`.
 - `limen run` accepts both direct YAML files and committed `manifest://sha256:` URIs.
-- `limen run` writes a result directory containing the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
+- `limen run` writes a result directory containing the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl.gz`.
 - `limen commit` writes the project manifest store before attempting the git commit.
 - Command code should stay thin; YAML semantics belong in `limen.yaml` and execution semantics belong in `limen.experiment`.
 
