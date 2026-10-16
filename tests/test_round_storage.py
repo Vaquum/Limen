@@ -204,7 +204,8 @@ def test_committed_corruption_fails(tmp_path, recorded_rounds, damage):
         (path.parent / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
     before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in path.parent.rglob('*') if p.is_file()}
     loop = _loop(_config('rule'), recorded_rounds['rule']['loop'].data, directory)
-    with pytest.raises((storage.RoundStorageError, FileNotFoundError)):
+    expected_error = UnicodeDecodeError if damage == 'metadata_utf8' else (storage.RoundStorageError, FileNotFoundError)
+    with pytest.raises(expected_error):
         _run(loop, record_execution=True, record_model_outputs=True, resume=True)
     assert {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in before} == before
 
