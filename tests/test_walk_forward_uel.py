@@ -151,7 +151,7 @@ def test_manifest_block_validation():
         'test_start': '2024-01-04', 'test_end': '2024-01-05',
     }
     assert not validate(conflicting).valid
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         CompiledSFD(conflicting).manifest()
 
 
@@ -165,9 +165,9 @@ def test_geometry_requires_literal_values(field, value):
     config = _config()
     config['sfd']['manifest']['split_walk_forward'] = geometry
     assert not validate(config).valid
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         Manifest().set_split_walk_forward(**geometry)
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         CompiledSFD(config).manifest()
 
 
@@ -176,7 +176,7 @@ def test_geometry_requires_complete_known_fields(declaration):
     config = _config()
     config['sfd']['manifest']['split_walk_forward'] = declaration
     assert not validate(config).valid
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         CompiledSFD(config).manifest()
 
 
@@ -395,7 +395,7 @@ def test_resume_rejects_changed_geometry_and_retains_tracks(tmp_path, monkeypatc
     before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
     changed = copy.deepcopy(config)
     changed['sfd']['manifest']['split_walk_forward']['embargo_bars'] += 1
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         _run(_loop(changed, bars, path), resume=True, n_permutations=6)
     assert all((path / name).read_bytes() == value for name, value in before.items())
     resumed = make_loop(path)
@@ -465,7 +465,7 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
         records[0]['folds'].pop()
         (_storage.round_path(path)).write_bytes(gzip.compress((json.dumps(records[0]) + '\n').encode(), compresslevel=1, mtime=0))
         before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
-        with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+        with pytest.raises(ValueError, match='split_walk_forward'):
             _run(_loop(config, bars, path), resume=True, n_permutations=3)
         assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
         (_storage.round_path(path)).write_bytes(saved_jsonl)
@@ -473,7 +473,7 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
         (path / 'results.csv').write_text(saved_csv.decode().splitlines()[0] + '\n')
         (_storage.round_path(path)).write_text('')
         before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
-        with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+        with pytest.raises(ValueError, match='CSV prefix'):
             _run(_loop(config, bars, path), resume=True, n_permutations=3)
         assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
         (path / 'results.csv').write_bytes(saved_csv)
@@ -523,7 +523,7 @@ def test_resume_clears_returns_beyond_failure_only_checkpoint(tmp_path, monkeypa
     changed = copy.deepcopy(config)
     changed['sfd']['manifest']['split_walk_forward']['embargo_bars'] += 1
     before = {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()}
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         _run(_loop(changed, bars, tmp_path), resume=True, n_permutations=3)
     assert {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()} == before
 
@@ -562,7 +562,7 @@ def test_native_resume_rejects_added_or_removed_walk_forward(tmp_path, saved_wal
     _run(saved, n_permutations=2)
     assert (tmp_path / 'checkpoint.json').exists()
     before = {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()}
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         _run(native_loop(not saved_walk_forward), resume=True, n_permutations=2)
     assert {file.name: file.read_bytes() for file in tmp_path.iterdir() if file.is_file()} == before
 
@@ -609,7 +609,7 @@ def test_fold_geometry_rejects_unusable_recorded_rows(invalid, tmp_path):
         bars = bars.reverse()
     else:
         bars = pl.concat([bars, bars.tail(1)])
-    with pytest.raises(ValueError, match='split_walk_forward|CSV|prefix'):
+    with pytest.raises(ValueError, match='split_walk_forward'):
         _run(_loop(_config(), bars, tmp_path))
 
 

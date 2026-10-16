@@ -1,6 +1,7 @@
 import gzip
 import hashlib
 import json
+import logging
 import shutil
 import time
 from datetime import datetime
@@ -15,6 +16,8 @@ from limen.experiment import _round_storage as storage
 from limen.inference import Trainer
 from tests.test_record_execution import _assert_aligned_market, _config, _loop, _run
 from tests import test_walk_forward_uel as forward
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope='module')
@@ -229,6 +232,6 @@ def test_recorded_workload_storage_reduction(tmp_path, recorded_rounds):
         stored = sum(p.stat().st_size for p in compact.parent.rglob('*') if p.is_file())
         total_legacy += raw
         total_compact += stored
-        print(f'{kind}: rounds={len(captured["records"])} legacy={raw} compact_all_files={stored} ratio={stored/raw:.4f}')
+        logger.info('%s: rounds=%d legacy=%d compact_all_files=%d ratio=%.4f', kind, len(captured['records']), raw, stored, stored / raw)
     assert total_compact < total_legacy
-    print(f'wall_seconds={time.perf_counter()-started:.6f} cpu_seconds={time.process_time()-cpu:.6f} total_ratio={total_compact/total_legacy:.4f}')
+    logger.info('wall_seconds=%.6f cpu_seconds=%.6f total_ratio=%.4f', time.perf_counter() - started, time.process_time() - cpu, total_compact / total_legacy)

@@ -162,7 +162,7 @@ def test_default_and_false_preserve_round_artifacts(recorded_bars, tmp_path):
     _run(baseline)
     _run(explicit, record_execution=False)
     _run(enabled, record_execution=True)
-    assert (_storage.round_path((tmp_path / 'default'))).read_bytes() == (_storage.round_path((tmp_path / 'false'))).read_bytes()
+    assert (_storage.round_path(tmp_path / 'default')).read_bytes() == (_storage.round_path(tmp_path / 'false')).read_bytes()
     assert baseline.experiment_log.drop('execution_time').equals(explicit.experiment_log.drop('execution_time'))
     assert baseline.experiment_log.drop('execution_time').equals(enabled.experiment_log.drop('execution_time'))
     for off, on in zip(_records(tmp_path / 'default'), _records(tmp_path / 'true'), strict=True):

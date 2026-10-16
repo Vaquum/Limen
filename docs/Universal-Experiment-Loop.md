@@ -266,7 +266,7 @@ import numpy as np
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest._snapshot_ledger import snapshot_ledger
 
-with open("results/round_data.jsonl.gz") as rows:
+with open_text(round_path(Path("results"))) as rows:
     record = json.loads(next(rows))
 execution = record["execution"]
 result = ExecutionResult(**{key: np.asarray(value) for key, value in execution.items()})

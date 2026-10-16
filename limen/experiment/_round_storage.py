@@ -48,7 +48,7 @@ def _members(stream: BinaryIO, path: Path, *, tail: bool = False,
              limit: int = _MEMBER_LIMIT) -> Iterator[tuple[bytes, int]]:
     while header := stream.read(2):
         start = stream.tell() - len(header)
-        if len(header) < 2 and tail:
+        if header == b'\x1f' and tail:
             return
         if header != b'\x1f\x8b':
             raise RoundStorageError(f'Invalid gzip member header in {path} at byte {start}')

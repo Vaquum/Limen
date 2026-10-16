@@ -107,7 +107,7 @@ def test_default_and_false_preserve_outputs(recorded_bars, tmp_path):
     explicit = _loop(config, recorded_bars, tmp_path / 'false')
     _run(baseline)
     _run(explicit, record_model_outputs=False)
-    assert (_storage.round_path((tmp_path / 'default'))).read_bytes() == (_storage.round_path((tmp_path / 'false'))).read_bytes()
+    assert (_storage.round_path(tmp_path / 'default')).read_bytes() == (_storage.round_path(tmp_path / 'false')).read_bytes()
     assert baseline.experiment_log.drop('execution_time').equals(explicit.experiment_log.drop('execution_time'))
     assert all('probs' not in row for row in _records(tmp_path / 'default'))
     assert 'best_iteration' not in baseline.experiment_log.columns

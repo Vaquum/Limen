@@ -65,11 +65,11 @@ def test_same_objective_resume_matches_uninterrupted_run(objective, tmp_path):
     first = _loop(config, tmp_path / 'resume', reducers=[SanityReducer(metric=COLUMN)] if objective else [])
     _stop_after_first(first)
     _run(first)
-    original_round = (_storage.round_path((tmp_path / 'resume'))).read_bytes()
+    original_round = (_storage.round_path(tmp_path / 'resume')).read_bytes()
     resumed = _loop(config, tmp_path / 'resume', reducers=[SanityReducer(metric=COLUMN)] if objective else [])
     _run(resumed, resume=True)
     assert resumed.experiment_log.drop('execution_time').equals(full.experiment_log.drop('execution_time'))
-    assert (_storage.round_path((tmp_path / 'resume'))).read_bytes().startswith(original_round)
+    assert (_storage.round_path(tmp_path / 'resume')).read_bytes().startswith(original_round)
     for path in (tmp_path / 'full', tmp_path / 'resume'):
         metadata = json.loads((path / 'metadata.json').read_text())
         if objective:
