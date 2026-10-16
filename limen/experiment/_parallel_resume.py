@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from limen.experiment import _round_storage as _storage
+
 import csv
 import json
 import math
@@ -181,20 +183,11 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         raise ValueError('Cannot resume ablation results without _dropped_features')
     expected = [(index, str(row['id'])) for index, row in enumerate(rows) if not row['strict_mode_error']]
     committed: list[dict[str, object]] = []
-    lines: list[str] = []
-    if expected and not round_data_path.exists():
-        raise ValueError('Cannot resume parallel run without successful round data')
+    _storage.validate_prefix(round_data_path, expected)
     if round_data_path.exists():
-        with round_data_path.open() as stream:
-            for index, identity in expected:
-                line = stream.readline()
-                if not line:
-                    raise ValueError('Cannot resume parallel run without all successful round evidence')
-                entry = _mapping(json.loads(line), 'round data')
-                if type(entry.get('_round_index')) is not int or entry['_round_index'] != index or entry.get('round_id') != identity:
-                    raise ValueError('Parallel JSONL evidence differs from successful terminal CSV occurrences')
-                committed.append(entry)
-                lines.append(line.rstrip('\n'))
+        with _storage.open_text(round_data_path, limit=len(expected)) as stream:
+            for line in stream:
+                committed.append(_mapping(json.loads(line), 'round data'))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
     failed = failed_parameters(checkpoint, rows)
     parameter_keys = {key for key in (*_mapping(attributes.get('params'), 'search parameters'), *(context_params or {}), *context_keys) if not key.startswith('_')}
@@ -256,7 +249,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
             forward.writer.clear()
     attributes['experiment_log'] = log if start else None
     failed_round_params.extend(failed)
-    _ = round_data_path.write_text(''.join(line + '\n' for line in lines))
+    _storage.truncate_rounds(round_data_path, start)
     with csv_path.open('w', newline='') as stream:
         writer = csv.DictWriter(stream, header)
         writer.writeheader()

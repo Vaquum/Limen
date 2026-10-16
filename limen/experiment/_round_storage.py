@@ -34,7 +34,7 @@ def round_path(directory: Path, *, fresh: bool = False) -> Path:
         raise ValueError(f'Compact metadata conflicts with legacy round data in {directory}')
     if (directory / 'round_market').exists() and not compact.exists():
         raise ValueError(f'Market directory lacks compressed round data in {directory}')
-    return compact if storage == FORMAT or (fresh and not plain.exists()) else plain
+    return compact if storage == FORMAT or (fresh and not metadata.exists() and not plain.exists()) else plain
 
 
 def _members(stream: BinaryIO, path: Path, *, tail: bool = False,

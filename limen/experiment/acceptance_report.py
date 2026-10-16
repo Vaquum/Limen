@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import json
 import math
 from collections.abc import Mapping
@@ -55,11 +56,11 @@ def _matrix(frame: pl.DataFrame, trials: list[str]) -> npt.NDArray[np.float64]:
 
 
 def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trials: list[str]) -> None:
-    path = directory / 'round_data.jsonl'
+    path = _storage.round_path(directory)
     if not path.exists():
         raise ValueError('PBO requires recorded ordered test timestamps for every trial')
     records: dict[str, Mapping[str, object]] = {}
-    with path.open() as stream:
+    with _storage.open_text(path) as stream:
         for line in stream:
             entry = cast(object, json.loads(line))
             if not isinstance(entry, Mapping):

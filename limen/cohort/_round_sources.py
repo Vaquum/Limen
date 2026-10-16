@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from limen.experiment import _round_storage as _storage
+
 from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Generic, Protocol, TypeVar, cast
@@ -69,7 +71,7 @@ class RoundSources(Generic[Source]):
                 raise ValueError(f'Cohort source {path}: data source is required.')
             source_signature = (data_source.method, {k: v for k, v in data_source.params.items()
                                                     if k not in ('start_date_limit', 'end_date_limit')})
-            entries = load_entries(path / 'round_data.jsonl')
+            entries = load_entries(_storage.round_path(path))
             for pid in ids:
                 key = (source.manifest_id, pid)
                 if key in self.member_sources:
