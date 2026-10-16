@@ -89,6 +89,8 @@ def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
     if 'market' in record or not isinstance(digest, str) or re.fullmatch('[0-9a-f]{64}', digest) is None:
         raise RoundStorageError(f'Invalid market reference for round {record.get("round_id")} in {directory}')
     path = directory / 'round_market' / (digest + '.json.gz')
+    if not path.is_file():
+        raise FileNotFoundError(f'Missing market for round {record.get("round_id")}: {path}')
     with path.open('rb') as stream:
         iterator = _members(stream, path, limit=_MARKET_LIMIT)
         member = next(iterator, None)
@@ -204,13 +206,15 @@ def validate_prefix(path: Path, expected: Sequence[tuple[int, str]]) -> None:
 def truncate_rounds(path: Path, start_round: int) -> None:
     end = 0
     with path.open('rb') as stream:
-        count = len(csv_prefix(path, start_round)) if (path.parent / 'results.csv').exists() else None
+        count = len(csv_prefix(path, start_round)) if path.suffix != '.gz' and (path.parent / 'results.csv').exists() else None
         for raw, offset in islice(_frames(stream, path, tail=True), count):
             record = cast(dict[str, object], json.loads(raw))
             if cast(int, record.get('_round_index', 0)) >= start_round:
-                break
+                if path.suffix != '.gz':
+                    break
+            else:
+                end = offset
             _ = _restore(record, path.parent)
-            end = offset
     with path.open('r+b') as stream:
         _ = stream.truncate(end)
 

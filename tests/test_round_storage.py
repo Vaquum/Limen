@@ -270,3 +270,17 @@ def test_orphaned_first_market_blob_allows_empty_prefix(tmp_path, recorded_round
     record = recorded_rounds['rule']['records'][0]
     with pytest.raises(storage.RoundStorageError, match='not found'):
         storage.validate_prefix(path, [(record['_round_index'], record['round_id'])])
+
+
+def test_resume_rejects_crc_damage_beyond_checkpoint(tmp_path, recorded_rounds):
+    records = recorded_rounds['rule']['records']
+    path = _write(tmp_path / 'bad-uncommitted-crc', records[:1])
+    member = bytearray(gzip.compress((json.dumps(records[1]) + '\n').encode(), mtime=0))
+    member[-8] ^= 1
+    with path.open('ab') as stream:
+        stream.write(member)
+    before = path.read_bytes()
+    storage.validate_prefix(path, [(records[0]['_round_index'], records[0]['round_id'])])
+    with pytest.raises(storage.RoundStorageError, match='Corrupt gzip'):
+        storage.truncate_rounds(path, records[1]['_round_index'])
+    assert path.read_bytes() == before
