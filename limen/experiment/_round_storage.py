@@ -28,7 +28,10 @@ _MARKET_LIMIT = 128 * 1024 * 1024
 def round_path(directory: Path, *, fresh: bool = False) -> Path:
     plain, compact = (directory / name for name in ('round_data.jsonl', 'round_data.jsonl.gz'))
     metadata = directory / 'metadata.json'
-    settings = cast(dict[str, object], json.loads(metadata.read_text())) if metadata.exists() else {}
+    value = _json(metadata.read_text(), metadata) if metadata.exists() else {}
+    if not isinstance(value, dict):
+        raise RoundStorageError(f'Invalid storage metadata in {metadata}')
+    settings = cast(dict[str, object], value)
     storage = settings.get('round_storage')
     if storage not in (None, FORMAT) or (plain.exists() and compact.exists()):
         raise RoundStorageError(f'Conflicting or unknown round storage in {directory}')
@@ -87,12 +90,15 @@ def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
         raise RoundStorageError(f'Invalid market reference for round {record.get("round_id")} in {directory}')
     path = directory / 'round_market' / (digest + '.json.gz')
     with path.open('rb') as stream:
-        members = list(_members(stream, path, limit=_MARKET_LIMIT))
-    if len(members) != 1 or hashlib.sha256(members[0][0]).hexdigest() != digest:
+        iterator = _members(stream, path, limit=_MARKET_LIMIT)
+        member = next(iterator, None)
+        if member is None or next(iterator, None) is not None:
+            raise RoundStorageError(f'Expected one market member in {path}')
+    if hashlib.sha256(member[0]).hexdigest() != digest:
         raise RoundStorageError(f'Market digest mismatch in {path} for round {record.get("round_id")}')
     predictions = record.get('preds')
     count = len(cast(list[object], predictions)) if isinstance(predictions, list) else None
-    market = _market(json.loads(members[0][0]), path, count)
+    market = _market(_json(member[0], path), path, count)
     return {('market' if key == 'market_ref' else key): (market if key == 'market_ref' else value)
             for key, value in record.items()}
 
@@ -185,7 +191,8 @@ def validate_prefix(path: Path, expected: Sequence[tuple[int, str]]) -> None:
 def truncate_rounds(path: Path, start_round: int) -> None:
     end = 0
     with path.open('rb') as stream:
-        for raw, offset in _frames(stream, path, tail=True):
+        count = len(csv_prefix(path, start_round)) if (path.parent / 'results.csv').exists() else None
+        for raw, offset in islice(_frames(stream, path, tail=True), count):
             record = cast(dict[str, object], json.loads(raw))
             if cast(int, record.get('_round_index', 0)) >= start_round:
                 break
@@ -203,3 +210,10 @@ def text(path: Path) -> str:
 def propagate(error: BaseException) -> None:
     if isinstance(error, RoundStorageError):
         raise error
+
+
+def _json(raw: str | bytes, path: Path) -> object:
+    try:
+        return cast(object, json.loads(raw))
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise RoundStorageError(f'Malformed JSON in {path}') from exc
