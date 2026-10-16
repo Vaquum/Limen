@@ -119,45 +119,8 @@ def xgboost_regressor(data: dict[str, Any],
 
     """Train and evaluate a regressor, forwarding optional XGBoost controls."""
 
-    model = XGBoostRegressor().train(
-        data,
-        learning_rate=learning_rate,
-        max_depth=max_depth,
-        n_estimators=n_estimators,
-        min_child_weight=min_child_weight,
-        subsample=subsample,
-        colsample_bytree=colsample_bytree,
-        gamma=gamma,
-        reg_alpha=reg_alpha,
-        reg_lambda=reg_lambda,
-        objective=objective,
-        booster=booster,
-        early_stopping_rounds=early_stopping_rounds,
-        random_state=random_state,
-        eval_metric=eval_metric,
-        max_leaves=max_leaves,
-        max_bin=max_bin,
-        grow_policy=grow_policy,
-        sampling_method=sampling_method,
-        colsample_bylevel=colsample_bylevel,
-        colsample_bynode=colsample_bynode,
-        max_delta_step=max_delta_step,
-        tree_method=tree_method,
-        num_parallel_tree=num_parallel_tree,
-        base_score=base_score,
-        scale_pos_weight=scale_pos_weight,
-        n_jobs=n_jobs,
-        verbosity=verbosity,
-        device=device,
-        enable_categorical=enable_categorical,
-        max_cat_to_onehot=max_cat_to_onehot,
-        max_cat_threshold=max_cat_threshold,
-        importance_type=importance_type,
-        interaction_constraints=interaction_constraints,
-        monotone_constraints=monotone_constraints,
-        multi_strategy=multi_strategy,
-        validate_parameters=validate_parameters,
-    )
+    model_params = {key: value for key, value in locals().items() if key != 'data'}
+    model = XGBoostRegressor().train(data, **model_params)
 
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
