@@ -39,8 +39,8 @@ def round_path(directory: Path, *, fresh: bool = False) -> Path:
         raise RoundStorageError(f'Compressed round data lacks format metadata in {directory}')
     if storage == FORMAT and plain.exists():
         raise RoundStorageError(f'Compact metadata conflicts with legacy round data in {directory}')
-    if (directory / 'round_market').exists() and not compact.exists():
-        raise RoundStorageError(f'Market directory lacks compressed round data in {directory}')
+    if (directory / 'round_market').exists() and storage != FORMAT:
+        raise RoundStorageError(f'Market directory lacks compressed format metadata in {directory}')
     return compact if storage == FORMAT or (fresh and not metadata.exists() and not plain.exists()) else plain
 
 

@@ -891,7 +891,7 @@ class UniversalExperimentLoop:
         )
         logger.info('Resuming from round %d', start_round)
 
-        if not round_data_path or not round_data_path.exists():
+        if not round_data_path or (not round_data_path.exists() and not csv_path.exists()):
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no round data exists."
             )

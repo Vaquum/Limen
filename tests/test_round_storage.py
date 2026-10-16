@@ -259,3 +259,14 @@ def test_writer_rejects_unreadable_sizes_before_writing(tmp_path, recorded_round
     with pytest.raises(storage.RoundStorageError, match='size limit'):
         storage.append_record(path, recorded_rounds['rule']['records'][0])
     assert {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()} == before
+
+
+def test_orphaned_first_market_blob_allows_empty_prefix(tmp_path, recorded_rounds):
+    path = _write(tmp_path / 'orphan', recorded_rounds['rule']['records'][:1])
+    path.unlink()
+    assert (path.parent / 'round_market').is_dir()
+    assert storage.round_path(path.parent) == path
+    storage.validate_prefix(path, [])
+    record = recorded_rounds['rule']['records'][0]
+    with pytest.raises(storage.RoundStorageError, match='not found'):
+        storage.validate_prefix(path, [(record['_round_index'], record['round_id'])])
