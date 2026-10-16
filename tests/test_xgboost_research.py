@@ -53,7 +53,7 @@ def test_wrapper_forwards_controls(prepared, monkeypatch):
         'tree_method': 'hist', 'num_parallel_tree': 2, 'base_score': 0.0,
         'scale_pos_weight': 1.0, 'n_jobs': 1, 'verbosity': 0, 'device': 'cpu',
         'enable_categorical': False, 'max_cat_to_onehot': 4, 'max_cat_threshold': 64,
-        'importance_type': 'gain', 'interaction_constraints': [[0, 1]],
+        'importance_type': 'gain', 'interaction_constraints': [prepared['x_train'].columns[:2]],
         'monotone_constraints': tuple(0 for _ in prepared['x_train'].columns),
         'multi_strategy': 'one_output_per_tree', 'validate_parameters': True,
     }
@@ -154,14 +154,15 @@ def test_research_features_are_causal_and_do_not_share_sma_aliases(bars):
 def test_sweep_entrypoint(bars, monkeypatch, tmp_path, environment):
     fetched = []
 
-    def load(**kwargs):
-        fetched.append(kwargs)
-        return bars
+    class MarketSource:
+        def fetch(self, **kwargs):
+            fetched.append(kwargs)
+            return bars
 
     space = {key: [values[0]] for key, values in sfd.params().items()}
     space['n_estimators'] = [8]
     monkeypatch.setattr(sfd, 'params', lambda: space)
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(load))
+    monkeypatch.setattr(HistoricalData, 'get_spot_klines', MarketSource().fetch)
     output = tmp_path / 'sweep'
     monkeypatch.setattr(sys, 'argv', ['xgboost_sweep.py', '--env', environment,
                                      '--permutations', '1', '--output', str(output)])
