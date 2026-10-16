@@ -1617,3 +1617,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.27.0] - 2026-10-14
 
 - Apply opt-in generic numeric-column shims before scaling and PCA; resolve ordinary MSQ parameters and retain train-fitted fractional-difference state for validation, test and inference (#518). Preserve default preparation and reject unsupported factorized composition.
+
+## [5.28.0] - 2026-10-17
+
+- Compress new experiment round artifacts losslessly and share repeated market-return payloads within each result directory.
+- Preserve legacy round reads and resume while validating compressed member and market integrity.
