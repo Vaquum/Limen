@@ -293,7 +293,7 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
     records = [json.loads(line) for line in _storage.text(records_path).splitlines()]
     for record in records:
         record['round_params']['bar_type'] = 'volume'
-    records_path.write_bytes(gzip.compress(('\n'.join(json.dumps(record) for record in records) + '\n').encode(), mtime=0))
+    records_path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
     with pytest.raises(ValueError, match='bar'):
         Cohort(rounds=[(first.directory, first.ids[0]), (bars, second.ids[0])])
     # Even the same function declaration must compare the selected resolved arguments.
@@ -303,7 +303,7 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
     other_records = [json.loads(line) for line in _storage.text(other_records_path).splitlines()]
     for record in other_records:
         record['round_params']['bar_type'] = 'volume'
-    other_records_path.write_bytes(gzip.compress(('\n'.join(json.dumps(record) for record in other_records) + '\n').encode(), mtime=0))
+    other_records_path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in other_records))
     with pytest.raises(ValueError, match='bar'):
         Cohort(rounds=[(other_bars, first.ids[0]), (bars, second.ids[1])])
 

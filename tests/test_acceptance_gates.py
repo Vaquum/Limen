@@ -209,7 +209,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     for record in records:
         for fold in record['folds']:
             fold['alignment'].pop('test_datetimes', None)
-    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
+    path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
     absent = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert absent['pbo'] is None
     assert absent['verdicts']['max_pbo'] is None
@@ -224,7 +224,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
                      and value not in alignment['missing_datetimes']]
             assert len(dates) == len(fold['net_returns'])
             alignment['test_datetimes'] = dates
-    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
+    path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
     aligned = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert aligned['pbo'] == _reference_pbo(matrix, 2)
     assert aligned['deflated_sharpe_probability'] == absent['deflated_sharpe_probability']
@@ -236,7 +236,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
         adjacent = source_dates[start:start + len(dates)]
         assert len(adjacent) == len(dates) and adjacent != dates
         fold['alignment']['test_datetimes'] = adjacent
-    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
+    path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
     shifted = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert shifted['pbo'] is None
     assert shifted['verdicts']['max_pbo'] is None
@@ -245,7 +245,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     records = valid_records
     recorded_returns = records[1]['folds'][0]['net_returns']
     recorded_returns[1] = {'recorded_return': recorded_returns[1]}
-    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
+    path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
     corrupt = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert corrupt['pbo'] is None
     assert corrupt['verdicts']['max_pbo'] is None
@@ -285,14 +285,14 @@ def test_pbo_timestamp_identity_survives_recorded_dst_transition(tmp_path):
             zone = helsinki if trial_index == 0 else timezone.utc
             alignment['test_datetimes'] = [value.astimezone(zone).isoformat() for value in instants]
     assert lexical_disorder
-    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
+    path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
     aligned = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert aligned['pbo'] == _reference_pbo(matrix, 2)
     assert aligned['errors'] == {}
     original = records[1]['folds'][0]['alignment']['test_datetimes']
     for invalid in (original[::-1], [original[0], *original[:-1]]):
         records[1]['folds'][0]['alignment']['test_datetimes'] = invalid
-        path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
+        path.write_bytes(b''.join(gzip.compress((json.dumps(record) + '\n').encode(), mtime=0) for record in records))
         rejected = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
         assert rejected['pbo'] is None
         assert rejected['verdicts']['max_pbo'] is None
