@@ -13,6 +13,7 @@ import pytest
 
 from limen.cohort import Cohort
 from limen.experiment import _round_storage as storage
+from limen.experiment.acceptance_report import acceptance_report
 from limen.inference import Trainer
 from tests.test_record_execution import _assert_aligned_market, _config, _loop, _run
 from tests import test_walk_forward_uel as forward
@@ -167,7 +168,9 @@ def test_compact_live_read_and_resume(tmp_path, recorded_rounds, cut):
 @pytest.mark.parametrize('damage', ('zero', 'crc', 'missing_blob', 'blob_digest', 'reference', 'both', 'unknown', 'layout', 'duplicate'))
 def test_committed_corruption_fails(tmp_path, recorded_rounds, damage):
     records = recorded_rounds['rule']['records']
-    path = _write(tmp_path / damage, records)
+    directory = tmp_path / damage
+    shutil.copytree(recorded_rounds['rule']['directory'], directory)
+    path = storage.round_path(directory)
     if damage in ('zero', 'crc'):
         first = gzip.compress((json.dumps(records[0]) + '\n').encode(), compresslevel=1, mtime=0)
         raw = bytearray(first)
@@ -196,9 +199,9 @@ def test_committed_corruption_fails(tmp_path, recorded_rounds, damage):
     else:
         (path.parent / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
     before = {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in path.parent.rglob('*') if p.is_file()}
-    expected = [(record['_round_index'], record['round_id']) for record in records]
+    loop = _loop(_config('rule'), recorded_rounds['rule']['loop'].data, directory)
     with pytest.raises((storage.RoundStorageError, FileNotFoundError)):
-        storage.validate_prefix(path, expected)
+        _run(loop, record_execution=True, record_model_outputs=True, resume=True)
     assert {p: (p.read_bytes(), p.stat().st_mtime_ns) for p in before} == before
 
 
@@ -217,6 +220,14 @@ def test_consumers_match_legacy(tmp_path, recorded_rounds):
             _assert_aligned_market(record, captured['loop'].data)
     # Walk-forward fixture construction already ran acceptance on compact records.
     assert (recorded_rounds['folds']['directory'] / 'acceptance_report.json').exists()
+    rejected = tmp_path / 'corrupt-acceptance'
+    shutil.copytree(recorded_rounds['folds']['directory'], rejected)
+    path = storage.round_path(rejected)
+    path.write_bytes(path.read_bytes()[:-4])
+    reports = {p: p.read_bytes() for p in rejected.glob('acceptance_report.*')}
+    with pytest.raises(storage.RoundStorageError):
+        acceptance_report(rejected)
+    assert {p: p.read_bytes() for p in reports} == reports
 
 
 def test_recorded_workload_storage_reduction(tmp_path, recorded_rounds):
