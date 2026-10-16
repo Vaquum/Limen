@@ -167,7 +167,7 @@ def test_compact_live_read_and_resume(tmp_path, recorded_rounds, cut):
     assert path.read_bytes() == prefix and path.stat().st_ino == inode
 
 
-@pytest.mark.parametrize('damage', ('zero', 'crc', 'missing_blob', 'blob_digest', 'reference', 'both', 'unknown', 'layout', 'duplicate'))
+@pytest.mark.parametrize('damage', ('zero', 'crc', 'missing_blob', 'blob_digest', 'reference', 'both', 'unknown', 'layout', 'duplicate', 'metadata_utf8'))
 def test_committed_corruption_fails(tmp_path, recorded_rounds, damage):
     records = recorded_rounds['rule']['records']
     directory = tmp_path / damage
@@ -196,6 +196,8 @@ def test_committed_corruption_fails(tmp_path, recorded_rounds, damage):
         elif damage == 'both':
             record['market_ref'] = '0' * 64
         path.write_bytes(gzip.compress((json.dumps(record) + '\n').encode(), compresslevel=1, mtime=0) * (2 if damage == 'duplicate' else 1))
+    elif damage == 'metadata_utf8':
+        (path.parent / 'metadata.json').write_bytes(b'\xff')
     elif damage == 'unknown':
         (path.parent / 'metadata.json').write_text(json.dumps({'round_storage': 'future'}))
     else:
@@ -222,14 +224,18 @@ def test_consumers_match_legacy(tmp_path, recorded_rounds):
             _assert_aligned_market(record, captured['loop'].data)
     # Walk-forward fixture construction already ran acceptance on compact records.
     assert (recorded_rounds['folds']['directory'] / 'acceptance_report.json').exists()
-    rejected = tmp_path / 'corrupt-acceptance'
-    shutil.copytree(recorded_rounds['folds']['directory'], rejected)
-    path = storage.round_path(rejected)
-    path.write_bytes(path.read_bytes()[:-4])
-    reports = {p: p.read_bytes() for p in rejected.glob('acceptance_report.*')}
-    with pytest.raises(storage.RoundStorageError):
-        acceptance_report(rejected)
-    assert {p: p.read_bytes() for p in reports} == reports
+    for damage in ('member', 'metadata_utf8'):
+        rejected = tmp_path / ('corrupt-acceptance-' + damage)
+        shutil.copytree(recorded_rounds['folds']['directory'], rejected)
+        path = storage.round_path(rejected)
+        if damage == 'member':
+            path.write_bytes(path.read_bytes()[:-4])
+        else:
+            (rejected / 'metadata.json').write_bytes(b'\xff')
+        reports = {p: p.read_bytes() for p in rejected.glob('acceptance_report.*')}
+        with pytest.raises(storage.RoundStorageError):
+            acceptance_report(rejected)
+        assert {p: p.read_bytes() for p in reports} == reports
 
 
 def test_recorded_workload_storage_reduction(tmp_path, recorded_rounds):

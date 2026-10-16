@@ -28,7 +28,7 @@ _MARKET_LIMIT = 128 * 1024 * 1024
 def round_path(directory: Path, *, fresh: bool = False) -> Path:
     plain, compact = (directory / name for name in ('round_data.jsonl', 'round_data.jsonl.gz'))
     metadata = directory / 'metadata.json'
-    value: object = _json(metadata.read_text(), metadata) if metadata.exists() else {}
+    value: object = _json(metadata.read_bytes(), metadata) if metadata.exists() else {}
     if not isinstance(value, dict):
         raise RoundStorageError(f'Invalid storage metadata in {metadata}')
     settings = cast(dict[str, object], value)
