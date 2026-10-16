@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 import importlib
 import inspect
 import json
@@ -171,7 +172,7 @@ def test_sweep_entrypoint(bars, monkeypatch, tmp_path, environment):
     log = pl.read_csv(output / 'results.csv')
     assert log.height == 1 and log['mae'].is_not_null().all()
     assert (output / 'metadata.json').is_file()
-    assert len((output / 'round_data.jsonl').read_text().splitlines()) == 1
+    assert len(_storage.text(_storage.round_path(output)).splitlines()) == 1
 
 
 @pytest.mark.skipif(os.getenv('LIMEN_TEST_CUDA') != '1', reason='requires an explicit CUDA integration environment')
