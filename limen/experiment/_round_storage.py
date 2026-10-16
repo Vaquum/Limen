@@ -211,14 +211,15 @@ def validate_prefix(path: Path, expected: Sequence[tuple[int, str]]) -> None:
 def truncate_rounds(path: Path, start_round: int) -> None:
     end = 0
     with path.open('rb') as stream:
-        count = len(csv_prefix(path, start_round)) if path.suffix != '.gz' and (path.parent / 'results.csv').exists() else None
-        for raw, offset in islice(_frames(stream, path, tail=True), count):
+        count = len(csv_prefix(path, start_round)) if (path.parent / 'results.csv').exists() else None
+        limit = count if path.suffix != '.gz' else None
+        for position, (raw, offset) in enumerate(islice(_frames(stream, path, tail=True), limit)):
             record = cast(dict[str, object], json.loads(raw))
-            if cast(int, record.get('_round_index', 0)) >= start_round:
-                if path.suffix != '.gz':
-                    break
-            else:
+            committed = position < count if count is not None else cast(int, record.get('_round_index', 0)) < start_round
+            if committed:
                 end = offset
+            elif path.suffix != '.gz':
+                break
             _ = _restore(record, path.parent)
     with path.open('r+b') as stream:
         _ = stream.truncate(end)

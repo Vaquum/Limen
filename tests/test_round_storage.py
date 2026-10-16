@@ -305,3 +305,17 @@ def test_legacy_resume_appends_after_record_without_newline(tmp_path, recorded_r
     _run(resumed, record_execution=True, record_model_outputs=True, resume=True)
     assert path.stat().st_ino == inode and path.read_bytes().startswith(before + b'\n')
     assert storage.text(path) == ''.join(json.dumps(record) + '\n' for record in recorded_rounds['rule']['records'])
+
+
+def test_resume_discards_uncommitted_duplicate_index(tmp_path, recorded_rounds):
+    captured = recorded_rounds['rule']
+    directory = tmp_path / 'duplicate-tail'
+    shutil.copytree(captured['directory'], directory)
+    path = storage.round_path(directory)
+    prefix, inode = path.read_bytes(), path.stat().st_ino
+    with path.open('ab') as stream:
+        stream.write(gzip.compress((json.dumps(captured['records'][0]) + '\n').encode(), mtime=0))
+    _run(_loop(_config('rule'), captured['loop'].data, directory),
+         record_execution=True, record_model_outputs=True, resume=True)
+    assert path.read_bytes() == prefix and path.stat().st_ino == inode
+    assert storage.text(path) == ''.join(json.dumps(record) + '\n' for record in captured['records'])
