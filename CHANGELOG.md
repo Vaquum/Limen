@@ -1621,3 +1621,4 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.28.0] - 2026-10-17
 
 - Expose optional XGBoost regression controls through the stock manifest wrapper, including device, tree method, constraints, and evaluation metric.
+- Parameterize the foundational XGBoost research features, forward horizon, groups, scaling and ablation; add a documented sweep entrypoint and real-market regression coverage.

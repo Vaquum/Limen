@@ -27,10 +27,7 @@ class XGBoostRegressor(ReferenceModel):
 
         xgb = require_optional('xgboost', 'XGBoost', 'boosting')
 
-        self.model = xgb.XGBRegressor(
-            early_stopping_rounds=early_stopping_rounds,
-            **params,
-        )
+        self.model = xgb.XGBRegressor(early_stopping_rounds=early_stopping_rounds, **params)
 
         has_val = 'x_val' in data and 'y_val' in data and len(data['x_val']) > 0
 
