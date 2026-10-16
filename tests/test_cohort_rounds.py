@@ -1,3 +1,4 @@
+import gzip
 from limen.experiment import _round_storage as _storage
 import copy
 import hashlib
@@ -289,20 +290,20 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
     bars = _copy_campaign(second, tmp_path / 'bars')
     _edit_metadata(bars, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(bar_formation={'func': 'limen.data.bars.volume_bars', 'params': {'volume_threshold': '{C}'}}))
     records_path = _storage.round_path(bars)
-    records = [json.loads(line) for line in records_path.read_text().splitlines()]
+    records = [json.loads(line) for line in _storage.text(records_path).splitlines()]
     for record in records:
         record['round_params']['bar_type'] = 'volume'
-    records_path.write_text('\n'.join(json.dumps(record) for record in records) + '\n')
+    records_path.write_bytes(gzip.compress(('\n'.join(json.dumps(record) for record in records) + '\n').encode(), mtime=0))
     with pytest.raises(ValueError, match='bar'):
         Cohort(rounds=[(first.directory, first.ids[0]), (bars, second.ids[0])])
     # Even the same function declaration must compare the selected resolved arguments.
     other_bars = _copy_campaign(first, tmp_path / 'other_bars')
     _edit_metadata(other_bars, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(bar_formation={'func': 'limen.data.bars.volume_bars', 'params': {'volume_threshold': '{C}'}}))
     other_records_path = _storage.round_path(other_bars)
-    other_records = [json.loads(line) for line in other_records_path.read_text().splitlines()]
+    other_records = [json.loads(line) for line in _storage.text(other_records_path).splitlines()]
     for record in other_records:
         record['round_params']['bar_type'] = 'volume'
-    other_records_path.write_text('\n'.join(json.dumps(record) for record in other_records) + '\n')
+    other_records_path.write_bytes(gzip.compress(('\n'.join(json.dumps(record) for record in other_records) + '\n').encode(), mtime=0))
     with pytest.raises(ValueError, match='bar'):
         Cohort(rounds=[(other_bars, first.ids[0]), (bars, second.ids[1])])
 

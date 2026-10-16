@@ -1,6 +1,5 @@
 # End-to-End Workflow
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 For a native direction/sizing model trained from simulated trade outcomes, use the [direction/sizing workflow](Reference-Architecture.md#direction-and-sizing). It preserves signed exposure through experiment export, Trainer and Sensor; downstream execution parity requires the corresponding integration.
 

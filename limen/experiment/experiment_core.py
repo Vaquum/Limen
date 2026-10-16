@@ -1,4 +1,4 @@
-from limen.experiment import _round_storage as _storage
+import limen.experiment._round_storage as _storage
 import csv
 import importlib.metadata
 import json
@@ -891,7 +891,7 @@ class UniversalExperimentLoop:
         )
         logger.info('Resuming from round %d', start_round)
 
-        if not round_data_path:
+        if not round_data_path or not round_data_path.exists():
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no round data exists."
             )

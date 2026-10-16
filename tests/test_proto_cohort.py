@@ -211,9 +211,9 @@ def _patch_round_architecture(experiment_dir: Path,
                 entry['round_params'] = rp
             rows.append(entry)
 
-    with round_data_path.open('w') as f:
-        for row in rows:
-            f.write(json.dumps(row) + '\n')
+    round_data_path.unlink()
+    for row in rows:
+        _storage.append_record(round_data_path, row)
 
 
 def _train_real_members_and_input(experiment_dir: Path,

@@ -1,6 +1,5 @@
 # Glossary
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 This glossary defines the terms used across public docs, developer docs, package READMEs, and issue work.
 

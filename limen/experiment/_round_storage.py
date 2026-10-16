@@ -28,7 +28,7 @@ _MARKET_LIMIT = 128 * 1024 * 1024
 def round_path(directory: Path, *, fresh: bool = False) -> Path:
     plain, compact = (directory / name for name in ('round_data.jsonl', 'round_data.jsonl.gz'))
     metadata = directory / 'metadata.json'
-    value = _json(metadata.read_text(), metadata) if metadata.exists() else {}
+    value: object = _json(metadata.read_text(), metadata) if metadata.exists() else {}
     if not isinstance(value, dict):
         raise RoundStorageError(f'Invalid storage metadata in {metadata}')
     settings = cast(dict[str, object], value)
@@ -65,14 +65,14 @@ def _members(stream: BinaryIO, path: Path, *, tail: bool = False,
             if len(data) > limit:
                 raise RoundStorageError(f'Decompressed size limit exceeded in {path} at byte {start}')
             if decoder.eof:
-                stream.seek(-len(decoder.unused_data), 1)
+                _ = stream.seek(-len(decoder.unused_data), 1)
             else:
                 chunk = stream.read(65536)
         yield bytes(data), stream.tell()
 
 
 def _market(value: object, path: Path, count: int | None) -> dict[str, object]:
-    if not isinstance(value, dict) or set(value) != {'ret'}:
+    if not isinstance(value, dict) or set(cast(dict[str, object], value)) != {'ret'}:
         raise RoundStorageError(f'Invalid market payload in {path}')
     values = cast(dict[str, object], value)['ret']
     if not isinstance(values, list) or (count is not None and len(cast(list[object], values)) != count):
@@ -109,23 +109,29 @@ def append_record(path: Path, record: Mapping[str, object]) -> None:
             _ = stream.write(json.dumps(record) + '\n')
         return
     wire = dict(record)
+    raw: bytes | None = None
     if (market := wire.get('market')) is not None:
         _ = _market(market, path, len(cast(list[object], wire['preds'])))
         raw = json.dumps(market, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('utf-8')
+        if len(raw) > _MARKET_LIMIT:
+            raise RoundStorageError(f'Market size limit exceeded in {path}')
         digest = hashlib.sha256(raw).hexdigest()
-        folder = path.parent / 'round_market'
-        folder.mkdir(exist_ok=True)
-        blob = folder / (digest + '.json.gz')
-        if not blob.exists():
-            with tempfile.NamedTemporaryFile(dir=folder, prefix='market-', suffix='.tmp', delete=False) as temporary:
-                temporary.write(gzip.compress(raw, compresslevel=1, mtime=0))
-                temporary_path = Path(temporary.name)
-            temporary_path.replace(blob)
         wire = {('market_ref' if key == 'market' else key): (digest if key == 'market' else value)
                 for key, value in wire.items()}
-    data = gzip.compress((json.dumps(wire) + '\n').encode('utf-8'), compresslevel=1, mtime=0)
+    encoded = (json.dumps(wire) + '\n').encode('utf-8')
+    if len(encoded) > _MEMBER_LIMIT:
+        raise RoundStorageError(f'Round size limit exceeded in {path}')
+    if raw is not None:
+        folder = path.parent / 'round_market'
+        folder.mkdir(exist_ok=True)
+        blob = folder / (hashlib.sha256(raw).hexdigest() + '.json.gz')
+        if not blob.exists():
+            with tempfile.NamedTemporaryFile(dir=folder, prefix='market-', suffix='.tmp', delete=False) as temporary:
+                _ = temporary.write(gzip.compress(raw, compresslevel=1, mtime=0))
+                temporary_path = Path(temporary.name)
+            _ = temporary_path.replace(blob)
     with path.open('ab') as stream:
-        _ = stream.write(data)
+        _ = stream.write(gzip.compress(encoded, compresslevel=1, mtime=0))
 
 
 def _frames(stream: BinaryIO, path: Path, *, tail: bool = False) -> Iterator[tuple[bytes, int]]:
@@ -170,11 +176,16 @@ def open_text(path: Path, *, limit: int | None = None, tail: bool = False) -> It
 
 
 def csv_prefix(path: Path, count: int) -> list[tuple[int, str]]:
+    result: list[tuple[int, str]] = []
+    seen = 0
     with (path.parent / 'results.csv').open(newline='') as stream:
-        rows = list(islice(csv.DictReader(stream), count))
-    if len(rows) != count:
+        for index, row in enumerate(islice(csv.DictReader(stream), count)):
+            seen += 1
+            if not row.get('strict_mode_error'):
+                result.append((index, row['id']))
+    if seen != count:
         raise RoundStorageError(f'Incomplete successful CSV prefix for {path}')
-    return [(index, row['id']) for index, row in enumerate(rows) if not row.get('strict_mode_error')]
+    return result
 
 
 def validate_prefix(path: Path, expected: Sequence[tuple[int, str]]) -> None:
@@ -183,9 +194,11 @@ def validate_prefix(path: Path, expected: Sequence[tuple[int, str]]) -> None:
             return
         raise RoundStorageError(f'round_data.jsonl not found for committed prefix: {path}')
     with open_text(path, limit=len(expected)) as stream:
-        records = [cast(dict[str, object], json.loads(line)) for line in stream]
-    if [(r.get('_round_index'), r.get('round_id')) for r in records] != list(expected):
-        raise RoundStorageError(f'Round evidence differs from successful terminal CSV occurrences in {path}')
+        for occurrence in expected:
+            line = next(stream, None)
+            record = cast(dict[str, object], json.loads(line)) if line is not None else {}
+            if (record.get('_round_index'), record.get('round_id')) != occurrence:
+                raise RoundStorageError(f'Round evidence differs from successful terminal CSV occurrences in {path}')
 
 
 def truncate_rounds(path: Path, start_round: int) -> None:

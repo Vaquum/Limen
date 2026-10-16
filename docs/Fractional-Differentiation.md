@@ -1,6 +1,5 @@
 # Fractional Differentiation
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 Fractional differentiation makes a price series stationary while keeping as much of its memory as possible. Full first differencing (returns) is stationary but erases the level information a model can learn from; the raw price keeps all its memory but is non-stationary. Fractional differentiation sits between the two: it applies a real-valued differencing order `d` between `0` and `1` and keeps the smallest amount of differencing that passes a stationarity test.
 

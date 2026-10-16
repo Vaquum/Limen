@@ -576,7 +576,7 @@ def test_preds_none_does_not_crash():
 
         assert round_data_path.exists()
         with _storage.open_text(round_data_path) as f:
-            entry = json.loads(f.readline())
+            entry = json.loads(next(f))
         assert entry['preds'] == []
         assert entry['_round_index'] == 0
 

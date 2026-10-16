@@ -1,6 +1,5 @@
 # Advanced Search
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 Search strategies control candidate generation for both CLI and Python/MSQ experiments. The CLI builds the strategy from YAML. Python callers construct a strategy over a `ParamDomain` and pass it to UEL; UEL creates MSQ around that strategy.
 

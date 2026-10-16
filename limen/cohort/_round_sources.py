@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from limen.experiment import _round_storage as _storage
+import limen.experiment._round_storage as _storage
 
 from collections.abc import Callable, Mapping
 from pathlib import Path

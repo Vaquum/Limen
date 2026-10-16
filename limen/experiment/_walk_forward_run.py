@@ -1,4 +1,4 @@
-from limen.experiment import _round_storage as _storage
+import limen.experiment._round_storage as _storage
 import copy
 import json
 import math

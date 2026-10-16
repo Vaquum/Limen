@@ -1,6 +1,5 @@
 # Perturbation Strategies
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 A perturbation is a parameter-controlled variation of the feature and preprocessing pipeline, searched *within* a single experiment. Instead of hand-writing a new manifest for every "what if we dropped this feature" or "what if we scaled differently" question, you declare the variation once, expose it as a parameter, and let the search compare outcomes across rounds. Perturbations are how Limen tests robustness, attributes value to feature families, and avoids over-fitting to one fixed pipeline.
 

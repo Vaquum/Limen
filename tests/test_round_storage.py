@@ -122,6 +122,8 @@ def test_legacy_readers_and_resume(tmp_path, recorded_rounds):
     for record in captured['records']:
         storage.append_record(path, record)
     before, inode = path.read_bytes(), path.stat().st_ino
+    with path.open('ab') as stream:
+        stream.write((json.dumps(captured['records'][-1]) + '\n').encode()[:100])
     real_open, real_replace = Path.open, Path.replace
 
     def observe_open(p, mode='r', *args, **kwargs):
@@ -246,3 +248,14 @@ def test_recorded_workload_storage_reduction(tmp_path, recorded_rounds):
         logger.info('%s: rounds=%d legacy=%d compact_all_files=%d ratio=%.4f', kind, len(captured['records']), raw, stored, stored / raw)
     assert total_compact < total_legacy
     logger.info('wall_seconds=%.6f cpu_seconds=%.6f total_ratio=%.4f', time.perf_counter() - started, time.process_time() - cpu, total_compact / total_legacy)
+
+
+@pytest.mark.parametrize('limit', ('_MARKET_LIMIT', '_MEMBER_LIMIT'))
+def test_writer_rejects_unreadable_sizes_before_writing(tmp_path, recorded_rounds, monkeypatch, limit):
+    directory = tmp_path / limit
+    path = _write(directory, [])
+    before = {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()}
+    monkeypatch.setattr(storage, limit, 1)
+    with pytest.raises(storage.RoundStorageError, match='size limit'):
+        storage.append_record(path, recorded_rounds['rule']['records'][0])
+    assert {p: p.read_bytes() for p in directory.rglob('*') if p.is_file()} == before

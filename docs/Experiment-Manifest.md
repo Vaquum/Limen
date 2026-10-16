@@ -1,6 +1,5 @@
 # Experiment Manifest
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 The Experiment Manifest is Limen's declarative experiment definition. The canonical operator form is YAML: define the manifest, validate it, profile it, run it through CLI, then inspect the generated artifacts.
 

@@ -1,6 +1,5 @@
 # `limen.cli`
 
-
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](../../docs/Universal-Experiment-Loop.md#round-storage-format).
 > Provide the `limen` shell command for YAML validation, profiling, execution, manifest storage, and project scaffolding.
 

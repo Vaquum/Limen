@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 from dataclasses import asdict, replace
 import json
 from pathlib import Path
@@ -108,6 +109,6 @@ def test_nullable_yaml_search_completes_both_rounds(field, candidates, monkeypat
     with path.open('w') as stream:
         YAML().dump(config, stream)
     assert run_experiment(path, results_base=tmp_path, progress_bar=False)
-    records = [json.loads(line) for line in next(tmp_path.rglob('round_data.jsonl')).read_text().splitlines()]
+    records = [json.loads(line) for line in _storage.text(next(tmp_path.rglob('round_data.jsonl.gz'))).splitlines()]
     assert len(records) == 2
     assert [record['trade_contract']['policy'][field] for record in records] == candidates

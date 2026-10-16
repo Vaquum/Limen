@@ -6,8 +6,7 @@
 <br />
 <div align="center"><b>Vaquum Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.</b></div>
 
-
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](docs/Universal-Experiment-Loop.md#round-storage-format).
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#round-storage-format).
 <div align="center">
   <a href="#limen">Limen</a> •
   <a href="#what-limen-is-not">What Limen Is Not</a> •

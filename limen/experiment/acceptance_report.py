@@ -1,4 +1,4 @@
-from limen.experiment import _round_storage as _storage
+import limen.experiment._round_storage as _storage
 import json
 import math
 from collections.abc import Mapping

@@ -1,3 +1,4 @@
+import gzip
 from limen.experiment import _round_storage as _storage
 import copy
 import json
@@ -175,7 +176,7 @@ def test_acceptance_block_and_verdicts(acceptance_runs, tmp_path):
     assert not report['verdicts']['min_deflated_sharpe_probability']
     assert loop.experiment_log.height == 2
     (tmp_path / 'trial_returns.parquet').write_bytes((path / 'trial_returns.parquet').read_bytes())
-    (_storage.round_path(tmp_path)).write_bytes((_storage.round_path(path)).read_bytes())
+    (tmp_path / 'round_data.jsonl').write_text(_storage.text(_storage.round_path(path)))
     permissive = acceptance_report(tmp_path, acceptance={
         'min_deflated_sharpe_probability': 0.0, 'max_pbo': 1.0,
     })
@@ -204,11 +205,11 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
                        for trial in trials])
     path = _storage.round_path(tmp_path)
-    records = [json.loads(line) for line in path.read_text().splitlines()]
+    records = [json.loads(line) for line in _storage.text(path).splitlines()]
     for record in records:
         for fold in record['folds']:
             fold['alignment'].pop('test_datetimes', None)
-    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
     absent = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert absent['pbo'] is None
     assert absent['verdicts']['max_pbo'] is None
@@ -223,7 +224,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
                      and value not in alignment['missing_datetimes']]
             assert len(dates) == len(fold['net_returns'])
             alignment['test_datetimes'] = dates
-    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
     aligned = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert aligned['pbo'] == _reference_pbo(matrix, 2)
     assert aligned['deflated_sharpe_probability'] == absent['deflated_sharpe_probability']
@@ -235,7 +236,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
         adjacent = source_dates[start:start + len(dates)]
         assert len(adjacent) == len(dates) and adjacent != dates
         fold['alignment']['test_datetimes'] = adjacent
-    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
     shifted = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert shifted['pbo'] is None
     assert shifted['verdicts']['max_pbo'] is None
@@ -244,7 +245,7 @@ def test_pbo_requires_recorded_synchronous_dates(tmp_path):
     records = valid_records
     recorded_returns = records[1]['folds'][0]['net_returns']
     recorded_returns[1] = {'recorded_return': recorded_returns[1]}
-    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
     corrupt = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert corrupt['pbo'] is None
     assert corrupt['verdicts']['max_pbo'] is None
@@ -265,7 +266,7 @@ def test_pbo_timestamp_identity_survives_recorded_dst_transition(tmp_path):
     matrix = np.stack([artifact.filter(pl.col('trial') == trial)['net_return'].to_numpy()
                        for trial in trials])
     path = _storage.round_path(tmp_path)
-    records = [json.loads(line) for line in path.read_text().splitlines()]
+    records = [json.loads(line) for line in _storage.text(path).splitlines()]
     helsinki = ZoneInfo('Europe/Helsinki')
     lexical_disorder = False
     for trial_index, record in enumerate(records):
@@ -284,14 +285,14 @@ def test_pbo_timestamp_identity_survives_recorded_dst_transition(tmp_path):
             zone = helsinki if trial_index == 0 else timezone.utc
             alignment['test_datetimes'] = [value.astimezone(zone).isoformat() for value in instants]
     assert lexical_disorder
-    path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+    path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
     aligned = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
     assert aligned['pbo'] == _reference_pbo(matrix, 2)
     assert aligned['errors'] == {}
     original = records[1]['folds'][0]['alignment']['test_datetimes']
     for invalid in (original[::-1], [original[0], *original[:-1]]):
         records[1]['folds'][0]['alignment']['test_datetimes'] = invalid
-        path.write_text(''.join(json.dumps(record) + '\n' for record in records))
+        path.write_bytes(gzip.compress(''.join(json.dumps(record) + '\n' for record in records).encode(), mtime=0))
         rejected = acceptance_report(tmp_path, acceptance={'max_pbo': 0.5})
         assert rejected['pbo'] is None
         assert rejected['verdicts']['max_pbo'] is None
