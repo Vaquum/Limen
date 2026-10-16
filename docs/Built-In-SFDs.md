@@ -131,16 +131,37 @@ Because it is stochastic, it is a poor fit for deterministic reconstruction in [
 
 ## `xgboost_regressor`
 
-`xgboost_regressor` is the regression-oriented foundational SFD.
+`xgboost_regressor` predicts percentage forward returns using `NextReturnTarget`.
+It requires the `boosting` extra (`pip install 'vaquum-limen[boosting]'`).
 
-Use this SFD for continuous targets rather than binary targets.
+The Python SFD searches the target horizon, return/volatility/volume windows,
+stochastic/RSI settings, price SMAs, range/Bollinger settings, volume regime,
+lag, feature groups, scaler and feature ablation. `params()` lists the exact
+candidate values. Model controls use the wrapper's defaults unless the search
+space overrides them; the default sweep uses CPU histogram trees and one native
+thread. `device` and `tree_method` reach the model through the stock manifest.
 
-In the bundled smoke path, it prepared:
+Feature groups are `momentum`, `trend`, `volume`, `volatility`, and `structure`.
+Select `all` or pipe-delimited names such as `momentum|trend`. Each group includes
+its own lagged research columns. The one-bar return and its configured lag form
+a shared baseline. Scaling is fitted on training data; ablation uses the existing
+`feature_drop_count` and `feature_drop_seed` controls. Prepare each sampled round
+because the feature pipeline and target can change.
 
-- `49` training features
-- `3615` training rows
+Run the [sweep example](examples/xgboost_sweep.py) from the repository root:
 
-It requires `xgboost`.
+```bash
+python docs/examples/xgboost_sweep.py --env test --permutations 12 --output /tmp/xgboost-test
+python docs/examples/xgboost_sweep.py --env prod --permutations 100 --output /tmp/xgboost-prod
+```
+
+`test` selects the built-in 5,000-row, two-hour data source; `prod` selects hourly
+bars from 2025-01-01. Both use real market data. `--seed` controls reproducible
+candidate sampling; `--device cuda:0` requests CUDA with histogram trees. CUDA
+requires a compatible XGBoost build and available GPU; inspect the fitted
+booster's configuration to verify the backend. The example writes results,
+round data, metadata and checkpoints through the existing experiment loop.
+The shipped YAML template remains a smaller fixed-window example.
 
 ## `dlinear_regressor`
 

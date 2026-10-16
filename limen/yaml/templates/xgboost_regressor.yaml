@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: xgboost_regressor_experiment
-  limen_version: "5.28.0"
+  limen_version: "5.29.0"
   mode: development
   description: XGBoost regressor predicting next-period return with feature perturbation
 
@@ -104,6 +104,29 @@ sfd:
     booster: [gbtree]
     early_stopping_rounds: [50]
     random_state: [42]
+    eval_metric: [null]
+    max_leaves: [null]
+    max_bin: [null]
+    grow_policy: [null]
+    sampling_method: [null]
+    colsample_bylevel: [null]
+    colsample_bynode: [null]
+    max_delta_step: [null]
+    tree_method: [null]
+    num_parallel_tree: [null]
+    base_score: [null]
+    scale_pos_weight: [null]
+    n_jobs: [null]
+    verbosity: [null]
+    device: [null]
+    enable_categorical: [null]
+    max_cat_to_onehot: [null]
+    max_cat_threshold: [null]
+    importance_type: [null]
+    interaction_constraints: [null]
+    monotone_constraints: [null]
+    multi_strategy: [null]
+    validate_parameters: [null]
 
 uel:
   n_permutations: 12
