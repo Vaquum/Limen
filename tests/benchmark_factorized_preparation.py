@@ -1,6 +1,7 @@
 """Bounded recorded-data comparison of fitted preparation reuse in factorization."""
 from __future__ import annotations
 
+from limen.experiment import _round_storage as _storage
 import argparse
 import csv
 import hashlib
@@ -88,7 +89,7 @@ def _captured(directory):
         rows = list(csv.DictReader(stream))
     return {
         'columns': list(rows[0]), 'rows': rows,
-        'round_data': [json.loads(line) for line in (directory / 'round_data.jsonl').read_text().splitlines()],
+        'round_data': [json.loads(line) for line in _storage.text(_storage.round_path(directory)).splitlines()],
         'metadata': json.loads((directory / 'metadata.json').read_text()),
     }
 

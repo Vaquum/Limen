@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import json
 from pathlib import Path
 
@@ -77,7 +78,7 @@ def _run(loop, **kwargs):
 
 
 def _records(path):
-    return [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
+    return [json.loads(line) for line in _storage.text(_storage.round_path(path)).splitlines()]
 
 
 def _assert_predictions(record):
@@ -106,7 +107,7 @@ def test_default_and_false_preserve_outputs(recorded_bars, tmp_path):
     explicit = _loop(config, recorded_bars, tmp_path / 'false')
     _run(baseline)
     _run(explicit, record_model_outputs=False)
-    assert (tmp_path / 'default/round_data.jsonl').read_bytes() == (tmp_path / 'false/round_data.jsonl').read_bytes()
+    assert (_storage.round_path(tmp_path / 'default')).read_bytes() == (_storage.round_path(tmp_path / 'false')).read_bytes()
     assert baseline.experiment_log.drop('execution_time').equals(explicit.experiment_log.drop('execution_time'))
     assert all('probs' not in row for row in _records(tmp_path / 'default'))
     assert 'best_iteration' not in baseline.experiment_log.columns
@@ -270,7 +271,8 @@ def test_python_resume_rejects_changed_setting_without_rewriting(record_outputs,
     first = _loop(config, recorded_bars, tmp_path)
     _stop_after_first(first)
     _run(first, record_model_outputs=record_outputs)
-    before = {name: (tmp_path / name).read_bytes() for name in ('results.csv', 'round_data.jsonl', 'metadata.json', 'checkpoint.json')}
+    original_record = _records(tmp_path)[0]
+    before = {name: (tmp_path / name).read_bytes() for name in ('results.csv', 'round_data.jsonl.gz', 'metadata.json', 'checkpoint.json')}
     wrong = _loop(config, recorded_bars, tmp_path)
     with pytest.raises(ValueError, match='record_model_outputs'):
         _run(wrong, record_model_outputs=not record_outputs, resume=True)
@@ -279,7 +281,7 @@ def test_python_resume_rejects_changed_setting_without_rewriting(record_outputs,
     _run(resumed, record_model_outputs=record_outputs, resume=True)
     records = _records(tmp_path)
     assert len(records) == len({row['round_id'] for row in records}) == 2
-    assert records[0] == json.loads(before['round_data.jsonl'])
+    assert records[0] == original_record
     assert all(('probs' in row) == record_outputs for row in records)
     if record_outputs:
         for record in records:

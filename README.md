@@ -6,6 +6,7 @@
 <br />
 <div align="center"><b>Vaquum Limen turns Bitcoin market data into searchable signals, backtested outcomes, and decoder cohorts.</b></div>
 
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#round-storage-format).
 <div align="center">
   <a href="#limen">Limen</a> •
   <a href="#what-limen-is-not">What Limen Is Not</a> •
@@ -104,7 +105,7 @@ limen run logreg-first.yaml
 - copied YAML manifest
 - `metadata.json`
 - `results.csv`
-- `round_data.jsonl`
+- `round_data.jsonl.gz`
 
 For a Python experiment, follow the [Python/MSQ run](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run). Supply an SFD and a search strategy; custom SFDs also receive your input dataframe explicitly.
 

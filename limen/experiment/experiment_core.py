@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 import csv
 import importlib.metadata
 import json
@@ -823,7 +824,7 @@ class UniversalExperimentLoop:
         )
 
         csv_path = self._experiment_dir / 'results.csv' if self._experiment_dir else Path(f"{experiment_name}.csv")
-        round_data_path = self._experiment_dir / 'round_data.jsonl' if self._experiment_dir else None
+        round_data_path = _storage.round_path(self._experiment_dir, fresh=True) if self._experiment_dir else None
 
         return {
             'domain': domain,
@@ -890,7 +891,7 @@ class UniversalExperimentLoop:
         )
         logger.info('Resuming from round %d', start_round)
 
-        if not round_data_path or (not round_data_path.exists() and self._walk_forward is None):
+        if not round_data_path or (not round_data_path.exists() and not csv_path.exists()):
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: round_data.jsonl not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no round data exists."
             )
@@ -903,6 +904,8 @@ class UniversalExperimentLoop:
             experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
             raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
+        expected = _storage.csv_prefix(round_data_path, start_round)
+        _storage.validate_prefix(round_data_path, expected)
         if self._walk_forward is not None:
             if experiment_log.height != start_round:
                 raise ValueError('Cannot resume split_walk_forward without every completed trial result')
@@ -917,7 +920,7 @@ class UniversalExperimentLoop:
                 up_to_round=start_round,
                 retain_round_artifacts=retain_round_artifacts,
             )
-            if loaded_rounds < start_round:
+            if loaded_rounds < len(expected):
                 raise ValueError(
                     f"UniversalExperimentLoop Cannot resume: round_data.jsonl has {loaded_rounds} entries but checkpoint indicates {start_round} rounds completed."
                 )
@@ -943,23 +946,7 @@ class UniversalExperimentLoop:
 
         '''Truncate round_data.jsonl to only contain rounds before start_round.'''
 
-        valid_lines: list[str] = []
-        with round_data_path.open('r') as f:
-            for raw_line in f:
-                stripped = raw_line.strip()
-                if not stripped:
-                    continue
-                try:
-                    entry = json.loads(stripped)
-                except json.JSONDecodeError:
-                    break
-                if entry.get('_round_index', 0) >= start_round:
-                    break
-                valid_lines.append(stripped)
-
-        with round_data_path.open('w') as f:
-            for line in valid_lines:
-                _ = f.write(line + '\n')
+        _storage.truncate_rounds(round_data_path, start_round)
 
 
     def _flush_results(self,
@@ -987,7 +974,7 @@ class UniversalExperimentLoop:
             return
 
         artifact_files = [
-            'results.csv', 'round_data.jsonl', 'checkpoint.json',
+            'results.csv', 'round_data.jsonl', 'round_data.jsonl.gz', 'round_market', 'checkpoint.json',
             'audit.jsonl', 'interventions.json', 'metadata.json',
         ]
         existing = [
@@ -995,7 +982,7 @@ class UniversalExperimentLoop:
             if (self._experiment_dir / f).exists()
         ]
         if existing:
-            resume_required = ['checkpoint.json', 'round_data.jsonl', 'results.csv']
+            resume_required = ['checkpoint.json', 'round_data.jsonl' if 'round_data.jsonl' in existing else 'round_data.jsonl.gz', 'results.csv']
             missing_for_resume = [f for f in resume_required if f not in existing]
             if not missing_for_resume:
                 raise FileExistsError(
@@ -1026,7 +1013,7 @@ class UniversalExperimentLoop:
         metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
             'sfd_module': self._sfd_module_name,
             'limen_version': self._get_limen_version(),
-            'created_at': datetime.now(timezone.utc).isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
         }, context_parameter_keys=context_parameter_keys)
         if self._record_execution:
             metadata['record_execution'] = True
@@ -1096,9 +1083,8 @@ class UniversalExperimentLoop:
         '''Append one round's data to the JSONL file.'''
 
         if self._walk_forward is not None:
-            with round_data_path.open('a') as f:
-                _ = f.write(json.dumps({'round_id': round_id, '_round_index': round_index,
-                                       'round_params': round_params, 'folds': alignment['folds']}) + '\n')
+            _storage.append_record(round_data_path, {'round_id': round_id, '_round_index': round_index,
+                                                     'round_params': round_params, 'folds': alignment['folds']})
             return
 
         entry = {
@@ -1129,8 +1115,7 @@ class UniversalExperimentLoop:
         if self._record_model_outputs:
             entry.update(alignment.get('model_outputs', {'probs': None}))
 
-        with round_data_path.open('a') as f:
-            _ = f.write(json.dumps(entry) + '\n')
+        _storage.append_record(round_data_path, entry)
 
 
     def _load_round_data(self,
@@ -1148,16 +1133,10 @@ class UniversalExperimentLoop:
             return self._walk_forward.restore(round_data_path, up_to_round)
 
         loaded_rounds = 0
-        with round_data_path.open('r') as f:
+        limit = len(_storage.csv_prefix(round_data_path, up_to_round)) if up_to_round is not None else None
+        with _storage.open_text(round_data_path, limit=limit) as f:
             for raw_line in f:
-                stripped = raw_line.strip()
-                if not stripped:
-                    continue
-                try:
-                    entry = json.loads(stripped)
-                except json.JSONDecodeError:
-                    break
-
+                entry = json.loads(raw_line)
                 if up_to_round is not None and entry.get('_round_index', 0) >= up_to_round:
                     break
 

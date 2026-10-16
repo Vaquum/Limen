@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import hashlib
 import json
 import math
@@ -223,7 +224,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
 
         assert ok
         assert (exp_dir / 'results.csv').exists()
-        assert (exp_dir / 'round_data.jsonl').exists()
+        assert (_storage.round_path(exp_dir)).exists()
         assert (exp_dir / 'metadata.json').exists()
 
         results = pl.read_csv(exp_dir / 'results.csv')
@@ -238,7 +239,7 @@ def test_e2e_label_control_trainer_sensor() -> None:
         assert metadata['yaml_reference']['metadata']['name'] == 'btc_logreg_15m_random_ctrl'
 
         round_ids: list[int] = []
-        with (exp_dir / 'round_data.jsonl').open() as f:
+        with _storage.open_text(_storage.round_path(exp_dir)) as f:
             for line in f:
                 stripped = line.strip()
                 if stripped:

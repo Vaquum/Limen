@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 import hashlib
 import json
 import logging
@@ -117,7 +118,7 @@ class Cohort:
             )
 
         metadata_path = experiment_dir / 'metadata.json'
-        round_data_path = experiment_dir / 'round_data.jsonl'
+        round_data_path = _storage.round_path(experiment_dir)
         if not metadata_path.exists():
             raise FileNotFoundError(
                 f'Cohort Experiment log path is missing or unreadable: {experiment_dir}'
@@ -491,7 +492,7 @@ class Cohort:
     def _load_round_entries(round_data_path: Path) -> dict[str, dict[str, Any]]:
 
         entries: dict[str, dict[str, Any]] = {}
-        with round_data_path.open('r') as f:
+        with _storage.open_text(round_data_path) as f:
             for raw_line in f:
                 stripped = raw_line.strip()
                 if not stripped:
@@ -589,7 +590,7 @@ class Cohort:
             parent = metadata_path.parent
             if parent.name != experiment_id:
                 continue
-            if (parent / 'round_data.jsonl').exists():
+            if _storage.round_path(parent).exists():
                 matches.append(parent.resolve())
 
         if not matches:

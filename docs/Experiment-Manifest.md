@@ -1,5 +1,6 @@
 # Experiment Manifest
 
+New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 The Experiment Manifest is Limen's declarative experiment definition. The canonical operator form is YAML: define the manifest, validate it, profile it, run it through CLI, then inspect the generated artifacts.
 
 Use YAML manifests for Limen's opinionated pipeline. Use Python builders, custom `prep()`, and custom `model()` only when the workflow cannot fit the declarative operator path.
@@ -28,7 +29,7 @@ limen run --dry-run logreg-first.yaml
 limen run logreg-first.yaml
 ```
 
-The run writes a result directory containing the copied YAML manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
+The run writes a result directory containing the copied YAML manifest, `metadata.json`, `results.csv`, and `round_data.jsonl.gz`.
 
 ## YAML Shape
 
@@ -39,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.28.0"
+  limen_version: "5.29.0"
   mode: development
 
 sfd:
@@ -407,7 +408,7 @@ One trial consumes one permutation and reaches feedback only after its folds fin
 
 `uel.fold_results` keeps the individual result rows with trial `id` and `fold` identity. The aggregate `optimal_threshold` is null: each fold has its own fitted threshold, retained in its result. Post-run `Log` backtest rows remain per fold rather than treating the concatenated test windows as one continuous position path. Prediction and confusion replay that assumes one test set rejects walk-forward trials.
 
-In saved CLI or Python/MSQ runs, `round_data.jsonl` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Legacy standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
+In saved CLI or Python/MSQ runs, `round_data.jsonl.gz` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Legacy standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
 
 Every fold starts execution independently. Snapshot net returns are the existing notional-scaled `execution.net` values. Event execution samples its recorded equity at retained test-bar endpoints, including the terminal mark in the final value; each return is current equity divided by prior equity minus one, starting from the policy's initial equity. The return track is captured for walk-forward trials even when `record_execution` is off; that flag retains its existing optional JSONL fields. Existing snapshot metrics and their columns remain unchanged.
 
@@ -446,7 +447,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.28.0"
+  limen_version: "5.29.0"
   mode: development
 sfd:
   manifest:
@@ -503,7 +504,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.28.0"
+  limen_version: "5.29.0"
   mode: development
 sfd:
   manifest:
@@ -730,7 +731,7 @@ Important behavior:
 
 The selected column depends on the eligible feature set. The exact list is recorded in `round_params['_dropped_features']`.
 
-In saved CLI or Python/MSQ runs, that `_dropped_features` payload is stored into `round_data.jsonl`. [Trainer](Trainer.md) reproduces the same drop set when the saved YAML definition supports reconstruction.
+In saved CLI or Python/MSQ runs, that `_dropped_features` payload is stored into `round_data.jsonl.gz`. [Trainer](Trainer.md) reproduces the same drop set when the saved YAML definition supports reconstruction.
 
 ### Scaler choice from parameters
 

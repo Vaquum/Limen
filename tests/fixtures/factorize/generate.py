@@ -1,5 +1,6 @@
 """Four frozen source-independent CLI manifests and baseline recorder."""
 from __future__ import annotations
+from limen.experiment import _round_storage as _storage
 import argparse
 import csv
 import hashlib
@@ -98,7 +99,7 @@ def execute(case: str, directory: Path, factorize: bool | None = None) -> dict:
     with (output/'results.csv').open(newline='') as stream:
         rows=list(csv.DictReader(stream))
     return {'columns':list(rows[0]) if rows else [],'rows':rows,
-            'round_data':[json.loads(s) for s in (output/'round_data.jsonl').read_text().splitlines()],
+            'round_data':[json.loads(s) for s in _storage.text(_storage.round_path(output)).splitlines()],
             'metadata':json.loads((output/'metadata.json').read_text())}
 
 def _scalar(value: float | str, in_csv: bool) -> object:
@@ -138,7 +139,7 @@ def canonical(value: object, *, in_csv: bool = False) -> object:
 
 
 def stable(captured: dict) -> dict:
-    excluded = {'created_at', 'limen_version', 'manifest_id', 'yaml_reference', 'factorize'}
+    excluded = {'created_at', 'round_storage', 'limen_version', 'manifest_id', 'yaml_reference', 'factorize'}
     return {'columns': captured['columns'],
             'rows': [{k:v for k,v in row.items() if k!='execution_time'} for row in captured['rows']],
             'round_data':captured['round_data'],

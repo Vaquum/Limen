@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 import json
 from collections.abc import Mapping
 from limen.backtest.trade_contract import JsonValue
@@ -116,17 +117,15 @@ class Trainer:
 
         '''
 
-        round_data_path = self._experiment_dir / 'round_data.jsonl'
+        round_data_path = _storage.round_path(self._experiment_dir)
 
         result: dict[str, dict[str, Any]] = {}
-        try:
-            f = round_data_path.open('r')
-        except FileNotFoundError:
+        if not round_data_path.exists():
             raise FileNotFoundError(
                 f"round_data.jsonl not found in {self._experiment_dir}. Cannot load permutation parameters."
-            ) from None
+            )
 
-        with f:
+        with _storage.open_text(round_data_path) as f:
             for line_number, raw_line in enumerate(f, start=1):
                 stripped = raw_line.strip()
                 if not stripped:

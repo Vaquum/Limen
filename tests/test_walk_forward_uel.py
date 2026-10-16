@@ -1,3 +1,5 @@
+import gzip
+from limen.experiment import _round_storage as _storage
 import copy
 import json
 from pathlib import Path
@@ -114,7 +116,7 @@ def _fold_manifest(manifest, fold):
 
 
 def _records(path):
-    return [json.loads(line) for line in (path / 'round_data.jsonl').read_text().splitlines()]
+    return [json.loads(line) for line in _storage.text(_storage.round_path(path)).splitlines()]
 
 
 @pytest.fixture(scope='module')
@@ -404,7 +406,7 @@ def test_resume_rejects_changed_geometry_and_retains_tracks(tmp_path, monkeypatc
     assert pq.ParquetFile(path / 'trial_returns.parquet').metadata.num_row_groups == resumed.experiment_log.height
     assert pl.read_parquet(path / 'trial_returns.parquet').equals(pl.read_parquet(tmp_path / 'full/trial_returns.parquet'))
     assert _records(path) == _records(tmp_path / 'full')
-    assert _records(path)[0] == json.loads(before['round_data.jsonl'])
+    assert _records(path)[0] == json.loads(gzip.decompress(before['round_data.jsonl.gz']))
     audits = []
     for output in (path, tmp_path / 'full'):
         entries = [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()]
@@ -453,35 +455,35 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
         assert first.fold_results.height == 2
         records = _records(path)
         assert len(records) == 1 and records[0]['_round_index'] == 1
-        saved_jsonl = (path / 'round_data.jsonl').read_bytes()
-        (path / 'round_data.jsonl').write_bytes(saved_jsonl[:len(saved_jsonl) // 2])
+        saved_jsonl = (_storage.round_path(path)).read_bytes()
+        (_storage.round_path(path)).write_bytes(saved_jsonl[:len(saved_jsonl) // 2])
         before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
-        with pytest.raises(json.JSONDecodeError):
+        with pytest.raises(_storage.RoundStorageError):
             _run(_loop(config, bars, path), resume=True, n_permutations=3)
         assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
-        (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+        (_storage.round_path(path)).write_bytes(saved_jsonl)
         records[0]['folds'].pop()
-        (path / 'round_data.jsonl').write_text(json.dumps(records[0]) + '\n')
+        (_storage.round_path(path)).write_bytes(gzip.compress((json.dumps(records[0]) + '\n').encode(), compresslevel=1, mtime=0))
         before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
         with pytest.raises(ValueError, match='split_walk_forward'):
             _run(_loop(config, bars, path), resume=True, n_permutations=3)
         assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
-        (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+        (_storage.round_path(path)).write_bytes(saved_jsonl)
         saved_csv = (path / 'results.csv').read_bytes()
         (path / 'results.csv').write_text(saved_csv.decode().splitlines()[0] + '\n')
-        (path / 'round_data.jsonl').write_text('')
+        (_storage.round_path(path)).write_text('')
         before = {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()}
-        with pytest.raises(ValueError, match='split_walk_forward'):
+        with pytest.raises(ValueError, match='CSV prefix'):
             _run(_loop(config, bars, path), resume=True, n_permutations=3)
         assert {file.name: file.read_bytes() for file in path.iterdir() if file.is_file()} == before
         (path / 'results.csv').write_bytes(saved_csv)
-        (path / 'round_data.jsonl').write_bytes(saved_jsonl)
+        (_storage.round_path(path)).write_bytes(saved_jsonl)
     else:
         assert first.fold_results.is_empty()
-        assert not (path / 'round_data.jsonl').exists()
+        assert not (_storage.round_path(path)).exists()
         assert not (path / 'trial_returns.parquet').exists()
-    next_record = (tmp_path / 'full/round_data.jsonl').read_bytes().splitlines()[int(stop_after_success)]
-    with (path / 'round_data.jsonl').open('ab') as stream:
+    next_record = gzip.compress((json.dumps(_records(tmp_path / 'full')[int(stop_after_success)]) + '\n').encode(), compresslevel=1, mtime=0)
+    with (_storage.round_path(path)).open('ab') as stream:
         _ = stream.write(next_record[:len(next_record) // 2])
     resumed = _loop(config, bars, path)
     _run(resumed, resume=True, n_permutations=3)
@@ -516,7 +518,7 @@ def test_resume_clears_returns_beyond_failure_only_checkpoint(tmp_path, monkeypa
     assert pq.ParquetFile(tmp_path / 'trial_returns.parquet').metadata.num_row_groups == 2
     (tmp_path / 'checkpoint.json').write_bytes(checkpoint)
     if not saved_round_data:
-        (tmp_path / 'round_data.jsonl').unlink()
+        (_storage.round_path(tmp_path)).unlink()
 
     changed = copy.deepcopy(config)
     changed['sfd']['manifest']['split_walk_forward']['embargo_bars'] += 1
@@ -535,7 +537,7 @@ def test_resume_clears_returns_beyond_failure_only_checkpoint(tmp_path, monkeypa
     assert resumed.experiment_log['strict_mode_error'].null_count() == 0
     assert not (tmp_path / 'trial_returns.parquet').exists()
     assert not (tmp_path / 'trial_returns.parquet.tmp').exists()
-    assert not (tmp_path / 'round_data.jsonl').exists() or not _records(tmp_path)
+    assert not (_storage.round_path(tmp_path)).exists() or not _records(tmp_path)
     assert pl.read_csv(tmp_path / 'results.csv')['strict_mode_error'].null_count() == 0
 
 

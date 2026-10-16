@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import copy
 import json
 import warnings
@@ -379,7 +380,7 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
         warnings.simplefilter('always')
         loop.run('sklearn_input_boundary', n_permutations=1, prep_each_round=True,
                  progress_bar=False, record_execution=True, record_model_outputs=True)
-        record = json.loads((directory / 'round_data.jsonl').read_text())
+        record = json.loads(_storage.text(_storage.round_path(directory)))
         sensor = Trainer(directory, data=recorded_boundary_bars).train([record['round_id']])[0]
         replay = sensor.predict_all(recorded_boundary_bars)
         expected = manifest.run_model(data, params)

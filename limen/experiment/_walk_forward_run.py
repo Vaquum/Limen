@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 import copy
 import json
 import math
@@ -183,7 +184,7 @@ class WalkForwardRun:
 
     def restore(self, path: Path, up_to_round: int | None, expected: list[tuple[int, str]] | None = None) -> int:
         entries: list[dict[str, object]] = []
-        with path.open() as stream:
+        with _storage.open_text(path, limit=None if expected is None else len(expected)) as stream:
             for line in islice(stream, None if expected is None else len(expected)):
                 entry = cast(dict[str, object], json.loads(line))
                 index = entry.get('_round_index')

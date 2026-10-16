@@ -1,3 +1,4 @@
+import limen.experiment._round_storage as _storage
 import json
 import math
 from collections.abc import Mapping
@@ -55,11 +56,10 @@ def _matrix(frame: pl.DataFrame, trials: list[str]) -> npt.NDArray[np.float64]:
 
 
 def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trials: list[str]) -> None:
-    path = directory / 'round_data.jsonl'
-    if not path.exists():
+    if not (path := _storage.round_path(directory)).exists():
         raise ValueError('PBO requires recorded ordered test timestamps for every trial')
     records: dict[str, Mapping[str, object]] = {}
-    with path.open() as stream:
+    with _storage.open_text(path) as stream:
         for line in stream:
             entry = cast(object, json.loads(line))
             if not isinstance(entry, Mapping):
@@ -126,6 +126,7 @@ def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], 
         _require_synchronous(directory, values, trials)
         report['pbo'] = probability_of_backtest_overfitting(values, n_blocks=_BLOCKS)
     except (ValueError, FloatingPointError) as exc:
+        _storage.propagate(exc)
         errors['pbo'] = str(exc)
 
 
@@ -150,6 +151,7 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
         report['n_bars'] = values.shape[1]
         _score(directory, values, trials, report, errors)
     except ValueError as exc:
+        _storage.propagate(exc)
         errors['returns'] = str(exc)
     verdicts: dict[str, bool | None] = {}
     for key, threshold in thresholds.items():

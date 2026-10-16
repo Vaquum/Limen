@@ -28,7 +28,7 @@ limen run --dry-run logreg-first.yaml
 limen run logreg-first.yaml
 ```
 
-`limen run` constructs UEL with a compiled SFD, a concrete search strategy, an `experiment_dir`, and the parsed YAML stored as `yaml_reference` in `metadata.json`. The result directory contains the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl`.
+`limen run` constructs UEL with a compiled SFD, a concrete search strategy, an `experiment_dir`, and the parsed YAML stored as `yaml_reference` in `metadata.json`. The result directory contains the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl.gz`.
 
 For trials evaluated across successive test windows, see [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps). Each trial runs all configured folds before its aggregate result enters the existing feedback loop.
 
@@ -239,7 +239,7 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 | File | Meaning |
 |---|---|
 | `results.csv` | streaming round log; if a round fails a `strict_mode` null check, a `strict_mode_error` column records the error message and all metric columns for that round are empty |
-| `round_data.jsonl` | round params, predictions, alignment metadata, and optional execution and market returns |
+| `round_data.jsonl.gz` | round params, predictions, alignment metadata, and optional execution and market returns |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |
 | `interventions.json` | optional external intervention file polled by the feedback controller when the file exists |
@@ -250,7 +250,7 @@ Saved state powers checkpointing and resumability. The CLI also stores the YAML 
 
 ### Record execution
 
-Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to a Python/MSQ run with `experiment_dir`. This is independent of `post_processing`. Each successful round gains `execution` in `round_data.jsonl`: full-precision `pos`, `gross`, and `net` arrays in test-row order, each multiplied once by the resolved `notional_rate`. Positions include execution lag and exits; regressors may backtest directional signals rather than their continuous saved predictions. Rule-based strategies record only test execution.
+Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to a Python/MSQ run with `experiment_dir`. This is independent of `post_processing`. Each successful round gains `execution` in `round_data.jsonl.gz`: full-precision `pos`, `gross`, and `net` arrays in test-row order, each multiplied once by the resolved `notional_rate`. Positions include execution lag and exits; regressors may backtest directional signals rather than their continuous saved predictions. Rule-based strategies record only test execution.
 
 The same flag records the sibling `market: {"ret": [...]}`: unscaled returns from the original aligned test prices, in the same order and length as `execution.pos`. Each value is `close[i] / close[i-1] - 1` since the previous retained test row; row gaps can therefore span several source bars. The first value is JSON `null`, since the evaluated window supplies no predecessor. A value is also `null` when the original open, close, close-minus-open or previous close is NaN, the previous close is zero, or the computed return is nonfinite. This uses price tradability, independently of signals, execution lag, costs, notional and TP/SL settings; it is not a finite-positive-price mask.
 
@@ -260,11 +260,13 @@ Read a new-format snapshot record with available market returns and reproduce it
 
 ```python
 import json
+from pathlib import Path
+from limen.experiment._round_storage import open_text, round_path
 import numpy as np
 from limen.backtest.long_flat_strategy import ExecutionResult
 from limen.backtest._snapshot_ledger import snapshot_ledger
 
-with open("results/round_data.jsonl") as rows:
+with open_text(round_path(Path("results"))) as rows:
     record = json.loads(next(rows))
 execution = record["execution"]
 result = ExecutionResult(**{key: np.asarray(value) for key, value in execution.items()})
@@ -288,7 +290,7 @@ Python resume must pass the same flag; CLI resume uses the effective setting sav
 
 ### Record model outputs
 
-Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl`, in the same order as `preds`, with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
+Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl.gz`, in the same order as `preds`, with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
 
 LightGBM and XGBoost add `best_iteration` to `results.csv`: the number of boosting iterations actually used for prediction. LightGBM uses its positive `best_iteration_`, otherwise `n_iter_`. Tree-based XGBoost uses its zero-based best iteration plus one, otherwise the fitted booster's round count. XGBoost `gblinear` uses the final fitted round count because it does not retain an earlier model. Counts are available with early stopping disabled and with `inline_metrics=False`.
 
@@ -325,7 +327,7 @@ uel.run(
 )
 ```
 
-The budget reducer can trim the remaining queue during a feedback cycle, so the number of completed rows may be lower than the requested permutation budget. `results.csv` and `round_data.jsonl` track completed rounds; `audit.jsonl` records the intervention; checkpoints follow `checkpoint_interval`.
+The budget reducer can trim the remaining queue during a feedback cycle, so the number of completed rows may be lower than the requested permutation budget. `results.csv` and `round_data.jsonl.gz` track completed rounds; `audit.jsonl` records the intervention; checkpoints follow `checkpoint_interval`.
 
 ## Resume in practice
 
@@ -342,7 +344,7 @@ uel.run(
 In a live shutdown-and-resume run in this repo:
 
 - the first phase stopped after `2` completed rounds
-- `results.csv` and `round_data.jsonl` each contained `2` entries
+- `results.csv` and `round_data.jsonl.gz` each contained `2` entries
 - the resumed phase finished the remaining rounds
 - the final stored round indices were `0, 1, 2, 3`
 
@@ -404,3 +406,17 @@ Calling `run(resume=True)` without a search strategy raises `resume=True is only
 - Continue to [Log](Log.md) to understand the analysis surfaces built on top of UEL results.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for manifest-driven SFD construction.
 - Continue to [Trainer](Trainer.md) for reconstruction of saved YAML experiment rounds into sensors.
+
+## Round storage format
+
+New result directories declare `round_storage: gzip-jsonl-v1` in metadata and write `round_data.jsonl.gz`. Each gzip member contains one UTF-8 JSON round plus a newline, compressed at fixed level 1 with mtime zero and no filename header. Walk-forward fold objects remain intact and receive gzip compression only. Existing directories without the discriminator retain plain `round_data.jsonl`, including on resume. Existing run/CLI signatures and recording flags do not change.
+
+For ordinary rounds, a non-null top-level `market` is replaced in place by `market_ref`. Its lowercase SHA-256 digest addresses `round_market/<digest>.json.gz`. The decompressed blob bytes are exactly `json.dumps(market, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('utf-8')`; hash those bytes and verify them before reconstruction. Alignment stays in the owning round. Restore the market key at the reference's position; missing/null market stays missing/null. This preserves exact values, numeric types, signed zero and ordering without lossy conversion. Existing nonfinite tokens elsewhere in round/fold results retain the legacy JSON behavior.
+
+External readers must verify each member trailer before exposing its round. The internal shared reader uses `zlib.decompressobj(wbits=31)`, requires each gzip header, rejects zero padding, and checks EOF/CRC/ISIZE. It validates references before constructing a path and verifies blob digest and return length. Decompression is bounded to 512 MiB per round and 128 MiB per market. The package-local example above uses the private shared reader; this is not a new public reader API.
+
+Trainer, Cohort and acceptance processing reject incomplete artifacts. Live/resume reads may ignore only an incomplete final member outside the successful checkpoint prefix. Resume validates ordered successful CSV identities, scans existing member/line offsets, and truncates in place: committed round-data bytes and inode survive. CSV retains its existing rewrite behavior. This is sequential restoration, not indexed random access.
+
+Blob publication precedes its referencing member through a same-directory temporary file and atomic replace. The contract covers process interruption, not new power-loss/fsync durability or multiple writers in one directory. Orphan blobs and temporary leftovers are tolerated, never used as alternate references, and included in storage accounting; no garbage collector is introduced. Unknown/conflicting layouts and integrity failures raise errors before successful resume or report replacement.
+
+Compression reduces disk output; it does not change worker IPC, model execution or scientific results. Unique markets still require unique files and save less. Grid currently pins its Limen package version: update its reader before upgrading that separate dependency pin. No historical run is converted automatically.

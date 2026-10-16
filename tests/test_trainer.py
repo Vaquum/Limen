@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import json
 import math
 from datetime import datetime
@@ -297,7 +298,7 @@ def _run_e2e_experiment(experiment_dir: Path, yaml_text: str) -> list[int]:
     finally:
         historical_data.HistoricalData.get_spot_klines = original
     round_ids: list[int] = []
-    with (experiment_dir / 'round_data.jsonl').open('r') as f:
+    with _storage.open_text(_storage.round_path(experiment_dir)) as f:
         for raw_line in f:
             stripped = raw_line.strip()
             if not stripped:
@@ -324,7 +325,7 @@ def test_trainer_requires_yaml_reference() -> None:
         (experiment_dir / 'metadata.json').write_text(
             json.dumps({'sfd_module': 'limen.sfd.foundational_sfd.logreg_binary'}),
         )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        (_storage.round_path(experiment_dir)).write_text('')
 
         with pytest.raises(ValueError, match='yaml_reference'):
             Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
@@ -337,7 +338,7 @@ def test_trainer_rejects_non_dict_yaml_reference() -> None:
         (experiment_dir / 'metadata.json').write_text(
             json.dumps({'yaml_reference': []}),
         )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        (_storage.round_path(experiment_dir)).write_text('')
 
         with pytest.raises(ValueError, match='yaml_reference'):
             Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
@@ -350,7 +351,7 @@ def test_trainer_rejects_malformed_yaml_reference() -> None:
         (experiment_dir / 'metadata.json').write_text(
             json.dumps({'yaml_reference': {'metadata': {'name': 'yaml_exp'}, 'sfd': {}}}),
         )
-        (experiment_dir / 'round_data.jsonl').write_text('')
+        (_storage.round_path(experiment_dir)).write_text('')
 
         with pytest.raises(ValueError, match='yaml_reference'):
             Trainer(experiment_dir, data=pl.DataFrame({'x': [1, 2, 3]}))
@@ -359,7 +360,7 @@ def test_trainer_rejects_malformed_yaml_reference() -> None:
 def test_load_round_data_skips_blank_lines_and_loads_valid_entries() -> None:
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir)
-        (experiment_dir / 'round_data.jsonl').write_text(
+        (_storage.round_path(experiment_dir)).write_text(
             '\n'
             '{"round_id": 0, "round_params": {"alpha": 1}}\n'
             '{"round_id": 1, "round_params": {"alpha": 2}}\n'
@@ -377,7 +378,7 @@ def test_load_round_data_skips_blank_lines_and_loads_valid_entries() -> None:
 def test_load_round_data_rejects_malformed_jsonl() -> None:
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir)
-        (experiment_dir / 'round_data.jsonl').write_text(
+        (_storage.round_path(experiment_dir)).write_text(
             '{"round_id": 0, "round_params": {}}\n'
             'not-json\n'
         )
@@ -385,14 +386,14 @@ def test_load_round_data_rejects_malformed_jsonl() -> None:
         trainer = object.__new__(Trainer)
         trainer._experiment_dir = experiment_dir
 
-        with pytest.raises(ValueError, match=r'Malformed JSON in round_data\.jsonl line 2'):
+        with pytest.raises(ValueError, match=r'Malformed JSON in .*round_data\.jsonl ending at byte'):
             trainer._load_round_data()
 
 
 def test_load_round_data_rejects_missing_required_fields() -> None:
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir)
-        (experiment_dir / 'round_data.jsonl').write_text(
+        (_storage.round_path(experiment_dir)).write_text(
             '{"round_id": 0}\n'
         )
 
@@ -406,7 +407,7 @@ def test_load_round_data_rejects_missing_required_fields() -> None:
 def test_load_round_data_rejects_non_object_round_params() -> None:
     with TemporaryDirectory() as tmpdir:
         experiment_dir = Path(tmpdir)
-        (experiment_dir / 'round_data.jsonl').write_text(
+        (_storage.round_path(experiment_dir)).write_text(
             '{"round_id": 0, "round_params": []}\n'
         )
 

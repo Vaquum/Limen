@@ -1,3 +1,4 @@
+from limen.experiment import _round_storage as _storage
 import hashlib
 import json
 import math
@@ -144,7 +145,7 @@ def _run_real_experiment(experiment_dir: Path,
         historical_data.HistoricalData.get_spot_klines = original
 
     round_ids: list[str] = []
-    with (experiment_dir / 'round_data.jsonl').open('r') as f:
+    with _storage.open_text(_storage.round_path(experiment_dir)) as f:
         for raw_line in f:
             stripped = raw_line.strip()
             if not stripped:
@@ -174,7 +175,7 @@ def _write_minimal_cohort_artifacts(experiment_dir: Path,
 
     ids: list[str] = [f'id_{i}' for i in range(n_rounds)] if round_ids is None else round_ids
 
-    with (experiment_dir / 'round_data.jsonl').open('w') as f:
+    with (_storage.round_path(experiment_dir)).open('w') as f:
         for round_id in ids:
             f.write(json.dumps({
                 'round_id': round_id,
@@ -193,10 +194,10 @@ def _write_minimal_cohort_artifacts(experiment_dir: Path,
 def _patch_round_architecture(experiment_dir: Path,
                                architecture_by_round_id: dict[str, str]) -> None:
 
-    round_data_path = experiment_dir / 'round_data.jsonl'
+    round_data_path = _storage.round_path(experiment_dir)
     rows: list[dict] = []
 
-    with round_data_path.open('r') as f:
+    with _storage.open_text(round_data_path) as f:
         for raw_line in f:
             stripped = raw_line.strip()
             if not stripped:
@@ -210,9 +211,9 @@ def _patch_round_architecture(experiment_dir: Path,
                 entry['round_params'] = rp
             rows.append(entry)
 
-    with round_data_path.open('w') as f:
-        for row in rows:
-            f.write(json.dumps(row) + '\n')
+    round_data_path.unlink()
+    for row in rows:
+        _storage.append_record(round_data_path, row)
 
 
 def _train_real_members_and_input(experiment_dir: Path,
@@ -868,7 +869,7 @@ def test_yaml_cli_artifact_cohort_predict_returns_bar_prediction():
 
             round_ids = sorted(
                 json.loads(line)['round_id']
-                for line in (exp_dir / 'round_data.jsonl').read_text().splitlines()
+                for line in _storage.text(_storage.round_path(exp_dir)).splitlines()
                 if line.strip()
             )
 

@@ -1622,3 +1622,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Expose optional XGBoost regression controls through the stock manifest wrapper, including device, tree method, constraints, and evaluation metric.
 - Parameterize the foundational XGBoost research features, forward horizon, groups, scaling and ablation; add a documented sweep entrypoint and real-market regression coverage.
+
+## [5.29.0] - 2026-10-17
+
+- Compress new experiment round artifacts losslessly and share repeated market-return payloads within each result directory.
+- Preserve legacy round reads and resume while validating compressed member and market integrity.
