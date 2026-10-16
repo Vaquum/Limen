@@ -249,7 +249,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
             forward.writer.clear()
     attributes['experiment_log'] = log if start else None
     failed_round_params.extend(failed)
-    _storage.truncate_rounds(round_data_path, start)
+    if round_data_path.exists():
+        _storage.truncate_rounds(round_data_path, start)
     with csv_path.open('w', newline='') as stream:
         writer = csv.DictWriter(stream, header)
         writer.writeheader()

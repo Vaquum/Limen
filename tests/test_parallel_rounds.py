@@ -631,6 +631,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             assert log['A_tag'].to_list() == ['', None, '', None, ''][:log.height]
             feedback_heights.append(log.height)
 
+        _storage.round_path(directory).unlink()
         with controlled_pool(tmp_path / 'resume_markers', mode):
             resumed = run_loop(config, directory, resume=True, callback=numeric_feedback, context_params=context_params)
         assert feedback_heights == [5]
