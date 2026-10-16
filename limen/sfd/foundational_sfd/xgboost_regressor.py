@@ -5,7 +5,13 @@ from limen.data import HistoricalData
 from limen.experiment import MLManifest
 from limen.indicators.window_return import window_return
 from limen.features.lagged_features import lag_columns
-from limen.sfd.foundational_sfd._xgboost_features import _momentum, _structure, _trend, _volatility, _volume
+from limen.sfd.foundational_sfd._xgboost_features import (
+    momentum as _momentum,
+    structure as _structure,
+    trend as _trend,
+    volatility as _volatility,
+    volume as _volume,
+)
 from limen.sfd.reference_architecture.xgboost_regressor import xgboost_regressor
 from limen.targets import NextReturnTarget
 

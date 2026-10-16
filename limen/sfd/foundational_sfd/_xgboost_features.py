@@ -15,13 +15,15 @@ from limen.indicators.sma import sma
 from limen.indicators.stochastic_oscillator import stochastic_oscillator
 from limen.indicators.window_return import window_return
 
+__all__ = ['momentum', 'structure', 'trend', 'volatility', 'volume']
+
 
 def _lag_new(data: pl.DataFrame, features: pl.DataFrame, lag: int) -> pl.DataFrame:
     columns = [col for col in features.collect_schema().names() if col not in data.collect_schema()]
     return lag_columns(features.fill_nan(None), columns, lag)
 
 
-def _momentum(data: pl.DataFrame, return_fast: int, return_medium: int,
+def momentum(data: pl.DataFrame, return_fast: int, return_medium: int,
               return_slow: int, stochastic_k: int, stochastic_d: int,
               rsi_period: int, lag: int) -> pl.DataFrame:
     features = data
@@ -31,7 +33,7 @@ def _momentum(data: pl.DataFrame, return_fast: int, return_medium: int,
     return _lag_new(data, rsi(features, period=rsi_period), lag)
 
 
-def _trend(data: pl.DataFrame, price_sma_fast: int, price_sma_slow: int,
+def trend(data: pl.DataFrame, price_sma_fast: int, price_sma_slow: int,
            lag: int) -> pl.DataFrame:
     features = sma_ratios(data, [price_sma_fast, price_sma_slow]).drop(
         [f'sma_{period}' for period in sorted({price_sma_fast, price_sma_slow})]
@@ -39,7 +41,7 @@ def _trend(data: pl.DataFrame, price_sma_fast: int, price_sma_slow: int,
     return _lag_new(data, features, lag)
 
 
-def _volume(data: pl.DataFrame, volume_window: int, flow_window: int,
+def volume(data: pl.DataFrame, volume_window: int, flow_window: int,
             volume_regime_window: int, lag: int) -> pl.DataFrame:
     features = sma(data, column='volume', period=volume_window)
     features = sma(features, column='maker_ratio', period=flow_window)
@@ -54,12 +56,12 @@ def _volume(data: pl.DataFrame, volume_window: int, flow_window: int,
     return _lag_new(data, features, lag)
 
 
-def _volatility(data: pl.DataFrame, volatility_window: int, bollinger_window: int,
+def volatility(data: pl.DataFrame, volatility_window: int, bollinger_window: int,
                 bollinger_std: float, lag: int) -> pl.DataFrame:
     features = rolling_volatility(data, column='ret_1', window=volatility_window)
     features = bollinger_bands(features, window=bollinger_window, num_std=bollinger_std)
     return _lag_new(data, bollinger_position(features), lag)
 
 
-def _structure(data: pl.DataFrame, price_range_window: int, lag: int) -> pl.DataFrame:
+def structure(data: pl.DataFrame, price_range_window: int, lag: int) -> pl.DataFrame:
     return _lag_new(data, price_range_position(range_pct(body_pct(data)), price_range_window), lag)
