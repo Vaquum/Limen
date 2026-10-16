@@ -15,7 +15,7 @@ from limen.cohort import Cohort
 from limen.experiment import _round_storage as storage
 from limen.experiment.acceptance_report import acceptance_report
 from limen.inference import Trainer
-from tests.test_record_execution import _assert_aligned_market, _config, _loop, _run
+from tests.test_record_execution import _assert_aligned_market, _config, _loop, _run, _stop_after_first
 from tests import test_walk_forward_uel as forward
 
 logger = logging.getLogger(__name__)
@@ -284,3 +284,24 @@ def test_resume_rejects_crc_damage_beyond_checkpoint(tmp_path, recorded_rounds):
     with pytest.raises(storage.RoundStorageError, match='Corrupt gzip'):
         storage.truncate_rounds(path, records[1]['_round_index'])
     assert path.read_bytes() == before
+
+
+def test_legacy_resume_appends_after_record_without_newline(tmp_path, recorded_rounds):
+    bars = recorded_rounds['rule']['loop'].data
+    first = _loop(_config('rule'), bars, tmp_path)
+    _stop_after_first(first)
+    _run(first, record_execution=True, record_model_outputs=True)
+    path = storage.round_path(tmp_path)
+    record = storage.text(path).rstrip('\n')
+    path.unlink()
+    shutil.rmtree(tmp_path / 'round_market')
+    metadata = json.loads((tmp_path / 'metadata.json').read_text())
+    metadata.pop('round_storage')
+    (tmp_path / 'metadata.json').write_text(json.dumps(metadata))
+    path = storage.round_path(tmp_path)
+    path.write_text(record)
+    before, inode = path.read_bytes(), path.stat().st_ino
+    resumed = _loop(_config('rule'), bars, tmp_path)
+    _run(resumed, record_execution=True, record_model_outputs=True, resume=True)
+    assert path.stat().st_ino == inode and path.read_bytes().startswith(before + b'\n')
+    assert storage.text(path) == ''.join(json.dumps(record) + '\n' for record in recorded_rounds['rule']['records'])

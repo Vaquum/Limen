@@ -681,7 +681,7 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
         elif name == 'corrupt':
             saved = records(directory)
             saved[0]['round_id'] = 'unrecorded-identity'
-            (_storage.round_path(directory)).write_bytes(gzip.compress(('\n'.join(json.dumps(row) for row in saved) + '\n').encode(), compresslevel=1, mtime=0))
+            (_storage.round_path(directory)).write_bytes(b''.join(gzip.compress((json.dumps(row) + '\n').encode(), compresslevel=1, mtime=0) for row in saved))
         elif name == 'duplicate':
             frame = pl.read_csv(directory / 'results.csv')
             frame.with_columns(pl.when(pl.col('_round_index') == 1).then(0).otherwise(pl.col('_round_index')).alias('_round_index')).write_csv(directory / 'results.csv')
@@ -702,7 +702,9 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
                 saved[0]['trade_ledger']['states'] = [None]
             else:
                 saved[0]['trade_ledger'] = None
-            (_storage.round_path(directory)).write_bytes(gzip.compress(('\n'.join(json.dumps(row) for row in saved) + '\n').encode(), compresslevel=1, mtime=0))
+            (_storage.round_path(directory)).write_bytes(b''.join(gzip.compress((json.dumps(row) + '\n').encode(), compresslevel=1, mtime=0) for row in saved))
+        if name != 'missing':
+            assert records(directory)
         before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'worker|policy|round|evidence|record|prefix|occurrence|identity|ledger'):
             run_loop(config, directory, workers=2 if name == 'policy' else None, resume=True)
@@ -717,7 +719,7 @@ def test_parallel_resume_rejects_null_snapshot_execution(parallel_campaigns, tmp
         saved = records(directory)
         assert saved[0][field] is not None
         saved[0][field] = None
-        (_storage.round_path(directory)).write_bytes(gzip.compress(('\n'.join(json.dumps(row) for row in saved) + '\n').encode(), compresslevel=1, mtime=0))
+        (_storage.round_path(directory)).write_bytes(b''.join(gzip.compress((json.dumps(row) + '\n').encode(), compresslevel=1, mtime=0) for row in saved))
         before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'execution|market|record|evidence'):
             run_loop(config, directory, resume=True)
@@ -765,7 +767,7 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
             saved = records(rejected)
             for entry in saved:
                 entry['round_params'].pop(name)
-            (_storage.round_path(rejected)).write_bytes(gzip.compress((''.join(json.dumps(entry) + '\n' for entry in saved)).encode(), compresslevel=1, mtime=0))
+            (_storage.round_path(rejected)).write_bytes(b''.join(gzip.compress((json.dumps(entry) + '\n').encode(), compresslevel=1, mtime=0) for entry in saved))
         before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'context|parameter|record'):
             run_loop(config, rejected, resume=True)

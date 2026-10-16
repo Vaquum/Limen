@@ -107,8 +107,13 @@ def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
 
 def append_record(path: Path, record: Mapping[str, object]) -> None:
     if path.suffix != '.gz':
-        with path.open('a') as stream:
-            _ = stream.write(json.dumps(record) + '\n')
+        with path.open('ab+') as stream:
+            separator = b''
+            if stream.tell():
+                _ = stream.seek(-1, 2)
+                if stream.read(1) != b'\n':
+                    separator = b'\n'
+            _ = stream.write(separator + (json.dumps(record) + '\n').encode('utf-8'))
         return
     wire = dict(record)
     raw: bytes | None = None
