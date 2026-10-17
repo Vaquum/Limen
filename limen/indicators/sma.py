@@ -25,7 +25,7 @@ def sma_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray
     steps[0] = period_total
     steps[1::2] = values[lookback:]
     steps[2::2] = -values[:count]
-    np.cumsum(steps, out=steps)
+    steps = np.cumsum(steps, out=steps)
     out[lookback:] = steps[1::2] / period
 
     return out
