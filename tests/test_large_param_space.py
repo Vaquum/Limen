@@ -26,10 +26,10 @@ def test_large_param_space():
         'scaler': ['standard', 'minmax', 'robust', 'quantile', 'power'],
     }
 
-    start = time.process_time()
+    start = time.perf_counter()
     EXPECTED_PERMUTATIONS = 1000000
     ps = ParamSpace(params, EXPECTED_PERMUTATIONS)
-    elapsed = time.process_time() - start
+    elapsed = time.perf_counter() - start
 
     assert ps.n_permutations == EXPECTED_PERMUTATIONS
     max_elapsed_time = (
@@ -38,8 +38,8 @@ def test_large_param_space():
         else DEFAULT_MAX_ELAPSED_TIME
     )
     assert elapsed < max_elapsed_time, (
-        f"ParamSpace initialization used {elapsed:.2f}s CPU, "
-        f"expected under {max_elapsed_time:.2f}s CPU"
+        f"ParamSpace initialization took {elapsed:.2f}s, "
+        f"expected under {max_elapsed_time:.2f}s"
     )
 
     combo = ps.generate()

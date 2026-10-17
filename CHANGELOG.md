@@ -1649,4 +1649,4 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.29.5] - 2026-10-17
 
-- Construct parameter combinations as positional rows, measure their CPU cost independently of scheduling, and time controlled worker shutdown after the failure begins.
+- Vectorize homogeneous scalar parameter grids while retaining legacy inference for other inputs; remove the controlled-worker marker race and separate bounded startup from shutdown timing.

@@ -446,11 +446,16 @@ def _write_yaml(config, path):
     path.write_text(stream.getvalue())
 
 
-def _wait_for(path, process, *, timeout=40):
+def _wait_for(path, process, output, *, timeout=40):
     deadline = time.monotonic() + timeout
     while not path.exists():
-        assert process.poll() is None, f'process exited {process.returncode} before {path.name}'
-        assert time.monotonic() < deadline, f'timed out waiting for {path.name}'
+        returncode = process.poll()
+        if path.exists():
+            return
+        if returncode is not None:
+            pytest.fail(f'process exited {returncode} before {path.name}:\n{output.read_text()}')
+        if time.monotonic() >= deadline:
+            pytest.fail(f'timed out waiting for {path.name}:\n{output.read_text()}')
         time.sleep(0.025)
 
 
@@ -494,9 +499,9 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
                                    stderr=subprocess.STDOUT, start_new_session=True)
         try:
             first = directory / 'checkpoint.json' if phase == 'zero' else markers / ('3.start' if phase == 'final' else '0.start')
-            _wait_for(first, process)
+            _wait_for(first, process, output=output)
             if phase in ('outstanding', 'group'):
-                _wait_for(markers / '1.done', process)
+                _wait_for(markers / '1.done', process, output=output)
             if phase == 'group':
                 os.killpg(process.pid, signal.SIGTERM)
             else:
@@ -544,7 +549,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
                                        stderr=subprocess.STDOUT, start_new_session=True)
             try:
-                _wait_for(tmp_path / 'markers' / '1.failed', process)
+                _wait_for(tmp_path / 'markers' / '1.failed', process, output=output)
                 try:
                     returncode = process.wait(timeout=20)
                 except subprocess.TimeoutExpired:
