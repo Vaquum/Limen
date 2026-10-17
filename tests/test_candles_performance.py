@@ -136,8 +136,9 @@ def test_numpy_penetration(name):
     from limen import indicators
     frame = pl.read_parquet(FIXTURES / 'indicator_equivalence_long.parquet').head(5444)
     for penetration in (np.float16(.5), np.float32(.5570075), np.float64(.5), .2, .8):
-        expected = BASELINES[name](frame, penetration=penetration)
-        assert_frame_equal(getattr(indicators, name)(frame, penetration=penetration), expected, check_exact=True)
+        with np.errstate(over='ignore'):
+            expected = BASELINES[name](frame, penetration=penetration)
+            assert_frame_equal(getattr(indicators, name)(frame, penetration=penetration), expected, check_exact=True)
 
 
 @pytest.mark.parametrize('name', ['cdldoji', 'cdlhammer', 'cdllongline'])
