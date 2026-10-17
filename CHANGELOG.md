@@ -1641,6 +1641,12 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Keep composite price-line calculations in arrays to remove per-line objects and Python event scans.
 
+## [5.29.4] - 2026-10-17
+
+- Reduce scalar dispatch overhead in the remaining candlestick indicators while preserving their existing pattern rules and recurrences.
+
+Preserve NumPy scalar penetration precision; document that scalar floating-point warnings are outside numerical equivalence.
+
 ## [5.30.0] - 2026-10-17
 
 - Configure persisted round-log predictions, alignment arrays, event ledgers and fold details through one YAML/native recording policy; preserve default payloads, scientific results and canonical walk-forward returns (#942).
