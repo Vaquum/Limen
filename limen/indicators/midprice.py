@@ -49,18 +49,7 @@ def midprice(
     period: int = 14,
 ) -> pl.DataFrame:
 
-    '''
-    Compute Midpoint Price over period.
-
-    Args:
-        data (pl.DataFrame): Dataset with high and low columns
-        high_col (str): Column name for high prices
-        low_col (str): Column name for low prices
-        period (int): Number of periods (2..100000)
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'midprice_{period}'
-    '''
+    '''Compute the trailing high/low midpoint over period (2..100000).'''
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('midprice period must be between 2 and 100000')
