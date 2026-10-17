@@ -67,8 +67,7 @@ class ParamSpace:
 
     """Sample parameter combinations without constructing the Cartesian product.
 
-    Preserve stdlib sampling order, including spaces beyond Py_ssize_t.
-    Set sample=False to enumerate the declared grid prefix.
+    Preserve stdlib sampling beyond Py_ssize_t; sample=False selects the grid prefix.
     """
 
     def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None = None, *, sample: bool = True) -> None:
