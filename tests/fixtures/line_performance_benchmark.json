@@ -1,0 +1,519 @@
+{
+  "reference": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
+  "file_sha256": "04cdc6b715daa4ad32b2594fcb33a2c2f3aea100eb17e131182391880a46c443",
+  "hardware": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.12",
+  "numpy": "2.5.1",
+  "polars": "1.42.1",
+  "threads": {
+    "POLARS_MAX_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  },
+  "results": [
+    {
+      "mode": "before",
+      "name": "price_lines",
+      "rows": 20000,
+      "research": false,
+      "first_ms": 707.5945411343127,
+      "steady_ms": 649.1397500503808,
+      "times_ms": [
+        707.5945411343127,
+        659.4385830685496,
+        600.666917162016,
+        649.1397500503808
+      ],
+      "cpu_ms": [
+        588.139,
+        550.8130000000002,
+        541.6059999999998,
+        548.5219999999997
+      ],
+      "rss_before_mib": 254.640625,
+      "peak_rss_mib": 501.484375,
+      "schema": {
+        "close": "Float64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "after",
+      "name": "price_lines",
+      "rows": 20000,
+      "research": false,
+      "first_ms": 67.99254100769758,
+      "steady_ms": 62.75204196572304,
+      "times_ms": [
+        67.99254100769758,
+        62.75204196572304,
+        62.212416902184486,
+        63.92266694456339
+      ],
+      "cpu_ms": [
+        56.31300000000006,
+        49.35200000000006,
+        49.08899999999994,
+        48.54400000000014
+      ],
+      "rss_before_mib": 254.21875,
+      "peak_rss_mib": 308.515625,
+      "schema": {
+        "close": "Float64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "before",
+      "name": "price_lines",
+      "rows": 20000,
+      "research": true,
+      "first_ms": 1760.89833304286,
+      "steady_ms": 1786.0489168670028,
+      "times_ms": [
+        1760.89833304286,
+        1786.0489168670028,
+        1097.7570000104606,
+        2320.189124904573
+      ],
+      "cpu_ms": [
+        1190.519,
+        1202.181,
+        1052.8010000000002,
+        1144.3460000000005
+      ],
+      "rss_before_mib": 255.375,
+      "peak_rss_mib": 620.046875,
+      "schema": {
+        "close": "Float64",
+        "active_lines": "Int64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "after",
+      "name": "price_lines",
+      "rows": 20000,
+      "research": true,
+      "first_ms": 358.3223749883473,
+      "steady_ms": 195.14216599054635,
+      "times_ms": [
+        358.3223749883473,
+        141.4799999911338,
+        276.74354217015207,
+        195.14216599054635
+      ],
+      "cpu_ms": [
+        92.0510000000001,
+        82.61300000000004,
+        83.17300000000016,
+        81.4680000000001
+      ],
+      "rss_before_mib": 254.015625,
+      "peak_rss_mib": 301.421875,
+      "schema": {
+        "close": "Float64",
+        "active_lines": "Int64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "before",
+      "name": "quantile_price_lines",
+      "rows": 20000,
+      "research": false,
+      "first_ms": 2431.0223751235753,
+      "steady_ms": 2389.256249880418,
+      "times_ms": [
+        2431.0223751235753,
+        2851.343333022669,
+        1767.9319998715073,
+        2389.256249880418
+      ],
+      "cpu_ms": [
+        1497.0410000000004,
+        1427.5190000000002,
+        1398.447,
+        1428.1229999999994
+      ],
+      "rss_before_mib": 254.328125,
+      "peak_rss_mib": 507.625,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "after",
+      "name": "quantile_price_lines",
+      "rows": 20000,
+      "research": false,
+      "first_ms": 66.74437504261732,
+      "steady_ms": 40.20916600711644,
+      "times_ms": [
+        66.74437504261732,
+        42.785166995599866,
+        40.20916600711644,
+        38.43087493441999
+      ],
+      "cpu_ms": [
+        43.97400000000018,
+        36.257000000000204,
+        35.28399999999987,
+        35.190000000000055
+      ],
+      "rss_before_mib": 254.1875,
+      "peak_rss_mib": 306.609375,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "before",
+      "name": "quantile_price_lines",
+      "rows": 20000,
+      "research": true,
+      "first_ms": 2134.579666890204,
+      "steady_ms": 2721.0234999656677,
+      "times_ms": [
+        2134.579666890204,
+        2759.4519169069827,
+        2615.5399580020458,
+        2721.0234999656677
+      ],
+      "cpu_ms": [
+        1614.881,
+        1583.6650000000004,
+        1611.237,
+        1596.3039999999999
+      ],
+      "rss_before_mib": 254.875,
+      "peak_rss_mib": 528.0625,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "active_quantile_count": "Int64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "after",
+      "name": "quantile_price_lines",
+      "rows": 20000,
+      "research": true,
+      "first_ms": 108.47345809452236,
+      "steady_ms": 48.719875048846006,
+      "times_ms": [
+        108.47345809452236,
+        59.82924997806549,
+        48.19112503901124,
+        48.719875048846006
+      ],
+      "cpu_ms": [
+        59.06200000000017,
+        49.50800000000011,
+        45.103000000000115,
+        45.67600000000005
+      ],
+      "rss_before_mib": 254.40625,
+      "peak_rss_mib": 313.03125,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "active_quantile_count": "Int64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "5eae4bb8e4e513ee98f5f269f6547108d708138ebce148f3d5d38dfea3ad248f"
+    },
+    {
+      "mode": "before",
+      "name": "price_lines",
+      "rows": 83136,
+      "research": false,
+      "first_ms": 2549.2875420022756,
+      "steady_ms": 2692.867917008698,
+      "times_ms": [
+        2549.2875420022756,
+        2692.867917008698,
+        3258.410874987021,
+        2517.0110419858247
+      ],
+      "cpu_ms": [
+        2425.663,
+        2428.417,
+        2424.879000000001,
+        2395.788999999999
+      ],
+      "rss_before_mib": 254.390625,
+      "peak_rss_mib": 1360.125,
+      "schema": {
+        "close": "Float64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "after",
+      "name": "price_lines",
+      "rows": 83136,
+      "research": false,
+      "first_ms": 267.6377089228481,
+      "steady_ms": 236.71354190446436,
+      "times_ms": [
+        267.6377089228481,
+        235.7922091614455,
+        236.71354190446436,
+        241.9629581272602
+      ],
+      "cpu_ms": [
+        259.1349999999999,
+        230.4569999999999,
+        227.201,
+        230.035
+      ],
+      "rss_before_mib": 254.203125,
+      "peak_rss_mib": 498.484375,
+      "schema": {
+        "close": "Float64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "before",
+      "name": "price_lines",
+      "rows": 83136,
+      "research": true,
+      "first_ms": 6048.987125046551,
+      "steady_ms": 5170.84424989298,
+      "times_ms": [
+        6048.987125046551,
+        5170.84424989298,
+        5057.804459007457,
+        5816.248083021492
+      ],
+      "cpu_ms": [
+        5232.047,
+        4916.435,
+        4819.703000000002,
+        4987.839000000001
+      ],
+      "rss_before_mib": 254.125,
+      "peak_rss_mib": 1904.1875,
+      "schema": {
+        "close": "Float64",
+        "active_lines": "Int64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "after",
+      "name": "price_lines",
+      "rows": 83136,
+      "research": true,
+      "first_ms": 439.91987500339746,
+      "steady_ms": 405.3806660231203,
+      "times_ms": [
+        439.91987500339746,
+        431.19162507355213,
+        405.3806660231203,
+        404.3663751799613
+      ],
+      "cpu_ms": [
+        420.71100000000007,
+        403.2180000000001,
+        390.7189999999998,
+        394.1950000000003
+      ],
+      "rss_before_mib": 253.984375,
+      "peak_rss_mib": 534.875,
+      "schema": {
+        "close": "Float64",
+        "active_lines": "Int64",
+        "hours_since_big_move": "Float64",
+        "line_momentum_6h": "Float64",
+        "trending_score": "Float64",
+        "reversal_potential": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "before",
+      "name": "quantile_price_lines",
+      "rows": 83136,
+      "research": false,
+      "first_ms": 6695.361583027989,
+      "steady_ms": 20018.866416998208,
+      "times_ms": [
+        6695.361583027989,
+        7018.900332972407,
+        20018.866416998208,
+        25519.95904208161
+      ],
+      "cpu_ms": [
+        6292.252,
+        6384.115,
+        6656.89,
+        6722.729999999999
+      ],
+      "rss_before_mib": 254.65625,
+      "peak_rss_mib": 1387.28125,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "after",
+      "name": "quantile_price_lines",
+      "rows": 83136,
+      "research": false,
+      "first_ms": 764.8562910035253,
+      "steady_ms": 210.19325009547174,
+      "times_ms": [
+        764.8562910035253,
+        238.89491707086563,
+        210.19325009547174,
+        168.88612508773804
+      ],
+      "cpu_ms": [
+        201.6039999999999,
+        161.08499999999992,
+        156.7280000000002,
+        153.505
+      ],
+      "rss_before_mib": 253.703125,
+      "peak_rss_mib": 558.234375,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "before",
+      "name": "quantile_price_lines",
+      "rows": 83136,
+      "research": true,
+      "first_ms": 19279.897958040237,
+      "steady_ms": 22739.212749991566,
+      "times_ms": [
+        19279.897958040237,
+        34927.66029201448,
+        22739.212749991566,
+        10052.582416916266
+      ],
+      "cpu_ms": [
+        7432.384,
+        7598.197000000001,
+        7471.847000000001,
+        7468.723999999998
+      ],
+      "rss_before_mib": 254.34375,
+      "peak_rss_mib": 1487.21875,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "active_quantile_count": "Int64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    },
+    {
+      "mode": "after",
+      "name": "quantile_price_lines",
+      "rows": 83136,
+      "research": true,
+      "first_ms": 409.01179192587733,
+      "steady_ms": 246.20945798233151,
+      "times_ms": [
+        409.01179192587733,
+        246.20945798233151,
+        191.34625000879169,
+        351.93050000816584
+      ],
+      "cpu_ms": [
+        256.68800000000005,
+        210.12799999999987,
+        188.90699999999993,
+        201.51999999999992
+      ],
+      "rss_before_mib": 254.484375,
+      "peak_rss_mib": 567.90625,
+      "schema": {
+        "close": "Float64",
+        "hours_since_quantile_line": "Float64",
+        "active_quantile_count": "Int64",
+        "quantile_line_density_48h": "Int64",
+        "quantile_momentum_6h": "Float64",
+        "avg_quantile_height_24h": "Float64",
+        "quantile_direction_bias": "Float64"
+      },
+      "input_sha256": "4d8179e7108093f2d99748bdcdb4c88ee717598544d680c75527937828f182fc"
+    }
+  ],
+  "exact": true,
+  "input": "BTCUSDT 15-minute candles, 2020-01-01 to 2026-10-03; first N close prices",
+  "method": "Fresh process per function/size/mode/implementation; one first call and three warm calls, timings include conversions and allocation; RSS includes imports and loaded input. Host contention affects wall time; CPU medians are supplied. All output columns compared exactly.",
+  "source_sha256": {
+    "limen/features/price_lines.py": "6ba9afb1fa0fbf0183c19cd086a9c13e60bcc1228d77ffc946cae0c673b20ac5",
+    "limen/features/quantile_price_lines.py": "e0bb4d9ddeb2e5ba1197eff2377264966853dd9b88e75b9a1379b3fe11f7beac",
+    "limen/utils/find_price_lines.py": "df3e2302a7835112316c287f88ae7d43d6d92f1aa597c844e39c2c6c1f745b5a"
+  }
+}

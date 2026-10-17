@@ -2,9 +2,9 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.features.active_lines import active_lines
-from limen.features.hours_since_big_move import hours_since_big_move
-from limen.utils.find_price_lines import find_price_lines
+from limen.utils.find_price_lines import LineArrays, price_line_arrays
+
+__all__ = ['line_active_count', 'line_recency', 'price_lines']
 
 DEFAULT_BIG_MOVE_LOOKBACK_HOURS = 168
 DEFAULT_MOMENTUM_LOOKBACK_HOURS = 6
@@ -115,14 +115,10 @@ def _price_line_columns(close: npt.NDArray[np.float64],
         pl.Series: Struct series with the line-based fields
     '''
 
-    long_lines, short_lines = find_price_lines(close, max_duration_hours, min_height_pct)
-
-    frame = pl.DataFrame({'close': close})
-    if include_research_only:
-        frame = active_lines(frame, long_lines, short_lines)
-    frame = hours_since_big_move(frame, long_lines, short_lines, big_move_lookback_hours)
+    long_lines, short_lines = price_line_arrays(close, max_duration_hours, min_height_pct)
 
     n_rows = close.shape[0]
+    ends = np.sort(np.concatenate([long_lines[1], short_lines[1]]))
     momentum_col = f"line_momentum_{momentum_lookback_hours}h"
 
     long_counts = _end_counts_in_window(long_lines, n_rows, momentum_lookback_hours)
@@ -139,40 +135,36 @@ def _price_line_columns(close: npt.NDArray[np.float64],
     )
 
     columns = [
-        pl.col('hours_since_big_move').cast(pl.Float64),
+        pl.Series('hours_since_big_move', line_recency(ends, n_rows, big_move_lookback_hours)),
         pl.Series(momentum_col, balance.astype(np.float64)),
         pl.Series('trending_score', trending),
         pl.Series('reversal_potential', reversal),
     ]
     if include_research_only:
-        columns.insert(0, pl.col('active_lines').cast(pl.Int64))
+        columns.insert(0, pl.Series('active_lines', line_active_count(long_lines, short_lines, n_rows)))
 
-    frame = frame.with_columns(columns)
-
-    return frame.drop('close').to_struct(STRUCT_COL)
+    return pl.DataFrame(columns).to_struct(STRUCT_COL)
 
 
-def _end_counts_in_window(lines: list[dict[str, float]], n_rows: int, window: int) -> npt.NDArray[np.intp]:
-
-    '''
-    Compute per-bar counts of line ends inside the trailing window [t-window, t).
-
-    Args:
-        lines (list[dict]): Line dicts with an 'end_idx' key
-        n_rows (int): Number of bars in the frame
-        window (int): Trailing window length in bars
-
-    Returns:
-        np.ndarray: Integer end counts per bar
-    '''
-
-    if not lines or n_rows == 0:
-        return np.zeros(n_rows, dtype=np.intp)
-
-    ends = np.sort(np.array([line['end_idx'] for line in lines]))
+def _end_counts_in_window(lines: LineArrays, n_rows: int, window: int) -> npt.NDArray[np.intp]:
+    ends = np.sort(lines[1])
     positions = np.arange(n_rows)
+    return (np.searchsorted(ends, positions, side='left')
+            - np.searchsorted(ends, positions - window, side='left'))
 
-    upper = np.searchsorted(ends, positions, side='left')
-    lower = np.searchsorted(ends, positions - window, side='left')
 
-    return upper - lower
+def line_recency(ends: npt.NDArray[np.intp], n_rows: int, lookback: int) -> npt.NDArray[np.float64]:
+    positions = np.arange(n_rows)
+    previous = np.searchsorted(ends, positions, side='right') - 1
+    result = np.full(n_rows, float(lookback))
+    known = previous >= 0
+    result[known] = np.minimum(positions[known] - ends[previous[known]], lookback)
+    return result
+
+
+def line_active_count(long: LineArrays, short: LineArrays, n_rows: int) -> npt.NDArray[np.intp]:
+    positions = np.arange(n_rows)
+    starts = np.sort(np.concatenate([long[0], short[0]]))
+    stops = np.sort(np.concatenate([long[1], short[1]]) + 1)
+    return (np.searchsorted(starts, positions, side='right')
+            - np.searchsorted(stops, positions, side='right'))

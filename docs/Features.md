@@ -205,7 +205,7 @@ These helpers provide state or structure rather than only a continuous numeric s
 
 These helpers summarize how recently and how densely price interacted with detected price lines — pairs of bars at most `max_duration_hours` apart whose close-to-close change is at least `min_height_pct` (positive lines are long, negative are short; quantile lines are those at or above the `quantile_threshold` height quantile per direction).
 
-The two grouped transforms below are the YAML-facing surface. Each detects lines internally from scalar params on the frame it receives — per split under the manifest pipeline, so detection cannot observe other splits — and adds its full column family in one detection pass. Line detection lives in `limen.utils.find_price_lines` / `limen.utils.filter_lines_by_quantile`.
+The two grouped transforms below are the YAML-facing surface. Each detects lines internally from scalar params on the frame it receives — per split under the manifest pipeline, so detection cannot observe other splits — and adds its full column family in one detection pass. The composites use array geometry from `limen.utils.find_price_lines`; dictionary utilities remain available independently.
 
 | Function | Adds by default | Notes |
 |---|---|---|
@@ -214,7 +214,7 @@ The two grouped transforms below are the YAML-facing surface. Each detects lines
 
 `active_lines` and `active_quantile_count` count lines that span the current bar before the line's end — the event that defines it — is knowable. That within-line lookahead is inherited from the tradeline research design: treat both columns as research-only, not live-computable. The grouped transforms expose `include_research_only`; set it to `false` to omit the active-span columns. Bundled live-safe templates set `include_research_only: false`. The end-event columns are causal.
 
-The per-column building blocks below take pre-computed line structures (`list[dict]` with `start_idx`/`end_idx`) and remain available for programmatic composition; the grouped transforms above compose them.
+The per-column building blocks below take pre-computed line structures (`list[dict]` with `start_idx`/`end_idx`) and remain available for programmatic composition.
 
 | Function | Adds by default | Notes |
 |---|---|---|
@@ -223,6 +223,19 @@ The per-column building blocks below take pre-computed line structures (`list[di
 | `quantile_line_density` | `quantile_line_density_<lookback>h` | Count of quantile-line endings within a trailing `lookback_hours` window. |
 | `hours_since_big_move` | `hours_since_big_move` | Bars since the most recent line end, capped at `lookback_hours`. |
 | `hours_since_quantile_line` | `hours_since_quantile_line` | Bars since the most recent quantile-line end, capped at `lookback_hours`. |
+
+### Line calculation performance
+
+The composite transforms keep line geometry in arrays; the standalone dictionary helpers retain their existing API. Exact baseline comparisons cover eager/lazy frames, research/live outputs, quantile endpoints, short histories and missing values.
+
+| Feature | Rows | Live wall ms, before → after | Live CPU ms, before → after | Peak RSS MiB, before → after |
+|---|---:|---:|---:|---:|
+| `price_lines` | 20,000 | 649.1 → 62.8 | 548.5 → 49.1 | 501 → 309 |
+| `quantile_price_lines` | 20,000 | 2389.3 → 40.2 | 1427.5 → 35.3 | 508 → 307 |
+| `price_lines` | 83,136 | 2692.9 → 236.7 | 2424.9 → 230.0 | 1360 → 498 |
+| `quantile_price_lines` | 83,136 | 20018.9 → 210.2 | 6656.9 → 156.7 | 1387 → 558 |
+
+These are local M1 Max measurements on real BTCUSDT bars, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Values are medians of three warm calls; first-call samples, research-mode results, input digests and exact schemas are in the [raw measurements](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/line_performance_benchmark.json). Peak RSS includes imports and input loading. Desktop contention inflated some wall samples, particularly the quantile baseline; CPU timings provide the corresponding execution cost.
 
 ## Lag helpers and threshold utilities
 
