@@ -1,0 +1,310 @@
+{
+  "cdl2crows": {
+    "function": "cdl2crows",
+    "kwargs": {},
+    "outputs": [
+      "cdl2crows"
+    ]
+  },
+  "cdl3blackcrows": {
+    "function": "cdl3blackcrows",
+    "kwargs": {},
+    "outputs": [
+      "cdl3blackcrows"
+    ]
+  },
+  "cdl3inside": {
+    "function": "cdl3inside",
+    "kwargs": {},
+    "outputs": [
+      "cdl3inside"
+    ]
+  },
+  "cdl3linestrike": {
+    "function": "cdl3linestrike",
+    "kwargs": {},
+    "outputs": [
+      "cdl3linestrike"
+    ]
+  },
+  "cdl3starsinsouth": {
+    "function": "cdl3starsinsouth",
+    "kwargs": {},
+    "outputs": [
+      "cdl3starsinsouth"
+    ]
+  },
+  "cdlabandonedbaby": {
+    "function": "cdlabandonedbaby",
+    "kwargs": {},
+    "outputs": [
+      "cdlabandonedbaby"
+    ]
+  },
+  "cdlbelthold": {
+    "function": "cdlbelthold",
+    "kwargs": {},
+    "outputs": [
+      "cdlbelthold"
+    ]
+  },
+  "cdlclosingmarubozu": {
+    "function": "cdlclosingmarubozu",
+    "kwargs": {},
+    "outputs": [
+      "cdlclosingmarubozu"
+    ]
+  },
+  "cdlconcealbabyswall": {
+    "function": "cdlconcealbabyswall",
+    "kwargs": {},
+    "outputs": [
+      "cdlconcealbabyswall"
+    ]
+  },
+  "cdlcounterattack": {
+    "function": "cdlcounterattack",
+    "kwargs": {},
+    "outputs": [
+      "cdlcounterattack"
+    ]
+  },
+  "cdldarkcloudcover": {
+    "function": "cdldarkcloudcover",
+    "kwargs": {},
+    "outputs": [
+      "cdldarkcloudcover"
+    ]
+  },
+  "cdldoji": {
+    "function": "cdldoji",
+    "kwargs": {},
+    "outputs": [
+      "cdldoji"
+    ]
+  },
+  "cdldragonflydoji": {
+    "function": "cdldragonflydoji",
+    "kwargs": {},
+    "outputs": [
+      "cdldragonflydoji"
+    ]
+  },
+  "cdlengulfing": {
+    "function": "cdlengulfing",
+    "kwargs": {},
+    "outputs": [
+      "cdlengulfing"
+    ]
+  },
+  "cdlgravestonedoji": {
+    "function": "cdlgravestonedoji",
+    "kwargs": {},
+    "outputs": [
+      "cdlgravestonedoji"
+    ]
+  },
+  "cdlhammer": {
+    "function": "cdlhammer",
+    "kwargs": {},
+    "outputs": [
+      "cdlhammer"
+    ]
+  },
+  "cdlhangingman": {
+    "function": "cdlhangingman",
+    "kwargs": {},
+    "outputs": [
+      "cdlhangingman"
+    ]
+  },
+  "cdlharami": {
+    "function": "cdlharami",
+    "kwargs": {},
+    "outputs": [
+      "cdlharami"
+    ]
+  },
+  "cdlharamicross": {
+    "function": "cdlharamicross",
+    "kwargs": {},
+    "outputs": [
+      "cdlharamicross"
+    ]
+  },
+  "cdlhighwave": {
+    "function": "cdlhighwave",
+    "kwargs": {},
+    "outputs": [
+      "cdlhighwave"
+    ]
+  },
+  "cdlhikkake": {
+    "function": "cdlhikkake",
+    "kwargs": {},
+    "outputs": [
+      "cdlhikkake"
+    ]
+  },
+  "cdlhikkakemod": {
+    "function": "cdlhikkakemod",
+    "kwargs": {},
+    "outputs": [
+      "cdlhikkakemod"
+    ]
+  },
+  "cdlhomingpigeon": {
+    "function": "cdlhomingpigeon",
+    "kwargs": {},
+    "outputs": [
+      "cdlhomingpigeon"
+    ]
+  },
+  "cdlidentical3crows": {
+    "function": "cdlidentical3crows",
+    "kwargs": {},
+    "outputs": [
+      "cdlidentical3crows"
+    ]
+  },
+  "cdlinvertedhammer": {
+    "function": "cdlinvertedhammer",
+    "kwargs": {},
+    "outputs": [
+      "cdlinvertedhammer"
+    ]
+  },
+  "cdlladderbottom": {
+    "function": "cdlladderbottom",
+    "kwargs": {},
+    "outputs": [
+      "cdlladderbottom"
+    ]
+  },
+  "cdllongleggeddoji": {
+    "function": "cdllongleggeddoji",
+    "kwargs": {},
+    "outputs": [
+      "cdllongleggeddoji"
+    ]
+  },
+  "cdllongline": {
+    "function": "cdllongline",
+    "kwargs": {},
+    "outputs": [
+      "cdllongline"
+    ]
+  },
+  "cdlmarubozu": {
+    "function": "cdlmarubozu",
+    "kwargs": {},
+    "outputs": [
+      "cdlmarubozu"
+    ]
+  },
+  "cdlmatchinglow": {
+    "function": "cdlmatchinglow",
+    "kwargs": {},
+    "outputs": [
+      "cdlmatchinglow"
+    ]
+  },
+  "cdlmathold": {
+    "function": "cdlmathold",
+    "kwargs": {},
+    "outputs": [
+      "cdlmathold"
+    ]
+  },
+  "cdlonneck": {
+    "function": "cdlonneck",
+    "kwargs": {},
+    "outputs": [
+      "cdlonneck"
+    ]
+  },
+  "cdlpiercing": {
+    "function": "cdlpiercing",
+    "kwargs": {},
+    "outputs": [
+      "cdlpiercing"
+    ]
+  },
+  "cdlrickshawman": {
+    "function": "cdlrickshawman",
+    "kwargs": {},
+    "outputs": [
+      "cdlrickshawman"
+    ]
+  },
+  "cdlrisefall3methods": {
+    "function": "cdlrisefall3methods",
+    "kwargs": {},
+    "outputs": [
+      "cdlrisefall3methods"
+    ]
+  },
+  "cdlseparatinglines": {
+    "function": "cdlseparatinglines",
+    "kwargs": {},
+    "outputs": [
+      "cdlseparatinglines"
+    ]
+  },
+  "cdlshootingstar": {
+    "function": "cdlshootingstar",
+    "kwargs": {},
+    "outputs": [
+      "cdlshootingstar"
+    ]
+  },
+  "cdlshortline": {
+    "function": "cdlshortline",
+    "kwargs": {},
+    "outputs": [
+      "cdlshortline"
+    ]
+  },
+  "cdlspinningtop": {
+    "function": "cdlspinningtop",
+    "kwargs": {},
+    "outputs": [
+      "cdlspinningtop"
+    ]
+  },
+  "cdlsticksandwich": {
+    "function": "cdlsticksandwich",
+    "kwargs": {},
+    "outputs": [
+      "cdlsticksandwich"
+    ]
+  },
+  "cdltakuri": {
+    "function": "cdltakuri",
+    "kwargs": {},
+    "outputs": [
+      "cdltakuri"
+    ]
+  },
+  "cdlthrusting": {
+    "function": "cdlthrusting",
+    "kwargs": {},
+    "outputs": [
+      "cdlthrusting"
+    ]
+  },
+  "cdltristar": {
+    "function": "cdltristar",
+    "kwargs": {},
+    "outputs": [
+      "cdltristar"
+    ]
+  },
+  "cdlunique3river": {
+    "function": "cdlunique3river",
+    "kwargs": {},
+    "outputs": [
+      "cdlunique3river"
+    ]
+  }
+}

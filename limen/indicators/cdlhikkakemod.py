@@ -29,9 +29,9 @@ def _cdlhikkakemod_impl(
     '''
     _ = open_col
 
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    high_values = data[high_col].to_numpy().astype(float, copy=False).tolist()
+    low_values = data[low_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
