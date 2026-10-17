@@ -21,18 +21,22 @@ def parse_recording(value: object) -> dict[str, bool]:
     return policy
 
 
+def _configured(reference: Mapping[str, object] | None) -> dict[str, bool] | None:
+    if reference is None:
+        return None
+    configuration = reference.get('uel', {})
+    if not isinstance(configuration, Mapping):
+        raise ValueError('uel must be a mapping')
+    settings = cast(Mapping[str, object], configuration)
+    return parse_recording(settings['recording']) if 'recording' in settings else None
+
+
 def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
                       directory: Path | None, has_search: bool,
                       resume: bool) -> dict[str, bool] | None:
-    declared = value
-    explicit = value is not None
-    if not explicit and reference is not None:
-        configuration = reference.get('uel', {})
-        if not isinstance(configuration, Mapping):
-            raise ValueError('uel must be a mapping')
-        settings = cast(Mapping[str, object], configuration)
-        if 'recording' in settings:
-            declared, explicit = settings['recording'], True
+    configured = _configured(reference)
+    declared = value if value is not None else configured
+    explicit = declared is not None
 
     saved: dict[str, bool] | None = None
     metadata_path = None if directory is None else directory / 'metadata.json'
@@ -42,6 +46,12 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
             raise ValueError('Cannot resume: metadata must be a mapping')
         metadata = cast(Mapping[str, object], metadata)
         saved = parse_recording(metadata['recording']) if 'recording' in metadata else dict(_DEFAULTS)
+        original = metadata.get('yaml_reference')
+        if reference is not None and isinstance(original, Mapping):
+            if (_configured(cast(Mapping[str, object], original)) or _DEFAULTS) != (configured or _DEFAULTS):
+                raise ValueError('Cannot resume with a different YAML recording declaration')
+        elif configured is not None and configured != saved:
+            raise ValueError('Cannot resume with a different recording policy')
         if value is None and 'recording' in metadata:
             declared, explicit = metadata['recording'], True
 

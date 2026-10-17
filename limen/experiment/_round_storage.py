@@ -82,12 +82,14 @@ def _market(value: object, path: Path, count: int | None) -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
-def _row_count(record: Mapping[str, object]) -> int | None:
+def _row_count(record: Mapping[str, object]) -> int:
     values = record.get('preds')
     if not isinstance(values, list):
         execution = record.get('execution')
         values = cast(Mapping[str, object], execution).get('pos') if isinstance(execution, Mapping) else None
-    return len(cast(list[object], values)) if isinstance(values, list) else None
+    if not isinstance(values, list):
+        raise RoundStorageError('Market recording requires predictions or execution positions for row alignment')
+    return len(cast(list[object], values))
 
 
 def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
