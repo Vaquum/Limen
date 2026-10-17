@@ -13,7 +13,7 @@ import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
 
-import limen.indicators as indicators
+from limen import indicators
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 REFERENCE = json.loads((FIXTURES / 'indicator_equivalence.json').read_text())

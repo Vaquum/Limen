@@ -47,9 +47,9 @@ def _worker(args):
     import polars as pl
     dependency_ms = (time.perf_counter() - started) * 1000
     started = time.perf_counter()
-    import limen.indicators as indicators
+    from limen import indicators
     import_ms = (time.perf_counter() - started) * 1000
-    data = pl.read_parquet(args.input).head(args.rows)
+    data = pl.read_parquet(args.input, n_rows=args.rows)
     if data.height != args.rows:
         raise ValueError(f'Input has fewer than {args.rows} real rows')
     digest = hashlib.sha256(data.select('open', 'high', 'low', 'close', 'volume')
@@ -82,6 +82,14 @@ def _worker(args):
                          'polars': pl.__version__}}
 
 
+
+def _code_digest(root):
+    digest = hashlib.sha256()
+    for path in sorted((root / 'limen').rglob('*.py')):
+        digest.update(str(path.relative_to(root)).encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
+
 def _campaign(args, baseline):
     import numpy as np
 
@@ -91,13 +99,23 @@ def _campaign(args, baseline):
         'input': str(args.input.resolve()),
         'file_sha256': hashlib.sha256(args.input.read_bytes()).hexdigest(),
         'hardware': platform.platform(), 'machine': platform.machine(),
-        'processor': subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'],
+        'processor': subprocess.check_output(['/usr/sbin/sysctl', '-n', 'machdep.cpu.brand_string'],
                                             text=True).strip() if sys.platform == 'darwin' else platform.processor(),
-        'threads': dict.fromkeys(THREADS, '1'), 'results': []}
+        'threads': dict.fromkeys(THREADS, '1'), 'code_sha256': _code_digest(ROOT), 'results': []}
+    saved = args.output / 'report.json'
+    if saved.exists():
+        previous = json.loads(saved.read_text())
+        for key in ('reference', 'file_sha256', 'code_sha256', 'threads'):
+            if previous[key] != report[key]:
+                raise ValueError(f'Existing report differs in {key}; use a new output directory')
+        report = previous
+    existing = {(p['before']['rows'], p['before']['indicator']): p for p in report['results']}
     for rows in (20000, 83136):
         for name in args.indicators:
-            pair = {}
+            pair = existing.get((rows, name), {})
             for label, code_root in (('before', baseline), ('after', ROOT)):
+                if label in pair:
+                    continue
                 output = args.output / f'{rows}-{name}-{label}.npz'
                 command = [sys.executable, str(Path(__file__).resolve()), '--worker',
                            '--code-root', str(code_root), '--input', str(args.input),
@@ -118,11 +136,13 @@ def _campaign(args, baseline):
                 for column in left.files:
                     np.testing.assert_array_equal(left[column], right[column],
                                                   err_msg=f'{name}: {column}, {rows} rows')
-            report['results'].append(pair)
+            if (rows, name) not in existing:
+                report['results'].append(pair)
             (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
             sys.stdout.write(f'{rows} {name}: {before["steady_ms"]:.2f} -> '
                              f'{after["steady_ms"]:.2f} ms; exact outputs\n')
             sys.stdout.flush()
+    assert report['code_sha256'] == _code_digest(ROOT), 'Implementation changed during measurement'
     return report
 
 
