@@ -27,10 +27,10 @@ def _cdl3blackcrows_impl(
         pl.DataFrame: The input data with a new column 'cdl3blackcrows'
     '''
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    high_values = data[high_col].to_numpy().astype(float, copy=False).tolist()
+    low_values = data[low_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
@@ -42,7 +42,7 @@ def _cdl3blackcrows_impl(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdl3blackcrows', values=out))
 
-    shadow_vs_period_total = np.zeros(3, dtype=float)
+    shadow_vs_period_total = [0.0] * 3
     shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
 
     i = shadow_vs_trailing_idx

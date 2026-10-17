@@ -33,10 +33,10 @@ def _cdl3starsinsouth_impl(
         pl.DataFrame: The input data with a new column 'cdl3starsinsouth'
     '''
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    high_values = data[high_col].to_numpy().astype(float, copy=False).tolist()
+    low_values = data[low_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
@@ -55,7 +55,7 @@ def _cdl3starsinsouth_impl(
     body_long_period_total = CDL3STARSINSOUTH_BODY_LONG_PERIOD_TOTAL
     body_short_period_total = CDL3STARSINSOUTH_BODY_SHORT_PERIOD_TOTAL
     shadow_long_period_total = CDL3STARSINSOUTH_SHADOW_LONG_PERIOD_TOTAL
-    shadow_vs_period_total = np.zeros(2, dtype=float)
+    shadow_vs_period_total = [0.0] * 2
 
     body_long_trailing_idx = lookback_total - body_long_avg_period
     body_short_trailing_idx = lookback_total - body_short_avg_period
