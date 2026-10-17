@@ -3,7 +3,7 @@ from typing import Any
 
 import polars as pl
 
-import limen.sfd.rule_based._temporal as _temporal
+from limen.sfd.rule_based._temporal import positive_temporal_window as _positive_window, resolve_temporal_window as _resolve_window, validate_temporal_conditions as _validate_windows
 
 
 _OPS: dict[str, Callable[[pl.Expr, Any], pl.Expr]] = {
@@ -145,7 +145,7 @@ def with_persistence(expr: pl.Expr, n: int) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
-    n = _temporal.positive_temporal_window(n, condition_id='<direct>', field='persistence_n')
+    n = _positive_window(n, condition_id='<direct>', field='persistence_n')
 
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=n) == n).fill_null(False)
 
@@ -163,7 +163,7 @@ def with_recency(expr: pl.Expr, n: int) -> pl.Expr:
         pl.Expr: Boolean expression
     '''
 
-    n = _temporal.positive_temporal_window(n, condition_id='<direct>', field='recency_n')
+    n = _positive_window(n, condition_id='<direct>', field='recency_n')
 
     return (expr.cast(pl.Int8).rolling_sum(n, min_samples=1) >= 1).fill_null(False)
 
@@ -209,7 +209,7 @@ def build_predicate(condition: dict[str, Any], round_params: dict[str, Any]) -> 
         pl.Expr: Boolean predicate expression
     '''
 
-    _temporal.validate_temporal_conditions((condition,))
+    _validate_windows((condition,))
     ptype = condition['type']
 
     if ptype == 'threshold':
@@ -247,8 +247,8 @@ def build_predicate(condition: dict[str, Any], round_params: dict[str, Any]) -> 
         raise ValueError(f'Unknown predicate type: {ptype!r}')
 
     if 'persistence_n' in condition:
-        expr = with_persistence(expr, _temporal.resolve_temporal_window(condition, 'persistence_n', round_params))
+        expr = with_persistence(expr, _resolve_window(condition, 'persistence_n', round_params))
     elif 'recency_n' in condition:
-        expr = with_recency(expr, _temporal.resolve_temporal_window(condition, 'recency_n', round_params))
+        expr = with_recency(expr, _resolve_window(condition, 'recency_n', round_params))
 
     return expr
