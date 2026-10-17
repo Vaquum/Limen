@@ -2,6 +2,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+from limen.indicators.midprice import window_extrema
+
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
@@ -14,23 +16,8 @@ def _midpoint_from_values(values: npt.NDArray[np.float64], period: int) -> npt.N
     if n <= lookback_total:
         return out
 
-    today = lookback_total
-    trailing_idx = 0
-    while today < n:
-        lowest = values[trailing_idx]
-        highest = lowest
-        i = trailing_idx + 1
-        while i <= today:
-            tmp = values[i]
-            if tmp < lowest:
-                lowest = tmp
-            elif tmp > highest:
-                highest = tmp
-            i += 1
-
-        out[today] = (highest + lowest) / 2.0
-        today += 1
-        trailing_idx += 1
+    lowest, highest = window_extrema(values, values, period)
+    out[lookback_total:] = (highest + lowest) / 2.0
 
     return out
 

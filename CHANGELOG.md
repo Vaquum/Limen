@@ -1659,6 +1659,10 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Enforce the covered test job’s Python 3.12 exception without changing the support floor; collect the interpreter contract in CI and reject coverage backend fallback.
 
+## [5.29.8] - 2026-10-17
+
+- Accelerate rolling midpoint/price windows and reuse Ultimate Oscillator terms without changing arithmetic order.
+
 ## [5.30.0] - 2026-10-17
 
 - Configure persisted round-log predictions, alignment arrays, event ledgers and fold details through one YAML/native recording policy; preserve default payloads, scientific results and canonical walk-forward returns (#942).
