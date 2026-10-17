@@ -3,6 +3,7 @@ import random
 import sys
 from typing import Any
 
+import numpy as np
 import polars as pl
 
 
@@ -64,20 +65,10 @@ def sample_range_exact(
 
 class ParamSpace:
 
-    '''
-    Create a legacy parameter space manager for hyperparameter sampling.
+    """Sample parameter combinations without constructing the Cartesian product.
 
-    Args:
-        params (dict): Dictionary of parameter names and their possible values.
-        n_permutations (int): Number of parameter combinations to sample. When
-            this is smaller than the total parameter space, sampling uses exact
-            `random.sample(range(N), k)` semantics, including when `N` exceeds
-            the stdlib wrapper's `Py_ssize_t` limit. When this is greater than
-            or equal to the total parameter space, all combinations are
-            enumerated instead of sampled.
-        seed (int | None): Optional seed for reproducible legacy sampling.
-        sample (bool): Sample a subset; False selects the declared grid prefix.
-    '''
+    Preserve stdlib sampling beyond Py_ssize_t; sample=False selects the grid prefix.
+    """
 
     def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None = None, *, sample: bool = True) -> None:
 
@@ -101,9 +92,20 @@ class ParamSpace:
         else:
             indices = sample_range_exact(self._rng, self.total_space, n_permutations)
 
-        # Convert indices to parameter combinations
-        combos = [self._index_to_combo(idx) for idx in indices]
-        self.df_params = pl.DataFrame(combos)
+        if indices and self.keys and self.total_space <= sys.maxsize and all(
+            type(values[0]) in (bool, int, float, str)
+            and all(type(value) is type(values[0]) for value in values)
+            and (type(values[0]) is not int or all(-(2**63) <= value < 2**63 for value in values))
+            for values in params.values()
+        ):
+            remaining = np.asarray(indices, dtype=np.int64)
+            columns: list[pl.Series] = []
+            for key, size in zip(self.keys, self.param_sizes, strict=True):
+                remaining, offsets = np.divmod(remaining, size)
+                columns.append(pl.Series(key, params[key]).gather(offsets))
+            self.df_params = pl.DataFrame(columns)
+        else:
+            self.df_params = pl.DataFrame([self._index_to_combo(idx) for idx in indices])
         self.n_permutations = self.df_params.height
 
     def _index_to_combo(self, index: int) -> dict[str, Any]:
