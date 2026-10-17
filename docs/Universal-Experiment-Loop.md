@@ -316,7 +316,9 @@ recording:
   trade_ledger: false
 ```
 
-The Python equivalent is `uel.run(..., recording={"predictions": False, "trade_ledger": False})`. On a new run, `recording=None` uses the configured YAML policy, or all-true defaults when absent; an explicit native mapping overrides the YAML policy, with unspecified keys defaulting to `true`. The effective policy is frozen for the invocation and, when explicitly configured, recorded separately in `metadata.json`; the source YAML and its identity remain intact.
+The Python equivalent is `uel.run(..., recording={"predictions": False, "trade_ledger": False})`. On a new run, `recording=None` uses the configured YAML policy, or all-true defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `true`: native `{"trade_ledger": False}` overrides YAML `{"predictions": False}` with predictions enabled.
+
+For a compiled SFD, its compiled YAML is authoritative even without a separate `yaml_reference`. A conflicting recording declaration in an explicitly supplied `yaml_reference` rejects before artifacts. New explicitly configured recording runs retain the original compiled YAML through the existing `yaml_reference` metadata. The frozen effective policy is stored separately as `metadata.recording`. Changing YAML `uel.recording` changes the existing canonical manifest ID; a native override preserves the source YAML and its ID. Neither operation changes the manifest-ID algorithm. Omitted no-policy execution retains its existing behavior.
 
 This policy filters copied serialized records only. Models, predictions used for scoring, scalar CSV/Parquet results, feedback and live `post_processing` retain their full evidence. When folds remain, the other controls apply within them. Walk-forward `trial_returns.parquet` and DSR computation are unchanged. Existing `record_execution` and `record_model_outputs` remain independent and off by default: omitted predictions can coexist with recorded execution, market returns or probabilities.
 
@@ -326,9 +328,9 @@ Any policy containing `false` makes the run non-resumable, even if that group is
 
 Supported single-split Trainer/Sensor reconstruction and built-in Cohort selection retain their identities, parameters, scalar results and required exact trade/learning bindings. Omitted row-level evidence cannot be inspected from the log; custom readers must require the fields they use. Existing walk-forward Trainer limitations remain. Reducing recording changes stored evidence, not live retention or model/preparation memory.
 
-The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/recording_payload_inventory.json) measures two production rounds per case from `spot_1h_20240101_20241231.parquet`, with execution and model-output recording enabled. Group percentages below are logical JSON removal deltas; compressed sizes include the round log and shared market blobs.
+The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/recording_payload_inventory.json) measures two production rounds per case from `spot_1h_20240101_20241231.parquet`, with both execution and model-output recording enabled for ordinary cases and execution recording enabled for walk-forward. For records `R`, logical bytes are `L(R) = sum(len((json.dumps(r) + '\n').encode('utf-8')) for r in R)`, using Python's default JSON settings. Each section's weight is `L(full) - L(without_section)`; its percentage divides that difference by `L(full)` for that case alone. Compressed sizes include the round log and shared market blobs. The alignment measurement removes the entire alignment object; the policy retains its dated bounds, so that percentage is not its omission saving.
 
-| Case | Logical bytes | Compressed bytes | Largest payload groups |
+| Case | Logical bytes | Compressed bytes | Largest payload sections |
 |---|---:|---:|---|
 | Rule snapshot | 17,680 | 5,987 | Execution 53.85%; market 37.69% |
 | Binary snapshot | 25,376 | 9,790 | Execution 43.08%; market 26.08%; probabilities 22.67% |
@@ -336,7 +338,35 @@ The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests
 | Event | 245,352 | 36,981 | Ledger 89.13%; retained trade contract 10.23% |
 | Walk-forward | 31,677 | 10,311 | Fold results 34.99%; alignment 20.34%; execution 19.41% |
 
-Omitting only the event ledger recompresses that sample to 4,668 bytes. Exact trade provenance remains despite its cost. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive.
+Omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. Exact trade provenance remains despite its cost. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
+
+Reproduce the event probe from the repository root using the existing recorded-execution helpers:
+
+```python
+import gzip
+import json
+import tempfile
+from pathlib import Path
+import polars as pl
+from tests import test_record_execution as probe
+
+with tempfile.TemporaryDirectory() as temporary:
+    directory = Path(temporary)
+    config = probe._config('rule')
+    config['sfd']['manifest']['backtest'] = {'product': {
+        'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
+        'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0,
+    }}
+    bars = pl.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
+    loop = probe._loop(config, bars, directory)
+    probe._run(loop, record_execution=True, record_model_outputs=True)
+    full = [(json.dumps(record) + '\n').encode('utf-8') for record in probe._records(directory)]
+    lean = [(json.dumps({k: v for k, v in json.loads(row).items() if k != 'trade_ledger'}) + '\n').encode('utf-8') for row in full]
+    print('logical full/without ledger:', sum(map(len, full)), sum(map(len, lean)))
+    print('compressed full/without ledger:', *(sum(len(gzip.compress(row, compresslevel=1, mtime=0)) for row in rows) for rows in (full, lean)))
+```
+
+Structural and relative-size regression checks run with `python -m pytest -q tests/test_recording_policy.py -k payload_projection`; exact compressed counts are not the acceptance criterion.
 
 ## Optional adaptive search
 

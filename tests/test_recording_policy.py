@@ -23,6 +23,7 @@ from limen.experiment.errors import StrictModeError
 from limen.inference import Trainer
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.compiler import build_pruning_strategies
+from limen.yaml.store import canonical_manifest_id
 from tests.test_experiment_objective import objective_config
 from tests.test_factorized_preparation import _config as factorized_config
 from tests.test_record_model_outputs import _config as binary_config
@@ -31,6 +32,7 @@ from tests.test_round_storage import _writer_record
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
 FULL = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
 LEAN = dict.fromkeys(FULL, False)
+_DEFAULT_REFERENCE = object()
 
 
 def _config(kind='serial'):
@@ -76,10 +78,10 @@ def _bars(kind='serial'):
     return pl.read_parquet(FIXTURE, n_rows=count).with_columns(pl.lit(3600).alias('base_interval'))
 
 
-def _loop(config, path, *, bars=None, search=True):
+def _loop(config, path, *, bars=None, search=True, reference=_DEFAULT_REFERENCE):
     return UniversalExperimentLoop(
         sfd=CompiledSFD(config), data=_bars() if bars is None else bars,
-        experiment_dir=path, yaml_reference=config,
+        experiment_dir=path, yaml_reference=config if reference is _DEFAULT_REFERENCE else reference,
         search_strategy=build_search_strategy(config) if search else None,
         pruning_strategies=build_pruning_strategies(config),
         checkpoint_interval=1, feedback_interval=1,
@@ -87,7 +89,7 @@ def _loop(config, path, *, bars=None, search=True):
 
 
 def _run(loop, *, kind='serial', **kwargs):
-    config = loop._yaml_reference
+    config = loop._compiled_yaml if loop._yaml_reference is None else loop._yaml_reference
     options = {
         'n_permutations': config['uel']['n_permutations'], 'prep_each_round': True,
         'progress_bar': False, 'record_execution': True, 'record_model_outputs': True,
@@ -140,8 +142,8 @@ def campaigns(tmp_path_factory):
     return result
 
 
-@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission'))
-def test_policy_validation(case, tmp_path):
+@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'compiled_sources'))
+def test_policy_validation(case, tmp_path, monkeypatch):
     config = _config('walk_forward')
     if case in ('yaml', 'native'):
         invalid = [False, True, [], 'predictions', {'unknown': True},
@@ -203,11 +205,49 @@ def test_policy_validation(case, tmp_path):
             report = json.loads((path / 'acceptance_report.json').read_text())
             assert isinstance(report['pbo'], float)
             assert isinstance(report['verdicts']['max_pbo'], bool)
+    elif case == 'compiled_sources':
+        class _PolicyResolved(RuntimeError):
+            pass
+
+        def resolved_before_dispatch(*args, **kwargs):
+            raise _PolicyResolved('recording admission completed')
+
+        monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', resolved_before_dispatch)
+        config['uel']['recording'] = {'predictions': False}
+        unchanged = copy.deepcopy(config)
+        no_policy = copy.deepcopy(config)
+        del no_policy['uel']['recording']
+        assert canonical_manifest_id(config) != canonical_manifest_id(no_policy)
+        bars = _bars('walk_forward')
+        for workers in (1, 2):
+            for label, declaration, expected in (
+                ('yaml', None, {**FULL, 'predictions': False}),
+                ('partial', {'trade_ledger': False}, {**FULL, 'trade_ledger': False}),
+                ('empty', {}, FULL),
+            ):
+                path = tmp_path / f'{workers}-{label}'
+                loop = _loop(config, path, bars=bars, reference=None)
+                options = {} if declaration is None else {'recording': declaration}
+                with pytest.raises(_PolicyResolved, match='admission completed'):
+                    _run(loop, workers=workers, post_processing=False, **options)
+                assert loop._recording == expected
+                assert not path.exists()
+            for label, declaration in (('omitted', None), ('native', FULL)):
+                conflicting = copy.deepcopy(config)
+                conflicting['uel']['recording'] = {'alignment': False}
+                path = tmp_path / f'{workers}-conflict-{label}'
+                loop = _loop(config, path, bars=bars, reference=conflicting)
+                options = {} if declaration is None else {'recording': declaration}
+                with pytest.raises(ValueError, match='recording'):
+                    _run(loop, workers=workers, post_processing=False, **options)
+                assert not path.exists()
+        assert config == unchanged
     else:
         config['uel']['recording'] = {'predictions': False}
         for label, options in (('yaml', {}), ('native', {'recording': FULL})):
             path = tmp_path / label
-            loop = _loop(config, path, bars=_bars('walk_forward'))
+            loop = _loop(config, path, bars=_bars('walk_forward'),
+                         reference=None if label == 'native' else config)
             _run(loop, kind='walk_forward', n_permutations=2, **options)
             records = _records(path)
             assert all(('preds' in fold) == (label == 'native')
@@ -215,8 +255,9 @@ def test_policy_validation(case, tmp_path):
             metadata = json.loads((path / 'metadata.json').read_text())
             assert metadata['recording'] == (FULL if label == 'native' else {**FULL, 'predictions': False})
             assert metadata['yaml_reference']['uel']['recording'] == {'predictions': False}
+            assert metadata['manifest_id'] == canonical_manifest_id(config)
             if label == 'native':
-                resumed = _loop(config, path, bars=_bars('walk_forward'))
+                resumed = _loop(config, path, bars=_bars('walk_forward'), reference=None)
                 _run(resumed, kind='walk_forward', n_permutations=2, resume=True)
                 assert _records(path) == records
                 assert resumed._recording == FULL
@@ -251,6 +292,11 @@ def test_payload_projection(kind, campaigns, tmp_path):
                 assert all('preds' in fold and 'net_returns' in fold for fold in right['folds'])
     assert 'recording' not in json.loads((full['path'] / 'metadata.json').read_text())
     assert json.loads((lean['path'] / 'metadata.json').read_text())['recording'] == LEAN
+    expected_identity = canonical_manifest_id(captured['config'])
+    for saved in (full, lean):
+        metadata = json.loads((saved['path'] / 'metadata.json').read_text())
+        assert metadata['manifest_id'] == expected_identity
+        assert metadata['yaml_reference'] == captured['config']
     original = copy.deepcopy(full['records'])
     loop = full['loop']
     previous = loop._recording
@@ -266,7 +312,9 @@ def test_payload_projection(kind, campaigns, tmp_path):
                 source = copy.deepcopy(record)
                 if 'learning_binding' in source:
                     source['learning_binding'] = source['learning_binding']['model']
+                before_write = copy.deepcopy(source)
                 _writer_record(loop, path, source)
+                assert source == before_write
             assert _records(directory) == [_project(record, policy) for record in original]
     finally:
         loop._recording = previous
@@ -365,29 +413,30 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         assert predictions[0] == predictions[1]
         assert chosen[0] == chosen[1]
     elif case == 'resume_rejection':
-        policies = [None, FULL, *({key: False} for key in FULL)]
-        for saved in ('full', 'lean'):
-            for index, policy in enumerate(policies):
-                if saved == 'full' and policy in (None, FULL):
-                    continue
-                path = tmp_path / f'{saved}-{index}'
-                shutil.copytree(captured[saved]['path'], path)
+        policies = [None, FULL, LEAN, *({key: False} for key in FULL)]
+        for kind, captured in campaigns.items():
+            for saved in ('full', 'lean'):
+                for index, policy in enumerate(policies):
+                    if saved == 'full' and policy in (None, FULL):
+                        continue
+                    path = tmp_path / f'{kind}-{saved}-{index}'
+                    shutil.copytree(captured[saved]['path'], path)
+                    before = _snapshot(path)
+                    loop = _loop(captured['config'], path, bars=captured['bars'])
+                    options = {} if policy is None else {'recording': policy}
+                    with pytest.raises(ValueError, match='recording'):
+                        _run(loop, kind=kind, resume=True, **options)
+                    assert _snapshot(path) == before
+            for label, options in (('omitted', {}), ('override', {'recording': FULL})):
+                path = tmp_path / f'{kind}-changed-yaml-{label}'
+                shutil.copytree(captured['full']['path'], path)
+                candidate = copy.deepcopy(captured['config'])
+                candidate['uel']['recording'] = {'alignment': False}
+                loop = _loop(candidate, path, bars=captured['bars'])
                 before = _snapshot(path)
-                loop = _loop(captured['config'], path, bars=captured['bars'])
-                options = {} if policy is None else {'recording': policy}
                 with pytest.raises(ValueError, match='recording'):
-                    _run(loop, resume=True, **options)
+                    _run(loop, kind=kind, resume=True, **options)
                 assert _snapshot(path) == before
-        for label, options in (('omitted', {}), ('override', {'recording': FULL})):
-            path = tmp_path / ('changed-yaml-' + label)
-            shutil.copytree(captured['full']['path'], path)
-            candidate = copy.deepcopy(captured['config'])
-            candidate['uel']['recording'] = {'alignment': False}
-            loop = _loop(candidate, path, bars=captured['bars'])
-            before = _snapshot(path)
-            with pytest.raises(ValueError, match='recording'):
-                _run(loop, resume=True, **options)
-            assert _snapshot(path) == before
     elif case == 'default_resume':
         path = tmp_path / 'default'
         shutil.copytree(captured['full']['path'], path)

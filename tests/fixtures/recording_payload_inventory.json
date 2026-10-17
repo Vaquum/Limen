@@ -1,6 +1,6 @@
 {
   "source": "tests/fixtures/spot_1h_20240101_20241231.parquet",
-  "method": "Existing production helper configs; all recording enabled; 2 rounds each. Group byte weights are exact logical JSON removal deltas. Compressed omission deltas recompress the same records and shared market layout without that group; estimates are not additive.",
+  "method": "Existing production helper configs; 2 rounds each. Ordinary cases enable execution and model-output recording; walk-forward uses the existing helper with execution enabled and model outputs disabled. Group byte weights are exact logical JSON removal deltas. Compressed omission deltas recompress the same records and shared market layout without that section; deltas are not additive.",
   "kinds": {
     "binary": {
       "rounds": 2,
@@ -299,12 +299,86 @@
   "timing": {
     "production_generation_seconds": 0.6008086248766631,
     "measurement_seconds": 0.426210125,
-    "limitations": "Tiny 2-round existing fixtures, not a campaign estimate; byte savings depend on predictions/trade activity. Probabilities are null on rule/ridge/event cases. All optional recording flags enabled; default run omits snapshot execution/market and model probabilities. Fold results/net returns may be required for existing analysis/resume/acceptance and are not omission recommendations."
+    "limitations": "Tiny 2-round existing fixtures, not a campaign estimate; byte savings depend on predictions/trade activity. Probabilities are null on rule/ridge/event cases. Ordinary cases enable both optional recording flags; walk-forward enables execution only. Default runs omit snapshot execution/market and model probabilities. Diagnostic section weights do not imply safe policy omission; PBO requires saved fold/timestamp evidence."
   },
   "recording_flags": {
-    "record_execution": true,
-    "record_model_outputs": true
+    "rule_binary_ridge_event": {
+      "record_execution": true,
+      "record_model_outputs": true
+    },
+    "walk_forward": {
+      "record_execution": true,
+      "record_model_outputs": false
+    }
   },
   "baseline_recording_policy": "Before optional recording groups; complete existing round payloads retained.",
-  "interpretation": "Measured fixture observations only. Preserve exact contracts, digests and learning bindings in retained records despite their byte cost. Whole-fold omission removes fold-local provenance with the omitted subtree. Scalar results and canonical walk-forward return artifacts are outside the byte omission estimates."
+  "interpretation": "Measured fixture observations only. Preserve exact contracts, digests and learning bindings in retained records despite their byte cost. Whole-fold omission removes fold-local provenance with the omitted subtree. Scalar results and canonical walk-forward return artifacts are outside the byte omission estimates.",
+  "counting": {
+    "logical_formula": "L(records) = sum(len((json.dumps(record) + '\\n').encode('utf-8')) for record in records)",
+    "json_settings": "Python json.dumps defaults, preserving record insertion order, followed by one newline per record; logical records restore shared market references.",
+    "section_formula": "logical_bytes = L(full_records) - L(records_without_section); logical_percent = round(100 * logical_bytes / L(full_records), 2).",
+    "section_keys": {
+      "predictions": [
+        "preds"
+      ],
+      "probabilities": [
+        "probs"
+      ],
+      "thresholds": [
+        "optimal_threshold",
+        "threshold_rule"
+      ],
+      "alignment": [
+        "alignment",
+        "learning_binding"
+      ],
+      "execution_series": [
+        "execution"
+      ],
+      "market_returns": [
+        "market"
+      ],
+      "trade_contract": [
+        "trade_contract",
+        "trade_contract_digest"
+      ],
+      "trade_ledger": [
+        "trade_ledger"
+      ],
+      "fold_results": [
+        "results"
+      ],
+      "fold_net_returns": [
+        "net_returns"
+      ]
+    },
+    "section_scope": "Remove listed keys from each top-level record and each retained fold only. Other nested structures remain unchanged. These diagnostic sections describe existing payloads, not the exact four recording-policy ownership sets.",
+    "alignment_limit": "The diagnostic alignment section includes the entire alignment object and any learning_binding. recording.alignment omits only missing_datetimes and test_datetimes and retains dated bounds and learning_binding; its attainable saving is smaller.",
+    "event_denominator": {
+      "case": "event",
+      "rounds": 2,
+      "logical_jsonl_bytes": 245352,
+      "ledger_removal_bytes": 218682,
+      "ledger_removal_percent": 89.13,
+      "not": "The denominator is not the combined ten-round inventory."
+    },
+    "compressed_formula": "Sum one gzip.compress((json.dumps(wire_record) + newline).encode(UTF-8), compresslevel=1, mtime=0) per record plus each distinct shared market blob once. Market blobs use the existing storage canonical JSON/digest layout.",
+    "compressed_scope": "round_data.jsonl.gz plus round_market files only; metadata, results, checkpoints, canonical return/report artifacts and filesystem allocation overhead are excluded.",
+    "portability": "Exact logical and compressed counts describe this baseline observation; neither is a portable numerical-library or zlib oracle. Regression acceptance checks field structure, scientific parity and relative storage reduction."
+  },
+  "reproduction": {
+    "baseline_git_ref": "a049505cb9f314fcb837acede70fdc1dab37ae58",
+    "from_repository_root": "python -m pytest -q tests/test_recording_policy.py -k payload_projection",
+    "event_probe_documentation": "docs/Universal-Experiment-Loop.md#recording-policy",
+    "event_steps": [
+      "bars = polars.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)",
+      "config = tests.test_record_execution._config('rule')",
+      "config['sfd']['manifest']['backtest'] = {'product': pinning['rule_binary_ridge_event']['event']}",
+      "Create a temporary directory; call tests.test_record_execution._loop(config, bars, directory).",
+      "Call tests.test_record_execution._run(loop, record_execution=True, record_model_outputs=True), which emits two rounds.",
+      "Read records with tests.test_record_execution._records(directory); compute L(full) and L(without trade_ledger) using the stated formula.",
+      "For this event case market/execution are null, so gzip each full/ledger-omitted JSON line independently at level1/mtime0; there are no market blobs."
+    ],
+    "remaining_cases": "Use tests.test_record_execution._config(kind), _loop and _run with the pinned ordinary source rows for rule/binary/ridge. For walk-forward use tests.test_walk_forward_uel._config(), _bars(), _loop and _run; existing helpers pin all dates/geometry/parameters."
+  }
 }

@@ -50,11 +50,14 @@ def validate_recorded_pbo(directory: Path, acceptance: Mapping[str, object]) -> 
 
 
 def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
+                      compiled_reference: Mapping[str, object] | None,
                       directory: Path | None, has_search: bool,
                       resume: bool, acceptance: Mapping[str, object] | None = None) -> dict[str, bool] | None:
+    if compiled_reference is not None and reference is not None and (_configured(compiled_reference) or _DEFAULTS) != (_configured(reference) or _DEFAULTS):
+        raise ValueError('Conflicting compiled YAML and yaml_reference recording declarations')
+    reference = compiled_reference if compiled_reference is not None else reference
     configured = _configured(reference)
     declared = value if value is not None else configured
-    explicit = declared is not None
 
     saved: dict[str, bool] | None = None
     metadata_path = None if directory is None else directory / 'metadata.json'
@@ -71,18 +74,18 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
         elif configured is not None and configured != saved:
             raise ValueError('Cannot resume with a different recording policy')
         if value is None and 'recording' in metadata:
-            declared, explicit = metadata['recording'], True
+            declared = metadata['recording']
 
-    policy = parse_recording(declared) if explicit else dict(_DEFAULTS)
+    policy = parse_recording(declared) if declared is not None else dict(_DEFAULTS)
     validate_pbo_recording(policy, acceptance)
-    if explicit and (not has_search or directory is None):
+    if declared is not None and (not has_search or directory is None):
         raise ValueError('recording requires search_strategy and experiment_dir')
     if resume:
         if saved is not None and saved != policy:
             raise ValueError('Cannot resume with a different recording policy')
         if not all(policy.values()):
             raise ValueError('Cannot resume a lighter recording policy: complete recorded recovery evidence is required')
-    return policy if explicit else None
+    return policy if declared is not None else None
 
 
 def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | None) -> dict[str, object]:

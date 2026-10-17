@@ -160,8 +160,11 @@ class UniversalExperimentLoop:
             record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None,
             recording: Mapping[str, bool] | None = None) -> None:
         self._recording = prepare_recording(recording, reference=self._yaml_reference,
+                                            compiled_reference=self._compiled_yaml,
                                             directory=self._experiment_dir, has_search=self._search_strategy is not None,
                                             resume=resume, acceptance=getattr(self.manifest, 'acceptance', None))
+        if self._recording is not None and self._yaml_reference is None:
+            self._yaml_reference = self._compiled_yaml
         original_prep, original_model = _parallel.begin_run(self, workers, prep_each_round, resume, post_processing, factorize, context_params, (params, prep, model))
         self._walk_forward = None
         self.convergence_report = None
@@ -998,7 +1001,7 @@ class UniversalExperimentLoop:
             missing_for_resume = [f for f in resume_required if f not in existing]
             if not missing_for_resume:
                 raise FileExistsError(
-                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} already contains artifacts: {', '.join(existing)}. Set resume=True to continue or choose a different experiment_dir."
+                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} already contains artifacts: {', '.join(existing)}. Choose a different experiment_dir, or use resume=True only when the saved recording policy permits recovery."
                 )
             raise FileExistsError(
                 f"UniversalExperimentLoop Experiment directory {self._experiment_dir} contains partial artifacts that resume=True cannot continue: {', '.join(existing)} (missing {', '.join(missing_for_resume)}). The previous run crashed before a complete checkpoint was written. Delete these files or choose a different experiment_dir."

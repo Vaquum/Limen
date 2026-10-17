@@ -1,4 +1,4 @@
-import limen.experiment._round_storage as _storage
+from limen.experiment import _round_storage as _storage, _recording
 import json
 import math
 from collections.abc import Mapping
@@ -12,7 +12,6 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfitting
-from limen.experiment._recording import validate_recorded_pbo
 
 __all__ = ['acceptance_report', 'read_acceptance']
 
@@ -132,11 +131,10 @@ def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], 
 
 
 def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None = None) -> dict[str, object] | None:
-    path = directory / 'trial_returns.parquet'
-    if not path.exists():
+    if not (path := directory / 'trial_returns.parquet').exists():
         return None
     thresholds = read_acceptance(acceptance) if acceptance is not None else {}
-    validate_recorded_pbo(directory, thresholds)
+    _recording.validate_recorded_pbo(directory, thresholds)
     frame = pl.read_parquet(path)
     if frame.schema != {'trial': pl.String, 'bar': pl.Int64, 'net_return': pl.Float64}:
         raise ValueError('Acceptance requires the recorded trial_returns.parquet schema')
