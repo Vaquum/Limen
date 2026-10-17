@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
+from importlib.metadata import version
 import json
 import os
 import platform
@@ -66,7 +67,9 @@ def _worker(args):
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     rss_mib = rss / (1024 ** 2 if sys.platform == 'darwin' else 1024)
     tracemalloc.start()
+    started = time.perf_counter()
     calculate(data)
+    memory_probe_ms = (time.perf_counter() - started) * 1000
     _, peak_bytes = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     np.savez(args.output, **{name: result[name].to_numpy()
@@ -75,6 +78,7 @@ def _worker(args):
             'dependency_import_ms': dependency_ms, 'indicator_import_ms': import_ms,
             'first_call_ms': first_ms, 'steady_ms': statistics.median(times),
             'samples_ms': times, 'peak_rss_mib': rss_mib,
+            'memory_probe_ms': memory_probe_ms,
             'traced_peak_mib': peak_bytes / 1024 ** 2,
             'schema': {name: str(dtype) for name, dtype in result.schema.items()},
             'polars_threads': pl.thread_pool_size(),
@@ -90,6 +94,27 @@ def _code_digest(root):
         digest.update(path.read_bytes())
     return digest.hexdigest()
 
+
+def _previous_report(args, report):
+    saved = args.output / 'report.json'
+    if not saved.exists():
+        return report
+    previous = json.loads(saved.read_text())
+    for key in ('reference', 'file_sha256', 'threads', 'hardware', 'processor'):
+        if previous[key] != report[key]:
+            raise ValueError(f'Existing report differs in {key}; use a new output directory')
+    environment = {'python': platform.python_version(), 'numpy': version('numpy'),
+                   'polars': version('polars')}
+    for pair in previous['results']:
+        if pair['before']['versions'] != environment or len(pair['before']['samples_ms']) != args.repeats:
+            raise ValueError('Existing report uses a different environment or repeat count')
+    if previous['code_sha256'] != report['code_sha256']:
+        previous['code_sha256'] = report['code_sha256']
+        previous['candidate'] = report['candidate']
+        for pair in previous['results']:
+            pair.pop('after', None)
+    return previous
+
 def _campaign(args, baseline):
     import numpy as np
 
@@ -102,13 +127,7 @@ def _campaign(args, baseline):
         'processor': subprocess.check_output(['/usr/sbin/sysctl', '-n', 'machdep.cpu.brand_string'],
                                             text=True).strip() if sys.platform == 'darwin' else platform.processor(),
         'threads': dict.fromkeys(THREADS, '1'), 'code_sha256': _code_digest(ROOT), 'results': []}
-    saved = args.output / 'report.json'
-    if saved.exists():
-        previous = json.loads(saved.read_text())
-        for key in ('reference', 'file_sha256', 'code_sha256', 'threads'):
-            if previous[key] != report[key]:
-                raise ValueError(f'Existing report differs in {key}; use a new output directory')
-        report = previous
+    report = _previous_report(args, report)
     existing = {(p['before']['rows'], p['before']['indicator']): p for p in report['results']}
     for rows in (20000, 83136):
         for name in args.indicators:
