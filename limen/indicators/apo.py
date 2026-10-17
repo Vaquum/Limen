@@ -5,6 +5,7 @@ from limen.indicators.ma import ma
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
+CMP_N_7 = 7
 CMP_N_8 = 8
 
 def apo(
@@ -50,7 +51,7 @@ def apo(
         period=fast_period,
         ma_type=ma_type,
     )
-    if ma_type == 7 and price_col != fast_col:
+    if ma_type == CMP_N_7 and price_col != fast_col:
         frame = frame.with_columns(pl.col(fast_col).alias(slow_col))
     else:
         frame = ma(
