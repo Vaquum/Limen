@@ -24,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@7f4fc3e22c37d6ff65e88745f38bd3157c663f7c # v4.9.1
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install limen package (and deps)
         run: |
@@ -34,9 +34,18 @@ jobs:
       - name: Run limen tests with coverage
         env:
           LIMEN_COVERAGE_RUN: '1'
+          COVERAGE_CORE: sysmon
         run: |
           set -x
           mkdir -p coverage-artifacts
+          python - <<'PY'
+          import coverage
+          import sys
+          measurement = coverage.Coverage()
+          measurement.start()
+          assert sys.monitoring.get_tool(sys.monitoring.COVERAGE_ID) == 'coverage.py', 'SysMonitor coverage is not active'
+          measurement.stop()
+          PY
           test_exit=0
           python -m coverage run -m tests.run || test_exit=$?
           if [ -f .coverage ]; then

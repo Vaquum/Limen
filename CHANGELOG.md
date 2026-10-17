@@ -1649,4 +1649,16 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.29.5] - 2026-10-17
 
+- Run the covered CI suite on Python 3.12 with monitoring-based coverage to reduce tracing overhead while retaining all tests, frozen numerical comparisons and runtime limits.
+
+## [5.29.6] - 2026-10-17
+
+- Vectorize homogeneous scalar parameter grids while retaining legacy inference for other inputs; remove the controlled-worker marker race and separate bounded startup from shutdown timing.
+
+## [5.29.7] - 2026-10-17
+
+- Enforce the covered test job’s Python 3.12 exception without changing the support floor; collect the interpreter contract in CI and reject coverage backend fallback.
+
+## [5.29.8] - 2026-10-17
+
 - Accelerate rolling midpoint/price windows and reuse Ultimate Oscillator terms without changing arithmetic order.
