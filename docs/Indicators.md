@@ -335,6 +335,37 @@ The original Hilbert implementation produces different flat-price phase results 
 
 CI runs covered exact equivalence and a three-sample untraced relative latency check for every changed indicator on 3,000 recorded bars. CCI must take less than half the baseline time; each remaining calculation must take less than 90%. The standalone 20k/83k benchmark additionally rejects any measured latency regression.
 
+### Remaining candlestick calculations
+
+The remaining 44 candlestick indicators convert input arrays to Python doubles once before their existing scalar loops. Small moving-total states use Python double lists. Pattern predicates, seeds and recurrence order stay unchanged; no native pattern rewrite or dependency is introduced.
+
+| Rows | Sum of standalone CPU ms, before → after | Sum of standalone wall ms, before → after | Largest peak RSS increase MiB |
+|---|---:|---:|---:|
+| 20,000 | 1799.4 → 654.6 | 3527.8 → 3256.5 | 0.8 |
+| 83,136 | 7190.9 → 2588.0 | 8778.7 → 4111.3 | 15.5 |
+
+These totals add independent calls; they are not a production-workload benchmark. Measurements use real BTCUSDT 15-minute bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall values are medians of three warm calls and include desktop contention. Input conversion adds bounded list storage; the table reports its observed RSS cost.
+
+All 88 size/indicator comparisons preserve exact outputs and schemas. CI also compares eager/lazy results on short, empty, flat, tied, missing, Float32/integer and alternate-column inputs and checks each indicator's CPU cost against the frozen original source. [Per-indicator first/warm timings, CPU, imports, RSS, input digests and schemas](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/candles_performance_benchmark.json) retain the full evidence.
+
+Each input list uses approximately 32 bytes per bar (a slot plus a Python double), so four inputs can add about 436 MiB on 3.57 million rows. This is an O(rows) speed/memory trade-off; the 83k RSS observations are not a bound for larger histories. Numerical outputs remain exact; NumPy scalar floating-point warning emission is not part of that numerical contract.
+
+CI structurally compares every predicate, arithmetic update and output assignment with the frozen source, allowing only input unboxing, small-state lists and explicit Float64 multiplication of penetration parameters. This protects patterns absent from the available real input without adding fabricated detections. CPU timing samples batch complete calls until the baseline consumes at least 30 ms.
+
+Reproduce all 44 pairs at both sizes using the committed real-data prefix:
+
+```sh
+LIMEN_BENCHMARK_CASES=tests/fixtures/candles_performance_cases.json \
+python tests/fixtures/candles_performance_replay.py \
+  --input tests/fixtures/indicator_equivalence_long.parquet \
+  --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 \
+  --output /tmp/limen-candles-replay --repeats 3
+```
+
+The replay supplies named cases to the existing benchmark; it adds no package runtime code. Each side runs in a fresh process with all six numerical thread limits set to one. RSS is sampled after warm calls, before the separate allocation-tracing probe; tracing does not enter timing. The committed input has the same 20k/83k OHLCV digests as the original cached snapshot, although its whole-file hash differs.
+
+In replay reports, `steady_ms` is median CPU time (`steady_clock: process_time`); `steady_wall_ms` and `samples_ms` retain the wall observations.
+
 ### Rolling extrema and Ultimate Oscillator
 
 MIDPRICE and MIDPOINT compare windows in the original order using array slices; few-output, long-window cases retain scalar comparisons. Ultimate Oscillator computes each pressure/range term once before the original accumulation loops. This preserves first-element NaNs, ties, warmups and arithmetic order.

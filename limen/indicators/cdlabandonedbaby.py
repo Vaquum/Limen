@@ -39,10 +39,10 @@ def _cdlabandonedbaby_impl(
     if penetration < 0.0 or penetration > CMP_N_3E37:
         raise ValueError('cdlabandonedbaby penetration must be between 0 and 3e37')
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    high_values = data[high_col].to_numpy().astype(float, copy=False).tolist()
+    low_values = data[low_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
@@ -106,14 +106,14 @@ def _cdlabandonedbaby_impl(
                 (
                     color_i2 == 1
                     and color_i0 == -1
-                    and close_values[i] < close_values[i - 2] - (real_body_i2 * penetration)
+                    and close_values[i] < close_values[i - 2] - (np.float64(real_body_i2) * penetration)
                     and candle_gap_up_1_2
                     and candle_gap_down_0_1
                 )
                 or (
                     color_i2 == -1
                     and color_i0 == 1
-                    and close_values[i] > close_values[i - 2] + (real_body_i2 * penetration)
+                    and close_values[i] > close_values[i - 2] + (np.float64(real_body_i2) * penetration)
                     and candle_gap_down_1_2
                     and candle_gap_up_0_1
                 )
