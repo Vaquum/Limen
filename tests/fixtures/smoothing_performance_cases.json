@@ -1,0 +1,64 @@
+{
+  "sma": {
+    "function": "sma",
+    "kwargs": {},
+    "outputs": [
+      "sma_30",
+      "close_sma_30"
+    ]
+  },
+  "sma168": {
+    "function": "sma",
+    "kwargs": {
+      "period": 168
+    },
+    "outputs": [
+      "sma_168",
+      "close_sma_168"
+    ]
+  },
+  "apo": {
+    "function": "apo",
+    "kwargs": {},
+    "outputs": [
+      "apo_12_26_0"
+    ]
+  },
+  "ppo": {
+    "function": "ppo",
+    "kwargs": {},
+    "outputs": [
+      "ppo_12_26_0"
+    ]
+  },
+  "apo7": {
+    "function": "apo",
+    "kwargs": {
+      "ma_type": 7
+    },
+    "outputs": [
+      "apo_12_26_7"
+    ]
+  },
+  "ppo7": {
+    "function": "ppo",
+    "kwargs": {
+      "ma_type": 7
+    },
+    "outputs": [
+      "ppo_12_26_7"
+    ]
+  },
+  "macdext7": {
+    "function": "macdext",
+    "kwargs": {
+      "fast_ma_type": 7,
+      "slow_ma_type": 7
+    },
+    "outputs": [
+      "macdext",
+      "macdext_signal",
+      "macdext_hist"
+    ]
+  }
+}

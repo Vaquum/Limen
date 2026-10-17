@@ -1,0 +1,21 @@
+{
+  "commit": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
+  "sources": {
+    "limen/indicators/_ema.py": "9e0e31bc809805c59db34de4823d00b119d472ee7503b81436e0c7a0960e87d1",
+    "limen/indicators/_hilbert.py": "b5bfac436ff43b77e28c30847d91c7ae12e9a921fd7b22f44b22cb6f3770d36b",
+    "limen/indicators/apo.py": "b784c2aaaa5037c46080f3bf02531f8a6ffa7c40d4bedf4c49f0f5d1722717ce",
+    "limen/indicators/dema.py": "365ddad8f6961ed6587eb71544c5dc74a3ca078ae2f712b0583528238721acd3",
+    "limen/indicators/ema.py": "72c1ad7cba84accb71163cf916f50732a10fe3d286dc9f0c05a26605aa993b64",
+    "limen/indicators/kama.py": "0bbd79f10babdba6a124ef15303f45a073b4cdacaabe6338f5462af9890d2d4a",
+    "limen/indicators/ma.py": "5a1bd519674c33715b41fffa2aa32339b384720d329de6f5bf7728d45e50c7fe",
+    "limen/indicators/macdext.py": "ef8636f2e7bd833827dbc034f2f053df2b702fb33ed1da8138e3fabe67f4c931",
+    "limen/indicators/mama.py": "d0fc0cac1ccd50201e55a7b4b3846403ff4b2a73538cb344868fe8abca614782",
+    "limen/indicators/ppo.py": "e9bfd3840ed01cde29efbebc3139331345356a97f00854512cd53dceb4c23ead",
+    "limen/indicators/sma.py": "83f7a75ff923d89e7c6792ef3dde8c5ae18e8f2fa201d83e91bd5ce695a9f350",
+    "limen/indicators/t3.py": "3aaad32bbe68953a50a67f452677e64bac5556be4e3ee91e082f11897282e432",
+    "limen/indicators/tema.py": "5a217cd691dda445bacdd6f616f083bb21e98732f7d41259dce5679441444b5b",
+    "limen/indicators/trima.py": "03c698598ecb2a996b2efdf6787815143d4f46dd8d66bed7387fdc3f8775e6eb",
+    "limen/indicators/wma.py": "1aaced63d59df93776228ff7e919b25dfb253780c72d8193657f2ef8efcddfff"
+  },
+  "archive_sha256": "908b13455456f096017e8fd3b1f07f86fc5956ae8acf3650519f79f3d8147eea"
+}

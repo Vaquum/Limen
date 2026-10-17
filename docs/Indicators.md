@@ -365,3 +365,44 @@ python tests/fixtures/candles_performance_replay.py \
 The replay supplies named cases to the existing benchmark; it adds no package runtime code. Each side runs in a fresh process with all six numerical thread limits set to one. RSS is sampled after warm calls, before the separate allocation-tracing probe; tracing does not enter timing. The committed input has the same 20k/83k OHLCV digests as the original cached snapshot, although its whole-file hash differs.
 
 In replay reports, `steady_ms` is median CPU time (`steady_clock: process_time`); `steady_wall_ms` and `samples_ms` retain the wall observations.
+
+### Shared moving averages
+
+SMA keeps its original seed and ordered add/subtract recurrence in a native cumulative scan. APO/PPO reuse MAMA only when their first output does not overwrite the input column; MACDEXT reuses it when fast and slow averages receive the same segment. No cross-call cache is added.
+
+| Calculation | Rows | CPU ms, before → after | Indicative wall ms, before → after | Peak RSS MiB, before → after |
+|---|---:|---:|---:|---:|
+| `sma` | 20,000 | 5.21 → 0.46 | 47.85 → 0.50 | 85.1 → 84.2 |
+| `sma(period=168)` | 20,000 | 5.00 → 0.46 | 6.56 → 0.57 | 84.0 → 84.4 |
+| `apo` | 20,000 | 12.60 → 1.30 | 26.36 → 10.61 | 84.2 → 83.9 |
+| `ppo` | 20,000 | 10.53 → 1.44 | 12.35 → 1.49 | 84.2 → 83.8 |
+| `apo(ma_type=7)` | 20,000 | 75.47 → 33.63 | 227.05 → 41.04 | 84.2 → 84.1 |
+| `ppo(ma_type=7)` | 20,000 | 72.78 → 35.79 | 143.48 → 54.00 | 84.0 → 83.8 |
+| `macdext(fast_ma_type=7, slow_ma_type=7)` | 20,000 | 80.72 → 38.66 | 127.91 → 87.62 | 84.4 → 84.2 |
+| `sma` | 83,136 | 20.10 → 1.07 | 23.96 → 2.19 | 94.5 → 98.3 |
+| `sma(period=168)` | 83,136 | 21.31 → 1.20 | 28.81 → 1.67 | 94.7 → 98.1 |
+| `apo` | 83,136 | 45.74 → 3.14 | 88.30 → 4.96 | 95.3 → 101.6 |
+| `ppo` | 83,136 | 45.62 → 2.89 | 202.22 → 3.49 | 96.6 → 100.8 |
+| `apo(ma_type=7)` | 83,136 | 301.21 → 151.92 | 1061.10 → 200.47 | 98.9 → 100.6 |
+| `ppo(ma_type=7)` | 83,136 | 303.94 → 152.55 | 1915.80 → 291.99 | 100.4 → 101.4 |
+| `macdext(fast_ma_type=7, slow_ma_type=7)` | 83,136 | 325.87 → 155.27 | 1060.79 → 218.33 | 104.3 → 107.0 |
+
+Other parameters use their public defaults. Measurements use real BTCUSDT bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall values are medians of three warm calls under desktop contention. RSS includes imports and input loading.
+
+Every output and schema compares exactly in all fourteen size/calculation pairs. CI also checks eager/lazy execution, all APO/PPO moving-average types, missing values, ties, maximum-period accumulation, input-column collisions and MAMA invocation counts. [Raw first/warm samples, CPU, imports, RSS, input digests and schemas](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/smoothing_performance_benchmark.json) preserve the evidence.
+
+CPU medians are the performance measure; contended desktop wall samples are indicative only. The scan uses O(rows) extra storage (up to 5 MiB RSS observed at 83,136 rows). SMA retains permanent NaN propagation. NumPy floating-point warning wording is not part of the numerical contract. MAMA reuse applies only to type 7; types 1–6 and 8 keep their existing calculations.
+
+Reproduce the seven parameter sets at both sizes with the committed real-data prefix (the OHLCV hashes above match the original snapshot):
+
+```sh
+LIMEN_BENCHMARK_CASES=tests/fixtures/smoothing_performance_cases.json \
+python tests/fixtures/candles_performance_replay.py \
+  --input tests/fixtures/indicator_equivalence_long.parquet \
+  --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 \
+  --output /tmp/limen-smoothing-replay --repeats 3
+```
+
+The replay uses the existing benchmark with named parameter sets. It runs each implementation in a fresh process, pins all six thread limits to one, checks every recorded output and schema, and includes input conversion in timing. RSS is the process high-water mark after warm calls; allocation tracing runs afterwards and does not enter timing or RSS.
+
+In replay reports, `steady_ms` is median CPU time (`steady_clock: process_time`); `steady_wall_ms` and `samples_ms` retain the wall observations.
