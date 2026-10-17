@@ -70,9 +70,7 @@ def _required_status_contexts() -> list[str]:
     raise AssertionError('required_status_checks rule missing from ruleset snapshot')
 
 
-# This project ships a package, so two workflows must run on more than the
-# floor interpreter: packaging builds and audits the distributions, and the
-# install matrix proves the built wheel imports on every supported version.
+# The packaging workflow builds on 3.12 and installs across supported versions.
 # Other jobs use the floor, except covered tests: sysmon requires Python 3.12.
 MULTI_INTERPRETER_WORKFLOWS: Final[frozenset[str]] = frozenset({
     'pr_checks_packaging.yml',

@@ -31,20 +31,28 @@ jobs:
           pip install --require-hashes -r requirements/ci/research-env.txt
           pip install --no-deps -e .
 
+      - name: Verify coverage backend contract
+        env:
+          LIMEN_COVERAGE_RUN: '1'
+          COVERAGE_CORE: sysmon
+        run: python -m pytest -q governance/tests/test_tests_ci_contract.py
+
       - name: Run limen tests with coverage
         env:
           LIMEN_COVERAGE_RUN: '1'
           COVERAGE_CORE: sysmon
         run: |
-          set -x
+          set -euxo pipefail
           mkdir -p coverage-artifacts
           python - <<'PY'
           import coverage
           import sys
           measurement = coverage.Coverage()
           measurement.start()
-          assert sys.monitoring.get_tool(sys.monitoring.COVERAGE_ID) == 'coverage.py', 'SysMonitor coverage is not active'
+          active = sys.monitoring.get_tool(sys.monitoring.COVERAGE_ID) == 'coverage.py'
           measurement.stop()
+          if not active:
+              raise SystemExit('SysMonitor coverage is not active')
           PY
           test_exit=0
           python -m coverage run -m tests.run || test_exit=$?

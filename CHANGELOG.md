@@ -1672,3 +1672,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.30.1] - 2026-10-17
 
 - Execute SMA updates as an ordered native cumulative scan and reuse identical MAMA calculations in APO, PPO and MACDEXT.
+
+## [5.30.2] - 2026-10-17
+
+- Reject coverage command, probe and collection regressions; execute supported and unsupported backend proofs in the covered test job.
