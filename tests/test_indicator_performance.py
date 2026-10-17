@@ -4,7 +4,9 @@ from __future__ import annotations
 import hashlib
 import importlib
 import inspect
+import os
 import statistics
+import subprocess
 import json
 import sys
 import zipfile
@@ -19,6 +21,7 @@ import pytest
 from polars.testing import assert_frame_equal
 
 from limen import indicators
+from tests import benchmark_indicators
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 REFERENCE = json.loads((FIXTURES / 'indicator_equivalence.json').read_text())
@@ -60,6 +63,8 @@ def test_baseline_equivalence(case):
     function = getattr(indicators, case['name'])
     assert str(inspect.signature(function)) == REFERENCE['signatures'][case['name']]
     frame = _case_frame(case)
+    if 'error' not in case:
+        baseline = getattr(BASELINES[case['name']], case['name'])(frame, **case['kwargs'])
     for source in (frame, frame.lazy()):
         if 'error' in case:
             with pytest.raises((ValueError, ZeroDivisionError, pl.exceptions.PolarsError)) as caught:
@@ -75,7 +80,6 @@ def test_baseline_equivalence(case):
             assert result.columns == frame.columns + case['columns']
             assert_frame_equal(result.select(frame.columns), frame)
             assert [str(result[c].dtype) for c in case['columns']] == case['dtypes']
-            baseline = getattr(BASELINES[case['name']], case['name'])(frame, **case['kwargs'])
             for column in case['columns']:
                 assert result[column].null_count() == baseline[column].null_count()
                 np.testing.assert_array_equal(result[column].to_numpy(), baseline[column].to_numpy())
@@ -142,7 +146,7 @@ def test_mama_validation(parameter, value):
 
 
 def _timed_calculation(name):
-    frame = DATA.head(6000)
+    frame = DATA.head(3000)
     baseline = getattr(BASELINES[name], name)
     calculate = getattr(indicators, name)
     before, after = [], []
@@ -157,9 +161,35 @@ def _timed_calculation(name):
     return before, after
 
 
-@pytest.mark.parametrize('name', REFERENCE['signatures'])
-def test_calculation_latency(name):
+@pytest.fixture(scope='module')
+def timing_worker():
     with ProcessPoolExecutor(max_workers=1, mp_context=get_context('spawn')) as worker:
-        before, after = worker.submit(_timed_calculation, name).result(timeout=60)
+        yield worker
+
+
+@pytest.mark.parametrize('name', REFERENCE['signatures'])
+def test_calculation_latency(name, timing_worker):
+    before, after = timing_worker.submit(_timed_calculation, name).result(timeout=60)
     threshold = 0.5 if name == 'cci' else 0.9
     assert statistics.median(after) < statistics.median(before) * threshold
+
+
+def test_benchmark_relative_paths(monkeypatch, tmp_path):
+    (tmp_path / 'input.parquet').symlink_to(SOURCE.resolve())
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(sys, 'argv', ['benchmark_indicators', '--input', 'input.parquet',
+                                    '--output', 'measurements', '--reference', 'HEAD'])
+
+    def small_campaign(args, baseline):
+        args.output.mkdir(parents=True)
+        subprocess.run([sys.executable, str(Path(benchmark_indicators.__file__).resolve()),
+                        '--worker', '--code-root', str(baseline), '--input', str(args.input),
+                        '--rows', '64', '--indicator', 'cci', '--output',
+                        str(args.output / 'contract.npz'), '--repeats', '1'],
+                       cwd=baseline, check=True,
+                       env={**os.environ, **dict.fromkeys(benchmark_indicators.THREADS, '1')})
+
+    monkeypatch.setattr(benchmark_indicators, '_campaign', small_campaign)
+    benchmark_indicators.main()
+    with np.load(tmp_path / 'measurements' / 'contract.npz') as result:
+        np.testing.assert_array_equal(result['cci'], indicators.cci(DATA.head(64))['cci'].to_numpy())

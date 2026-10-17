@@ -181,6 +181,8 @@ def main():
     parser.add_argument('--rows', type=int, help=argparse.SUPPRESS)
     parser.add_argument('--indicator', help=argparse.SUPPRESS)
     args = parser.parse_args()
+    args.input = args.input.resolve()
+    args.output = args.output.resolve()
     if args.worker:
         sys.stdout.write(json.dumps(_worker(args)) + '\n')
     else:
