@@ -334,3 +334,22 @@ The 409 contract cases compare the candidate with the original source on the sam
 The original Hilbert implementation produces different flat-price phase results across the macOS and Linux runtimes, where tiny floating-point differences reach zero-sensitive phase branches. Therefore, a macOS-only output snapshot is not a portable oracle. `indicator_equivalence_reference.zip` contains the original source with only its internal import namespace relocated; committed SHA-256 values verify every original file. Tests compare both implementations within each runtime instead of accepting a numerical discrepancy.
 
 CI runs covered exact equivalence and a three-sample untraced relative latency check for every changed indicator on 3,000 recorded bars. CCI must take less than half the baseline time; each remaining calculation must take less than 90%. The standalone 20k/83k benchmark additionally rejects any measured latency regression.
+
+### Rolling extrema and Ultimate Oscillator
+
+MIDPRICE and MIDPOINT compare windows in the original order using array slices; few-output, long-window cases retain scalar comparisons. Ultimate Oscillator computes each pressure/range term once before the original accumulation loops. This preserves first-element NaNs, ties, warmups and arithmetic order.
+
+| Calculation | Rows | Wall ms, before → after | CPU ms, before → after | Peak RSS MiB, before → after |
+|---|---:|---:|---:|---:|
+| `midprice` | 20,000 | 92.01 → 0.61 | 75.49 → 0.61 | 85.3 → 83.6 |
+| `midpoint` | 20,000 | 69.84 → 0.63 | 28.83 → 0.63 | 84.1 → 83.9 |
+| `midprice168` | 20,000 | 1847.92 → 14.21 | 919.89 → 9.45 | 83.7 → 83.6 |
+| `midpoint168` | 20,000 | 490.62 → 10.04 | 304.63 → 6.86 | 83.8 → 83.6 |
+| `ultosc` | 20,000 | 110.69 → 9.19 | 74.80 → 8.31 | 84.2 → 83.4 |
+| `midprice` | 83,136 | 498.19 → 2.92 | 312.87 → 2.54 | 95.1 → 100.0 |
+| `midpoint` | 83,136 | 234.71 → 2.13 | 129.12 → 2.11 | 94.5 → 98.8 |
+| `midprice168` | 83,136 | 6445.98 → 70.65 | 3836.22 → 29.07 | 95.6 → 101.4 |
+| `midpoint168` | 83,136 | 2207.32 → 26.08 | 1310.78 → 25.14 | 95.3 → 101.1 |
+| `ultosc` | 83,136 | 287.63 → 43.40 | 277.20 → 37.68 | 95.1 → 108.4 |
+
+A `168` suffix denotes period 168; other periods use their public defaults. Measurements use real BTCUSDT bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall timings are medians of three warm calls under desktop contention. RSS includes imports and loaded input. All ten comparisons preserve every output and schema exactly; regression tests also cover eager/lazy execution, missing values, flat/tied inputs and full windows at period 100,000. [Raw samples, imports, input digests and schemas](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/extrema_performance_benchmark.json) record the evidence.
