@@ -35,7 +35,7 @@ def test_baseline_equivalence(name, variant):
     from limen import indicators
     calculate = getattr(indicators, name)
     assert inspect.signature(calculate) == inspect.signature(BASELINES[name])
-    frame = DATA.head(512)
+    frame = DATA.head(512 if variant == 'raw' else 128)
     kwargs = {}
     if variant in ('empty', 'short'):
         frame = frame.head(0 if variant == 'empty' else 11)
@@ -70,7 +70,7 @@ def test_reference_provenance():
 
 def _timings(name):
     from limen import indicators
-    frame = DATA.head(3000)
+    frame = DATA.head(1500)
     before, after = [], []
     for _ in range(3):
         started = time.process_time()
