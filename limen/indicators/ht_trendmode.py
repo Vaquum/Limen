@@ -216,10 +216,10 @@ def _ht_trendmode_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np
         imag_part = 0.0
 
         idx = smooth_price_idx
-        for sine, cosine in _phase_weights(dc_period_int):
+        for sine_weight, cosine_weight in _phase_weights(dc_period_int):
             temp_real2 = smooth_price[idx]
-            real_part += sine * temp_real2
-            imag_part += cosine * temp_real2
+            real_part += sine_weight * temp_real2
+            imag_part += cosine_weight * temp_real2
             if idx == 0:
                 idx = _SMOOTH_PRICE_SIZE - 1
             else:
