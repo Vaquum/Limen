@@ -3,6 +3,8 @@ import numpy.typing as npt
 import polars as pl
 
 
+__all__ = ['midprice', 'window_extrema']
+
 CMP_N_100000 = 100000
 CMP_N_2 = 2
 
@@ -14,25 +16,31 @@ def _midprice_from_arrays(high_values: npt.NDArray[np.float64], low_values: npt.
     if n <= lookback_total:
         return out
 
-    today = lookback_total
-    trailing_idx = 0
-    while today < n:
-        lowest = low_values[trailing_idx]
-        highest = high_values[trailing_idx]
-        i = trailing_idx + 1
-        while i <= today:
-            low_tmp = low_values[i]
-            lowest = min(lowest, low_tmp)
-            high_tmp = high_values[i]
-            highest = max(highest, high_tmp)
-            i += 1
-
-        out[today] = (highest + lowest) / 2.0
-        today += 1
-        trailing_idx += 1
+    lowest, highest = window_extrema(high_values, low_values, period)
+    out[lookback_total:] = (highest + lowest) / 2.0
 
     return out
 
+
+
+def window_extrema(high: npt.NDArray[np.float64], low: npt.NDArray[np.float64],
+                   period: int) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    count = high.size - period + 1
+    lowest, highest = low[:count].copy(), high[:count].copy()
+    if count < period:
+        high_list, low_list = high.tolist(), low.tolist()
+        for row in range(count):
+            bottom, top = low_list[row], high_list[row]
+            for index in range(row + 1, row + period):
+                bottom = min(bottom, low_list[index])
+                top = max(top, high_list[index])
+            lowest[row], highest[row] = bottom, top
+    else:
+        for lag in range(1, period):
+            candidate_low, candidate_high = low[lag:lag + count], high[lag:lag + count]
+            lowest = np.where(candidate_low < lowest, candidate_low, lowest)
+            highest = np.where(candidate_high > highest, candidate_high, highest)
+    return lowest, highest
 
 def midprice(
     data: pl.DataFrame,
