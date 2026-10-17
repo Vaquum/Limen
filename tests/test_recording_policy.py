@@ -208,16 +208,17 @@ def test_policy_validation(case, tmp_path):
         for label, options in (('yaml', {}), ('native', {'recording': FULL})):
             path = tmp_path / label
             loop = _loop(config, path, bars=_bars('walk_forward'))
-            _run(loop, kind='walk_forward', n_permutations=1, **options)
-            record = _records(path)[0]
-            assert all(('preds' in fold) == (label == 'native') for fold in record['folds'])
+            _run(loop, kind='walk_forward', n_permutations=2, **options)
+            records = _records(path)
+            assert all(('preds' in fold) == (label == 'native')
+                       for record in records for fold in record['folds'])
             metadata = json.loads((path / 'metadata.json').read_text())
             assert metadata['recording'] == (FULL if label == 'native' else {**FULL, 'predictions': False})
             assert metadata['yaml_reference']['uel']['recording'] == {'predictions': False}
             if label == 'native':
                 resumed = _loop(config, path, bars=_bars('walk_forward'))
-                _run(resumed, kind='walk_forward', n_permutations=1, resume=True)
-                assert _records(path) == [record]
+                _run(resumed, kind='walk_forward', n_permutations=2, resume=True)
+                assert _records(path) == records
                 assert resumed._recording == FULL
 
 
@@ -391,10 +392,11 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         path = tmp_path / 'default'
         shutil.copytree(captured['full']['path'], path)
         records = _records(path)
+        persisted = pl.read_csv(path / 'results.csv', schema_overrides={'_convergence_warning': pl.Boolean})
         loop = _loop(captured['config'], path, bars=captured['bars'])
         _run(loop, resume=True)
         assert _records(path) == records
-        assert_frame_equal(loop.experiment_log, captured['full']['loop'].experiment_log, check_dtypes=False)
+        assert_frame_equal(loop.experiment_log, persisted)
     elif case == 'cli':
         config = _config('walk_forward')
         config['sfd']['manifest']['data_source']['params']['row_count_limit'] = 384
