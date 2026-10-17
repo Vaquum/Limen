@@ -366,6 +366,39 @@ The replay supplies named cases to the existing benchmark; it adds no package ru
 
 In replay reports, `steady_ms` is median CPU time (`steady_clock: process_time`); `steady_wall_ms` and `samples_ms` retain the wall observations.
 
+### Rolling extrema and Ultimate Oscillator
+
+MIDPRICE and MIDPOINT compare windows in the original order using array slices; few-output, long-window cases retain scalar comparisons. Ultimate Oscillator computes each pressure/range term once before the original accumulation loops. This preserves first-element NaNs, ties, warmups and arithmetic order.
+
+| Calculation | Rows | Wall ms, before → after | CPU ms, before → after | Peak RSS MiB, before → after |
+|---|---:|---:|---:|---:|
+| `midprice` | 20,000 | 92.01 → 0.61 | 75.49 → 0.61 | 85.3 → 83.6 |
+| `midpoint` | 20,000 | 69.84 → 0.63 | 28.83 → 0.63 | 84.1 → 83.9 |
+| `midprice168` | 20,000 | 1847.92 → 14.21 | 919.89 → 9.45 | 83.7 → 83.6 |
+| `midpoint168` | 20,000 | 490.62 → 10.04 | 304.63 → 6.86 | 83.8 → 83.6 |
+| `ultosc` | 20,000 | 110.69 → 9.19 | 74.80 → 8.31 | 84.2 → 83.4 |
+| `midprice` | 83,136 | 498.19 → 2.92 | 312.87 → 2.54 | 95.1 → 100.0 |
+| `midpoint` | 83,136 | 234.71 → 2.13 | 129.12 → 2.11 | 94.5 → 98.8 |
+| `midprice168` | 83,136 | 6445.98 → 70.65 | 3836.22 → 29.07 | 95.6 → 101.4 |
+| `midpoint168` | 83,136 | 2207.32 → 26.08 | 1310.78 → 25.14 | 95.3 → 101.1 |
+| `ultosc` | 83,136 | 287.63 → 43.40 | 277.20 → 37.68 | 95.1 → 108.4 |
+
+A `168` suffix denotes period 168; other periods use their public defaults. Measurements use real BTCUSDT bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall timings are medians of three warm calls under desktop contention. RSS includes imports and loaded input. All ten comparisons preserve every output and schema exactly; regression tests also cover eager/lazy execution, missing values, flat/tied inputs and full windows at period 100,000. [Raw samples, imports, input digests and schemas](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/extrema_performance_benchmark.json) record the evidence.
+
+Extrema seed each output from its oldest element and apply strict comparisons in chronological order: a seed NaN persists, while later NaNs do not replace the seed. ULTOSC keeps its original sequential sums and epsilon branches; high/low NaN totals can produce a permanent zero tail, an existing difference from TA-Lib preserved by this performance change. Working storage is O(rows); RSS observations are diagnostic, not a memory-reduction claim.
+
+Reproduce the five parameter sets at both sizes through the shared replay, using the committed real-data prefix:
+
+```sh
+LIMEN_BENCHMARK_CASES=tests/fixtures/extrema_performance_cases.json \
+python tests/fixtures/candles_performance_replay.py \
+  --input tests/fixtures/indicator_equivalence_long.parquet \
+  --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 \
+  --output /tmp/limen-extrema-replay --repeats 3
+```
+
+The replay uses the existing benchmark. Each implementation runs in a fresh process with six numerical thread limits pinned to one. RSS is sampled before the separate allocation-tracing probe. CPU medians measure execution cost; desktop wall values remain indicative.
+
 ### Shared moving averages
 
 SMA keeps its original seed and ordered add/subtract recurrence in a native cumulative scan. APO/PPO reuse MAMA only when their first output does not overwrite the input column; MACDEXT reuses it when fast and slow averages receive the same segment. No cross-call cache is added.

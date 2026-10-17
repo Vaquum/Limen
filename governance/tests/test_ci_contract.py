@@ -136,12 +136,9 @@ def test_update_changelog_script_removed() -> None:
 def test_typing_gate_setup_failures_exit_2() -> None:
     with tempfile.TemporaryDirectory() as td:
         tmp = Path(td) / 'repo'
-        shutil.copytree(
-            REPO_ROOT,
-            tmp,
-            dirs_exist_ok=True,
-            ignore=shutil.ignore_patterns('.git'),
-        )
+        (tmp / 'governance').mkdir(parents=True)
+        for name in ('typing_gate.py', '_common.py'):
+            shutil.copy2(REPO_ROOT / 'governance' / name, tmp / 'governance' / name)
         (tmp / 'pyproject.toml').write_text('not = [valid\n', encoding='utf-8')
 
         result = subprocess.run(

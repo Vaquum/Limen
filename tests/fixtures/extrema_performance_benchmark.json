@@ -1,0 +1,961 @@
+{
+  "reference": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
+  "candidate": "23f0a0c65a702d313695bff5126d76381b7c75e6",
+  "input": "/Users/mikkokotila/.cache/limen/datasets/vaquum--binance_btcusdt_15m_klines/btcusdt_15m_kline_20200101_to_20261003.parquet",
+  "file_sha256": "04cdc6b715daa4ad32b2594fcb33a2c2f3aea100eb17e131182391880a46c443",
+  "hardware": "macOS-26.6.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "processor": "Apple M1 Max",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "POLARS_MAX_THREADS": "1"
+  },
+  "code_sha256": "4ef99d26bb15d57c9757f65c5b8361a235f4097a77778952c1f90d2d33dfe5ac",
+  "results": [
+    {
+      "before": {
+        "indicator": "midprice",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 348.288832930848,
+        "indicator_import_ms": 248.72883292846382,
+        "first_call_ms": 124.2467921692878,
+        "steady_ms": 92.01391716487706,
+        "samples_ms": [
+          92.01391716487706,
+          90.42395907454193,
+          115.29858293943107
+        ],
+        "cpu_samples_ms": [
+          75.494,
+          73.93800000000006,
+          79.93700000000004
+        ],
+        "peak_rss_mib": 85.296875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midprice",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 220.79379204660654,
+        "indicator_import_ms": 214.78816703893244,
+        "first_call_ms": 2.718375064432621,
+        "steady_ms": 0.6114160642027855,
+        "samples_ms": [
+          0.6822079885751009,
+          0.6114160642027855,
+          0.5934580694884062
+        ],
+        "cpu_samples_ms": [
+          0.6820000000000159,
+          0.6120000000000014,
+          0.5940000000000389
+        ],
+        "peak_rss_mib": 83.625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midpoint",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 250.90254191309214,
+        "indicator_import_ms": 80.8287498075515,
+        "first_call_ms": 55.90600008144975,
+        "steady_ms": 69.8427080642432,
+        "samples_ms": [
+          52.167708054184914,
+          69.8427080642432,
+          121.9965829513967
+        ],
+        "cpu_samples_ms": [
+          28.27099999999999,
+          29.386000000000024,
+          28.828999999999994
+        ],
+        "peak_rss_mib": 84.0625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midpoint",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 400.2042079810053,
+        "indicator_import_ms": 76.891333097592,
+        "first_call_ms": 1.0881249327212572,
+        "steady_ms": 0.6317500956356525,
+        "samples_ms": [
+          0.6317500956356525,
+          1.898874994367361,
+          0.6232911255210638
+        ],
+        "cpu_samples_ms": [
+          0.6309999999999927,
+          0.8080000000000309,
+          0.6240000000000134
+        ],
+        "peak_rss_mib": 83.890625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midprice168",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 224.72133301198483,
+        "indicator_import_ms": 27.38604205660522,
+        "first_call_ms": 1218.572499928996,
+        "steady_ms": 1847.9165839962661,
+        "samples_ms": [
+          1463.8762501999736,
+          1847.9165839962661,
+          2145.6377499271184
+        ],
+        "cpu_samples_ms": [
+          891.2439999999999,
+          919.8919999999999,
+          953.001
+        ],
+        "peak_rss_mib": 83.734375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midprice168",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 303.8894578348845,
+        "indicator_import_ms": 25.55283298715949,
+        "first_call_ms": 18.217124976217747,
+        "steady_ms": 14.209375018253922,
+        "samples_ms": [
+          17.773333005607128,
+          11.22391619719565,
+          14.209375018253922
+        ],
+        "cpu_samples_ms": [
+          11.143000000000015,
+          7.853999999999973,
+          9.450000000000014
+        ],
+        "peak_rss_mib": 83.609375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midpoint168",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 236.80549999698997,
+        "indicator_import_ms": 26.1632080655545,
+        "first_call_ms": 467.67387515865266,
+        "steady_ms": 490.61824986711144,
+        "samples_ms": [
+          645.4198330175132,
+          490.61824986711144,
+          443.5412911698222
+        ],
+        "cpu_samples_ms": [
+          305.808,
+          304.63399999999996,
+          302.9710000000001
+        ],
+        "peak_rss_mib": 83.8125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midpoint168",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 205.94845805317163,
+        "indicator_import_ms": 34.930875059217215,
+        "first_call_ms": 34.45991710759699,
+        "steady_ms": 10.038791922852397,
+        "samples_ms": [
+          16.66287495754659,
+          10.038791922852397,
+          9.087083861231804
+        ],
+        "cpu_samples_ms": [
+          8.165000000000006,
+          6.863000000000036,
+          6.672999999999984
+        ],
+        "peak_rss_mib": 83.59375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "ultosc",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 304.573834175244,
+        "indicator_import_ms": 45.73608282953501,
+        "first_call_ms": 86.40825003385544,
+        "steady_ms": 110.68766703829169,
+        "samples_ms": [
+          107.52295795828104,
+          110.68766703829169,
+          191.33387506008148
+        ],
+        "cpu_samples_ms": [
+          72.994,
+          74.79599999999998,
+          79.89399999999996
+        ],
+        "peak_rss_mib": 84.25,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ultosc_7_14_28": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "ultosc",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 207.14079216122627,
+        "indicator_import_ms": 17.963624792173505,
+        "first_call_ms": 13.88075016438961,
+        "steady_ms": 9.193667210638523,
+        "samples_ms": [
+          9.193667210638523,
+          8.331875083968043,
+          10.374083183705807
+        ],
+        "cpu_samples_ms": [
+          8.311000000000012,
+          8.144999999999957,
+          8.919999999999984
+        ],
+        "peak_rss_mib": 83.421875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ultosc_7_14_28": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midprice",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 191.0409580450505,
+        "indicator_import_ms": 47.96037496998906,
+        "first_call_ms": 377.80512496829033,
+        "steady_ms": 498.1942919548601,
+        "samples_ms": [
+          445.65658387728035,
+          508.1869999412447,
+          498.1942919548601
+        ],
+        "cpu_samples_ms": [
+          312.867,
+          308.2250000000001,
+          316.72900000000004
+        ],
+        "peak_rss_mib": 95.109375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midprice",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 227.42570913396776,
+        "indicator_import_ms": 22.321874974295497,
+        "first_call_ms": 3.2570408657193184,
+        "steady_ms": 2.921625040471554,
+        "samples_ms": [
+          2.5093331933021545,
+          4.9194160383194685,
+          2.921625040471554
+        ],
+        "cpu_samples_ms": [
+          2.3940000000000072,
+          3.049999999999997,
+          2.5410000000000155
+        ],
+        "peak_rss_mib": 100.046875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midpoint",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 435.1282920688391,
+        "indicator_import_ms": 38.16512483172119,
+        "first_call_ms": 216.52891603298485,
+        "steady_ms": 234.71470805816352,
+        "samples_ms": [
+          183.8267499115318,
+          234.71470805816352,
+          289.24920805729926
+        ],
+        "cpu_samples_ms": [
+          129.58400000000003,
+          125.49899999999991,
+          129.11899999999997
+        ],
+        "peak_rss_mib": 94.453125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midpoint",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 176.24800000339746,
+        "indicator_import_ms": 29.948208015412092,
+        "first_call_ms": 4.392874892801046,
+        "steady_ms": 2.1284171380102634,
+        "samples_ms": [
+          3.178791841492057,
+          2.106791129335761,
+          2.1284171380102634
+        ],
+        "cpu_samples_ms": [
+          2.774999999999972,
+          2.1090000000000275,
+          2.1090000000000275
+        ],
+        "peak_rss_mib": 98.8125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_14": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midprice168",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 127.32829200103879,
+        "indicator_import_ms": 23.932208074256778,
+        "first_call_ms": 7985.622165957466,
+        "steady_ms": 6445.975417038426,
+        "samples_ms": [
+          7934.5662500709295,
+          6445.975417038426,
+          5920.712291030213
+        ],
+        "cpu_samples_ms": [
+          3939.0220000000004,
+          3836.215,
+          3737.5930000000003
+        ],
+        "peak_rss_mib": 95.578125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midprice168",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 342.40574995055795,
+        "indicator_import_ms": 172.7258749306202,
+        "first_call_ms": 227.25070803426206,
+        "steady_ms": 70.65387489274144,
+        "samples_ms": [
+          78.1596249435097,
+          70.65387489274144,
+          51.74120794981718
+        ],
+        "cpu_samples_ms": [
+          28.19699999999997,
+          29.07499999999996,
+          29.366000000000003
+        ],
+        "peak_rss_mib": 101.390625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midprice_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "midpoint168",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 185.147917130962,
+        "indicator_import_ms": 76.22874993830919,
+        "first_call_ms": 2069.838457973674,
+        "steady_ms": 2207.3229590896517,
+        "samples_ms": [
+          2207.3229590896517,
+          2361.8566661607474,
+          2131.114208139479
+        ],
+        "cpu_samples_ms": [
+          1310.776,
+          1346.6159999999995,
+          1309.0979999999997
+        ],
+        "peak_rss_mib": 95.265625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "midpoint168",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 186.62645784206688,
+        "indicator_import_ms": 60.29633292928338,
+        "first_call_ms": 26.43512492068112,
+        "steady_ms": 26.0819171089679,
+        "samples_ms": [
+          26.0819171089679,
+          25.129999965429306,
+          28.5135000012815
+        ],
+        "cpu_samples_ms": [
+          25.13700000000002,
+          24.791000000000007,
+          26.491000000000042
+        ],
+        "peak_rss_mib": 101.140625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "midpoint_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "ultosc",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 107.02012502588332,
+        "indicator_import_ms": 17.588290851563215,
+        "first_call_ms": 321.80779217742383,
+        "steady_ms": 287.6325419638306,
+        "samples_ms": [
+          287.6325419638306,
+          285.88120895437896,
+          366.97479197755456
+        ],
+        "cpu_samples_ms": [
+          277.2,
+          273.825,
+          287.31600000000014
+        ],
+        "peak_rss_mib": 95.078125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ultosc_7_14_28": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "ultosc",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 162.22120798192918,
+        "indicator_import_ms": 19.278666004538536,
+        "first_call_ms": 38.39879110455513,
+        "steady_ms": 43.40129205957055,
+        "samples_ms": [
+          43.40129205957055,
+          46.805083053186536,
+          35.93262517824769
+        ],
+        "cpu_samples_ms": [
+          37.67899999999996,
+          39.420999999999985,
+          33.407999999999994
+        ],
+        "peak_rss_mib": 108.359375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ultosc_7_14_28": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    }
+  ],
+  "method": "Fresh process per implementation/indicator/size; first call plus three warm calls include input conversion and allocations. RSS is process peak after those calls, including imports/input. CPU medians and exact output/schema comparisons accompany wall timings."
+}
