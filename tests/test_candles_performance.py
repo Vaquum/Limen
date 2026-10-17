@@ -70,15 +70,15 @@ def test_reference_provenance():
 
 def _timings(name):
     from limen import indicators
-    frame = DATA.head(1000)
+    frame = DATA.head(3000)
     before, after = [], []
     for _ in range(3):
-        started = time.perf_counter()
+        started = time.process_time()
         expected = BASELINES[name](frame)
-        before.append(time.perf_counter() - started)
-        started = time.perf_counter()
+        before.append(time.process_time() - started)
+        started = time.process_time()
         result = getattr(indicators, name)(frame)
-        after.append(time.perf_counter() - started)
+        after.append(time.process_time() - started)
     assert_frame_equal(result, expected, check_exact=True)
     return before, after
 
