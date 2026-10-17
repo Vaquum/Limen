@@ -19,10 +19,25 @@ import tracemalloc
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGETS = ('ht_sine', 'ht_trendmode', 'ht_dcphase', 'ht_phasor',
-           'ht_trendline', 'ht_dcperiod', 'mama', 'cci', 'cdladvancedblock',
-           'cdl3whitesoldiers', 'cdlstalledpattern', 'linearreg',
-           'linearreg_angle', 'linearreg_intercept', 'linearreg_slope', 'tsf')
+OUTPUTS = {
+    'ht_sine': ('ht_sine', 'ht_sine_lead'),
+    'ht_trendmode': ('ht_trendmode',),
+    'ht_dcphase': ('ht_dcphase',),
+    'ht_phasor': ('ht_phasor_inphase', 'ht_phasor_quadrature'),
+    'ht_trendline': ('ht_trendline',),
+    'ht_dcperiod': ('ht_dcperiod',),
+    'mama': ('mama', 'fama'),
+    'cci': ('cci_14',),
+    'cdladvancedblock': ('cdladvancedblock',),
+    'cdl3whitesoldiers': ('cdl3whitesoldiers',),
+    'cdlstalledpattern': ('cdlstalledpattern',),
+    'linearreg': ('linearreg_14',),
+    'linearreg_angle': ('linearreg_angle_14',),
+    'linearreg_intercept': ('linearreg_intercept_14',),
+    'linearreg_slope': ('linearreg_slope_14',),
+    'tsf': ('tsf_14',),
+}
+TARGETS = tuple(OUTPUTS)
 THREADS = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
            'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'POLARS_MAX_THREADS')
 
@@ -76,7 +91,7 @@ def _worker(args):
     _, peak_bytes = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     np.savez(args.output, **{name: result[name].to_numpy()
-                            for name in result.columns if name not in data.columns})
+                            for name in OUTPUTS[args.indicator]})
     return {'indicator': args.indicator, 'rows': args.rows, 'input_sha256': digest,
             'dependency_import_ms': dependency_ms, 'indicator_import_ms': import_ms,
             'first_call_ms': first_ms, 'steady_ms': statistics.median(times),

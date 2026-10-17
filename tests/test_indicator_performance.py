@@ -230,3 +230,19 @@ def test_benchmark_rejects_moving_reference(monkeypatch, tmp_path):
     git('update-ref', 'HEAD', next_commit)
     with pytest.raises(ValueError, match='Existing report differs in reference'):
         benchmark_indicators.main()
+
+
+def test_benchmark_compares_replaced_outputs(tmp_path):
+    expected = indicators.mama(DATA.head(128))
+    source = tmp_path / 'input.parquet'
+    expected.write_parquet(source)
+    output = tmp_path / 'outputs.npz'
+    subprocess.run([sys.executable, str(Path(benchmark_indicators.__file__).resolve()),
+                    '--worker', '--input', str(source), '--rows', '128',
+                    '--indicator', 'mama', '--output', str(output), '--repeats', '1'],
+                   check=True,
+                   env={**os.environ, **dict.fromkeys(benchmark_indicators.THREADS, '1')})
+    with np.load(output) as result:
+        assert result.files == ['mama', 'fama']
+        for column in result.files:
+            np.testing.assert_array_equal(result[column], expected[column].to_numpy())
