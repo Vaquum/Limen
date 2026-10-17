@@ -1,6 +1,6 @@
 {
   "reference": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
-  "candidate": "197ebc53b35b9e2f78ea52df3dde19e3db91e3f8",
+  "candidate": "6b3d9c2e519a81bdc0e1bca78c4301f1be1958b5",
   "input": "/Users/mikkokotila/.cache/limen/datasets/vaquum--binance_btcusdt_15m_klines/btcusdt_15m_kline_20200101_to_20261003.parquet",
   "file_sha256": "04cdc6b715daa4ad32b2594fcb33a2c2f3aea100eb17e131182391880a46c443",
   "hardware": "macOS-26.6.2-arm64-arm-64bit",
@@ -14,7 +14,7 @@
     "BLIS_NUM_THREADS": "1",
     "POLARS_MAX_THREADS": "1"
   },
-  "code_sha256": "53467c3fc755f0f8d29e305cfc1b6cab710807e95ca37a8fab3dc9ab4cba01a6",
+  "code_sha256": "0d92d04d715ae40e5f87d4ea3d01ebbd41ed1e2b989e4e33b25003b24bcbe894",
   "results": [
     {
       "before": {
@@ -68,21 +68,21 @@
         "indicator": "sma",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 287.43437491357327,
-        "indicator_import_ms": 87.78729103505611,
-        "first_call_ms": 1.0857500601559877,
-        "steady_ms": 0.44362503103911877,
+        "dependency_import_ms": 190.17579103820026,
+        "indicator_import_ms": 86.19154104962945,
+        "first_call_ms": 0.6474170368164778,
+        "steady_ms": 0.5010419990867376,
         "samples_ms": [
-          0.8442499674856663,
-          0.44362503103911877,
-          0.29300013557076454
+          0.5010419990867376,
+          0.5490831099450588,
+          0.42150006629526615
         ],
         "cpu_samples_ms": [
-          0.5000000000000004,
-          0.3909999999999747,
-          0.2829999999999777
+          0.4649999999999932,
+          0.5149999999999877,
+          0.35000000000001696
         ],
-        "peak_rss_mib": 84.109375,
+        "peak_rss_mib": 84.1875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -164,21 +164,21 @@
         "indicator": "sma168",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 194.9446250218898,
-        "indicator_import_ms": 37.564750062301755,
-        "first_call_ms": 0.8731251582503319,
-        "steady_ms": 0.26575010269880295,
+        "dependency_import_ms": 181.81099998764694,
+        "indicator_import_ms": 19.073792034760118,
+        "first_call_ms": 1.9613751210272312,
+        "steady_ms": 0.567000126466155,
         "samples_ms": [
-          0.30437507666647434,
-          0.26575010269880295,
-          0.2541251014918089
+          0.567000126466155,
+          1.6365828923881054,
+          0.5138751585036516
         ],
         "cpu_samples_ms": [
-          0.3039999999999987,
-          0.2660000000000162,
-          0.25499999999997747
+          0.46000000000001595,
+          0.5129999999999857,
+          0.40000000000001146
         ],
-        "peak_rss_mib": 84.0625,
+        "peak_rss_mib": 84.375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -259,21 +259,21 @@
         "indicator": "apo",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 297.08866705186665,
-        "indicator_import_ms": 38.314458914101124,
-        "first_call_ms": 8.439874975010753,
-        "steady_ms": 2.0108751486986876,
+        "dependency_import_ms": 373.4121669549495,
+        "indicator_import_ms": 90.51483287476003,
+        "first_call_ms": 19.404708174988627,
+        "steady_ms": 10.610415833070874,
         "samples_ms": [
-          4.387250170111656,
-          2.0108751486986876,
-          1.9372501410543919
+          10.912124998867512,
+          10.610415833070874,
+          9.852542076259851
         ],
         "cpu_samples_ms": [
-          1.2050000000000116,
-          1.0350000000000081,
-          1.6639999999999988
+          1.4359999999999928,
+          1.3020000000000254,
+          1.0049999999999781
         ],
-        "peak_rss_mib": 84.28125,
+        "peak_rss_mib": 83.890625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -353,21 +353,21 @@
         "indicator": "ppo",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 278.3268329221755,
-        "indicator_import_ms": 27.179541066288948,
-        "first_call_ms": 6.897208048030734,
-        "steady_ms": 3.8930419832468033,
+        "dependency_import_ms": 239.81895903125405,
+        "indicator_import_ms": 19.06708301976323,
+        "first_call_ms": 4.922083113342524,
+        "steady_ms": 1.4901671092957258,
         "samples_ms": [
-          3.0014580115675926,
-          3.8930419832468033,
-          4.552541999146342
+          1.4901671092957258,
+          1.1627920903265476,
+          1.9697498064488173
         ],
         "cpu_samples_ms": [
-          1.597000000000015,
-          1.5740000000000198,
-          1.9449999999999745
+          1.436999999999966,
+          0.8839999999999959,
+          1.782999999999979
         ],
-        "peak_rss_mib": 83.703125,
+        "peak_rss_mib": 83.796875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -447,21 +447,21 @@
         "indicator": "apo7",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 131.59466604702175,
-        "indicator_import_ms": 18.273374997079372,
-        "first_call_ms": 35.32612486742437,
-        "steady_ms": 46.00400011986494,
+        "dependency_import_ms": 137.73137493990362,
+        "indicator_import_ms": 18.627041950821877,
+        "first_call_ms": 36.92133282311261,
+        "steady_ms": 41.03891598060727,
         "samples_ms": [
-          37.83008409664035,
-          53.90550009906292,
-          46.00400011986494
+          36.48341586813331,
+          41.03891598060727,
+          86.17837494239211
         ],
         "cpu_samples_ms": [
-          33.54199999999996,
-          38.21199999999997,
-          36.25600000000001
+          33.184999999999995,
+          33.62799999999999,
+          35.65299999999999
         ],
-        "peak_rss_mib": 83.828125,
+        "peak_rss_mib": 84.078125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -541,21 +541,21 @@
         "indicator": "ppo7",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 370.65137503668666,
-        "indicator_import_ms": 42.65441605821252,
-        "first_call_ms": 84.79866688139737,
-        "steady_ms": 78.94104206934571,
+        "dependency_import_ms": 177.153083961457,
+        "indicator_import_ms": 32.388417050242424,
+        "first_call_ms": 44.78104203008115,
+        "steady_ms": 54.00012503378093,
         "samples_ms": [
-          77.38416688516736,
-          78.94104206934571,
-          96.74525004811585
+          54.00012503378093,
+          53.11874998733401,
+          80.77779086306691
         ],
         "cpu_samples_ms": [
-          38.74100000000003,
-          37.48199999999996,
-          46.724000000000046
+          34.344999999999956,
+          35.79199999999999,
+          37.81000000000001
         ],
-        "peak_rss_mib": 84.453125,
+        "peak_rss_mib": 83.765625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -637,21 +637,21 @@
         "indicator": "macdext7",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 108.40370785444975,
-        "indicator_import_ms": 15.945332823321223,
-        "first_call_ms": 36.15608299151063,
-        "steady_ms": 33.42949994839728,
+        "dependency_import_ms": 406.46858303807676,
+        "indicator_import_ms": 35.94562504440546,
+        "first_call_ms": 53.57650015503168,
+        "steady_ms": 87.62145903892815,
         "samples_ms": [
-          33.42949994839728,
-          36.05962498113513,
-          32.99849992617965
+          52.14645806699991,
+          89.8986249230802,
+          87.62145903892815
         ],
         "cpu_samples_ms": [
-          32.20800000000001,
-          32.232999999999954,
-          32.09200000000001
+          38.65799999999997,
+          38.46700000000003,
+          40.07299999999997
         ],
-        "peak_rss_mib": 83.78125,
+        "peak_rss_mib": 84.171875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -734,21 +734,21 @@
         "indicator": "sma",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 158.34245784208179,
-        "indicator_import_ms": 19.760542083531618,
-        "first_call_ms": 1.8944579642266035,
-        "steady_ms": 1.9438748713582754,
+        "dependency_import_ms": 396.76316687837243,
+        "indicator_import_ms": 21.283000009134412,
+        "first_call_ms": 15.6655830796808,
+        "steady_ms": 2.193208085373044,
         "samples_ms": [
-          1.9438748713582754,
-          1.059875125065446,
-          2.016667043790221
+          9.524374967440963,
+          1.9556249026209116,
+          2.193208085373044
         ],
         "cpu_samples_ms": [
-          1.699000000000006,
-          1.0600000000000054,
-          1.34999999999999
+          1.5560000000000018,
+          1.0539999999999994,
+          1.0719999999999619
         ],
-        "peak_rss_mib": 98.421875,
+        "peak_rss_mib": 98.3125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -830,21 +830,21 @@
         "indicator": "sma168",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 297.2320420667529,
-        "indicator_import_ms": 45.53845780901611,
-        "first_call_ms": 3.056584158912301,
-        "steady_ms": 2.045166911557317,
+        "dependency_import_ms": 279.7121671028435,
+        "indicator_import_ms": 27.744333958253264,
+        "first_call_ms": 1.6373340040445328,
+        "steady_ms": 1.6697081737220287,
         "samples_ms": [
-          2.045166911557317,
-          2.1773751359432936,
-          1.8516250420361757
+          1.6697081737220287,
+          1.7701671458780766,
+          0.9093328844755888
         ],
         "cpu_samples_ms": [
-          1.4290000000000136,
-          1.9080000000000208,
-          1.1419999999999764
+          1.1999999999999789,
+          1.4120000000000243,
+          0.9100000000000219
         ],
-        "peak_rss_mib": 99.0,
+        "peak_rss_mib": 98.125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -925,21 +925,21 @@
         "indicator": "apo",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 405.05662513896823,
-        "indicator_import_ms": 365.4713339637965,
-        "first_call_ms": 13.396166963502765,
-        "steady_ms": 9.219374973326921,
+        "dependency_import_ms": 145.80687507987022,
+        "indicator_import_ms": 24.454375030472875,
+        "first_call_ms": 3.398166038095951,
+        "steady_ms": 4.96258307248354,
         "samples_ms": [
-          9.219374973326921,
-          10.472499998286366,
-          4.6337919775396585
+          4.96258307248354,
+          4.159499891102314,
+          6.3059169333428144
         ],
         "cpu_samples_ms": [
-          2.795999999999965,
-          2.82300000000002,
-          2.72
+          3.1429999999999794,
+          2.8939999999999797,
+          3.252000000000005
         ],
-        "peak_rss_mib": 100.078125,
+        "peak_rss_mib": 101.578125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1019,21 +1019,21 @@
         "indicator": "ppo",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 758.2662079948932,
-        "indicator_import_ms": 64.09108405932784,
-        "first_call_ms": 21.90499985590577,
-        "steady_ms": 13.171459082514048,
+        "dependency_import_ms": 178.4443750511855,
+        "indicator_import_ms": 20.585292018949986,
+        "first_call_ms": 3.494917182251811,
+        "steady_ms": 3.48966708406806,
         "samples_ms": [
-          46.25666583888233,
-          11.80700003169477,
-          13.171459082514048
+          3.48966708406806,
+          5.528833018615842,
+          2.817458938807249
         ],
         "cpu_samples_ms": [
-          3.7659999999999916,
-          3.3139999999999836,
-          4.2159999999999975
+          3.156999999999993,
+          2.8910000000000045,
+          2.595999999999987
         ],
-        "peak_rss_mib": 100.5625,
+        "peak_rss_mib": 100.796875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1113,21 +1113,21 @@
         "indicator": "apo7",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 638.3894579485059,
-        "indicator_import_ms": 215.04849987104535,
-        "first_call_ms": 336.8932500015944,
-        "steady_ms": 586.6263329517096,
+        "dependency_import_ms": 261.4587920252234,
+        "indicator_import_ms": 18.73195799998939,
+        "first_call_ms": 202.2723329719156,
+        "steady_ms": 200.47166687436402,
         "samples_ms": [
-          586.6263329517096,
-          457.67454197630286,
-          814.8542500566691
+          200.47166687436402,
+          269.920667167753,
+          157.40300016477704
         ],
         "cpu_samples_ms": [
-          154.382,
-          155.687,
-          147.01500000000001
+          152.07199999999997,
+          151.92399999999995,
+          139.38099999999997
         ],
-        "peak_rss_mib": 100.65625,
+        "peak_rss_mib": 100.5625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1207,21 +1207,21 @@
         "indicator": "ppo7",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 984.1098748147488,
-        "indicator_import_ms": 291.9940419960767,
-        "first_call_ms": 462.91895816102624,
-        "steady_ms": 357.1242499165237,
+        "dependency_import_ms": 200.16224985010922,
+        "indicator_import_ms": 34.578749909996986,
+        "first_call_ms": 242.1280841808766,
+        "steady_ms": 291.9919998385012,
         "samples_ms": [
-          466.1691249348223,
-          357.1242499165237,
-          341.1154579371214
+          190.30454196035862,
+          438.6114578228444,
+          291.9919998385012
         ],
         "cpu_samples_ms": [
-          150.04499999999993,
-          148.42500000000004,
-          149.96600000000004
+          152.54900000000004,
+          165.45900000000003,
+          148.9600000000001
         ],
-        "peak_rss_mib": 101.125,
+        "peak_rss_mib": 101.4375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1303,21 +1303,21 @@
         "indicator": "macdext7",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 394.8121250141412,
-        "indicator_import_ms": 133.1608749460429,
-        "first_call_ms": 354.17579114437103,
-        "steady_ms": 321.2580420076847,
+        "dependency_import_ms": 362.0417909696698,
+        "indicator_import_ms": 30.97208309918642,
+        "first_call_ms": 251.48554099723697,
+        "steady_ms": 218.33337494172156,
         "samples_ms": [
-          302.3919998668134,
-          321.2580420076847,
-          333.3032501395792
+          218.33337494172156,
+          208.03970796987414,
+          224.09649984911084
         ],
         "cpu_samples_ms": [
-          152.95999999999998,
-          155.45200000000003,
-          162.412
+          150.29200000000003,
+          155.26899999999998,
+          165.93000000000004
         ],
-        "peak_rss_mib": 108.953125,
+        "peak_rss_mib": 107.03125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1349,5 +1349,5 @@
       }
     }
   ],
-  "method": "One fresh process per implementation/calculation/size; first call plus three warm calls include input conversion and allocation. RSS is process peak after those calls, including imports/input. All output columns, including SMA compatibility aliases, and complete schemas compare exactly."
+  "method": "Full public calls; isolated processes, one first and three warm calls; all six numerical thread limits one. CPU medians determine execution cost; wall samples include uncontrolled desktop contention. RSS is process peak after warm calls, including imports/input. Outputs and schemas compare exactly. Any allocation-probe fields are separate from timing/RSS."
 }

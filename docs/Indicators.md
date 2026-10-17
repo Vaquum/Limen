@@ -341,20 +341,20 @@ SMA keeps its original seed and ordered add/subtract recurrence in a native cumu
 
 | Calculation | Rows | CPU ms, before → after | Indicative wall ms, before → after | Peak RSS MiB, before → after |
 |---|---:|---:|---:|---:|
-| `sma` | 20,000 | 5.21 → 0.39 | 47.85 → 0.44 | 85.1 → 84.1 |
-| `sma(period=168)` | 20,000 | 5.00 → 0.27 | 6.56 → 0.27 | 84.0 → 84.1 |
-| `apo` | 20,000 | 12.60 → 1.21 | 26.36 → 2.01 | 84.2 → 84.3 |
-| `ppo` | 20,000 | 10.53 → 1.60 | 12.35 → 3.89 | 84.2 → 83.7 |
-| `apo(ma_type=7)` | 20,000 | 75.47 → 36.26 | 227.05 → 46.00 | 84.2 → 83.8 |
-| `ppo(ma_type=7)` | 20,000 | 72.78 → 38.74 | 143.48 → 78.94 | 84.0 → 84.5 |
-| `macdext(fast_ma_type=7, slow_ma_type=7)` | 20,000 | 80.72 → 32.21 | 127.91 → 33.43 | 84.4 → 83.8 |
-| `sma` | 83,136 | 20.10 → 1.35 | 23.96 → 1.94 | 94.5 → 98.4 |
-| `sma(period=168)` | 83,136 | 21.31 → 1.43 | 28.81 → 2.05 | 94.7 → 99.0 |
-| `apo` | 83,136 | 45.74 → 2.80 | 88.30 → 9.22 | 95.3 → 100.1 |
-| `ppo` | 83,136 | 45.62 → 3.77 | 202.22 → 13.17 | 96.6 → 100.6 |
-| `apo(ma_type=7)` | 83,136 | 301.21 → 154.38 | 1061.10 → 586.63 | 98.9 → 100.7 |
-| `ppo(ma_type=7)` | 83,136 | 303.94 → 149.97 | 1915.80 → 357.12 | 100.4 → 101.1 |
-| `macdext(fast_ma_type=7, slow_ma_type=7)` | 83,136 | 325.87 → 155.45 | 1060.79 → 321.26 | 104.3 → 109.0 |
+| `sma` | 20,000 | 5.21 → 0.46 | 47.85 → 0.50 | 85.1 → 84.2 |
+| `sma(period=168)` | 20,000 | 5.00 → 0.46 | 6.56 → 0.57 | 84.0 → 84.4 |
+| `apo` | 20,000 | 12.60 → 1.30 | 26.36 → 10.61 | 84.2 → 83.9 |
+| `ppo` | 20,000 | 10.53 → 1.44 | 12.35 → 1.49 | 84.2 → 83.8 |
+| `apo(ma_type=7)` | 20,000 | 75.47 → 33.63 | 227.05 → 41.04 | 84.2 → 84.1 |
+| `ppo(ma_type=7)` | 20,000 | 72.78 → 35.79 | 143.48 → 54.00 | 84.0 → 83.8 |
+| `macdext(fast_ma_type=7, slow_ma_type=7)` | 20,000 | 80.72 → 38.66 | 127.91 → 87.62 | 84.4 → 84.2 |
+| `sma` | 83,136 | 20.10 → 1.07 | 23.96 → 2.19 | 94.5 → 98.3 |
+| `sma(period=168)` | 83,136 | 21.31 → 1.20 | 28.81 → 1.67 | 94.7 → 98.1 |
+| `apo` | 83,136 | 45.74 → 3.14 | 88.30 → 4.96 | 95.3 → 101.6 |
+| `ppo` | 83,136 | 45.62 → 2.89 | 202.22 → 3.49 | 96.6 → 100.8 |
+| `apo(ma_type=7)` | 83,136 | 301.21 → 151.92 | 1061.10 → 200.47 | 98.9 → 100.6 |
+| `ppo(ma_type=7)` | 83,136 | 303.94 → 152.55 | 1915.80 → 291.99 | 100.4 → 101.4 |
+| `macdext(fast_ma_type=7, slow_ma_type=7)` | 83,136 | 325.87 → 155.27 | 1060.79 → 218.33 | 104.3 → 107.0 |
 
 Other parameters use their public defaults. Measurements use real BTCUSDT bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall values are medians of three warm calls under desktop contention. RSS includes imports and input loading.
 
@@ -373,3 +373,5 @@ python tests/fixtures/candles_performance_replay.py \
 ```
 
 The replay uses the existing benchmark with named parameter sets. It runs each implementation in a fresh process, pins all six thread limits to one, checks every recorded output and schema, and includes input conversion in timing. RSS is the process high-water mark after warm calls; allocation tracing runs afterwards and does not enter timing or RSS.
+
+In replay reports, `steady_ms` is median CPU time (`steady_clock: process_time`); `steady_wall_ms` and `samples_ms` retain the wall observations.
