@@ -1637,6 +1637,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Accelerate Hilbert, MAMA, CCI, candlestick and linear-regression calculations while preserving indicator contracts.
 
+## [5.29.3] - 2026-10-17
+
+- Keep composite price-line calculations in arrays to remove per-line objects and Python event scans.
+
 ## [5.29.5] - 2026-10-17
 
 - Accelerate rolling midpoint/price windows and reuse Ultimate Oscillator terms without changing arithmetic order.
