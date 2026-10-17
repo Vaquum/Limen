@@ -93,3 +93,12 @@ def timing_worker():
 def test_calculation_latency(name, timing_worker):
     before, after = timing_worker.submit(_timings, name).result(timeout=60)
     assert statistics.median(after) < statistics.median(before) * .9
+
+
+@pytest.mark.parametrize('name', ['midpoint', 'midprice', 'ultosc'])
+def test_longest_period(name):
+    from limen import indicators
+    frame = pl.read_parquet(FIXTURES / 'indicator_equivalence_long.parquet')
+    kwargs = {'period1': 100000, 'period2': 100000, 'period3': 100000} if name == 'ultosc' else {'period': 100000}
+    expected = getattr(BASELINES, name)(frame, **kwargs)
+    assert_frame_equal(getattr(indicators, name)(frame, **kwargs), expected, check_exact=True)
