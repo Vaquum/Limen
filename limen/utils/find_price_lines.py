@@ -3,7 +3,7 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
-__all__ = ['find_price_lines', 'price_line_arrays', 'LineArrays']
+__all__ = ['LineArrays', 'find_price_lines', 'price_line_arrays']
 
 MIN_DURATION_BARS = 1
 MIN_MAX_DURATION_HOURS = 2

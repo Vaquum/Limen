@@ -4,7 +4,7 @@ import polars as pl
 
 from limen.utils.find_price_lines import LineArrays, price_line_arrays
 
-__all__ = ['price_lines', 'line_recency', 'line_active_count']
+__all__ = ['line_active_count', 'line_recency', 'price_lines']
 
 DEFAULT_BIG_MOVE_LOOKBACK_HOURS = 168
 DEFAULT_MOMENTUM_LOOKBACK_HOURS = 6

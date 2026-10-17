@@ -46,7 +46,7 @@ def test_line_equivalence(name, rows, duration, height, variant, research):
         frame = frame.with_columns(pl.when(pl.int_range(pl.len()) == 70)
                                    .then(pl.lit(np.nan if variant == 'nan' else None, dtype=pl.Float64))
                                    .otherwise(pl.col('close')).alias('close'))
-    kwargs = dict(max_duration_hours=duration, min_height_pct=height, include_research_only=research)
+    kwargs = {'max_duration_hours': duration, 'min_height_pct': height, 'include_research_only': research}
     expected = baseline(frame, **kwargs)
     chunked = pl.concat([frame.head(rows // 2), frame.slice(rows // 2)], rechunk=False)
     for source in (chunked, chunked.lazy()):
@@ -59,8 +59,8 @@ def test_line_equivalence(name, rows, duration, height, variant, research):
 @pytest.mark.parametrize('quantile', [0.0, .7, .8, 1.0])
 def test_quantile_boundaries(quantile):
     from limen.features.quantile_price_lines import quantile_price_lines
-    kwargs = dict(max_duration_hours=48, min_height_pct=.002, quantile_threshold=quantile,
-                  density_lookback_hours=3, momentum_lookback_hours=1, height_lookback_hours=2)
+    kwargs = {'max_duration_hours': 48, 'min_height_pct': .002, 'quantile_threshold': quantile,
+              'density_lookback_hours': 3, 'momentum_lookback_hours': 1, 'height_lookback_hours': 2}
     expected = BASELINES['quantile_price_lines'].quantile_price_lines(DATA.head(512), **kwargs)
     assert_frame_equal(quantile_price_lines(DATA.head(512), **kwargs), expected, check_exact=True)
 
