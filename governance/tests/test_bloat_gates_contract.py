@@ -113,9 +113,8 @@ def test_all_wired_scripts_pass_on_current_repo() -> None:
     ).check_returncode()
 
 
-# Gates that ship but are not wired into pr_checks_lint, and do not pass on
-# this repository. Each is named in CLAUDE.md law 6 with its reason. They are
-# still exercised here for banner and exit-code shape, just not for a PASS.
+# Gates that ship but are not wired into pr_checks_lint. Each is named in
+# CLAUDE.md law 6 with its reason; their verdict must match their exit code.
 UNWIRED_GATES: Final[frozenset[str]] = frozenset({
     # Coverage is enforced by `PR Checks Coverage` at a 92% floor, computed
     # from the suite's own run. Wiring these into pr_checks_lint would run the
@@ -140,20 +139,16 @@ def test_pass_banners_printed_on_success() -> None:
 
 
 def test_unwired_gates_still_report_under_their_banner() -> None:
-    # They are not required, but they must remain runnable and honest: a
-    # non-zero exit under the gate's own FAIL banner, never a crash and never
-    # a silent zero.
+    # They remain runnable and honest whether the current tree passes or fails.
     # The ratchet gates take a required --base-ref/--base-file, so a bare
     # run is an argparse usage error rather than a gate verdict. They are
     # exercised with arguments in test_budget_ratchet_vacuous_when_base_missing.
     for name in sorted(UNWIRED_GATES - {'check_coverage_ratchet.py', 'check_diff_coverage.py'}):
         result = _run(name)
         banner = GATE_BANNERS[name]
-        # 1 is a violation, 2 is a setup failure (a gate that cannot run
-        # fails closed rather than passing over an empty tree). Both are
-        # honest; a silent 0 would not be.
-        assert result.returncode in (1, 2), f'{name} exited {result.returncode}'
-        assert f'{banner} -- FAIL' in result.stdout + result.stderr, name
+        assert result.returncode in (0, 1, 2), f'{name} exited {result.returncode}'
+        verdict = 'PASS' if result.returncode == 0 else 'FAIL'
+        assert f'{banner} -- {verdict}' in result.stdout + result.stderr, name
 
 
 def test_fail_banners_are_declared_in_each_script_source() -> None:

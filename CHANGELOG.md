@@ -1654,3 +1654,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.29.6] - 2026-10-17
 
 - Vectorize homogeneous scalar parameter grids while retaining legacy inference for other inputs; remove the controlled-worker marker race and separate bounded startup from shutdown timing.
+
+## [5.29.7] - 2026-10-17
+
+- Enforce the covered test job’s Python 3.12 exception without changing the support floor; collect the interpreter contract in CI and reject coverage backend fallback.

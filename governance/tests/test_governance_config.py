@@ -73,22 +73,22 @@ def _required_status_contexts() -> list[str]:
 # This project ships a package, so two workflows must run on more than the
 # floor interpreter: packaging builds and audits the distributions, and the
 # install matrix proves the built wheel imports on every supported version.
-# Every other workflow runs the floor interpreter named in governance.yml.
+# Other jobs use the floor, except covered tests: sysmon requires Python 3.12.
 MULTI_INTERPRETER_WORKFLOWS: Final[frozenset[str]] = frozenset({
     'pr_checks_packaging.yml',
 })
 SUPPORTED_PYTHONS: Final[frozenset[str]] = frozenset({'3.10', '3.11', '3.12', '3.13'})
 
 
-def _setup_python_versions() -> dict[str, list[str]]:
-    versions: dict[str, list[str]] = {}
+def _setup_python_versions() -> dict[tuple[str, str], list[str]]:
+    versions: dict[tuple[str, str], list[str]] = {}
     for workflow in sorted(WORKFLOWS_DIR.glob('*.yml')):
         workflow_payload = _mapping(
             yaml.safe_load(workflow.read_text(encoding='utf-8')), workflow.name
         )
         jobs = _mapping(workflow_payload.get('jobs'), f'{workflow.name}.jobs')
-        workflow_versions: list[str] = []
         for job_name, job in jobs.items():
+            job_versions: list[str] = []
             job_map = _mapping(job, f'{workflow.name}.{job_name}')
             steps = job_map.get('steps')
             assert isinstance(steps, list), f'{workflow.name}.{job_name}.steps must be a list'
@@ -100,9 +100,9 @@ def _setup_python_versions() -> dict[str, list[str]]:
                 with_config = _mapping(step_map.get('with'), f'{workflow.name}.{job_name}.with')
                 version = with_config.get('python-version')
                 assert isinstance(version, str), f'{workflow.name} python-version must be quoted'
-                workflow_versions.append(version)
-        if workflow_versions:
-            versions[workflow.name] = workflow_versions
+                job_versions.append(version)
+            if job_versions:
+                versions[workflow.name, job_name] = job_versions
     return versions
 
 
@@ -156,7 +156,7 @@ def test_workflow_runtime_and_tooling_match_config() -> None:
     pyproject = tomllib.loads((REPO_ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
 
     assert _setup_python_versions()
-    for workflow_name, versions in _setup_python_versions().items():
+    for (workflow_name, job_name), versions in _setup_python_versions().items():
         if workflow_name in MULTI_INTERPRETER_WORKFLOWS:
             # These deliberately exercise more than the floor interpreter.
             # Matrix expressions are not literal versions; every literal that
@@ -164,7 +164,8 @@ def test_workflow_runtime_and_tooling_match_config() -> None:
             literals = [v for v in versions if not v.startswith('${{')]
             assert set(literals) <= SUPPORTED_PYTHONS, (workflow_name, literals)
             continue
-        assert versions == [python_version] * len(versions), workflow_name
+        expected = '3.12' if (workflow_name, job_name) == ('pr_checks_tests.yml', 'pr_checks_tests') else python_version
+        assert versions == [expected] * len(versions), (workflow_name, job_name)
     assert _requirement_pins('ruff') == [ruff_version]
     assert _requirement_pins('pyright') == [pyright_version]
     # This project bounds the interpreter at both ends: the floor is the

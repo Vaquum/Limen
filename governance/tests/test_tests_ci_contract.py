@@ -16,7 +16,14 @@ def test_pr_checks_tests_workflow_exists() -> None:
 def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
     workflow = TESTS_WORKFLOW.read_text(encoding='utf-8')
 
-    assert "python-version: '3.10'" in workflow
+    payload = yaml.safe_load(workflow)
+    covered_job = payload['jobs']['pr_checks_tests']
+    versions = [step['with']['python-version'] for step in covered_job['steps']
+                if step.get('uses', '').startswith('actions/setup-python@')]
+    assert versions == ['3.12']
+    covered_step = next(step for step in covered_job['steps'] if EXPECTED_TEST_COMMAND in step.get('run', ''))
+    assert covered_step['env']['COVERAGE_CORE'] == 'sysmon'
+    assert covered_step['env']['LIMEN_COVERAGE_RUN'] == '1'
     # The suite needs the full research stack, so it installs the
     # research-env set rather than the runtime/build pair upstream uses.
     assert 'pip install --require-hashes -r requirements/ci/research-env.txt' in workflow
@@ -28,7 +35,6 @@ def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
     # the PR when the upstream test job produced no artifact; the job then
     # checks for the file and skips. Asserting per-job keeps that allowance
     # from silently widening to a gate.
-    payload = yaml.safe_load(workflow)
     gating_jobs = {
         name: job for name, job in payload['jobs'].items()
         if name != 'publish_coverage_pr_comment'
