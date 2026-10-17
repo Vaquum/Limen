@@ -182,7 +182,8 @@ def test_temporal_parameter_domains_reject_before_artifacts(field, recorded_temp
         for msq in (False, True):
             directory = tmp_path / f'{field}-{msq}-{type(value).__name__}-{value}'
             sfd = SimpleNamespace(__name__='recorded_temporal_parameters',
-                                  manifest=lambda: manifest, params=lambda: parameters)
+                                  manifest=lambda _manifest=manifest: _manifest,
+                                  params=lambda _parameters=parameters: _parameters)
             loop = UniversalExperimentLoop(sfd=sfd, data=recorded_temporal_bars,
                 experiment_dir=directory,
                 search_strategy=GridStrategy(ParamDomain(parameters)) if msq else None)
@@ -209,7 +210,8 @@ def test_temporal_parameter_domains_reject_before_artifacts(field, recorded_temp
         for msq in (False, True):
             directory = tmp_path / f'{field}-{label}-{msq}'
             sfd = SimpleNamespace(__name__='recorded_temporal_parameters',
-                                  manifest=lambda: manifest, params=lambda: parameters)
+                                  manifest=lambda _manifest=manifest: _manifest,
+                                  params=lambda _parameters=parameters: _parameters)
             loop = UniversalExperimentLoop(sfd=sfd, data=recorded_temporal_bars,
                 experiment_dir=directory,
                 search_strategy=GridStrategy(ParamDomain(parameters)) if msq else None)
@@ -249,13 +251,13 @@ def test_temporal_factorization_preserves_records_and_signal_reuse(recorded_temp
         counts = {'prep': 0, 'model': 0}
         original_prep, original_model = RuleBasedManifest.prepare_data, RuleBasedManifest.run_model
 
-        def prep(*args, **kwargs):
-            counts['prep'] += 1
-            return original_prep(*args, **kwargs)
+        def prep(*args, _counts=counts, _original=original_prep, **kwargs):
+            _counts['prep'] += 1
+            return _original(*args, **kwargs)
 
-        def model(*args, **kwargs):
-            counts['model'] += 1
-            return original_model(*args, **kwargs)
+        def model(*args, _counts=counts, _original=original_model, **kwargs):
+            _counts['model'] += 1
+            return _original(*args, **kwargs)
 
         loop = UniversalExperimentLoop(sfd=CompiledSFD(config), data=recorded_temporal_bars,
             search_strategy=build_search_strategy(config), experiment_dir=directory,
