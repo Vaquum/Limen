@@ -341,8 +341,8 @@ The remaining 44 candlestick indicators convert input arrays to Python doubles o
 
 | Rows | Sum of standalone CPU ms, before → after | Sum of standalone wall ms, before → after | Largest peak RSS increase MiB |
 |---|---:|---:|---:|
-| 20,000 | 1799.4 → 611.4 | 3527.8 → 1248.9 | 1.0 |
-| 83,136 | 7190.9 → 2422.1 | 8778.7 → 2873.7 | 15.9 |
+| 20,000 | 1799.4 → 654.6 | 3527.8 → 3256.5 | 0.8 |
+| 83,136 | 7190.9 → 2588.0 | 8778.7 → 4111.3 | 15.5 |
 
 These totals add independent calls; they are not a production-workload benchmark. Measurements use real BTCUSDT 15-minute bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall values are medians of three warm calls and include desktop contention. Input conversion adds bounded list storage; the table reports its observed RSS cost.
 
@@ -363,3 +363,5 @@ python tests/fixtures/candles_performance_replay.py \
 ```
 
 The replay supplies named cases to the existing benchmark; it adds no package runtime code. Each side runs in a fresh process with all six numerical thread limits set to one. RSS is sampled after warm calls, before the separate allocation-tracing probe; tracing does not enter timing. The committed input has the same 20k/83k OHLCV digests as the original cached snapshot, although its whole-file hash differs.
+
+In replay reports, `steady_ms` is median CPU time (`steady_clock: process_time`); `steady_wall_ms` and `samples_ms` retain the wall observations.

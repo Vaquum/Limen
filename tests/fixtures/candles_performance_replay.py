@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import runpy
+import statistics
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,7 +26,11 @@ def replay_worker(args):
              for name, case in CASES.items()}
     for name, calculate in calls.items():
         setattr(indicators, name, calculate)
-    return original_worker(args)
+    result = original_worker(args)
+    result['steady_wall_ms'] = result['steady_ms']
+    result['steady_ms'] = statistics.median(result['cpu_samples_ms'])
+    result['steady_clock'] = 'process_time'
+    return result
 
 
 state['_worker'] = replay_worker

@@ -1,6 +1,6 @@
 {
   "reference": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
-  "candidate": "e35b4199f9db78297bb1667f88ff4fa28299b396",
+  "candidate": "05a2394d7ba733bdf8e23a913e39c7faa8888fec",
   "input": "/Users/mikkokotila/.cache/limen/datasets/vaquum--binance_btcusdt_15m_klines/btcusdt_15m_kline_20200101_to_20261003.parquet",
   "file_sha256": "04cdc6b715daa4ad32b2594fcb33a2c2f3aea100eb17e131182391880a46c443",
   "hardware": "macOS-26.6.2-arm64-arm-64bit",
@@ -14,7 +14,7 @@
     "BLIS_NUM_THREADS": "1",
     "POLARS_MAX_THREADS": "1"
   },
-  "code_sha256": "130eb86aedbc0fa00053bb9985ea6afa068f591c0ac9f7f9a8271696b809a1b4",
+  "code_sha256": "4b8b7f48cc14b5ba3a0131d0ef1cbbcdcf067213ee6e9b6bb94c01ce9b6dfbef",
   "results": [
     {
       "before": {
@@ -69,23 +69,21 @@
         "indicator": "cdl2crows",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 976.0484579019248,
-        "indicator_import_ms": 241.6762080974877,
-        "first_call_ms": 38.99449994787574,
-        "steady_ms": 37.66708285547793,
+        "dependency_import_ms": 559.0586250182241,
+        "indicator_import_ms": 106.54508299194276,
+        "first_call_ms": 17.837459221482277,
+        "steady_ms": 95.95841681584716,
         "samples_ms": [
-          37.66708285547793,
-          39.56637508235872,
-          36.35483398102224
+          132.22054112702608,
+          95.95841681584716,
+          41.212750133126974
         ],
         "cpu_samples_ms": [
-          18.235,
-          18.446999999999992,
-          18.522000000000038
+          16.51600000000003,
+          15.576000000000034,
+          15.367999999999993
         ],
-        "peak_rss_mib": 83.96875,
-        "memory_probe_ms": 2744.3980001844466,
-        "traced_peak_mib": 1.3013715744018555,
+        "peak_rss_mib": 84.21875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -167,23 +165,21 @@
         "indicator": "cdl3blackcrows",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 322.78591697104275,
-        "indicator_import_ms": 67.2952919267118,
-        "first_call_ms": 39.935250068083405,
-        "steady_ms": 44.276125030592084,
+        "dependency_import_ms": 528.6940829828382,
+        "indicator_import_ms": 25.601499946787953,
+        "first_call_ms": 28.39650004170835,
+        "steady_ms": 77.8758330270648,
         "samples_ms": [
-          54.312667110934854,
-          33.813250018283725,
-          44.276125030592084
+          126.34725007228553,
+          77.8758330270648,
+          27.34900009818375
         ],
         "cpu_samples_ms": [
-          25.135999999999992,
-          22.38599999999996,
-          22.865999999999996
+          20.894000000000023,
+          22.585000000000022,
+          21.023000000000014
         ],
-        "peak_rss_mib": 84.109375,
-        "memory_probe_ms": 3249.0113750100136,
-        "traced_peak_mib": 2.522216796875,
+        "peak_rss_mib": 84.25,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -265,23 +261,21 @@
         "indicator": "cdl3inside",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 346.8793339561671,
-        "indicator_import_ms": 64.57508401945233,
-        "first_call_ms": 41.19929182343185,
-        "steady_ms": 59.15745906531811,
+        "dependency_import_ms": 255.22316596470773,
+        "indicator_import_ms": 40.44720809906721,
+        "first_call_ms": 28.007332934066653,
+        "steady_ms": 26.5257079154253,
         "samples_ms": [
-          28.93991698510945,
-          70.16645791009068,
-          59.15745906531811
+          34.35933403670788,
+          23.87512498535216,
+          26.5257079154253
         ],
         "cpu_samples_ms": [
-          18.112000000000016,
-          22.68600000000004,
-          23.397000000000002
+          20.66000000000001,
+          18.16899999999999,
+          19.572000000000035
         ],
-        "peak_rss_mib": 84.03125,
-        "memory_probe_ms": 3982.454416109249,
-        "traced_peak_mib": 1.3014717102050781,
+        "peak_rss_mib": 84.171875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -363,23 +357,21 @@
         "indicator": "cdl3linestrike",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 1947.567667113617,
-        "indicator_import_ms": 179.1123750153929,
-        "first_call_ms": 167.68579208292067,
-        "steady_ms": 67.33187497593462,
+        "dependency_import_ms": 378.1791250221431,
+        "indicator_import_ms": 49.62220904417336,
+        "first_call_ms": 87.55620894953609,
+        "steady_ms": 20.979583030566573,
         "samples_ms": [
-          49.000415951013565,
-          67.33187497593462,
-          188.31079197116196
+          18.137125065550208,
+          32.58337499573827,
+          20.979583030566573
         ],
         "cpu_samples_ms": [
-          15.999000000000041,
-          17.47399999999999,
-          16.80699999999996
+          13.785000000000046,
+          17.156000000000006,
+          15.081999999999985
         ],
-        "peak_rss_mib": 84.5,
-        "memory_probe_ms": 7855.976457940415,
-        "traced_peak_mib": 2.5221099853515625,
+        "peak_rss_mib": 84.75,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -461,23 +453,21 @@
         "indicator": "cdl3starsinsouth",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 834.6179588697851,
-        "indicator_import_ms": 179.09062514081597,
-        "first_call_ms": 75.28150011785328,
-        "steady_ms": 87.62254193425179,
+        "dependency_import_ms": 514.303624862805,
+        "indicator_import_ms": 63.67504200898111,
+        "first_call_ms": 486.8219159543514,
+        "steady_ms": 337.8122500143945,
         "samples_ms": [
-          87.62254193425179,
-          77.95641594566405,
-          88.52912508882582
+          337.8122500143945,
+          398.78379204310477,
+          257.7459590975195
         ],
         "cpu_samples_ms": [
-          35.01200000000004,
-          33.19899999999998,
-          32.76699999999999
+          33.495,
+          32.48399999999996,
+          38.46299999999997
         ],
-        "peak_rss_mib": 84.125,
-        "memory_probe_ms": 20027.77799987234,
-        "traced_peak_mib": 2.5224857330322266,
+        "peak_rss_mib": 83.859375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -559,23 +549,21 @@
         "indicator": "cdlabandonedbaby",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 1532.5461670290679,
-        "indicator_import_ms": 400.7842498831451,
-        "first_call_ms": 23.594415979459882,
-        "steady_ms": 49.0167080424726,
+        "dependency_import_ms": 588.6681249830872,
+        "indicator_import_ms": 22.171542048454285,
+        "first_call_ms": 509.29587497375906,
+        "steady_ms": 265.8043329138309,
         "samples_ms": [
-          44.47220801375806,
-          55.68066705018282,
-          49.0167080424726
+          265.8043329138309,
+          136.51395798660815,
+          473.0884588789195
         ],
         "cpu_samples_ms": [
-          15.96599999999998,
-          19.132000000000037,
-          15.97900000000002
+          15.932000000000002,
+          16.38299999999998,
+          16.65
         ],
-        "peak_rss_mib": 84.53125,
-        "memory_probe_ms": 4371.502249967307,
-        "traced_peak_mib": 2.522317886352539,
+        "peak_rss_mib": 84.21875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -657,23 +645,21 @@
         "indicator": "cdlbelthold",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 936.122165992856,
-        "indicator_import_ms": 290.3235841076821,
-        "first_call_ms": 45.95979209989309,
-        "steady_ms": 29.492333065718412,
+        "dependency_import_ms": 1180.3694169502705,
+        "indicator_import_ms": 62.625041930004954,
+        "first_call_ms": 213.7649580836296,
+        "steady_ms": 24.013916961848736,
         "samples_ms": [
-          27.97020901925862,
-          29.492333065718412,
-          43.968708952888846
+          50.673957914114,
+          24.013916961848736,
+          16.179041005671024
         ],
         "cpu_samples_ms": [
-          12.753999999999987,
-          10.994000000000003,
-          11.498999999999981
+          15.017999999999976,
+          12.969000000000008,
+          11.61000000000001
         ],
-        "peak_rss_mib": 84.25,
-        "memory_probe_ms": 3324.7539589647204,
-        "traced_peak_mib": 2.5221986770629883,
+        "peak_rss_mib": 84.140625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -755,23 +741,21 @@
         "indicator": "cdlclosingmarubozu",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 3427.247959189117,
-        "indicator_import_ms": 332.9871669411659,
-        "first_call_ms": 223.56329183094203,
-        "steady_ms": 283.04362506605685,
+        "dependency_import_ms": 1103.9725420996547,
+        "indicator_import_ms": 293.98683412000537,
+        "first_call_ms": 14.209208078682423,
+        "steady_ms": 140.79041685909033,
         "samples_ms": [
-          21.91595803014934,
-          330.955124925822,
-          283.04362506605685
+          140.79041685909033,
+          174.94679219089448,
+          140.69508318789303
         ],
         "cpu_samples_ms": [
-          10.968999999999951,
-          12.514000000000024,
-          10.934
+          12.046000000000001,
+          11.413000000000007,
+          10.75699999999996
         ],
-        "peak_rss_mib": 84.1875,
-        "memory_probe_ms": 5415.437666000798,
-        "traced_peak_mib": 2.522205352783203,
+        "peak_rss_mib": 83.765625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -851,21 +835,21 @@
         "indicator": "cdlconcealbabyswall",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 302.1460419986397,
-        "indicator_import_ms": 150.99012502469122,
-        "first_call_ms": 58.68045799434185,
-        "steady_ms": 66.70874985866249,
+        "dependency_import_ms": 1686.9192919693887,
+        "indicator_import_ms": 118.9172079320997,
+        "first_call_ms": 529.1339580435306,
+        "steady_ms": 542.6617090124637,
         "samples_ms": [
-          66.70874985866249,
-          70.43995917774737,
-          59.187375009059906
+          542.6617090124637,
+          407.44425007142127,
+          857.9951669089496
         ],
         "cpu_samples_ms": [
-          36.17500000000001,
-          34.60599999999997,
-          32.04699999999999
+          36.80900000000003,
+          35.756999999999984,
+          39.35899999999998
         ],
-        "peak_rss_mib": 83.828125,
+        "peak_rss_mib": 84.078125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -945,21 +929,21 @@
         "indicator": "cdlcounterattack",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 134.30316699668765,
-        "indicator_import_ms": 42.611541924998164,
-        "first_call_ms": 39.58891681395471,
-        "steady_ms": 25.626958115026355,
+        "dependency_import_ms": 1133.3660839591175,
+        "indicator_import_ms": 246.14358297549188,
+        "first_call_ms": 98.15241699106991,
+        "steady_ms": 301.8254169728607,
         "samples_ms": [
-          39.40870822407305,
-          18.973957980051637,
-          25.626958115026355
+          164.96316716074944,
+          303.97062515839934,
+          301.8254169728607
         ],
         "cpu_samples_ms": [
-          16.392000000000017,
-          16.653000000000027,
-          17.706
+          19.272999999999985,
+          19.928,
+          22.523999999999987
         ],
-        "peak_rss_mib": 84.609375,
+        "peak_rss_mib": 84.359375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1039,21 +1023,21 @@
         "indicator": "cdldarkcloudcover",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 101.12825012765825,
-        "indicator_import_ms": 15.377041883766651,
-        "first_call_ms": 9.932250017300248,
-        "steady_ms": 7.2949170134961605,
+        "dependency_import_ms": 1038.620000006631,
+        "indicator_import_ms": 21.911750081926584,
+        "first_call_ms": 9.861625032499433,
+        "steady_ms": 12.366625014692545,
         "samples_ms": [
-          8.615167113021016,
-          7.2949170134961605,
-          6.936707999557257
+          12.366625014692545,
+          11.545791989192367,
+          163.1708750501275
         ],
         "cpu_samples_ms": [
-          7.664000000000004,
-          6.92799999999999,
-          6.926000000000015
+          8.981000000000016,
+          8.304999999999952,
+          8.272000000000002
         ],
-        "peak_rss_mib": 84.375,
+        "peak_rss_mib": 84.046875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1133,21 +1117,21 @@
         "indicator": "cdldoji",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 123.63512511365116,
-        "indicator_import_ms": 19.47054103948176,
-        "first_call_ms": 6.363625172525644,
-        "steady_ms": 4.402833990752697,
+        "dependency_import_ms": 898.1394998263568,
+        "indicator_import_ms": 310.50545792095363,
+        "first_call_ms": 6.466292077675462,
+        "steady_ms": 106.19979188777506,
         "samples_ms": [
-          5.815292010083795,
-          3.9872501511126757,
-          4.402833990752697
+          194.13579092361033,
+          15.090917004272342,
+          106.19979188777506
         ],
         "cpu_samples_ms": [
-          4.231000000000012,
-          3.963999999999995,
-          4.175999999999985
+          5.306000000000005,
+          6.430000000000019,
+          5.657999999999996
         ],
-        "peak_rss_mib": 84.203125,
+        "peak_rss_mib": 84.28125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1227,21 +1211,21 @@
         "indicator": "cdldragonflydoji",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 312.71700002253056,
-        "indicator_import_ms": 33.86983391828835,
-        "first_call_ms": 15.52616711705923,
-        "steady_ms": 11.885832995176315,
+        "dependency_import_ms": 1086.6852910257876,
+        "indicator_import_ms": 211.39820804819465,
+        "first_call_ms": 9.672207990661263,
+        "steady_ms": 88.10491696931422,
         "samples_ms": [
-          11.885832995176315,
-          14.33679205365479,
-          8.261499926447868
+          88.10491696931422,
+          59.30979200638831,
+          104.17595808394253
         ],
         "cpu_samples_ms": [
-          9.116000000000014,
-          9.384999999999977,
-          8.26300000000002
+          8.836000000000011,
+          10.558000000000012,
+          12.33200000000001
         ],
-        "peak_rss_mib": 84.4375,
+        "peak_rss_mib": 84.46875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1321,21 +1305,21 @@
         "indicator": "cdlengulfing",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 176.0319999884814,
-        "indicator_import_ms": 37.78416709974408,
-        "first_call_ms": 5.764709087088704,
-        "steady_ms": 5.4519998375326395,
+        "dependency_import_ms": 1999.6345830149949,
+        "indicator_import_ms": 1239.734583068639,
+        "first_call_ms": 6.299959030002356,
+        "steady_ms": 143.60645809210837,
         "samples_ms": [
-          10.086291003972292,
-          4.902999848127365,
-          5.4519998375326395
+          334.15420912206173,
+          143.60645809210837,
+          5.799416918307543
         ],
         "cpu_samples_ms": [
-          7.280000000000008,
-          4.703999999999986,
-          4.649000000000014
+          5.894999999999984,
+          6.137999999999977,
+          4.807000000000006
         ],
-        "peak_rss_mib": 84.328125,
+        "peak_rss_mib": 84.265625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1415,21 +1399,21 @@
         "indicator": "cdlgravestonedoji",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 135.58779191225767,
-        "indicator_import_ms": 19.64662503451109,
-        "first_call_ms": 11.007583001628518,
-        "steady_ms": 10.720208985731006,
+        "dependency_import_ms": 958.355583017692,
+        "indicator_import_ms": 318.2939160615206,
+        "first_call_ms": 203.15941609442234,
+        "steady_ms": 76.15508302114904,
         "samples_ms": [
-          10.720208985731006,
-          8.515374967828393,
-          10.807249927893281
+          21.336250007152557,
+          344.2345838993788,
+          76.15508302114904
         ],
         "cpu_samples_ms": [
-          10.134000000000004,
-          8.517999999999997,
-          9.742
+          9.609000000000034,
+          11.80399999999998,
+          11.027000000000008
         ],
-        "peak_rss_mib": 83.625,
+        "peak_rss_mib": 84.15625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1509,21 +1493,21 @@
         "indicator": "cdlhammer",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 144.737167051062,
-        "indicator_import_ms": 20.803499966859818,
-        "first_call_ms": 14.64466704055667,
-        "steady_ms": 16.68099989183247,
+        "dependency_import_ms": 1242.18870815821,
+        "indicator_import_ms": 21.455791080370545,
+        "first_call_ms": 111.1421249806881,
+        "steady_ms": 21.583749912679195,
         "samples_ms": [
-          16.68099989183247,
-          18.045082921162248,
-          16.25212491489947
+          36.23520792461932,
+          20.538249984383583,
+          21.583749912679195
         ],
         "cpu_samples_ms": [
-          13.628000000000002,
-          15.356000000000037,
-          13.647999999999993
+          14.012999999999998,
+          15.315000000000023,
+          14.967000000000008
         ],
-        "peak_rss_mib": 84.53125,
+        "peak_rss_mib": 84.3125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1603,21 +1587,21 @@
         "indicator": "cdlhangingman",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 123.64320806227624,
-        "indicator_import_ms": 16.66808291338384,
-        "first_call_ms": 16.057749977335334,
-        "steady_ms": 18.132208148017526,
+        "dependency_import_ms": 481.6464171744883,
+        "indicator_import_ms": 41.997167048975825,
+        "first_call_ms": 43.88733301311731,
+        "steady_ms": 198.49341618828475,
         "samples_ms": [
-          18.132208148017526,
-          15.36904089152813,
-          18.84304196573794
+          198.49341618828475,
+          333.41604215092957,
+          53.84512501768768
         ],
         "cpu_samples_ms": [
-          14.347999999999999,
-          13.199999999999989,
-          15.038999999999996
+          15.16400000000001,
+          15.463999999999977,
+          20.29000000000003
         ],
-        "peak_rss_mib": 84.28125,
+        "peak_rss_mib": 84.265625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1697,21 +1681,21 @@
         "indicator": "cdlharami",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 167.2776669729501,
-        "indicator_import_ms": 14.018333051353693,
-        "first_call_ms": 11.180250206962228,
-        "steady_ms": 11.50449994020164,
+        "dependency_import_ms": 385.06950018927455,
+        "indicator_import_ms": 36.12616704776883,
+        "first_call_ms": 16.411666991189122,
+        "steady_ms": 39.22191611491144,
         "samples_ms": [
-          9.612249908968806,
-          12.15124991722405,
-          11.50449994020164
+          39.22191611491144,
+          45.857249991968274,
+          26.96654200553894
         ],
         "cpu_samples_ms": [
-          9.416000000000007,
-          10.127999999999998,
-          10.256000000000014
+          10.116999999999987,
+          10.16900000000004,
+          10.356000000000032
         ],
-        "peak_rss_mib": 84.21875,
+        "peak_rss_mib": 84.046875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1791,21 +1775,21 @@
         "indicator": "cdlharamicross",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 175.09970907121897,
-        "indicator_import_ms": 26.77395800128579,
-        "first_call_ms": 9.609249886125326,
-        "steady_ms": 11.466291034594178,
+        "dependency_import_ms": 683.0800839234143,
+        "indicator_import_ms": 20.368583034723997,
+        "first_call_ms": 11.308124987408519,
+        "steady_ms": 12.091249926015735,
         "samples_ms": [
-          11.466291034594178,
-          8.556499844416976,
-          12.211499968543649
+          12.091249926015735,
+          10.395791847258806,
+          13.459334149956703
         ],
         "cpu_samples_ms": [
-          8.456999999999992,
-          8.066000000000017,
-          9.907
+          8.070999999999994,
+          7.821000000000023,
+          9.222999999999981
         ],
-        "peak_rss_mib": 84.921875,
+        "peak_rss_mib": 84.71875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1885,21 +1869,21 @@
         "indicator": "cdlhighwave",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 118.79916698671877,
-        "indicator_import_ms": 17.93275005184114,
-        "first_call_ms": 13.821833999827504,
-        "steady_ms": 10.792874963954091,
+        "dependency_import_ms": 243.91187517903745,
+        "indicator_import_ms": 31.07724990695715,
+        "first_call_ms": 86.44233318045735,
+        "steady_ms": 60.773749835789204,
         "samples_ms": [
-          10.184040991589427,
-          10.792874963954091,
-          16.639166977256536
+          60.773749835789204,
+          19.683083053678274,
+          221.84470808133483
         ],
         "cpu_samples_ms": [
-          9.800000000000002,
-          9.698000000000013,
-          10.770000000000001
+          10.42700000000002,
+          13.370999999999967,
+          13.639000000000012
         ],
-        "peak_rss_mib": 84.109375,
+        "peak_rss_mib": 84.28125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -1979,21 +1963,21 @@
         "indicator": "cdlhikkake",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 124.04354196041822,
-        "indicator_import_ms": 17.057874938473105,
-        "first_call_ms": 9.606374893337488,
-        "steady_ms": 6.995250005275011,
+        "dependency_import_ms": 1288.7693331576884,
+        "indicator_import_ms": 103.69316604919732,
+        "first_call_ms": 9.896874893456697,
+        "steady_ms": 22.946084151044488,
         "samples_ms": [
-          5.026208003982902,
-          6.995250005275011,
-          8.149874862283468
+          6.014167098328471,
+          52.08362499251962,
+          22.946084151044488
         ],
         "cpu_samples_ms": [
-          4.2240000000000055,
-          4.567000000000015,
-          3.9910000000000223
+          4.373999999999989,
+          6.2349999999999905,
+          4.618999999999984
         ],
-        "peak_rss_mib": 84.296875,
+        "peak_rss_mib": 84.15625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2073,21 +2057,21 @@
         "indicator": "cdlhikkakemod",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 126.00462511181831,
-        "indicator_import_ms": 21.669625071808696,
-        "first_call_ms": 12.060541892424226,
-        "steady_ms": 9.074667003005743,
+        "dependency_import_ms": 937.6516251359135,
+        "indicator_import_ms": 116.83333292603493,
+        "first_call_ms": 13.594083953648806,
+        "steady_ms": 16.489834059029818,
         "samples_ms": [
-          9.074667003005743,
-          9.590624831616879,
-          8.003042079508305
+          40.09104100987315,
+          10.364499874413013,
+          16.489834059029818
         ],
         "cpu_samples_ms": [
-          8.025000000000004,
-          8.150999999999991,
-          7.970000000000005
+          10.90800000000003,
+          8.236999999999995,
+          8.045999999999998
         ],
-        "peak_rss_mib": 84.203125,
+        "peak_rss_mib": 84.484375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2167,21 +2151,21 @@
         "indicator": "cdlhomingpigeon",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 157.26700006052852,
-        "indicator_import_ms": 35.72300006635487,
-        "first_call_ms": 10.731874965131283,
-        "steady_ms": 12.85691699013114,
+        "dependency_import_ms": 615.6460409983993,
+        "indicator_import_ms": 35.50670901313424,
+        "first_call_ms": 16.878625145182014,
+        "steady_ms": 13.136040885001421,
         "samples_ms": [
-          13.144333148375154,
-          9.571959031745791,
-          12.85691699013114
+          13.136040885001421,
+          10.908833937719464,
+          15.196125023066998
         ],
         "cpu_samples_ms": [
-          9.376999999999997,
-          9.285999999999989,
-          9.98300000000002
+          9.336999999999984,
+          9.267999999999999,
+          9.170000000000012
         ],
-        "peak_rss_mib": 84.234375,
+        "peak_rss_mib": 84.546875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2261,21 +2245,21 @@
         "indicator": "cdlidentical3crows",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 98.44962507486343,
-        "indicator_import_ms": 17.403332982212305,
-        "first_call_ms": 34.434332977980375,
-        "steady_ms": 44.37612509354949,
+        "dependency_import_ms": 186.75775011070073,
+        "indicator_import_ms": 31.751417089253664,
+        "first_call_ms": 82.10183307528496,
+        "steady_ms": 40.69608403369784,
         "samples_ms": [
-          31.82666702196002,
-          44.37612509354949,
-          52.865833044052124
+          47.66937508247793,
+          40.69608403369784,
+          39.57775002345443
         ],
         "cpu_samples_ms": [
-          28.43800000000002,
-          29.13800000000005,
-          31.45700000000001
+          33.594000000000015,
+          32.00400000000003,
+          30.932000000000016
         ],
-        "peak_rss_mib": 84.421875,
+        "peak_rss_mib": 84.3125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2355,21 +2339,21 @@
         "indicator": "cdlinvertedhammer",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 168.10666699893773,
-        "indicator_import_ms": 16.449332935735583,
-        "first_call_ms": 17.90712494403124,
-        "steady_ms": 21.290208911523223,
+        "dependency_import_ms": 361.2335838843137,
+        "indicator_import_ms": 40.323249995708466,
+        "first_call_ms": 29.302542097866535,
+        "steady_ms": 33.35387515835464,
         "samples_ms": [
-          21.290208911523223,
-          19.68079200014472,
-          91.78895805962384
+          33.35387515835464,
+          35.66524991765618,
+          20.256458083167672
         ],
         "cpu_samples_ms": [
-          16.630000000000006,
-          17.060999999999993,
-          15.388000000000012
+          20.184000000000037,
+          21.550000000000015,
+          15.436000000000005
         ],
-        "peak_rss_mib": 84.703125,
+        "peak_rss_mib": 84.359375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2449,21 +2433,21 @@
         "indicator": "cdlladderbottom",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 112.24379087798297,
-        "indicator_import_ms": 20.98825015127659,
-        "first_call_ms": 12.280958006158471,
-        "steady_ms": 11.56100002117455,
+        "dependency_import_ms": 166.49449989199638,
+        "indicator_import_ms": 43.7822500243783,
+        "first_call_ms": 25.43854108080268,
+        "steady_ms": 15.267208917066455,
         "samples_ms": [
-          11.06958300806582,
-          11.56100002117455,
-          13.158415909856558
+          20.77724994160235,
+          15.267208917066455,
+          12.994582997635007
         ],
         "cpu_samples_ms": [
-          11.009000000000018,
-          11.379,
-          12.125000000000025
+          13.21300000000003,
+          11.99,
+          11.550999999999977
         ],
-        "peak_rss_mib": 83.875,
+        "peak_rss_mib": 84.4375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2543,21 +2527,21 @@
         "indicator": "cdllongleggeddoji",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 137.13495805859566,
-        "indicator_import_ms": 15.748582780361176,
-        "first_call_ms": 27.670374838635325,
-        "steady_ms": 19.523875089362264,
+        "dependency_import_ms": 261.39979204162955,
+        "indicator_import_ms": 25.51866602152586,
+        "first_call_ms": 19.042500061914325,
+        "steady_ms": 15.560875181108713,
         "samples_ms": [
-          35.53595789708197,
-          19.523875089362264,
-          12.224290985614061
+          15.560875181108713,
+          12.819290859624743,
+          15.80970804207027
         ],
         "cpu_samples_ms": [
-          10.458999999999996,
-          10.076999999999975,
-          9.894000000000014
+          11.05299999999998,
+          9.241,
+          10.145000000000016
         ],
-        "peak_rss_mib": 83.96875,
+        "peak_rss_mib": 84.34375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2637,21 +2621,21 @@
         "indicator": "cdllongline",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 119.01391693390906,
-        "indicator_import_ms": 11.969625018537045,
-        "first_call_ms": 19.08004190772772,
-        "steady_ms": 16.553791938349605,
+        "dependency_import_ms": 193.69741692207754,
+        "indicator_import_ms": 20.336000015959144,
+        "first_call_ms": 41.9275420717895,
+        "steady_ms": 23.205915931612253,
         "samples_ms": [
-          16.5412500500679,
-          23.635916179046035,
-          16.553791938349605
+          19.62891686707735,
+          29.802416916936636,
+          23.205915931612253
         ],
         "cpu_samples_ms": [
-          16.404000000000003,
-          17.89500000000002,
-          16.38899999999999
+          16.977999999999994,
+          17.61499999999999,
+          17.28999999999997
         ],
-        "peak_rss_mib": 84.046875,
+        "peak_rss_mib": 84.578125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2731,21 +2715,21 @@
         "indicator": "cdlmarubozu",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 99.35950022190809,
-        "indicator_import_ms": 13.27812485396862,
-        "first_call_ms": 10.338041931390762,
-        "steady_ms": 10.148457949981093,
+        "dependency_import_ms": 261.0650828573853,
+        "indicator_import_ms": 28.51391606964171,
+        "first_call_ms": 13.149917125701904,
+        "steady_ms": 12.317083077505231,
         "samples_ms": [
-          10.148457949981093,
-          9.486207971349359,
-          11.988959042355418
+          12.317083077505231,
+          10.090332943946123,
+          15.501582995057106
         ],
         "cpu_samples_ms": [
-          9.80600000000001,
-          9.48199999999999,
-          9.436
+          10.755000000000015,
+          9.599999999999998,
+          12.13900000000001
         ],
-        "peak_rss_mib": 84.671875,
+        "peak_rss_mib": 84.3125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2825,21 +2809,21 @@
         "indicator": "cdlmatchinglow",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 96.0344581399113,
-        "indicator_import_ms": 12.917417101562023,
-        "first_call_ms": 7.087791105732322,
-        "steady_ms": 5.937666865065694,
+        "dependency_import_ms": 201.3704169075936,
+        "indicator_import_ms": 29.132584109902382,
+        "first_call_ms": 9.155875071883202,
+        "steady_ms": 7.803375134244561,
         "samples_ms": [
-          6.882666843011975,
-          5.937666865065694,
-          5.796167068183422
+          7.3179579339921474,
+          7.803375134244561,
+          11.930209118872881
         ],
         "cpu_samples_ms": [
-          6.168000000000006,
-          5.919000000000008,
-          5.770000000000025
+          6.225999999999954,
+          6.5989999999999664,
+          8.16699999999998
         ],
-        "peak_rss_mib": 84.015625,
+        "peak_rss_mib": 84.21875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -2919,21 +2903,21 @@
         "indicator": "cdlmathold",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 104.93345814757049,
-        "indicator_import_ms": 15.390458051115274,
-        "first_call_ms": 36.5300418343395,
-        "steady_ms": 35.11008294299245,
+        "dependency_import_ms": 227.0357080269605,
+        "indicator_import_ms": 22.098208079114556,
+        "first_call_ms": 46.72054201364517,
+        "steady_ms": 44.25608413293958,
         "samples_ms": [
-          34.51075009070337,
-          36.988167092204094,
-          35.11008294299245
+          44.25608413293958,
+          43.63550012931228,
+          47.61183401569724
         ],
         "cpu_samples_ms": [
-          33.214999999999996,
-          34.20099999999998,
-          33.745000000000026
+          37.492999999999995,
+          36.23399999999999,
+          37.70299999999999
         ],
-        "peak_rss_mib": 84.375,
+        "peak_rss_mib": 84.671875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3013,21 +2997,21 @@
         "indicator": "cdlonneck",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 109.9092080257833,
-        "indicator_import_ms": 16.95908303372562,
-        "first_call_ms": 13.13687488436699,
-        "steady_ms": 10.5793341062963,
+        "dependency_import_ms": 342.9457501042634,
+        "indicator_import_ms": 71.70058391056955,
+        "first_call_ms": 28.789875097572803,
+        "steady_ms": 18.024499993771315,
         "samples_ms": [
-          9.68891684897244,
-          12.732582865282893,
-          10.5793341062963
+          45.57041707448661,
+          18.024499993771315,
+          15.172583982348442
         ],
         "cpu_samples_ms": [
-          9.669000000000011,
-          10.431000000000024,
-          9.683999999999997
+          10.436,
+          11.238000000000026,
+          12.567999999999968
         ],
-        "peak_rss_mib": 84.234375,
+        "peak_rss_mib": 84.125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3107,21 +3091,21 @@
         "indicator": "cdlpiercing",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 96.17112507112324,
-        "indicator_import_ms": 13.261291896924376,
-        "first_call_ms": 13.058041920885444,
-        "steady_ms": 12.467083055526018,
+        "dependency_import_ms": 170.50058394670486,
+        "indicator_import_ms": 20.974540850147605,
+        "first_call_ms": 23.441917030140758,
+        "steady_ms": 22.627542028203607,
         "samples_ms": [
-          12.467083055526018,
-          12.8174580167979,
-          12.169375084340572
+          17.43537513539195,
+          25.510000064969063,
+          22.627542028203607
         ],
         "cpu_samples_ms": [
-          12.338999999999988,
-          12.414000000000009,
-          12.141999999999985
+          14.904000000000028,
+          15.498000000000012,
+          14.730000000000022
         ],
-        "peak_rss_mib": 83.984375,
+        "peak_rss_mib": 84.8125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3201,21 +3185,21 @@
         "indicator": "cdlrickshawman",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 106.1570409219712,
-        "indicator_import_ms": 13.641417026519775,
-        "first_call_ms": 16.52695913799107,
-        "steady_ms": 18.39487487450242,
+        "dependency_import_ms": 205.82120795734227,
+        "indicator_import_ms": 25.174957932904363,
+        "first_call_ms": 20.57962492108345,
+        "steady_ms": 19.69329104758799,
         "samples_ms": [
-          20.303874975070357,
-          18.39487487450242,
-          17.34054205007851
+          21.99404197745025,
+          19.69329104758799,
+          19.670709036290646
         ],
         "cpu_samples_ms": [
-          17.322000000000003,
-          15.471999999999985,
-          15.271000000000006
+          16.517000000000003,
+          16.1,
+          15.841999999999967
         ],
-        "peak_rss_mib": 84.03125,
+        "peak_rss_mib": 84.484375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3295,21 +3279,21 @@
         "indicator": "cdlrisefall3methods",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 102.84975008107722,
-        "indicator_import_ms": 16.095417086035013,
-        "first_call_ms": 26.636209106072783,
-        "steady_ms": 26.04204206727445,
+        "dependency_import_ms": 281.81512490846217,
+        "indicator_import_ms": 31.9775000680238,
+        "first_call_ms": 34.12529197521508,
+        "steady_ms": 35.55687493644655,
         "samples_ms": [
-          25.778334122151136,
-          26.04204206727445,
-          26.520292041823268
+          35.55687493644655,
+          33.14845799468458,
+          37.20670915208757
         ],
         "cpu_samples_ms": [
-          24.91299999999999,
-          25.327000000000016,
-          25.11800000000003
+          26.480999999999977,
+          26.475000000000026,
+          26.968999999999966
         ],
-        "peak_rss_mib": 83.890625,
+        "peak_rss_mib": 84.34375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3389,21 +3373,21 @@
         "indicator": "cdlseparatinglines",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 145.69974993355572,
-        "indicator_import_ms": 17.138834111392498,
-        "first_call_ms": 18.03312497213483,
-        "steady_ms": 29.019708978012204,
+        "dependency_import_ms": 185.5547500308603,
+        "indicator_import_ms": 27.195292059332132,
+        "first_call_ms": 20.75041690841317,
+        "steady_ms": 29.855041997507215,
         "samples_ms": [
-          69.16825007647276,
-          29.019708978012204,
-          17.010666895657778
+          21.56854118220508,
+          31.758666038513184,
+          29.855041997507215
         ],
         "cpu_samples_ms": [
-          14.751999999999988,
-          14.325999999999977,
-          14.556000000000013
+          16.001000000000044,
+          15.158999999999978,
+          20.50599999999997
         ],
-        "peak_rss_mib": 84.21875,
+        "peak_rss_mib": 84.359375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3483,21 +3467,21 @@
         "indicator": "cdlshootingstar",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 110.20108289085329,
-        "indicator_import_ms": 15.883208950981498,
-        "first_call_ms": 17.26991613395512,
-        "steady_ms": 16.235165996477008,
+        "dependency_import_ms": 198.95320921204984,
+        "indicator_import_ms": 20.64350014552474,
+        "first_call_ms": 27.45679090730846,
+        "steady_ms": 26.622290955856442,
         "samples_ms": [
-          15.975374961271882,
-          16.235165996477008,
-          17.308708047494292
+          24.393290979787707,
+          55.619708029553294,
+          26.622290955856442
         ],
         "cpu_samples_ms": [
-          15.566999999999997,
-          15.641000000000016,
-          15.414000000000039
+          19.484,
+          18.917999999999992,
+          21.167999999999964
         ],
-        "peak_rss_mib": 84.40625,
+        "peak_rss_mib": 84.15625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3577,21 +3561,21 @@
         "indicator": "cdlshortline",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 155.15016694553196,
-        "indicator_import_ms": 20.69749985821545,
-        "first_call_ms": 53.41666704043746,
-        "steady_ms": 32.77691709809005,
+        "dependency_import_ms": 237.08712495863438,
+        "indicator_import_ms": 30.118207912892103,
+        "first_call_ms": 25.513957953080535,
+        "steady_ms": 22.926209028810263,
         "samples_ms": [
-          32.77691709809005,
-          34.34483311139047,
-          30.90725000947714
+          32.57779194973409,
+          21.989791886880994,
+          22.926209028810263
         ],
         "cpu_samples_ms": [
-          19.247000000000014,
-          17.317,
-          22.776000000000018
+          18.11999999999997,
+          16.680999999999948,
+          16.654999999999976
         ],
-        "peak_rss_mib": 84.03125,
+        "peak_rss_mib": 84.546875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3671,21 +3655,21 @@
         "indicator": "cdlspinningtop",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 91.6968749370426,
-        "indicator_import_ms": 12.54587504081428,
-        "first_call_ms": 8.79200012423098,
-        "steady_ms": 8.074624929577112,
+        "dependency_import_ms": 301.9410839769989,
+        "indicator_import_ms": 73.4759580809623,
+        "first_call_ms": 80.20791597664356,
+        "steady_ms": 30.147792072966695,
         "samples_ms": [
-          8.186167106032372,
-          8.074624929577112,
-          8.067582966759801
+          67.34845810569823,
+          30.147792072966695,
+          29.765665996819735
         ],
         "cpu_samples_ms": [
-          8.173000000000014,
-          8.059999999999985,
-          8.03799999999999
+          14.645999999999992,
+          10.027000000000008,
+          10.361999999999982
         ],
-        "peak_rss_mib": 84.046875,
+        "peak_rss_mib": 84.484375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3765,21 +3749,21 @@
         "indicator": "cdlsticksandwich",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 96.37879207730293,
-        "indicator_import_ms": 14.10200004465878,
-        "first_call_ms": 7.991959108039737,
-        "steady_ms": 6.720124976709485,
+        "dependency_import_ms": 588.2572920527309,
+        "indicator_import_ms": 54.02691708877683,
+        "first_call_ms": 13.153000036254525,
+        "steady_ms": 11.534832883626223,
         "samples_ms": [
-          6.631833966821432,
-          6.767624989151955,
-          6.720124976709485
+          9.04654199257493,
+          11.534832883626223,
+          12.42287503555417
         ],
         "cpu_samples_ms": [
-          6.633,
-          6.7030000000000145,
-          6.5870000000000095
+          7.515999999999967,
+          7.70299999999996,
+          7.645000000000013
         ],
-        "peak_rss_mib": 83.96875,
+        "peak_rss_mib": 84.359375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3859,21 +3843,21 @@
         "indicator": "cdltakuri",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 101.1167501565069,
-        "indicator_import_ms": 13.526583090424538,
-        "first_call_ms": 11.177125154063106,
-        "steady_ms": 10.66662510856986,
+        "dependency_import_ms": 555.5977921467274,
+        "indicator_import_ms": 45.86399998515844,
+        "first_call_ms": 20.586792146787047,
+        "steady_ms": 20.774625008925796,
         "samples_ms": [
-          12.257334077730775,
-          9.84429195523262,
-          10.66662510856986
+          20.774625008925796,
+          21.624292014166713,
+          14.233999885618687
         ],
         "cpu_samples_ms": [
-          10.940000000000005,
-          9.720999999999979,
-          9.644000000000014
+          12.627999999999972,
+          12.824000000000002,
+          11.433000000000026
         ],
-        "peak_rss_mib": 85.078125,
+        "peak_rss_mib": 84.203125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -3953,21 +3937,21 @@
         "indicator": "cdlthrusting",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 89.34554201550782,
-        "indicator_import_ms": 12.415542034432292,
-        "first_call_ms": 10.00529108569026,
-        "steady_ms": 9.538625134155154,
+        "dependency_import_ms": 461.6780828218907,
+        "indicator_import_ms": 218.3105000294745,
+        "first_call_ms": 26.43512492068112,
+        "steady_ms": 24.867000058293343,
         "samples_ms": [
-          9.664040990173817,
-          9.446125011891127,
-          9.538625134155154
+          34.54058291390538,
+          24.770041927695274,
+          24.867000058293343
         ],
         "cpu_samples_ms": [
-          9.591000000000015,
-          9.441000000000004,
-          9.468000000000004
+          10.445999999999955,
+          10.512999999999995,
+          10.74799999999998
         ],
-        "peak_rss_mib": 83.921875,
+        "peak_rss_mib": 84.25,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4047,21 +4031,21 @@
         "indicator": "cdltristar",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 144.96729103848338,
-        "indicator_import_ms": 17.31004216708243,
-        "first_call_ms": 7.515749894082546,
-        "steady_ms": 6.66483398526907,
+        "dependency_import_ms": 234.2207080218941,
+        "indicator_import_ms": 63.110207905992866,
+        "first_call_ms": 13.264790875837207,
+        "steady_ms": 24.148416938260198,
         "samples_ms": [
-          7.082249969244003,
-          6.66483398526907,
-          6.604416994377971
+          27.425542008131742,
+          24.148416938260198,
+          10.98191598430276
         ],
         "cpu_samples_ms": [
-          6.866999999999984,
-          6.61500000000001,
-          6.4889999999999946
+          7.205999999999991,
+          10.034999999999961,
+          7.0830000000000055
         ],
-        "peak_rss_mib": 84.0625,
+        "peak_rss_mib": 84.109375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4141,21 +4125,21 @@
         "indicator": "cdlunique3river",
         "rows": 20000,
         "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
-        "dependency_import_ms": 98.7234169151634,
-        "indicator_import_ms": 13.022791128605604,
-        "first_call_ms": 10.387999936938286,
-        "steady_ms": 10.055708000436425,
+        "dependency_import_ms": 1096.9007909297943,
+        "indicator_import_ms": 69.4999999832362,
+        "first_call_ms": 302.83133313059807,
+        "steady_ms": 131.81554106995463,
         "samples_ms": [
-          9.75491595454514,
-          10.267416015267372,
-          10.055708000436425
+          44.24604191444814,
+          131.81554106995463,
+          268.1826250627637
         ],
         "cpu_samples_ms": [
-          9.701999999999988,
-          9.721000000000007,
-          9.821999999999997
+          11.026999999999953,
+          10.777000000000037,
+          11.426999999999964
         ],
-        "peak_rss_mib": 83.984375,
+        "peak_rss_mib": 84.328125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4235,21 +4219,21 @@
         "indicator": "cdl2crows",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 120.48624991439283,
-        "indicator_import_ms": 29.316957807168365,
-        "first_call_ms": 64.8459589574486,
-        "steady_ms": 66.62629079073668,
+        "dependency_import_ms": 462.296332931146,
+        "indicator_import_ms": 92.73704094812274,
+        "first_call_ms": 203.49812507629395,
+        "steady_ms": 114.67662500217557,
         "samples_ms": [
-          63.51958401501179,
-          66.62629079073668,
-          66.80824980139732
+          150.54775006137788,
+          114.67662500217557,
+          110.39458285085857
         ],
         "cpu_samples_ms": [
-          57.975,
-          60.762000000000036,
-          59.57499999999999
+          66.99500000000003,
+          64.811,
+          65.02199999999996
         ],
-        "peak_rss_mib": 100.9375,
+        "peak_rss_mib": 101.984375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4329,21 +4313,21 @@
         "indicator": "cdl3blackcrows",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 100.13499995693564,
-        "indicator_import_ms": 14.415291836485267,
-        "first_call_ms": 81.34058304131031,
-        "steady_ms": 82.30233378708363,
+        "dependency_import_ms": 381.3313329592347,
+        "indicator_import_ms": 28.73141597956419,
+        "first_call_ms": 152.73354202508926,
+        "steady_ms": 173.87670907191932,
         "samples_ms": [
-          82.30233378708363,
-          86.25812502577901,
-          79.20929114334285
+          197.1909999847412,
+          159.51162506826222,
+          173.87670907191932
         ],
         "cpu_samples_ms": [
-          79.13999999999999,
-          81.31000000000004,
-          78.09099999999997
+          88.89400000000003,
+          95.96100000000001,
+          90.84899999999996
         ],
-        "peak_rss_mib": 107.171875,
+        "peak_rss_mib": 109.09375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4423,21 +4407,21 @@
         "indicator": "cdl3inside",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 116.56145798042417,
-        "indicator_import_ms": 15.491249971091747,
-        "first_call_ms": 77.14012498036027,
-        "steady_ms": 75.43491711840034,
+        "dependency_import_ms": 208.3969998639077,
+        "indicator_import_ms": 50.562458112835884,
+        "first_call_ms": 177.77849989943206,
+        "steady_ms": 139.47245804592967,
         "samples_ms": [
-          72.98141601495445,
-          77.24137511104345,
-          75.43491711840034
+          161.76091600209475,
+          139.47245804592967,
+          115.66941603086889
         ],
         "cpu_samples_ms": [
-          71.874,
-          72.88700000000003,
-          72.47300000000001
+          88.46300000000001,
+          87.63000000000004,
+          82.11800000000002
         ],
-        "peak_rss_mib": 102.203125,
+        "peak_rss_mib": 101.625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4517,21 +4501,21 @@
         "indicator": "cdl3linestrike",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 164.01924984529614,
-        "indicator_import_ms": 17.857833998277783,
-        "first_call_ms": 68.52591596543789,
-        "steady_ms": 64.26641694270074,
+        "dependency_import_ms": 290.7800409011543,
+        "indicator_import_ms": 23.576707812026143,
+        "first_call_ms": 101.01483389735222,
+        "steady_ms": 120.07312499918044,
         "samples_ms": [
-          64.85533295199275,
-          64.26641694270074,
-          61.555166030302644
+          86.08266687951982,
+          120.07312499918044,
+          132.4092079885304
         ],
         "cpu_samples_ms": [
-          58.34399999999995,
-          59.54999999999999,
-          57.76099999999995
+          64.73499999999999,
+          64.29600000000002,
+          63.02400000000002
         ],
-        "peak_rss_mib": 108.234375,
+        "peak_rss_mib": 109.78125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4611,21 +4595,21 @@
         "indicator": "cdl3starsinsouth",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 89.2155000474304,
-        "indicator_import_ms": 13.790249824523926,
-        "first_call_ms": 128.28112486749887,
-        "steady_ms": 125.31991698779166,
+        "dependency_import_ms": 139.99899988994002,
+        "indicator_import_ms": 19.019332947209477,
+        "first_call_ms": 161.97333298623562,
+        "steady_ms": 177.49604186974466,
         "samples_ms": [
-          120.29883312061429,
-          125.31991698779166,
-          130.43275009840727
+          164.04841607436538,
+          177.49604186974466,
+          242.47491592541337
         ],
         "cpu_samples_ms": [
-          116.52499999999999,
-          116.44200000000005,
-          116.77099999999996
+          124.687,
+          130.68899999999994,
+          140.17199999999997
         ],
-        "peak_rss_mib": 106.8125,
+        "peak_rss_mib": 108.09375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4705,21 +4689,21 @@
         "indicator": "cdlabandonedbaby",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 100.18162499181926,
-        "indicator_import_ms": 12.768124928697944,
-        "first_call_ms": 60.92149997130036,
-        "steady_ms": 62.27129208855331,
+        "dependency_import_ms": 237.0070838369429,
+        "indicator_import_ms": 29.805042082443833,
+        "first_call_ms": 106.51908302679658,
+        "steady_ms": 110.64933286979795,
         "samples_ms": [
-          61.64287496358156,
-          64.2068749293685,
-          62.27129208855331
+          280.28175001963973,
+          110.64933286979795,
+          91.81250003166497
         ],
         "cpu_samples_ms": [
-          59.54499999999999,
-          60.91300000000005,
-          59.196000000000026
+          77.048,
+          69.27,
+          66.29600000000002
         ],
-        "peak_rss_mib": 108.203125,
+        "peak_rss_mib": 108.828125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4799,21 +4783,21 @@
         "indicator": "cdlbelthold",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 142.35537499189377,
-        "indicator_import_ms": 27.9747499153018,
-        "first_call_ms": 62.81929090619087,
-        "steady_ms": 44.152165995910764,
+        "dependency_import_ms": 168.2414999231696,
+        "indicator_import_ms": 17.20770914107561,
+        "first_call_ms": 60.9570830129087,
+        "steady_ms": 51.80624988861382,
         "samples_ms": [
-          44.881667010486126,
-          44.152165995910764,
-          42.79524995945394
+          51.989583065733314,
+          49.05908298678696,
+          51.80624988861382
         ],
         "cpu_samples_ms": [
-          42.791999999999994,
-          42.56899999999997,
-          41.10600000000003
+          44.038000000000025,
+          43.04399999999997,
+          42.74
         ],
-        "peak_rss_mib": 108.734375,
+        "peak_rss_mib": 108.828125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4893,21 +4877,21 @@
         "indicator": "cdlclosingmarubozu",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 94.02179205790162,
-        "indicator_import_ms": 13.465291121974587,
-        "first_call_ms": 47.37208294682205,
-        "steady_ms": 47.17737506143749,
+        "dependency_import_ms": 135.70620818063617,
+        "indicator_import_ms": 15.559541061520576,
+        "first_call_ms": 46.978583093732595,
+        "steady_ms": 43.092333944514394,
         "samples_ms": [
-          45.488958014175296,
-          47.17737506143749,
-          58.54808306321502
+          43.092333944514394,
+          43.09791699051857,
+          40.10854219086468
         ],
         "cpu_samples_ms": [
-          42.35600000000003,
-          43.32999999999998,
-          40.99900000000001
+          40.863999999999955,
+          39.665000000000006,
+          38.951000000000015
         ],
-        "peak_rss_mib": 108.25,
+        "peak_rss_mib": 107.0625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -4987,21 +4971,21 @@
         "indicator": "cdlconcealbabyswall",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 86.76995802670717,
-        "indicator_import_ms": 14.405249850824475,
-        "first_call_ms": 127.45758309029043,
-        "steady_ms": 154.40024994313717,
+        "dependency_import_ms": 141.8665419332683,
+        "indicator_import_ms": 19.597999984398484,
+        "first_call_ms": 153.78641616553068,
+        "steady_ms": 158.00720802508295,
         "samples_ms": [
-          133.10420792549849,
-          154.40024994313717,
-          171.03187483735383
+          158.00720802508295,
+          147.2764580976218,
+          204.26379214040935
         ],
         "cpu_samples_ms": [
-          128.185,
-          134.87700000000004,
-          138.22199999999995
+          133.72999999999996,
+          129.96999999999997,
+          132.432
         ],
-        "peak_rss_mib": 109.78125,
+        "peak_rss_mib": 107.28125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5081,21 +5065,21 @@
         "indicator": "cdlcounterattack",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 209.14174988865852,
-        "indicator_import_ms": 22.164667025208473,
-        "first_call_ms": 92.5003751181066,
-        "steady_ms": 145.7374170422554,
+        "dependency_import_ms": 152.99908304587007,
+        "indicator_import_ms": 26.740290923044086,
+        "first_call_ms": 88.83766690269113,
+        "steady_ms": 83.45041703432798,
         "samples_ms": [
-          88.1729160901159,
-          145.7374170422554,
-          158.75674993731081
+          83.45041703432798,
+          78.68829183280468,
+          89.46970803663135
         ],
         "cpu_samples_ms": [
-          70.06899999999999,
-          75.16599999999995,
-          71.27499999999998
+          66.15400000000005,
+          65.94200000000001,
+          69.00699999999999
         ],
-        "peak_rss_mib": 109.171875,
+        "peak_rss_mib": 107.40625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5175,21 +5159,21 @@
         "indicator": "cdldarkcloudcover",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 116.73916690051556,
-        "indicator_import_ms": 17.939541954547167,
-        "first_call_ms": 33.076458144932985,
-        "steady_ms": 29.419499915093184,
+        "dependency_import_ms": 218.14645896665752,
+        "indicator_import_ms": 27.151708025485277,
+        "first_call_ms": 39.049332961440086,
+        "steady_ms": 42.35179093666375,
         "samples_ms": [
-          29.252582928165793,
-          30.074958922341466,
-          29.419499915093184
+          42.3908329103142,
+          37.29412495158613,
+          42.35179093666375
         ],
         "cpu_samples_ms": [
-          28.24700000000002,
-          28.561000000000003,
-          28.436000000000018
+          31.38400000000002,
+          29.79599999999999,
+          30.917000000000026
         ],
-        "peak_rss_mib": 105.625,
+        "peak_rss_mib": 104.953125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5269,21 +5253,21 @@
         "indicator": "cdldoji",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 116.49737507104874,
-        "indicator_import_ms": 16.73654210753739,
-        "first_call_ms": 17.36216712743044,
-        "steady_ms": 16.61566598340869,
+        "dependency_import_ms": 336.4033750258386,
+        "indicator_import_ms": 17.729041865095496,
+        "first_call_ms": 22.903665900230408,
+        "steady_ms": 20.584666868671775,
         "samples_ms": [
-          16.520917182788253,
-          17.38187507726252,
-          16.61566598340869
+          23.570667020976543,
+          19.76308412849903,
+          20.584666868671775
         ],
         "cpu_samples_ms": [
-          16.154000000000003,
-          16.376,
-          16.388000000000012
+          18.434000000000005,
+          17.564999999999998,
+          16.95399999999997
         ],
-        "peak_rss_mib": 110.203125,
+        "peak_rss_mib": 108.390625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5363,21 +5347,21 @@
         "indicator": "cdldragonflydoji",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 121.4606249704957,
-        "indicator_import_ms": 18.032958963885903,
-        "first_call_ms": 51.31875001825392,
-        "steady_ms": 48.69750002399087,
+        "dependency_import_ms": 237.2142921667546,
+        "indicator_import_ms": 21.96441707201302,
+        "first_call_ms": 42.42762504145503,
+        "steady_ms": 49.61370793171227,
         "samples_ms": [
-          51.026917062699795,
-          48.69750002399087,
-          39.79508392512798
+          49.61370793171227,
+          48.6691661644727,
+          51.8999588675797
         ],
         "cpu_samples_ms": [
-          40.32600000000003,
-          37.310999999999986,
-          36.92000000000001
+          37.377999999999965,
+          37.43599999999997,
+          37.712000000000025
         ],
-        "peak_rss_mib": 109.375,
+        "peak_rss_mib": 109.265625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5457,21 +5441,21 @@
         "indicator": "cdlengulfing",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 89.83712480403483,
-        "indicator_import_ms": 12.89387489669025,
-        "first_call_ms": 20.322500029578805,
-        "steady_ms": 18.579832976683974,
+        "dependency_import_ms": 199.93825000710785,
+        "indicator_import_ms": 34.069000044837594,
+        "first_call_ms": 33.8642920833081,
+        "steady_ms": 33.00962503999472,
         "samples_ms": [
-          18.579832976683974,
-          18.298707902431488,
-          18.818708136677742
+          41.30941699258983,
+          25.186625076457858,
+          33.00962503999472
         ],
         "cpu_samples_ms": [
-          18.307999999999993,
-          18.101000000000006,
-          18.200999999999993
+          22.024999999999963,
+          20.21400000000001,
+          23.168999999999997
         ],
-        "peak_rss_mib": 101.46875,
+        "peak_rss_mib": 101.453125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5551,21 +5535,21 @@
         "indicator": "cdlgravestonedoji",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 91.29258408211172,
-        "indicator_import_ms": 12.269207974895835,
-        "first_call_ms": 36.61724994890392,
-        "steady_ms": 39.463083958253264,
+        "dependency_import_ms": 136.1715840175748,
+        "indicator_import_ms": 23.211374878883362,
+        "first_call_ms": 50.673000048846006,
+        "steady_ms": 62.63804202899337,
         "samples_ms": [
-          39.463083958253264,
-          39.89512496627867,
-          36.19012492708862
+          52.047292003408074,
+          62.63804202899337,
+          66.81279209442437
         ],
         "cpu_samples_ms": [
-          36.27499999999998,
-          36.36000000000001,
-          35.646999999999984
+          40.503999999999984,
+          43.14699999999999,
+          43.38600000000004
         ],
-        "peak_rss_mib": 110.8125,
+        "peak_rss_mib": 108.6875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5645,21 +5629,21 @@
         "indicator": "cdlhammer",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 108.5312080103904,
-        "indicator_import_ms": 12.829333078116179,
-        "first_call_ms": 54.311290849000216,
-        "steady_ms": 93.01529102958739,
+        "dependency_import_ms": 169.6250420063734,
+        "indicator_import_ms": 29.038457898423076,
+        "first_call_ms": 101.15754208527505,
+        "steady_ms": 75.3188340459019,
         "samples_ms": [
-          53.308417089283466,
-          129.83704218640924,
-          93.01529102958739
+          76.42000005580485,
+          72.50004122033715,
+          75.3188340459019
         ],
         "cpu_samples_ms": [
-          52.78700000000003,
-          55.024000000000015,
-          53.727000000000025
+          60.32500000000002,
+          59.303,
+          58.92899999999995
         ],
-        "peak_rss_mib": 107.9375,
+        "peak_rss_mib": 109.953125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5739,21 +5723,21 @@
         "indicator": "cdlhangingman",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 166.95374995470047,
-        "indicator_import_ms": 20.797790959477425,
-        "first_call_ms": 61.30424980074167,
-        "steady_ms": 56.99374992400408,
+        "dependency_import_ms": 114.23520813696086,
+        "indicator_import_ms": 14.979749917984009,
+        "first_call_ms": 82.3046660516411,
+        "steady_ms": 74.27370781078935,
         "samples_ms": [
-          59.4589589163661,
-          56.99374992400408,
-          54.17874990962446
+          73.60875001177192,
+          74.27370781078935,
+          97.5474170409143
         ],
         "cpu_samples_ms": [
-          56.06,
-          55.54700000000001,
-          53.63599999999996
+          58.762000000000036,
+          59.284000000000006,
+          59.96499999999999
         ],
-        "peak_rss_mib": 109.96875,
+        "peak_rss_mib": 108.375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5833,21 +5817,21 @@
         "indicator": "cdlharami",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 123.2639579102397,
-        "indicator_import_ms": 14.976042089983821,
-        "first_call_ms": 42.1174590010196,
-        "steady_ms": 37.902083015069366,
+        "dependency_import_ms": 181.0267090331763,
+        "indicator_import_ms": 47.4412499461323,
+        "first_call_ms": 73.55283410288393,
+        "steady_ms": 54.601750103756785,
         "samples_ms": [
-          39.121291832998395,
-          37.902083015069366,
-          36.62266698665917
+          64.94333385489881,
+          54.601750103756785,
+          53.631666116416454
         ],
         "cpu_samples_ms": [
-          38.439,
-          37.412,
-          36.187000000000026
+          46.14099999999999,
+          40.36099999999998,
+          39.98599999999997
         ],
-        "peak_rss_mib": 102.1875,
+        "peak_rss_mib": 102.34375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -5927,21 +5911,21 @@
         "indicator": "cdlharamicross",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 167.94995800592005,
-        "indicator_import_ms": 27.204624842852354,
-        "first_call_ms": 44.55645801499486,
-        "steady_ms": 40.04887491464615,
+        "dependency_import_ms": 189.06670808792114,
+        "indicator_import_ms": 18.78166594542563,
+        "first_call_ms": 47.87795897573233,
+        "steady_ms": 50.73300004005432,
         "samples_ms": [
-          41.42858297564089,
-          40.04887491464615,
-          32.92620787397027
+          50.73300004005432,
+          58.98929201066494,
+          49.33137516491115
         ],
         "cpu_samples_ms": [
-          36.75400000000001,
-          35.33900000000001,
-          31.895000000000007
+          36.379,
+          38.41,
+          36.621000000000016
         ],
-        "peak_rss_mib": 108.359375,
+        "peak_rss_mib": 108.21875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6021,21 +6005,21 @@
         "indicator": "cdlhighwave",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 100.72645801119506,
-        "indicator_import_ms": 13.677750015631318,
-        "first_call_ms": 44.15149986743927,
-        "steady_ms": 42.6512910053134,
+        "dependency_import_ms": 169.89620798267424,
+        "indicator_import_ms": 21.102666156366467,
+        "first_call_ms": 63.24579217471182,
+        "steady_ms": 304.25320798531175,
         "samples_ms": [
-          42.6512910053134,
-          42.57641709409654,
-          43.00262499600649
+          1257.5670001097023,
+          304.25320798531175,
+          115.43799983337522
         ],
         "cpu_samples_ms": [
-          41.32900000000001,
-          40.97699999999998,
-          41.07900000000003
+          51.62700000000003,
+          45.85600000000001,
+          47.47400000000002
         ],
-        "peak_rss_mib": 107.5,
+        "peak_rss_mib": 108.0,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6115,21 +6099,21 @@
         "indicator": "cdlhikkake",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 111.33449990302324,
-        "indicator_import_ms": 14.961584005504847,
-        "first_call_ms": 18.65812507458031,
-        "steady_ms": 22.11374999023974,
+        "dependency_import_ms": 314.6337498910725,
+        "indicator_import_ms": 51.904499996453524,
+        "first_call_ms": 51.65524990297854,
+        "steady_ms": 32.26366615854204,
         "samples_ms": [
-          18.960291985422373,
-          22.11374999023974,
-          22.944583790376782
+          32.02975005842745,
+          33.47091609612107,
+          32.26366615854204
         ],
         "cpu_samples_ms": [
-          16.445999999999987,
-          18.905999999999977,
-          17.673999999999968
+          16.81499999999997,
+          18.311999999999994,
+          16.91999999999999
         ],
-        "peak_rss_mib": 106.3125,
+        "peak_rss_mib": 105.96875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6209,21 +6193,21 @@
         "indicator": "cdlhikkakemod",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 160.6857089791447,
-        "indicator_import_ms": 19.219708861783147,
-        "first_call_ms": 39.933249820023775,
-        "steady_ms": 34.00570806115866,
+        "dependency_import_ms": 164.20287499204278,
+        "indicator_import_ms": 20.84087487310171,
+        "first_call_ms": 41.03920795023441,
+        "steady_ms": 39.34858296997845,
         "samples_ms": [
-          36.51804197579622,
-          33.58783316798508,
-          34.00570806115866
+          39.34858296997845,
+          39.401707937940955,
+          37.342041032388806
         ],
         "cpu_samples_ms": [
-          34.654999999999994,
-          32.31899999999999,
-          32.75499999999998
+          35.33900000000001,
+          34.15299999999999,
+          33.201000000000036
         ],
-        "peak_rss_mib": 103.9375,
+        "peak_rss_mib": 105.734375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6303,21 +6287,21 @@
         "indicator": "cdlhomingpigeon",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 189.55912510864437,
-        "indicator_import_ms": 17.887709196656942,
-        "first_call_ms": 41.15050006657839,
-        "steady_ms": 46.96562513709068,
+        "dependency_import_ms": 227.81837498769164,
+        "indicator_import_ms": 25.43283300474286,
+        "first_call_ms": 50.65762484446168,
+        "steady_ms": 57.675916934385896,
         "samples_ms": [
-          39.123541209846735,
-          46.96562513709068,
-          50.77337520197034
+          57.675916934385896,
+          52.79508396051824,
+          70.64341707155108
         ],
         "cpu_samples_ms": [
-          36.881,
-          39.08800000000001,
-          41.681000000000026
+          40.02999999999995,
+          41.398000000000046,
+          44.016999999999975
         ],
-        "peak_rss_mib": 101.03125,
+        "peak_rss_mib": 101.734375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6397,21 +6381,21 @@
         "indicator": "cdlidentical3crows",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 132.86700006574392,
-        "indicator_import_ms": 13.69208307005465,
-        "first_call_ms": 115.01191696152091,
-        "steady_ms": 113.08758310042322,
+        "dependency_import_ms": 178.84812480770051,
+        "indicator_import_ms": 28.708874946460128,
+        "first_call_ms": 363.7370830401778,
+        "steady_ms": 304.14770916104317,
         "samples_ms": [
-          113.08758310042322,
-          114.13566605187953,
-          111.41041596420109
+          304.14770916104317,
+          499.6285829693079,
+          255.2321250550449
         ],
         "cpu_samples_ms": [
-          110.79999999999995,
-          111.37500000000006,
-          109.908
+          139.46699999999996,
+          131.845,
+          130.34400000000002
         ],
-        "peak_rss_mib": 108.421875,
+        "peak_rss_mib": 108.75,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6491,21 +6475,21 @@
         "indicator": "cdlinvertedhammer",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 228.47395786084235,
-        "indicator_import_ms": 25.780207943171263,
-        "first_call_ms": 118.5751250013709,
-        "steady_ms": 75.18775016069412,
+        "dependency_import_ms": 439.77187504060566,
+        "indicator_import_ms": 29.417125042527914,
+        "first_call_ms": 98.36754202842712,
+        "steady_ms": 76.0700001846999,
         "samples_ms": [
-          91.68291697278619,
-          75.18775016069412,
-          72.340999962762
+          77.29625003412366,
+          76.0700001846999,
+          73.63154203630984
         ],
         "cpu_samples_ms": [
-          68.31900000000002,
-          66.15300000000002,
-          66.29099999999998
+          66.12799999999996,
+          65.93599999999999,
+          62.75900000000001
         ],
-        "peak_rss_mib": 109.0,
+        "peak_rss_mib": 109.0625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6585,21 +6569,21 @@
         "indicator": "cdlladderbottom",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 118.39783401228487,
-        "indicator_import_ms": 15.525209018960595,
-        "first_call_ms": 94.30870809592307,
-        "steady_ms": 79.31562513113022,
+        "dependency_import_ms": 139.20937501825392,
+        "indicator_import_ms": 18.48954218439758,
+        "first_call_ms": 94.18691578321159,
+        "steady_ms": 61.336749931797385,
         "samples_ms": [
-          99.09045789390802,
-          79.31562513113022,
-          72.57537497207522
+          59.275415958836675,
+          69.86150005832314,
+          61.336749931797385
         ],
         "cpu_samples_ms": [
-          53.421,
-          50.11599999999999,
-          50.30099999999999
+          49.73299999999997,
+          51.90700000000004,
+          49.28399999999999
         ],
-        "peak_rss_mib": 109.9375,
+        "peak_rss_mib": 106.625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6679,21 +6663,21 @@
         "indicator": "cdllongleggeddoji",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 113.18295798264444,
-        "indicator_import_ms": 19.484792137518525,
-        "first_call_ms": 41.618167189881206,
-        "steady_ms": 38.74445892870426,
+        "dependency_import_ms": 168.1761669460684,
+        "indicator_import_ms": 28.861124999821186,
+        "first_call_ms": 47.858166974037886,
+        "steady_ms": 52.21991613507271,
         "samples_ms": [
-          38.74445892870426,
-          38.04583405144513,
-          38.92045887187123
+          52.197666838765144,
+          57.61545803397894,
+          52.21991613507271
         ],
         "cpu_samples_ms": [
-          38.271,
-          37.46300000000002,
-          37.58399999999995
+          43.08700000000004,
+          44.129999999999946,
+          42.437000000000005
         ],
-        "peak_rss_mib": 108.265625,
+        "peak_rss_mib": 109.828125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6773,21 +6757,21 @@
         "indicator": "cdllongline",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 155.52945784293115,
-        "indicator_import_ms": 25.678665842860937,
-        "first_call_ms": 102.9565001372248,
-        "steady_ms": 92.44808298535645,
+        "dependency_import_ms": 160.93195788562298,
+        "indicator_import_ms": 16.86637499369681,
+        "first_call_ms": 88.70033407583833,
+        "steady_ms": 104.80962507426739,
         "samples_ms": [
-          102.51875012181699,
-          92.44808298535645,
-          91.83512511663139
+          104.80962507426739,
+          95.80995794385672,
+          136.4953750744462
         ],
         "cpu_samples_ms": [
-          76.30799999999999,
-          75.94400000000002,
-          75.704
+          76.88000000000001,
+          74.33399999999996,
+          84.61600000000003
         ],
-        "peak_rss_mib": 109.84375,
+        "peak_rss_mib": 108.828125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6867,21 +6851,21 @@
         "indicator": "cdlmarubozu",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 101.99854080565274,
-        "indicator_import_ms": 15.067375032231212,
-        "first_call_ms": 50.92116701416671,
-        "steady_ms": 47.12116695009172,
+        "dependency_import_ms": 186.82679207995534,
+        "indicator_import_ms": 19.494167063385248,
+        "first_call_ms": 54.98791695572436,
+        "steady_ms": 96.27862507477403,
         "samples_ms": [
-          47.12116695009172,
-          49.83295896090567,
-          43.09862502850592
+          70.71512495167553,
+          96.27862507477403,
+          212.90508401580155
         ],
         "cpu_samples_ms": [
-          41.22799999999999,
-          42.756000000000014,
-          39.06900000000002
+          46.04000000000003,
+          49.958000000000006,
+          52.02200000000001
         ],
-        "peak_rss_mib": 109.484375,
+        "peak_rss_mib": 110.4375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -6961,21 +6945,21 @@
         "indicator": "cdlmatchinglow",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 121.18487502448261,
-        "indicator_import_ms": 24.938249960541725,
-        "first_call_ms": 32.83741604536772,
-        "steady_ms": 25.70912498049438,
+        "dependency_import_ms": 462.4383330810815,
+        "indicator_import_ms": 306.20366684161127,
+        "first_call_ms": 155.1442090421915,
+        "steady_ms": 52.68866685219109,
         "samples_ms": [
-          25.63500008545816,
-          27.087584137916565,
-          25.70912498049438
+          54.931415943428874,
+          52.68866685219109,
+          35.71570897474885
         ],
         "cpu_samples_ms": [
-          24.95900000000001,
-          25.778000000000024,
-          25.15299999999998
+          30.471999999999998,
+          33.33799999999998,
+          28.24199999999999
         ],
-        "peak_rss_mib": 109.078125,
+        "peak_rss_mib": 108.15625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7055,21 +7039,21 @@
         "indicator": "cdlmathold",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 106.35637491941452,
-        "indicator_import_ms": 15.738584101200104,
-        "first_call_ms": 272.78020791709423,
-        "steady_ms": 151.6123751644045,
+        "dependency_import_ms": 214.96212505735457,
+        "indicator_import_ms": 20.02033405005932,
+        "first_call_ms": 201.22020808048546,
+        "steady_ms": 265.74433292262256,
         "samples_ms": [
-          145.29733289964497,
-          158.88849995099008,
-          151.6123751644045
+          230.0784159451723,
+          453.6824580281973,
+          265.74433292262256
         ],
         "cpu_samples_ms": [
-          136.70499999999996,
-          141.057,
-          140.23000000000008
+          161.68000000000004,
+          158.63499999999996,
+          153.953
         ],
-        "peak_rss_mib": 105.015625,
+        "peak_rss_mib": 104.359375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7149,21 +7133,21 @@
         "indicator": "cdlonneck",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 144.1273328382522,
-        "indicator_import_ms": 21.817916072905064,
-        "first_call_ms": 55.94404204748571,
-        "steady_ms": 56.04666704311967,
+        "dependency_import_ms": 165.5757501721382,
+        "indicator_import_ms": 35.21129209548235,
+        "first_call_ms": 46.621707966551185,
+        "steady_ms": 46.88945901580155,
         "samples_ms": [
-          53.045749897137284,
-          56.04666704311967,
-          58.1575830001384
+          47.90062503889203,
+          46.88945901580155,
+          39.74670893512666
         ],
         "cpu_samples_ms": [
-          43.047000000000004,
-          43.373,
-          46.840999999999966
+          41.491,
+          40.29099999999997,
+          38.466
         ],
-        "peak_rss_mib": 107.34375,
+        "peak_rss_mib": 107.265625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7243,21 +7227,21 @@
         "indicator": "cdlpiercing",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 115.1990001089871,
-        "indicator_import_ms": 22.82191696576774,
-        "first_call_ms": 82.72062498144805,
-        "steady_ms": 55.75112486258149,
+        "dependency_import_ms": 98.40716701000929,
+        "indicator_import_ms": 16.008916776627302,
+        "first_call_ms": 60.574083123356104,
+        "steady_ms": 57.44174984283745,
         "samples_ms": [
-          65.75499987229705,
-          54.813917027786374,
-          55.75112486258149
+          57.44174984283745,
+          63.51279094815254,
+          56.67866696603596
         ],
         "cpu_samples_ms": [
-          54.423,
-          52.16599999999999,
-          52.029999999999966
+          51.853999999999985,
+          53.70199999999997,
+          52.93700000000001
         ],
-        "peak_rss_mib": 105.5,
+        "peak_rss_mib": 105.265625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7337,21 +7321,21 @@
         "indicator": "cdlrickshawman",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 169.79841701686382,
-        "indicator_import_ms": 32.25675015710294,
-        "first_call_ms": 91.49016696028411,
-        "steady_ms": 76.35570783168077,
+        "dependency_import_ms": 115.97016686573625,
+        "indicator_import_ms": 16.791875008493662,
+        "first_call_ms": 78.40179093182087,
+        "steady_ms": 113.76066599041224,
         "samples_ms": [
-          72.29324989020824,
-          77.44366698898375,
-          76.35570783168077
+          113.76066599041224,
+          97.2988330759108,
+          135.62820805236697
         ],
         "cpu_samples_ms": [
-          63.40099999999998,
-          64.334,
-          61.56
+          71.61900000000004,
+          66.73099999999998,
+          70.305
         ],
-        "peak_rss_mib": 109.296875,
+        "peak_rss_mib": 109.890625,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7431,21 +7415,21 @@
         "indicator": "cdlrisefall3methods",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 154.75674998015165,
-        "indicator_import_ms": 16.478332923725247,
-        "first_call_ms": 126.56204192899168,
-        "steady_ms": 115.95937493257225,
+        "dependency_import_ms": 165.31970910727978,
+        "indicator_import_ms": 19.230749923735857,
+        "first_call_ms": 114.10420900210738,
+        "steady_ms": 147.7312499191612,
         "samples_ms": [
-          148.88816699385643,
-          115.95937493257225,
-          107.28299990296364
+          153.14791700802743,
+          123.74316691420972,
+          147.7312499191612
         ],
         "cpu_samples_ms": [
-          114.60599999999998,
-          105.70300000000005,
-          103.36499999999992
+          114.04999999999998,
+          106.24,
+          112.84799999999994
         ],
-        "peak_rss_mib": 109.140625,
+        "peak_rss_mib": 108.328125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7525,21 +7509,21 @@
         "indicator": "cdlseparatinglines",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 130.46087487600744,
-        "indicator_import_ms": 17.792500089854002,
-        "first_call_ms": 66.22179201804101,
-        "steady_ms": 62.611499801278114,
+        "dependency_import_ms": 143.12020898796618,
+        "indicator_import_ms": 31.900708097964525,
+        "first_call_ms": 183.06691711768508,
+        "steady_ms": 79.89616598933935,
         "samples_ms": [
-          62.611499801278114,
-          57.31183313764632,
-          76.8002918921411
+          79.89616598933935,
+          62.79516709037125,
+          137.94133393093944
         ],
         "cpu_samples_ms": [
-          57.031,
-          54.74800000000002,
-          57.95600000000001
+          61.19199999999997,
+          56.77299999999996,
+          63.57200000000002
         ],
-        "peak_rss_mib": 109.6875,
+        "peak_rss_mib": 109.25,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7619,21 +7603,21 @@
         "indicator": "cdlshootingstar",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 155.56000010110438,
-        "indicator_import_ms": 37.1908750385046,
-        "first_call_ms": 78.43049988150597,
-        "steady_ms": 109.23808300867677,
+        "dependency_import_ms": 121.1884580552578,
+        "indicator_import_ms": 12.885292060673237,
+        "first_call_ms": 72.85116706043482,
+        "steady_ms": 69.48950001969934,
         "samples_ms": [
-          80.6258749216795,
-          109.23808300867677,
-          113.43016708269715
+          72.35345779918134,
+          69.47700004093349,
+          69.48950001969934
         ],
         "cpu_samples_ms": [
-          65.05199999999999,
-          66.91599999999997,
-          65.80499999999995
+          64.693,
+          63.38699999999997,
+          63.01000000000001
         ],
-        "peak_rss_mib": 109.0625,
+        "peak_rss_mib": 107.359375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7713,21 +7697,21 @@
         "indicator": "cdlshortline",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 141.11829199828207,
-        "indicator_import_ms": 16.231208108365536,
-        "first_call_ms": 97.25741692818701,
-        "steady_ms": 101.60237504169345,
+        "dependency_import_ms": 119.59283403120935,
+        "indicator_import_ms": 26.523124892264605,
+        "first_call_ms": 100.58837500400841,
+        "steady_ms": 134.99650009907782,
         "samples_ms": [
-          101.60237504169345,
-          140.68750012665987,
-          80.80516592599452
+          134.99650009907782,
+          147.95337500981987,
+          131.44908309914172
         ],
         "cpu_samples_ms": [
-          74.88700000000004,
-          81.30999999999999,
-          71.57599999999998
+          82.21600000000001,
+          78.129,
+          79.58199999999998
         ],
-        "peak_rss_mib": 108.84375,
+        "peak_rss_mib": 108.4375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7807,21 +7791,21 @@
         "indicator": "cdlspinningtop",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 109.94137497618794,
-        "indicator_import_ms": 16.33033319376409,
-        "first_call_ms": 38.48970797844231,
-        "steady_ms": 43.249999871477485,
+        "dependency_import_ms": 613.0147080402821,
+        "indicator_import_ms": 71.8720001168549,
+        "first_call_ms": 128.50975012406707,
+        "steady_ms": 86.05016604997218,
         "samples_ms": [
-          53.901041159406304,
-          38.37625007145107,
-          43.249999871477485
+          86.05016604997218,
+          91.32562507875264,
+          77.18074996955693
         ],
         "cpu_samples_ms": [
-          40.82899999999998,
-          35.47100000000003,
-          36.22900000000001
+          43.10600000000003,
+          44.07899999999998,
+          42.155
         ],
-        "peak_rss_mib": 110.484375,
+        "peak_rss_mib": 108.609375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7901,21 +7885,21 @@
         "indicator": "cdlsticksandwich",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 183.82825003936887,
-        "indicator_import_ms": 16.670458018779755,
-        "first_call_ms": 32.162707997485995,
-        "steady_ms": 38.22112502530217,
+        "dependency_import_ms": 314.3617499154061,
+        "indicator_import_ms": 41.60320805385709,
+        "first_call_ms": 72.28716695681214,
+        "steady_ms": 106.41966690309346,
         "samples_ms": [
-          29.85316701233387,
-          38.26516610570252,
-          38.22112502530217
+          62.46625003404915,
+          106.41966690309346,
+          206.77045919001102
         ],
         "cpu_samples_ms": [
-          29.049999999999965,
-          31.375000000000043,
-          28.927000000000035
+          31.242999999999967,
+          35.53800000000001,
+          32.262000000000015
         ],
-        "peak_rss_mib": 108.53125,
+        "peak_rss_mib": 109.109375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -7995,21 +7979,21 @@
         "indicator": "cdltakuri",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 118.68254095315933,
-        "indicator_import_ms": 17.50175002962351,
-        "first_call_ms": 45.729625038802624,
-        "steady_ms": 51.432209089398384,
+        "dependency_import_ms": 235.34387513063848,
+        "indicator_import_ms": 21.50679100304842,
+        "first_call_ms": 56.531416019424796,
+        "steady_ms": 47.186000039801,
         "samples_ms": [
-          45.02820805646479,
-          51.503832917660475,
-          51.432209089398384
+          49.29933394305408,
+          42.98395803198218,
+          47.186000039801
         ],
         "cpu_samples_ms": [
-          41.37199999999999,
-          42.70499999999999,
-          41.910000000000004
+          43.24900000000004,
+          40.356,
+          40.53400000000001
         ],
-        "peak_rss_mib": 109.890625,
+        "peak_rss_mib": 108.484375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -8089,21 +8073,21 @@
         "indicator": "cdlthrusting",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 164.2940421588719,
-        "indicator_import_ms": 14.392791083082557,
-        "first_call_ms": 61.15737510845065,
-        "steady_ms": 52.01362515799701,
+        "dependency_import_ms": 102.58479206822813,
+        "indicator_import_ms": 13.673416804522276,
+        "first_call_ms": 53.92324994318187,
+        "steady_ms": 47.411083010956645,
         "samples_ms": [
-          51.36829195544124,
-          54.67333295382559,
-          52.01362515799701
+          47.411083010956645,
+          47.82516695559025,
+          45.35516700707376
         ],
         "cpu_samples_ms": [
-          41.29499999999997,
-          44.56899999999997,
-          42.866000000000014
+          41.26000000000002,
+          42.945999999999984,
+          40.31200000000001
         ],
-        "peak_rss_mib": 110.515625,
+        "peak_rss_mib": 107.484375,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -8183,21 +8167,21 @@
         "indicator": "cdltristar",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 142.60341692715883,
-        "indicator_import_ms": 18.39699991978705,
-        "first_call_ms": 36.88462497666478,
-        "steady_ms": 37.88320813328028,
+        "dependency_import_ms": 129.20212489552796,
+        "indicator_import_ms": 16.030208207666874,
+        "first_call_ms": 32.19979186542332,
+        "steady_ms": 28.073666151612997,
         "samples_ms": [
-          37.88320813328028,
-          42.272666934877634,
-          37.54312498494983
+          28.073666151612997,
+          27.691832976415753,
+          31.231417087838054
         ],
         "cpu_samples_ms": [
-          28.06399999999998,
-          30.300999999999966,
-          31.658999999999992
+          27.406999999999986,
+          27.023999999999994,
+          27.05099999999999
         ],
-        "peak_rss_mib": 108.75,
+        "peak_rss_mib": 107.1875,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -8277,21 +8261,21 @@
         "indicator": "cdlunique3river",
         "rows": 83136,
         "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
-        "dependency_import_ms": 136.59641705453396,
-        "indicator_import_ms": 15.586708905175328,
-        "first_call_ms": 47.99850005656481,
-        "steady_ms": 55.93116697855294,
+        "dependency_import_ms": 129.2339579667896,
+        "indicator_import_ms": 15.841958811506629,
+        "first_call_ms": 45.793999917805195,
+        "steady_ms": 63.39991698041558,
         "samples_ms": [
-          55.93116697855294,
-          50.11258297599852,
-          381.61037489771843
+          44.16983318515122,
+          63.39991698041558,
+          120.91000005602837
         ],
         "cpu_samples_ms": [
-          44.97099999999998,
-          45.925,
-          46.91299999999998
+          39.947999999999986,
+          41.058999999999955,
+          46.40499999999997
         ],
-        "peak_rss_mib": 103.9375,
+        "peak_rss_mib": 104.53125,
         "schema": {
           "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
           "open": "Float64",
@@ -8321,5 +8305,5 @@
       }
     }
   ],
-  "method": "One fresh process per implementation/indicator/size; first call plus three warm calls include conversion and allocations. RSS is process peak after the untraced calls, including imports/input. Some early samples additionally contain optional traced-allocation probes measured after RSS. CPU timings avoid desktop scheduling noise. Every output and full schema compared exactly."
+  "method": "Full public calls; isolated processes, one first and three warm calls; all six numerical thread limits one. CPU medians determine execution cost; wall samples include uncontrolled desktop contention. RSS is process peak after warm calls, including imports/input. Outputs and schemas compare exactly. Any allocation-probe fields are separate from timing/RSS."
 }
