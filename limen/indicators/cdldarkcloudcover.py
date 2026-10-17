@@ -70,7 +70,7 @@ def _cdldarkcloudcover_impl(
             and color_i0 == -1
             and open_values[i] > high_values[i - 1]
             and close_values[i] > open_values[i - 1]
-            and close_values[i] < close_values[i - 1] - (real_body_i1 * penetration)
+            and close_values[i] < close_values[i - 1] - (np.float64(real_body_i1) * penetration)
         ):
             out[i] = -100
 

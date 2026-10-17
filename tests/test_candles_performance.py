@@ -1,4 +1,5 @@
 """Candlestick equivalence and scalar-dispatch costs on recorded market bars."""
+import ast
 import hashlib
 import importlib
 import inspect
@@ -72,13 +73,21 @@ def _timings(name):
     from limen import indicators
     frame = DATA.head(1500)
     before, after = [], []
+    iterations = 1
     for _ in range(3):
+        while True:
+            started = time.process_time()
+            for _ in range(iterations):
+                expected = BASELINES[name](frame)
+            elapsed = time.process_time() - started
+            if elapsed >= .03:
+                break
+            iterations *= 2
+        before.append(elapsed / iterations)
         started = time.process_time()
-        expected = BASELINES[name](frame)
-        before.append(time.process_time() - started)
-        started = time.process_time()
-        result = getattr(indicators, name)(frame)
-        after.append(time.process_time() - started)
+        for _ in range(iterations):
+            result = getattr(indicators, name)(frame)
+        after.append((time.process_time() - started) / iterations)
     assert_frame_equal(result, expected, check_exact=True)
     return before, after
 
@@ -93,3 +102,51 @@ def timing_worker():
 def test_calculation_latency(name, timing_worker):
     before, after = timing_worker.submit(_timings, name).result(timeout=60)
     assert statistics.median(after) < statistics.median(before) * .9
+
+
+class _AllowedRewrites(ast.NodeTransformer):
+    def visit_Call(self, node):
+        node = self.generic_visit(node)
+        if isinstance(node.func, ast.Attribute):
+            if node.func.attr == 'tolist' and not node.args and not node.keywords:
+                return node.func.value
+            if ast.unparse(node.func) == 'np.float64' and len(node.args) == 1:
+                return node.args[0]
+        return node
+
+    def visit_BinOp(self, node):
+        node = self.generic_visit(node)
+        if (isinstance(node.op, ast.Mult) and isinstance(node.left, ast.List)
+                and ast.literal_eval(node.left) == [0.0]):
+            return ast.parse(f'np.zeros({ast.unparse(node.right)}, dtype=float)').body[0].value
+        return node
+
+
+def test_structural_equivalence():
+    root = Path(__file__).resolve().parents[1]
+    with zipfile.ZipFile(ARCHIVE) as saved:
+        for path in REFERENCE['sources']:
+            before = ast.parse(saved.read('_limen_candles_baseline/' + Path(path).name))
+            after = _AllowedRewrites().visit(ast.parse((root / path).read_text()))
+            assert ast.dump(after) == ast.dump(before), path
+
+
+@pytest.mark.parametrize('name', ['cdlabandonedbaby', 'cdldarkcloudcover', 'cdlmathold'])
+def test_numpy_penetration(name):
+    from limen import indicators
+    frame = pl.read_parquet(FIXTURES / 'indicator_equivalence_long.parquet').head(5444)
+    for penetration in (np.float16(.5), np.float32(.5570075), np.float64(.5), .2, .8):
+        expected = BASELINES[name](frame, penetration=penetration)
+        assert_frame_equal(getattr(indicators, name)(frame, penetration=penetration), expected, check_exact=True)
+
+
+@pytest.mark.parametrize('name', ['cdldoji', 'cdlhammer', 'cdllongline'])
+def test_infinite_values(name):
+    from limen import indicators
+    frame = DATA.head(128).with_columns(
+        pl.when(pl.int_range(pl.len()).is_in([20, 30])).then(pl.lit(np.inf))
+        .when(pl.int_range(pl.len()) == 40).then(pl.lit(-np.inf))
+        .otherwise(pl.col('high')).alias('high'))
+    with np.errstate(invalid='ignore'):
+        expected = BASELINES[name](frame)
+        assert_frame_equal(getattr(indicators, name)(frame), expected, check_exact=True)

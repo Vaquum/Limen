@@ -106,14 +106,14 @@ def _cdlabandonedbaby_impl(
                 (
                     color_i2 == 1
                     and color_i0 == -1
-                    and close_values[i] < close_values[i - 2] - (real_body_i2 * penetration)
+                    and close_values[i] < close_values[i - 2] - (np.float64(real_body_i2) * penetration)
                     and candle_gap_up_1_2
                     and candle_gap_down_0_1
                 )
                 or (
                     color_i2 == -1
                     and color_i0 == 1
-                    and close_values[i] > close_values[i - 2] + (real_body_i2 * penetration)
+                    and close_values[i] > close_values[i - 2] + (np.float64(real_body_i2) * penetration)
                     and candle_gap_down_1_2
                     and candle_gap_up_0_1
                 )

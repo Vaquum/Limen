@@ -101,8 +101,8 @@ def _cdlmathold_impl(
             and second_rb_low > first_rb_high
             and third_rb_low < close_values[i - 4]
             and fourth_rb_low < close_values[i - 4]
-            and third_rb_low > close_values[i - 4] - (real_body_i4 * penetration)
-            and fourth_rb_low > close_values[i - 4] - (real_body_i4 * penetration)
+            and third_rb_low > close_values[i - 4] - (np.float64(real_body_i4) * penetration)
+            and fourth_rb_low > close_values[i - 4] - (np.float64(real_body_i4) * penetration)
             and third_rb_high < open_values[i - 3]
             and fourth_rb_high < third_rb_high
             and open_values[i] > close_values[i - 1]
