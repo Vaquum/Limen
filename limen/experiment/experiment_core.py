@@ -32,6 +32,7 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.log.log import Log
 from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
+from limen.sfd.rule_based._temporal import validate_temporal_conditions
 from limen.yaml.store import canonical_manifest_id
 import limen.experiment._parallel_rounds as _parallel
 
@@ -200,6 +201,11 @@ class UniversalExperimentLoop:
         '''Run manifest/custom rounds; MSQ owns sampling; manifests require prep_each_round=True.'''
 
         validate_objective_reducers(self.manifest, self._pruning_strategies)
+        if isinstance(self.manifest, RuleBasedManifest):
+            if params is not None and self._search_strategy is None:
+                self.params, params = params(), None
+            domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params
+            validate_temporal_conditions(self.manifest.strategy.conditions, domains | {key: [value] for key, value in (context_params or {}).items()})
         if type(record_execution) is not bool:
             raise ValueError('record_execution must be a bool')
         if record_execution and (self._search_strategy is None or self._experiment_dir is None):
