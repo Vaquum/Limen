@@ -1663,6 +1663,12 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Accelerate rolling midpoint/price windows and reuse Ultimate Oscillator terms without changing arithmetic order.
 
-## [5.29.9] - 2026-10-17
+## [5.30.0] - 2026-10-17
+
+- Configure persisted round-log predictions, alignment arrays, event ledgers and fold details through one YAML/native recording policy; preserve default payloads, scientific results and canonical walk-forward returns (#942).
+- Reject lighter or changed recording policies before resume modifies artifacts; retain exact reconstruction provenance and existing execution/model-output recording defaults.
+- Allow omitted fold/alignment evidence with PBO reported unavailable; reject an explicitly selected PBO threshold before creating run artifacts or replacing saved reports, while preserving return tracks and DSR.
+
+## [5.30.1] - 2026-10-17
 
 - Execute SMA updates as an ordered native cumulative scan and reuse identical MAMA calculations in APO, PPO and MACDEXT.

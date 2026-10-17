@@ -69,6 +69,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
             progress_bar=progress_bar,
             record_execution=metadata.get('record_execution', False),
             record_model_outputs=metadata.get('record_model_outputs', False),
+            recording=metadata.get('recording'),
             factorize=metadata.get('factorize', False),
             workers=effective_workers,
         )

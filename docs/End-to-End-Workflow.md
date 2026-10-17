@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_first
-  limen_version: "5.29.9"
+  limen_version: "5.30.1"
   mode: development
   description: First logistic-regression binary classifier
 
@@ -143,7 +143,7 @@ Key artifacts:
 | copied YAML manifest | Exact run definition. |
 | `metadata.json` | Manifest reference and run metadata used by downstream tools. |
 | `results.csv` | One row per completed permutation. |
-| `round_data.jsonl.gz` | Round params, predictions, and alignment metadata. |
+| `round_data.jsonl.gz` | Round identity, params and payloads selected by the [recording policy](Universal-Experiment-Loop.md#recording-policy). |
 | `checkpoint.json` | Resume state when checkpointing has run. |
 | `audit.jsonl` | Feedback-cycle trail when feedback has run. |
 
