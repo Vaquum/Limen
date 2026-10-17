@@ -62,6 +62,9 @@ def _step(steps, name):
 
 
 def _check_workflows(workflow, ruleset) -> None:
+    for config, job_name in ((workflow, 'pr_checks_tests'), (ruleset, 'pr_checks_ruleset')):
+        assert not config.get('env', {}).get('PYTEST_ADDOPTS'), 'workflow pytest selection changed'
+        assert not config['jobs'][job_name].get('env', {}).get('PYTEST_ADDOPTS'), 'job pytest selection changed'
     steps = workflow['jobs']['pr_checks_tests']['steps']
     setup = [step for step in steps if step.get('uses', '').startswith('actions/setup-python@')]
     assert [step['with']['python-version'] for step in setup] == ['3.12'], 'covered interpreter changed'
@@ -112,6 +115,10 @@ def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
     ('conditional_backend_step', 'backend contract step changed'),
     ('filtered_backend_step', 'backend contract step changed'),
     ('late_backend_step', 'backend contract step order changed'),
+    ('workflow_selection', 'workflow pytest selection changed'),
+    ('job_selection', 'job pytest selection changed'),
+    ('ruleset_workflow_selection', 'workflow pytest selection changed'),
+    ('ruleset_job_selection', 'job pytest selection changed'),
 ])
 def test_coverage_contract_rejects_workflow_mutations(mutation, reason):
     workflow, ruleset = _workflow(TESTS_WORKFLOW), _workflow(RULESET_WORKFLOW)
@@ -144,6 +151,14 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason):
         case 'late_backend_step':
             steps.remove(contract)
             steps.insert(steps.index(covered) + 1, contract)
+        case 'workflow_selection':
+            workflow['env'] = {'PYTEST_ADDOPTS': '--ignore=tests/test_factorize_equivalence.py'}
+        case 'job_selection':
+            workflow['jobs']['pr_checks_tests']['env'] = {'PYTEST_ADDOPTS': '-k not_actual_coverage_probe_rejects_fallback'}
+        case 'ruleset_workflow_selection':
+            ruleset['env'] = {'PYTEST_ADDOPTS': '-k not_tests_ci_contract'}
+        case 'ruleset_job_selection':
+            ruleset['jobs']['pr_checks_ruleset']['env'] = {'PYTEST_ADDOPTS': '-k not_governance_config'}
     assert (workflow, ruleset) != original, 'mutation did not change workflow'
     with pytest.raises(AssertionError, match=reason):
         _check_workflows(workflow, ruleset)
