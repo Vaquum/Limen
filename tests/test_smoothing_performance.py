@@ -76,13 +76,21 @@ def _timings(name):
     frame = DATA.head(3000)
     kwargs = {'period': 168} if name == 'sma' else ({'ma_type': 7} if name in ('apo', 'ppo') else {'fast_ma_type': 7, 'slow_ma_type': 7})
     before, after = [], []
+    iterations = 1
     for _ in range(3):
+        while True:
+            started = time.process_time()
+            for _ in range(iterations):
+                expected = getattr(BASELINES, name)(frame, **kwargs)
+            elapsed = time.process_time() - started
+            if elapsed >= .03:
+                break
+            iterations *= 2
+        before.append(elapsed / iterations)
         started = time.process_time()
-        expected = getattr(BASELINES, name)(frame, **kwargs)
-        before.append(time.process_time() - started)
-        started = time.process_time()
-        result = getattr(indicators, name)(frame, **kwargs)
-        after.append(time.process_time() - started)
+        for _ in range(iterations):
+            result = getattr(indicators, name)(frame, **kwargs)
+        after.append((time.process_time() - started) / iterations)
     assert_frame_equal(result, expected, check_exact=True)
     return before, after
 
@@ -135,3 +143,24 @@ def test_longest_period():
     from limen.indicators.sma import sma
     frame = pl.read_parquet(FIXTURES / 'indicator_equivalence_long.parquet')
     assert_frame_equal(sma(frame, period=100000), BASELINES.sma(frame, period=100000), check_exact=True)
+
+
+@pytest.mark.parametrize(('name', 'kwargs'), [
+    ('sma', {'period': 30.0}), ('sma', {'period': np.float64(30)}),
+    ('sma', {'period': 30.5}), ('apo', {'fast_period': 12.0}),
+    ('ppo', {'slow_period': 26.0}),
+])
+def test_float_periods(name, kwargs):
+    from limen import indicators
+    frame = DATA.head(128)
+    expected = getattr(BASELINES, name)(frame, **kwargs)
+    assert_frame_equal(getattr(indicators, name)(frame, **kwargs), expected, check_exact=True)
+
+
+def test_sma_bits():
+    baseline = importlib.import_module('_limen_smoothing_baseline.sma').sma_from_values
+    calculate = importlib.import_module('limen.indicators.sma').sma_from_values
+    for values in (DATA['close'].to_numpy(), DATA['close'].to_numpy() * -0.0):
+        for period in (2, 30, 168):
+            np.testing.assert_array_equal(calculate(values, period).view(np.uint64),
+                                          baseline(values, period).view(np.uint64))

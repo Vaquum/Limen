@@ -20,13 +20,13 @@ def sma_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray
         period_total += values[i]
         i += 1
 
-    count = n - lookback
+    count = n - i
     steps = np.empty(2 * count + 1)
     steps[0] = period_total
-    steps[1::2] = values[lookback:]
+    steps[1::2] = values[i:]
     steps[2::2] = -values[:count]
     steps = np.cumsum(steps, out=steps)
-    out[lookback:] = steps[1::2] / period
+    out[i:] = steps[1::2] / period
 
     return out
 
