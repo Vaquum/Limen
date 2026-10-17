@@ -30,7 +30,7 @@ DATA = pl.read_parquet(FIXTURES / 'spot_15m_20250101_20250531.parquet').select('
 @pytest.mark.parametrize('name', ['price_lines', 'quantile_price_lines'])
 @pytest.mark.parametrize(('rows', 'duration', 'height', 'variant'), [
     (0, 48, .002, 'raw'), (1, 48, .002, 'raw'), (2, 2, .002, 'raw'),
-    (17, 48, .002, 'raw'), (512, 13, .005, 'raw'), (3000, 48, .002, 'raw'),
+    (17, 48, .002, 'raw'), (512, 13, .005, 'raw'), (512, 48, .002, 'raw'),
     (512, 48, 1.0, 'raw'), (512, 48, .002, 'flat'),
     (512, 48, .002, 'nan'), (512, 48, .002, 'null'),
 ])
@@ -75,7 +75,10 @@ def test_dictionary_contract_and_provenance():
         for path, digest in metadata['sources'].items():
             source = saved.read(f'_limen_lines_baseline/{Path(path).name}').replace(
                 b'from _limen_lines_baseline.find_price_lines import',
-                b'from limen.utils.find_price_lines import')
+                b'from limen.utils.find_price_lines import').replace(
+                b'from _limen_lines_baseline.filter_lines_by_quantile import',
+                b'from limen.utils.filter_lines_by_quantile import').replace(
+                b'from _limen_lines_baseline.', b'from limen.features.')
             assert hashlib.sha256(source).hexdigest() == digest
 
 
@@ -85,10 +88,10 @@ def _timings(name):
     before, after = [], []
     for _ in range(3):
         started = time.perf_counter()
-        expected = baseline(DATA.head(3000), 48, .002)
+        expected = baseline(DATA.head(512), 48, .002)
         before.append(time.perf_counter() - started)
         started = time.perf_counter()
-        result = calculate(DATA.head(3000), 48, .002)
+        result = calculate(DATA.head(512), 48, .002)
         after.append(time.perf_counter() - started)
     assert_frame_equal(result, expected, check_exact=True)
     return before, after

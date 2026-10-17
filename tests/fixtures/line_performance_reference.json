@@ -2,8 +2,14 @@
   "commit": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
   "sources": {
     "limen/utils/find_price_lines.py": "c1ef92a3955f5a24f3f424e83706c97e64592ebf08fa46282dbd0a720cc56dcb",
+    "limen/utils/filter_lines_by_quantile.py": "d6e64784becb126e5909965ad84b66ca3420139c1a9d1834c0697c849d882ef4",
     "limen/features/price_lines.py": "0c42abeb661ce07b29908fe2f86171de23222dc388e0b9f9a5a635a005874e0d",
-    "limen/features/quantile_price_lines.py": "e9ccbe025e86b14a8a60778e626e77f7da0154aeb9b1d20bfab709859e457e44"
+    "limen/features/quantile_price_lines.py": "e9ccbe025e86b14a8a60778e626e77f7da0154aeb9b1d20bfab709859e457e44",
+    "limen/features/active_lines.py": "eb5165c93fc1bae9bec41084bdcf8211bffd1de523f4ed8a996be805efc7501b",
+    "limen/features/hours_since_big_move.py": "5452966ba143aac186985d2c184d5afa8b9100abb61e5635843336e684b2679d",
+    "limen/features/active_quantile_count.py": "01c8fbac89853bfec7978e1f8c83d0d0bf2fa9fbab4bd70d15ff55b5e3a274a4",
+    "limen/features/hours_since_quantile_line.py": "292d725e6be80a22600330cccaf003353e29d0275a1acb4e94c81bf70c9e15a8",
+    "limen/features/quantile_line_density.py": "97ba3deac9ca873b89ecab8b0fa70fd8d8843e9891de11d4d4b4aab0195b2f47"
   },
-  "archive_sha256": "b3776247b34e9f617388e606ca7fabcd68c527ad6fa3351ffb85f2fd95ba0fb1"
+  "archive_sha256": "2f050c45a4b609eab0a10be8bdc68675b1c9cccf3e934b7b87cb7276e5ae498e"
 }
