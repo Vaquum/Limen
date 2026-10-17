@@ -192,4 +192,4 @@ def test_benchmark_relative_paths(monkeypatch, tmp_path):
     monkeypatch.setattr(benchmark_indicators, '_campaign', small_campaign)
     benchmark_indicators.main()
     with np.load(tmp_path / 'measurements' / 'contract.npz') as result:
-        np.testing.assert_array_equal(result['cci'], indicators.cci(DATA.head(64))['cci'].to_numpy())
+        np.testing.assert_array_equal(result['cci_14'], indicators.cci(DATA.head(64))['cci_14'].to_numpy())
