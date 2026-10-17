@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.29.3"
+  limen_version: "5.30.0"
   mode: development
 
 sfd:
@@ -104,6 +104,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
+| `recording` | mapping of bool | all groups `true` | choose saved predictions, alignment arrays, event ledger and fold details; lighter policies cannot resume; see [UEL recording policy](Universal-Experiment-Loop.md#recording-policy) |
 | `factorize` | bool | `false` | reuse deterministic snapshot signal work across independent backtest-only grid axes; see [UEL](Universal-Experiment-Loop.md) |
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
@@ -408,11 +409,11 @@ One trial consumes one permutation and reaches feedback only after its folds fin
 
 `uel.fold_results` keeps the individual result rows with trial `id` and `fold` identity. The aggregate `optimal_threshold` is null: each fold has its own fitted threshold, retained in its result. Post-run `Log` backtest rows remain per fold rather than treating the concatenated test windows as one continuous position path. Prediction and confusion replay that assumes one test set rejects walk-forward trials.
 
-In saved CLI or Python/MSQ runs, `round_data.jsonl.gz` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Legacy standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
+In saved CLI or Python/MSQ runs, `round_data.jsonl.gz` contains a nested `folds` record per trial with each fold's results, alignment, predictions and net returns by default. The [recording policy](Universal-Experiment-Loop.md#recording-policy) can omit the entire fold payload or selected fields within retained folds without changing `trial_returns.parquet` or acceptance reports. `trial_returns.parquet` contains exactly `trial`, `bar` and `net_return`, with one row group per successful trial. Legacy standard runs write it in `experiment_dir`, or beside the named experiment output when no directory is supplied. `bar` is a consecutive ordinal over the actual retained test rows, in fold order; it adds no rows for excluded or dropped bars.
 
 Every fold starts execution independently. Snapshot net returns are the existing notional-scaled `execution.net` values. Event execution samples its recorded equity at retained test-bar endpoints, including the terminal mark in the final value; each return is current equity divided by prior equity minus one, starting from the policy's initial equity. The return track is captured for walk-forward trials even when `record_execution` is off; that flag retains its existing optional JSONL fields. Existing snapshot metrics and their columns remain unchanged.
 
-Resume rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. This adds no fold-specific Trainer promotion or Sensor reconstruction contract. Existing no-walk-forward runs retain their artifact and resume behavior.
+Full/default recording allows resume, which rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. Any lighter recording policy rejects resume before artifact changes. This adds no fold-specific Trainer promotion or Sensor reconstruction contract. Existing no-walk-forward runs retain their artifact and resume behavior.
 
 These folds provide recorded out-of-sample evaluations. The selection report below assesses the recorded sweep; its statistics provide no guarantee against selection optimism or future loss. Omitting `split_walk_forward` preserves the existing single-split path.
 
@@ -447,7 +448,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.29.3"
+  limen_version: "5.30.0"
   mode: development
 sfd:
   manifest:
@@ -504,7 +505,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.29.3"
+  limen_version: "5.30.0"
   mode: development
 sfd:
   manifest:

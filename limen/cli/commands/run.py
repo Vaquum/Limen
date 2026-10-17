@@ -95,6 +95,7 @@ def run_experiment(yaml_path: Path,
             progress_bar=progress_bar,
             record_execution=uel_cfg.get('record_execution', False),
             record_model_outputs=uel_cfg.get('record_model_outputs', False),
+            recording=uel_cfg.get('recording'),
             factorize=uel_cfg.get('factorize', False),
             workers=effective_workers,
         )

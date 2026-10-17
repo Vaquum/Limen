@@ -1640,3 +1640,8 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.29.3] - 2026-10-17
 
 - Keep composite price-line calculations in arrays to remove per-line objects and Python event scans.
+
+## [5.30.0] - 2026-10-17
+
+- Configure persisted round-log predictions, alignment arrays, event ledgers and fold details through one YAML/native recording policy; preserve default payloads, scientific results and canonical walk-forward returns (#942).
+- Reject lighter or changed recording policies before resume modifies artifacts; retain exact reconstruction provenance and existing execution/model-output recording defaults.

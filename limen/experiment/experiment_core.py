@@ -6,7 +6,7 @@ import logging
 import signal
 import time
 import warnings
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from contextlib import nullcontext
 from datetime import datetime
 from datetime import timezone
@@ -23,6 +23,7 @@ from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
+from limen.experiment._recording import prepare_recording, project_record
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
@@ -128,6 +129,7 @@ class UniversalExperimentLoop:
         self._walk_forward: WalkForwardRun | None = None
         self._record_execution = False
         self._record_model_outputs = False
+        self._recording: dict[str, bool] | None = None
         self._factorize = False
         self.round_params: list[dict[str, Any]] = []
         self.preds: list[Any] = []
@@ -155,7 +157,11 @@ class UniversalExperimentLoop:
             prep: Callable[..., dict[str, object]] | None = None, model: Callable[..., dict[str, object]] | None = None,
             resume: bool = False, post_processing: bool = False,
             progress_bar: bool = True, record_execution: bool = False,
-            record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None) -> None:
+            record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None,
+            recording: Mapping[str, bool] | None = None) -> None:
+        self._recording = prepare_recording(recording, reference=self._yaml_reference,
+                                            directory=self._experiment_dir, has_search=self._search_strategy is not None,
+                                            resume=resume)
         original_prep, original_model = _parallel.begin_run(self, workers, prep_each_round, resume, post_processing, factorize, context_params, (params, prep, model))
         self._walk_forward = None
         self.convergence_report = None
@@ -1025,6 +1031,8 @@ class UniversalExperimentLoop:
             metadata['record_execution'] = True
         if self._record_model_outputs:
             metadata['record_model_outputs'] = True
+        if self._recording is not None:
+            metadata['recording'] = self._recording
         if self._factorize:
             metadata['factorize'] = True
         add_objective_metadata(self.manifest, metadata)
@@ -1089,8 +1097,9 @@ class UniversalExperimentLoop:
         '''Append one round's data to the JSONL file.'''
 
         if self._walk_forward is not None:
-            _storage.append_record(round_data_path, {'round_id': round_id, '_round_index': round_index,
-                                                     'round_params': round_params, 'folds': alignment['folds']})
+            _storage.append_record(round_data_path, project_record(
+                {'round_id': round_id, '_round_index': round_index,
+                 'round_params': round_params, 'folds': alignment['folds']}, self._recording))
             return
 
         entry = {
@@ -1121,7 +1130,7 @@ class UniversalExperimentLoop:
         if self._record_model_outputs:
             entry.update(alignment.get('model_outputs', {'probs': None}))
 
-        _storage.append_record(round_data_path, entry)
+        _storage.append_record(round_data_path, project_record(entry, self._recording))
 
 
     def _load_round_data(self,

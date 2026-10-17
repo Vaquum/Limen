@@ -1,0 +1,310 @@
+{
+  "source": "tests/fixtures/spot_1h_20240101_20241231.parquet",
+  "method": "Existing production helper configs; all recording enabled; 2 rounds each. Group byte weights are exact logical JSON removal deltas. Compressed omission deltas recompress the same records and shared market layout without that group; estimates are not additive.",
+  "kinds": {
+    "binary": {
+      "rounds": 2,
+      "prediction_rows": 286,
+      "folds": 0,
+      "logical_jsonl_bytes": 25376,
+      "round_and_market_disk_bytes": 9790,
+      "other_files": {
+        "checkpoint.json": 858,
+        "metadata.json": 2469,
+        "convergence_report.json": 165,
+        "results.csv": 2999
+      },
+      "groups": {
+        "predictions": {
+          "logical_bytes": 880,
+          "logical_percent": 3.47,
+          "compressed_omission_saves_bytes": 181
+        },
+        "probabilities": {
+          "logical_bytes": 5752,
+          "logical_percent": 22.67,
+          "compressed_omission_saves_bytes": 2908
+        },
+        "thresholds": {
+          "logical_bytes": 98,
+          "logical_percent": 0.39,
+          "compressed_omission_saves_bytes": 79
+        },
+        "alignment": {
+          "logical_bytes": 804,
+          "logical_percent": 3.17,
+          "compressed_omission_saves_bytes": 231
+        },
+        "execution_series": {
+          "logical_bytes": 10932,
+          "logical_percent": 43.08,
+          "compressed_omission_saves_bytes": 4574
+        },
+        "market_returns": {
+          "logical_bytes": 6618,
+          "logical_percent": 26.08,
+          "compressed_omission_saves_bytes": 1673
+        }
+      }
+    },
+    "event": {
+      "rounds": 2,
+      "prediction_rows": 288,
+      "folds": 0,
+      "logical_jsonl_bytes": 245352,
+      "round_and_market_disk_bytes": 36981,
+      "other_files": {
+        "checkpoint.json": 841,
+        "metadata.json": 2057,
+        "convergence_report.json": 165,
+        "results.csv": 3365
+      },
+      "groups": {
+        "predictions": {
+          "logical_bytes": 886,
+          "logical_percent": 0.36,
+          "compressed_omission_saves_bytes": 223
+        },
+        "probabilities": {
+          "logical_bytes": 30,
+          "logical_percent": 0.01,
+          "compressed_omission_saves_bytes": 16
+        },
+        "alignment": {
+          "logical_bytes": 286,
+          "logical_percent": 0.12,
+          "compressed_omission_saves_bytes": 156
+        },
+        "execution_series": {
+          "logical_bytes": 38,
+          "logical_percent": 0.02,
+          "compressed_omission_saves_bytes": 23
+        },
+        "market_returns": {
+          "logical_bytes": 32,
+          "logical_percent": 0.01,
+          "compressed_omission_saves_bytes": 18
+        },
+        "trade_contract": {
+          "logical_bytes": 25104,
+          "logical_percent": 10.23,
+          "compressed_omission_saves_bytes": 4227
+        },
+        "trade_ledger": {
+          "logical_bytes": 218682,
+          "logical_percent": 89.13,
+          "compressed_omission_saves_bytes": 32313
+        }
+      }
+    },
+    "folds": {
+      "rounds": 2,
+      "prediction_rows": 0,
+      "folds": 4,
+      "logical_jsonl_bytes": 31677,
+      "round_and_market_disk_bytes": 10311,
+      "other_files": {
+        "checkpoint.json": 835,
+        "acceptance_report.json": 352,
+        "trial_returns.parquet": 4021,
+        "metadata.json": 2155,
+        "convergence_report.json": 165,
+        "acceptance_report.md": 467,
+        "audit.jsonl": 226,
+        "results.csv": 4092
+      },
+      "groups": {
+        "predictions": {
+          "logical_bytes": 608,
+          "logical_percent": 1.92,
+          "compressed_omission_saves_bytes": 150
+        },
+        "thresholds": {
+          "logical_bytes": 108,
+          "logical_percent": 0.34,
+          "compressed_omission_saves_bytes": 45
+        },
+        "alignment": {
+          "logical_bytes": 6444,
+          "logical_percent": 20.34,
+          "compressed_omission_saves_bytes": 1054
+        },
+        "execution_series": {
+          "logical_bytes": 6148,
+          "logical_percent": 19.41,
+          "compressed_omission_saves_bytes": 1488
+        },
+        "market_returns": {
+          "logical_bytes": 4352,
+          "logical_percent": 13.74,
+          "compressed_omission_saves_bytes": 2271
+        },
+        "fold_results": {
+          "logical_bytes": 11083,
+          "logical_percent": 34.99,
+          "compressed_omission_saves_bytes": 4127
+        },
+        "fold_net_returns": {
+          "logical_bytes": 2580,
+          "logical_percent": 8.14,
+          "compressed_omission_saves_bytes": 164
+        }
+      }
+    },
+    "ridge": {
+      "rounds": 2,
+      "prediction_rows": 286,
+      "folds": 0,
+      "logical_jsonl_bytes": 22399,
+      "round_and_market_disk_bytes": 8408,
+      "other_files": {
+        "checkpoint.json": 861,
+        "metadata.json": 2408,
+        "convergence_report.json": 165,
+        "results.csv": 2001
+      },
+      "groups": {
+        "predictions": {
+          "logical_bytes": 6251,
+          "logical_percent": 27.91,
+          "compressed_omission_saves_bytes": 3220
+        },
+        "probabilities": {
+          "logical_bytes": 30,
+          "logical_percent": 0.13,
+          "compressed_omission_saves_bytes": 24
+        },
+        "alignment": {
+          "logical_bytes": 804,
+          "logical_percent": 3.59,
+          "compressed_omission_saves_bytes": 267
+        },
+        "execution_series": {
+          "logical_bytes": 8398,
+          "logical_percent": 37.49,
+          "compressed_omission_saves_bytes": 3163
+        },
+        "market_returns": {
+          "logical_bytes": 6618,
+          "logical_percent": 29.55,
+          "compressed_omission_saves_bytes": 1672
+        }
+      }
+    },
+    "rule": {
+      "rounds": 2,
+      "prediction_rows": 288,
+      "folds": 0,
+      "logical_jsonl_bytes": 17680,
+      "round_and_market_disk_bytes": 5987,
+      "other_files": {
+        "checkpoint.json": 841,
+        "metadata.json": 1964,
+        "convergence_report.json": 165,
+        "results.csv": 4034
+      },
+      "groups": {
+        "predictions": {
+          "logical_bytes": 886,
+          "logical_percent": 5.01,
+          "compressed_omission_saves_bytes": 183
+        },
+        "probabilities": {
+          "logical_bytes": 30,
+          "logical_percent": 0.17,
+          "compressed_omission_saves_bytes": 25
+        },
+        "alignment": {
+          "logical_bytes": 286,
+          "logical_percent": 1.62,
+          "compressed_omission_saves_bytes": 155
+        },
+        "execution_series": {
+          "logical_bytes": 9520,
+          "logical_percent": 53.85,
+          "compressed_omission_saves_bytes": 3706
+        },
+        "market_returns": {
+          "logical_bytes": 6664,
+          "logical_percent": 37.69,
+          "compressed_omission_saves_bytes": 1674
+        }
+      }
+    }
+  },
+  "fixture_sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+  "git_head": "a049505cb9f314fcb837acede70fdc1dab37ae58",
+  "helpers": [
+    "tests.test_record_execution._config/_loop/_run",
+    "tests.test_walk_forward_uel._config/_loop/_bars/_run",
+    "tests.test_record_execution.test_event_execution_keeps_its_trade_ledger event policy"
+  ],
+  "pinning": {
+    "rule_binary_ridge_event": {
+      "source_rows": 1200,
+      "train": "2024-01-01..2024-01-23",
+      "validation": "2024-01-24..2024-01-30",
+      "test": "2024-01-31..2024-02-06",
+      "rule_params": {
+        "sharpe_std_threshold": [
+          0.5,
+          0.7
+        ]
+      },
+      "binary_params": {
+        "C": [
+          0.1,
+          1.0
+        ],
+        "max_iter": [
+          1000
+        ]
+      },
+      "ridge_params": {
+        "alpha": [
+          0.1,
+          1.0
+        ],
+        "solver": [
+          "svd"
+        ]
+      },
+      "snapshot": {
+        "fee_bps": 7.0,
+        "slip_bps": 3.0,
+        "notional_rate": 0.5
+      },
+      "event": {
+        "kind": "cash_spot",
+        "instrument": "BTCUSDT",
+        "base_currency": "BTC",
+        "quote_currency": "USDT",
+        "quantity_step": 1e-09,
+        "min_notional": 0
+      }
+    },
+    "walk_forward": {
+      "source_rows": 384,
+      "n_folds": 2,
+      "test_bars": 48,
+      "purge_bars": 4,
+      "embargo_bars": 3,
+      "anchored": true,
+      "entry_return": [
+        0.0,
+        0.001
+      ]
+    }
+  },
+  "timing": {
+    "production_generation_seconds": 0.6008086248766631,
+    "measurement_seconds": 0.426210125,
+    "limitations": "Tiny 2-round existing fixtures, not a campaign estimate; byte savings depend on predictions/trade activity. Probabilities are null on rule/ridge/event cases. All optional recording flags enabled; default run omits snapshot execution/market and model probabilities. Fold results/net returns may be required for existing analysis/resume/acceptance and are not omission recommendations."
+  },
+  "recording_flags": {
+    "record_execution": true,
+    "record_model_outputs": true
+  },
+  "baseline_recording_policy": "Before optional recording groups; complete existing round payloads retained.",
+  "interpretation": "Measured fixture observations only. Preserve exact contracts, digests and learning bindings in retained records despite their byte cost. Whole-fold omission removes fold-local provenance with the omitted subtree. Scalar results and canonical walk-forward return artifacts are outside the byte omission estimates."
+}
