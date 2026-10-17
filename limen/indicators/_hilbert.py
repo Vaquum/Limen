@@ -1,7 +1,7 @@
 import math
 from functools import lru_cache
 
-__all__ = ['init_hilbert_state', 'do_hilbert_transform', '_phase_weights']
+__all__ = ['_phase_weights', 'do_hilbert_transform', 'init_hilbert_state']
 
 
 def init_hilbert_state() -> list[float]:

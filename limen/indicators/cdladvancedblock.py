@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-__all__ = ['cdladvancedblock', '_candle_totals']
+__all__ = ['_candle_totals', 'cdladvancedblock']
 
 CDLADVANCEDBLOCK_BODY_LONG_AVG_PERIOD = 10
 CDLADVANCEDBLOCK_BODY_LONG_PERIOD_TOTAL = 0.0

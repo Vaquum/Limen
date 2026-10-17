@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-__all__ = ['linearreg', '_linearreg_components']
+__all__ = ['_linearreg_components', 'linearreg']
 
 
 CMP_N_100000 = 100000
