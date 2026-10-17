@@ -87,6 +87,7 @@ def _check_workflows(workflow, ruleset) -> None:
 def test_pr_checks_tests_workflow_exists() -> None:
     assert TESTS_WORKFLOW.exists()
     assert RULESET_WORKFLOW.exists()
+    _check_workflows(_workflow(TESTS_WORKFLOW), _workflow(RULESET_WORKFLOW))
 
 
 def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
@@ -154,7 +155,7 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason):
         case 'workflow_selection':
             workflow['env'] = {'PYTEST_ADDOPTS': '--ignore=tests/test_factorize_equivalence.py'}
         case 'job_selection':
-            workflow['jobs']['pr_checks_tests']['env'] = {'PYTEST_ADDOPTS': '-k "not actual_coverage_probe_rejects_fallback"'}
+            workflow['jobs']['pr_checks_tests']['env'] = {'PYTEST_ADDOPTS': '-k "test_pr_checks_tests_workflow_exists or not tests_ci_contract"'}
         case 'ruleset_workflow_selection':
             ruleset['env'] = {'PYTEST_ADDOPTS': '-k "not tests_ci_contract"'}
         case 'ruleset_job_selection':
