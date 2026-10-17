@@ -121,7 +121,7 @@ def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
     ('ruleset_workflow_selection', 'workflow pytest selection changed'),
     ('ruleset_job_selection', 'job pytest selection changed'),
 ])
-def test_coverage_contract_rejects_workflow_mutations(mutation, reason):
+def test_coverage_contract_rejects_workflow_mutations(mutation, reason, monkeypatch):
     workflow, ruleset = _workflow(TESTS_WORKFLOW), _workflow(RULESET_WORKFLOW)
     _check_workflows(workflow, ruleset)
     original = deepcopy((workflow, ruleset))
@@ -161,8 +161,14 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason):
         case 'ruleset_job_selection':
             ruleset['jobs']['pr_checks_ruleset']['env'] = {'PYTEST_ADDOPTS': '-k "not governance_config"'}
     assert (workflow, ruleset) != original, 'mutation did not change workflow'
+    if mutation == 'job_selection':
+        monkeypatch.setattr(sys.modules[__name__], '_workflow',
+                            {TESTS_WORKFLOW: workflow, RULESET_WORKFLOW: ruleset}.__getitem__)
     with pytest.raises(AssertionError, match=reason):
-        _check_workflows(workflow, ruleset)
+        if mutation == 'job_selection':
+            test_pr_checks_tests_workflow_exists()
+        else:
+            _check_workflows(workflow, ruleset)
 
 
 @pytest.mark.parametrize(('branch', 'optimize'), [(False, '0'), (True, '0'), (True, '1')])
