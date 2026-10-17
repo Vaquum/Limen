@@ -1,0 +1,41 @@
+{
+  "midprice": {
+    "function": "midprice",
+    "kwargs": {},
+    "outputs": [
+      "midprice_14"
+    ]
+  },
+  "midpoint": {
+    "function": "midpoint",
+    "kwargs": {},
+    "outputs": [
+      "midpoint_14"
+    ]
+  },
+  "midprice168": {
+    "function": "midprice",
+    "kwargs": {
+      "period": 168
+    },
+    "outputs": [
+      "midprice_168"
+    ]
+  },
+  "midpoint168": {
+    "function": "midpoint",
+    "kwargs": {
+      "period": 168
+    },
+    "outputs": [
+      "midpoint_168"
+    ]
+  },
+  "ultosc": {
+    "function": "ultosc",
+    "kwargs": {},
+    "outputs": [
+      "ultosc_7_14_28"
+    ]
+  }
+}
