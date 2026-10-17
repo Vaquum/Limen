@@ -1649,4 +1649,4 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.29.5] - 2026-10-17
 
-- Construct parameter combinations as positional rows and measure controlled worker shutdown after the failure begins.
+- Construct parameter combinations as positional rows, measure their CPU cost independently of scheduling, and time controlled worker shutdown after the failure begins.
