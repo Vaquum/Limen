@@ -1636,3 +1636,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.29.2] - 2026-10-17
 
 - Accelerate Hilbert, MAMA, CCI, candlestick and linear-regression calculations while preserving indicator contracts.
+
+## [5.29.4] - 2026-10-17
+
+- Reduce scalar dispatch overhead in the remaining candlestick indicators while preserving their existing pattern rules and recurrences.

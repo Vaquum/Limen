@@ -28,8 +28,8 @@ def _cdl2crows_impl(
     '''
     _ = high_col, low_col
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 

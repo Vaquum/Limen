@@ -27,9 +27,9 @@ def _cdlpiercing_impl(
     '''
     _ = high_col
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    low_values = data[low_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
@@ -40,7 +40,7 @@ def _cdlpiercing_impl(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlpiercing', values=out))
 
-    body_long_period_total = np.zeros(2, dtype=float)
+    body_long_period_total = [0.0] * 2
     body_long_trailing_idx = lookback_total - body_long_avg_period
 
     i = body_long_trailing_idx

@@ -35,9 +35,9 @@ def _cdldarkcloudcover_impl(
     if penetration < 0.0 or penetration > CMP_N_3E37:
         raise ValueError('cdldarkcloudcover penetration must be between 0 and 3e37')
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    high_values = data[high_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
