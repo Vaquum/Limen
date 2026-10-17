@@ -60,10 +60,13 @@ def _worker(args):
     result = calculate(data)
     first_ms = (time.perf_counter() - started) * 1000
     times = []
+    cpu_times = []
     for _ in range(args.repeats):
         started = time.perf_counter()
+        cpu_started = time.process_time()
         calculate(data)
         times.append((time.perf_counter() - started) * 1000)
+        cpu_times.append((time.process_time() - cpu_started) * 1000)
     rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     rss_mib = rss / (1024 ** 2 if sys.platform == 'darwin' else 1024)
     tracemalloc.start()
@@ -77,7 +80,7 @@ def _worker(args):
     return {'indicator': args.indicator, 'rows': args.rows, 'input_sha256': digest,
             'dependency_import_ms': dependency_ms, 'indicator_import_ms': import_ms,
             'first_call_ms': first_ms, 'steady_ms': statistics.median(times),
-            'samples_ms': times, 'peak_rss_mib': rss_mib,
+            'samples_ms': times, 'cpu_samples_ms': cpu_times, 'peak_rss_mib': rss_mib,
             'memory_probe_ms': memory_probe_ms,
             'traced_peak_mib': peak_bytes / 1024 ** 2,
             'schema': {name: str(dtype) for name, dtype in result.schema.items()},
@@ -149,6 +152,7 @@ def _campaign(args, baseline):
             before, after = pair['before'], pair['after']
             assert before['input_sha256'] == after['input_sha256']
             assert before['schema'] == after['schema']
+            assert after['steady_ms'] < before['steady_ms'], f'{name}: latency did not improve'
             with (np.load(args.output / f'{rows}-{name}-before.npz') as left,
                   np.load(args.output / f'{rows}-{name}-after.npz') as right):
                 assert left.files == right.files

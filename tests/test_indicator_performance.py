@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import inspect
+import statistics
 import json
 import sys
 import zipfile
@@ -137,30 +138,20 @@ def test_mama_validation(parameter, value):
         indicators.mama(DATA.head(40), **{parameter: value})
 
 
-def _scalar_cci(data, period):
-    price = (data['high'].to_numpy() + data['low'].to_numpy() + data['close'].to_numpy()) / 3.0
-    result = np.full(len(price), np.nan)
-    for index in range(period - 1, len(price)):
-        window = price[index - period + 1:index + 1]
-        average = 0.0
-        for value in window:
-            average += value
-        average /= period
-        deviation = 0.0
-        for value in window:
-            deviation += abs(value - average)
-        difference = price[index] - average
-        result[index] = difference / (0.015 * (deviation / period)) if difference and deviation else 0.0
-    return result
 
-
-def test_native_window_latency():
+@pytest.mark.parametrize('name', REFERENCE['signatures'])
+def test_calculation_latency(name):
     frame = DATA.head(6000)
-    started = time.perf_counter()
-    expected = _scalar_cci(frame, 14)
-    scalar_time = time.perf_counter() - started
-    started = time.perf_counter()
-    result = indicators.cci(frame)['cci_14'].to_numpy()
-    native_time = time.perf_counter() - started
-    np.testing.assert_array_equal(result, expected)
-    assert native_time < scalar_time * 0.5
+    baseline = getattr(BASELINES[name], name)
+    calculate = getattr(indicators, name)
+    before, after = [], []
+    for _ in range(3):
+        started = time.perf_counter()
+        expected = baseline(frame)
+        before.append(time.perf_counter() - started)
+        started = time.perf_counter()
+        result = calculate(frame)
+        after.append(time.perf_counter() - started)
+    assert_frame_equal(result, expected, check_exact=True)
+    threshold = 0.5 if name == 'cci' else 0.9
+    assert statistics.median(after) < statistics.median(before) * threshold
