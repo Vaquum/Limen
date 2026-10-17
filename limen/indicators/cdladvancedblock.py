@@ -33,10 +33,10 @@ def _cdladvancedblock_impl(
         pl.DataFrame: The input data with a new column 'cdladvancedblock'
     '''
 
-    open_values = data[open_col].to_numpy().astype(float, copy=False)
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
+    open_values = data[open_col].to_numpy().astype(float, copy=False).tolist()
+    high_values = data[high_col].to_numpy().astype(float, copy=False).tolist()
+    low_values = data[low_col].to_numpy().astype(float, copy=False).tolist()
+    close_values = data[close_col].to_numpy().astype(float, copy=False).tolist()
     n = len(data)
 
 
@@ -54,10 +54,10 @@ def _cdladvancedblock_impl(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdladvancedblock', values=out))
 
-    shadow_short_period_total = np.zeros(3, dtype=float)
-    shadow_long_period_total = np.zeros(2, dtype=float)
-    near_period_total = np.zeros(3, dtype=float)
-    far_period_total = np.zeros(3, dtype=float)
+    shadow_short_period_total = [0.0] * 3
+    shadow_long_period_total = [0.0] * 2
+    near_period_total = [0.0] * 3
+    far_period_total = [0.0] * 3
     body_long_period_total = CDLADVANCEDBLOCK_BODY_LONG_PERIOD_TOTAL
 
     body_long_trailing_idx = lookback_total - body_long_avg_period

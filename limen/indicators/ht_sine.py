@@ -27,23 +27,24 @@ def _ht_sine_from_values(values: npt.NDArray[np.float64]) -> tuple[npt.NDArray[n
     if n <= lookback_total:
         return out_sine, out_lead_sine
 
+    prices: list[float] = values.tolist()
     start_idx = lookback_total
     end_idx = n - 1
 
     trailing_wma_idx = start_idx - lookback_total
     today = trailing_wma_idx
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub = temp_real
     period_wma_sum = temp_real
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub += temp_real
     period_wma_sum += temp_real * 2.0
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub += temp_real
     period_wma_sum += temp_real * 3.0
@@ -56,14 +57,14 @@ def _ht_sine_from_values(values: npt.NDArray[np.float64]) -> tuple[npt.NDArray[n
         period_wma_sub += new_price
         period_wma_sub -= trailing_wma_value
         period_wma_sum += new_price * 4.0
-        trailing_wma_value = values[trailing_wma_idx]
+        trailing_wma_value = prices[trailing_wma_idx]
         trailing_wma_idx += 1
         smoothed = period_wma_sum * 0.1
         period_wma_sum -= period_wma_sub
         return smoothed
 
     for _ in range(34):
-        temp_real = values[today]
+        temp_real = prices[today]
         today += 1
         smoothed_value = do_price_wma(temp_real)
 
@@ -98,7 +99,7 @@ def _ht_sine_from_values(values: npt.NDArray[np.float64]) -> tuple[npt.NDArray[n
     while today <= end_idx:
         adjusted_prev_period = (0.075 * period) + 0.54
 
-        today_value = values[today]
+        today_value = prices[today]
         smoothed_value = do_price_wma(today_value)
         smooth_price[smooth_price_idx] = smoothed_value
 
@@ -261,21 +262,13 @@ def ht_sine(
             'ht_sine_lead'
     '''
 
-    return data.with_columns([
+    def calculate(s: pl.Series) -> pl.Series:
+        first, second = _ht_sine_from_values(s.to_numpy().astype(float, copy=False))
+        return pl.DataFrame({'ht_sine': first, 'ht_sine_lead': second}).to_struct()
+
+    return data.with_columns(
         pl.col(price_col).map_batches(
-            lambda s: pl.Series(
-                _ht_sine_from_values(
-                    s.to_numpy().astype(float, copy=False)
-                )[0]
-            ),
-            return_dtype=pl.Float64,
-        ).alias('ht_sine'),
-        pl.col(price_col).map_batches(
-            lambda s: pl.Series(
-                _ht_sine_from_values(
-                    s.to_numpy().astype(float, copy=False)
-                )[1]
-            ),
-            return_dtype=pl.Float64,
-        ).alias('ht_sine_lead'),
-    ])
+            calculate,
+            return_dtype=pl.Struct({'ht_sine': pl.Float64, 'ht_sine_lead': pl.Float64}),
+        ).struct.unnest()
+    )

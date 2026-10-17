@@ -24,23 +24,24 @@ def _ht_dcphase_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np.f
     if n <= lookback_total:
         return out
 
+    prices: list[float] = values.tolist()
     start_idx = lookback_total
     end_idx = n - 1
 
     trailing_wma_idx = start_idx - lookback_total
     today = trailing_wma_idx
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub = temp_real
     period_wma_sum = temp_real
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub += temp_real
     period_wma_sum += temp_real * 2.0
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub += temp_real
     period_wma_sum += temp_real * 3.0
@@ -53,14 +54,14 @@ def _ht_dcphase_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np.f
         period_wma_sub += new_price
         period_wma_sub -= trailing_wma_value
         period_wma_sum += new_price * 4.0
-        trailing_wma_value = values[trailing_wma_idx]
+        trailing_wma_value = prices[trailing_wma_idx]
         trailing_wma_idx += 1
         smoothed = period_wma_sum * 0.1
         period_wma_sum -= period_wma_sub
         return smoothed
 
     for _ in range(34):
-        temp_real = values[today]
+        temp_real = prices[today]
         today += 1
         smoothed_value = do_price_wma(temp_real)
 
@@ -94,7 +95,7 @@ def _ht_dcphase_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np.f
     while today <= end_idx:
         adjusted_prev_period = (0.075 * period) + 0.54
 
-        today_value = values[today]
+        today_value = prices[today]
         smoothed_value = do_price_wma(today_value)
         smooth_price[smooth_price_idx] = smoothed_value
 

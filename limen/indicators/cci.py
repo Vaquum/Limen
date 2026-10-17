@@ -21,22 +21,18 @@ def _cci_from_arrays(
         return out
 
     typical_price = (high + low + close) / 3.0
-    for i in range(lookback, n):
-        trailing = i - lookback
-        average = 0.0
-        for j in range(trailing, i + 1):
-            average += typical_price[j]
-        average /= period
-
-        abs_sum = 0.0
-        for j in range(trailing, i + 1):
-            abs_sum += abs(typical_price[j] - average)
-
-        diff = typical_price[i] - average
-        if diff != 0.0 and abs_sum != 0.0:
-            out[i] = diff / (CCI_SCALING * (abs_sum / period))
-        else:
-            out[i] = 0.0
+    count = n - lookback
+    average = np.zeros(count)
+    for lag in range(period):
+        average += typical_price[lag:lag + count]
+    average /= period
+    abs_sum = np.zeros(count)
+    for lag in range(period):
+        abs_sum += np.abs(typical_price[lag:lag + count] - average)
+    diff = typical_price[lookback:] - average
+    np.divide(diff, CCI_SCALING * (abs_sum / period), out=out[lookback:],
+              where=(diff != 0.0) & (abs_sum != 0.0))
+    out[lookback:][(diff == 0.0) | (abs_sum == 0.0)] = 0.0
 
     return out
 
