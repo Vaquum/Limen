@@ -460,5 +460,7 @@
   "limen/experiment/_round_storage.py": 240,
   "limen/sfd/foundational_sfd/_xgboost_features.py": 90,
   "limen/sfd/rule_based/_temporal.py": 80,
-  "limen/yaml/_temporal_spec.py": 40
+  "limen/yaml/_temporal_spec.py": 40,
+  "limen/experiment/_recording.py": 90,
+  "limen/yaml/_recording_spec.py": 30
 }
