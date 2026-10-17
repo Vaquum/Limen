@@ -334,3 +334,28 @@ The 409 contract cases compare the candidate with the original source on the sam
 The original Hilbert implementation produces different flat-price phase results across the macOS and Linux runtimes, where tiny floating-point differences reach zero-sensitive phase branches. Therefore, a macOS-only output snapshot is not a portable oracle. `indicator_equivalence_reference.zip` contains the original source with only its internal import namespace relocated; committed SHA-256 values verify every original file. Tests compare both implementations within each runtime instead of accepting a numerical discrepancy.
 
 CI runs covered exact equivalence and a three-sample untraced relative latency check for every changed indicator on 3,000 recorded bars. CCI must take less than half the baseline time; each remaining calculation must take less than 90%. The standalone 20k/83k benchmark additionally rejects any measured latency regression.
+
+### Shared moving averages
+
+SMA keeps its original seed and ordered add/subtract recurrence in a native cumulative scan. APO/PPO reuse MAMA only when their first output does not overwrite the input column; MACDEXT reuses it when fast and slow averages receive the same segment. No cross-call cache is added.
+
+| Calculation | Rows | Wall ms, before → after | CPU ms, before → after | Peak RSS MiB, before → after |
+|---|---:|---:|---:|---:|
+| `sma` | 20,000 | 47.85 → 0.44 | 5.21 → 0.39 | 85.1 → 84.1 |
+| `sma(period=168)` | 20,000 | 6.56 → 0.27 | 5.00 → 0.27 | 84.0 → 84.1 |
+| `apo` | 20,000 | 26.36 → 2.01 | 12.60 → 1.21 | 84.2 → 84.3 |
+| `ppo` | 20,000 | 12.35 → 3.89 | 10.53 → 1.60 | 84.2 → 83.7 |
+| `apo(ma_type=7)` | 20,000 | 227.05 → 46.00 | 75.47 → 36.26 | 84.2 → 83.8 |
+| `ppo(ma_type=7)` | 20,000 | 143.48 → 78.94 | 72.78 → 38.74 | 84.0 → 84.5 |
+| `macdext(fast_ma_type=7, slow_ma_type=7)` | 20,000 | 127.91 → 33.43 | 80.72 → 32.21 | 84.4 → 83.8 |
+| `sma` | 83,136 | 23.96 → 1.94 | 20.10 → 1.35 | 94.5 → 98.4 |
+| `sma(period=168)` | 83,136 | 28.81 → 2.05 | 21.31 → 1.43 | 94.7 → 99.0 |
+| `apo` | 83,136 | 88.30 → 9.22 | 45.74 → 2.80 | 95.3 → 100.1 |
+| `ppo` | 83,136 | 202.22 → 13.17 | 45.62 → 3.77 | 96.6 → 100.6 |
+| `apo(ma_type=7)` | 83,136 | 1061.10 → 586.63 | 301.21 → 154.38 | 98.9 → 100.7 |
+| `ppo(ma_type=7)` | 83,136 | 1915.80 → 357.12 | 303.94 → 149.97 | 100.4 → 101.1 |
+| `macdext(fast_ma_type=7, slow_ma_type=7)` | 83,136 | 1060.79 → 321.26 | 325.87 → 155.45 | 104.3 → 109.0 |
+
+Other parameters use their public defaults. Measurements use real BTCUSDT bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall values are medians of three warm calls under desktop contention. RSS includes imports and input loading.
+
+Every output and schema compares exactly in all fourteen size/calculation pairs. CI also checks eager/lazy execution, all APO/PPO moving-average types, missing values, ties, maximum-period accumulation, input-column collisions and MAMA invocation counts. [Raw first/warm samples, CPU, imports, RSS, input digests and schemas](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/smoothing_performance_benchmark.json) preserve the evidence.

@@ -1,0 +1,1353 @@
+{
+  "reference": "728a6eefc19cde2cb0fa3f5312b185e2877bc330",
+  "candidate": "197ebc53b35b9e2f78ea52df3dde19e3db91e3f8",
+  "input": "/Users/mikkokotila/.cache/limen/datasets/vaquum--binance_btcusdt_15m_klines/btcusdt_15m_kline_20200101_to_20261003.parquet",
+  "file_sha256": "04cdc6b715daa4ad32b2594fcb33a2c2f3aea100eb17e131182391880a46c443",
+  "hardware": "macOS-26.6.2-arm64-arm-64bit",
+  "machine": "arm64",
+  "processor": "Apple M1 Max",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "POLARS_MAX_THREADS": "1"
+  },
+  "code_sha256": "53467c3fc755f0f8d29e305cfc1b6cab710807e95ca37a8fab3dc9ab4cba01a6",
+  "results": [
+    {
+      "before": {
+        "indicator": "sma",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 169.20670890249312,
+        "indicator_import_ms": 362.0877079665661,
+        "first_call_ms": 5.996334133669734,
+        "steady_ms": 47.851291950792074,
+        "samples_ms": [
+          5.4667911026626825,
+          210.56849998421967,
+          47.851291950792074
+        ],
+        "cpu_samples_ms": [
+          5.008000000000012,
+          5.390000000000006,
+          5.210999999999966
+        ],
+        "peak_rss_mib": 85.09375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_30": "Float64",
+          "close_sma_30": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "sma",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 287.43437491357327,
+        "indicator_import_ms": 87.78729103505611,
+        "first_call_ms": 1.0857500601559877,
+        "steady_ms": 0.44362503103911877,
+        "samples_ms": [
+          0.8442499674856663,
+          0.44362503103911877,
+          0.29300013557076454
+        ],
+        "cpu_samples_ms": [
+          0.5000000000000004,
+          0.3909999999999747,
+          0.2829999999999777
+        ],
+        "peak_rss_mib": 84.109375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_30": "Float64",
+          "close_sma_30": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "sma168",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 272.20524987205863,
+        "indicator_import_ms": 43.47970895469189,
+        "first_call_ms": 9.938750183209777,
+        "steady_ms": 6.5567079000175,
+        "samples_ms": [
+          6.5567079000175,
+          7.379292044788599,
+          6.246707867830992
+        ],
+        "cpu_samples_ms": [
+          5.025000000000002,
+          4.998000000000003,
+          4.921999999999982
+        ],
+        "peak_rss_mib": 84.03125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_168": "Float64",
+          "close_sma_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "sma168",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 194.9446250218898,
+        "indicator_import_ms": 37.564750062301755,
+        "first_call_ms": 0.8731251582503319,
+        "steady_ms": 0.26575010269880295,
+        "samples_ms": [
+          0.30437507666647434,
+          0.26575010269880295,
+          0.2541251014918089
+        ],
+        "cpu_samples_ms": [
+          0.3039999999999987,
+          0.2660000000000162,
+          0.25499999999997747
+        ],
+        "peak_rss_mib": 84.0625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_168": "Float64",
+          "close_sma_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "apo",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 440.23358286358416,
+        "indicator_import_ms": 91.53562504798174,
+        "first_call_ms": 16.996084013953805,
+        "steady_ms": 26.357667054980993,
+        "samples_ms": [
+          15.794666949659586,
+          40.303791873157024,
+          26.357667054980993
+        ],
+        "cpu_samples_ms": [
+          12.604000000000005,
+          11.695000000000011,
+          13.407000000000002
+        ],
+        "peak_rss_mib": 84.15625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "apo",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 297.08866705186665,
+        "indicator_import_ms": 38.314458914101124,
+        "first_call_ms": 8.439874975010753,
+        "steady_ms": 2.0108751486986876,
+        "samples_ms": [
+          4.387250170111656,
+          2.0108751486986876,
+          1.9372501410543919
+        ],
+        "cpu_samples_ms": [
+          1.2050000000000116,
+          1.0350000000000081,
+          1.6639999999999988
+        ],
+        "peak_rss_mib": 84.28125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "ppo",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 259.29612503387034,
+        "indicator_import_ms": 25.11287503875792,
+        "first_call_ms": 17.635999945923686,
+        "steady_ms": 12.353874975815415,
+        "samples_ms": [
+          11.299041099846363,
+          12.353874975815415,
+          18.388499971479177
+        ],
+        "cpu_samples_ms": [
+          10.457999999999966,
+          10.533999999999988,
+          10.578999999999949
+        ],
+        "peak_rss_mib": 84.171875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "ppo",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 278.3268329221755,
+        "indicator_import_ms": 27.179541066288948,
+        "first_call_ms": 6.897208048030734,
+        "steady_ms": 3.8930419832468033,
+        "samples_ms": [
+          3.0014580115675926,
+          3.8930419832468033,
+          4.552541999146342
+        ],
+        "cpu_samples_ms": [
+          1.597000000000015,
+          1.5740000000000198,
+          1.9449999999999745
+        ],
+        "peak_rss_mib": 83.703125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "apo7",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 351.6820839140564,
+        "indicator_import_ms": 60.83391699939966,
+        "first_call_ms": 168.6495419126004,
+        "steady_ms": 227.05470793880522,
+        "samples_ms": [
+          132.18616601079702,
+          227.05470793880522,
+          278.6444169469178
+        ],
+        "cpu_samples_ms": [
+          74.52499999999995,
+          75.46599999999998,
+          82.999
+        ],
+        "peak_rss_mib": 84.1875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "apo7",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 131.59466604702175,
+        "indicator_import_ms": 18.273374997079372,
+        "first_call_ms": 35.32612486742437,
+        "steady_ms": 46.00400011986494,
+        "samples_ms": [
+          37.83008409664035,
+          53.90550009906292,
+          46.00400011986494
+        ],
+        "cpu_samples_ms": [
+          33.54199999999996,
+          38.21199999999997,
+          36.25600000000001
+        ],
+        "peak_rss_mib": 83.828125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "ppo7",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 157.01700001955032,
+        "indicator_import_ms": 45.24699994362891,
+        "first_call_ms": 179.46679214946926,
+        "steady_ms": 143.47833301872015,
+        "samples_ms": [
+          109.08449999988079,
+          143.47833301872015,
+          229.256333084777
+        ],
+        "cpu_samples_ms": [
+          71.28000000000002,
+          72.78499999999998,
+          80.80400000000004
+        ],
+        "peak_rss_mib": 83.953125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "ppo7",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 370.65137503668666,
+        "indicator_import_ms": 42.65441605821252,
+        "first_call_ms": 84.79866688139737,
+        "steady_ms": 78.94104206934571,
+        "samples_ms": [
+          77.38416688516736,
+          78.94104206934571,
+          96.74525004811585
+        ],
+        "cpu_samples_ms": [
+          38.74100000000003,
+          37.48199999999996,
+          46.724000000000046
+        ],
+        "peak_rss_mib": 84.453125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "macdext7",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 224.32795795612037,
+        "indicator_import_ms": 48.67770802229643,
+        "first_call_ms": 91.41466580331326,
+        "steady_ms": 127.90754181332886,
+        "samples_ms": [
+          132.2914578486234,
+          127.90754181332886,
+          104.91050011478364
+        ],
+        "cpu_samples_ms": [
+          80.72400000000002,
+          82.843,
+          76.69100000000006
+        ],
+        "peak_rss_mib": 84.421875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "macdext": "Float64",
+          "macdext_signal": "Float64",
+          "macdext_hist": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "macdext7",
+        "rows": 20000,
+        "input_sha256": "e6d78685cf5eb2dbfa6936f13ddec32268ab5147fc2edc86572adc1cbe03a70e",
+        "dependency_import_ms": 108.40370785444975,
+        "indicator_import_ms": 15.945332823321223,
+        "first_call_ms": 36.15608299151063,
+        "steady_ms": 33.42949994839728,
+        "samples_ms": [
+          33.42949994839728,
+          36.05962498113513,
+          32.99849992617965
+        ],
+        "cpu_samples_ms": [
+          32.20800000000001,
+          32.232999999999954,
+          32.09200000000001
+        ],
+        "peak_rss_mib": 83.78125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "macdext": "Float64",
+          "macdext_signal": "Float64",
+          "macdext_hist": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "sma",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 97.76970907114446,
+        "indicator_import_ms": 17.408084124326706,
+        "first_call_ms": 27.959791012108326,
+        "steady_ms": 23.96320807747543,
+        "samples_ms": [
+          21.1775831412524,
+          28.198041953146458,
+          23.96320807747543
+        ],
+        "cpu_samples_ms": [
+          19.814,
+          20.86199999999999,
+          20.10300000000001
+        ],
+        "peak_rss_mib": 94.484375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_30": "Float64",
+          "close_sma_30": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "sma",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 158.34245784208179,
+        "indicator_import_ms": 19.760542083531618,
+        "first_call_ms": 1.8944579642266035,
+        "steady_ms": 1.9438748713582754,
+        "samples_ms": [
+          1.9438748713582754,
+          1.059875125065446,
+          2.016667043790221
+        ],
+        "cpu_samples_ms": [
+          1.699000000000006,
+          1.0600000000000054,
+          1.34999999999999
+        ],
+        "peak_rss_mib": 98.421875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_30": "Float64",
+          "close_sma_30": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "sma168",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 184.62075013667345,
+        "indicator_import_ms": 45.97058310173452,
+        "first_call_ms": 28.32554210908711,
+        "steady_ms": 28.814040822908282,
+        "samples_ms": [
+          27.762458194047213,
+          28.814040822908282,
+          35.10700003243983
+        ],
+        "cpu_samples_ms": [
+          21.310999999999968,
+          24.10000000000001,
+          20.82600000000001
+        ],
+        "peak_rss_mib": 94.71875,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_168": "Float64",
+          "close_sma_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "sma168",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 297.2320420667529,
+        "indicator_import_ms": 45.53845780901611,
+        "first_call_ms": 3.056584158912301,
+        "steady_ms": 2.045166911557317,
+        "samples_ms": [
+          2.045166911557317,
+          2.1773751359432936,
+          1.8516250420361757
+        ],
+        "cpu_samples_ms": [
+          1.4290000000000136,
+          1.9080000000000208,
+          1.1419999999999764
+        ],
+        "peak_rss_mib": 99.0,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "sma_168": "Float64",
+          "close_sma_168": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "apo",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 247.14774987660348,
+        "indicator_import_ms": 50.09695887565613,
+        "first_call_ms": 86.76874986849725,
+        "steady_ms": 88.30483304336667,
+        "samples_ms": [
+          87.07483415491879,
+          88.30483304336667,
+          116.22000019997358
+        ],
+        "cpu_samples_ms": [
+          45.45299999999997,
+          45.738999999999976,
+          48.24400000000001
+        ],
+        "peak_rss_mib": 95.328125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "apo",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 405.05662513896823,
+        "indicator_import_ms": 365.4713339637965,
+        "first_call_ms": 13.396166963502765,
+        "steady_ms": 9.219374973326921,
+        "samples_ms": [
+          9.219374973326921,
+          10.472499998286366,
+          4.6337919775396585
+        ],
+        "cpu_samples_ms": [
+          2.795999999999965,
+          2.82300000000002,
+          2.72
+        ],
+        "peak_rss_mib": 100.078125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "ppo",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 799.2193750105798,
+        "indicator_import_ms": 116.5442920755595,
+        "first_call_ms": 224.97908305376768,
+        "steady_ms": 202.21533300355077,
+        "samples_ms": [
+          139.92170779965818,
+          506.9609589409083,
+          202.21533300355077
+        ],
+        "cpu_samples_ms": [
+          45.61900000000002,
+          46.80000000000001,
+          44.55399999999998
+        ],
+        "peak_rss_mib": 96.578125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "ppo",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 758.2662079948932,
+        "indicator_import_ms": 64.09108405932784,
+        "first_call_ms": 21.90499985590577,
+        "steady_ms": 13.171459082514048,
+        "samples_ms": [
+          46.25666583888233,
+          11.80700003169477,
+          13.171459082514048
+        ],
+        "cpu_samples_ms": [
+          3.7659999999999916,
+          3.3139999999999836,
+          4.2159999999999975
+        ],
+        "peak_rss_mib": 100.5625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_0": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "apo7",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 718.1719169020653,
+        "indicator_import_ms": 54.589124862104654,
+        "first_call_ms": 1382.9343330580741,
+        "steady_ms": 1061.0994170419872,
+        "samples_ms": [
+          843.2669579051435,
+          1061.0994170419872,
+          1601.0409998707473
+        ],
+        "cpu_samples_ms": [
+          302.72300000000007,
+          301.214,
+          296.75600000000003
+        ],
+        "peak_rss_mib": 98.9375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "apo7",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 638.3894579485059,
+        "indicator_import_ms": 215.04849987104535,
+        "first_call_ms": 336.8932500015944,
+        "steady_ms": 586.6263329517096,
+        "samples_ms": [
+          586.6263329517096,
+          457.67454197630286,
+          814.8542500566691
+        ],
+        "cpu_samples_ms": [
+          154.382,
+          155.687,
+          147.01500000000001
+        ],
+        "peak_rss_mib": 100.65625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "apo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "ppo7",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 528.9954170584679,
+        "indicator_import_ms": 362.5306668691337,
+        "first_call_ms": 775.748916901648,
+        "steady_ms": 1915.7970829401165,
+        "samples_ms": [
+          1915.7970829401165,
+          962.4589579179883,
+          2053.165999939665
+        ],
+        "cpu_samples_ms": [
+          303.945,
+          298.884,
+          312.0310000000002
+        ],
+        "peak_rss_mib": 100.4375,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "ppo7",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 984.1098748147488,
+        "indicator_import_ms": 291.9940419960767,
+        "first_call_ms": 462.91895816102624,
+        "steady_ms": 357.1242499165237,
+        "samples_ms": [
+          466.1691249348223,
+          357.1242499165237,
+          341.1154579371214
+        ],
+        "cpu_samples_ms": [
+          150.04499999999993,
+          148.42500000000004,
+          149.96600000000004
+        ],
+        "peak_rss_mib": 101.125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "ppo_12_26_7": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    },
+    {
+      "before": {
+        "indicator": "macdext7",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 490.4934579972178,
+        "indicator_import_ms": 40.55916704237461,
+        "first_call_ms": 1955.272916937247,
+        "steady_ms": 1060.7865420170128,
+        "samples_ms": [
+          1827.657459070906,
+          1060.7865420170128,
+          605.012624990195
+        ],
+        "cpu_samples_ms": [
+          331.0249999999999,
+          322.1340000000001,
+          325.86800000000005
+        ],
+        "peak_rss_mib": 104.265625,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "macdext": "Float64",
+          "macdext_signal": "Float64",
+          "macdext_hist": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      },
+      "after": {
+        "indicator": "macdext7",
+        "rows": 83136,
+        "input_sha256": "dc9b556fb8d2ea5a7ac1988f40c069bcaf57f8b063a9694273358222f20dd3a0",
+        "dependency_import_ms": 394.8121250141412,
+        "indicator_import_ms": 133.1608749460429,
+        "first_call_ms": 354.17579114437103,
+        "steady_ms": 321.2580420076847,
+        "samples_ms": [
+          302.3919998668134,
+          321.2580420076847,
+          333.3032501395792
+        ],
+        "cpu_samples_ms": [
+          152.95999999999998,
+          155.45200000000003,
+          162.412
+        ],
+        "peak_rss_mib": 108.953125,
+        "schema": {
+          "datetime": "Datetime(time_unit='ms', time_zone='UTC')",
+          "open": "Float64",
+          "high": "Float64",
+          "low": "Float64",
+          "close": "Float64",
+          "mean": "Float64",
+          "std": "Float64",
+          "volume": "Float64",
+          "maker_ratio": "Float64",
+          "no_of_trades": "UInt64",
+          "open_liquidity": "Float64",
+          "high_liquidity": "Float64",
+          "low_liquidity": "Float64",
+          "close_liquidity": "Float64",
+          "liquidity_sum": "Float64",
+          "maker_volume": "Float64",
+          "maker_liquidity": "Float64",
+          "macdext": "Float64",
+          "macdext_signal": "Float64",
+          "macdext_hist": "Float64"
+        },
+        "polars_threads": 1,
+        "versions": {
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1"
+        }
+      }
+    }
+  ],
+  "method": "One fresh process per implementation/calculation/size; first call plus three warm calls include input conversion and allocation. RSS is process peak after those calls, including imports/input. All output columns, including SMA compatibility aliases, and complete schemas compare exactly."
+}
