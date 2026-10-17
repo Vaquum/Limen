@@ -3,6 +3,7 @@ import random
 import sys
 from typing import Any
 
+import numpy as np
 import polars as pl
 
 
@@ -101,9 +102,18 @@ class ParamSpace:
         else:
             indices = sample_range_exact(self._rng, self.total_space, n_permutations)
 
-        # Convert indices to parameter combinations
-        combos = [self._index_to_combo(idx) for idx in indices]
-        self.df_params = pl.DataFrame(combos)
+        schema_rows = [self._index_to_combo(idx) for idx in indices[:100]]
+        if not indices or not self.keys:
+            self.df_params = pl.DataFrame(schema_rows)
+        else:
+            schema = pl.DataFrame(schema_rows).schema
+            remaining = np.asarray(indices, dtype=np.uint64 if max(indices) <= np.iinfo(np.uint64).max else object)
+            columns = {}
+            for key, size in zip(self.keys, self.param_sizes, strict=True):
+                values = self.params[key]
+                columns[key] = [values[int(index)] for index in remaining % size]
+                remaining //= size
+            self.df_params = pl.DataFrame(columns, schema=schema)
         self.n_permutations = self.df_params.height
 
     def _index_to_combo(self, index: int) -> dict[str, Any]:

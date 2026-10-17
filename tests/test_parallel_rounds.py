@@ -201,6 +201,7 @@ def _controlled_round(function, params, marker_directory, mode):
     if mode == 'stop_final' and index == 3:
         time.sleep(15)
     if mode == 'dead' and index == 1:
+        (directory / f'{index}.failed').touch()
         os._exit(17)
     method = 'prepare_data' if mode == 'strict' else 'run_model'
     original = getattr(MLManifest, method)
@@ -211,6 +212,7 @@ def _controlled_round(function, params, marker_directory, mode):
                 raise StrictModeError()
             raise StrictModeError(f'recorded control failure {index}')
         if mode == 'fatal' and index == 1:
+            (directory / f'{index}.failed').touch()
             raise RuntimeError('recorded fatal worker control')
         return original(manifest, data, round_params)
 
@@ -542,6 +544,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
                                        stderr=subprocess.STDOUT, start_new_session=True)
             try:
+                _wait_for(tmp_path / 'markers' / '1.failed', process)
                 try:
                     returncode = process.wait(timeout=20)
                 except subprocess.TimeoutExpired:
