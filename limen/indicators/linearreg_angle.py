@@ -3,6 +3,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+from limen.indicators.linearreg import _linearreg_components
+
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
@@ -15,29 +17,8 @@ def _linearreg_angle_from_values(values: npt.NDArray[np.float64], period: int) -
     if n <= lookback_total:
         return out
 
-    start_idx = lookback_total
-    end_idx = n - 1
-
-    sum_x = period * (period - 1) * 0.5
-    sum_x_sqr = period * (period - 1) * (2 * period - 1) / 6.0
-    divisor = (sum_x * sum_x) - (period * sum_x_sqr)
-    rad_to_deg = 180.0 / math.pi
-
-    today = start_idx
-    while today <= end_idx:
-        sum_xy = 0.0
-        sum_y = 0.0
-
-        i = period
-        while i != 0:
-            i -= 1
-            temp_value = values[today - i]
-            sum_y += temp_value
-            sum_xy += float(i) * temp_value
-
-        m = ((period * sum_xy) - (sum_x * sum_y)) / divisor
-        out[today] = math.atan(m) * rad_to_deg
-        today += 1
+    m, _ = _linearreg_components(values, period)
+    out[lookback_total:] = np.fromiter((math.atan(value) for value in m), dtype=float) * (180.0 / math.pi)
 
     return out
 

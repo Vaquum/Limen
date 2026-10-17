@@ -1,6 +1,8 @@
 import numpy as np
 import polars as pl
 
+from limen.indicators.cdladvancedblock import _candle_totals
+
 CDLSTALLEDPATTERN_BODY_LONG_AVG_PERIOD = 10
 CDLSTALLEDPATTERN_BODY_SHORT_AVG_PERIOD = 10
 CDLSTALLEDPATTERN_BODY_SHORT_PERIOD_TOTAL = 0.0
@@ -53,92 +55,26 @@ def _cdlstalledpattern_impl(
     if n <= lookback_total:
         return data.with_columns(pl.Series(name='cdlstalledpattern', values=out))
 
-    body_long_period_total = np.zeros(3, dtype=float)
-    near_period_total = np.zeros(3, dtype=float)
-    body_short_period_total = CDLSTALLEDPATTERN_BODY_SHORT_PERIOD_TOTAL
-    shadow_vs_period_total = CDLSTALLEDPATTERN_SHADOW_VS_PERIOD_TOTAL
-
-    body_long_trailing_idx = lookback_total - body_long_avg_period
-    body_short_trailing_idx = lookback_total - body_short_avg_period
-    shadow_vs_trailing_idx = lookback_total - shadow_vs_avg_period
-    near_trailing_idx = lookback_total - near_avg_period
-
-    i = body_long_trailing_idx
-    while i < lookback_total:
-        body_long_period_total[2] += abs(close_values[i - 2] - open_values[i - 2])
-        body_long_period_total[1] += abs(close_values[i - 1] - open_values[i - 1])
-        i += 1
-
-    i = body_short_trailing_idx
-    while i < lookback_total:
-        body_short_period_total += abs(close_values[i] - open_values[i])
-        i += 1
-
-    i = shadow_vs_trailing_idx
-    while i < lookback_total:
-        shadow_vs_period_total += high_values[i - 1] - low_values[i - 1]
-        i += 1
-
-    i = near_trailing_idx
-    while i < lookback_total:
-        near_period_total[2] += high_values[i - 2] - low_values[i - 2]
-        near_period_total[1] += high_values[i - 1] - low_values[i - 1]
-        i += 1
-
-    i = lookback_total
-    while i < n:
-        real_body_i2 = abs(close_values[i - 2] - open_values[i - 2])
-        real_body_i1 = abs(close_values[i - 1] - open_values[i - 1])
-        real_body_i0 = abs(close_values[i] - open_values[i])
-        upper_shadow_i1 = high_values[i - 1] - max(open_values[i - 1], close_values[i - 1])
-
-        body_long_avg_i2 = body_long_period_total[2] / body_long_avg_period
-        body_long_avg_i1 = body_long_period_total[1] / body_long_avg_period
-        body_short_avg_i0 = body_short_period_total / body_short_avg_period
-        shadow_vs_avg_i1 = shadow_vs_factor * (shadow_vs_period_total / shadow_vs_avg_period)
-        near_avg_i2 = near_factor * (near_period_total[2] / near_avg_period)
-        near_avg_i1 = near_factor * (near_period_total[1] / near_avg_period)
-
-        if (
-            close_values[i - 2] >= open_values[i - 2]
-            and close_values[i - 1] >= open_values[i - 1]
-            and close_values[i] >= open_values[i]
-            and close_values[i] > close_values[i - 1]
-            and close_values[i - 1] > close_values[i - 2]
-            and real_body_i2 > body_long_avg_i2
-            and real_body_i1 > body_long_avg_i1
-            and upper_shadow_i1 < shadow_vs_avg_i1
-            and open_values[i - 1] > open_values[i - 2]
-            and open_values[i - 1] <= close_values[i - 2] + near_avg_i2
-            and real_body_i0 < body_short_avg_i0
-            and open_values[i] >= close_values[i - 1] - real_body_i0 - near_avg_i1
-        ):
-            out[i] = -100
-
-        for tot_idx in (2, 1):
-            body_long_period_total[tot_idx] += (
-                abs(close_values[i - tot_idx] - open_values[i - tot_idx])
-                - abs(close_values[body_long_trailing_idx - tot_idx] - open_values[body_long_trailing_idx - tot_idx])
-            )
-            near_period_total[tot_idx] += (
-                (high_values[i - tot_idx] - low_values[i - tot_idx])
-                - (high_values[near_trailing_idx - tot_idx] - low_values[near_trailing_idx - tot_idx])
-            )
-
-        body_short_period_total += (
-            real_body_i0
-            - abs(close_values[body_short_trailing_idx] - open_values[body_short_trailing_idx])
-        )
-        shadow_vs_period_total += (
-            (high_values[i - 1] - low_values[i - 1])
-            - (high_values[shadow_vs_trailing_idx - 1] - low_values[shadow_vs_trailing_idx - 1])
-        )
-
-        i += 1
-        body_long_trailing_idx += 1
-        body_short_trailing_idx += 1
-        shadow_vs_trailing_idx += 1
-        near_trailing_idx += 1
+    count = n - lookback_total
+    body = np.abs(close_values - open_values)
+    upper = high_values - np.where(close_values > open_values, close_values, open_values)
+    price_range = high_values - low_values
+    o0, o1, o2 = (open_values[lookback_total - lag:n - lag] for lag in range(3))
+    c0, c1, c2 = (close_values[lookback_total - lag:n - lag] for lag in range(3))
+    real_body_i0, real_body_i1, real_body_i2 = (body[lookback_total - lag:n - lag] for lag in range(3))
+    upper_shadow_i1 = upper[lookback_total - 1:n - 1]
+    near_avg_i1, near_avg_i2 = (
+        near_factor * (_candle_totals(price_range, near_avg_period, lookback_total - lag, count) / near_avg_period)
+        for lag in (1, 2))
+    body_long_avg_i1, body_long_avg_i2 = (
+        _candle_totals(body, body_long_avg_period, lookback_total - lag, count) / body_long_avg_period
+        for lag in (1, 2))
+    body_short_avg_i0 = _candle_totals(body, body_short_avg_period, lookback_total, count,
+                                    CDLSTALLEDPATTERN_BODY_SHORT_PERIOD_TOTAL) / body_short_avg_period
+    shadow_vs_avg_i1 = shadow_vs_factor * (_candle_totals(price_range, shadow_vs_avg_period, lookback_total - 1, count,
+                                                       CDLSTALLEDPATTERN_SHADOW_VS_PERIOD_TOTAL) / shadow_vs_avg_period)
+    matched = (c2 >= o2) & (c1 >= o1) & (c0 >= o0) & (c0 > c1) & (c1 > c2) & (real_body_i2 > body_long_avg_i2) & (real_body_i1 > body_long_avg_i1) & (upper_shadow_i1 < shadow_vs_avg_i1) & (o1 > o2) & (o1 <= c2 + near_avg_i2) & (real_body_i0 < body_short_avg_i0) & (o0 >= c1 - real_body_i0 - near_avg_i1)
+    out[lookback_total:][matched] = -100
 
     return data.with_columns(pl.Series(name='cdlstalledpattern', values=out))
 

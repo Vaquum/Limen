@@ -3,7 +3,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.indicators._hilbert import do_hilbert_transform, init_hilbert_state
+from limen.indicators._hilbert import _phase_weights, do_hilbert_transform, init_hilbert_state
 
 CMP_N_0_01 = 0.01
 CMP_N_3 = 3
@@ -90,7 +90,6 @@ def _ht_dcphase_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np.f
     dc_phase = 0.0
     temp_real = math.atan(1.0)
     rad2deg = 45.0 / temp_real
-    const_deg2rad_by_360 = temp_real * 8.0
 
     while today <= end_idx:
         adjusted_prev_period = (0.075 * period) + 0.54
@@ -201,11 +200,10 @@ def _ht_dcphase_from_values(values: npt.NDArray[np.float64]) -> npt.NDArray[np.f
         imag_part = 0.0
 
         idx = smooth_price_idx
-        for i in range(dc_period_int):
-            temp_real = (float(i) * const_deg2rad_by_360) / float(dc_period_int)
+        for sine, cosine in _phase_weights(dc_period_int):
             temp_real2 = smooth_price[idx]
-            real_part += math.sin(temp_real) * temp_real2
-            imag_part += math.cos(temp_real) * temp_real2
+            real_part += sine * temp_real2
+            imag_part += cosine * temp_real2
             if idx == 0:
                 idx = _SMOOTH_PRICE_SIZE - 1
             else:

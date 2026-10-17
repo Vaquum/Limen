@@ -14,32 +14,28 @@ def _linearreg_from_values(values: npt.NDArray[np.float64], period: int) -> npt.
     if n <= lookback_total:
         return out
 
-    start_idx = lookback_total
-    end_idx = n - 1
-
-    sum_x = period * (period - 1) * 0.5
-    sum_x_sqr = period * (period - 1) * (2 * period - 1) / 6.0
-    divisor = (sum_x * sum_x) - (period * sum_x_sqr)
-
-    today = start_idx
-    while today <= end_idx:
-        sum_xy = 0.0
-        sum_y = 0.0
-
-        i = period
-        while i != 0:
-            i -= 1
-            temp_value = values[today - i]
-            sum_y += temp_value
-            sum_xy += float(i) * temp_value
-
-        m = ((period * sum_xy) - (sum_x * sum_y)) / divisor
-        b = (sum_y - (m * sum_x)) / float(period)
-        out[today] = b + (m * float(period - 1))
-        today += 1
+    m, b = _linearreg_components(values, period)
+    out[lookback_total:] = b + (m * float(period - 1))
 
     return out
 
+
+
+def _linearreg_components(
+    values: npt.NDArray[np.float64], period: int,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    count = len(values) - period + 1
+    sum_y = np.zeros(count)
+    sum_xy = np.zeros(count)
+    for lag in range(period):
+        window = values[lag:lag + count]
+        sum_y += window
+        sum_xy += float(period - 1 - lag) * window
+    sum_x = period * (period - 1) * 0.5
+    sum_x_sqr = period * (period - 1) * (2 * period - 1) / 6.0
+    divisor = (sum_x * sum_x) - (period * sum_x_sqr)
+    m = ((period * sum_xy) - (sum_x * sum_y)) / divisor
+    return m, (sum_y - (m * sum_x)) / float(period)
 
 def linearreg(
     data: pl.DataFrame,
