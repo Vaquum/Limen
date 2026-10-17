@@ -100,13 +100,16 @@ def _macdext_from_values(
         ma_start_idx,
         end_idx,
     )
-    slow_ma_buffer = _ma_talib_segment(
-        values,
-        effective_slow_period,
-        effective_slow_type,
-        ma_start_idx,
-        end_idx,
-    )
+    if effective_fast_type == effective_slow_type == CMP_N_7:
+        slow_ma_buffer = fast_ma_buffer
+    else:
+        slow_ma_buffer = _ma_talib_segment(
+            values,
+            effective_slow_period,
+            effective_slow_type,
+            ma_start_idx,
+            end_idx,
+        )
 
     macd_buffer = fast_ma_buffer - slow_ma_buffer
     out_count = n - start_idx

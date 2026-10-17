@@ -1636,3 +1636,7 @@ Note: add all new changelog entries to the bottom of this file.
 ## [5.29.2] - 2026-10-17
 
 - Accelerate Hilbert, MAMA, CCI, candlestick and linear-regression calculations while preserving indicator contracts.
+
+## [5.29.6] - 2026-10-17
+
+- Execute SMA updates as an ordered native cumulative scan and reuse identical MAMA calculations in APO, PPO and MACDEXT.

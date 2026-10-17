@@ -51,12 +51,15 @@ def ppo(
         period=fast_period,
         ma_type=ma_type,
     )
-    frame = ma(
-        frame,
-        price_col=price_col,
-        period=slow_period,
-        ma_type=ma_type,
-    )
+    if ma_type == 7 and price_col != fast_col:
+        frame = frame.with_columns(pl.col(fast_col).alias(slow_col))
+    else:
+        frame = ma(
+            frame,
+            price_col=price_col,
+            period=slow_period,
+            ma_type=ma_type,
+        )
 
     missing_fast = pl.col(fast_col).is_null() | pl.col(fast_col).is_nan()
     missing_slow = pl.col(slow_col).is_null() | pl.col(slow_col).is_nan()
