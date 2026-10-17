@@ -54,12 +54,7 @@ def apo(
     if ma_type == CMP_N_7 and price_col != fast_col:
         frame = frame.with_columns(pl.col(fast_col).alias(slow_col))
     else:
-        frame = ma(
-            frame,
-            price_col=price_col,
-            period=slow_period,
-            ma_type=ma_type,
-        )
+        frame = ma(frame, price_col=price_col, period=slow_period, ma_type=ma_type)
 
     return frame.with_columns(
         (pl.col(fast_col) - pl.col(slow_col)).alias(out_col)
