@@ -961,6 +961,7 @@ sfd:
     strategy:
       conditions:
         - id: rsi_oversold
+          name: RSI oversold
           type: threshold
           column: wilder_rsi_14
           operator: "<"

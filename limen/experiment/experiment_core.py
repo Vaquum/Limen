@@ -201,7 +201,7 @@ class UniversalExperimentLoop:
         '''Run manifest/custom rounds; MSQ owns sampling; manifests require prep_each_round=True.'''
 
         validate_objective_reducers(self.manifest, self._pruning_strategies)
-        if isinstance(self.manifest, RuleBasedManifest):
+        if isinstance(self.manifest, RuleBasedManifest) and self.manifest.strategy is not None:
             if params is not None and self._search_strategy is None:
                 self.params, params = params(), None
             domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params

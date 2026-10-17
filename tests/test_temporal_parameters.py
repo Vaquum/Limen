@@ -27,7 +27,8 @@ DATES = ('2024-01-01', '2024-01-03', '2024-01-03', '2024-01-05',
          '2024-01-05', '2024-01-07')
 DATE_KEYS = ('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end')
 FIELDS = ('persistence_n', 'recency_n')
-INVALID = (0, -1, True, False, 1.0, 1.5, '3', None)
+INVALID = (0, -1, True, False, np.bool_(True), 1.0, 1.5, '3', None,
+           float('nan'), float('inf'), [3], {'window': 3})
 BAD_REFERENCES = ('window', '', '{}', '{window:.0f}', '{window!s}', '{window.real}',
                   '{window[0]}', 'prefix_{window}', '{window}{other}', '{{window}}', '{window')
 
@@ -110,7 +111,7 @@ def test_temporal_templates_match_recorded_literals_and_split_boundaries(recorde
     native = _native(conditions)
     compiled = CompiledSFD(config).manifest()
     assert validate(config).valid
-    for window in (1, 3, 1):
+    for window in (1, 3, 1, recorded_temporal_bars.height + 1):
         parameters = {'hold_bars': window, 'recent_bars': window, 'fee': 3.0, 'size': 0.5}
         actual = native.prepare_data(recorded_temporal_bars, parameters)
         yaml_actual = compiled.prepare_data(recorded_temporal_bars, parameters)
@@ -131,6 +132,16 @@ def test_temporal_templates_match_recorded_literals_and_split_boundaries(recorde
         assert native.strategy.conditions == conditions
         assert compiled.strategy.conditions == conditions
         assert config == original
+
+    omitted = _conditions(1, 1)
+    omitted[0].pop('persistence_n')
+    omitted[1].pop('recency_n')
+    parameters = {'fee': 3.0, 'size': 0.5}
+    baseline = _native(omitted).prepare_data(recorded_temporal_bars, parameters)
+    window_one = _native(_conditions(1, 1)).prepare_data(recorded_temporal_bars, parameters)
+    for split in ('train', 'val', 'test'):
+        assert baseline[split].equals(window_one[split])
+    assert baseline['_alignment'] == window_one['_alignment']
 
     for field, wrapper in (('persistence_n', with_persistence), ('recency_n', with_recency)):
         condition = _single_condition(field, '{window}')[0]
@@ -227,9 +238,29 @@ def test_temporal_parameter_domains_reject_before_artifacts(field, recorded_temp
                 {'id': 'entry', 'name': 'Entry', 'operator': 'and',
                  'operands': ['leaf'], field: 3}]
     for conditions in (both, compound):
-        with pytest.raises(ValueError, match='persistence_n|recency_n'):
+        with pytest.raises(ValueError, match=r'persistence_n|recency_n'):
             RuleBasedConfig(conditions, entry='entry')
         assert not validate(_config(conditions)).valid
+
+    valid = {'window': [3], 'fee': [3.0], 'size': [0.5]}
+    expected = _native(_single_condition(field, 3)).prepare_data(
+        recorded_temporal_bars, {'window': 3, 'fee': 3.0, 'size': 0.5})['test']['entry']
+    for mode in ('standard-context', 'msq-context', 'standard-params'):
+        manifest = _native(_single_condition(field, '{window}'))
+        source_parameters = {'fee': [3.0], 'size': [0.5]}
+        if mode != 'standard-params':
+            source_parameters['window'] = [1, '3']
+        sfd = SimpleNamespace(__name__='recorded_temporal_parameters',
+                              manifest=lambda _manifest=manifest: _manifest,
+                              params=lambda _parameters=source_parameters: _parameters)
+        loop = UniversalExperimentLoop(sfd=sfd, data=recorded_temporal_bars,
+            experiment_dir=tmp_path / f'{field}-{mode}',
+            search_strategy=GridStrategy(ParamDomain(source_parameters)) if mode == 'msq-context' else None)
+        overrides = {'params': lambda: valid} if mode == 'standard-params' else {'context_params': {'window': 3}}
+        loop.run('effective-window', n_permutations=1, prep_each_round=True,
+                 post_processing=True, random_search=False, progress_bar=False, **overrides)
+        assert loop.experiment_log['window'].to_list() == [3]
+        np.testing.assert_array_equal(loop.preds[0], expected.to_numpy().astype(int))
 
 
 def _stable(value):
@@ -303,7 +334,7 @@ def test_temporal_factorization_preserves_records_and_signal_reuse(recorded_temp
     loop = UniversalExperimentLoop(sfd=CompiledSFD(overlapping), data=recorded_temporal_bars,
         search_strategy=build_search_strategy(overlapping), experiment_dir=directory,
         yaml_reference=overlapping)
-    with pytest.raises(ValueError, match='backtest parameter fee.*manifest'):
+    with pytest.raises(ValueError, match=r'backtest parameter fee.*manifest'):
         loop.run('economic-overlap', n_permutations=1, prep_each_round=True,
                  progress_bar=False, factorize=True)
     _assert_no_artifacts(directory)
