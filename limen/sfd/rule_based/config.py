@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import Any
 from typing import cast
 
+from limen.sfd.rule_based._temporal import validate_temporal_conditions
+
 
 _VALID_OPERATORS = ('and', 'or', 'not')
 
@@ -23,8 +25,6 @@ def _validate_leaf(cond: dict[str, Any]) -> None:
             raise ValueError(
                 f'Condition {cond["id"]!r} of type {ptype!r} is missing required field {field!r}'
             )
-    if 'persistence_n' in cond and 'recency_n' in cond:
-        raise ValueError(f'Condition {cond["id"]!r} cannot specify both persistence_n and recency_n')
 
 
 def _detect_cycles(conditions: list[dict[str, Any]]) -> None:
@@ -101,6 +101,7 @@ class RuleBasedConfig:
         if self.entry not in known_ids:
             raise ValueError(f'Entry id {self.entry!r} not found in conditions')
 
+        validate_temporal_conditions(self.conditions)
         for cond in self.conditions:
             if 'type' in cond:
                 _validate_leaf(cond)

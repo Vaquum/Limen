@@ -1630,4 +1630,9 @@ Note: add all new changelog entries to the bottom of this file.
 
 ## [5.29.1] - 2026-10-17
 
+- Resolve rule-based `persistence_n` and `recency_n` from exact round-parameter references without mutating declarations; validate positive integer windows consistently in YAML, Python and direct predicates before execution (#925).
+- Preserve split-local temporal semantics and ordinary/factorized decision parity.
+
+## [5.29.2] - 2026-10-17
+
 - Accelerate Hilbert, MAMA, CCI, candlestick and linear-regression calculations while preserving indicator contracts.

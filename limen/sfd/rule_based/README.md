@@ -4,6 +4,7 @@
 
 ## Canonical docs
 
+- [Rule-Based Strategy](../../../docs/Experiment-Manifest.md#rule-based-strategy) — conditions, temporal modifiers and parameter references
 - [Single-File Decoder](../../../docs/Single-File-Decoder.md)
 
 ## What this package owns
@@ -35,7 +36,7 @@ rule_based/
 
 - Leaf conditions are validated by type: each of `threshold`, `relative`, `crossover`, `slope`, and `sql_expr` has its own required fields, and a missing field raises `ValueError`.
 - Logical nodes combine leaves with `and`, `or`, and `not`.
-- A condition may specify `persistence_n` **or** `recency_n`, but not both.
+- Leaf conditions may specify `persistence_n` **or** `recency_n`; see the [canonical temporal-modifier contract](../../../docs/Experiment-Manifest.md#temporal-modifiers).
 - Predicate values support `{param}`-style formatting, so thresholds can be parameterized from the manifest.
 
 ## Read next
