@@ -3,7 +3,7 @@ from typing import Any
 
 import polars as pl
 
-from limen.sfd.rule_based import _temporal
+import limen.sfd.rule_based._temporal as _temporal
 
 
 _OPS: dict[str, Callable[[pl.Expr, Any], pl.Expr]] = {

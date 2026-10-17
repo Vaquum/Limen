@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Mapping, Sequence
 from numbers import Integral
 import re
+from typing import cast
 
 
 _FIELDS = ('persistence_n', 'recency_n')
@@ -20,11 +21,10 @@ def _reference(value: object, condition_id: object, field: str) -> str | None:
         matched = _REFERENCE.fullmatch(value)
         if matched is None:
             raise ValueError(
-                f'Condition {condition_id!r} {field} must be a positive integer '
-                f'or an exact {{param}} reference, got {value!r}'
+                f'Condition {condition_id!r} {field} must be a positive integer or an exact {{param}} reference, got {value!r}'
             )
         return matched.group(1)
-    positive_temporal_window(value, condition_id=condition_id, field=field)
+    _ = positive_temporal_window(value, condition_id=condition_id, field=field)
     return None
 
 
@@ -56,8 +56,8 @@ def validate_temporal_conditions(
                 raise ValueError(
                     f'Condition {condition_id!r} {field} parameter {reference!r} requires a nonempty domain'
                 )
-            for index, value in enumerate(values):
-                positive_temporal_window(value, condition_id=condition_id, field=f'{field} parameter {reference!r}[{index}]')
+            for index, value in enumerate(cast(Sequence[object], values)):
+                _ = positive_temporal_window(value, condition_id=condition_id, field=f'{field} parameter {reference!r}[{index}]')
 
 
 def resolve_temporal_window(

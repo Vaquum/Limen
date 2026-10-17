@@ -10,22 +10,27 @@ class TemporalSpec:
         sfd = yaml_dict.get('sfd')
         if not isinstance(sfd, Mapping):
             return
-        manifest = cast(Mapping[str, object], sfd).get('manifest')
-        if not isinstance(manifest, Mapping) or manifest.get('type') != 'rule_based':
+        sfd = cast(Mapping[str, object], sfd)
+        manifest = sfd.get('manifest')
+        if not isinstance(manifest, Mapping):
+            return
+        manifest = cast(Mapping[str, object], manifest)
+        if manifest.get('type') != 'rule_based':
             return
         strategy = manifest.get('strategy')
         if not isinstance(strategy, Mapping):
             return
-        conditions = strategy.get('conditions')
+        conditions = cast(Mapping[str, object], strategy).get('conditions')
         domains = sfd.get('params')
         if not isinstance(conditions, list) or not isinstance(domains, Mapping):
             return
-        for index, condition in enumerate(conditions):
+        for index, condition in enumerate(cast(list[object], conditions)):
             if not isinstance(condition, Mapping):
                 continue
+            condition = cast(Mapping[str, object], condition)
             path = f'sfd.manifest.strategy.conditions[{index}]'
             try:
-                validate_temporal_conditions([condition], domains)
+                validate_temporal_conditions([condition], cast(Mapping[str, object], domains))
             except ValueError as exc:
                 field = next((field for field in ('persistence_n', 'recency_n') if field in condition), None)
                 errors.append(YAMLError(message=str(exc), path=f'{path}.{field}' if field else path))
