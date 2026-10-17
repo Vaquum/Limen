@@ -170,7 +170,8 @@ def _campaign(args, baseline):
             assert after['steady_ms'] < before['steady_ms'], f'{name}: latency did not improve'
             with (np.load(args.output / f'{rows}-{name}-before.npz') as left,
                   np.load(args.output / f'{rows}-{name}-after.npz') as right):
-                assert left.files == right.files
+                assert left.files == list(OUTPUTS[name]), f'{name}: missing baseline outputs'
+                assert right.files == list(OUTPUTS[name]), f'{name}: missing candidate outputs'
                 for column in left.files:
                     np.testing.assert_array_equal(left[column], right[column],
                                                   err_msg=f'{name}: {column}, {rows} rows')
