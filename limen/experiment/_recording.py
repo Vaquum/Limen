@@ -5,7 +5,7 @@ from typing import cast
 
 __all__: list[str] = []
 
-_DEFAULTS = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+_DEFAULTS: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
 
 
 def parse_recording(value: object) -> dict[str, bool]:
@@ -33,9 +33,8 @@ def _configured(reference: Mapping[str, object] | None) -> dict[str, bool] | Non
 
 def validate_pbo_recording(policy: Mapping[str, bool] | None,
                            acceptance: Mapping[str, object] | None) -> None:
-    if acceptance is not None and 'max_pbo' in acceptance and policy is not None:
-        if not policy['alignment'] or not policy['fold_details']:
-            raise ValueError('PBO requires recording.alignment and recording.fold_details; omit max_pbo or retain its evidence')
+    if acceptance is not None and 'max_pbo' in acceptance and policy is not None and (not policy['alignment'] or not policy['fold_details']):
+        raise ValueError('PBO requires recording.alignment and recording.fold_details; omit max_pbo or retain its evidence')
 
 
 def validate_recorded_pbo(directory: Path, acceptance: Mapping[str, object]) -> None:

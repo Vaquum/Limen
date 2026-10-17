@@ -183,7 +183,7 @@ def test_policy_validation(case, tmp_path):
             assert any('PBO' in error.message or 'max_pbo' in error.message for error in report.errors)
             path = tmp_path / (key + '-native')
             loop = _loop(config, path, bars=_bars('walk_forward'))
-            with pytest.raises(ValueError, match='PBO|max_pbo'):
+            with pytest.raises(ValueError, match=r'PBO|max_pbo'):
                 _run(loop, kind='walk_forward', recording={key: False})
             assert not path.exists()
             candidate['uel']['output_path'] = str(tmp_path / (key + '-cli'))
@@ -299,11 +299,11 @@ def test_payload_projection(kind, campaigns, tmp_path):
                     record['execution']['pos'].pop()
             output = directory / 'rejected.jsonl.gz'
             before = _snapshot(directory)
-            with pytest.raises(storage.RoundStorageError, match='Market|alignment'):
+            with pytest.raises(storage.RoundStorageError, match=r'Market|alignment'):
                 storage.append_record(output, valid)
             assert _snapshot(directory) == before
             path.write_bytes(gzip.compress((json.dumps(wire) + '\n').encode('utf-8'), mtime=0))
-            with pytest.raises(storage.RoundStorageError, match='Market|alignment'):
+            with pytest.raises(storage.RoundStorageError, match=r'Market|alignment'):
                 _records(directory)
 
 
@@ -421,14 +421,14 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         path = tmp_path / 'selected-pbo'
         shutil.copytree(campaigns['walk_forward']['lean']['path'], path)
         before = _snapshot(path)
-        with pytest.raises(ValueError, match='PBO|max_pbo'):
+        with pytest.raises(ValueError, match=r'PBO|max_pbo'):
             acceptance_report(path, acceptance={'max_pbo': 0.9})
         assert _snapshot(path) == before
     else:
         config = _config()
         logs = []
-        for label, policy in (('full', None), ('lean', LEAN)):
-            policy = None if policy is None else dict(policy)
+        for label, declaration in (('full', None), ('lean', LEAN)):
+            policy = None if declaration is None else dict(declaration)
             loop = _loop(config, tmp_path / label)
             original = loop.model
 
