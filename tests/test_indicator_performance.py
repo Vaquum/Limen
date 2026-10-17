@@ -9,13 +9,14 @@ import json
 import sys
 import zipfile
 import time
+from concurrent.futures import ProcessPoolExecutor
+from multiprocessing import get_context
 from pathlib import Path
 
 import numpy as np
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
-from coverage import Coverage
 
 from limen import indicators
 
@@ -140,26 +141,25 @@ def test_mama_validation(parameter, value):
 
 
 
-@pytest.mark.parametrize('name', REFERENCE['signatures'])
-def test_calculation_latency(name):
+def _timed_calculation(name):
     frame = DATA.head(6000)
     baseline = getattr(BASELINES[name], name)
     calculate = getattr(indicators, name)
     before, after = [], []
-    coverage = Coverage.current()
-    if coverage is not None:
-        coverage.stop()
-    try:
-        for _ in range(3):
-            started = time.perf_counter()
-            expected = baseline(frame)
-            before.append(time.perf_counter() - started)
-            started = time.perf_counter()
-            result = calculate(frame)
-            after.append(time.perf_counter() - started)
-    finally:
-        if coverage is not None:
-            coverage.start()
+    for _ in range(3):
+        started = time.perf_counter()
+        expected = baseline(frame)
+        before.append(time.perf_counter() - started)
+        started = time.perf_counter()
+        result = calculate(frame)
+        after.append(time.perf_counter() - started)
     assert_frame_equal(result, expected, check_exact=True)
+    return before, after
+
+
+@pytest.mark.parametrize('name', REFERENCE['signatures'])
+def test_calculation_latency(name):
+    with ProcessPoolExecutor(max_workers=1, mp_context=get_context('spawn')) as worker:
+        before, after = worker.submit(_timed_calculation, name).result(timeout=60)
     threshold = 0.5 if name == 'cci' else 0.9
     assert statistics.median(after) < statistics.median(before) * threshold
