@@ -93,7 +93,7 @@ def test_cli_manifest_switch(tmp_path: Path) -> None:
 
 
 def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path: Path) -> None:
-    locked = sys.platform == 'linux' and sys.version_info[:2] == (3, 10) and np.__version__ == '2.2.6'
+    locked = sys.platform == 'linux' and sys.version_info[:2] in ((3, 10), (3, 12)) and np.__version__ == '2.2.6'
     captures = pinned_captures(tmp_path / 'pinned') if locked else {}
     for name in CASES:
         baseline = json.loads((GOLDENS / f'{name}.json').read_text())
@@ -102,7 +102,7 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
         off = captures[name]['off'] if locked else execute(name, tmp_path / name / 'off')
         on = captures[name]['on'] if locked else execute(name, tmp_path / name / 'on', factorize=True)
         off_digest, on_digest = digest(_original_surface(off)), digest(_original_surface(on))
-        # Frozen goldens require the locked Linux/Python 3.10 numerical runtime.
+        # Frozen goldens require the locked Linux numerical runtime.
         if locked:
             if off_digest != baseline['digest_12dp']:
                 actual = component_digests(_original_surface(off))
