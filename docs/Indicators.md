@@ -235,7 +235,7 @@ python -m tests.benchmark_indicators \
 python -m pytest tests/test_indicator_performance.py
 ```
 
-The input is the recorded BTCUSDT 15-minute snapshot from `vaquum/binance_btcusdt_15m_klines`, with its first 20,000 and 83,136 rows used unchanged for both implementations. The benchmark fails on unequal outputs/schemas or a latency regression. It reuses measured baseline results only when the input, reference, runtime versions, hardware, repeat count and thread settings match; candidate code changes invalidate candidate results.
+The input is the recorded BTCUSDT 15-minute snapshot from `vaquum/binance_btcusdt_15m_klines`, with its first 20,000 and 83,136 rows used unchanged for both implementations. The benchmark fails on unequal outputs/schemas or a latency regression. It reuses measured baseline results only when the input, resolved reference commit, runtime versions, hardware, repeat count and thread settings match; candidate code changes invalidate candidate results.
 
 - Baseline: `fe27656cfa6973185c5e789080fbf61e169e0d5a` (5.29.0).
 - Measured candidate: `6242252168794ad84b0eeb2e0119033b94556bc7` (5.29.2); implementation SHA-256 `81c82f8c0b5c9cd2a609573f0bce8d3f5e83a2fa7ff2738aba709f839b95c248`.

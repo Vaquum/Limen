@@ -193,3 +193,40 @@ def test_benchmark_relative_paths(monkeypatch, tmp_path):
     benchmark_indicators.main()
     with np.load(tmp_path / 'measurements' / 'contract.npz') as result:
         np.testing.assert_array_equal(result['cci_14'], indicators.cci(DATA.head(64))['cci_14'].to_numpy())
+
+
+def test_benchmark_rejects_moving_reference(monkeypatch, tmp_path):
+    repository = tmp_path / 'repository'
+    subprocess.run(['git', 'clone', '--quiet', '--shared', '--no-checkout',
+                    str(benchmark_indicators.ROOT), str(repository)], check=True)
+
+    def git(*args):
+        return subprocess.check_output(
+            ['git', '-C', str(repository), '-c', 'user.name=Benchmark Tests',
+             '-c', 'user.email=tests@example.com', *args], text=True).strip()
+
+    monkeypatch.setattr(benchmark_indicators, 'ROOT', repository)
+    output = tmp_path / 'measurements'
+    monkeypatch.setattr(sys, 'argv', ['benchmark_indicators', '--input', str(SOURCE.resolve()),
+                                    '--output', str(output), '--reference', 'HEAD'])
+
+    def cached_campaign(args, baseline):
+        report = {'reference': args.reference,
+                  'file_sha256': hashlib.sha256(args.input.read_bytes()).hexdigest(),
+                  'threads': dict.fromkeys(benchmark_indicators.THREADS, '1'),
+                  'hardware': benchmark_indicators.platform.platform(),
+                  'processor': benchmark_indicators.platform.processor(),
+                  'code_sha256': benchmark_indicators._code_digest(repository),
+                  'results': []}
+        report = benchmark_indicators._previous_report(args, report)
+        args.output.mkdir(parents=True, exist_ok=True)
+        (args.output / 'report.json').write_text(json.dumps(report))
+
+    monkeypatch.setattr(benchmark_indicators, '_campaign', cached_campaign)
+    benchmark_indicators.main()
+    assert json.loads((output / 'report.json').read_text())['reference'] == git('rev-parse', 'HEAD')
+    next_commit = git('commit-tree', git('rev-parse', 'HEAD^{tree}'), '-p', 'HEAD',
+                      '-m', 'test: advance benchmark reference')
+    git('update-ref', 'HEAD', next_commit)
+    with pytest.raises(ValueError, match='Existing report differs in reference'):
+        benchmark_indicators.main()

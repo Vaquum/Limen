@@ -1,5 +1,5 @@
 {
-  "reference": "fe27656c",
+  "reference": "fe27656cfa6973185c5e789080fbf61e169e0d5a",
   "candidate": "6242252168794ad84b0eeb2e0119033b94556bc7",
   "input": "/Users/mikkokotila/.cache/limen/datasets/vaquum--binance_btcusdt_15m_klines/btcusdt_15m_kline_20200101_to_20261003.parquet",
   "file_sha256": "04cdc6b715daa4ad32b2594fcb33a2c2f3aea100eb17e131182391880a46c443",

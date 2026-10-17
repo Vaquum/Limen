@@ -186,6 +186,9 @@ def main():
     if args.worker:
         sys.stdout.write(json.dumps(_worker(args)) + '\n')
     else:
+        args.reference = subprocess.check_output(
+            ['git', 'rev-parse', '--verify', '--end-of-options', args.reference + '^{commit}'],
+            cwd=ROOT, text=True).strip()
         with tempfile.TemporaryDirectory(prefix='limen-indicators-') as directory:
             baseline = Path(directory)
             _checkout(args.reference, baseline)
