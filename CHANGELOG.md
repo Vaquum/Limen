@@ -1646,3 +1646,7 @@ Note: add all new changelog entries to the bottom of this file.
 - Reduce scalar dispatch overhead in the remaining candlestick indicators while preserving their existing pattern rules and recurrences.
 
 Preserve NumPy scalar penetration precision; document that scalar floating-point warnings are outside numerical equivalence.
+
+## [5.29.5] - 2026-10-17
+
+- Vectorize homogeneous scalar parameter grids while retaining legacy inference for other inputs; remove the controlled-worker marker race and separate bounded startup from shutdown timing.
