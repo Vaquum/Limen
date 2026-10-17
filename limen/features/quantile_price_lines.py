@@ -2,11 +2,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.features.active_quantile_count import active_quantile_count
-from limen.features.hours_since_quantile_line import hours_since_quantile_line
-from limen.features.quantile_line_density import quantile_line_density
-from limen.utils.filter_lines_by_quantile import filter_lines_by_quantile
-from limen.utils.find_price_lines import find_price_lines
+from limen.features.price_lines import line_active_count, line_recency
+from limen.utils.find_price_lines import LineArrays, price_line_arrays
 
 DEFAULT_QUANTILE_THRESHOLD = 0.75
 DEFAULT_DENSITY_LOOKBACK_HOURS = 48
@@ -144,16 +141,10 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
         pl.Series: Struct series with the quantile-line fields
     '''
 
-    long_lines, short_lines = find_price_lines(close, max_duration_hours, min_height_pct)
+    long_lines, short_lines = price_line_arrays(close, max_duration_hours, min_height_pct)
 
-    long_lines_q = filter_lines_by_quantile(long_lines, quantile_threshold)
-    short_lines_q = filter_lines_by_quantile(short_lines, quantile_threshold)
-
-    frame = pl.DataFrame({'close': close})
-    frame = hours_since_quantile_line(frame, long_lines_q, short_lines_q, density_lookback_hours)
-    if include_research_only:
-        frame = active_quantile_count(frame, long_lines_q, short_lines_q)
-    frame = quantile_line_density(frame, long_lines_q, short_lines_q, density_lookback_hours)
+    long_lines_q = _filter_quantile(long_lines, quantile_threshold)
+    short_lines_q = _filter_quantile(short_lines, quantile_threshold)
 
     n_rows = close.shape[0]
     momentum_col = f"quantile_momentum_{momentum_lookback_hours}h"
@@ -173,53 +164,38 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
     density_col = f"quantile_line_density_{density_lookback_hours}h"
 
     columns = [
-        pl.col('hours_since_quantile_line').cast(pl.Float64),
-        pl.col(density_col).cast(pl.Int64),
+        pl.Series('hours_since_quantile_line', line_recency(ends, n_rows, density_lookback_hours)),
+        pl.Series(density_col, np.searchsorted(ends, np.arange(n_rows), side='right')
+                  - np.searchsorted(ends, np.arange(n_rows) - density_lookback_hours, side='left')),
         pl.Series(momentum_col, momentum),
         pl.Series(height_col, avg_height),
         pl.Series('quantile_direction_bias', direction_bias),
     ]
     if include_research_only:
-        columns.insert(1, pl.col('active_quantile_count').cast(pl.Int64))
+        columns.insert(1, pl.Series('active_quantile_count', line_active_count(long_lines_q, short_lines_q, n_rows)))
 
-    frame = frame.with_columns(columns)
-
-    return frame.drop('close').to_struct(STRUCT_COL)
+    return pl.DataFrame(columns).to_struct(STRUCT_COL)
 
 
-def _end_events(long_lines_q: list[dict[str, float]],
-                short_lines_q: list[dict[str, float]]) -> tuple[npt.NDArray[np.int64], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+def _filter_quantile(lines: LineArrays, quantile: float) -> LineArrays:
+    if not 0 <= quantile <= 1:
+        raise ValueError('filter_lines_by_quantile quantile must be between 0 and 1')
+    if lines[2].size == 0:
+        return lines
+    heights = np.abs(lines[2])
+    keep = heights >= np.quantile(heights, quantile)
+    return lines[0][keep], lines[1][keep], lines[2][keep]
 
-    '''
-    Compute end-sorted event arrays from quantile-filtered lines.
 
-    Args:
-        long_lines_q (list[dict]): Quantile-filtered long lines
-        short_lines_q (list[dict]): Quantile-filtered short lines
-
-    Returns:
-        tuple[np.ndarray, np.ndarray, np.ndarray]: End indices, absolute
-            heights, and directions (+1 long, -1 short), sorted by end index
-    '''
-
-    ends = np.array(
-        [line['end_idx'] for line in long_lines_q] + [line['end_idx'] for line in short_lines_q],
-        dtype=np.int64,
-    )
-    heights = np.abs(np.array(
-        [line['height_pct'] for line in long_lines_q] + [line['height_pct'] for line in short_lines_q],
-        dtype=np.float64,
-    ))
-    directions = np.array(
-        [1.0] * len(long_lines_q) + [-1.0] * len(short_lines_q), dtype=np.float64
-    )
-
+def _end_events(long: LineArrays, short: LineArrays) -> tuple[npt.NDArray[np.intp], npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    ends = np.concatenate([long[1], short[1]])
+    heights = np.abs(np.concatenate([long[2], short[2]]))
+    directions = np.concatenate([np.ones(long[2].size), -np.ones(short[2].size)])
     order = np.argsort(ends, kind='stable')
-
     return ends[order], heights[order], directions[order]
 
 
-def _windowed_sum(ends: npt.NDArray[np.int64],
+def _windowed_sum(ends: npt.NDArray[np.intp],
                   values: npt.NDArray[np.float64],
                   n_rows: int,
                   window: int) -> npt.NDArray[np.float64]:
