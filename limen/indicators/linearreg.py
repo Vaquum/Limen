@@ -2,6 +2,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+__all__ = ['linearreg', 'linearreg_components']
+
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2
@@ -14,32 +16,38 @@ def _linearreg_from_values(values: npt.NDArray[np.float64], period: int) -> npt.
     if n <= lookback_total:
         return out
 
-    start_idx = lookback_total
-    end_idx = n - 1
-
-    sum_x = period * (period - 1) * 0.5
-    sum_x_sqr = period * (period - 1) * (2 * period - 1) / 6.0
-    divisor = (sum_x * sum_x) - (period * sum_x_sqr)
-
-    today = start_idx
-    while today <= end_idx:
-        sum_xy = 0.0
-        sum_y = 0.0
-
-        i = period
-        while i != 0:
-            i -= 1
-            temp_value = values[today - i]
-            sum_y += temp_value
-            sum_xy += float(i) * temp_value
-
-        m = ((period * sum_xy) - (sum_x * sum_y)) / divisor
-        b = (sum_y - (m * sum_x)) / float(period)
-        out[today] = b + (m * float(period - 1))
-        today += 1
+    m, b = linearreg_components(values, period)
+    out[lookback_total:] = b + (m * float(period - 1))
 
     return out
 
+
+
+def linearreg_components(
+    values: npt.NDArray[np.float64], period: int,
+) -> tuple[npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    count = len(values) - period + 1
+    sum_y = np.zeros(count)
+    sum_xy = np.zeros(count)
+    if count < period:
+        prefix = np.zeros(period + 1, dtype=float)
+        weights = np.arange(period - 1, -1, -1, dtype=float)
+        for start in range(count):
+            window = values[start:start + period]
+            prefix[1:] = window
+            sum_y[start] = np.cumsum(prefix)[-1]
+            prefix[1:] = weights * window
+            sum_xy[start] = np.cumsum(prefix)[-1]
+    else:
+        for lag in range(period):
+            window = values[lag:lag + count]
+            sum_y += window
+            sum_xy += float(period - 1 - lag) * window
+    sum_x = period * (period - 1) * 0.5
+    sum_x_sqr = period * (period - 1) * (2 * period - 1) / 6.0
+    divisor = (sum_x * sum_x) - (period * sum_x_sqr)
+    m = ((period * sum_xy) - (sum_x * sum_y)) / divisor
+    return m, (sum_y - (m * sum_x)) / float(period)
 
 def linearreg(
     data: pl.DataFrame,
@@ -47,17 +55,7 @@ def linearreg(
     period: int = 14,
 ) -> pl.DataFrame:
 
-    '''
-    Compute Linear Regression.
-
-    Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
-        period (int): Number of periods
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'linearreg_{period}'
-    '''
+    '''Append the trailing least-squares line value with the original warmup.'''
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('linearreg period must be between 2 and 100000')

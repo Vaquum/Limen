@@ -27,23 +27,24 @@ def mama_from_values(
     if n <= lookback_total:
         return out_mama, out_fama
 
+    prices: list[float] = values.tolist()
     start_idx = lookback_total
     end_idx = n - 1
 
     trailing_wma_idx = start_idx - lookback_total
     today = trailing_wma_idx
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub = temp_real
     period_wma_sum = temp_real
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub += temp_real
     period_wma_sum += temp_real * 2.0
 
-    temp_real = values[today]
+    temp_real = prices[today]
     today += 1
     period_wma_sub += temp_real
     period_wma_sum += temp_real * 3.0
@@ -56,14 +57,14 @@ def mama_from_values(
         period_wma_sub += new_price
         period_wma_sub -= trailing_wma_value
         period_wma_sum += new_price * 4.0
-        trailing_wma_value = values[trailing_wma_idx]
+        trailing_wma_value = prices[trailing_wma_idx]
         trailing_wma_idx += 1
         smoothed = period_wma_sum * 0.1
         period_wma_sum -= period_wma_sub
         return smoothed
 
     for _ in range(9):
-        temp_real = values[today]
+        temp_real = prices[today]
         today += 1
         smoothed_value = do_price_wma(temp_real)
 
@@ -94,7 +95,7 @@ def mama_from_values(
     while today <= end_idx:
         adjusted_prev_period = (0.075 * period) + 0.54
 
-        today_value = values[today]
+        today_value = prices[today]
         smoothed_value = do_price_wma(today_value)
 
         if (today % 2) == 0:
@@ -250,26 +251,13 @@ def mama(
     if slow_limit < CMP_N_0_01 or slow_limit > CMP_N_0_99:
         raise ValueError('mama slow_limit must be between 0.01 and 0.99')
 
-    frame = data
-    return frame.with_columns([
+    def calculate(s: pl.Series) -> pl.Series:
+        first, second = mama_from_values(s.to_numpy().astype(float, copy=False), fast_limit, slow_limit)
+        return pl.DataFrame({'mama': first, 'fama': second}).to_struct()
+
+    return data.with_columns(
         pl.col(price_col).map_batches(
-            lambda s: pl.Series(
-                mama_from_values(
-                    s.to_numpy().astype(float, copy=False),
-                    fast_limit,
-                    slow_limit,
-                )[0]
-            ),
-            return_dtype=pl.Float64,
-        ).alias('mama'),
-        pl.col(price_col).map_batches(
-            lambda s: pl.Series(
-                mama_from_values(
-                    s.to_numpy().astype(float, copy=False),
-                    fast_limit,
-                    slow_limit,
-                )[1]
-            ),
-            return_dtype=pl.Float64,
-        ).alias('fama'),
-    ])
+            calculate,
+            return_dtype=pl.Struct({'mama': pl.Float64, 'fama': pl.Float64}),
+        ).struct.field('*')
+    )
