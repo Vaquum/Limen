@@ -1001,7 +1001,7 @@ class UniversalExperimentLoop:
             missing_for_resume = [f for f in resume_required if f not in existing]
             if not missing_for_resume:
                 raise FileExistsError(
-                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} already contains artifacts: {', '.join(existing)}. Choose a different experiment_dir, or use resume=True only when the saved recording policy permits recovery."
+                    f"UniversalExperimentLoop Experiment directory {self._experiment_dir} already contains artifacts: {', '.join(existing)}. Set resume=True to continue only when the saved recording policy permits recovery, or choose a different experiment_dir."
                 )
             raise FileExistsError(
                 f"UniversalExperimentLoop Experiment directory {self._experiment_dir} contains partial artifacts that resume=True cannot continue: {', '.join(existing)} (missing {', '.join(missing_for_resume)}). The previous run crashed before a complete checkpoint was written. Delete these files or choose a different experiment_dir."

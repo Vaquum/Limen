@@ -9,8 +9,9 @@ __all__ = ['RecordingSpec']
 
 class RecordingSpec:
     def check(self, yaml_dict: dict[str, object], errors: list[YAMLError], _warnings: list[YAMLError]) -> None:
-        sfd = yaml_dict.get('sfd')
-        manifest = cast(Mapping[str, object], sfd).get('manifest') if isinstance(sfd, Mapping) else None
+        raw_sfd = yaml_dict.get('sfd')
+        sfd = cast(Mapping[str, object], raw_sfd) if isinstance(raw_sfd, Mapping) else None
+        manifest = sfd.get('manifest') if sfd is not None else None
         containers: tuple[tuple[str, object], ...] = (('recording', yaml_dict), ('sfd.recording', sfd), ('sfd.manifest.recording', manifest))
         for path, container in containers:
             if isinstance(container, Mapping) and 'recording' in container:

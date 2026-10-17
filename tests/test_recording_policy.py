@@ -49,6 +49,11 @@ def _config(kind='serial'):
         manifest['acceptance'] = {'min_deflated_sharpe_probability': 0.95}
     else:
         config = objective_config()
+        config['sfd']['manifest']['split_dates'] = {
+            'train_start': '2024-01-01', 'train_end': '2024-01-04',
+            'val_start': '2024-01-05', 'val_end': '2024-01-06',
+            'test_start': '2024-01-07', 'test_end': '2024-01-08',
+        }
         config['sfd']['manifest']['calibration']['threshold_function']['params'].update(
             threshold_min=0.5, threshold_max=0.5, threshold_step=0.1,
         )
@@ -74,7 +79,7 @@ def _config(kind='serial'):
 
 
 def _bars(kind='serial'):
-    count = 384 if kind == 'walk_forward' else 192 if kind == 'factorized' else 1200
+    count = 384 if kind == 'walk_forward' else 192 if kind == 'factorized' else 240
     return pl.read_parquet(FIXTURE, n_rows=count).with_columns(pl.lit(3600).alias('base_interval'))
 
 
@@ -206,11 +211,11 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             assert isinstance(report['pbo'], float)
             assert isinstance(report['verdicts']['max_pbo'], bool)
     elif case == 'compiled_sources':
-        class _PolicyResolved(RuntimeError):
+        class _PolicyResolvedError(RuntimeError):
             pass
 
         def resolved_before_dispatch(*args, **kwargs):
-            raise _PolicyResolved('recording admission completed')
+            raise _PolicyResolvedError('recording admission completed')
 
         monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', resolved_before_dispatch)
         config['uel']['recording'] = {'predictions': False}
@@ -228,7 +233,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 path = tmp_path / f'{workers}-{label}'
                 loop = _loop(config, path, bars=bars, reference=None)
                 options = {} if declaration is None else {'recording': declaration}
-                with pytest.raises(_PolicyResolved, match='admission completed'):
+                with pytest.raises(_PolicyResolvedError, match='admission completed'):
                     _run(loop, workers=workers, post_processing=False, **options)
                 assert loop._recording == expected
                 assert not path.exists()
