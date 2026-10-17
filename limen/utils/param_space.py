@@ -99,7 +99,7 @@ class ParamSpace:
             for values in params.values()
         ):
             remaining = np.asarray(indices, dtype=np.int64)
-            columns = []
+            columns: list[pl.Series] = []
             for key, size in zip(self.keys, self.param_sizes, strict=True):
                 remaining, offsets = np.divmod(remaining, size)
                 columns.append(pl.Series(key, params[key]).gather(offsets))
