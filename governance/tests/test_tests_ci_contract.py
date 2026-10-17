@@ -171,7 +171,7 @@ def test_actual_coverage_probe_rejects_fallback(tmp_path, branch, optimize):
     assert shutil.which('bash', path=env['PATH']), 'coverage workflow proof requires bash'
     prefix = covered['run'].split('test_exit=0\n', 1)[0]
     result = subprocess.run(['bash', '-c', prefix + "printf '%s\n' 'SUITE-START'\n"],
-                            cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30)
+                            cwd=tmp_path, env=env, capture_output=True, text=True, timeout=30, check=False)
     output = result.stdout + result.stderr
     if branch:
         assert result.returncode != 0, output
