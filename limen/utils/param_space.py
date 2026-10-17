@@ -102,7 +102,10 @@ class ParamSpace:
             indices = sample_range_exact(self._rng, self.total_space, n_permutations)
 
         combos = [self._index_to_combo(idx) for idx in indices]
-        self.df_params = pl.DataFrame(combos, schema=self.keys, orient='row') if combos and self.keys else pl.DataFrame()
+        if combos and self.keys:
+            self.df_params = pl.DataFrame(combos, schema=self.keys, orient='row')
+        else:
+            self.df_params = pl.DataFrame([dict.fromkeys(self.keys) for _ in indices])
         self.n_permutations = self.df_params.height
 
     def _index_to_combo(self, index: int) -> list[object]:
