@@ -129,3 +129,9 @@ def test_mama_runs_once(monkeypatch, name, kwargs, count):
         if isinstance(result, pl.LazyFrame):
             result.collect()
         assert len(calls) == count
+
+
+def test_longest_period():
+    from limen.indicators.sma import sma
+    frame = pl.read_parquet(FIXTURES / 'indicator_equivalence_long.parquet')
+    assert_frame_equal(sma(frame, period=100000), BASELINES.sma(frame, period=100000), check_exact=True)
