@@ -141,24 +141,24 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason):
         case 'missing_workflow_contract':
             collection['run'] = collection['run'].replace('governance/tests/test_tests_ci_contract.py ', '')
         case 'filtered_collection':
-            collection['run'] += ' -k not_governance_config'
+            collection['run'] += ' -k "not governance_config"'
         case 'missing_backend_step':
             steps.remove(contract)
         case 'conditional_backend_step':
             contract['if'] = 'false'
         case 'filtered_backend_step':
-            contract['run'] += ' -k not_probe'
+            contract['run'] += ' -k "not actual_coverage_probe_rejects_fallback"'
         case 'late_backend_step':
             steps.remove(contract)
             steps.insert(steps.index(covered) + 1, contract)
         case 'workflow_selection':
             workflow['env'] = {'PYTEST_ADDOPTS': '--ignore=tests/test_factorize_equivalence.py'}
         case 'job_selection':
-            workflow['jobs']['pr_checks_tests']['env'] = {'PYTEST_ADDOPTS': '-k not_actual_coverage_probe_rejects_fallback'}
+            workflow['jobs']['pr_checks_tests']['env'] = {'PYTEST_ADDOPTS': '-k "not actual_coverage_probe_rejects_fallback"'}
         case 'ruleset_workflow_selection':
-            ruleset['env'] = {'PYTEST_ADDOPTS': '-k not_tests_ci_contract'}
+            ruleset['env'] = {'PYTEST_ADDOPTS': '-k "not tests_ci_contract"'}
         case 'ruleset_job_selection':
-            ruleset['jobs']['pr_checks_ruleset']['env'] = {'PYTEST_ADDOPTS': '-k not_governance_config'}
+            ruleset['jobs']['pr_checks_ruleset']['env'] = {'PYTEST_ADDOPTS': '-k "not governance_config"'}
     assert (workflow, ruleset) != original, 'mutation did not change workflow'
     with pytest.raises(AssertionError, match=reason):
         _check_workflows(workflow, ruleset)
