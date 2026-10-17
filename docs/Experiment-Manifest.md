@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.29.0"
+  limen_version: "5.29.1"
   mode: development
 
 sfd:
@@ -447,7 +447,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.29.0"
+  limen_version: "5.29.1"
   mode: development
 sfd:
   manifest:
@@ -504,7 +504,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.29.0"
+  limen_version: "5.29.1"
   mode: development
 sfd:
   manifest:
@@ -952,7 +952,31 @@ Any leaf condition can be wrapped with a temporal modifier by adding an optional
 # True if the crossover happened within the last 5 bars
 ```
 
-`persistence_n` and `recency_n` are mutually exclusive — only one can be specified per condition.
+`persistence_n` and `recency_n` apply only to leaves and are mutually exclusive. Each accepts a positive integer literal or an exact bare `{identifier}` reference to one round parameter:
+
+```yaml
+sfd:
+  manifest:
+    type: rule_based
+    strategy:
+      conditions:
+        - id: rsi_oversold
+          name: RSI oversold
+          type: threshold
+          column: wilder_rsi_14
+          operator: "<"
+          value: 30
+          persistence_n: "{hold_bars}"
+      entry: rsi_oversold
+  params:
+    hold_bars: [1, 3]
+```
+
+This fragment extends a manifest that produces `wilder_rsi_14`. MSQ draws the scalar `hold_bars` normally; each round resolves its own window without modifying the condition declaration. Use `recency_n: "{hold_bars}"` for the equivalent recency sweep.
+
+Both YAML and native Python validate every value in the effective parameter domain, including context overrides, before creating run artifacts. Resolved windows must be positive `numbers.Integral` values, excluding booleans. Floats (including `3.0`), numeric strings, null, zero and negative values raise; no value is coerced. Missing references and formatted, indexed, attributed or compound placeholders also raise. Direct predicate evaluation enforces the same value checks.
+
+Windows count rows within each prepared split; they do not carry predicate history across split boundaries. Persistence requires the full window; recency uses the available prefix. Ordinary and existing `factorize=True` runs retain the same decisions and parameter identity; temporal resolution does not add or change cache keys.
 
 ### Parameter template substitution
 

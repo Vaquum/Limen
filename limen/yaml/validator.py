@@ -6,6 +6,7 @@ from typing import cast
 from limen.yaml.errors import YAMLError
 from limen.yaml._objective_spec import check_objective_spec
 from limen.yaml._feature_shim_spec import FeatureShimSpec
+from limen.yaml._temporal_spec import TemporalSpec
 from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import AcceptanceSpec
 from limen.yaml.rules import BlockSpec
@@ -161,6 +162,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
         Required('sfd.manifest.strategy.conditions', list),
         Required('sfd.manifest.strategy.entry', str),
         ConditionsList(),
+        TemporalSpec(),
         FuncList('sfd.manifest.indicators'),
         NoUnknownKeys('sfd.manifest.strategy', STRATEGY_REQUIRED),
         WarnIfPresent(

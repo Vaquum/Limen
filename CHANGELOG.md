@@ -1627,3 +1627,8 @@ Note: add all new changelog entries to the bottom of this file.
 
 - Compress new experiment round artifacts losslessly and share repeated market-return payloads within each result directory.
 - Preserve legacy round reads and resume while validating compressed member and market integrity.
+
+## [5.29.1] - 2026-10-17
+
+- Resolve rule-based `persistence_n` and `recency_n` from exact round-parameter references without mutating declarations; validate positive integer windows consistently in YAML, Python and direct predicates before execution (#925).
+- Preserve split-local temporal semantics and ordinary/factorized decision parity.
