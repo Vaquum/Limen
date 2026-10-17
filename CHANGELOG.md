@@ -1649,4 +1649,4 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.29.5] - 2026-10-17
 
-- Run the covered CI suite on Python 3.12 with monitoring-based coverage to reduce tracing overhead while retaining all tests and runtime limits.
+- Run the covered CI suite on Python 3.12 with monitoring-based coverage to reduce tracing overhead while retaining all tests, frozen numerical comparisons and runtime limits.
