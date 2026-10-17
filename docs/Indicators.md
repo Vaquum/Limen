@@ -334,3 +334,16 @@ The 409 contract cases compare the candidate with the original source on the sam
 The original Hilbert implementation produces different flat-price phase results across the macOS and Linux runtimes, where tiny floating-point differences reach zero-sensitive phase branches. Therefore, a macOS-only output snapshot is not a portable oracle. `indicator_equivalence_reference.zip` contains the original source with only its internal import namespace relocated; committed SHA-256 values verify every original file. Tests compare both implementations within each runtime instead of accepting a numerical discrepancy.
 
 CI runs covered exact equivalence and a three-sample untraced relative latency check for every changed indicator on 3,000 recorded bars. CCI must take less than half the baseline time; each remaining calculation must take less than 90%. The standalone 20k/83k benchmark additionally rejects any measured latency regression.
+
+### Remaining candlestick calculations
+
+The remaining 44 candlestick indicators convert input arrays to Python doubles once before their existing scalar loops. Small moving-total states use Python double lists. Pattern predicates, seeds and recurrence order stay unchanged; no native pattern rewrite or dependency is introduced.
+
+| Rows | Sum of standalone CPU ms, before → after | Sum of standalone wall ms, before → after | Largest peak RSS increase MiB |
+|---|---:|---:|---:|
+| 20,000 | 1799.4 → 611.4 | 3527.8 → 1248.9 | 1.0 |
+| 83,136 | 7190.9 → 2422.1 | 8778.7 → 2873.7 | 15.9 |
+
+These totals add independent calls; they are not a production-workload benchmark. Measurements use real BTCUSDT 15-minute bars on M1 Max, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Wall values are medians of three warm calls and include desktop contention. Input conversion adds bounded list storage; the table reports its observed RSS cost.
+
+All 88 size/indicator comparisons preserve exact outputs and schemas. CI also compares eager/lazy results on short, empty, flat, tied, missing, Float32/integer and alternate-column inputs and checks each indicator's CPU cost against the frozen original source. [Per-indicator first/warm timings, CPU, imports, RSS, input digests and schemas](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/candles_performance_benchmark.json) retain the full evidence.
