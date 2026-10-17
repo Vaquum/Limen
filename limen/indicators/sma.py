@@ -15,19 +15,18 @@ def sma_from_values(values: npt.NDArray[np.float64], period: int) -> npt.NDArray
         return out
 
     period_total = SMA_PERIOD_TOTAL
-    trailing_idx = 0
     i = 0
     while i < lookback:
         period_total += values[i]
         i += 1
 
-    while i < n:
-        period_total += values[i]
-        temp_real = period_total
-        period_total -= values[trailing_idx]
-        trailing_idx += 1
-        out[i] = temp_real / period
-        i += 1
+    count = n - i
+    steps = np.empty(2 * count + 1)
+    steps[0] = period_total
+    steps[1::2] = values[i:]
+    steps[2::2] = -values[:count]
+    steps = np.cumsum(steps, out=steps)
+    out[i:] = steps[1::2] / period
 
     return out
 
