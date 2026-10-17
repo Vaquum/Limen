@@ -38,7 +38,7 @@ def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integ
     invocation cannot observe other splits.
     '''
 
-    long_lines, short_lines = price_line_arrays(np.asarray(close, dtype=np.float64), max_duration_hours, min_height_pct)
+    long_lines, short_lines = price_line_arrays(close, max_duration_hours, min_height_pct)
     results = tuple([
         {'start_idx': int(start), 'end_idx': int(end), 'height_pct': float(height),
          'duration_hours': int(end - start)}
@@ -50,7 +50,7 @@ def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integ
 LineArrays = tuple[npt.NDArray[np.intp], npt.NDArray[np.intp], npt.NDArray[np.float64]]
 
 
-def price_line_arrays(close: npt.NDArray[np.float64],
+def price_line_arrays(close: npt.ArrayLike,
                       max_duration_hours: int, min_height_pct: float) -> tuple[LineArrays, LineArrays]:
     if max_duration_hours < MIN_MAX_DURATION_HOURS:
         raise ValueError('find_price_lines max_duration_hours must be at least 2')
@@ -60,11 +60,12 @@ def price_line_arrays(close: npt.NDArray[np.float64],
     starts_per_duration: list[npt.NDArray[np.intp]] = []
     ends_per_duration: list[npt.NDArray[np.intp]] = []
     heights_per_duration: list[npt.NDArray[np.float64]] = []
-    if close.size < MIN_PRICES:
+    n_prices = close.shape[0]
+    if n_prices < MIN_PRICES:
         empty: LineArrays = (np.empty(0, dtype=np.intp), np.empty(0, dtype=np.intp), np.empty(0))
         return empty, empty
     for duration in range(MIN_DURATION_BARS, max_duration_hours):
-        if duration >= close.size:
+        if duration >= n_prices:
             break
         heights = (close[duration:] - close[:-duration]) / close[:-duration]
         starts = np.nonzero(np.abs(heights) >= min_height_pct)[0]
