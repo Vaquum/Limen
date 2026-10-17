@@ -3,7 +3,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.indicators.linearreg import _linearreg_components
+from limen.indicators.linearreg import linearreg_components as _linearreg_components
 
 
 CMP_N_100000 = 100000

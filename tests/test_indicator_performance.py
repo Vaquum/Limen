@@ -15,6 +15,7 @@ import numpy as np
 import polars as pl
 import pytest
 from polars.testing import assert_frame_equal
+from coverage import Coverage
 
 from limen import indicators
 
@@ -145,13 +146,20 @@ def test_calculation_latency(name):
     baseline = getattr(BASELINES[name], name)
     calculate = getattr(indicators, name)
     before, after = [], []
-    for _ in range(3):
-        started = time.perf_counter()
-        expected = baseline(frame)
-        before.append(time.perf_counter() - started)
-        started = time.perf_counter()
-        result = calculate(frame)
-        after.append(time.perf_counter() - started)
+    coverage = Coverage.current()
+    if coverage is not None:
+        coverage.stop()
+    try:
+        for _ in range(3):
+            started = time.perf_counter()
+            expected = baseline(frame)
+            before.append(time.perf_counter() - started)
+            started = time.perf_counter()
+            result = calculate(frame)
+            after.append(time.perf_counter() - started)
+    finally:
+        if coverage is not None:
+            coverage.start()
     assert_frame_equal(result, expected, check_exact=True)
     threshold = 0.5 if name == 'cci' else 0.9
     assert statistics.median(after) < statistics.median(before) * threshold

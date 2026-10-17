@@ -1,7 +1,7 @@
 import numpy as np
 import polars as pl
 
-from limen.indicators.cdladvancedblock import _candle_totals
+from limen.indicators.cdladvancedblock import candle_totals as _candle_totals
 
 CDLSTALLEDPATTERN_BODY_LONG_AVG_PERIOD = 10
 CDLSTALLEDPATTERN_BODY_SHORT_AVG_PERIOD = 10

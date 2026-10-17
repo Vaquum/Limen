@@ -1,7 +1,7 @@
 import math
 from functools import lru_cache
 
-__all__ = ['_phase_weights', 'do_hilbert_transform', 'init_hilbert_state']
+__all__ = ['do_hilbert_transform', 'init_hilbert_state', 'phase_weights']
 
 
 def init_hilbert_state() -> list[float]:
@@ -30,7 +30,7 @@ def do_hilbert_transform(
 
 
 @lru_cache(maxsize=50)
-def _phase_weights(period: int) -> tuple[tuple[float, float], ...]:
+def phase_weights(period: int) -> tuple[tuple[float, float], ...]:
     circle = math.atan(1.0) * 8.0
     return tuple((math.sin((float(i) * circle) / float(period)),
                   math.cos((float(i) * circle) / float(period)))

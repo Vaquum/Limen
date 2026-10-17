@@ -2,7 +2,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-__all__ = ['_candle_totals', 'cdladvancedblock']
+__all__ = ['candle_totals', 'cdladvancedblock']
 
 CDLADVANCEDBLOCK_BODY_LONG_AVG_PERIOD = 10
 CDLADVANCEDBLOCK_BODY_LONG_PERIOD_TOTAL = 0.0
@@ -15,7 +15,7 @@ CDLADVANCEDBLOCK_SHADOW_SHORT_AVG_PERIOD = 10
 
 
 
-def _candle_totals(
+def candle_totals(
     values: npt.NDArray[np.float64], period: int, start: int, count: int,
     initial: float = 0.0,
 ) -> npt.NDArray[np.float64]:
@@ -82,18 +82,18 @@ def _cdladvancedblock_impl(
     lower = np.where(close_values < open_values, close_values, open_values) - low_values
     shadows = upper + lower
     shadow_short_avg_i0, shadow_short_avg_i1, shadow_short_avg_i2 = (
-        (_candle_totals(shadows, shadow_short_avg_period, lookback_total - lag, count) / shadow_short_avg_period) / 2.0
+        (candle_totals(shadows, shadow_short_avg_period, lookback_total - lag, count) / shadow_short_avg_period) / 2.0
         for lag in range(3))
     shadow_long_avg_i0 = (real_body_i0 if shadow_long_avg_period == 0 else
-                         _candle_totals(body, shadow_long_avg_period, lookback_total, count) / shadow_long_avg_period)
-    body_long_avg_i2 = _candle_totals(body, body_long_avg_period, lookback_total - 2, count,
+                         candle_totals(body, shadow_long_avg_period, lookback_total, count) / shadow_long_avg_period)
+    body_long_avg_i2 = candle_totals(body, body_long_avg_period, lookback_total - 2, count,
                                    CDLADVANCEDBLOCK_BODY_LONG_PERIOD_TOTAL) / body_long_avg_period
     first_white, second_white, third_white = c2 >= o2, c1 >= o1, c0 >= o0
     far_avg_i1, far_avg_i2 = (
-        far_factor * (_candle_totals(price_range, far_avg_period, lookback_total - lag, count) / far_avg_period)
+        far_factor * (candle_totals(price_range, far_avg_period, lookback_total - lag, count) / far_avg_period)
         for lag in (1, 2))
     near_avg_i1, near_avg_i2 = (
-        near_factor * (_candle_totals(price_range, near_avg_period, lookback_total - lag, count) / near_avg_period)
+        near_factor * (candle_totals(price_range, near_avg_period, lookback_total - lag, count) / near_avg_period)
         for lag in (1, 2))
     matched = (
         first_white

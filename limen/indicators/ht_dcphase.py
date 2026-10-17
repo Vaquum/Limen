@@ -3,7 +3,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.indicators._hilbert import _phase_weights, do_hilbert_transform, init_hilbert_state
+from limen.indicators._hilbert import phase_weights as _phase_weights, do_hilbert_transform, init_hilbert_state
 
 CMP_N_0_01 = 0.01
 CMP_N_3 = 3

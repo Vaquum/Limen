@@ -22,10 +22,21 @@ def _cci_from_arrays(
 
     typical_price = (high + low + close) / 3.0
     count = n - lookback
+    if count < period:
+        prefix = np.zeros(period + 1, dtype=float)
+        for start in range(count):
+            window = typical_price[start:start + period]
+            prefix[1:] = window
+            mean = float(np.cumsum(prefix)[-1]) / period
+            prefix[1:] = np.abs(window - mean)
+            deviation = float(np.cumsum(prefix)[-1])
+            delta = window[-1] - mean
+            out[start + lookback] = delta / (CCI_SCALING * (deviation / period)) if delta != 0.0 and deviation != 0.0 else 0.0
+        return out
     average: npt.NDArray[np.float64] = np.zeros(count, dtype=float)
     for lag in range(period):
         average += typical_price[lag:lag + count]
-    average /= period
+    _ = np.divide(average, period, out=average)
     abs_sum = np.zeros(count, dtype=float)
     for lag in range(period):
         abs_sum += np.abs(typical_price[lag:lag + count] - average)
@@ -45,19 +56,7 @@ def cci(
     period: int = 14,
 ) -> pl.DataFrame:
 
-    '''
-    Compute Commodity Channel Index (CCI).
-
-    Args:
-        data (pl.DataFrame): Dataset with high/low/close columns
-        high_col (str): Column name for high prices
-        low_col (str): Column name for low prices
-        close_col (str): Column name for close prices
-        period (int): Number of periods (2..100000)
-
-    Returns:
-        pl.DataFrame: The input data with a new column 'cci_{period}'
-    '''
+    '''Append CCI with the original chronological mean/deviation sums (period 2..100000).'''
 
     if period < CMP_N_2 or period > CMP_N_100000:
         raise ValueError('cci period must be between 2 and 100000')
