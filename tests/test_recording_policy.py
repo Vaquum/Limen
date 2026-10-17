@@ -18,6 +18,7 @@ from limen.cohort import Cohort
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _round_storage as storage
 from limen.experiment._recording import parse_recording
+from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.errors import StrictModeError
 from limen.inference import Trainer
 from limen.yaml import CompiledSFD, build_search_strategy, validate
@@ -43,6 +44,7 @@ def _config(kind='serial'):
             'n_folds': 2, 'test_bars': 48, 'purge_bars': 4,
             'embargo_bars': 3, 'anchored': True,
         }
+        manifest['acceptance'] = {'min_deflated_sharpe_probability': 0.95}
     else:
         config = objective_config()
         config['sfd']['manifest']['calibration']['threshold_function']['params'].update(
@@ -138,7 +140,7 @@ def campaigns(tmp_path_factory):
     return result
 
 
-@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission'))
+@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission'))
 def test_policy_validation(case, tmp_path):
     config = _config('walk_forward')
     if case in ('yaml', 'native'):
@@ -171,6 +173,36 @@ def test_policy_validation(case, tmp_path):
                 _run(loop, recording=FULL)
             if directory is not None:
                 assert not directory.exists()
+    elif case == 'pbo_admission':
+        config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
+        for key in ('alignment', 'fold_details'):
+            candidate = copy.deepcopy(config)
+            candidate['uel']['recording'] = {key: False}
+            report = validate(candidate)
+            assert not report.valid
+            assert any('PBO' in error.message or 'max_pbo' in error.message for error in report.errors)
+            path = tmp_path / (key + '-native')
+            loop = _loop(config, path, bars=_bars('walk_forward'))
+            with pytest.raises(ValueError, match='PBO|max_pbo'):
+                _run(loop, kind='walk_forward', recording={key: False})
+            assert not path.exists()
+            candidate['uel']['output_path'] = str(tmp_path / (key + '-cli'))
+            yaml_path = tmp_path / (key + '.yaml')
+            YAML().dump(candidate, yaml_path)
+            result = CliRunner().invoke(cli, ['run', '--no-progress-bar', str(yaml_path)])
+            assert result.exit_code != 0
+            assert 'PBO' in result.output or 'max_pbo' in result.output
+            assert not Path(candidate['uel']['output_path']).exists()
+        for key in ('predictions', 'trade_ledger'):
+            candidate = copy.deepcopy(config)
+            candidate['uel']['recording'] = {key: False}
+            assert validate(candidate).valid
+            path = tmp_path / (key + '-allowed')
+            loop = _loop(candidate, path, bars=_bars('walk_forward'))
+            _run(loop, kind='walk_forward')
+            report = json.loads((path / 'acceptance_report.json').read_text())
+            assert isinstance(report['pbo'], float)
+            assert isinstance(report['verdicts']['max_pbo'], bool)
     else:
         config['uel']['recording'] = {'predictions': False}
         for label, options in (('yaml', {}), ('native', {'recording': FULL})):
@@ -300,11 +332,20 @@ def test_scientific_equivalence(kind, campaigns):
     if kind == 'walk_forward':
         assert_frame_equal(full['loop'].fold_results, lean['loop'].fold_results)
         assert_frame_equal(*[pl.read_parquet(item['path'] / 'trial_returns.parquet') for item in (full, lean)])
-        for name in ('acceptance_report.json', 'acceptance_report.md'):
-            assert (full['path'] / name).read_bytes() == (lean['path'] / name).read_bytes()
+        reports = [json.loads((item['path'] / 'acceptance_report.json').read_text()) for item in (full, lean)]
+        expected, projected = reports
+        assert isinstance(expected['pbo'], float)
+        assert projected['pbo'] is None
+        assert projected['errors']['pbo']
+        for key in expected:
+            if key not in ('pbo', 'errors'):
+                assert projected[key] == expected[key]
+        assert {key: value for key, value in projected['errors'].items() if key != 'pbo'} == expected['errors']
+        assert projected['thresholds'] == {'min_deflated_sharpe_probability': 0.95}
+        assert 'pbo unavailable' in (lean['path'] / 'acceptance_report.md').read_text()
 
 
-@pytest.mark.parametrize('case', ('trainer', 'resume_rejection', 'default_resume', 'cli', 'strict_failure'))
+@pytest.mark.parametrize('case', ('trainer', 'resume_rejection', 'default_resume', 'cli', 'strict_failure', 'pbo_report'))
 def test_consumer_contracts(case, campaigns, tmp_path):
     captured = campaigns['serial']
     if case == 'trainer':
@@ -373,6 +414,13 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         rejected = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(path)])
         assert rejected.exit_code != 0
         assert 'recording' in rejected.output
+        assert _snapshot(path) == before
+    elif case == 'pbo_report':
+        path = tmp_path / 'selected-pbo'
+        shutil.copytree(campaigns['walk_forward']['lean']['path'], path)
+        before = _snapshot(path)
+        with pytest.raises(ValueError, match='PBO|max_pbo'):
+            acceptance_report(path, acceptance={'max_pbo': 0.9})
         assert _snapshot(path) == before
     else:
         config = _config()

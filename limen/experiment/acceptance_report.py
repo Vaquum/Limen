@@ -12,6 +12,7 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfitting
+from limen.experiment._recording import validate_recorded_pbo
 
 __all__ = ['acceptance_report', 'read_acceptance']
 
@@ -135,6 +136,7 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
     if not path.exists():
         return None
     thresholds = read_acceptance(acceptance) if acceptance is not None else {}
+    validate_recorded_pbo(directory, thresholds)
     frame = pl.read_parquet(path)
     if frame.schema != {'trial': pl.String, 'bar': pl.Int64, 'net_return': pl.Float64}:
         raise ValueError('Acceptance requires the recorded trial_returns.parquet schema')

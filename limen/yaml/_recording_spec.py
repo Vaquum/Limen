@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 from typing import cast
 
-from limen.experiment._recording import parse_recording
+from limen.experiment._recording import parse_recording, validate_pbo_recording
 from limen.yaml.errors import YAMLError
 
 __all__ = ['RecordingSpec']
@@ -18,6 +18,8 @@ class RecordingSpec:
         if not isinstance(uel, Mapping) or 'recording' not in uel:
             return
         try:
-            _ = parse_recording(cast(Mapping[str, object], uel)['recording'])
+            policy = parse_recording(cast(Mapping[str, object], uel)['recording'])
+            acceptance = cast(Mapping[str, object], manifest).get('acceptance') if isinstance(manifest, Mapping) else None
+            validate_pbo_recording(policy, acceptance)
         except (TypeError, ValueError) as exc:
             errors.append(YAMLError(message=str(exc), path='uel.recording'))

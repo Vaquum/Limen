@@ -161,7 +161,7 @@ class UniversalExperimentLoop:
             recording: Mapping[str, bool] | None = None) -> None:
         self._recording = prepare_recording(recording, reference=self._yaml_reference,
                                             directory=self._experiment_dir, has_search=self._search_strategy is not None,
-                                            resume=resume)
+                                            resume=resume, acceptance=getattr(self.manifest, 'acceptance', None))
         original_prep, original_model = _parallel.begin_run(self, workers, prep_each_round, resume, post_processing, factorize, context_params, (params, prep, model))
         self._walk_forward = None
         self.convergence_report = None

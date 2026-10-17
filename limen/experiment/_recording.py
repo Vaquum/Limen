@@ -31,9 +31,28 @@ def _configured(reference: Mapping[str, object] | None) -> dict[str, bool] | Non
     return parse_recording(settings['recording']) if 'recording' in settings else None
 
 
+def validate_pbo_recording(policy: Mapping[str, bool] | None,
+                           acceptance: Mapping[str, object] | None) -> None:
+    if acceptance is not None and 'max_pbo' in acceptance and policy is not None:
+        if not policy['alignment'] or not policy['fold_details']:
+            raise ValueError('PBO requires recording.alignment and recording.fold_details; omit max_pbo or retain its evidence')
+
+
+def validate_recorded_pbo(directory: Path, acceptance: Mapping[str, object]) -> None:
+    metadata_path = directory / 'metadata.json'
+    if 'max_pbo' not in acceptance or not metadata_path.exists():
+        return
+    metadata: object = json.loads(metadata_path.read_text())
+    if not isinstance(metadata, Mapping):
+        raise ValueError('PBO requires valid recording metadata')
+    metadata = cast(Mapping[str, object], metadata)
+    if 'recording' in metadata:
+        validate_pbo_recording(parse_recording(metadata['recording']), acceptance)
+
+
 def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
                       directory: Path | None, has_search: bool,
-                      resume: bool) -> dict[str, bool] | None:
+                      resume: bool, acceptance: Mapping[str, object] | None = None) -> dict[str, bool] | None:
     configured = _configured(reference)
     declared = value if value is not None else configured
     explicit = declared is not None
@@ -56,6 +75,7 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
             declared, explicit = metadata['recording'], True
 
     policy = parse_recording(declared) if explicit else dict(_DEFAULTS)
+    validate_pbo_recording(policy, acceptance)
     if explicit and (not has_search or directory is None):
         raise ValueError('recording requires search_strategy and experiment_dir')
     if resume:
