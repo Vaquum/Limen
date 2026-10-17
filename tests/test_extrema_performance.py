@@ -102,3 +102,18 @@ def test_longest_period(name):
     kwargs = {'period1': 100000, 'period2': 100000, 'period3': 100000} if name == 'ultosc' else {'period': 100000}
     expected = getattr(BASELINES, name)(frame, **kwargs)
     assert_frame_equal(getattr(indicators, name)(frame, **kwargs), expected, check_exact=True)
+
+
+@pytest.mark.parametrize(('name', 'column'), [
+    ('midprice', 'high'), ('midprice', 'low'), ('midpoint', 'close'),
+    ('ultosc', 'high'), ('ultosc', 'low'), ('ultosc', 'close'),
+])
+def test_missing_columns(name, column):
+    from limen import indicators
+    for value in (np.nan, None):
+        for index in (0, 70):
+            frame = DATA.head(128).with_columns(
+                pl.when(pl.int_range(pl.len()) == index)
+                .then(pl.lit(value, dtype=pl.Float64)).otherwise(pl.col(column)).alias(column))
+            expected = getattr(BASELINES, name)(frame)
+            assert_frame_equal(getattr(indicators, name)(frame), expected, check_exact=True)
