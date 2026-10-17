@@ -134,6 +134,7 @@ uel.run(
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
+| `recording` | choose saved round-log payload groups; all enabled by default; requires `search_strategy` and `experiment_dir`; see [recording policy](#recording-policy) |
 | `factorize` | opt-in reuse of fitted preparation state across model variations, and predictions across independent snapshot economics, in a deterministic persisted MSQ grid; default `false` |
 
 ### Factorized snapshot grids
@@ -239,7 +240,7 @@ When UEL is instantiated with a concrete `search_strategy` and an `experiment_di
 | File | Meaning |
 |---|---|
 | `results.csv` | streaming round log; if a round fails a `strict_mode` null check, a `strict_mode_error` column records the error message and all metric columns for that round are empty |
-| `round_data.jsonl.gz` | round params, predictions, alignment metadata, and optional execution and market returns |
+| `round_data.jsonl.gz` | round identity and params, with payloads selected by the [recording policy](#recording-policy) and existing recording flags |
 | `checkpoint.json` | checkpoint state for resumption |
 | `audit.jsonl` | feedback-controller audit trail |
 | `interventions.json` | optional external intervention file polled by the feedback controller when the file exists |
@@ -254,7 +255,7 @@ Set `uel.record_execution: true` in YAML, or pass `record_execution=True` to a P
 
 The same flag records the sibling `market: {"ret": [...]}`: unscaled returns from the original aligned test prices, in the same order and length as `execution.pos`. Each value is `close[i] / close[i-1] - 1` since the previous retained test row; row gaps can therefore span several source bars. The first value is JSON `null`, since the evaluated window supplies no predecessor. A value is also `null` when the original open, close, close-minus-open or previous close is NaN, the previous close is zero, or the computed return is nonfinite. This uses price tradability, independently of signals, execution lag, costs, notional and TP/SL settings; it is not a finite-positive-price mask.
 
-When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), both `execution` and `market` are `null`. A flat snapshot has full-length zero execution arrays and still records market returns. Event execution retains its existing `trade_ledger`. With recording off, neither field is added.
+When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), both `execution` and `market` are `null`. A flat snapshot has full-length zero execution arrays and still records market returns. Event execution retains its existing `trade_ledger` by default. With recording off, neither field is added.
 
 Read a new-format snapshot record with available market returns and reproduce its snapshot metrics:
 
@@ -295,6 +296,77 @@ Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True
 LightGBM and XGBoost add `best_iteration` to `results.csv`: the number of boosting iterations actually used for prediction. LightGBM uses its positive `best_iteration_`, otherwise `n_iter_`. Tree-based XGBoost uses its zero-based best iteration plus one, otherwise the fitted booster's round count. XGBoost `gblinear` uses the final fitted round count because it does not retain an earlier model. Counts are available with early stopping disabled and with `inline_metrics=False`.
 
 The option is independent of `record_execution` and `post_processing`; leaving it off preserves existing outputs. Python resume must pass the same flag; CLI resume uses the effective setting saved in metadata, including Python overrides. Metadata records an enabled setting, and a changed setting rejects resume before artifacts are rewritten. Older metadata without the flag means `false`. Probability arrays increase JSONL storage with test-window length.
+
+### Recording policy
+
+Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ run to omit named groups from `round_data.jsonl.gz`. Every group defaults to `true`; omitted policy and explicit all-true policy preserve the existing logical payloads. Values must be literal booleans: unknown keys, parameter references and non-booleans are errors. Explicit policies require both `search_strategy` and `experiment_dir`.
+
+| Key | When `false` |
+|---|---|
+| `predictions` | Omit saved `preds`, including within retained folds. |
+| `alignment` | Omit row-sized `missing_datetimes` and fold `test_datetimes`; retain first/last dated bounds and exact source bindings. |
+| `trade_ledger` | Omit the complete event ledger; retain the trade contract, its digest and learning binding. |
+| `fold_details` | Omit the entire nested `folds` payload, including fold-local results, bounds and provenance; retain the outer occurrence identity and parameters. |
+
+For example, add this block to an existing YAML `uel` configuration:
+
+```yaml
+recording:
+  predictions: false
+  trade_ledger: false
+```
+
+The Python equivalent is `uel.run(..., recording={"predictions": False, "trade_ledger": False})`. On a new run, `recording=None` uses the configured YAML policy, or all-true defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `true`: native `{"trade_ledger": False}` overrides YAML `{"predictions": False}` with predictions enabled.
+
+For a compiled SFD, its compiled YAML is authoritative even without a separate `yaml_reference`. A conflicting recording declaration in an explicitly supplied `yaml_reference` rejects before artifacts. New explicitly configured recording runs retain the original compiled YAML through the existing `yaml_reference` metadata. The frozen effective policy is stored separately as `metadata.recording`. Changing YAML `uel.recording` changes the existing canonical manifest ID; a native override preserves the source YAML and its ID. Neither operation changes the manifest-ID algorithm. Omitted no-policy execution retains its existing behavior.
+
+This policy filters copied serialized records only. Models, predictions used for scoring, scalar CSV/Parquet results, feedback and live `post_processing` retain their full evidence. When folds remain, the other controls apply within them. Walk-forward `trial_returns.parquet` and DSR computation are unchanged. Existing `record_execution` and `record_model_outputs` remain independent and off by default: omitted predictions can coexist with recorded execution, market returns or probabilities.
+
+Disabling `fold_details` or `alignment` makes PBO unavailable because the saved log lacks its required fold/timestamp evidence. These omissions are allowed unless PBO is selected through `acceptance.max_pbo`; that conflict raises before run artifacts are created. Without a PBO threshold, the report records `pbo: null` with an explanation while retaining DSR. Directly requesting `max_pbo` from `acceptance_report` on an incompatible saved log also raises before either report file is written. Full/default recording retains existing acceptance behavior.
+
+Any policy containing `false` makes the run non-resumable, even if that group is absent from its particular records. Python and CLI reject lighter saved/requested policies or changed policies before modifying artifacts. On resume, an omitted policy uses saved metadata; legacy metadata without a policy means all-true defaults. Full/default resume keeps its existing behavior.
+
+Supported single-split Trainer/Sensor reconstruction and built-in Cohort selection retain their identities, parameters, scalar results and required exact trade/learning bindings. Omitted row-level evidence cannot be inspected from the log; custom readers must require the fields they use. Existing walk-forward Trainer limitations remain. Reducing recording changes stored evidence, not live retention or model/preparation memory.
+
+The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/recording_payload_inventory.json) measures two production rounds per case from `spot_1h_20240101_20241231.parquet`, with both execution and model-output recording enabled for ordinary cases and execution recording enabled for walk-forward. For records `R`, logical bytes are `L(R) = sum(len((json.dumps(r) + '\n').encode('utf-8')) for r in R)`, using Python's default JSON settings. Each section's weight is `L(full) - L(without_section)`; its percentage divides that difference by `L(full)` for that case alone. Compressed sizes include the round log and shared market blobs. The alignment measurement removes the entire alignment object; the policy retains its dated bounds, so that percentage is not its omission saving.
+
+| Case | Logical bytes | Compressed bytes | Largest payload sections |
+|---|---:|---:|---|
+| Rule snapshot | 17,680 | 5,987 | Execution 53.85%; market 37.69% |
+| Binary snapshot | 25,376 | 9,790 | Execution 43.08%; market 26.08%; probabilities 22.67% |
+| Ridge snapshot | 22,399 | 8,408 | Execution 37.49%; market 29.55%; predictions 27.91% |
+| Event | 245,352 | 36,981 | Ledger 89.13%; retained trade contract 10.23% |
+| Walk-forward | 31,677 | 10,311 | Fold results 34.99%; alignment 20.34%; execution 19.41% |
+
+Omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. Exact trade provenance remains despite its cost. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
+
+Reproduce the event probe from the repository root using the existing recorded-execution helpers:
+
+```python
+import gzip
+import json
+import tempfile
+from pathlib import Path
+import polars as pl
+from tests import test_record_execution as probe
+
+with tempfile.TemporaryDirectory() as temporary:
+    directory = Path(temporary)
+    config = probe._config('rule')
+    config['sfd']['manifest']['backtest'] = {'product': {
+        'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
+        'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0,
+    }}
+    bars = pl.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
+    loop = probe._loop(config, bars, directory)
+    probe._run(loop, record_execution=True, record_model_outputs=True)
+    full = [(json.dumps(record) + '\n').encode('utf-8') for record in probe._records(directory)]
+    lean = [(json.dumps({k: v for k, v in json.loads(row).items() if k != 'trade_ledger'}) + '\n').encode('utf-8') for row in full]
+    print('logical full/without ledger:', sum(map(len, full)), sum(map(len, lean)))
+    print('compressed full/without ledger:', *(sum(len(gzip.compress(row, compresslevel=1, mtime=0)) for row in rows) for rows in (full, lean)))
+```
+
+Structural and relative-size regression checks run with `python -m pytest -q tests/test_recording_policy.py -k payload_projection`; exact compressed counts are not the acceptance criterion.
 
 ## Optional adaptive search
 
@@ -409,11 +481,11 @@ Calling `run(resume=True)` without a search strategy raises `resume=True is only
 
 ## Round storage format
 
-New result directories declare `round_storage: gzip-jsonl-v1` in metadata and write `round_data.jsonl.gz`. Each gzip member contains one UTF-8 JSON round plus a newline, compressed at fixed level 1 with mtime zero and no filename header. Walk-forward fold objects remain intact and receive gzip compression only. Existing directories without the discriminator retain plain `round_data.jsonl`, including on resume. Existing run/CLI signatures and recording flags do not change.
+New result directories declare `round_storage: gzip-jsonl-v1` in metadata and write `round_data.jsonl.gz`. Each gzip member contains one UTF-8 JSON round plus a newline, compressed at fixed level 1 with mtime zero and no filename header. Retained walk-forward fold objects receive gzip compression only; the [recording policy](#recording-policy) determines their saved fields. Existing directories without the discriminator retain plain `round_data.jsonl`, including on full/default resume. Compression preserves the existing recording flags.
 
 For ordinary rounds, a non-null top-level `market` is replaced in place by `market_ref`. Its lowercase SHA-256 digest addresses `round_market/<digest>.json.gz`. The decompressed blob bytes are exactly `json.dumps(market, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('utf-8')`; hash those bytes and verify them before reconstruction. Alignment stays in the owning round. Restore the market key at the reference's position; missing/null market stays missing/null. This preserves exact values, numeric types, signed zero and ordering without lossy conversion. Existing nonfinite tokens elsewhere in round/fold results retain the legacy JSON behavior.
 
-External readers must verify each member trailer before exposing its round. The internal shared reader uses `zlib.decompressobj(wbits=31)`, requires each gzip header, rejects zero padding, and checks EOF/CRC/ISIZE. It validates references before constructing a path and verifies blob digest and return length. Decompression is bounded to 512 MiB per round and 128 MiB per market. The package-local example above uses the private shared reader; this is not a new public reader API.
+External readers must verify each member trailer before exposing its round. The internal shared reader uses `zlib.decompressobj(wbits=31)`, requires each gzip header, rejects zero padding, and checks EOF/CRC/ISIZE. It validates references before constructing a path and verifies blob digest and return length against predictions, or retained execution positions when predictions are omitted. Decompression is bounded to 512 MiB per round and 128 MiB per market. The package-local example above uses the private shared reader; this is not a new public reader API.
 
 Trainer, Cohort and acceptance processing reject incomplete artifacts. Live/resume reads may ignore only an incomplete final member outside the successful checkpoint prefix. Resume validates ordered successful CSV identities, scans existing member/line offsets, and truncates in place: committed round-data bytes and inode survive. CSV retains its existing rewrite behavior. This is sequential restoration, not indexed random access.
 

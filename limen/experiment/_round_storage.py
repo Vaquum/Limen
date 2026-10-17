@@ -82,6 +82,16 @@ def _market(value: object, path: Path, count: int | None) -> dict[str, object]:
     return cast(dict[str, object], value)
 
 
+def _row_count(record: Mapping[str, object]) -> int:
+    values = record.get('preds')
+    if not isinstance(values, list):
+        execution = record.get('execution')
+        values = cast(Mapping[str, object], execution).get('pos') if isinstance(execution, Mapping) else None
+    if not isinstance(values, list):
+        raise RoundStorageError('Market recording requires predictions or execution positions for row alignment')
+    return len(cast(list[object], values))
+
+
 def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
     if 'market_ref' not in record:
         return record
@@ -98,9 +108,7 @@ def _restore(record: dict[str, object], directory: Path) -> dict[str, object]:
             raise RoundStorageError(f'Expected one market member in {path}')
     if hashlib.sha256(member[0]).hexdigest() != digest:
         raise RoundStorageError(f'Market digest mismatch in {path} for round {record.get("round_id")}')
-    predictions = record.get('preds')
-    count = len(cast(list[object], predictions)) if isinstance(predictions, list) else None
-    market = _market(_json(member[0], path), path, count)
+    market = _market(_json(member[0], path), path, _row_count(record))
     return {('market' if key == 'market_ref' else key): (market if key == 'market_ref' else value)
             for key, value in record.items()}
 
@@ -118,7 +126,7 @@ def append_record(path: Path, record: Mapping[str, object]) -> None:
     wire = dict(record)
     raw: bytes | None = None
     if (market := wire.get('market')) is not None:
-        _ = _market(market, path, len(cast(list[object], wire['preds'])))
+        _ = _market(market, path, _row_count(wire))
         raw = json.dumps(market, sort_keys=True, separators=(',', ':'), ensure_ascii=True, allow_nan=False).encode('utf-8')
         if len(raw) > _MARKET_LIMIT:
             raise RoundStorageError(f'Market size limit exceeded in {path}')

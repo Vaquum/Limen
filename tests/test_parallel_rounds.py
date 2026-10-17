@@ -495,8 +495,9 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
                str(directory), str(markers), f'stop_{mode}']
     output = tmp_path / 'process.log'
     with output.open('w') as stream:
-        process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
-                                   stderr=subprocess.STDOUT, start_new_session=True)
+        with startup_limits():
+            process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
+                                       stderr=subprocess.STDOUT, start_new_session=True)
         try:
             first = directory / 'checkpoint.json' if phase == 'zero' else markers / ('3.start' if phase == 'final' else '0.start')
             _wait_for(first, process, output=output)
@@ -546,8 +547,9 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         command = [sys.executable, '-m', 'tests.test_parallel_rounds', str(config_path),
                    str(directory), str(tmp_path / 'markers'), mode]
         with output.open('w') as stream:
-            process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
-                                       stderr=subprocess.STDOUT, start_new_session=True)
+            with startup_limits():
+                process = subprocess.Popen(command, cwd=ROOT, stdout=stream,
+                                           stderr=subprocess.STDOUT, start_new_session=True)
             try:
                 _wait_for(tmp_path / 'markers' / '1.failed', process, output=output)
                 try:

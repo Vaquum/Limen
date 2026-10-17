@@ -1,11 +1,11 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from typing import Any
 from typing import cast
 
 from limen.yaml.errors import YAMLError
 from limen.yaml._objective_spec import check_objective_spec
 from limen.yaml._feature_shim_spec import FeatureShimSpec
+from limen.yaml._recording_spec import RecordingSpec
 from limen.yaml._temporal_spec import TemporalSpec
 from limen.yaml.rules import BacktestCostSpec
 from limen.yaml.rules import AcceptanceSpec
@@ -187,6 +187,7 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
     OneOf('uel.output_format', VALID_OUTPUT_FORMATS),
     NoUnknownKeys('uel', UEL_REQUIRED | UEL_OPTIONAL),
     UelSpec(),
+    RecordingSpec(),
     PruningStrategiesSpec(),
 ]))
 
