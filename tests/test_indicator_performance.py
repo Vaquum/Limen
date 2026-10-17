@@ -5,6 +5,8 @@ import hashlib
 import importlib
 import inspect
 import json
+import sys
+import zipfile
 import time
 from pathlib import Path
 
@@ -17,11 +19,20 @@ from limen import indicators
 
 FIXTURES = Path(__file__).parent / 'fixtures'
 REFERENCE = json.loads((FIXTURES / 'indicator_equivalence.json').read_text())
+ARCHIVE = FIXTURES / 'indicator_equivalence_reference.zip'
+sys.path.insert(0, str(ARCHIVE))
+try:
+    BASELINES = {name: importlib.import_module(f'_limen_930_baseline.{name}')
+                 for name in REFERENCE['signatures']}
+finally:
+    sys.path.remove(str(ARCHIVE))
 SOURCE = FIXTURES.parent.parent / REFERENCE['input']
 DATA = pl.read_parquet(SOURCE).select('open', 'high', 'low', 'close', 'volume')
 
 
 def _case_frame(case):
+    if case['variant'] == 'long':
+        return pl.read_parquet(FIXTURES / 'indicator_equivalence_long.parquet')
     frame = DATA.head(case['rows'])
     variant = case['variant']
     if variant == 'flat':
@@ -34,9 +45,10 @@ def _case_frame(case):
     if variant.startswith(('nan', 'null')):
         index = 0 if variant.endswith('head') else 70
         missing = np.nan if variant.startswith('nan') else None
+        column = case.get('missing_column', 'close')
         return frame.with_columns(pl.when(pl.int_range(pl.len()) == index)
                                   .then(pl.lit(missing, dtype=pl.Float64))
-                                  .otherwise(pl.col('close')).alias('close'))
+                                  .otherwise(pl.col(column)).alias(column))
     return frame
 
 
@@ -60,15 +72,23 @@ def test_baseline_equivalence(case):
             assert result.columns == frame.columns + case['columns']
             assert_frame_equal(result.select(frame.columns), frame)
             assert [str(result[c].dtype) for c in case['columns']] == case['dtypes']
-            with np.load(FIXTURES / 'indicator_equivalence.npz') as expected:
-                for column in case['columns']:
-                    assert result[column].null_count() == 0
-                    np.testing.assert_array_equal(result[column].to_numpy(),
-                                                  expected[f'{case["id"]}:{column}'])
+            baseline = getattr(BASELINES[case['name']], case['name'])(frame, **case['kwargs'])
+            for column in case['columns']:
+                assert result[column].null_count() == baseline[column].null_count()
+                np.testing.assert_array_equal(result[column].to_numpy(), baseline[column].to_numpy())
+
 
 
 def test_fixture_provenance():
     assert hashlib.sha256(SOURCE.read_bytes()).hexdigest() == REFERENCE['input_sha256']
+    assert hashlib.sha256(ARCHIVE.read_bytes()).hexdigest() == REFERENCE['reference_archive_sha256']
+    with zipfile.ZipFile(ARCHIVE) as saved:
+        for path, digest in REFERENCE['reference_sources'].items():
+            source = saved.read(f'_limen_930_baseline/{Path(path).name}')
+            original = source.replace(b'from _limen_930_baseline._hilbert import',
+                                      b'from limen.indicators._hilbert import')
+            assert hashlib.sha256(original).hexdigest() == digest
+    assert hashlib.sha256((FIXTURES / 'indicator_equivalence_long.parquet').read_bytes()).hexdigest() == REFERENCE['long_input_sha256']
 
 
 @pytest.mark.parametrize(('name', 'kernel', 'columns'), [

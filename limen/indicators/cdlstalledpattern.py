@@ -73,7 +73,20 @@ def _cdlstalledpattern_impl(
                                     CDLSTALLEDPATTERN_BODY_SHORT_PERIOD_TOTAL) / body_short_avg_period
     shadow_vs_avg_i1 = shadow_vs_factor * (_candle_totals(price_range, shadow_vs_avg_period, lookback_total - 1, count,
                                                        CDLSTALLEDPATTERN_SHADOW_VS_PERIOD_TOTAL) / shadow_vs_avg_period)
-    matched = (c2 >= o2) & (c1 >= o1) & (c0 >= o0) & (c0 > c1) & (c1 > c2) & (real_body_i2 > body_long_avg_i2) & (real_body_i1 > body_long_avg_i1) & (upper_shadow_i1 < shadow_vs_avg_i1) & (o1 > o2) & (o1 <= c2 + near_avg_i2) & (real_body_i0 < body_short_avg_i0) & (o0 >= c1 - real_body_i0 - near_avg_i1)
+    matched = (
+        (c2 >= o2)
+        & (c1 >= o1)
+        & (c0 >= o0)
+        & (c0 > c1)
+        & (c1 > c2)
+        & (real_body_i2 > body_long_avg_i2)
+        & (real_body_i1 > body_long_avg_i1)
+        & (upper_shadow_i1 < shadow_vs_avg_i1)
+        & (o1 > o2)
+        & (o1 <= c2 + near_avg_i2)
+        & (real_body_i0 < body_short_avg_i0)
+        & (o0 >= c1 - real_body_i0 - near_avg_i1)
+    )
     out[lookback_total:][matched] = -100
 
     return data.with_columns(pl.Series(name='cdlstalledpattern', values=out))

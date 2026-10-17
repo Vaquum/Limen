@@ -259,5 +259,5 @@ def mama(
         pl.col(price_col).map_batches(
             calculate,
             return_dtype=pl.Struct({'mama': pl.Float64, 'fama': pl.Float64}),
-        ).struct.unnest()
+        ).struct.field('*')
     )

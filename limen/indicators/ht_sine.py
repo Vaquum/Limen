@@ -268,5 +268,5 @@ def ht_sine(
         pl.col(price_col).map_batches(
             calculate,
             return_dtype=pl.Struct({'ht_sine': pl.Float64, 'ht_sine_lead': pl.Float64}),
-        ).struct.unnest()
+        ).struct.field('*')
     )

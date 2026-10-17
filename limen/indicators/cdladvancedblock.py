@@ -2,6 +2,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+__all__ = ['cdladvancedblock', '_candle_totals']
+
 CDLADVANCEDBLOCK_BODY_LONG_AVG_PERIOD = 10
 CDLADVANCEDBLOCK_BODY_LONG_PERIOD_TOTAL = 0.0
 CDLADVANCEDBLOCK_FAR_AVG_PERIOD = 5
@@ -93,7 +95,28 @@ def _cdladvancedblock_impl(
     near_avg_i1, near_avg_i2 = (
         near_factor * (_candle_totals(price_range, near_avg_period, lookback_total - lag, count) / near_avg_period)
         for lag in (1, 2))
-    matched = first_white & second_white & third_white & (c0 > c1) & (c1 > c2) & (o1 > o2) & (o1 <= c2 + near_avg_i2) & (o0 > o1) & (o0 <= c1 + near_avg_i1) & (real_body_i2 > body_long_avg_i2) & (upper_shadow_i2 < shadow_short_avg_i2) & ((real_body_i1 < real_body_i2 - far_avg_i2) & (real_body_i0 < real_body_i1 + near_avg_i1) | (real_body_i0 < real_body_i1 - far_avg_i1) | (real_body_i0 < real_body_i1) & (real_body_i1 < real_body_i2) & ((upper_shadow_i0 > shadow_short_avg_i0) | (upper_shadow_i1 > shadow_short_avg_i1)) | (real_body_i0 < real_body_i1) & (upper_shadow_i0 > shadow_long_avg_i0))
+    matched = (
+        first_white
+        & second_white
+        & third_white
+        & (c0 > c1)
+        & (c1 > c2)
+        & (o1 > o2)
+        & (o1 <= c2 + near_avg_i2)
+        & (o0 > o1)
+        & (o0 <= c1 + near_avg_i1)
+        & (real_body_i2 > body_long_avg_i2)
+        & (upper_shadow_i2 < shadow_short_avg_i2)
+        & ((real_body_i1 < real_body_i2 - far_avg_i2)
+        & (real_body_i0 < real_body_i1 + near_avg_i1)
+        | (real_body_i0 < real_body_i1 - far_avg_i1)
+        | (real_body_i0 < real_body_i1)
+        & (real_body_i1 < real_body_i2)
+        & ((upper_shadow_i0 > shadow_short_avg_i0)
+        | (upper_shadow_i1 > shadow_short_avg_i1))
+        | (real_body_i0 < real_body_i1)
+        & (upper_shadow_i0 > shadow_long_avg_i0))
+    )
     out[lookback_total:][matched] = -100
 
     return data.with_columns(pl.Series(name='cdladvancedblock', values=out))

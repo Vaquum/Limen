@@ -75,7 +75,23 @@ def _cdl3whitesoldiers_impl(
         for lag in range(3))
     body_short_avg_i0 = _candle_totals(body, body_short_avg_period, lookback_total, count,
                                     CDL3WHITESOLDIERS_BODY_SHORT_PERIOD_TOTAL) / body_short_avg_period
-    matched = (c2 >= o2) & (upper_shadow_i2 < shadow_vs_avg_i2) & (c1 >= o1) & (upper_shadow_i1 < shadow_vs_avg_i1) & (c0 >= o0) & (upper_shadow_i0 < shadow_vs_avg_i0) & (c0 > c1) & (c1 > c2) & (o1 > o2) & (o1 <= c2 + near_avg_i2) & (o0 > o1) & (o0 <= c1 + near_avg_i1) & (real_body_i1 > real_body_i2 - far_avg_i2) & (real_body_i0 > real_body_i1 - far_avg_i1) & (real_body_i0 > body_short_avg_i0)
+    matched = (
+        (c2 >= o2)
+        & (upper_shadow_i2 < shadow_vs_avg_i2)
+        & (c1 >= o1)
+        & (upper_shadow_i1 < shadow_vs_avg_i1)
+        & (c0 >= o0)
+        & (upper_shadow_i0 < shadow_vs_avg_i0)
+        & (c0 > c1)
+        & (c1 > c2)
+        & (o1 > o2)
+        & (o1 <= c2 + near_avg_i2)
+        & (o0 > o1)
+        & (o0 <= c1 + near_avg_i1)
+        & (real_body_i1 > real_body_i2 - far_avg_i2)
+        & (real_body_i0 > real_body_i1 - far_avg_i1)
+        & (real_body_i0 > body_short_avg_i0)
+    )
     out[lookback_total:][matched] = 100
 
     return data.with_columns(pl.Series(name='cdl3whitesoldiers', values=out))

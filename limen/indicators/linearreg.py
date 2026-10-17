@@ -2,6 +2,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+__all__ = ['linearreg', '_linearreg_components']
+
 
 CMP_N_100000 = 100000
 CMP_N_2 = 2

@@ -22,15 +22,15 @@ def _cci_from_arrays(
 
     typical_price = (high + low + close) / 3.0
     count = n - lookback
-    average = np.zeros(count)
+    average: npt.NDArray[np.float64] = np.zeros(count, dtype=float)
     for lag in range(period):
         average += typical_price[lag:lag + count]
     average /= period
-    abs_sum = np.zeros(count)
+    abs_sum = np.zeros(count, dtype=float)
     for lag in range(period):
         abs_sum += np.abs(typical_price[lag:lag + count] - average)
     diff = typical_price[lookback:] - average
-    np.divide(diff, CCI_SCALING * (abs_sum / period), out=out[lookback:],
+    _ = np.divide(diff, CCI_SCALING * (abs_sum / period), out=out[lookback:],
               where=(diff != 0.0) & (abs_sum != 0.0))
     out[lookback:][(diff == 0.0) | (abs_sum == 0.0)] = 0.0
 
