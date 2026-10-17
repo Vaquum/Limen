@@ -1647,6 +1647,10 @@ Note: add all new changelog entries to the bottom of this file.
 
 Preserve NumPy scalar penetration precision; document that scalar floating-point warnings are outside numerical equivalence.
 
+## [5.29.5] - 2026-10-17
+
+- Run the covered CI suite on Python 3.12 with monitoring-based coverage to reduce tracing overhead while retaining all tests, frozen numerical comparisons and runtime limits.
+
 ## [5.30.0] - 2026-10-17
 
 - Configure persisted round-log predictions, alignment arrays, event ledgers and fold details through one YAML/native recording policy; preserve default payloads, scientific results and canonical walk-forward returns (#942).
