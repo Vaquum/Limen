@@ -47,7 +47,7 @@ def recorded_importance(tmp_path_factory):
         feedback_interval=1000,
     )
     loop.run('parameter_importance', n_permutations=64, prep_each_round=True,
-             progress_bar=False, post_processing=False, factorize=True,
+             progress_bar=False, post_processing=False, factorize=False,
              record_execution=True, record_model_outputs=True)
     rows = loop.experiment_log.to_pandas()
     assert len(rows) == len(rows[PARAMETERS].drop_duplicates()) == 64
