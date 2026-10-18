@@ -178,7 +178,8 @@ def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], valu
     if source is None:
         raise EvidenceUnavailable('Recorded data-source declaration is missing')
     source = mapping(source, 'data source')
-    source = {**source, 'params': _resolve_params(mapping(source.get('params', {}), 'data-source parameters'), params)}
+    source_params = source.get('params')
+    source = {**source, 'params': _resolve_params(mapping({} if source_params is None else source_params, 'data-source parameters'), params)}
     folds = record.get('folds')
     if folds is None:
         raise EvidenceUnavailable('Recorded fold evidence is missing')

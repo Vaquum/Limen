@@ -157,6 +157,20 @@ def test_family_separates_signed_execution(family_runs, tmp_path):
     assert signed_group['pbo'] == probability_of_backtest_overfitting(np.stack(list(_tracks(signed).values())), n_blocks=2)
 
 
+@pytest.mark.parametrize('source_params', (None, {}))
+def test_family_accepts_empty_source_params(family_runs, tmp_path, source_params):
+    project, _, _, _ = family_runs
+    config = _config()
+    config['metadata']['name'] = 'family_empty_source_params'
+    config['sfd']['manifest']['data_source']['params'] = source_params
+    directory = tmp_path / 'empty_params'
+    _experiment(config, _bars(), directory, project)
+    report = family_acceptance_report([directory], project_root=project)
+    assert report['coverage']['unavailable'] == 0
+    assert report['comparisons'][0]['evidence']['source']['params'] == {}
+    assert report['comparisons'][0]['n_trials'] == 2
+
+
 def test_family_rejects_corruption_and_explains_metric_limits(family_runs, tmp_path):
     project, paths, _, _ = family_runs
     damaged = _copy_run(paths[0], tmp_path / 'duplicate_bar')
