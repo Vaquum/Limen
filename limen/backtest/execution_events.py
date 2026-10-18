@@ -9,12 +9,16 @@ OBSERVATION_COLUMNS: tuple[str, ...] = ('row_id', 'start_ns', 'end_ns', 'open_av
 SIGNAL_COLUMNS: tuple[str, ...] = ('row_id', 'available_at_ns', 'target')
 
 
-def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
+def _validate_initial(inputs: TradeInputs) -> None:
     for value in cast(tuple[object, object], (inputs.partition_start_ns, inputs.partition_end_ns)):
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError('Partition timestamps must be integer UTC nanoseconds')
     if finite_number(inputs.initial_equity, 'initial equity') <= 0 or inputs.partition_end_ns < inputs.partition_start_ns:
         raise ValueError('Positive initial equity and ordered partition bounds are required')
+
+
+def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
+    _validate_initial(inputs)
     observations = inputs.observations
     if not observations.height or set(OBSERVATION_COLUMNS) - set(observations.columns):
         raise ValueError('Execution observations require recorded prices and interval/availability timestamps')

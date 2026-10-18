@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import polars as pl
+import numpy as np
 import pytest
 from polars.testing import assert_frame_equal
 
@@ -122,3 +123,27 @@ def test_cached_plan_revalidates_source_content_and_identity():
     observations.replace_column(observations.get_column_index('close'), opened.rename('close'))
     with pytest.raises(ValueError, match='fingerprint changed'):
         trade_execution(replace(inputs, observations=observations), policy)
+
+
+@pytest.mark.parametrize('field,invalid,message', [
+    ('initial_equity', '10000.0', 'initial equity must be a finite number'),
+    ('partition_start_ns', 'numpy', 'Partition timestamps must be integer'),
+    ('partition_end_ns', 'numpy', 'Partition timestamps must be integer'),
+])
+def test_cached_plan_revalidates_scalar_types(field, invalid, message):
+    inputs, policy = recorded_inputs()
+    trade_execution(inputs, policy)
+    value = np.int64(getattr(inputs, field)) if invalid == 'numpy' else invalid
+    with pytest.raises(ValueError, match=message):
+        trade_execution(replace(inputs, **{field: value}), policy)
+
+
+def test_narrow_partition_retains_only_referenced_source_rows():
+    inputs, policy = recorded_inputs()
+    end = int(inputs.observations['available_at_ns'][1])
+    signals = inputs.signals.filter(pl.col('available_at_ns') <= end)
+    plan = _event_plan(replace(inputs, partition_end_ns=end, signals=signals), policy)
+    referenced = {event.source_row_id for event in plan.events if event.kind == 'observation'}
+    assert set(plan.observations) == referenced
+    assert set(plan.observation_order) == referenced
+    assert len(plan.observations) < inputs.observations.height

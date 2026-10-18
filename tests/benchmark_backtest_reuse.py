@@ -12,6 +12,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 WORKER = ROOT / 'tests/backtest_reuse/worker.py'
 SCENARIOS = ('snapshot_ledger', 'snapshot_full', 'line_features',
              'timer_execution', 'funded_execution', 'forward_labels')

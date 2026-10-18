@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from threading import Lock
 from typing import cast
 
-from limen.backtest.execution_events import OBSERVATION_COLUMNS, SIGNAL_COLUMNS, _execution_events
+from limen.backtest.execution_events import OBSERVATION_COLUMNS, SIGNAL_COLUMNS, _execution_events, _validate_initial
 from limen.backtest.trade_contract import ExecutionEvent, TradeInputs, TradePolicy, contract_digest, export_trade_contract, json_value, source_binding
 
 
@@ -39,6 +39,7 @@ def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
 
 
 def _event_plan(inputs: TradeInputs, policy: TradePolicy) -> _EventPlan:
+    _validate_initial(inputs)
     if set(OBSERVATION_COLUMNS) - set(inputs.observations.columns) or set(SIGNAL_COLUMNS) - set(inputs.signals.columns):
         _execution_events(inputs, policy, include_timers=False)
     key = _plan_key(inputs, policy)
@@ -48,11 +49,13 @@ def _event_plan(inputs: TradeInputs, policy: TradePolicy) -> _EventPlan:
             _PLANS.move_to_end(key)
             return existing
     events = _execution_events(inputs, policy, include_timers=False)
+    observation_ids = {event.source_row_id for event in events if event.kind == 'observation'}
+    funding_ids = {event.source_row_id for event in events if event.kind == 'funding'}
     plan = _EventPlan(
         events, tuple(event.time_ns for event in events),
-        {str(row['row_id']): cast(dict[str, object], row) for row in inputs.observations.iter_rows(named=True)},
-        {str(row['event_id']): cast(dict[str, object], row) for row in inputs.funding_events.iter_rows(named=True)} if inputs.funding_events is not None else {},
-        {str(identity): index for index, identity in enumerate(inputs.observations['row_id'])},
+        {str(row['row_id']): cast(dict[str, object], row) for row in inputs.observations.iter_rows(named=True) if str(row['row_id']) in observation_ids},
+        {str(row['event_id']): cast(dict[str, object], row) for row in inputs.funding_events.iter_rows(named=True) if str(row['event_id']) in funding_ids} if inputs.funding_events is not None else {},
+        {str(identity): index for index, identity in enumerate(inputs.observations['row_id']) if str(identity) in observation_ids},
         {str(identity): index for index, identity in enumerate(inputs.signals['row_id'])},
         contract_digest(export_trade_contract(policy, inputs)),
     )
