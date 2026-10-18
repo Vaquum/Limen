@@ -15,6 +15,9 @@ from sklearn.preprocessing import OneHotEncoder
 if TYPE_CHECKING:
     from limen.log.log import Log
 
+_MIN_CONFIGURATIONS = 20
+_MIN_REPEATS = 2
+
 
 def experiment_parameter_importance(
     self: Log,
@@ -33,7 +36,7 @@ def experiment_parameter_importance(
         raise ValueError('Parameter columns must be unique names excluding the metric')
     if type(random_state) is not int or not 0 <= random_state < 2**32:
         raise ValueError('random_state must be an integer in [0, 2**32)')
-    if type(n_repeats) is not int or n_repeats < 2:
+    if type(n_repeats) is not int or n_repeats < _MIN_REPEATS:
         raise ValueError('n_repeats must be an integer of at least 2')
 
     captured = self._captured_log
@@ -63,13 +66,13 @@ def experiment_parameter_importance(
 
     groups = frame.groupby(columns, sort=False, observed=True).ngroup().to_numpy()
     n_configurations = len(np.unique(groups))
-    if n_configurations < 20:
+    if n_configurations < _MIN_CONFIGURATIONS:
         raise ValueError('Parameter importance requires at least 20 distinct configurations')
     train, evaluation = next(GroupShuffleSplit(n_splits=1, test_size=0.25,
                                                random_state=random_state).split(frame, groups=groups))
     x_train, x_evaluation = frame.iloc[train], frame.iloc[evaluation]
     y_train, y_evaluation = target.iloc[train], target.iloc[evaluation]
-    if y_evaluation.nunique() < 2:
+    if y_evaluation.nunique() == 1:
         raise ValueError('Held-out metric must vary for R² parameter importance')
     encoder = ColumnTransformer(
         [('categorical', OneHotEncoder(handle_unknown='ignore', sparse_output=False), categorical)],
