@@ -8,10 +8,6 @@ from typing import Protocol, cast
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GroupShuffleSplit
-from sklearn.preprocessing import OneHotEncoder
 
 
 class _Regressor(Protocol):
@@ -24,10 +20,6 @@ class _Splitter(Protocol):
         tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]
     ]: ...
 
-
-make_pipeline = cast(Callable[..., _Regressor], vars(import_module('sklearn.pipeline'))['make_pipeline'])
-permutation_importance = cast(Callable[..., Mapping[str, npt.NDArray[np.float64]]],
-                              vars(import_module('sklearn.inspection'))['permutation_importance'])
 
 _MIN_CONFIGURATIONS = 20
 _MIN_REPEATS = 2
@@ -82,6 +74,14 @@ def experiment_parameter_importance(
     n_configurations = len(np.unique(groups))
     if n_configurations < _MIN_CONFIGURATIONS:
         raise ValueError('Parameter importance requires at least 20 distinct configurations')
+    from sklearn.compose import ColumnTransformer
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.model_selection import GroupShuffleSplit
+    from sklearn.preprocessing import OneHotEncoder
+
+    make_pipeline = cast(Callable[..., _Regressor], vars(import_module('sklearn.pipeline'))['make_pipeline'])
+    permutation_importance = cast(Callable[..., Mapping[str, npt.NDArray[np.float64]]],
+                                  vars(import_module('sklearn.inspection'))['permutation_importance'])
     splitter = cast(_Splitter, GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=random_state))
     train, evaluation = next(splitter.split(frame, groups=groups))
     x_train, x_evaluation = frame.iloc[train], frame.iloc[evaluation]

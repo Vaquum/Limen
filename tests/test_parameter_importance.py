@@ -179,7 +179,7 @@ def test_importance_grouping_and_encoding(recorded_importance, monkeypatch):
     assert set(rows.iloc[train]['boosting_type']) == {'gbdt'}
     expected, reference_train, reference_evaluation = _reference(rows, seed=seed, repeats=2)
     pipelines = []
-    module = importlib.import_module('limen.log._experiment_parameter_importance')
+    module = importlib.import_module('sklearn.pipeline')
     original = module.make_pipeline
 
     def capture_pipeline(*steps):
