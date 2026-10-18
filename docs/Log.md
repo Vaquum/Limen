@@ -262,7 +262,7 @@ The result contains one row per parameter, ordered by descending `importance_mea
 - `n_train`, `n_evaluation`: retained occurrence counts in each partition
 - `n_configurations`: total distinct selected configurations
 
-`importance_std` is dispersion across repeated shuffles, not a confidence interval or significance measure. Negative importances are retained. A poor baseline score makes the importance estimates uninformative. Correlated parameters can share or obscure importance, and adaptive sampling leaves unexplored regions unmeasured. These estimates describe predictive usefulness within the recorded sample; they establish neither causal effects nor safe pruning decisions.
+`importance_std` is dispersion across repeated shuffles, not a confidence interval or significance measure. Negative importances are retained. A poor baseline score makes the importance estimates uninformative. Correlated parameters can share or obscure importance, and adaptive sampling leaves unexplored regions unmeasured. These estimates describe predictive usefulness within the recorded sample; they establish neither causal effects nor safe pruning decisions. Reproducibility requires the same input values and library versions; CSV parsing precision can change forest tie decisions relative to live rows.
 
 ## Analyzing perturbation impact
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from numbers import Real
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -52,7 +53,7 @@ def experiment_parameter_importance(
         values = frame[name]
         if values.isna().any():
             raise ValueError(f'Parameter {name!r} contains missing values')
-        if pd.api.types.is_numeric_dtype(values) and not pd.api.types.is_complex_dtype(values):
+        if all(isinstance(value, (Real, bool, np.bool_)) for value in values):
             if not np.isfinite(values.to_numpy(dtype=float)).all():
                 raise ValueError(f'Parameter {name!r} must be finite')
         elif all(isinstance(value, str) for value in values):
@@ -60,7 +61,7 @@ def experiment_parameter_importance(
         else:
             raise ValueError(f'Parameter {name!r} must contain numeric, boolean or text scalars')
     target = captured[metric]
-    if (not pd.api.types.is_numeric_dtype(target) or pd.api.types.is_complex_dtype(target)
+    if (not all(isinstance(value, (Real, bool, np.bool_)) for value in target)
             or not np.isfinite(target.to_numpy(dtype=float)).all()):
         raise ValueError('Successful rounds require a finite numeric metric')
 

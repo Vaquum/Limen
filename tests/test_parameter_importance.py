@@ -88,17 +88,24 @@ def test_recorded_parameter_importance(recorded_importance):
     expected, train, evaluation = _reference(rows)
     live = Log(uel_object=loop).experiment_parameter_importance(
         METRIC, parameters=PARAMETERS, random_state=7, n_repeats=3)
-    captured = Log(file_path=str(path / 'results.csv')).experiment_parameter_importance(
+    saved_log = Log(file_path=str(path / 'results.csv'))
+    saved_expected, _, _ = _reference(saved_log._captured_log)
+    captured = saved_log.experiment_parameter_importance(
         METRIC, parameters=PARAMETERS, random_state=7, n_repeats=3)
     assert list(live.columns) == COLUMNS
     assert_frame_equal(live, expected, check_exact=False, rtol=1e-12, atol=1e-12)
-    assert_frame_equal(captured, live, check_exact=False, rtol=1e-12, atol=1e-12)
+    assert_frame_equal(captured, saved_expected, check_exact=False, rtol=1e-12, atol=1e-12)
     assert live['n_train'].eq(len(train)).all() and live['n_evaluation'].eq(len(evaluation)).all()
     constants = live.set_index('parameter').loc[['force_row_wise', 'random_state']]
     assert constants[['importance_mean', 'importance_std']].eq(0.0).all().all()
     zero_names = live.loc[live['importance_mean'].eq(0.0), 'parameter'].to_list()
     assert zero_names == [name for name in PARAMETERS if name in zero_names]
     assert np.isfinite(live[['importance_mean', 'importance_std', 'baseline_score']]).all().all()
+    numeric_parameters = ['lookback', 'fee', 'n_estimators']
+    numeric = Log(uel_object=loop).experiment_parameter_importance(
+        METRIC, parameters=numeric_parameters, n_repeats=2)
+    assert set(numeric['parameter']) == set(numeric_parameters)
+    assert numeric['n_configurations'].eq(32).all()
 
 
 def test_invalid_importance_inputs(recorded_importance):
