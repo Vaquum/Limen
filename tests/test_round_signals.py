@@ -6,7 +6,6 @@ import logging
 import shutil
 import time
 from datetime import datetime
-from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -18,9 +17,10 @@ from limen.inference import Trainer
 from tests import test_factorized_preparation as factorized
 from tests.test_factorize_equivalence import _numeric_equal
 from tests.test_record_execution import _config, _loop, _run
-from tests.test_round_storage import recorded_rounds as recorded_rounds
+from tests import test_round_storage as legacy
 
 logger = logging.getLogger(__name__)
+recorded_rounds = legacy.recorded_rounds
 
 
 def _records(directory):
@@ -137,7 +137,7 @@ def test_recorded_storage_savings(tmp_path, economic_sweep):
 
 
 def test_logical_evidence(tmp_path, recorded_rounds, economic_sweep):
-    captures = list(recorded_rounds.values()) + [economic_sweep]
+    captures = [*recorded_rounds.values(), economic_sweep]
     for index, captured in enumerate(captures):
         directory, records = captured['directory'], captured['records']
         baseline = _v1(tmp_path / str(index), records)
