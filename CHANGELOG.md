@@ -1698,3 +1698,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Preserve computed precision in metrics, historical aggregates, weighted features, cohort percentages and execution timings.
 - Remove arbitrary decimal resolution from deterministic sampling and fractional differentiation searches; version sampling checkpoints and reject ambiguous older selection rules. Reserve rounding for presentation and discrete execution units.
+
+## [5.33.0] - 2026-10-18
+
+- Add a native common-strategy SFD and YAML template covering eight causal long/flat baselines with explicit stateful exits.
+- Add recorded-data backtester comparisons with per-bar equity and fill parity, isolated framework environments, cold and warm timings, and reproducible artifacts.

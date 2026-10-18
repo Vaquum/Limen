@@ -26,6 +26,7 @@ They show the packaged Limen experiment shape because each one combines:
 | `dlinear_regressor` | regression | canonical DLinear decomposition-linear reference, deterministic closed-form fit |
 | `tabpfn_binary` | binary classification | lazy symbols are always importable; model use requires `tabpfn` |
 | `rule_based` | rule-based long/flat | predicate-driven strategy with no learned model |
+| `common_strategies` | rule-based long/flat baselines | eight fixed passive, trend and mean-reversion rules; see [Common Strategies](Common-Strategies.md) |
 | `dollar_bar_crash_reversal` | rule-based long/flat | exhaustive crash-and-maker-flow reversal sweep on `$15M` dollar bars |
 
 ## Foundational SFD versus reference architecture

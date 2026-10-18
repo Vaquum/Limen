@@ -6,6 +6,7 @@ from typing import Any
 
 
 _LAZY_EXPORTS = {
+    'common_strategies': ('limen.sfd.foundational_sfd.common_strategies', None),
     'dlinear_regressor': ('limen.sfd.foundational_sfd.dlinear_regressor', None),
     'dollar_bar_crash_reversal': (
         'limen.sfd.foundational_sfd.dollar_bar_crash_reversal',
@@ -22,6 +23,7 @@ _LAZY_EXPORTS = {
 
 
 if TYPE_CHECKING:
+    from limen.sfd.foundational_sfd import common_strategies
     from limen.sfd.foundational_sfd import dlinear_regressor
     from limen.sfd.foundational_sfd import dollar_bar_crash_reversal
     from limen.sfd.foundational_sfd import lightgbm_binary
@@ -34,6 +36,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    'common_strategies',
     'dlinear_regressor',
     'dollar_bar_crash_reversal',
     'lightgbm_binary',
