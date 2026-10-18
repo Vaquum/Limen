@@ -27,6 +27,7 @@ def base_budget(name: str, directory: Path) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('plane', choices=('suite', 'static', 'typing'))
+    parser.add_argument('--typing-python', type=Path, default=ROOT / '.venv/bin/python')
     args = parser.parse_args()
     os.environ['PATH'] = str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH']
     directory = Path(tempfile.mkdtemp(prefix='limen-backtest-check-'))
@@ -56,7 +57,8 @@ def main() -> None:
             base_budget('module_budgets', directory), '--pr-body-file', str(body_path))
         run('scripts/package_audit.py')
     else:
-        result = subprocess.run([sys.executable, '-m', 'pyright', '--outputjson'],
+        result = subprocess.run([sys.executable, '-m', 'pyright', '--outputjson',
+                                 '--pythonpath', str(args.typing_python)],
                                 cwd=ROOT, check=False, capture_output=True, text=True)
         path = directory / 'pyright.json'
         path.write_text(result.stdout)
