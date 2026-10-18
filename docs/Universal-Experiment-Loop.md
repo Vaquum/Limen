@@ -299,7 +299,7 @@ The option is independent of `record_execution` and `post_processing`; leaving i
 
 ### Recording policy
 
-Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ run to omit named groups from `round_data.jsonl.gz`. Every group defaults to `true`; omitted policy and explicit all-true policy preserve the existing logical payloads. Values must be literal booleans: unknown keys, parameter references and non-booleans are errors. Explicit policies require both `search_strategy` and `experiment_dir`.
+Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ run to omit named groups from `round_data.jsonl.gz`. Every group defaults to `false`; new runs omit bar-level payloads unless explicitly enabled. An explicit all-true policy restores full recording. Values must be literal booleans: unknown keys, parameter references and non-booleans are errors. Explicit policies require both `search_strategy` and `experiment_dir`.
 
 | Key | When `false` |
 |---|---|
@@ -312,19 +312,21 @@ For example, add this block to an existing YAML `uel` configuration:
 
 ```yaml
 recording:
-  predictions: false
-  trade_ledger: false
+  predictions: true
+  alignment: true
+  trade_ledger: true
+  fold_details: true
 ```
 
-The Python equivalent is `uel.run(..., recording={"predictions": False, "trade_ledger": False})`. On a new run, `recording=None` uses the configured YAML policy, or all-true defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `true`: native `{"trade_ledger": False}` overrides YAML `{"predictions": False}` with predictions enabled.
+The Python equivalent is `uel.run(..., recording=dict.fromkeys(("predictions", "alignment", "trade_ledger", "fold_details"), True))`. On a new run, `recording=None` uses the configured YAML policy, or all-false defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `false`: native `{"trade_ledger": True}` overrides YAML `{"predictions": True}` with predictions disabled.
 
-For a compiled SFD, its compiled YAML is authoritative even without a separate `yaml_reference`. A conflicting recording declaration in an explicitly supplied `yaml_reference` rejects before artifacts. New explicitly configured recording runs retain the original compiled YAML through the existing `yaml_reference` metadata. The frozen effective policy is stored separately as `metadata.recording`. Changing YAML `uel.recording` changes the existing canonical manifest ID; a native override preserves the source YAML and its ID. Neither operation changes the manifest-ID algorithm. Omitted no-policy execution retains its existing behavior.
+For a compiled SFD, its compiled YAML is authoritative even without a separate `yaml_reference`. A conflicting recording declaration in an explicitly supplied `yaml_reference` rejects before artifacts. New persisted recording runs retain the original compiled YAML through the existing `yaml_reference` metadata. The frozen effective policy is stored separately as `metadata.recording`. Changing YAML `uel.recording` changes the existing canonical manifest ID; a native override preserves the source YAML and its ID. Neither operation changes the manifest-ID algorithm. New persisted runs save the effective policy even when no policy was declared.
 
 This policy filters copied serialized records only. Models, predictions used for scoring, scalar CSV/Parquet results, feedback and live `post_processing` retain their full evidence. When folds remain, the other controls apply within them. Walk-forward `trial_returns.parquet` and DSR computation are unchanged. Existing `record_execution` and `record_model_outputs` remain independent and off by default: omitted predictions can coexist with recorded execution, market returns or probabilities.
 
-Disabling `fold_details` or `alignment` makes PBO unavailable because the saved log lacks its required fold/timestamp evidence. These omissions are allowed unless PBO is selected through `acceptance.max_pbo`; that conflict raises before run artifacts are created. Without a PBO threshold, the report records `pbo: null` with an explanation while retaining DSR. Directly requesting `max_pbo` from `acceptance_report` on an incompatible saved log also raises before either report file is written. Full/default recording retains existing acceptance behavior.
+Disabling `fold_details` or `alignment` makes PBO unavailable because the saved log lacks its required fold/timestamp evidence. These omissions are allowed unless PBO is selected through `acceptance.max_pbo`; that conflict raises before run artifacts are created. Without a PBO threshold, the report records `pbo: null` with an explanation while retaining DSR. Directly requesting `max_pbo` from `acceptance_report` on an incompatible saved log also raises before either report file is written. PBO requires explicitly enabling both `alignment` and `fold_details`; full recording retains existing acceptance behavior.
 
-Any policy containing `false` makes the run non-resumable, even if that group is absent from its particular records. Python and CLI reject lighter saved/requested policies or changed policies before modifying artifacts. On resume, an omitted policy uses saved metadata; legacy metadata without a policy means all-true defaults. Full/default resume keeps its existing behavior.
+Default runs and any policy containing `false` are non-resumable, even if that group is absent from its particular records. Python and CLI reject lighter saved/requested policies or changed policies before modifying artifacts. On resume, an omitted policy uses saved metadata; legacy metadata without a policy means all-true recording. Existing full logs retain their resume behavior; enable all four groups when creating a new resumable run.
 
 Supported single-split Trainer/Sensor reconstruction and built-in Cohort selection retain their identities, parameters, scalar results and required exact trade/learning bindings. Omitted row-level evidence cannot be inspected from the log; custom readers must require the fields they use. Existing walk-forward Trainer limitations remain. Reducing recording changes stored evidence, not live retention or model/preparation memory.
 
