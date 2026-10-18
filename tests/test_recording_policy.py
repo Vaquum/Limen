@@ -442,7 +442,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
                 path = tmp_path / f'{kind}-changed-yaml-{label}'
                 shutil.copytree(captured['full']['path'], path)
                 candidate = copy.deepcopy(captured['config'])
-                candidate['uel']['recording'] = {'alignment': False}
+                candidate['uel']['recording'] = {'alignment': True}
                 loop = _loop(candidate, path, bars=captured['bars'])
                 before = _snapshot(path)
                 with pytest.raises(ValueError, match='recording'):
