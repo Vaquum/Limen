@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.31.3"
+  limen_version: "5.32.1"
   mode: development
 
 sfd:
@@ -452,7 +452,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.31.3"
+  limen_version: "5.32.1"
   mode: development
 sfd:
   manifest:
@@ -509,7 +509,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.31.3"
+  limen_version: "5.32.1"
   mode: development
 sfd:
   manifest:

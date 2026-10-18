@@ -1690,7 +1690,11 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Omit predictions, row timestamp arrays, contract signal rows, trade ledgers and fold details from new run logs by default; retain explicit recording opt-ins and legacy full-log resume.
 
-## [5.31.3] - 2026-10-18
+## [5.32.0] - 2026-10-18
+
+- Add advisory Random Forest parameter importance from recorded round rows, with grouped held-out evaluation and reproducible permutation dispersion.
+
+## [5.32.1] - 2026-10-18
 
 - Preserve computed precision in metrics, historical aggregates, weighted features, cohort percentages and execution timings.
 - Remove arbitrary decimal resolution from deterministic sampling and fractional differentiation searches; reserve rounding for presentation and discrete execution units.

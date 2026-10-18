@@ -228,6 +228,42 @@ with columns:
 
 The default `min_n=10` skips smaller cohorts. If every requested cohort is smaller than `min_n`, or cleaning leaves no usable numeric cohort, the method raises `ValueError` instead of returning an unstable table.
 
+## Parameter importance
+
+### `experiment_parameter_importance(metric, *, parameters, random_state=0, n_repeats=10)`
+
+Estimate how much each explicitly selected parameter helps a Random Forest predict one recorded metric. This advisory analysis reads captured successful experiment rows from a UEL-backed or CSV-backed `Log`; it does not prepare data, fit the experiment's models, replay execution, write artifacts or alter the search.
+
+For an objective-enabled run with at least 20 distinct recorded `lookback`/`C` configurations:
+
+```python
+log = limen.Log(file_path='results.csv')
+importance = log.experiment_parameter_importance(
+    'val_backtest_total_return',
+    parameters=['lookback', 'C'],
+    random_state=0,
+    n_repeats=10,
+)
+```
+
+Select parameter columns explicitly; bookkeeping and other metric columns are not inferred as inputs. Parameters must contain finite scalar numbers, booleans or text, with no null or nested values. The chosen metric must be finite and numeric on every successful row. Missing, duplicate or malformed selections raise. Recorded strict-mode failures are excluded. CSV input retains the existing CSV reader's type interpretation; this method does not reconstruct typed round parameters.
+
+`random_state` must be a non-boolean integer in `[0, 2**32 - 1]`; `n_repeats` must be a non-boolean integer of at least 2.
+
+The seeded split reserves 25% of distinct selected configurations for evaluation. Repeated occurrences remain in the analysis, but identical selected parameter tuples always stay on the same side. At least 20 distinct configurations are required; this is a diagnostic floor, not evidence of statistical adequacy.
+
+A 100-tree, single-threaded Random Forest fits the training rows, with categorical one-hot encoding fitted only on that training set. Unseen evaluation categories receive an all-zero encoding; their effects were not learned. Held-out permutation importance shuffles each original parameter column and measures the decrease in R². Categorical levels are therefore permuted together rather than interpreted as separate parameters. A constant held-out metric raises because R² would not provide a meaningful baseline.
+
+The result contains one row per parameter, ordered by descending `importance_mean`, with input order breaking ties:
+
+- `parameter`
+- `importance_mean`, `importance_std`
+- `baseline_score`: held-out R² before shuffling
+- `n_train`, `n_evaluation`: retained occurrence counts in each partition
+- `n_configurations`: total distinct selected configurations
+
+`importance_std` is dispersion across repeated shuffles, not a confidence interval or significance measure. Negative importances are retained. A poor baseline score makes the importance estimates uninformative. Correlated parameters can share or obscure importance, and adaptive sampling leaves unexplored regions unmeasured. These estimates describe predictive usefulness within the recorded sample; they establish neither causal effects nor safe pruning decisions. Reproducibility requires the same input values and library versions; CSV parsing precision can change forest tie decisions relative to live rows.
+
 ## Analyzing perturbation impact
 
 Round parameter values become columns in `experiment_log` alongside the metrics. When ablation is configured, `_dropped_features` is taken from the actual prepared parameters and serialized as JSON text on every row, including `[]` for zero drops; automatic post-processing preserves this column. A perturbation sweep therefore leaves its own audit trail: `scaler_type`, `feature_groups`, any `use_*` toggle, `feature_drop_count`, `feature_drop_seed`, and the JSON-encoded `_dropped_features` list all appear as columns.
