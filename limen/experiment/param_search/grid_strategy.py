@@ -7,7 +7,7 @@ from typing_extensions import override
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search._grid_permutation import (
-    _lcg_map, _lcg_params, _permuted_index, _SHUFFLE_VERSION, domain_digest,
+    lcg_map, lcg_params, permuted_index, SHUFFLE_VERSION, domain_digest,
 )
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
@@ -25,7 +25,7 @@ class GridStrategy(SearchStrategy):
             raise ValueError('GridStrategy seed must be a non-boolean integer or None')
         super().__init__(domain, seed=seed)
         self._shuffle = shuffle
-        self._permutation_version = _SHUFFLE_VERSION if shuffle and seed is not None else 1
+        self._permutation_version = SHUFFLE_VERSION if shuffle and seed is not None else 1
         self._rebuild()
 
     @property
@@ -42,15 +42,15 @@ class GridStrategy(SearchStrategy):
         self._current_index = 0
         self._generated_count = 0
         if self._shuffle and self._total > 0 and self._permutation_version == 1:
-            self._lcg_multiplier, self._lcg_increment = _lcg_params(self._total, self._seed)
+            self._lcg_multiplier, self._lcg_increment = lcg_params(self._total, self._seed)
 
     def _permute_index(self, logical_index: int) -> int:
         if not self._shuffle:
             return logical_index
-        if self._permutation_version == _SHUFFLE_VERSION:
+        if self._permutation_version == SHUFFLE_VERSION:
             assert self._seed is not None
-            return _permuted_index(logical_index, self._total, self._seed)
-        return _lcg_map(logical_index, self._total, self._lcg_multiplier, self._lcg_increment)
+            return permuted_index(logical_index, self._total, self._seed)
+        return lcg_map(logical_index, self._total, self._lcg_multiplier, self._lcg_increment)
 
     def _index_to_combo(self, index: int) -> dict[str, Any]:
         combo: dict[str, Any] = {}
@@ -90,13 +90,13 @@ class GridStrategy(SearchStrategy):
     def set_state(self, state: dict[str, Any]) -> None:
         saved_shuffle, saved_seed = state.get('shuffle'), state.get('seed')
         version = state.get('permutation_version', 1)
-        if type(version) is not int or version not in (1, _SHUFFLE_VERSION):
+        if type(version) is not int or version not in (1, SHUFFLE_VERSION):
             raise ValueError('GridStrategy checkpoint permutation version is unsupported')
         if saved_shuffle is not None and saved_shuffle != self._shuffle:
             raise ValueError('GridStrategy checkpoint shuffle does not match current shuffle')
         if saved_seed is not None and saved_seed != self._seed:
             raise ValueError('GridStrategy checkpoint seed does not match current seed')
-        if version == _SHUFFLE_VERSION:
+        if version == SHUFFLE_VERSION:
             if not self._shuffle or saved_shuffle is not True or type(saved_seed) is not int or saved_seed != self._seed:
                 raise ValueError('GridStrategy version 2 requires matching seeded shuffle')
             if state.get('domain_digest') != domain_digest(self._domain.params):
@@ -105,6 +105,6 @@ class GridStrategy(SearchStrategy):
         if type(index) is not int or type(generated) is not int or not 0 <= generated <= index <= self._total:
             raise ValueError('GridStrategy checkpoint traversal counters are invalid')
         if self._shuffle and self._total > 0 and version == 1 and self._permutation_version != version:
-            self._lcg_multiplier, self._lcg_increment = _lcg_params(self._total, self._seed)
+            self._lcg_multiplier, self._lcg_increment = lcg_params(self._total, self._seed)
         self._permutation_version = version
         self._current_index, self._generated_count = index, generated

@@ -51,14 +51,14 @@ def supports_preparation(manifest: MLManifest) -> bool:
 class FittedPreparation:
     def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
                  references: Callable[[object, str], bool]) -> None:
+        super().__init__()
         self.manifest = manifest
-        architecture = manifest.architecture_function
-        if architecture is None:
+        if manifest.architecture_function is None:
             raise ValueError('Fitted preparation requires an architecture')
         consumers = [value for attr, value in vars(manifest).items()
                      if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
         self.names = frozenset(name for name in domain if name not in axes and (
-            name not in inspect.signature(architecture).parameters or any(references(value, name) for value in consumers)))
+            name not in inspect.signature(manifest.architecture_function).parameters or any(references(value, name) for value in consumers)))
         self.cache: dict[str, dict[str, object]] = {}
 
     def prepare(self, raw: pl.DataFrame, params: dict[str, object],

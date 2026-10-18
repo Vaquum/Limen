@@ -4,9 +4,9 @@ import math
 import random
 from collections.abc import Mapping
 
-__all__: list[str] = []
+__all__ = ['SHUFFLE_VERSION', 'domain_digest', 'lcg_map', 'lcg_params', 'permuted_index']
 
-_SHUFFLE_VERSION = 2
+SHUFFLE_VERSION = 2
 GOLDEN_RATIO_CONJUGATE = 0.6180339887498949
 
 
@@ -14,7 +14,7 @@ def domain_digest(params: Mapping[str, list[object]]) -> str:
     return hashlib.sha256(json.dumps(dict(params), sort_keys=True, default=str).encode()).hexdigest()
 
 
-def _permuted_index(index: int, n: int, seed: int) -> int:
+def permuted_index(index: int, n: int, seed: int) -> int:
     if not 0 <= index < n:
         raise ValueError('Grid permutation index is outside its domain')
     if n == 1:
@@ -34,7 +34,7 @@ def _permuted_index(index: int, n: int, seed: int) -> int:
             return value
 
 
-def _lcg_params(n: int, seed: int | None) -> tuple[int, int]:
+def lcg_params(n: int, seed: int | None) -> tuple[int, int]:
 
     '''
     Compute LCG parameters for a full-period permutation of [0, n).
@@ -66,7 +66,7 @@ def _find_coprime(n: int) -> int:
     return candidate
 
 
-def _lcg_map(logical_index: int, n: int,
+def lcg_map(logical_index: int, n: int,
              multiplier: int, increment: int) -> int:
 
     '''Map logical index to physical index via LCG.'''

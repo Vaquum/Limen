@@ -15,7 +15,7 @@ from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search._grid_permutation import (
-    _lcg_map, _lcg_params, _permuted_index, domain_digest,
+    lcg_map, lcg_params, permuted_index, domain_digest,
 )
 
 
@@ -29,9 +29,9 @@ def _stream(params, count):
                                   63, 64, 65, 120, 255, 256, 257, 385, 1440])
 def test_seeded_permutation_contract(size):
     for seed in (0, 7, 42, -123, 2**65):
-        order = [_permuted_index(index, size, seed) for index in range(size)]
+        order = [permuted_index(index, size, seed) for index in range(size)]
         assert sorted(order) == list(range(size))
-        assert order == [_permuted_index(index, size, seed) for index in range(size)]
+        assert order == [permuted_index(index, size, seed) for index in range(size)]
     strategy = GridStrategy(ParamDomain({'candidate': list(range(size))}), seed=42, shuffle=True)
     assert len(list(strategy)) == size
     with pytest.raises(StopIteration):
@@ -89,7 +89,7 @@ def test_seedless_in_memory_restore_keeps_existing_permutation(versionless):
         del state['permutation_version']
         del state['domain_digest']
     expected = list(strategy)
-    with patch('limen.experiment.param_search.grid_strategy._lcg_params',
+    with patch('limen.experiment.param_search.grid_strategy.lcg_params',
                side_effect=AssertionError('in-memory restore regenerated the seedless permutation')) as regenerate:
         strategy.set_state(state)
         assert list(strategy) == expected
@@ -206,11 +206,11 @@ def test_measured_early_joint_coverage_with_negative_controls():
         count, total = 2 * max(a * b for a, b in itertools.combinations(sizes, 2)), math.prod(sizes)
         measured, affine, nested = [], [], []
         for seed in range(8):
-            order = [_permuted_index(index, total, seed) for index in range(count)]
+            order = [permuted_index(index, total, seed) for index in range(count)]
             marginal, joint = _coverage(order, sizes)
             assert min(marginal) == 1.0
             measured.append(joint)
-            affine.append(_coverage([_lcg_map(index, total, *_lcg_params(total, seed))
+            affine.append(_coverage([lcg_map(index, total, *lcg_params(total, seed))
                                      for index in range(count)], sizes)[1])
             nested.append(_coverage(_nested_levels(sizes, seed, count), sizes)[1])
         means = [statistics.mean(projection) for projection in zip(*measured, strict=True)]
@@ -223,10 +223,10 @@ def test_measured_early_joint_coverage_with_negative_controls():
 
 
 def test_seed_orders_are_not_rotations_of_one_cycle():
-    first = [_permuted_index(index, 385, 1) for index in range(385)]
-    second = [_permuted_index(index, 385, 2) for index in range(385)]
+    first = [permuted_index(index, 385, 1) for index in range(385)]
+    second = [permuted_index(index, 385, 2) for index in range(385)]
     start = first.index(second[0])
     assert second != first[start:] + first[:start]
-    assert [_permuted_index(index, 385, 42) for index in range(16)] == [
+    assert [permuted_index(index, 385, 42) for index in range(16)] == [
         379, 98, 54, 7, 346, 155, 79, 87, 375, 112, 364, 382, 225, 177, 216, 146,
     ]
