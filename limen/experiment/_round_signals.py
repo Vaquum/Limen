@@ -1,6 +1,6 @@
 import math
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import cast
 
 __all__: list[str] = []
@@ -28,8 +28,12 @@ def reference(value: object, *, signal: bool) -> tuple[str, int | None] | None:
     return digest, length
 
 
-def aligned(record: Mapping[str, object]) -> bool:
-    values = [record.get(field) for field in ('preds', 'probs')]
+def aligned(record: Mapping[str, object], fields: Sequence[str], *, eligible: bool = False) -> bool:
+    values = [record.get(field) for field in fields]
+    if eligible:
+        values = [value for value in values if count(value) is not None]
+    if not values:
+        return True
     if isinstance(execution := record.get('execution'), Mapping):
         values.append(cast(Mapping[str, object], execution).get('pos'))
     lengths = {len(cast(list[object], value)) for value in values if isinstance(value, list)}

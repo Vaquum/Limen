@@ -21,8 +21,7 @@ class RoundStorageError(ValueError):
     """Recorded round storage failed integrity validation."""
 
 
-FORMAT = 'gzip-jsonl-v2'
-LEGACY_FORMAT = 'gzip-jsonl-v1'
+FORMAT, LEGACY_FORMAT = 'gzip-jsonl-v2', 'gzip-jsonl-v1'
 _MEMBER_LIMIT, _MARKET_LIMIT = 512 * 1024 * 1024, 128 * 1024 * 1024
 
 
@@ -101,6 +100,7 @@ def _row_count(record: Mapping[str, object]) -> int:
 
 
 def _restore(record: dict[str, object], directory: Path, storage: object) -> dict[str, object]:
+    signals = tuple(field for field in ('preds', 'probs') if field + '_ref' in record)
     for field in ('preds', 'probs', 'market'):
         key = field + '_ref'
         if key not in record:
@@ -125,7 +125,7 @@ def _restore(record: dict[str, object], directory: Path, storage: object) -> dic
             raise RoundStorageError(f'Invalid signal payload or count in {path}')
         value = value if signal else _market(value, path, _row_count(record))
         record = {(field if name == key else name): (value if name == key else item) for name, item in record.items()}
-    if storage == FORMAT and not _signals.aligned(record):
+    if storage == FORMAT and not _signals.aligned(record, signals):
         raise RoundStorageError(f'Signal lengths differ from predictions or execution alignment in {directory}')
     return record
 
@@ -146,7 +146,7 @@ def append_record(path: Path, record: Mapping[str, object]) -> None:
             _ = stream.write(separator + (json.dumps(record) + '\n').encode('utf-8'))
         return
     wire = dict(record)
-    if storage == FORMAT and not _signals.aligned(record):
+    if storage == FORMAT and not _signals.aligned(record, ('preds', 'probs'), eligible=True):
         raise RoundStorageError(f'Signal lengths differ from predictions or execution alignment in {path}')
     blobs: dict[Path, bytes] = {}
     for field in ('market', 'preds', 'probs'):
