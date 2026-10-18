@@ -25,7 +25,7 @@ NUMERICAL_ENV = {
 
 ROOT = Path(__file__).resolve().parents[3]
 MARKET = ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet'
-BASELINE = 'cda37a02d526c72360c56da4c75dc0626d08cd4c'
+BASELINE = '4f3b225154d2260c6d7243a3a296051f02b8a80f'
 CASES = ('binary_costs','directional_barriers','interleaved','rule_based')
 
 def fixture_source(**_kwargs: object) -> pl.DataFrame:
@@ -139,6 +139,15 @@ def canonical(value: object, *, in_csv: bool = False) -> object:
     raise TypeError(type(value).__name__)
 
 
+def baseline_surface(captured: dict) -> dict:
+    # Keep the original comparison columns; these independent additions have separate tests.
+    return {**captured,
+            'columns': [key for key in captured['columns'] if key != '_convergence_warning'],
+            'metadata': {key: value for key, value in captured['metadata'].items() if key != 'recording'},
+            'rows': [{key: value for key, value in row.items() if key != '_convergence_warning'}
+                     for row in captured['rows']]}
+
+
 def stable(captured: dict) -> dict:
     excluded = {'created_at', 'round_storage', 'limen_version', 'manifest_id', 'yaml_reference', 'factorize'}
     return {'columns': captured['columns'],
@@ -199,7 +208,7 @@ def main():
             (args.out / f'{name}.json').write_text(json.dumps(captured))
             continue
         with tempfile.TemporaryDirectory() as temp:
-            result=execute(name,Path(temp))
+            result=baseline_surface(execute(name,Path(temp)))
         evidence={'source_sha':BASELINE,'case':name,
                   'market_sha256':hashlib.sha256(MARKET.read_bytes()).hexdigest(),
                   'python':platform.python_version(),'platform':platform.platform(),

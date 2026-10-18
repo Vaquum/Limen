@@ -218,10 +218,12 @@ def test_release_metadata_and_embedded_versions_are_consistent() -> None:
     assert str(citation['version']) == project_version
 
     embedded_versions: list[str] = []
+    version_pattern = r'limen_version:\s*["\']?(\d+\.\d+\.\d+)["\']?'
     for path in _public_markdown_paths():
-        embedded_versions.extend(re.findall(r'limen_version:\s*["\']([^"\']+)["\']', path.read_text(encoding='utf-8')))
-    for template in (ROOT / 'limen' / 'yaml' / 'templates').glob('*.yaml'):
-        embedded_versions.extend(re.findall(r'limen_version:\s*["\']([^"\']+)["\']', template.read_text(encoding='utf-8')))
+        embedded_versions.extend(re.findall(version_pattern, path.read_text(encoding='utf-8')))
+    for template in [*(ROOT / 'limen' / 'yaml' / 'templates').glob('*.yaml'),
+                     *(ROOT / 'docs' / 'examples').glob('*.yaml')]:
+        embedded_versions.extend(re.findall(version_pattern, template.read_text(encoding='utf-8')))
     assert embedded_versions
     assert set(embedded_versions) == {project_version}
 

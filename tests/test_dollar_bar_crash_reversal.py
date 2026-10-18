@@ -295,5 +295,5 @@ def test_dollar_bar_crash_reversal_real_fixture_edge() -> None:
     assert featured[_OUTPUT_COLUMN].sum() == 221
     assert metrics['num_trades_test'] == 5
     assert metrics['num_executed_trades_test'] == 5
-    assert metrics['pnl_per_trade_bps_test'] == 148.8
+    assert metrics['pnl_per_trade_bps_test'] == pytest.approx(148.81249318934618, rel=1e-12)
     assert metrics['pnl_per_trade_bps_test'] > 60.0
