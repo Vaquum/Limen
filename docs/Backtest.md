@@ -356,3 +356,9 @@ Future settled funding remains private cost evidence. A funding feature requires
 `limen.backtest.trade_execution` accepts resolved `TradePolicy` and bound `TradeInputs`. Its `TradeLedger` separates states, intents, fills, episodes and funding. Returns and drawdown use actual marked equity; costs, funding credits/debits, gross/net PnL, completed/open episodes and mean absolute exposure are separate. Exposure samples use model availability, so shorts cannot cancel longs in an average.
 
 Each round freezes canonical `trade_contract`, SHA-256 digest, source identities/checksums, policy/adapter/preset versions, calibration and event/episode ledger in JSONL. Aggregate reads use the captured results; recomputing configured execution separately requires original bound prices and provenance. A saved contract cannot supply missing prices or recreate private source bindings. See [Log](Log.md#backtest-surface) for aggregate and retained-row boundaries. Deployment parity remains subject to the linked Praxis/Nexus requests.
+
+Execution optimizations retain the complete ledger and original event ordering.
+Equal-input numerical comparisons require absolute error at most `1e-10` with
+zero relative tolerance; schemas, identities, clocks and missing-value masks are
+unchanged. See [computation-reuse comparisons](Backtest-Benchmarks.md#backtest-computation-reuse)
+for the recorded-data measurement contract and command.

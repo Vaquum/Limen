@@ -432,3 +432,26 @@ portfolio constraints. It also does not test GPU execution, large parameter
 sweeps or optimizer scheduling. Its recorded windows and fixed rules support bounded
 correctness and timing observations; they do not establish out-of-sample
 profitability, capacity or future live returns.
+
+## Backtest computation reuse
+
+The computation-reuse comparison runs the baseline and candidate source trees in
+separate processes against the same recorded market data and prepared signals.
+It requires absolute numerical error no greater than `1e-10`, with zero relative
+tolerance. Table schemas, row and column order, null masks, identifiers, clocks
+and contract digests must agree. Snapshot regressions use the tighter `1e-12`
+absolute tolerance and preserve the original CVaR tail summation order.
+
+```bash
+python -m tests.benchmark_backtest_reuse \
+  --baseline-root /path/to/baseline \
+  --output /tmp/limen-backtest-reuse-results
+```
+
+The benchmark measures the snapshot ledger, complete snapshot evaluation,
+repeated line features, full timer-driven event execution and forward trade
+labels. First-call and warm timings are separate. The timer case retains every
+audit state row; label evaluation retains both directions and all label metadata.
+Source loading and shared signal preparation are excluded from each timed case.
+The report records source-code hashes, input checksums, dependency versions and
+the maximum absolute numerical error for every case.
