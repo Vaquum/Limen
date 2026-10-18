@@ -1,0 +1,597 @@
+{
+  "schema_version": 1,
+  "derived_utc": "2026-10-18T19:48:27.898079+00:00",
+  "commit": "8640fd3bc378413d6fde4afa97fce188f60ad94f",
+  "code_sha256": "962f8208ce303c37a034a437301820a1e951ed72b447a00ebb2a8296d5d393ba",
+  "source_reports": [
+    {
+      "file": "single-report.json",
+      "bytes": 359179,
+      "sha256": "ed0b5241aff89e5281f91e5611d3bcfdc8eac63f1e270c83e7b65d7609a3dc2c"
+    },
+    {
+      "file": "single-report.csv",
+      "bytes": 22426,
+      "sha256": "dfcbda366fb8a08370114caaae97e8fdf57d254c1fcf7efccc65fe9264c61405"
+    },
+    {
+      "file": "matrix-report.json",
+      "bytes": 47129,
+      "sha256": "ae2e20cf735393b0dff7a13b94830a80675d3456205bbe86edd83fce4d24d2c7"
+    },
+    {
+      "file": "matrix-report.csv",
+      "bytes": 1571,
+      "sha256": "5925e7da343f3cb9cb128e51bd01d4d6f51561ecf7a4c465dbc36c7834273f89"
+    }
+  ],
+  "individual_aggregation": "Median, minimum and maximum of eight per-strategy medians; each per-strategy median is from seven warm repetitions.",
+  "snapshot_aggregation": "Same two-stage aggregation applied to the separately measured public backtest_snapshot API.",
+  "matrix_aggregation": "Median, minimum and maximum of seven whole-matrix repetitions; eight independent portfolios per repetition.",
+  "scope_limit": "Public APIs perform unequal additional native work; API and common-output timings do not establish a universal engine ranking.",
+  "individual_status_counts": {
+    "verified": 80
+  },
+  "matrix_status_counts": {
+    "verified": 6
+  },
+  "largest_recorded_equity_error": {
+    "max_abs_equity_error": 1.1315569281578064e-07,
+    "max_relative_equity_error": 9.697873534894555e-14
+  },
+  "equity_error_scope": "Recorded first-result equity errors against the independent cash replay; every warm repetition additionally passes full-path parity.",
+  "inputs": [
+    {
+      "input": "/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_1h_20240101_20241231.parquet",
+      "input_file_sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+      "evaluation_rows": 8783,
+      "evaluation_start": "2024-01-01 00:00:00+00:00",
+      "evaluation_end": "2024-12-31 22:00:00+00:00",
+      "settlement_timestamp": "2024-12-31 23:00:00+00:00",
+      "source_rows_including_settlement": 8784
+    },
+    {
+      "input": "/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_15m_20250101_20250531.parquet",
+      "input_file_sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
+      "evaluation_rows": 14495,
+      "evaluation_start": "2025-01-01 00:00:00+00:00",
+      "evaluation_end": "2025-05-31 23:30:00+00:00",
+      "settlement_timestamp": "2025-05-31 23:45:00+00:00",
+      "source_rows_including_settlement": 14496
+    }
+  ],
+  "individual": [
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "limen",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 0.5316255000000001,
+        "minimum_ms": 0.409167,
+        "maximum_ms": 1.393315
+      },
+      "common_outputs": {
+        "median_ms": 0.9181675,
+        "minimum_ms": 0.725132,
+        "maximum_ms": 2.450087
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 1.393315,
+        "sma_cross": 0.551104,
+        "ema_cross": 0.409167,
+        "macd": 0.468214,
+        "rsi_mean_reversion": 0.633498,
+        "bollinger_mean_reversion": 0.452103,
+        "donchian_breakout": 0.712627,
+        "time_series_momentum": 0.512147
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 2.450087,
+        "sma_cross": 0.859532,
+        "ema_cross": 0.777639,
+        "macd": 0.800246,
+        "rsi_mean_reversion": 1.115638,
+        "bollinger_mean_reversion": 0.725132,
+        "donchian_breakout": 0.976803,
+        "time_series_momentum": 1.074087
+      }
+    },
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "vectorbt",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 5.0216805,
+        "minimum_ms": 4.586075,
+        "maximum_ms": 7.406149
+      },
+      "common_outputs": {
+        "median_ms": 9.765521,
+        "minimum_ms": 8.64158,
+        "maximum_ms": 15.569611
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 7.406149,
+        "sma_cross": 5.032741,
+        "ema_cross": 5.01062,
+        "macd": 4.788122,
+        "rsi_mean_reversion": 4.586075,
+        "bollinger_mean_reversion": 4.791328,
+        "donchian_breakout": 7.280789,
+        "time_series_momentum": 5.487251
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 14.807147,
+        "sma_cross": 9.614229,
+        "ema_cross": 8.98948,
+        "macd": 9.916813,
+        "rsi_mean_reversion": 8.64158,
+        "bollinger_mean_reversion": 9.581411,
+        "donchian_breakout": 15.569611,
+        "time_series_momentum": 10.185579
+      }
+    },
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "vectorbt_rust",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 3.853904,
+        "minimum_ms": 3.350435,
+        "maximum_ms": 5.534075
+      },
+      "common_outputs": {
+        "median_ms": 8.0491,
+        "minimum_ms": 7.234716,
+        "maximum_ms": 11.714578
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 4.002255,
+        "sma_cross": 3.705553,
+        "ema_cross": 3.350435,
+        "macd": 3.523697,
+        "rsi_mean_reversion": 5.534075,
+        "bollinger_mean_reversion": 3.506199,
+        "donchian_breakout": 4.701422,
+        "time_series_momentum": 4.895721
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 8.396773,
+        "sma_cross": 7.47175,
+        "ema_cross": 7.378098,
+        "macd": 7.701427,
+        "rsi_mean_reversion": 11.275338,
+        "bollinger_mean_reversion": 7.234716,
+        "donchian_breakout": 11.714578,
+        "time_series_momentum": 11.535244
+      }
+    },
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "backtesting_py",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 60.955232,
+        "minimum_ms": 54.995196,
+        "maximum_ms": 78.523573
+      },
+      "common_outputs": {
+        "median_ms": 61.462873,
+        "minimum_ms": 55.304493,
+        "maximum_ms": 78.901843
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 56.86019,
+        "sma_cross": 54.995196,
+        "ema_cross": 78.523573,
+        "macd": 70.214506,
+        "rsi_mean_reversion": 56.619276,
+        "bollinger_mean_reversion": 59.052466,
+        "donchian_breakout": 62.857998,
+        "time_series_momentum": 77.34356
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 57.374576,
+        "sma_cross": 55.304493,
+        "ema_cross": 78.901843,
+        "macd": 70.877997,
+        "rsi_mean_reversion": 56.937457,
+        "bollinger_mean_reversion": 59.462558,
+        "donchian_breakout": 63.463188,
+        "time_series_momentum": 77.886109
+      }
+    },
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "backtrader",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 1208.4637115,
+        "minimum_ms": 984.099946,
+        "maximum_ms": 1523.668958
+      },
+      "common_outputs": {
+        "median_ms": 1209.5722685,
+        "minimum_ms": 985.203096,
+        "maximum_ms": 1524.841445
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 1339.439395,
+        "sma_cross": 1034.529636,
+        "ema_cross": 1478.144156,
+        "macd": 1523.668958,
+        "rsi_mean_reversion": 984.099946,
+        "bollinger_mean_reversion": 1030.753039,
+        "donchian_breakout": 1174.418296,
+        "time_series_momentum": 1242.509127
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 1340.626654,
+        "sma_cross": 1035.527675,
+        "ema_cross": 1479.6606,
+        "macd": 1524.841445,
+        "rsi_mean_reversion": 985.203096,
+        "bollinger_mean_reversion": 1031.691097,
+        "donchian_breakout": 1175.563842,
+        "time_series_momentum": 1243.580695
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "limen",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 0.8065055000000001,
+        "minimum_ms": 0.745236,
+        "maximum_ms": 0.902033
+      },
+      "common_outputs": {
+        "median_ms": 1.2315615,
+        "minimum_ms": 1.152052,
+        "maximum_ms": 1.406982
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 0.755983,
+        "sma_cross": 0.751126,
+        "ema_cross": 0.816876,
+        "macd": 0.864524,
+        "rsi_mean_reversion": 0.745236,
+        "bollinger_mean_reversion": 0.802224,
+        "donchian_breakout": 0.810787,
+        "time_series_momentum": 0.902033
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 1.262677,
+        "sma_cross": 1.316866,
+        "ema_cross": 1.166574,
+        "macd": 1.340573,
+        "rsi_mean_reversion": 1.152052,
+        "bollinger_mean_reversion": 1.200446,
+        "donchian_breakout": 1.198499,
+        "time_series_momentum": 1.406982
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "vectorbt",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 5.6869315,
+        "minimum_ms": 5.539627,
+        "maximum_ms": 6.407045
+      },
+      "common_outputs": {
+        "median_ms": 12.0128635,
+        "minimum_ms": 10.399048,
+        "maximum_ms": 15.560586
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 5.539627,
+        "sma_cross": 5.645425,
+        "ema_cross": 5.541695,
+        "macd": 5.995288,
+        "rsi_mean_reversion": 5.728438,
+        "bollinger_mean_reversion": 5.746588,
+        "donchian_breakout": 5.578756,
+        "time_series_momentum": 6.407045
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 12.063148,
+        "sma_cross": 10.399048,
+        "ema_cross": 11.149031,
+        "macd": 12.310233,
+        "rsi_mean_reversion": 11.608468,
+        "bollinger_mean_reversion": 12.934714,
+        "donchian_breakout": 11.962579,
+        "time_series_momentum": 15.560586
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "vectorbt_rust",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 4.0059345,
+        "minimum_ms": 3.378788,
+        "maximum_ms": 5.485237
+      },
+      "common_outputs": {
+        "median_ms": 8.483564000000001,
+        "minimum_ms": 7.670454,
+        "maximum_ms": 14.17102
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 4.34065,
+        "sma_cross": 3.812672,
+        "ema_cross": 5.485237,
+        "macd": 4.13694,
+        "rsi_mean_reversion": 3.658266,
+        "bollinger_mean_reversion": 3.378788,
+        "donchian_breakout": 3.874929,
+        "time_series_momentum": 4.275586
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 8.301637,
+        "sma_cross": 8.507739,
+        "ema_cross": 14.17102,
+        "macd": 8.459389,
+        "rsi_mean_reversion": 8.204356,
+        "bollinger_mean_reversion": 7.670454,
+        "donchian_breakout": 8.726067,
+        "time_series_momentum": 9.270625
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "backtesting_py",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 85.00971050000001,
+        "minimum_ms": 79.328495,
+        "maximum_ms": 165.000076
+      },
+      "common_outputs": {
+        "median_ms": 85.60460549999999,
+        "minimum_ms": 79.807464,
+        "maximum_ms": 166.419792
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 96.602571,
+        "sma_cross": 81.275516,
+        "ema_cross": 81.51391,
+        "macd": 91.900867,
+        "rsi_mean_reversion": 86.012386,
+        "bollinger_mean_reversion": 84.007035,
+        "donchian_breakout": 79.328495,
+        "time_series_momentum": 165.000076
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 96.964501,
+        "sma_cross": 81.896796,
+        "ema_cross": 82.034341,
+        "macd": 92.639674,
+        "rsi_mean_reversion": 86.638092,
+        "bollinger_mean_reversion": 84.571119,
+        "donchian_breakout": 79.807464,
+        "time_series_momentum": 166.419792
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "backtrader",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "engine_api": {
+        "median_ms": 1723.8014875,
+        "minimum_ms": 1614.486289,
+        "maximum_ms": 2381.252104
+      },
+      "common_outputs": {
+        "median_ms": 1727.2482344999999,
+        "minimum_ms": 1615.650795,
+        "maximum_ms": 2383.199096
+      },
+      "engine_api_strategy_medians_ms": {
+        "buy_and_hold": 1763.97807,
+        "sma_cross": 1686.275326,
+        "ema_cross": 1614.486289,
+        "macd": 1806.019413,
+        "rsi_mean_reversion": 1655.036881,
+        "bollinger_mean_reversion": 1761.327649,
+        "donchian_breakout": 1630.553837,
+        "time_series_momentum": 2381.252104
+      },
+      "common_outputs_strategy_medians_ms": {
+        "buy_and_hold": 1766.022972,
+        "sma_cross": 1688.473497,
+        "ema_cross": 1615.650795,
+        "macd": 1807.64556,
+        "rsi_mean_reversion": 1656.238205,
+        "bollinger_mean_reversion": 1766.63848,
+        "donchian_breakout": 1631.892184,
+        "time_series_momentum": 2383.199096
+      }
+    }
+  ],
+  "native_snapshot": [
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "limen",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "snapshot_api": {
+        "median_ms": 3.5372985,
+        "minimum_ms": 2.863302,
+        "maximum_ms": 14.907268
+      },
+      "snapshot_strategy_medians_ms": {
+        "buy_and_hold": 14.907268,
+        "sma_cross": 3.769077,
+        "ema_cross": 3.059524,
+        "macd": 3.112489,
+        "rsi_mean_reversion": 7.729963,
+        "bollinger_mean_reversion": 2.863302,
+        "donchian_breakout": 3.690388,
+        "time_series_momentum": 3.384209
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "limen",
+      "portfolio_count_per_call": 1,
+      "strategies": 8,
+      "warm_repeats_per_strategy": 7,
+      "snapshot_api": {
+        "median_ms": 4.846146,
+        "minimum_ms": 4.183656,
+        "maximum_ms": 6.90271
+      },
+      "snapshot_strategy_medians_ms": {
+        "buy_and_hold": 6.90271,
+        "sma_cross": 4.20608,
+        "ema_cross": 4.942787,
+        "macd": 5.365923,
+        "rsi_mean_reversion": 4.838294,
+        "bollinger_mean_reversion": 4.183656,
+        "donchian_breakout": 4.853998,
+        "time_series_momentum": 4.547714
+      }
+    }
+  ],
+  "matrix": [
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "limen",
+      "portfolio_count_per_call": 8,
+      "warm_repeats": 7,
+      "engine_api": {
+        "median_ms": 4.414503,
+        "minimum_ms": 3.736861,
+        "maximum_ms": 7.315044
+      },
+      "common_outputs": {
+        "median_ms": 6.658048,
+        "minimum_ms": 6.379186,
+        "maximum_ms": 10.200277
+      }
+    },
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "vectorbt",
+      "portfolio_count_per_call": 8,
+      "warm_repeats": 7,
+      "engine_api": {
+        "median_ms": 19.705102,
+        "minimum_ms": 16.878053,
+        "maximum_ms": 22.67058
+      },
+      "common_outputs": {
+        "median_ms": 41.328181,
+        "minimum_ms": 30.910745,
+        "maximum_ms": 47.187979
+      }
+    },
+    {
+      "input": "spot_1h_20240101_20241231.parquet",
+      "evaluation_rows": 8783,
+      "engine": "vectorbt_rust",
+      "portfolio_count_per_call": 8,
+      "warm_repeats": 7,
+      "engine_api": {
+        "median_ms": 12.422593,
+        "minimum_ms": 10.298396,
+        "maximum_ms": 15.982884
+      },
+      "common_outputs": {
+        "median_ms": 26.734431,
+        "minimum_ms": 23.038499,
+        "maximum_ms": 30.764504
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "limen",
+      "portfolio_count_per_call": 8,
+      "warm_repeats": 7,
+      "engine_api": {
+        "median_ms": 5.740067,
+        "minimum_ms": 5.085277,
+        "maximum_ms": 7.125607
+      },
+      "common_outputs": {
+        "median_ms": 8.523469,
+        "minimum_ms": 7.980772,
+        "maximum_ms": 11.395898
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "vectorbt",
+      "portfolio_count_per_call": 8,
+      "warm_repeats": 7,
+      "engine_api": {
+        "median_ms": 25.74328,
+        "minimum_ms": 23.557884,
+        "maximum_ms": 30.232541
+      },
+      "common_outputs": {
+        "median_ms": 42.592813,
+        "minimum_ms": 41.256867,
+        "maximum_ms": 54.749031
+      }
+    },
+    {
+      "input": "spot_15m_20250101_20250531.parquet",
+      "evaluation_rows": 14495,
+      "engine": "vectorbt_rust",
+      "portfolio_count_per_call": 8,
+      "warm_repeats": 7,
+      "engine_api": {
+        "median_ms": 19.430187,
+        "minimum_ms": 18.505746,
+        "maximum_ms": 22.452637
+      },
+      "common_outputs": {
+        "median_ms": 43.848533,
+        "minimum_ms": 38.70531,
+        "maximum_ms": 57.868678
+      }
+    }
+  ]
+}

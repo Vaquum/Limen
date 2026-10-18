@@ -467,5 +467,8 @@
   "limen/yaml/_recording_spec.py": 30,
   "limen/experiment/param_search/_grid_permutation.py": 100,
   "limen/experiment/_grid_resume.py": 60,
-  "limen/log/_experiment_parameter_importance.py": 110
+  "limen/log/_experiment_parameter_importance.py": 110,
+  "limen/features/common_strategy_positions.py": 50,
+  "limen/sfd/foundational_sfd/common_strategies.py": 50,
+  "limen/sfd/rule_based/common_strategies.py": 180
 }

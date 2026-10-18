@@ -1702,3 +1702,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.33.0] - 2026-10-18
 
 - Add seeded, scrambled Sobol candidate sampling through YAML and MSQ, with versioned deterministic resume and bounded duplicate handling.
+
+## [5.34.0] - 2026-10-18
+
+- Add a native common-strategy SFD and YAML template covering eight causal long/flat baselines with explicit stateful exits.
+- Add recorded-data backtester comparisons with per-bar equity and fill parity, isolated framework environments, cold and warm timings, and reproducible artifacts.
