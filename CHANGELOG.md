@@ -1698,3 +1698,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Preserve computed precision in metrics, historical aggregates, weighted features, cohort percentages and execution timings.
 - Remove arbitrary decimal resolution from deterministic sampling and fractional differentiation searches; version sampling checkpoints and reject ambiguous older selection rules. Reserve rounding for presentation and discrete execution units.
+
+## [5.33.0] - 2026-10-18
+
+- Add seeded, scrambled Sobol candidate sampling through YAML and MSQ, with versioned deterministic resume and bounded duplicate handling.
