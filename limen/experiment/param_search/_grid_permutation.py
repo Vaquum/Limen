@@ -6,6 +6,7 @@ from collections.abc import Mapping
 
 __all__: list[str] = []
 
+_SHUFFLE_VERSION = 2
 GOLDEN_RATIO_CONJUGATE = 0.6180339887498949
 
 

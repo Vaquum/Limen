@@ -7,7 +7,7 @@ from typing_extensions import override
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search._grid_permutation import (
-    _lcg_map, _lcg_params, _permuted_index, domain_digest,
+    _lcg_map, _lcg_params, _permuted_index, _SHUFFLE_VERSION, domain_digest,
 )
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
@@ -25,7 +25,7 @@ class GridStrategy(SearchStrategy):
             raise ValueError('GridStrategy seed must be a non-boolean integer or None')
         super().__init__(domain, seed=seed)
         self._shuffle = shuffle
-        self._permutation_version = 2 if shuffle and seed is not None else 1
+        self._permutation_version = _SHUFFLE_VERSION if shuffle and seed is not None else 1
         self._rebuild()
 
     @property
@@ -47,7 +47,7 @@ class GridStrategy(SearchStrategy):
     def _permute_index(self, logical_index: int) -> int:
         if not self._shuffle:
             return logical_index
-        if self._permutation_version == 2:
+        if self._permutation_version == _SHUFFLE_VERSION:
             assert self._seed is not None
             return _permuted_index(logical_index, self._total, self._seed)
         return _lcg_map(logical_index, self._total, self._lcg_multiplier, self._lcg_increment)
@@ -90,13 +90,13 @@ class GridStrategy(SearchStrategy):
     def set_state(self, state: dict[str, Any]) -> None:
         saved_shuffle, saved_seed = state.get('shuffle'), state.get('seed')
         version = state.get('permutation_version', 1)
-        if type(version) is not int or version not in (1, 2):
+        if type(version) is not int or version not in (1, _SHUFFLE_VERSION):
             raise ValueError('GridStrategy checkpoint permutation version is unsupported')
         if saved_shuffle is not None and saved_shuffle != self._shuffle:
             raise ValueError('GridStrategy checkpoint shuffle does not match current shuffle')
         if saved_seed is not None and saved_seed != self._seed:
             raise ValueError('GridStrategy checkpoint seed does not match current seed')
-        if version == 2:
+        if version == _SHUFFLE_VERSION:
             if not self._shuffle or saved_shuffle is not True or type(saved_seed) is not int or saved_seed != self._seed:
                 raise ValueError('GridStrategy version 2 requires matching seeded shuffle')
             if state.get('domain_digest') != domain_digest(self._domain.params):

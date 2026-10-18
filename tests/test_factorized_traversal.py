@@ -117,7 +117,7 @@ def test_resume_rejects_before_mutation(tmp_path, monkeypatch, change):
         checkpoint_path.write_text(json.dumps(checkpoint))
     before = _snapshot(tmp_path)
     resumed = _loop(changed, tmp_path)
-    with pytest.raises(ValueError, match='seed|version|domain|[Cc]ontent hash'):
+    with pytest.raises(ValueError, match=r'seed|version|domain|[Cc]ontent hash'):
         _run(resumed, enabled=True, count=8, resume=True)
     assert _snapshot(tmp_path) == before
 
@@ -248,7 +248,7 @@ cli()
     for command in ([sys.executable, '-c', stop_script, 'run', str(source), '--no-progress-bar'],
                     [sys.executable, '-m', 'limen', 'run', '--resume', str(tmp_path / 'results/dev/factorized_shuffle'), '--no-progress-bar']):
         result = subprocess.run(command, cwd=tmp_path,
-                                env=env, text=True, capture_output=True, timeout=30)
+                                env=env, text=True, capture_output=True, timeout=30, check=False)
         assert result.returncode == 0, result.stdout + result.stderr
     path = tmp_path / 'results/dev/factorized_shuffle'
     rows, records = _science(path)

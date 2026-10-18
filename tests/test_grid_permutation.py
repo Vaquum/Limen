@@ -124,7 +124,7 @@ def test_changed_declared_level_order_rejects_restore():
 @pytest.mark.parametrize('options', [{'shuffle': 1}, {'shuffle': 'true'}, {'shuffle': None},
                                     {'seed': True}, {'seed': 1.5}, {'seed': '42'}])
 def test_native_options_are_not_coerced(options):
-    with pytest.raises(ValueError, match='shuffle|seed'):
+    with pytest.raises(ValueError, match=r'shuffle|seed'):
         GridStrategy(ParamDomain({'candidate': [1]}), **options)
 
 
@@ -202,9 +202,6 @@ def test_measured_early_joint_coverage_with_negative_controls():
         affine_failures.append(any(statistics.mean(projection) < .8
                                    for projection in zip(*affine, strict=True)))
         assert any(statistics.mean(projection) < .8 for projection in zip(*nested, strict=True))
-        print('prefix coverage', sizes, count, 'v2 minimum/mean',
-              min(itertools.chain.from_iterable(measured)), min(means),
-              'affine minimum mean', min(map(statistics.mean, zip(*affine, strict=True))))
     assert any(affine_failures)
 
 

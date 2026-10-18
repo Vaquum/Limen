@@ -55,7 +55,7 @@ def test_invalid_shuffle_declarations_fail(declaration):
     assert not result.valid
     assert any(error.path in ('uel.search_strategy.seed', 'uel.search_strategy.shuffle')
                for error in result.errors)
-    with pytest.raises(ValueError, match='seed|shuffle'):
+    with pytest.raises(ValueError, match=r'seed|shuffle'):
         build_search_strategy(config)
 
 

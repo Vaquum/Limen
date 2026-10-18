@@ -21,6 +21,7 @@ from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
 from limen.experiment._factorized_prep import FittedPreparation, supports_preparation
 from limen.experiment.param_search.grid_strategy import GridStrategy
+from limen.experiment.param_search._grid_permutation import _SHUFFLE_VERSION
 from limen.features.dollar_bar_crash_reversal import dollar_bar_crash_reversal
 from limen.features.lagged_features import lag_range
 from limen.indicators.window_return import window_return
@@ -150,7 +151,7 @@ class FactorizedRounds:
             _fail('GridStrategy is required')
         assert isinstance(strategy, GridStrategy)
         state = strategy.get_state()
-        if state['shuffle'] and (type(state['seed']) is not int or state.get('permutation_version') != 2):
+        if state['shuffle'] and (type(state['seed']) is not int or state.get('permutation_version') != _SHUFFLE_VERSION):
             _fail('shuffled GridStrategy requires an integer seed and permutation version 2')
         if pruning or callback:
             _fail('pruning and callbacks are not supported')
