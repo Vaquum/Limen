@@ -10,6 +10,9 @@ from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfit
 
 __all__ = ['family_acceptance_report']
 
+_MINIMUM_DSR_BARS = 4
+_MINIMUM_PBO_BLOCKS = 2
+
 
 def _assessment(trials: list[evidence.Trial], n_blocks: int) -> dict[str, object]:
     values = np.stack([trial.values for trial in trials])
@@ -22,7 +25,7 @@ def _assessment(trials: list[evidence.Trial], n_blocks: int) -> dict[str, object
         'deflated_sharpe_probability': None, 'pbo': None, 'errors': errors,
     }
     try:
-        if values.shape[1] < 4:
+        if values.shape[1] < _MINIMUM_DSR_BARS:
             raise ValueError('DSR requires at least four recorded returns per trial')
         with np.errstate(over='raise', invalid='raise', divide='raise'):
             spread = np.std(values, axis=1, ddof=1)
@@ -53,7 +56,7 @@ def family_acceptance_report(
     '''
     if not directories:
         raise ValueError('Family report requires at least one experiment directory')
-    if type(n_blocks) is not int or n_blocks < 2 or n_blocks % 2:
+    if type(n_blocks) is not int or n_blocks < _MINIMUM_PBO_BLOCKS or n_blocks % 2:
         raise ValueError('Family PBO n_blocks must be an even integer of at least two')
     roots: dict[Path, dict[str, object]] = {}
     duplicate_inputs: list[str] = []

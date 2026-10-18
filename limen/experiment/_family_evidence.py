@@ -9,11 +9,11 @@ from typing import cast
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-from ruamel.yaml import YAML
 
 import limen.experiment._round_storage as storage
-import limen.experiment.manifest_core as manifest_core
+from limen.experiment import manifest_core
 from limen.backtest.trade_contract import JsonValue, contract_digest
+from limen.yaml.config import round_trip_yaml
 from limen.yaml.store import STORE_RELATIVE, canonical_manifest_id, is_full_manifest_id
 
 __all__: list[str] = []
@@ -21,7 +21,7 @@ __all__: list[str] = []
 _resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
 
 
-class EvidenceUnavailable(ValueError):
+class EvidenceUnavailableError(ValueError):
     '''A required part of the recorded comparison evidence is absent.'''
 
 
@@ -36,7 +36,7 @@ class Trial:
 
 
 def mapping(value: object, name: str) -> dict[str, object]:
-    if not isinstance(value, dict) or any(not isinstance(key, str) for key in value):
+    if not isinstance(value, dict) or any(not isinstance(key, str) for key in cast(dict[object, object], value)):
         raise ValueError(f'{name} must be a mapping with string keys')
     return cast(dict[str, object], value)
 
@@ -76,7 +76,7 @@ def lineage(metadata: Mapping[str, object], project_root: Path) -> list[dict[str
         if not path.exists():
             chain.append({'manifest_id': current, 'available': False})
             break
-        document = mapping(cast(object, YAML(typ='safe').load(path.read_text())), str(path))
+        document = mapping(cast(object, round_trip_yaml().load(path.read_text())), str(path))
         recorded = mapping(document.get('lineage'), 'committed manifest lineage')
         if recorded.get('id') != current or canonical_manifest_id(document) != current:
             raise ValueError(f'Committed manifest identity mismatch: {path}')
@@ -109,7 +109,7 @@ def _records(directory: Path, metadata: Mapping[str, object]) -> dict[str, dict[
 
 def _timestamps(value: object) -> list[str]:
     if value is None:
-        raise EvidenceUnavailable('Recorded ordered test timestamps are missing')
+        raise EvidenceUnavailableError('Recorded ordered test timestamps are missing')
     if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in cast(list[object], value)):
         raise ValueError('Recorded test timestamps must be a nonempty ISO timestamp list')
     dates = [datetime.fromisoformat(item) for item in cast(list[str], value)]
@@ -124,7 +124,7 @@ def _timestamps(value: object) -> list[str]:
 def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
     alignment = fold.get('alignment')
     if alignment is None:
-        raise EvidenceUnavailable('Recorded fold alignment is missing')
+        raise EvidenceUnavailableError('Recorded fold alignment is missing')
     dates = _timestamps(mapping(alignment, 'fold alignment').get('test_datetimes'))
     if len(dates) != count:
         raise ValueError('Recorded test timestamps differ in length from fold returns')
@@ -137,13 +137,13 @@ def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
         product = mapping(policy.get('product'), 'trade product')
         sources = declaration.get('sources')
         if not isinstance(sources, list):
-            raise EvidenceUnavailable('Recorded execution sources are missing')
+            raise EvidenceUnavailableError('Recorded execution sources are missing')
         execution = [mapping(item, 'trade source') for item in cast(list[object], sources)
                      if mapping(item, 'trade source').get('interpretation') == 'causal_recorded_prices']
         if not execution or any(not item.get('checksum') for item in execution):
-            raise EvidenceUnavailable('Recorded execution observation identity is missing')
+            raise EvidenceUnavailableError('Recorded execution observation identity is missing')
         if any(declaration.get(key) is None for key in ('rule_version', 'partition', 'signal_rows')):
-            raise EvidenceUnavailable('Recorded execution rule, partition or signal availability is missing')
+            raise EvidenceUnavailableError('Recorded execution rule, partition or signal availability is missing')
         signals = declaration['signal_rows']
         if not isinstance(signals, list) or len(cast(list[object], signals)) != count:
             raise ValueError('Recorded signal availability differs in length from fold returns')
@@ -152,7 +152,7 @@ def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
                 'partition': declaration.get('partition'), 'signal_rows': declaration.get('signal_rows'), 'sources': execution}
     market = fold.get('market')
     if market is None:
-        raise EvidenceUnavailable('Recorded snapshot market observations are missing')
+        raise EvidenceUnavailableError('Recorded snapshot market observations are missing')
     returns = mapping(market, 'snapshot market').get('ret')
     if not isinstance(returns, list) or len(cast(list[object], returns)) != count:
         raise ValueError('Recorded snapshot market observations differ in length from fold returns')
@@ -160,29 +160,29 @@ def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
         if value is not None and (type(value) not in (int, float) or not np.isfinite(cast(float, value))):
             raise ValueError('Recorded market returns must be finite numbers or recorded nulls')
     if all(value is None for value in cast(list[object], returns)):
-        raise EvidenceUnavailable('Recorded snapshot market observations contain no observed returns')
+        raise EvidenceUnavailableError('Recorded snapshot market observations contain no observed returns')
     return {'dates': dates, 'semantics': 'snapshot', 'market_returns': returns}
 
 
 def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], values: npt.NDArray[np.float64]) -> tuple[str, str, dict[str, object]]:
     reference = metadata.get('yaml_reference')
     if reference is None:
-        raise EvidenceUnavailable('Recorded manifest configuration is missing')
+        raise EvidenceUnavailableError('Recorded manifest configuration is missing')
     sfd = mapping(mapping(reference, 'yaml_reference').get('sfd'), 'recorded SFD')
     manifest = mapping(sfd.get('manifest'), 'recorded manifest')
     params = record.get('round_params')
     if params is None:
-        raise EvidenceUnavailable('Recorded round parameters are missing')
+        raise EvidenceUnavailableError('Recorded round parameters are missing')
     params = mapping(params, 'round parameters')
     source = manifest.get('data_source')
     if source is None:
-        raise EvidenceUnavailable('Recorded data-source declaration is missing')
+        raise EvidenceUnavailableError('Recorded data-source declaration is missing')
     source = mapping(source, 'data source')
     source_params = source.get('params')
     source = {**source, 'params': _resolve_params(mapping({} if source_params is None else source_params, 'data-source parameters'), params)}
     folds = record.get('folds')
     if folds is None:
-        raise EvidenceUnavailable('Recorded fold evidence is missing')
+        raise EvidenceUnavailableError('Recorded fold evidence is missing')
     if not isinstance(folds, list) or not folds:
         raise ValueError('Recorded folds must be a nonempty list')
     decoded_folds: list[tuple[dict[str, object], int]] = []
@@ -191,11 +191,11 @@ def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], valu
         fold = mapping(value, 'recorded fold')
         net = fold.get('net_returns')
         if net is None:
-            raise EvidenceUnavailable('Recorded fold net returns are missing')
+            raise EvidenceUnavailableError('Recorded fold net returns are missing')
         if not isinstance(net, list) or not net or any(type(item) not in (int, float) for item in cast(list[object], net)):
             raise ValueError('Recorded fold net returns must be a nonempty numeric list')
         recorded.extend(cast(list[float], net))
-        decoded_folds.append((fold, len(net)))
+        decoded_folds.append((fold, len(cast(list[object], net))))
     if not np.array_equal(np.asarray(recorded, dtype=np.float64), values):
         raise ValueError('Recorded fold returns differ from trial_returns.parquet')
     samples = [_sample(fold, count) for fold, count in decoded_folds]
@@ -205,7 +205,7 @@ def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], valu
         raise ValueError('Recorded test folds overlap or differ in timestamp convention')
     version = metadata.get('limen_version')
     if not isinstance(version, str) or not version:
-        raise EvidenceUnavailable('Recorded implementation version is missing')
+        raise EvidenceUnavailableError('Recorded implementation version is missing')
     candidate = {key: value for key, value in sfd.items() if key != 'params'}
     candidate['manifest'] = {key: value for key, value in manifest.items() if key != 'acceptance'}
     summary: dict[str, object] = {'source': source, 'folds': [
@@ -259,10 +259,10 @@ def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -
         summary: dict[str, object] | None = None
         try:
             if trial not in records:
-                raise EvidenceUnavailable('Recorded trial/fold evidence is missing')
+                raise EvidenceUnavailableError('Recorded trial/fold evidence is missing')
             candidate, evaluation, summary = _evidence(metadata, records[trial], values)
             entry['candidate'] = candidate
-        except EvidenceUnavailable as exc:
+        except EvidenceUnavailableError as exc:
             entry['unavailable'] = str(exc)
         trials.append(Trial(identity, values, candidate, evaluation, summary, entry))
     if not trials:

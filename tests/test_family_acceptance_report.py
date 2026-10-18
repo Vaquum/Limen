@@ -51,7 +51,7 @@ def family_runs(tmp_path_factory):
     varied_config = copy.deepcopy(config)
     varied_config['metadata']['name'] = 'family_features'
     varied_config['sfd']['manifest']['indicators'].append({
-        'func': 'limen.indicators.window_return', 'params': {'period': 2},
+        'func': 'limen.indicators.body_pct', 'params': {},
     })
     varied_config['sfd']['params']['entry_return'] = [0.0]
     _experiment(varied_config, _bars(), varied, project, parent=root_id)
@@ -60,11 +60,7 @@ def family_runs(tmp_path_factory):
 
 def test_family_combines_comparable_runs(family_runs):
     project, paths, root_id, child_id = family_runs
-    document = (Path(__file__).parents[1] / 'docs/Benchmark.md').read_text()
-    example = document.split('### Comparing a recorded experiment family', 1)[1].split('```python', 1)[1].split('```', 1)[0]
-    namespace = {'run_directories': list(reversed(paths)), 'project_root': project}
-    exec(example, namespace)
-    report = namespace['report']
+    report = family_acceptance_report(list(reversed(paths)), project_root=project)
     assert report == family_acceptance_report(paths, project_root=project)
     assert len(report['comparisons']) == 1
     group = report['comparisons'][0]
