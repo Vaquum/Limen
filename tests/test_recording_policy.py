@@ -65,6 +65,7 @@ def _config(kind='serial'):
                 'check_after_pct': 0.0,
             },
         }]
+    config['uel'].pop('recording', None)
     manifest = config['sfd']['manifest']
     manifest['data_source'] = {
         'method': 'limen.data.HistoricalData.get_any_file',
@@ -138,7 +139,7 @@ def campaigns(tmp_path_factory):
     for kind in ('serial', 'factorized', 'parallel', 'walk_forward'):
         config, bars = _config(kind), _bars(kind)
         pairs = []
-        for label, options in (('full', {}), ('lean', {'recording': LEAN})):
+        for label, options in (('full', {'recording': FULL}), ('lean', {})):
             path = tmp_path_factory.mktemp(f'recording-{kind}-{label}')
             loop = _loop(config, path, bars=bars)
             _run(loop, kind=kind, **options)
@@ -182,16 +183,21 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not directory.exists()
     elif case == 'pbo_admission':
         config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
+        assert not validate(config).valid
+        path = tmp_path / 'implicit-pbo'
+        with pytest.raises(ValueError, match=r'PBO|max_pbo'):
+            _run(_loop(config, path, bars=_bars('walk_forward')), kind='walk_forward')
+        assert not path.exists()
         for key in ('alignment', 'fold_details'):
             candidate = copy.deepcopy(config)
-            candidate['uel']['recording'] = {key: False}
+            candidate['uel']['recording'] = {**FULL, key: False}
             report = validate(candidate)
             assert not report.valid
             assert any('PBO' in error.message or 'max_pbo' in error.message for error in report.errors)
             path = tmp_path / (key + '-native')
             loop = _loop(config, path, bars=_bars('walk_forward'))
             with pytest.raises(ValueError, match=r'PBO|max_pbo'):
-                _run(loop, kind='walk_forward', recording={key: False})
+                _run(loop, kind='walk_forward', recording={**FULL, key: False})
             assert not path.exists()
             candidate['uel']['output_path'] = str(tmp_path / (key + '-cli'))
             yaml_path = tmp_path / (key + '.yaml')
@@ -202,7 +208,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             assert not Path(candidate['uel']['output_path']).exists()
         for key in ('predictions', 'trade_ledger'):
             candidate = copy.deepcopy(config)
-            candidate['uel']['recording'] = {key: False}
+            candidate['uel']['recording'] = {**FULL, key: False}
             assert validate(candidate).valid
             path = tmp_path / (key + '-allowed')
             loop = _loop(candidate, path, bars=_bars('walk_forward'))
@@ -226,9 +232,9 @@ def test_policy_validation(case, tmp_path, monkeypatch):
         bars = _bars('walk_forward')
         for workers in (1, 2):
             for label, declaration, expected in (
-                ('yaml', None, {**FULL, 'predictions': False}),
-                ('partial', {'trade_ledger': False}, {**FULL, 'trade_ledger': False}),
-                ('empty', {}, FULL),
+                ('yaml', None, LEAN),
+                ('partial', {'trade_ledger': True}, {**LEAN, 'trade_ledger': True}),
+                ('empty', {}, LEAN),
             ):
                 path = tmp_path / f'{workers}-{label}'
                 loop = _loop(config, path, bars=bars, reference=None)
@@ -239,7 +245,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not path.exists()
             for label, declaration in (('omitted', None), ('native', FULL)):
                 conflicting = copy.deepcopy(config)
-                conflicting['uel']['recording'] = {'alignment': False}
+                conflicting['uel']['recording'] = {'alignment': True}
                 path = tmp_path / f'{workers}-conflict-{label}'
                 loop = _loop(config, path, bars=bars, reference=conflicting)
                 options = {} if declaration is None else {'recording': declaration}
@@ -248,7 +254,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not path.exists()
         assert config == unchanged
     else:
-        config['uel']['recording'] = {'predictions': False}
+        config['uel']['recording'] = {'alignment': True, 'fold_details': True}
         for label, options in (('yaml', {}), ('native', {'recording': FULL})):
             path = tmp_path / label
             loop = _loop(config, path, bars=_bars('walk_forward'),
@@ -258,8 +264,8 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             assert all(('preds' in fold) == (label == 'native')
                        for record in records for fold in record['folds'])
             metadata = json.loads((path / 'metadata.json').read_text())
-            assert metadata['recording'] == (FULL if label == 'native' else {**FULL, 'predictions': False})
-            assert metadata['yaml_reference']['uel']['recording'] == {'predictions': False}
+            assert metadata['recording'] == (FULL if label == 'native' else {**LEAN, 'alignment': True, 'fold_details': True})
+            assert metadata['yaml_reference']['uel']['recording'] == {'alignment': True, 'fold_details': True}
             assert metadata['manifest_id'] == canonical_manifest_id(config)
             if label == 'native':
                 resumed = _loop(config, path, bars=_bars('walk_forward'), reference=None)
@@ -295,7 +301,7 @@ def test_payload_projection(kind, campaigns, tmp_path):
                 assert right['trade_ledger'] == left['trade_ledger']
             elif kind == 'walk_forward':
                 assert all('preds' in fold and 'net_returns' in fold for fold in right['folds'])
-    assert 'recording' not in json.loads((full['path'] / 'metadata.json').read_text())
+    assert json.loads((full['path'] / 'metadata.json').read_text())['recording'] == FULL
     assert json.loads((lean['path'] / 'metadata.json').read_text())['recording'] == LEAN
     expected_identity = canonical_manifest_id(captured['config'])
     for saved in (full, lean):
@@ -451,10 +457,19 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         _run(loop, resume=True)
         assert _records(path) == records
         assert_frame_equal(loop.experiment_log, persisted)
+        metadata_path = path / 'metadata.json'
+        metadata = json.loads(metadata_path.read_text())
+        del metadata['recording']
+        metadata_path.write_text(json.dumps(metadata))
+        legacy = _loop(captured['config'], path, bars=captured['bars'])
+        _run(legacy, resume=True)
+        assert legacy._recording == FULL
+        assert _records(path) == records
+        assert_frame_equal(legacy.experiment_log, persisted)
     elif case == 'cli':
         config = _config('walk_forward')
         config['sfd']['manifest']['data_source']['params']['row_count_limit'] = 384
-        config['uel'].update(recording=LEAN, output_path=str(tmp_path / 'cli-run'),
+        config['uel'].update(output_path=str(tmp_path / 'cli-run'),
                              output_format='parquet', record_execution=True, record_model_outputs=True)
         yaml_path = tmp_path / 'recording.yaml'
         YAML().dump(config, yaml_path)
@@ -481,7 +496,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
     else:
         config = _config()
         logs = []
-        for label, declaration in (('full', None), ('lean', LEAN)):
+        for label, declaration in (('full', FULL), ('lean', LEAN)):
             policy = None if declaration is None else dict(declaration)
             loop = _loop(config, tmp_path / label)
             original = loop.model
