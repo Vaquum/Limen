@@ -49,7 +49,7 @@ def _engine_pythons(values):
 
 def _save_report(output, report):
     (output / 'report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
-    columns = ('input', 'strategy', 'evaluation_rows', 'engine', 'status',
+    columns = ('input', 'strategy', 'portfolio_count', 'evaluation_rows', 'engine', 'status',
                'cold_engine_ms', 'cold_common_outputs_ms', 'warm_engine_median_ms',
                'warm_engine_p95_ms', 'warm_common_median_ms', 'warm_common_p95_ms',
                'snapshot_median_ms', 'peak_rss_mib', 'total_return', 'max_drawdown',
@@ -61,7 +61,8 @@ def _save_report(output, report):
             for result in scenario['results']:
                 row = {name: result.get(name) for name in
                        ('engine', 'status', 'peak_rss_mib', 'max_abs_equity_error', 'reason')}
-                row.update({name: scenario[name] for name in ('input', 'strategy', 'evaluation_rows')})
+                row.update({name: scenario[name] for name in
+                            ('input', 'strategy', 'portfolio_count', 'evaluation_rows')})
                 row.update({name: result.get('metrics', {}).get(name) for name in
                             ('total_return', 'max_drawdown', 'entries')})
                 row['cold_engine_ms'] = result.get('cold', {}).get('engine_ms')
@@ -95,6 +96,7 @@ def campaign(args):
         'cpu_affinity': sorted(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else None,
         'versions': package_versions(), 'engine_pythons': executables,
         'repeats': args.repeats, 'threads': dict.fromkeys(THREADS, '1'),
+        'workload': 'independent strategy matrix' if args.batch else 'single strategy',
         'strategy_parameters': {key: dict(value) for key, value in STRATEGY_PARAMETERS.items()},
         'excluded_inputs': [{
             'input': 'tests/fixtures/indicator_equivalence_long.parquet',
@@ -113,6 +115,7 @@ def campaign(args):
             'cold': 'fresh process and unique empty Numba disk cache; imports/preparation reported separately',
             'memory': 'process high-water RSS, including imports and preparation; not allocation-only engine memory',
             'comparison_limit': 'public APIs perform unequal additional native work; no universal engine ranking',
+            'batch_scope': 'each column has its own initial cash and accounting; Limen serial calls versus one vectorbt matrix call; no cash sharing',
             'tail_statistic_limit': 'p95 is a sample percentile; few repeats do not establish tail latency',
         }, 'scenarios': [],
     }
@@ -122,8 +125,10 @@ def campaign(args):
         data = read_bars(source, args.rows)
         load_ms = (time.perf_counter_ns() - started) / 1e6
         file_digest = hashlib.sha256(source.read_bytes()).hexdigest()
-        for strategy in args.strategies:
-            name = f'{source.stem}-{file_digest[:8]}-{data.height - 1}-{strategy}'
+        strategies = [tuple(args.strategies)] if args.batch else args.strategies
+        for strategy in strategies:
+            label = 'batch' if args.batch else strategy
+            name = f'{source.stem}-{file_digest[:8]}-{data.height - 1}-{label}'
             folder = args.output / name
             folder.mkdir()
             prepared = folder / 'prepared.npz'
@@ -166,7 +171,7 @@ def campaign(args):
                     failed = True
                 scenario['results'].append(result)
                 _save_report(args.output, report)
-                sys.stdout.write(f'{source.name} {strategy} {engine}: {result["status"]}\n')
+                sys.stdout.write(f'{source.name} {label} {engine}: {result["status"]}\n')
                 sys.stdout.flush()
     if report['code_sha256'] != _code_digest():
         raise RuntimeError('Code changed during measurement; this campaign is invalid')
@@ -186,8 +191,9 @@ def main():
     parser.add_argument('--output', type=Path)
     parser.add_argument('--rows', type=int, help='Evaluation rows; requires one extra real settlement row')
     parser.add_argument('--strategies', nargs='+', choices=STRATEGIES, default=STRATEGIES)
-    parser.add_argument('--engines', nargs='+', choices=ENGINES,
-                        default=('limen', 'vectorbt', 'backtesting_py', 'backtrader'))
+    parser.add_argument('--engines', nargs='+', choices=ENGINES)
+    parser.add_argument('--batch', action='store_true',
+                        help='Compare independent strategy columns: serial Limen calls versus a vectorbt matrix')
     parser.add_argument('--engine-python', action='append', default=[], metavar='ENGINE=PYTHON')
     parser.add_argument('--repeats', type=int, default=3)
     parser.add_argument('--worker', action='store_true', help=argparse.SUPPRESS)
@@ -208,6 +214,11 @@ def main():
         parser.error('--rows must be at least 2')
     args.output = args.output.resolve()
     args.inputs = [path.resolve() for path in args.inputs]
+    if args.engines is None:
+        args.engines = (('limen', 'vectorbt', 'vectorbt_rust') if args.batch else
+                        ('limen', 'vectorbt', 'backtesting_py', 'backtrader'))
+    if args.batch and set(args.engines) - {'limen', 'vectorbt', 'vectorbt_rust'}:
+        parser.error('--batch supports limen, vectorbt and vectorbt_rust only')
     args.engines = ['limen', *(engine for engine in args.engines if engine != 'limen')]
     return campaign(args)
 

@@ -4,6 +4,9 @@ Backtest evaluates declared trading economics. The legacy snapshot reports binar
 
 The layer evaluates entry signals together with declared costs, sizing, and optional fixed take-profit/stop-loss exits.
 
+For reproducible comparisons with other engines using identical recorded prices
+and strategy signals, see [Backtest engine benchmarks](Backtest-Benchmarks.md).
+
 ## Prerequisites
 
 - aligned binary predictions and OHLC/price-change columns

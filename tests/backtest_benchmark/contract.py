@@ -20,6 +20,15 @@ class Result:
     fill_prices: np.ndarray
 
 
+@dataclass
+class BatchResult:
+    columns: dict[str, Result]
+
+    @property
+    def equity(self):
+        return np.column_stack([column.equity for column in self.columns.values()])
+
+
 def targets(signals):
     values = np.asarray(signals)
     if values.ndim != 1 or len(values) < 3 or not np.isin(values, (0, 1)).all():
@@ -56,6 +65,14 @@ def reference_result(close, desired):
 
 
 def assert_parity(actual, expected):
+    if isinstance(actual, BatchResult) or isinstance(expected, BatchResult):
+        if not isinstance(actual, BatchResult) or not isinstance(expected, BatchResult):
+            raise AssertionError('Batch and single-portfolio results cannot be compared')
+        if tuple(actual.columns) != tuple(expected.columns):
+            raise AssertionError('Batch strategy columns differ')
+        for name, column in actual.columns.items():
+            assert_parity(column, expected.columns[name])
+        return
     for name in ('equity', 'held', 'fill_bars', 'fill_sides', 'fill_prices'):
         value = getattr(actual, name)
         if not np.isfinite(value).all():
@@ -73,6 +90,10 @@ def assert_parity(actual, expected):
 
 
 def result_summary(result):
+    if isinstance(result, BatchResult):
+        return {'portfolio_count': len(result.columns),
+                'by_strategy': {name: result_summary(column)
+                                for name, column in result.columns.items()}}
     peak = np.maximum.accumulate(np.r_[INITIAL_CASH, result.equity])[1:]
     returns = result.equity / np.r_[INITIAL_CASH, result.equity[:-1]] - 1
     return {
@@ -87,6 +108,13 @@ def result_summary(result):
 
 
 def save_result(path, result):
+    if isinstance(result, BatchResult):
+        arrays = {'strategy_names': np.asarray(tuple(result.columns))}
+        for name, column in result.columns.items():
+            arrays.update({f'{name}.{field}': getattr(column, field)
+                           for field in Result.__dataclass_fields__})
+        np.savez(path, **arrays)
+        return
     np.savez(path, equity=result.equity, held=result.held,
              fill_bars=result.fill_bars, fill_sides=result.fill_sides,
              fill_prices=result.fill_prices)
@@ -94,4 +122,10 @@ def save_result(path, result):
 
 def load_result(path):
     with np.load(path, allow_pickle=False) as saved:
+        if 'strategy_names' in saved:
+            return BatchResult({
+                str(name): Result(**{field: saved[f'{name}.{field}']
+                                     for field in Result.__dataclass_fields__})
+                for name in saved['strategy_names']
+            })
         return Result(**{name: saved[name] for name in Result.__dataclass_fields__})

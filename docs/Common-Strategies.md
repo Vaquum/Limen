@@ -7,6 +7,12 @@ following, momentum and mean reversion. These distinct holding patterns make
 the catalogue useful both for strategy research and for checking backtest
 engines against identical position requests.
 
+## Prerequisites
+
+- A Limen checkout or installed package; use the `data` extra for automatic market-data fetching.
+- Recorded, chronological bars with finite positive close prices; Donchian also needs high and low.
+- A declared bar interval, evaluation window, execution convention and cost scenario.
+
 The catalogue is a set of declared baseline choices. Its parameters have not
 been selected for profitability on the bundled observations. All periods below
 count input bars: a 20-bar lookback means 20 hours on hourly observations, and
@@ -64,6 +70,11 @@ for training, October for validation, and November through December for testing.
 Fee is 10 basis points and slippage is 5 basis points on each entry and exit fill. These are explicit
 scenario assumptions, not measured costs. Execution uses the existing snapshot
 backtest's one-bar lag and final-exit convention; see [Backtest](Backtest.md).
+
+When no dataframe is supplied, the Python SFD requests hourly calendar-2024
+data in both normal and test mode. Supplying `data=` uses those recorded rows
+directly, without fetching either source. The benchmark always supplies its
+explicit fixture data; it does not depend on a changing latest-data window.
 
 For a fully offline example from a repository checkout, run the Python SFD on
 the recorded hourly fixture. The Python manifest's default split uses the

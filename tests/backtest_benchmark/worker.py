@@ -14,7 +14,7 @@ import numpy as np
 from tests.backtest_benchmark import THREADS
 from tests.backtest_benchmark.adapters import make_adapter
 from tests.backtest_benchmark.contract import (
-    assert_parity, reference_result, result_summary, save_result,
+    BatchResult, assert_parity, reference_result, result_summary, save_result,
 )
 
 def package_versions():
@@ -70,11 +70,19 @@ def _snapshot_measure(calculate, repeats):
             'scope': 'backtest_snapshot validation, execution and all native bar metrics'}
 
 
+def _finite_metrics(metrics):
+    return {name: _finite_metrics(value) if isinstance(value, dict)
+            else value if np.isfinite(value) else None for name, value in metrics.items()}
+
+
 def run_worker(args):
     with np.load(args.prepared, allow_pickle=False) as saved:
         data = {name: saved[name] for name in saved.files}
     report = {'engine': args.engine, 'status': 'running',
               'python_executable': sys.executable, 'versions': package_versions(),
+              'evaluation_rows': len(data['close']) - 1,
+              'processed_rows': len(data['close']) - (1 if args.engine == 'limen' else 0),
+              'portfolio_count': data['signal'].shape[1] if data['signal'].ndim == 2 else 1,
               'threads': {name: os.environ.get(name) for name in THREADS},
               'numba_cache_dir': os.environ.get('NUMBA_CACHE_DIR'),
               'rss_before_adapter_mib': peak_rss_mib()}
@@ -88,7 +96,11 @@ def run_worker(args):
     report['adapter_preparation_ms'] = (time.perf_counter_ns() - started) / 1e6
     report['scope'] = adapter.scope
     report['settings'] = adapter.settings
-    expected = reference_result(data['close'], data['signal'])
+    if data['signal'].ndim == 2:
+        expected = BatchResult({str(name): reference_result(data['close'], data['signal'][:, index])
+                                for index, name in enumerate(data['strategy_names'])})
+    else:
+        expected = reference_result(data['close'], data['signal'])
     common, summary, cold = _measure(adapter)
     report['cold'] = cold
     report['metrics'] = summary
@@ -116,8 +128,7 @@ def run_worker(args):
         report['max_abs_equity_error'] = None
         report['max_relative_equity_error'] = None
     if report['status'] == 'parity_failed':
-        report['metrics'] = {name: value if np.isfinite(value) else None
-                             for name, value in summary.items()}
+        report['metrics'] = _finite_metrics(summary)
     save_result(args.worker_output.with_suffix('.npz'), common)
     if adapter.snapshot is not None:
         report['native_snapshot'] = _snapshot_measure(adapter.snapshot, args.repeats)

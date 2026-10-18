@@ -108,6 +108,12 @@ const docs = [
     sidebarPosition: 5,
   },
   {
+    source: 'docs/Common-Strategies.md',
+    dest: 'guides/common-strategies.md',
+    slug: '/guides/common-strategies',
+    sidebarPosition: 19,
+  },
+  {
     source: 'docs/Experiment-Manifest.md',
     dest: 'guides/experiment-manifest.md',
     slug: '/guides/experiment-manifest',
@@ -148,6 +154,12 @@ const docs = [
     dest: 'guides/backtest.md',
     slug: '/guides/backtest',
     sidebarPosition: 12,
+  },
+  {
+    source: 'docs/Backtest-Benchmarks.md',
+    dest: 'guides/backtest-benchmarks.md',
+    slug: '/guides/backtest-benchmarks',
+    sidebarPosition: 20,
   },
   {
     source: 'docs/Trainer.md',

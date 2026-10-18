@@ -9,9 +9,9 @@ import pytest
 from limen.sfd.rule_based.common_strategies import STRATEGY_NAMES, strategy_signals
 from tests.backtest_benchmark.adapters import limen_adapter
 from tests.backtest_benchmark.contract import (
-    INITIAL_CASH, assert_parity, load_result, reference_result, save_result, targets,
+    INITIAL_CASH, BatchResult, assert_parity, load_result, reference_result, save_result, targets,
 )
-from tests.backtest_benchmark.prepare import read_bars
+from tests.backtest_benchmark.prepare import prepare_scenario, read_bars
 
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
 
@@ -88,7 +88,7 @@ def test_recorded_bar_validation_rejects_invalid_inputs(recorded, tmp_path, malf
                                         .then(None).otherwise(pl.col('close')).alias('close'))
     path = tmp_path / f'{malformation}.parquet'
     invalid.write_parquet(path)
-    with pytest.raises(ValueError, match='strictly increasing|finite|null'):
+    with pytest.raises(ValueError, match=r'strictly increasing|finite|null'):
         read_bars(path)
 
 
@@ -104,3 +104,47 @@ def test_fractional_signal_is_not_silently_cast_to_binary(recorded):
     signal[0] = 0.5
     with pytest.raises(ValueError, match='evaluation states'):
         targets(signal)
+
+
+def _batch_inputs(recorded):
+    inputs = tuple(_inputs(recorded, name) for name in STRATEGY_NAMES)
+    return {'open': inputs[0]['open'], 'close': inputs[0]['close'],
+            'signal': np.column_stack([item['signal'] for item in inputs]),
+            'strategy_names': np.asarray(STRATEGY_NAMES)}
+
+
+def test_native_batch_has_independent_cash_and_per_column_execution(recorded):
+    data = _batch_inputs(recorded)
+    adapter = limen_adapter(data)
+    actual = adapter.normalize(adapter.execute())
+    expected = BatchResult({name: reference_result(data['close'], data['signal'][:, index])
+                            for index, name in enumerate(STRATEGY_NAMES)})
+    assert_parity(actual, expected)
+    assert actual.equity.shape == (recorded.height - 1, len(STRATEGY_NAMES))
+    np.testing.assert_array_equal(actual.equity[0], INITIAL_CASH)
+    assert adapter.snapshot is None
+
+
+def test_batch_archives_preserve_strategy_identity(recorded, tmp_path):
+    data = _batch_inputs(recorded)
+    expected = BatchResult({name: reference_result(data['close'], data['signal'][:, index])
+                            for index, name in enumerate(STRATEGY_NAMES)})
+    path = tmp_path / 'batch.npz'
+    save_result(path, expected)
+    actual = load_result(path)
+    assert_parity(actual, expected)
+    renamed = BatchResult(dict(reversed(tuple(actual.columns.items()))))
+    with pytest.raises(AssertionError, match='strategy columns differ'):
+        assert_parity(renamed, expected)
+
+
+def test_prepared_batch_matches_the_same_independent_strategy_signals(recorded, tmp_path):
+    path = tmp_path / 'prepared.npz'
+    metadata = prepare_scenario(recorded, STRATEGY_NAMES, path, repeats=3)
+    expected = _batch_inputs(recorded)
+    with np.load(path, allow_pickle=False) as saved:
+        np.testing.assert_array_equal(saved['signal'], expected['signal'])
+        np.testing.assert_array_equal(saved['strategy_names'], STRATEGY_NAMES)
+        np.testing.assert_array_equal(saved['close'], recorded['close'].to_numpy())
+    assert metadata['portfolio_count'] == len(STRATEGY_NAMES)
+    assert metadata['evaluation_rows'] == recorded.height - 1

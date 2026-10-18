@@ -13,7 +13,6 @@ from limen.features.close_ma_distance_atr import close_ma_distance_atr
 from limen.features.close_position import close_position
 from limen.features.close_position_rolling import close_position_rolling
 from limen.features.close_to_extremes import close_to_extremes
-from limen.features.common_strategy_positions import common_strategy_positions
 from limen.features.conserved_flux_renormalization import conserved_flux_renormalization
 from limen.features.cusum_filter import cusum_filter
 from limen.features.cyclical_time_features import cyclical_time_features
@@ -136,7 +135,6 @@ __all__ = [
     'close_position',
     'close_position_rolling',
     'close_to_extremes',
-    'common_strategy_positions',
     'conserved_flux_renormalization',
     'cusum_filter',
     'cyclical_time_features',

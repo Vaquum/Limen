@@ -7,7 +7,7 @@ import math
 import numpy as np
 
 from tests.backtest_benchmark.contract import (
-    FRACTIONAL_UNIT, INITIAL_CASH, Result, transitions,
+    FRACTIONAL_UNIT, INITIAL_CASH, BatchResult, Result,
 )
 
 
@@ -21,6 +21,8 @@ class Adapter:
 
 
 def limen_adapter(data):
+    if data['signal'].ndim == 2:
+        return limen_batch_adapter(data)
     from limen.backtest.backtest_snapshot import backtest_snapshot
     from limen.backtest.long_flat_strategy import long_flat_strategy
 
@@ -53,6 +55,24 @@ def limen_adapter(data):
                    {'execution_lag_bars': 1}, snapshot)
 
 
+def limen_batch_adapter(data):
+    names = tuple(str(name) for name in data['strategy_names'])
+    adapters = tuple(limen_adapter({**data, 'signal': data['signal'][:, index]})
+                     for index in range(len(names)))
+
+    def execute():
+        return tuple(adapter.execute() for adapter in adapters)
+
+    def normalize(raw):
+        return BatchResult({name: adapter.normalize(result)
+                            for name, adapter, result in zip(names, adapters, raw, strict=True)})
+
+    return Adapter(execute, normalize,
+                   'independent portfolios evaluated by serial long_flat_strategy calls',
+                   {'execution_mode': 'serial calls', 'portfolio_count': len(names),
+                    'cash_sharing': False, 'execution_lag_bars': 1})
+
+
 def vectorbt_adapter(data, engine):
     import pandas as pd
     import vectorbt as vbt
@@ -64,31 +84,44 @@ def vectorbt_adapter(data, engine):
     count = len(data['close']) - 1
     close = pd.Series(data['close'], index=pd.to_datetime(data['timestamp_ns']))
     desired = data['signal']
-    bars, sides = transitions(desired)
-    entries = np.zeros(len(close), dtype=bool)
-    exits = np.zeros(len(close), dtype=bool)
-    entries[bars[sides == 1]] = True
-    exits[bars[sides == -1]] = True
+    previous = np.concatenate((np.zeros_like(desired[:1]), desired[:-1]))
+    entries = (desired == 1) & (previous == 0)
+    exits = (desired == 0) & (previous == 1)
+    names = tuple(str(name) for name in data['strategy_names']) if desired.ndim == 2 else ()
+    if names:
+        entries = pd.DataFrame(entries, index=close.index, columns=names)
+        exits = pd.DataFrame(exits, index=close.index, columns=names)
 
     def execute():
         return vbt.Portfolio.from_signals(
             close, entries=entries, exits=exits, init_cash=INITIAL_CASH,
             size=np.inf, size_type='amount', direction='longonly',
             fees=0, fixed_fees=0, slippage=0, accumulate=False,
-            engine=backend,
+            cash_sharing=False, group_by=False, engine=backend,
         )
 
     def normalize(raw):
         records = raw.orders.records
-        order_bars = records['idx'].to_numpy(dtype=np.int64)
-        order_sides = np.where(records['side'].to_numpy() == 0, 1, -1).astype(np.int8)
         assets = np.asarray(raw.assets(), dtype=float)
-        held = np.r_[0, assets[:-1] > 0].astype(np.int8)[:count]
-        return Result(np.asarray(raw.value(), dtype=float)[:count], held,
-                      order_bars, order_sides, records['price'].to_numpy(dtype=float))
+        equity = np.asarray(raw.value(), dtype=float)
+
+        def column_result(column_records, column_assets, column_equity):
+            order_bars = column_records['idx'].to_numpy(dtype=np.int64)
+            order_sides = np.where(column_records['side'].to_numpy() == 0, 1, -1).astype(np.int8)
+            held = np.r_[0, column_assets[:-1] > 0].astype(np.int8)[:count]
+            return Result(column_equity[:count], held, order_bars, order_sides,
+                          column_records['price'].to_numpy(dtype=float))
+
+        if names:
+            return BatchResult({name: column_result(records[records['col'] == index],
+                                                   assets[:, index], equity[:, index])
+                                for index, name in enumerate(names)})
+        return column_result(records, assets, equity)
 
     return Adapter(execute, normalize, 'Portfolio.from_signals plus common output extraction',
-                   {'backend': backend, 'size': 'infinite amount (all affordable units)'})
+                   {'backend': backend, 'size': 'infinite amount (all affordable units)',
+                    'cash_sharing': False, 'portfolio_count': len(names) if names else 1,
+                    'execution_mode': 'one matrix call' if names else 'one portfolio call'})
 
 
 def _pandas_frame(data):

@@ -16,11 +16,19 @@ def manifest() -> Manifest:
     configured = RuleBasedManifest()
     _ = configured.set_data_source(
         method=HistoricalData.get_spot_klines,
-        params={'kline_size': 3600, 'start_date_limit': '2024-01-01'},
+        params={
+            'kline_size': 3600,
+            'start_date_limit': '2024-01-01',
+            'end_date_limit': '2024-12-31',
+        },
     )
     _ = configured.set_test_data_source(
         method=HistoricalData.get_spot_klines,
-        params={'kline_size': 7200, 'row_count_limit': 5000},
+        params={
+            'kline_size': 3600,
+            'start_date_limit': '2024-01-01',
+            'end_date_limit': '2024-12-31',
+        },
     )
     _ = configured.set_required_bar_columns(['datetime', 'open', 'high', 'low', 'close'])
     _ = configured.set_split_config(8, 1, 2)

@@ -42,26 +42,39 @@ def read_bars(path, rows=None):
 
 def prepare_scenario(data, strategy, path, repeats):
     evaluation = data.head(data.height - 1)
+    names = strategy if isinstance(strategy, tuple) else (strategy,)
+
+    def generate():
+        signals = tuple(strategy_signals(evaluation, name) for name in names)
+        return np.column_stack(signals) if isinstance(strategy, tuple) else signals[0]
+
     started = time.perf_counter_ns()
-    signal = strategy_signals(evaluation, strategy)
+    signal = generate()
     first_ms = (time.perf_counter_ns() - started) / 1e6
     samples = []
     for _ in range(repeats):
         started = time.perf_counter_ns()
-        repeated = strategy_signals(evaluation, strategy)
+        repeated = generate()
         samples.append((time.perf_counter_ns() - started) / 1e6)
         np.testing.assert_array_equal(repeated, signal)
     columns = {name: data[name].to_numpy().astype(float) for name in
                ('open', 'high', 'low', 'close', 'volume')}
     columns['timestamp_ns'] = data['datetime'].dt.epoch('ns').to_numpy()
-    columns['signal'] = targets(np.r_[signal, np.int8(0)])
+    if isinstance(strategy, tuple):
+        columns['signal'] = np.column_stack([
+            targets(np.r_[signal[:, index], np.int8(0)]) for index in range(len(names))])
+        columns['strategy_names'] = np.asarray(names)
+    else:
+        columns['signal'] = targets(np.r_[signal, np.int8(0)])
     np.savez(path, **columns)
     digest = hashlib.sha256()
     for name, values in sorted(columns.items()):
         digest.update(name.encode())
         digest.update(str(values.dtype).encode())
         digest.update(values.tobytes())
-    return {'strategy': strategy, 'evaluation_rows': evaluation.height,
+    return {'strategy': 'batch' if isinstance(strategy, tuple) else strategy,
+            'strategy_columns': list(names), 'portfolio_count': len(names),
+            'evaluation_rows': evaluation.height,
             'source_rows_including_settlement': data.height,
             'evaluation_start': str(evaluation['datetime'][0]),
             'evaluation_end': str(evaluation['datetime'][-1]),

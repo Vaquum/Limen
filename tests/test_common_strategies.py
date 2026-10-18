@@ -146,6 +146,14 @@ def test_native_manifest_evaluates_all_strategies_with_independent_split_history
     raw_splits = split_sequential(recorded_bars, (8, 1, 2))
     assert sfd.params() == {'strategy': list(STRATEGY_NAMES)}
     assert set(STRATEGY_PARAMETERS) == set(_WARMUP_ROWS)
+    assert manifest.data_source_config is not None
+    assert manifest.test_data_source_config is not None
+    assert manifest.data_source_config.params == {
+        'kline_size': 3600,
+        'start_date_limit': '2024-01-01',
+        'end_date_limit': '2024-12-31',
+    }
+    assert manifest.test_data_source_config.params == manifest.data_source_config.params
 
     for strategy in STRATEGY_NAMES:
         prepared = manifest.prepare_data(recorded_bars, {'strategy': strategy})
@@ -191,6 +199,6 @@ def test_yaml_template_compiles_the_complete_fixed_catalogue():
     compiled_manifest = compiled.manifest()
     assert compiled_manifest.required_bar_columns == ['datetime', 'open', 'high', 'low', 'close']
     assert compiled_manifest.resolve_backtest_config({})['fee_bps'] == 10.0
-    assert list(build_search_strategy(config)) == [
-        {'strategy': name} for name in STRATEGY_NAMES
-    ]
+    candidates = list(build_search_strategy(config))
+    assert [candidate['strategy'] for candidate in candidates] == list(STRATEGY_NAMES)
+    assert len({candidate['_id'] for candidate in candidates}) == len(STRATEGY_NAMES)

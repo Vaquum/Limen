@@ -36,8 +36,8 @@ STRATEGY_NAMES = tuple(STRATEGY_PARAMETERS)
 
 
 def _validate_prices(data: pl.DataFrame, strategy: str) -> None:
-    required = ('close', 'high', 'low') if strategy == 'donchian_breakout' else ('close',)
-    missing = sorted(set(required) - set(data.columns))
+    required: tuple[str, ...] = ('close', 'high', 'low') if strategy == 'donchian_breakout' else ('close',)
+    missing = sorted(set[str](required) - set(data.columns))
     if missing:
         raise ValueError(f'strategy_signals missing required price columns: {missing}')
     for column in required:
