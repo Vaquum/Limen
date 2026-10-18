@@ -1707,3 +1707,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add a native common-strategy SFD and YAML template covering eight causal long/flat baselines with explicit stateful exits.
 - Add recorded-data backtester comparisons with per-bar equity and fill parity, isolated framework environments, cold and warm timings, and reproducible artifacts.
+
+## [5.34.1] - 2026-10-18
+
+- Reduce repeated backtest computation while preserving equal-input outputs through ten decimal places.
