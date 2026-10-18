@@ -474,5 +474,7 @@
   "limen/backtest/_event_plan.py": 100,
   "limen/backtest/_event_clock.py": 80,
   "limen/utils/_computation_cache.py": 160,
-  "limen/utils/_line_arrays.py": 80
+  "limen/utils/_line_arrays.py": 80,
+  "limen/experiment/_family_evidence.py": 300,
+  "limen/experiment/family_acceptance_report.py": 140
 }
