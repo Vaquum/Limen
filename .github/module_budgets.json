@@ -470,5 +470,9 @@
   "limen/log/_experiment_parameter_importance.py": 110,
   "limen/features/common_strategy_positions.py": 50,
   "limen/sfd/foundational_sfd/common_strategies.py": 50,
-  "limen/sfd/rule_based/common_strategies.py": 180
+  "limen/sfd/rule_based/common_strategies.py": 180,
+  "limen/backtest/_event_plan.py": 100,
+  "limen/backtest/_event_clock.py": 80,
+  "limen/utils/_computation_cache.py": 160,
+  "limen/utils/_line_arrays.py": 80
 }

@@ -17,7 +17,7 @@ def _quantiles(values: npt.NDArray[np.float64]) -> tuple[float, float, float]:
     arr = _finite_values(values)
     if arr.size == 0:
         return (np.nan, np.nan, np.nan)
-    p05, p50, p95 = (float(np.quantile(arr, q)) for q in (0.05, 0.50, 0.95))
+    p05, p50, p95 = (float(value) for value in np.quantile(arr, (0.05, 0.50, 0.95)))
     return (p05, p50, p95)
 
 
@@ -33,7 +33,8 @@ def _cvar_tail_bps(returns: npt.NDArray[np.float64]) -> float:
     if arr.size < CVAR_MIN_BARS:
         return np.nan
     tail_count = int(np.floor(CVAR_TAIL_FRACTION * arr.size))
-    return float(np.sort(arr)[:tail_count].mean()) * BPS_PER_UNIT
+    tail = np.partition(arr, tail_count - 1)[:tail_count]
+    return float(np.sort(tail).mean()) * BPS_PER_UNIT
 
 
 def snapshot_ledger(result: ExecutionResult, notional_rate: float) -> dict[str, float]:

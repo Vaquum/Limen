@@ -2,7 +2,9 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.utils.find_price_lines import LineArrays, price_line_arrays
+from limen.utils.find_price_lines import LineArrays
+from limen.utils._line_arrays import cached_price_line_arrays
+from limen.utils._computation_cache import ComputationCache, current_cache, reuse_series
 
 __all__ = ['line_active_count', 'line_recency', 'price_lines']
 
@@ -75,18 +77,19 @@ def price_lines(data: pl.DataFrame,
 
     return_dtype = pl.Struct(return_fields)
 
+    cache = current_cache()
+
+    def columns(series: pl.Series) -> pl.Series:
+        close = series.to_numpy()
+        return reuse_series(cache, 'price_lines', close,
+                            (max_duration_hours, min_height_pct, big_move_lookback_hours, momentum_lookback_hours, include_research_only),
+                            lambda: _price_line_columns(close, max_duration_hours, min_height_pct, big_move_lookback_hours, momentum_lookback_hours, include_research_only, _cache=cache))
+
     return data.with_columns(
         pl.col('close')
         .cast(pl.Float64)
         .map_batches(
-            lambda s: _price_line_columns(
-                s.to_numpy(),
-                max_duration_hours,
-                min_height_pct,
-                big_move_lookback_hours,
-                momentum_lookback_hours,
-                include_research_only,
-            ),
+            columns,
             return_dtype=return_dtype,
         )
         .alias(STRUCT_COL)
@@ -98,7 +101,8 @@ def _price_line_columns(close: npt.NDArray[np.float64],
                         min_height_pct: float,
                         big_move_lookback_hours: int,
                         momentum_lookback_hours: int,
-                        include_research_only: bool) -> pl.Series:
+                        include_research_only: bool, *,
+                        _cache: ComputationCache | None = None) -> pl.Series:
 
     '''
     Compute the four or five line-based columns as a struct series.
@@ -115,7 +119,7 @@ def _price_line_columns(close: npt.NDArray[np.float64],
         pl.Series: Struct series with the line-based fields
     '''
 
-    long_lines, short_lines = price_line_arrays(close, max_duration_hours, min_height_pct)
+    long_lines, short_lines = cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
 
     n_rows = close.shape[0]
     ends = np.sort(np.concatenate([long_lines[1], short_lines[1]]))

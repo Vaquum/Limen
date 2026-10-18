@@ -1,0 +1,4055 @@
+{
+  "started_utc": "2026-10-18T20:31:52.474366+00:00",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.12 (main, Nov 19 2025, 22:30:44) [Clang 21.1.4 ]",
+  "source_roots": {
+    "baseline": "baseline",
+    "optimized": "optimized"
+  },
+  "source_code_sha256": {
+    "baseline": "e5af427c931a5f65d854c829a4934f142efeeb0ae07e4bdb41ef70927128dc9f",
+    "optimized": "bd9c90f37d7619fcddd8f899ad15a9fe4f46d09ca401b10b34cfa03b7e864d1b"
+  },
+  "worker_sha256": "98f580ba04ca147201f0020a141388b6610e2128a807eb49ca5c48a16cb44678",
+  "sources": {
+    "primary": {
+      "path": "tests/fixtures/spot_1h_20240101_20241231.parquet",
+      "sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+      "rows": 8784,
+      "prepared_sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+      "signal_sha256": "b6643cb3439d27c3fcd06d86382efcf524f467190e2fb21fbae02d02e40da685"
+    },
+    "target": {
+      "path": "tests/fixtures/spot_15m_20250101_20250531.parquet",
+      "sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
+      "rows": 14496,
+      "prepared_sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
+      "signal_sha256": "d63a6252f86f03b35e6c59fd2ae8960e8bd01c80ae2362154aa822ec31050447"
+    },
+    "funding": {
+      "path": "tests/fixtures/btcusdt_funding_20240101_20240108.json",
+      "sha256": "4352c58c5467ba48b5d13039052085e3bd59c089d6e1455bf99f4063279c3df2"
+    }
+  },
+  "strategy": "ema_cross",
+  "timer_strategy": "buy_and_hold",
+  "repeats": 3,
+  "rounds": 32,
+  "target_rows": 128,
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "POLARS_MAX_THREADS": "1"
+  },
+  "contract": {
+    "absolute_tolerance": 1e-10,
+    "relative_tolerance": 0,
+    "non_numeric_outputs": "exact names, order, schemas, nulls, IDs and clocks",
+    "scope": "source reads and signal preparation excluded; complete declared computation included",
+    "cold": "first timed call in a fresh implementation process",
+    "warm": "median of repeated calls within that process",
+    "p95": "sample percentile; three repeats do not establish tail latency"
+  },
+  "scenarios": [
+    {
+      "scenario": "snapshot_ledger",
+      "results": {
+        "baseline": {
+          "scenario": "snapshot_ledger",
+          "variant": "baseline",
+          "source_root": "baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 1.166958,
+            "samples_ms": [
+              1.1770896,
+              1.25660625,
+              1.1625125
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 1.1770896,
+            "p95_ms": 1.248654585
+          }
+        },
+        "optimized": {
+          "scenario": "snapshot_ledger",
+          "variant": "optimized",
+          "source_root": "optimized",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 0.808292,
+            "samples_ms": [
+              0.72623125,
+              0.6985479,
+              0.678425
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 0.6985479,
+            "p95_ms": 0.723462915
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:pos": 0.0,
+        "arrays:gross": 0.0,
+        "arrays:net": 0.0
+      },
+      "floating_values_compared": 26372,
+      "tables_compared": [],
+      "warm_speedup": 1.685052091631798,
+      "first_call_speedup": 1.4437332053267877,
+      "equivalent": true
+    },
+    {
+      "scenario": "snapshot_full",
+      "results": {
+        "baseline": {
+          "scenario": "snapshot_full",
+          "variant": "baseline",
+          "source_root": "baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 6.34375,
+            "samples_ms": [
+              1.60661875,
+              1.59700415,
+              1.5928396
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 1.59700415,
+            "p95_ms": 1.60565729
+          }
+        },
+        "optimized": {
+          "scenario": "snapshot_full",
+          "variant": "optimized",
+          "source_root": "optimized",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 6.142709,
+            "samples_ms": [
+              1.10258125,
+              1.11474375,
+              1.0719
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 1.10258125,
+            "p95_ms": 1.1135275
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:pos": 0.0,
+        "arrays:gross": 0.0,
+        "arrays:net": 0.0
+      },
+      "floating_values_compared": 26372,
+      "tables_compared": [],
+      "warm_speedup": 1.4484230980710038,
+      "first_call_speedup": 1.0327283939382446,
+      "equivalent": true
+    },
+    {
+      "scenario": "line_features",
+      "results": {
+        "baseline": {
+          "scenario": "line_features",
+          "variant": "baseline",
+          "source_root": "baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 619.245375,
+            "samples_ms": [
+              604.496,
+              613.113,
+              607.907459
+            ],
+            "iterations_per_sample": 1,
+            "rounds": 32,
+            "scope": "two line features per round; four detector keys and eight quantile-feature keys",
+            "median_ms": 607.907459,
+            "p95_ms": 612.5924459
+          }
+        },
+        "optimized": {
+          "scenario": "line_features",
+          "variant": "optimized",
+          "source_root": "optimized",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 135.6105,
+            "samples_ms": [
+              117.657542,
+              232.873167,
+              163.300083
+            ],
+            "iterations_per_sample": 1,
+            "rounds": 32,
+            "scope": "two line features per round; four detector keys and eight quantile-feature keys",
+            "median_ms": 163.300083,
+            "p95_ms": 225.91585859999998
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:rows": 0.0,
+        "arrays:columns": 0.0,
+        "features.parquet:hours_since_big_move": 0.0,
+        "features.parquet:line_momentum_6h": 0.0,
+        "features.parquet:trending_score": 0.0,
+        "features.parquet:reversal_potential": 0.0,
+        "features.parquet:hours_since_quantile_line": 0.0,
+        "features.parquet:quantile_momentum_6h": 0.0,
+        "features.parquet:avg_quantile_height_24h": 0.0,
+        "features.parquet:quantile_direction_bias": 0.0
+      },
+      "floating_values_compared": 2248704,
+      "tables_compared": [
+        "features.parquet"
+      ],
+      "warm_speedup": 3.722640232828296,
+      "first_call_speedup": 4.566352716050748,
+      "equivalent": true
+    },
+    {
+      "scenario": "timer_execution",
+      "results": {
+        "baseline": {
+          "scenario": "timer_execution",
+          "variant": "baseline",
+          "source_root": "baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 274.26675,
+            "samples_ms": [
+              211.680375,
+              208.185833,
+              306.209333
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 43201,
+            "scope": "full event execution, all audit state rows and metrics; one-second timers",
+            "median_ms": 211.680375,
+            "p95_ms": 296.7564372
+          }
+        },
+        "optimized": {
+          "scenario": "timer_execution",
+          "variant": "optimized",
+          "source_root": "optimized",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 41.308583,
+            "samples_ms": [
+              17.637875,
+              18.047166,
+              11.73925
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 43201,
+            "scope": "full event execution, all audit state rows and metrics; one-second timers",
+            "median_ms": 17.637875,
+            "p95_ms": 18.0062369
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:contract_digest": 0.0,
+        "episodes.parquet:anchor_price": 0.0,
+        "episodes.parquet:net_pnl": 0.0,
+        "episodes.parquet:entry_equity": 0.0,
+        "fills.parquet:quantity_delta": 0.0,
+        "fills.parquet:reference_price": 0.0,
+        "fills.parquet:fill_price": 0.0,
+        "fills.parquet:fee": 0.0,
+        "fills.parquet:slippage": 0.0,
+        "funding.parquet:quantity": 0.0,
+        "funding.parquet:rate_decimal": 0.0,
+        "funding.parquet:valuation_price": 0.0,
+        "funding.parquet:recognized_delta": 0.0,
+        "funding.parquet:cash_delta": 0.0,
+        "intents.parquet:target": 0.0,
+        "states.parquet:cash": 0.0,
+        "states.parquet:accrued_funding": 0.0,
+        "states.parquet:quantity": 0.0,
+        "states.parquet:basis": 0.0,
+        "states.parquet:equity": 0.0,
+        "states.parquet:last_signal": 0.0,
+        "states.parquet:absolute_exposure": 0.0,
+        "states.parquet:net_return": 0.0
+      },
+      "floating_values_compared": 345635,
+      "tables_compared": [
+        "episodes.parquet",
+        "fills.parquet",
+        "funding.parquet",
+        "intents.parquet",
+        "states.parquet"
+      ],
+      "warm_speedup": 12.001467013458253,
+      "first_call_speedup": 6.639461585985654,
+      "equivalent": true
+    },
+    {
+      "scenario": "funded_execution",
+      "results": {
+        "baseline": {
+          "scenario": "funded_execution",
+          "variant": "baseline",
+          "source_root": "baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 21.113042,
+            "samples_ms": [
+              15.500584,
+              9.431209,
+              10.114917
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 172,
+            "funding_rows": 22,
+            "held_funding_rows": 13,
+            "scope": "full event execution with recorded discrete funding; 168 hourly bars, no timer",
+            "median_ms": 10.114917,
+            "p95_ms": 14.9620173
+          }
+        },
+        "optimized": {
+          "scenario": "funded_execution",
+          "variant": "optimized",
+          "source_root": "optimized",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 8.102167,
+            "samples_ms": [
+              2.662417,
+              2.616458,
+              2.346542
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 172,
+            "funding_rows": 22,
+            "held_funding_rows": 13,
+            "scope": "full event execution with recorded discrete funding; 168 hourly bars, no timer",
+            "median_ms": 2.616458,
+            "p95_ms": 2.6578211
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:contract_digest": 0.0,
+        "episodes.parquet:anchor_price": 0.0,
+        "episodes.parquet:net_pnl": 0.0,
+        "episodes.parquet:entry_equity": 0.0,
+        "fills.parquet:quantity_delta": 0.0,
+        "fills.parquet:reference_price": 0.0,
+        "fills.parquet:fill_price": 0.0,
+        "fills.parquet:fee": 0.0,
+        "fills.parquet:slippage": 0.0,
+        "funding.parquet:quantity": 0.0,
+        "funding.parquet:rate_decimal": 0.0,
+        "funding.parquet:valuation_price": 0.0,
+        "funding.parquet:recognized_delta": 0.0,
+        "funding.parquet:cash_delta": 0.0,
+        "intents.parquet:target": 0.0,
+        "states.parquet:cash": 0.0,
+        "states.parquet:accrued_funding": 0.0,
+        "states.parquet:quantity": 0.0,
+        "states.parquet:basis": 0.0,
+        "states.parquet:equity": 0.0,
+        "states.parquet:last_signal": 0.0,
+        "states.parquet:absolute_exposure": 0.0,
+        "states.parquet:net_return": 0.0
+      },
+      "floating_values_compared": 1552,
+      "tables_compared": [
+        "episodes.parquet",
+        "fills.parquet",
+        "funding.parquet",
+        "intents.parquet",
+        "states.parquet"
+      ],
+      "warm_speedup": 3.8658816613910867,
+      "first_call_speedup": 2.6058512494249997,
+      "equivalent": true
+    },
+    {
+      "scenario": "forward_labels",
+      "results": {
+        "baseline": {
+          "scenario": "forward_labels",
+          "variant": "baseline",
+          "source_root": "baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 1224.423834,
+            "samples_ms": [
+              2131.426625,
+              859.43825,
+              775.861084
+            ],
+            "iterations_per_sample": 1,
+            "candidates": 256,
+            "scope": "both forward trade outcomes per recorded row; TP/SL-only exits",
+            "median_ms": 859.43825,
+            "p95_ms": 2004.2277875
+          }
+        },
+        "optimized": {
+          "scenario": "forward_labels",
+          "variant": "optimized",
+          "source_root": "optimized",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "limen/__init__.py",
+          "timing": {
+            "first_call_ms": 28.791292,
+            "samples_ms": [
+              47.551791,
+              22.61025,
+              11.147875
+            ],
+            "iterations_per_sample": 1,
+            "candidates": 256,
+            "scope": "both forward trade outcomes per recorded row; TP/SL-only exits",
+            "median_ms": 22.61025,
+            "p95_ms": 45.0576369
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:outcome": 0.0,
+        "labels.parquet:long_return": 0.0,
+        "labels.parquet:short_return": 0.0
+      },
+      "floating_values_compared": 384,
+      "tables_compared": [
+        "labels.parquet"
+      ],
+      "warm_speedup": 38.01100164748289,
+      "first_call_speedup": 42.5275751432065,
+      "equivalent": true
+    }
+  ],
+  "finished_utc": "2026-10-18T20:32:23.104651+00:00",
+  "equivalent": true,
+  "baseline_commit": "ec254c73f0ff47cfcc2017e262458b2d5f671fb0",
+  "candidate_commit": "4754d0962be79fd8a20859b7017a0b8c4876d4a2",
+  "interpretation": "Component workload medians on this host, not a forecast for a complete research sweep. Three warm samples; preserve exact recorded outputs. Documentation/validation-runner changes after this code identity do not change the recorded Limen source-code hash.",
+  "source_commits": {
+    "baseline": "ec254c73f0ff47cfcc2017e262458b2d5f671fb0",
+    "optimized": "4754d0962be79fd8a20859b7017a0b8c4876d4a2"
+  },
+  "path_notation": "Published paths use source roles and repository-relative files; raw campaigns retain exact runtime paths.",
+  "resource_campaign": {
+    "started_utc": "2026-10-18T21:00:27.837091+00:00",
+    "finished_utc": "2026-10-18T21:00:47.129905+00:00",
+    "platform": "macOS-26.6.2-arm64-arm-64bit",
+    "python": "3.12.12 (main, Nov 19 2025, 22:30:44) [Clang 21.1.4 ]",
+    "source_code_sha256": {
+      "baseline": "e5af427c931a5f65d854c829a4934f142efeeb0ae07e4bdb41ef70927128dc9f",
+      "optimized": "bd9c90f37d7619fcddd8f899ad15a9fe4f46d09ca401b10b34cfa03b7e864d1b"
+    },
+    "worker_sha256": "833248ab1924986ddcd16a6cca85c2342c85c042f5c451494fd4d5c4d463ad50",
+    "repeats": 3,
+    "rounds": 32,
+    "target_rows": 128,
+    "threads": {
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1",
+      "BLIS_NUM_THREADS": "1",
+      "POLARS_MAX_THREADS": "1"
+    },
+    "contract": {
+      "absolute_tolerance": 1e-10,
+      "relative_tolerance": 0,
+      "minimum_warm_speedup_exclusive": 1.0,
+      "required_workloads": [
+        "snapshot_ledger",
+        "snapshot_full",
+        "line_features",
+        "timer_execution",
+        "funded_execution",
+        "forward_labels"
+      ],
+      "non_numeric_outputs": "exact names, order, schemas, nulls, IDs and clocks",
+      "scope": "source reads and signal preparation excluded; complete declared computation included",
+      "cold": "first timed call in a fresh implementation process",
+      "warm": "median of repeated calls within that process",
+      "cold_and_memory": "advisory; no universal cold-call or memory regression bound",
+      "memory_scope": "matched fresh-process high-water RSS, including imports, source loading and output persistence; timings include the materialized declared computation and exclude source reads and output persistence",
+      "rss_units": "resource.ru_maxrss: bytes on Darwin, KiB on Linux; normalized to bytes and MiB",
+      "p95": "sample percentile; three repeats do not establish tail latency"
+    },
+    "equivalent": true,
+    "performance_passed": true,
+    "raw_report_sha256": "2bd57b2a2daa4dc5c620f2133fbe671c0e4c3bc3bf97f5eddc276b4e08158acb",
+    "scenarios": [
+      {
+        "scenario": "snapshot_ledger",
+        "equivalent": true,
+        "max_absolute_error": 0.0,
+        "warm_speedup": 1.764911403445018,
+        "first_call_speedup": 1.6449751374309751,
+        "peak_rss_ratio": 1.0014329580348005,
+        "results": {
+          "baseline": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.0",
+            "peak_process_rss_bytes": 80035840,
+            "peak_process_rss_mib": 76.328125,
+            "timing": {
+              "first_call_ms": 1.329209,
+              "samples_ms": [
+                1.2141708,
+                1.2043771,
+                1.34136455
+              ],
+              "iterations_per_sample": 20,
+              "median_ms": 1.2141708,
+              "p95_ms": 1.328645175
+            }
+          },
+          "optimized": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.1",
+            "peak_process_rss_bytes": 80150528,
+            "peak_process_rss_mib": 76.4375,
+            "timing": {
+              "first_call_ms": 0.808042,
+              "samples_ms": [
+                0.68795,
+                0.68279585,
+                0.69461665
+              ],
+              "iterations_per_sample": 20,
+              "median_ms": 0.68795,
+              "p95_ms": 0.6939499849999999
+            }
+          }
+        }
+      },
+      {
+        "scenario": "snapshot_full",
+        "equivalent": true,
+        "max_absolute_error": 0.0,
+        "warm_speedup": 1.415054430593942,
+        "first_call_speedup": 1.0846209102502455,
+        "peak_rss_ratio": 1.0156663275686673,
+        "results": {
+          "baseline": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.0",
+            "peak_process_rss_bytes": 80527360,
+            "peak_process_rss_mib": 76.796875,
+            "timing": {
+              "first_call_ms": 6.485084,
+              "samples_ms": [
+                1.56796875,
+                1.5378583,
+                1.6108271
+              ],
+              "iterations_per_sample": 20,
+              "median_ms": 1.56796875,
+              "p95_ms": 1.606541265
+            }
+          },
+          "optimized": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.1",
+            "peak_process_rss_bytes": 81788928,
+            "peak_process_rss_mib": 78.0,
+            "timing": {
+              "first_call_ms": 5.979125,
+              "samples_ms": [
+                1.59863125,
+                1.05586875,
+                1.1080625
+              ],
+              "iterations_per_sample": 20,
+              "median_ms": 1.1080625,
+              "p95_ms": 1.549574375
+            }
+          }
+        }
+      },
+      {
+        "scenario": "line_features",
+        "equivalent": true,
+        "max_absolute_error": 0.0,
+        "warm_speedup": 5.998754306229934,
+        "first_call_speedup": 12.960415709360909,
+        "peak_rss_ratio": 0.8777033201340237,
+        "results": {
+          "baseline": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.0",
+            "peak_process_rss_bytes": 322732032,
+            "peak_process_rss_mib": 307.78125,
+            "timing": {
+              "first_call_ms": 1388.929959,
+              "samples_ms": [
+                632.859458,
+                599.696125,
+                611.792208
+              ],
+              "iterations_per_sample": 1,
+              "rounds": 32,
+              "scope": "two line features per round; four detector keys and eight quantile-feature keys",
+              "median_ms": 611.792208,
+              "p95_ms": 630.752733
+            }
+          },
+          "optimized": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.1",
+            "peak_process_rss_bytes": 283262976,
+            "peak_process_rss_mib": 270.140625,
+            "timing": {
+              "first_call_ms": 107.167084,
+              "samples_ms": [
+                101.986542,
+                102.185542,
+                101.983083
+              ],
+              "iterations_per_sample": 1,
+              "rounds": 32,
+              "scope": "two line features per round; four detector keys and eight quantile-feature keys",
+              "median_ms": 101.986542,
+              "p95_ms": 102.16564199999999
+            }
+          }
+        }
+      },
+      {
+        "scenario": "timer_execution",
+        "equivalent": true,
+        "max_absolute_error": 0.0,
+        "warm_speedup": 27.966732219786863,
+        "first_call_speedup": 20.615195933970284,
+        "peak_rss_ratio": 0.8453508008802006,
+        "results": {
+          "baseline": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.0",
+            "peak_process_rss_bytes": 320159744,
+            "peak_process_rss_mib": 305.328125,
+            "timing": {
+              "first_call_ms": 186.774541,
+              "samples_ms": [
+                157.677375,
+                191.931542,
+                185.013917
+              ],
+              "iterations_per_sample": 1,
+              "state_rows": 43201,
+              "scope": "full event execution, all audit state rows and metrics; one-second timers",
+              "median_ms": 185.013917,
+              "p95_ms": 191.2397795
+            }
+          },
+          "optimized": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.1",
+            "peak_process_rss_bytes": 270647296,
+            "peak_process_rss_mib": 258.109375,
+            "timing": {
+              "first_call_ms": 9.060042,
+              "samples_ms": [
+                7.024042,
+                6.6155,
+                6.274625
+              ],
+              "iterations_per_sample": 1,
+              "state_rows": 43201,
+              "scope": "full event execution, all audit state rows and metrics; one-second timers",
+              "median_ms": 6.6155,
+              "p95_ms": 6.9831878
+            }
+          }
+        }
+      },
+      {
+        "scenario": "funded_execution",
+        "equivalent": true,
+        "max_absolute_error": 0.0,
+        "warm_speedup": 1.9536612713076262,
+        "first_call_speedup": 1.0420248939140533,
+        "peak_rss_ratio": 1.0029204020646563,
+        "results": {
+          "baseline": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.0",
+            "peak_process_rss_bytes": 241238016,
+            "peak_process_rss_mib": 230.0625,
+            "timing": {
+              "first_call_ms": 4.824792,
+              "samples_ms": [
+                3.659875,
+                3.369583,
+                3.657334
+              ],
+              "iterations_per_sample": 1,
+              "state_rows": 172,
+              "funding_rows": 22,
+              "held_funding_rows": 13,
+              "scope": "full event execution with recorded discrete funding; 168 hourly bars, no timer",
+              "median_ms": 3.657334,
+              "p95_ms": 3.6596209
+            }
+          },
+          "optimized": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.1",
+            "peak_process_rss_bytes": 241942528,
+            "peak_process_rss_mib": 230.734375,
+            "timing": {
+              "first_call_ms": 4.630208,
+              "samples_ms": [
+                1.872041,
+                1.907417,
+                1.612709
+              ],
+              "iterations_per_sample": 1,
+              "state_rows": 172,
+              "funding_rows": 22,
+              "held_funding_rows": 13,
+              "scope": "full event execution with recorded discrete funding; 168 hourly bars, no timer",
+              "median_ms": 1.872041,
+              "p95_ms": 1.9038793999999999
+            }
+          }
+        }
+      },
+      {
+        "scenario": "forward_labels",
+        "equivalent": true,
+        "max_absolute_error": 0.0,
+        "warm_speedup": 57.2623354038002,
+        "first_call_speedup": 43.590059480881116,
+        "peak_rss_ratio": 0.9918043799543195,
+        "results": {
+          "baseline": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.0",
+            "peak_process_rss_bytes": 243892224,
+            "peak_process_rss_mib": 232.59375,
+            "timing": {
+              "first_call_ms": 426.352541,
+              "samples_ms": [
+                425.876709,
+                479.15575,
+                402.674
+              ],
+              "iterations_per_sample": 1,
+              "candidates": 256,
+              "scope": "both forward trade outcomes per recorded row; TP/SL-only exits",
+              "median_ms": 425.876709,
+              "p95_ms": 473.8278459
+            }
+          },
+          "optimized": {
+            "python": "3.12.12",
+            "numpy": "2.5.1",
+            "polars": "1.42.1",
+            "limen": "5.34.1",
+            "peak_process_rss_bytes": 241893376,
+            "peak_process_rss_mib": 230.6875,
+            "timing": {
+              "first_call_ms": 9.780958,
+              "samples_ms": [
+                7.437292,
+                7.424917,
+                7.469125
+              ],
+              "iterations_per_sample": 1,
+              "candidates": 256,
+              "scope": "both forward trade outcomes per recorded row; TP/SL-only exits",
+              "median_ms": 7.437292,
+              "p95_ms": 7.4659417
+            }
+          }
+        }
+      }
+    ],
+    "loaded_module_sources": {
+      "baseline": {
+        "limen": {
+          "path": "limen/__init__.py",
+          "sha256": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74"
+        },
+        "limen.backtest": {
+          "path": "limen/backtest/__init__.py",
+          "sha256": "23f7cd1ee46b34e14ea35b5f415ef9e2c8d151bb62fdccdb162697e99cb532d4"
+        },
+        "limen.backtest._long_flat_tp_sl": {
+          "path": "limen/backtest/_long_flat_tp_sl.py",
+          "sha256": "b2802f3940a11694c830f8320ccd3f56fff3f4aa1acfcbcab42d09c4612abee3"
+        },
+        "limen.backtest._snapshot_execution": {
+          "path": "limen/backtest/_snapshot_execution.py",
+          "sha256": "0d64bfac719d5e47caefd0e9c6ff8892bc665f108faf0a889c7e6a9f57209737"
+        },
+        "limen.backtest._snapshot_ledger": {
+          "path": "limen/backtest/_snapshot_ledger.py",
+          "sha256": "38d789e9f01199318e9aca3b6865320d02108fe4dd638cabf396a2acc81a41db"
+        },
+        "limen.backtest.backtest_snapshot": {
+          "path": "limen/backtest/backtest_snapshot.py",
+          "sha256": "f2ffaf2b8ce78c109fa93d34dbb4c367f8095067561dde15f4cb76c13c91815c"
+        },
+        "limen.backtest.execution_events": {
+          "path": "limen/backtest/execution_events.py",
+          "sha256": "c8522b4b45d7bc12a56a11e740b2a556b4dd7c574a13453b59304831e1a57688"
+        },
+        "limen.backtest.funding_adapter": {
+          "path": "limen/backtest/funding_adapter.py",
+          "sha256": "db98751d05827fb2d1575ac0f659987564a7a1bec11e4bd601d0aebd5a1d9581"
+        },
+        "limen.backtest.long_flat_strategy": {
+          "path": "limen/backtest/long_flat_strategy.py",
+          "sha256": "4d0fdbbe0672179c1cc93582042b8682a24aa1ca1b720a00ba9c56d802b0e893"
+        },
+        "limen.backtest.trade_contract": {
+          "path": "limen/backtest/trade_contract.py",
+          "sha256": "b5cb356348eeef97b0bf338d3064aafcfea52fb3489a84a2347ed17bab1e8fbc"
+        },
+        "limen.backtest.trade_execution": {
+          "path": "limen/backtest/trade_execution.py",
+          "sha256": "3caaa90ff0fb32c47bfda8fa113db615d97241c9f4836ed79e1ce57d65229cb5"
+        },
+        "limen.features": {
+          "path": "limen/features/__init__.py",
+          "sha256": "37a8863988d201fe869a8f07074ed689c19649f9bac82c634991497376590513"
+        },
+        "limen.features.absorption_intensity": {
+          "path": "limen/features/absorption_intensity.py",
+          "sha256": "d259943079840620a743f0bafc422b4080d9b875f7d26cc0fb96706731000e85"
+        },
+        "limen.features.active_lines": {
+          "path": "limen/features/active_lines.py",
+          "sha256": "eb5165c93fc1bae9bec41084bdcf8211bffd1de523f4ed8a996be805efc7501b"
+        },
+        "limen.features.active_quantile_count": {
+          "path": "limen/features/active_quantile_count.py",
+          "sha256": "01c8fbac89853bfec7978e1f8c83d0d0bf2fa9fbab4bd70d15ff55b5e3a274a4"
+        },
+        "limen.features.amihud_illiquidity": {
+          "path": "limen/features/amihud_illiquidity.py",
+          "sha256": "de32b11c2c622a98559a6774f87e907d47248df7cb6da1c557a02856d1bb33b8"
+        },
+        "limen.features.atr_percent_sma": {
+          "path": "limen/features/atr_percent_sma.py",
+          "sha256": "adedc2799f38d806d76dc4be8eb93bb686561770fd21e891812aab8c2b513020"
+        },
+        "limen.features.atr_sma": {
+          "path": "limen/features/atr_sma.py",
+          "sha256": "9f1eddbb7dead90465ddc1651c9922e4f8e1d33963ab11d8709287dabe4b09c6"
+        },
+        "limen.features.body_to_range": {
+          "path": "limen/features/body_to_range.py",
+          "sha256": "8b4ec0fe8d1179ed48fa275ed0f2f7b174da5ecd7f3af595ccf748acfe5bd507"
+        },
+        "limen.features.breakout_features": {
+          "path": "limen/features/breakout_features.py",
+          "sha256": "8a2b2005236934be0c2a869d9824b77243f14320e7891440f484015e77e5a07b"
+        },
+        "limen.features.breakout_percentile_regime": {
+          "path": "limen/features/breakout_percentile_regime.py",
+          "sha256": "ba665cb89d63f26e6b07db482b7a283e54ae93fe816e0988b11dd77e7131a782"
+        },
+        "limen.features.bulk_volume_classification": {
+          "path": "limen/features/bulk_volume_classification.py",
+          "sha256": "1106ff7824d64dc88edef31aa435f7a35048ce51e8f9e0550949578fdd285539"
+        },
+        "limen.features.calendar_time_features": {
+          "path": "limen/features/calendar_time_features.py",
+          "sha256": "dc6d691e478a5c96186f2e81b79246c148cc81867285e85930d532cc44e55646"
+        },
+        "limen.features.close_ma_distance_atr": {
+          "path": "limen/features/close_ma_distance_atr.py",
+          "sha256": "e5ca2e5050a0828c98d06941da49ab74e3e3262b0d68b3888496cc887bf2baab"
+        },
+        "limen.features.close_position": {
+          "path": "limen/features/close_position.py",
+          "sha256": "5af281756311dcae1f987fc5fcab707447c813e4030cbeffa15d2e489c80d3c8"
+        },
+        "limen.features.close_position_rolling": {
+          "path": "limen/features/close_position_rolling.py",
+          "sha256": "0cf8fbf2ea082d06e69276da4ca37113654fd321b3fb59c7d465ee66530ff1fb"
+        },
+        "limen.features.close_to_extremes": {
+          "path": "limen/features/close_to_extremes.py",
+          "sha256": "84abcd07c9f789476e4903e60802cf54b3fc0c14955f5c104cc962f1f7a15da4"
+        },
+        "limen.features.conserved_flux_renormalization": {
+          "path": "limen/features/conserved_flux_renormalization.py",
+          "sha256": "7bf8774cfc2d41c9865857bf7ca395b7572acd0395e777d298490473836ee287"
+        },
+        "limen.features.cusum_filter": {
+          "path": "limen/features/cusum_filter.py",
+          "sha256": "ff7f8d9367817abe8362349d4e65b2b93599bb82379f85cd2acbb4f2fd922363"
+        },
+        "limen.features.cyclical_time_features": {
+          "path": "limen/features/cyclical_time_features.py",
+          "sha256": "d2ce917eace74d8eb9da9c379f00ee5b30d82996f1e4a214bdad0bdfaa40e0b8"
+        },
+        "limen.features.distance_from_high": {
+          "path": "limen/features/distance_from_high.py",
+          "sha256": "dc5c869fa576d3764627d95590d5dda0ea85aa88b763603ab39a8ed6918f08e8"
+        },
+        "limen.features.distance_from_low": {
+          "path": "limen/features/distance_from_low.py",
+          "sha256": "5d5f9e09e93d4c87fb6f40b40ad63d6aeb9ee4ba160a345e0c9434d9a6c59c16"
+        },
+        "limen.features.distance_from_ma": {
+          "path": "limen/features/distance_from_ma.py",
+          "sha256": "a74ebfc733e1cd4e0e3d905d3dda20e9cda4040616b7ed364fa7c90f3138eebe"
+        },
+        "limen.features.dollar_bar_crash_reversal": {
+          "path": "limen/features/dollar_bar_crash_reversal.py",
+          "sha256": "ac2eabb9f2abe581aaa62045a9e2ddcdd3a18d59fb388919ba44aba77ab8ce67"
+        },
+        "limen.features.dollar_volume": {
+          "path": "limen/features/dollar_volume.py",
+          "sha256": "b3a2858e60b68efe981fbd716e5c932841f784ed937afb1d52b06df0f2a8688f"
+        },
+        "limen.features.downside_volatility_ratio": {
+          "path": "limen/features/downside_volatility_ratio.py",
+          "sha256": "4b622a978dfd15ccf85225d5d1b99ada07e25ce63a9467056a3e685de38da235"
+        },
+        "limen.features.dynamic_stop_loss": {
+          "path": "limen/features/dynamic_stop_loss.py",
+          "sha256": "6264e82bee3e5ab771bd9c0ec9823b02454e153aca09ccd62d58ff03b0dfed5e"
+        },
+        "limen.features.dynamic_target": {
+          "path": "limen/features/dynamic_target.py",
+          "sha256": "6a83160b9424bf89de2cfd029685af34499bfe5935a0ebb7252333f461547377"
+        },
+        "limen.features.ema_alignment": {
+          "path": "limen/features/ema_alignment.py",
+          "sha256": "f47c4d7b78b1d47b64f307df2ffc15f963e1aa36b98b22e18f07f5ac73ee6f49"
+        },
+        "limen.features.entry_score_microstructure": {
+          "path": "limen/features/entry_score_microstructure.py",
+          "sha256": "5b641573561ee9c9e809c711e787deff25458141fb75ee1ec27ea73958566bb5"
+        },
+        "limen.features.feature_aliases": {
+          "path": "limen/features/feature_aliases.py",
+          "sha256": "6296bf9b5f8f5ba39961be4ad265385e956f390553aa8708fe6d3f57067598a9"
+        },
+        "limen.features.fractional_diff": {
+          "path": "limen/features/fractional_diff.py",
+          "sha256": "e54b3f87cd582443643975420942a8ddf8ffcad5bae9a96dc64268957bf689d1"
+        },
+        "limen.features.gap_high": {
+          "path": "limen/features/gap_high.py",
+          "sha256": "54de367ba9084f24df822a84e53c19fe2e9bd4edd3bd48277de4d02f4353be75"
+        },
+        "limen.features.garman_klass_volatility": {
+          "path": "limen/features/garman_klass_volatility.py",
+          "sha256": "954988ea8bea5f28944b90e9df9987b044f1de00e1dde506a1627a78200e18b1"
+        },
+        "limen.features.hh_hl_structure_regime": {
+          "path": "limen/features/hh_hl_structure_regime.py",
+          "sha256": "c33ae77d6c91040c3b538649994a1a33087e742e57bff3257bf39b6cd7e97eca"
+        },
+        "limen.features.hours_since_big_move": {
+          "path": "limen/features/hours_since_big_move.py",
+          "sha256": "5452966ba143aac186985d2c184d5afa8b9100abb61e5635843336e684b2679d"
+        },
+        "limen.features.hours_since_quantile_line": {
+          "path": "limen/features/hours_since_quantile_line.py",
+          "sha256": "292d725e6be80a22600330cccaf003353e29d0275a1acb4e94c81bf70c9e15a8"
+        },
+        "limen.features.ichimoku_cloud": {
+          "path": "limen/features/ichimoku_cloud.py",
+          "sha256": "1e8779a28609a1c444351a8d04d2c7726e737fae12043ac55f290835a94ae9b5"
+        },
+        "limen.features.illiquidity_shock": {
+          "path": "limen/features/illiquidity_shock.py",
+          "sha256": "5a38d3150ee4fd506c9050e3a64f376a0485ee9f73c16943cd5f21ce2b9650ab"
+        },
+        "limen.features.is_funding_hour": {
+          "path": "limen/features/is_funding_hour.py",
+          "sha256": "4c7a9749bb27943af1b79b5ef85cb83df5957897ff40120bc759e8d042550982"
+        },
+        "limen.features.is_us_open_hour": {
+          "path": "limen/features/is_us_open_hour.py",
+          "sha256": "5d14132b6de6721a013cdabf88980bde4cb8dac7a1d1b95b792d9609e78ae214"
+        },
+        "limen.features.jump_variation_proxy": {
+          "path": "limen/features/jump_variation_proxy.py",
+          "sha256": "1f31d7ef11bc4fb740557e4ea7b3c987bc6115a0d4b66cdc11acf2ff7d9c7128"
+        },
+        "limen.features.kaufman_efficiency_ratio": {
+          "path": "limen/features/kaufman_efficiency_ratio.py",
+          "sha256": "0140e7aabb2f845d658ab323376c99bd846130bf0b37c474f5c7f71df931953b"
+        },
+        "limen.features.kline_imbalance": {
+          "path": "limen/features/kline_imbalance.py",
+          "sha256": "ae973507a1d60e662909841a77c138de693ca751ef421a4318fdf8035bca7755"
+        },
+        "limen.features.lagged_features": {
+          "path": "limen/features/lagged_features.py",
+          "sha256": "a72c26448ebe91ca9ac6b6e6d576e929dc4ab01a0d43c078acab3c1786d868c0"
+        },
+        "limen.features.liquidity_drop": {
+          "path": "limen/features/liquidity_drop.py",
+          "sha256": "44b12d7f8edf4cddacbb78f87537d72c79fdb1b5aa39dc1e6ff87fe1c7eb832f"
+        },
+        "limen.features.liquidity_range": {
+          "path": "limen/features/liquidity_range.py",
+          "sha256": "8e7aef45711ff5c38a77b9b795f6f0ad38eb5f39eb1c01c4462d5b886e49b565"
+        },
+        "limen.features.log_returns": {
+          "path": "limen/features/log_returns.py",
+          "sha256": "d151ad41211e0a0c81163ee072da0889c0b4d756f34763f699422617b8fe9c3c"
+        },
+        "limen.features.ma_slope_regime": {
+          "path": "limen/features/ma_slope_regime.py",
+          "sha256": "747634de2a122fe81958008eb366c657f95e44c62611a7034ff19a4bfb305942"
+        },
+        "limen.features.maker_liquidity_share": {
+          "path": "limen/features/maker_liquidity_share.py",
+          "sha256": "65ed6ef1cdaa96b01e6e2e1738ea2ed5d2c9b1fea83ceb05d05ae4e7af098cfd"
+        },
+        "limen.features.maker_volume_ratio": {
+          "path": "limen/features/maker_volume_ratio.py",
+          "sha256": "b3dbf9ca87ca490e87c42cdda255b4124506078be4961f3073e412aa13b23b3c"
+        },
+        "limen.features.maker_volume_share": {
+          "path": "limen/features/maker_volume_share.py",
+          "sha256": "8216040ef6efba634714dd5d2bac3905601040b04f9580a5b8217a172c6895c9"
+        },
+        "limen.features.market_regime": {
+          "path": "limen/features/market_regime.py",
+          "sha256": "b30593ed7064059e99602b24cfbb8ac8bd24693399e868c7a2848c40326e3d1d"
+        },
+        "limen.features.micro_momentum": {
+          "path": "limen/features/micro_momentum.py",
+          "sha256": "04d9ce74c6897cf45e8fcda74dee4189674b530b847e6c1b2433f363f2b6138b"
+        },
+        "limen.features.momentum_confirmation": {
+          "path": "limen/features/momentum_confirmation.py",
+          "sha256": "8ae7b241a928faf2213a64c2a27c47855271ab768e0ba6e91d20d264a9aafe7d"
+        },
+        "limen.features.momentum_periods": {
+          "path": "limen/features/momentum_periods.py",
+          "sha256": "925cadbdd84756c8496f8a68ba663c920d2838151dced7d0d177551218ac1e5f"
+        },
+        "limen.features.momentum_weight": {
+          "path": "limen/features/momentum_weight.py",
+          "sha256": "9af8465f515511d156cf2d8f0554b7ce85968264c1f2cc7ab0262cdcc3f779e2"
+        },
+        "limen.features.narrow_range": {
+          "path": "limen/features/narrow_range.py",
+          "sha256": "732753432b8de58022edde991d0baa7f7c7eb1f24933e01392cd3331f0ac806a"
+        },
+        "limen.features.order_flow_imbalance": {
+          "path": "limen/features/order_flow_imbalance.py",
+          "sha256": "f23b13627539764e3b4478ca69c19cf3dfc00884ff46b94b8041da187ea8a39d"
+        },
+        "limen.features.parkinson_vol_of_vol": {
+          "path": "limen/features/parkinson_vol_of_vol.py",
+          "sha256": "c38072c286158a12041fee724ed771f9bd31f974690a07d54e205654755facb8"
+        },
+        "limen.features.parkinson_volatility": {
+          "path": "limen/features/parkinson_volatility.py",
+          "sha256": "1462095720dfea9e2de836d7125a83d82262b81d2153cc26ad0076f1edb3e95e"
+        },
+        "limen.features.position_in_candle": {
+          "path": "limen/features/position_in_candle.py",
+          "sha256": "c230a64b9f575ad0824afdc9841584c61ee05730cf455159a1f8d2654ab9af17"
+        },
+        "limen.features.position_in_range": {
+          "path": "limen/features/position_in_range.py",
+          "sha256": "377e0e587e9d9b7eda90238c7184b33cee0ec39cdca289813e3d5275f2312e5e"
+        },
+        "limen.features.price_lines": {
+          "path": "limen/features/price_lines.py",
+          "sha256": "6ba9afb1fa0fbf0183c19cd086a9c13e60bcc1228d77ffc946cae0c673b20ac5"
+        },
+        "limen.features.price_range_position": {
+          "path": "limen/features/price_range_position.py",
+          "sha256": "6f0ec5d45cbab46370cf68de0d1d8d203316d601735d4d2f7874c04d4bcc8280"
+        },
+        "limen.features.price_vs_band_regime": {
+          "path": "limen/features/price_vs_band_regime.py",
+          "sha256": "c7e0ac8d872b3e12f9301754b972cfae08a3ff22e8d38875a1503731b5a3da32"
+        },
+        "limen.features.quantile_line_density": {
+          "path": "limen/features/quantile_line_density.py",
+          "sha256": "97ba3deac9ca873b89ecab8b0fa70fd8d8843e9891de11d4d4b4aab0195b2f47"
+        },
+        "limen.features.quantile_price_lines": {
+          "path": "limen/features/quantile_price_lines.py",
+          "sha256": "e0bb4d9ddeb2e5ba1197eff2377264966853dd9b88e75b9a1379b3fe11f7beac"
+        },
+        "limen.features.range_overlap": {
+          "path": "limen/features/range_overlap.py",
+          "sha256": "e2f20b4e47860c41b9f3eb8e3d3de96a5c9d06ae6cfd10dc92a40df06d3c1bc1"
+        },
+        "limen.features.range_pct": {
+          "path": "limen/features/range_pct.py",
+          "sha256": "35ef83b4962697dabf00a123712c3d001256ff8e5422f129efeeafd2c00c4e9e"
+        },
+        "limen.features.range_per_dollar_volume": {
+          "path": "limen/features/range_per_dollar_volume.py",
+          "sha256": "74aac836305062f0375437797c33011c1ad1afc4c033708645788e12b1d186ad"
+        },
+        "limen.features.realized_kurtosis": {
+          "path": "limen/features/realized_kurtosis.py",
+          "sha256": "a3a345290ed062b371f1ddd3d09c4b0d9ef3714001e3308febfac8c65bbb12b3"
+        },
+        "limen.features.realized_semivariance": {
+          "path": "limen/features/realized_semivariance.py",
+          "sha256": "3552ea3709ca6fcc6e2cdfce23eee180c52d75f1a47f2a35fe63bb3512d34332"
+        },
+        "limen.features.realized_skewness": {
+          "path": "limen/features/realized_skewness.py",
+          "sha256": "93b46d667d732c55ff949fc563cc1334e089b3f111f9817f33c2a0389156c09f"
+        },
+        "limen.features.regime_multiplier": {
+          "path": "limen/features/regime_multiplier.py",
+          "sha256": "13142b8d7b659e9c0028d6f8abf8df3ca1d22dd102f335e49e553c7af9ef3eb1"
+        },
+        "limen.features.rejection_intensity": {
+          "path": "limen/features/rejection_intensity.py",
+          "sha256": "909c1a892f00eda1a5a5df24b421b52e1708e1ce72c27ff0984ec4952dce8d89"
+        },
+        "limen.features.relative_range_seasonality": {
+          "path": "limen/features/relative_range_seasonality.py",
+          "sha256": "08f1cd020e67c304d9c1ef5ce6b00105e1322f4ce3ef9b488513585d42ff6084"
+        },
+        "limen.features.relative_volatility_seasonality": {
+          "path": "limen/features/relative_volatility_seasonality.py",
+          "sha256": "1c540f5511de111c04c46e7d32208ddc9798ca9ff1a8ee7a8d36487dac234bd2"
+        },
+        "limen.features.relative_volume_seasonality": {
+          "path": "limen/features/relative_volume_seasonality.py",
+          "sha256": "72e9ab247f5282e2251cdd2ac62b6d189d8c94bedf678ee2b7e620525ced6c94"
+        },
+        "limen.features.return_autocorrelation": {
+          "path": "limen/features/return_autocorrelation.py",
+          "sha256": "756aafa29f0321b04e91039f58aebf9e072365ae9b43748d326fc19ad1a9e68f"
+        },
+        "limen.features.return_per_dollar_volume": {
+          "path": "limen/features/return_per_dollar_volume.py",
+          "sha256": "54abaade09e45417825b14b39874e9e677e4f8c8574ea1425f74ff0973e214d4"
+        },
+        "limen.features.return_volatility_correlation": {
+          "path": "limen/features/return_volatility_correlation.py",
+          "sha256": "c70880e9b9a85988edfb2ad49137e55e17029c7d66305441da4b015aa7eb646c"
+        },
+        "limen.features.returns_lags": {
+          "path": "limen/features/returns_lags.py",
+          "sha256": "43c5c459383821bee004a4e9a681153613bb41b0ba19fddbc7eea33f643a073e"
+        },
+        "limen.features.rogers_satchell_volatility": {
+          "path": "limen/features/rogers_satchell_volatility.py",
+          "sha256": "06a64844f8854d36099cea5cae3b22e5ba14a6dffc451a3ecaa5d195224ce5a8"
+        },
+        "limen.features.rolling_zscore": {
+          "path": "limen/features/rolling_zscore.py",
+          "sha256": "24cb409fa643a4f55ceb14abe2a039f44aae921fc1bf3cc9ebcba37627ee9e3d"
+        },
+        "limen.features.sma_crossover": {
+          "path": "limen/features/sma_crossover.py",
+          "sha256": "a79603fbc7a60ebd26059b4b4048b19cefe6ce5a0eba2a6879b5e8fef01356eb"
+        },
+        "limen.features.sma_ratios": {
+          "path": "limen/features/sma_ratios.py",
+          "sha256": "1a9492edc61918c0bb1dbbc1b64d6c9938bf8e2f0edd9584f7db0b556e133b22"
+        },
+        "limen.features.spread": {
+          "path": "limen/features/spread.py",
+          "sha256": "bbfb20abe584ec58f7c5b6cc8a7602460a1330668b4f8954b6054f0792d97a4f"
+        },
+        "limen.features.spread_percent": {
+          "path": "limen/features/spread_percent.py",
+          "sha256": "69d092a0ada21e96a56ead21dcf7e2549bd24ba74aded64775017e66e196d459"
+        },
+        "limen.features.stochastic_k_abs": {
+          "path": "limen/features/stochastic_k_abs.py",
+          "sha256": "b506f56e93d4477fd8ebbb736ef2d92e729aa2830a053575b5cd31f02fa2cfe2"
+        },
+        "limen.features.tail_event_intensity": {
+          "path": "limen/features/tail_event_intensity.py",
+          "sha256": "ffc190d8c130dad1083537d9faf6e3831a38f1971dd115e68df7a3033b5a6f77"
+        },
+        "limen.features.taker_imbalance_ratio": {
+          "path": "limen/features/taker_imbalance_ratio.py",
+          "sha256": "a0deb6d2a1111a07ec762791a0453f2789cb0d94ebc1fa0a07cecdb8d3629066"
+        },
+        "limen.features.time_to_funding": {
+          "path": "limen/features/time_to_funding.py",
+          "sha256": "def7e2b9ed6aa9a266a147d4560e7cd40d0b09a4f84ae02531d92a943331168b"
+        },
+        "limen.features.trade_density": {
+          "path": "limen/features/trade_density.py",
+          "sha256": "ce63583eed9ab6efd8e246e6dae1c225c1ae04533b6412c9d1bebe15d48954b9"
+        },
+        "limen.features.trade_imbalance": {
+          "path": "limen/features/trade_imbalance.py",
+          "sha256": "764a5c80a0a340bd5ba238b271926da26a54d8c1cb79a00f6dd0e74d6ecbc2d5"
+        },
+        "limen.features.trade_size_ratio": {
+          "path": "limen/features/trade_size_ratio.py",
+          "sha256": "b21db13249d0878e4b9f382c9a14dbadc9e0021fb0ab5ccbc89ca92b970a36cc"
+        },
+        "limen.features.trend_coherence": {
+          "path": "limen/features/trend_coherence.py",
+          "sha256": "07f64908a2e27cdbe939420bfe3cb7d871a1e7d72e20586de35e849e5cb05d0d"
+        },
+        "limen.features.trend_strength": {
+          "path": "limen/features/trend_strength.py",
+          "sha256": "a618ea8ed840144803475ea714eed9f65e11469745f45ecc339482f3b091e908"
+        },
+        "limen.features.volatility_1h": {
+          "path": "limen/features/volatility_1h.py",
+          "sha256": "8792ccf43bee730a92f0cefe066dd4b7d77955005132d03c2a0bb4c98dd4d96a"
+        },
+        "limen.features.volatility_measure": {
+          "path": "limen/features/volatility_measure.py",
+          "sha256": "6354ad922179267b8a6b2bf326b95d5c7a82062b3ebdc072c7897073fb6028b8"
+        },
+        "limen.features.volatility_of_volatility": {
+          "path": "limen/features/volatility_of_volatility.py",
+          "sha256": "c6c561ea841a25ed3f90f2b243c36a7db13a88e8b541dd981dd2f30c019604b2"
+        },
+        "limen.features.volatility_ratio": {
+          "path": "limen/features/volatility_ratio.py",
+          "sha256": "4510ce875f17b7355f02185bb77658398ed3ede7a8fa790e80e25e8b6b0dbe55"
+        },
+        "limen.features.volatility_spike": {
+          "path": "limen/features/volatility_spike.py",
+          "sha256": "96f5654fc91a6802b901fb99ae475cff5aca4248e220c774d67e44cc105e89b4"
+        },
+        "limen.features.volatility_term_structure": {
+          "path": "limen/features/volatility_term_structure.py",
+          "sha256": "f2c89fde8639d264877a9e04ee81068811cf54a26bfcbfd2ea6b12fad0fc29b7"
+        },
+        "limen.features.volatility_weight": {
+          "path": "limen/features/volatility_weight.py",
+          "sha256": "ca00d1e78dce1b7b62cca7b74071d5eaa3b1a219a70abc799d1e3222a290c330"
+        },
+        "limen.features.volume_ratio": {
+          "path": "limen/features/volume_ratio.py",
+          "sha256": "e53d6670206804b94592fec6df10c1ed1d222140e7f5557a09d78021a842bfdc"
+        },
+        "limen.features.volume_regime": {
+          "path": "limen/features/volume_regime.py",
+          "sha256": "f55b8f2bd1831b801887dd4831334c893580910621078afde3af78e85e0f1a42"
+        },
+        "limen.features.volume_spike": {
+          "path": "limen/features/volume_spike.py",
+          "sha256": "8d942631bb940ae5cfca79596fed8cdf482eb5b0e057b7ce9925fd09e6df37a5"
+        },
+        "limen.features.volume_to_range": {
+          "path": "limen/features/volume_to_range.py",
+          "sha256": "95c9d3535d013fc1dba85b63bf8184098f6f67ae095e7dca765c56d5f3fe0c87"
+        },
+        "limen.features.volume_trend": {
+          "path": "limen/features/volume_trend.py",
+          "sha256": "ec39c3ba10f0033bf83588d88e3736dd3a7ae5aa84c7ff1d37b2998ebde19149"
+        },
+        "limen.features.volume_volatility_correlation": {
+          "path": "limen/features/volume_volatility_correlation.py",
+          "sha256": "0f6a3a3239cbda85fa38b9be6f18dac7291ecbbbc972f64de18f2061ae8a6cce"
+        },
+        "limen.features.vpin": {
+          "path": "limen/features/vpin.py",
+          "sha256": "23c30ca901509683837215953365030a3a38bc3bbf15bc02d671d6e032e776fb"
+        },
+        "limen.features.vwap": {
+          "path": "limen/features/vwap.py",
+          "sha256": "a77fd04d3dd67957e17230636a993d349c5c5bb83de32a7e5a8b4f6f680455fe"
+        },
+        "limen.features.wick_imbalance": {
+          "path": "limen/features/wick_imbalance.py",
+          "sha256": "7d9d621254b6e2c23190402b4d3996be923d0315de6bb3cd94546a5e9b8af307"
+        },
+        "limen.features.wick_proportion": {
+          "path": "limen/features/wick_proportion.py",
+          "sha256": "b61b1d7edef308202a7c35043559096a671a5022c3e1d6cc5474a1dd84c90d1e"
+        },
+        "limen.features.window_return_regime": {
+          "path": "limen/features/window_return_regime.py",
+          "sha256": "54eb83ef2a735fb1c5e005a3cd6684a54a41f03678fa6a5796bf62496b062463"
+        },
+        "limen.features.yang_zhang_volatility": {
+          "path": "limen/features/yang_zhang_volatility.py",
+          "sha256": "2f32b165f062a9e618efadabebea546fb5ff82788ff4e770eda2a71e14d336a5"
+        },
+        "limen.indicators": {
+          "path": "limen/indicators/__init__.py",
+          "sha256": "0bf3a2a74f450d1a0aab66a5bfeb3c4e6fd88e1c767bc6c5fede3638be521184"
+        },
+        "limen.indicators._atr": {
+          "path": "limen/indicators/_atr.py",
+          "sha256": "61070fa94c6c541baa8a2e58382f42d6ac3b4b3e57a26079c67c0d8ba8cfc435"
+        },
+        "limen.indicators._ema": {
+          "path": "limen/indicators/_ema.py",
+          "sha256": "9e0e31bc809805c59db34de4823d00b119d472ee7503b81436e0c7a0960e87d1"
+        },
+        "limen.indicators._hilbert": {
+          "path": "limen/indicators/_hilbert.py",
+          "sha256": "b5bfac436ff43b77e28c30847d91c7ae12e9a921fd7b22f44b22cb6f3770d36b"
+        },
+        "limen.indicators.ad": {
+          "path": "limen/indicators/ad.py",
+          "sha256": "05267461bc5e6598a3b5d642c79200031a90d8dff8ba76c2849ead8f670e95cd"
+        },
+        "limen.indicators.adosc": {
+          "path": "limen/indicators/adosc.py",
+          "sha256": "25a052787f993b4f0ff426f5b6fc710a1ffec63f55369a2a2232490fd5ae5058"
+        },
+        "limen.indicators.apo": {
+          "path": "limen/indicators/apo.py",
+          "sha256": "c4061f311e5ca054b3b4c1dc02d9daafa4b55d5ed32455920913e75a0b310ca2"
+        },
+        "limen.indicators.atr": {
+          "path": "limen/indicators/atr.py",
+          "sha256": "43269cadca91601ca950e44f9532c68a6b677221a5a78d91fb0ea16968371a26"
+        },
+        "limen.indicators.avgprice": {
+          "path": "limen/indicators/avgprice.py",
+          "sha256": "50695d787e005df02da2bb62c97973b8102ea4aa0458afa6850c960969c5b114"
+        },
+        "limen.indicators.bbands": {
+          "path": "limen/indicators/bbands.py",
+          "sha256": "6a12367022cc4c36914735e320b108eb45e4d6c0c296fced22a9300c337af1e7"
+        },
+        "limen.indicators.body_pct": {
+          "path": "limen/indicators/body_pct.py",
+          "sha256": "7c8851868d684d35e1efe47c0aeefe69363e865489006fecc2688c9d041567c9"
+        },
+        "limen.indicators.bollinger_bands": {
+          "path": "limen/indicators/bollinger_bands.py",
+          "sha256": "ff6566c761a25dca08bac64ce7e9dcb72187c0bed2ef566ae92fa91232c9c550"
+        },
+        "limen.indicators.bollinger_position": {
+          "path": "limen/indicators/bollinger_position.py",
+          "sha256": "664f72c67b786868e3a7c272ad30c3487ef8bf23a10a9ec2071f2872e744e9de"
+        },
+        "limen.indicators.bop": {
+          "path": "limen/indicators/bop.py",
+          "sha256": "0061bbc10658bcab2eb4f6995ad008e9d463fd766f1f26c4a1032697de8b105a"
+        },
+        "limen.indicators.cci": {
+          "path": "limen/indicators/cci.py",
+          "sha256": "b57cb44358691aede8075f036c84596920801b346350cea815dca25bc8e59ed6"
+        },
+        "limen.indicators.cdl2crows": {
+          "path": "limen/indicators/cdl2crows.py",
+          "sha256": "8210c77be15f241f0b7366cd6336e9d060ed7adc5e4b4c667f5aebcf99ef9c7c"
+        },
+        "limen.indicators.cdl3blackcrows": {
+          "path": "limen/indicators/cdl3blackcrows.py",
+          "sha256": "26e6370618a5f560c9c3ab0b8df509737dcb2102deadeac13e9d5fee9a79b5a8"
+        },
+        "limen.indicators.cdl3inside": {
+          "path": "limen/indicators/cdl3inside.py",
+          "sha256": "308000aaac0ea763db25ad765fb6bf67123a7f7ce512d47f583a2b0189e20779"
+        },
+        "limen.indicators.cdl3linestrike": {
+          "path": "limen/indicators/cdl3linestrike.py",
+          "sha256": "32766379b92ffd9c93dc09b80c35c94ce50639d4899205bdd79d4ee7d522e87b"
+        },
+        "limen.indicators.cdl3starsinsouth": {
+          "path": "limen/indicators/cdl3starsinsouth.py",
+          "sha256": "aa913b92a61b65b002149f8c4dd53501198e0970fd5ca185074df95a45509d09"
+        },
+        "limen.indicators.cdl3whitesoldiers": {
+          "path": "limen/indicators/cdl3whitesoldiers.py",
+          "sha256": "0cffde871839d9c3e68a9092a970305e41ae6e3867c23999a3d6f640f6a9adc4"
+        },
+        "limen.indicators.cdlabandonedbaby": {
+          "path": "limen/indicators/cdlabandonedbaby.py",
+          "sha256": "65c68742af14fcd3f2f063a2930a5068530b6b448c41f1a69d562cd9d80cdba1"
+        },
+        "limen.indicators.cdladvancedblock": {
+          "path": "limen/indicators/cdladvancedblock.py",
+          "sha256": "7de193be46e34cc9da4fe18445732ce86db0b1dc51984ba4d51331ea033eefc3"
+        },
+        "limen.indicators.cdlbelthold": {
+          "path": "limen/indicators/cdlbelthold.py",
+          "sha256": "a6a67b0ea9181eb9774c9b3647bc54837a6ed28f6f549d1c3da52abfb586c25f"
+        },
+        "limen.indicators.cdlclosingmarubozu": {
+          "path": "limen/indicators/cdlclosingmarubozu.py",
+          "sha256": "92db5619a7af401f1017c159f3d0fa700522f293ed0c76bc216615ff456607e3"
+        },
+        "limen.indicators.cdlconcealbabyswall": {
+          "path": "limen/indicators/cdlconcealbabyswall.py",
+          "sha256": "f0463b84138859e5606f9e4194a238feed46446aa727b7ad13170c1e1e16fab1"
+        },
+        "limen.indicators.cdlcounterattack": {
+          "path": "limen/indicators/cdlcounterattack.py",
+          "sha256": "30705875abf9804ace9ffe5461f516389853e5f444e216064953b5c590892331"
+        },
+        "limen.indicators.cdldarkcloudcover": {
+          "path": "limen/indicators/cdldarkcloudcover.py",
+          "sha256": "a7bef1483fd7953e09bc580535b6f4a85a420c34c820907203b390beb2158577"
+        },
+        "limen.indicators.cdldoji": {
+          "path": "limen/indicators/cdldoji.py",
+          "sha256": "db43e6d89407cc7ce75fdaf4099e6c395dccc1a8f264a2f8a0d1d0d27d63a215"
+        },
+        "limen.indicators.cdldragonflydoji": {
+          "path": "limen/indicators/cdldragonflydoji.py",
+          "sha256": "0f6338f1a6d5a64d1ac5e309a66feec63ea3ad8aa58cc2464c1051c95bed6387"
+        },
+        "limen.indicators.cdlengulfing": {
+          "path": "limen/indicators/cdlengulfing.py",
+          "sha256": "5a4306349320fd30bf8f515821ed14ea2f787e9aed9d0f2615cc9a28b02afc84"
+        },
+        "limen.indicators.cdlgravestonedoji": {
+          "path": "limen/indicators/cdlgravestonedoji.py",
+          "sha256": "3dee4bfebe521a7094781ead6ffdac70f3da6f2ce32ff981feabba427bbace05"
+        },
+        "limen.indicators.cdlhammer": {
+          "path": "limen/indicators/cdlhammer.py",
+          "sha256": "7531db72b9ec33f31f16181f2e004bc431b16f6e9702fdb2b1aff72f0c5a7bca"
+        },
+        "limen.indicators.cdlhangingman": {
+          "path": "limen/indicators/cdlhangingman.py",
+          "sha256": "6d1a7cbf4a8b120a8bca1327489f30bdfac013c3cd1bbedf43588441895163ed"
+        },
+        "limen.indicators.cdlharami": {
+          "path": "limen/indicators/cdlharami.py",
+          "sha256": "2c3bd85bea039188c465f1dba87206fe41259e524a94be059ffcac28ae11b88c"
+        },
+        "limen.indicators.cdlharamicross": {
+          "path": "limen/indicators/cdlharamicross.py",
+          "sha256": "159cf17dadd625a53dc1c762cf31f82e3d75e8d7f31e9063063f6b75bc1b0907"
+        },
+        "limen.indicators.cdlhighwave": {
+          "path": "limen/indicators/cdlhighwave.py",
+          "sha256": "1b77b164a0d4e65012a8d234c691021a18bba29495e0b2ed1e8c52a4753f5937"
+        },
+        "limen.indicators.cdlhikkake": {
+          "path": "limen/indicators/cdlhikkake.py",
+          "sha256": "3022f2e615f6babea783dcf0f0bdfb6e5fc04c7287b4cad50561baf5b24d361f"
+        },
+        "limen.indicators.cdlhikkakemod": {
+          "path": "limen/indicators/cdlhikkakemod.py",
+          "sha256": "0a43c8f0609621a93836ca6f2052d5e94fe6a8c7a7ae5cc536dbc304d763b848"
+        },
+        "limen.indicators.cdlhomingpigeon": {
+          "path": "limen/indicators/cdlhomingpigeon.py",
+          "sha256": "a9a7a834f0c7a7d4f02462dd2948b97c06e6903e98c85190227f9e9b667bd44f"
+        },
+        "limen.indicators.cdlidentical3crows": {
+          "path": "limen/indicators/cdlidentical3crows.py",
+          "sha256": "1713049964cd93ec46b7296be2bfb0387ef299c443c30e556c7e8fd2591e6a10"
+        },
+        "limen.indicators.cdlinvertedhammer": {
+          "path": "limen/indicators/cdlinvertedhammer.py",
+          "sha256": "6bac6c2fae136f765abae75b0330db1fb7de1293824a7c830adf4784db0b39cd"
+        },
+        "limen.indicators.cdlladderbottom": {
+          "path": "limen/indicators/cdlladderbottom.py",
+          "sha256": "5dfc3802f182cf9d9692712ebb83ea2bb896a5d051e1ac2256d573f315d83e09"
+        },
+        "limen.indicators.cdllongleggeddoji": {
+          "path": "limen/indicators/cdllongleggeddoji.py",
+          "sha256": "d6f42ea5fe85268f51e4166c5d0f74285c39d5fea85d6728bc9cde5265cee310"
+        },
+        "limen.indicators.cdllongline": {
+          "path": "limen/indicators/cdllongline.py",
+          "sha256": "9ac1db2b3e5afbfe670c320fd0e17e82553b842d64e4bcbb709d5faa60631f06"
+        },
+        "limen.indicators.cdlmarubozu": {
+          "path": "limen/indicators/cdlmarubozu.py",
+          "sha256": "c1d45a07e66fb2f8d04f5441d4e7ffeab038e55d5c1a65d9a68be242b199a0c3"
+        },
+        "limen.indicators.cdlmatchinglow": {
+          "path": "limen/indicators/cdlmatchinglow.py",
+          "sha256": "d106dba9a368db576a2f08ef6a5abf9c696101b06d3a48cfab171d55d151b660"
+        },
+        "limen.indicators.cdlmathold": {
+          "path": "limen/indicators/cdlmathold.py",
+          "sha256": "6b0f475e9a1530b9f86e472ebe4f5fabb4b883e06c34d0f3a8b0fb6660c5241e"
+        },
+        "limen.indicators.cdlonneck": {
+          "path": "limen/indicators/cdlonneck.py",
+          "sha256": "fe7b83b745c6ee8c9f845f6650604623123fe987fe0b8868dde353852933aa5c"
+        },
+        "limen.indicators.cdlpiercing": {
+          "path": "limen/indicators/cdlpiercing.py",
+          "sha256": "5fe31d9dc1e90d0fbdaeede0bedae3a0f3d9dcf11937b4b67288692a4598f1e7"
+        },
+        "limen.indicators.cdlrickshawman": {
+          "path": "limen/indicators/cdlrickshawman.py",
+          "sha256": "326c81bf16cff345d2c5626fb16429b2c6b403588614ffa6a705ae4d485f26ff"
+        },
+        "limen.indicators.cdlrisefall3methods": {
+          "path": "limen/indicators/cdlrisefall3methods.py",
+          "sha256": "d39756cf5ec46880163f0fff17849b8ff138bc697317fe72e22d1c5a5ac98f8e"
+        },
+        "limen.indicators.cdlseparatinglines": {
+          "path": "limen/indicators/cdlseparatinglines.py",
+          "sha256": "d96b784e51172db8fd512765feaf4ee3d5bfc0cec2086eae21d9b586e8bae3c4"
+        },
+        "limen.indicators.cdlshootingstar": {
+          "path": "limen/indicators/cdlshootingstar.py",
+          "sha256": "ab01efe1eeaa34b80246f93d38fbaeb470fd308442ab965174380a18eadc0111"
+        },
+        "limen.indicators.cdlshortline": {
+          "path": "limen/indicators/cdlshortline.py",
+          "sha256": "9d7b4c1a939fe55a1f42b4304d53974c8e5cccdfe26d2801b75366db369a2bd5"
+        },
+        "limen.indicators.cdlspinningtop": {
+          "path": "limen/indicators/cdlspinningtop.py",
+          "sha256": "54731f65cdb1ccdbdf9948a7056ed53a75b521913b56d4c56745b3eed4fc0ceb"
+        },
+        "limen.indicators.cdlstalledpattern": {
+          "path": "limen/indicators/cdlstalledpattern.py",
+          "sha256": "6501509746b3a59899fc528e2602f55fbb2570bd5569a8e7ba3bf93daab79f70"
+        },
+        "limen.indicators.cdlsticksandwich": {
+          "path": "limen/indicators/cdlsticksandwich.py",
+          "sha256": "d6aff1fc6f70a5e863ecdaac542166b3d2b12f3b73fee13195354765536c9067"
+        },
+        "limen.indicators.cdltakuri": {
+          "path": "limen/indicators/cdltakuri.py",
+          "sha256": "0d84ce4d73075e4c7a8a1016f15df1066edfd77e1bd43bde565a7d5087819ac1"
+        },
+        "limen.indicators.cdlthrusting": {
+          "path": "limen/indicators/cdlthrusting.py",
+          "sha256": "60186925d8a25932d7dacbf9817a8cbcbfb12c98bb19a50940de26cbcb1ce559"
+        },
+        "limen.indicators.cdltristar": {
+          "path": "limen/indicators/cdltristar.py",
+          "sha256": "40b7ff3032f8cf9ca3a788272aef7a290dc8b5d58c9303d495e07768b1fa311f"
+        },
+        "limen.indicators.cdlunique3river": {
+          "path": "limen/indicators/cdlunique3river.py",
+          "sha256": "d43f21ec6fa34b90ccc0505c89aeb4979c037e3e38cf28004964f3004b69a29f"
+        },
+        "limen.indicators.cmo": {
+          "path": "limen/indicators/cmo.py",
+          "sha256": "958ee9fd706e06c1ddb951ebf8461a82922ee3650c6725029ad29e5a5b59be06"
+        },
+        "limen.indicators.dema": {
+          "path": "limen/indicators/dema.py",
+          "sha256": "365ddad8f6961ed6587eb71544c5dc74a3ca078ae2f712b0583528238721acd3"
+        },
+        "limen.indicators.ema": {
+          "path": "limen/indicators/ema.py",
+          "sha256": "72c1ad7cba84accb71163cf916f50732a10fe3d286dc9f0c05a26605aa993b64"
+        },
+        "limen.indicators.ht_dcperiod": {
+          "path": "limen/indicators/ht_dcperiod.py",
+          "sha256": "02fb632362819846f136a35549b8b099b9c0a7bd8e0dbae2f5cb0cdc5e802d5e"
+        },
+        "limen.indicators.ht_dcphase": {
+          "path": "limen/indicators/ht_dcphase.py",
+          "sha256": "7f17bac7523d3f0bfaabb663cc5069a7a16b64a934f77bfe31f60b2e87a754dc"
+        },
+        "limen.indicators.ht_phasor": {
+          "path": "limen/indicators/ht_phasor.py",
+          "sha256": "e929244e5b0901b6bcbba54eb5404f388eed5b7c9d51788c3b4c8c27240b8f47"
+        },
+        "limen.indicators.ht_sine": {
+          "path": "limen/indicators/ht_sine.py",
+          "sha256": "f205fbd24c3f379eaba77db33188bc3b7d05a05322320acd6d0b845fcbab2d8a"
+        },
+        "limen.indicators.ht_trendline": {
+          "path": "limen/indicators/ht_trendline.py",
+          "sha256": "b2b84b9020dacad9065475372d05f21331d6d817dde3d0d6a74f04d11f257c38"
+        },
+        "limen.indicators.ht_trendmode": {
+          "path": "limen/indicators/ht_trendmode.py",
+          "sha256": "06d9be17c6a0f5715f19c0d77c0cbcd930c53f62e95a8dcb274d47147e280b66"
+        },
+        "limen.indicators.kama": {
+          "path": "limen/indicators/kama.py",
+          "sha256": "0bbd79f10babdba6a124ef15303f45a073b4cdacaabe6338f5462af9890d2d4a"
+        },
+        "limen.indicators.linearreg": {
+          "path": "limen/indicators/linearreg.py",
+          "sha256": "396c9462170d415e9186b35ee224bffe67d047e6dadabdb5f59cd3926a52470b"
+        },
+        "limen.indicators.linearreg_angle": {
+          "path": "limen/indicators/linearreg_angle.py",
+          "sha256": "4e10d57799d1c8e26b6882ade9ea8b340f8a1a21fa8429ae1c47faedca620f8e"
+        },
+        "limen.indicators.linearreg_intercept": {
+          "path": "limen/indicators/linearreg_intercept.py",
+          "sha256": "7322cfce38001c4b40c8d5dddfd2ce39cba0ffa1101d50799b3939e895d9be83"
+        },
+        "limen.indicators.linearreg_slope": {
+          "path": "limen/indicators/linearreg_slope.py",
+          "sha256": "80decc5a185d4219e4a9537bc8b74c614665d0825d77ba4bc3d253d6b13fa77d"
+        },
+        "limen.indicators.ma": {
+          "path": "limen/indicators/ma.py",
+          "sha256": "5a1bd519674c33715b41fffa2aa32339b384720d329de6f5bf7728d45e50c7fe"
+        },
+        "limen.indicators.macd": {
+          "path": "limen/indicators/macd.py",
+          "sha256": "cf53538ea4692d98a4384f504661d8611b0db4ab3ed9164f2f928beddea13fe5"
+        },
+        "limen.indicators.macdext": {
+          "path": "limen/indicators/macdext.py",
+          "sha256": "8b65dd5bdba784756c8601804225ecf6e6c2e7ccc24b8681f3f9b91b90a71f42"
+        },
+        "limen.indicators.macdfix": {
+          "path": "limen/indicators/macdfix.py",
+          "sha256": "5cc7f86392b889525ae47bf4c927f783d66c6cfe4ae7c9428f54ead5f3b18ff8"
+        },
+        "limen.indicators.mama": {
+          "path": "limen/indicators/mama.py",
+          "sha256": "d0fc0cac1ccd50201e55a7b4b3846403ff4b2a73538cb344868fe8abca614782"
+        },
+        "limen.indicators.medprice": {
+          "path": "limen/indicators/medprice.py",
+          "sha256": "e0383ba4e8e5a20f936617138019439c465fe46861a9b8297de1759533246a0a"
+        },
+        "limen.indicators.mfi": {
+          "path": "limen/indicators/mfi.py",
+          "sha256": "29f9682696930406046b3bfa51b242df8ef53cf986aaaa8fb13d72d552c27ce0"
+        },
+        "limen.indicators.midpoint": {
+          "path": "limen/indicators/midpoint.py",
+          "sha256": "1ec5ba8e35f5d656fc2c4158a6a29b0fef56d6e116fe308dc8bdf35ef612955e"
+        },
+        "limen.indicators.midprice": {
+          "path": "limen/indicators/midprice.py",
+          "sha256": "283af80a72a17c760954f5cc1e6a58e59a45d393779447c730cc1c35da54fd20"
+        },
+        "limen.indicators.mom": {
+          "path": "limen/indicators/mom.py",
+          "sha256": "3f6d00f951eff6dd023f0d603f9cf386ab8b859a04285def9b77458e390623d5"
+        },
+        "limen.indicators.natr": {
+          "path": "limen/indicators/natr.py",
+          "sha256": "5d7b99c8592368b068ba450fb57a5cf63518897e190f166ff6593329285c78a7"
+        },
+        "limen.indicators.obv": {
+          "path": "limen/indicators/obv.py",
+          "sha256": "816b54628738a5333c0be01aa56d76945850501466b6bd53417d4fe85c7be03b"
+        },
+        "limen.indicators.ppo": {
+          "path": "limen/indicators/ppo.py",
+          "sha256": "bdc36850a6a1f9035b3d87c279083d940337f2169e8ba7835cea52f9fe23307f"
+        },
+        "limen.indicators.price_change_pct": {
+          "path": "limen/indicators/price_change_pct.py",
+          "sha256": "e66d022910da566412d9d740ad37ecb4dd9489cbfd424b3cabdf2262717ec9c4"
+        },
+        "limen.indicators.returns": {
+          "path": "limen/indicators/returns.py",
+          "sha256": "775755afc005fbce76f75b0821aea987320591966559ffd157d9a99a9aa04bd4"
+        },
+        "limen.indicators.roc": {
+          "path": "limen/indicators/roc.py",
+          "sha256": "ddb15f471d4660afbb6198084e14022f2d1a89b41106b3be338c460000a0f007"
+        },
+        "limen.indicators.rocp": {
+          "path": "limen/indicators/rocp.py",
+          "sha256": "a14b001d7b8db0ae101bb91283d24d429602cf036beeba173e15de8d93c38a46"
+        },
+        "limen.indicators.rocr": {
+          "path": "limen/indicators/rocr.py",
+          "sha256": "5574ea6e3606605ab45ec1438814cf9c2e69cf1928dc60c55825e8127b4392c0"
+        },
+        "limen.indicators.rocr100": {
+          "path": "limen/indicators/rocr100.py",
+          "sha256": "cfebef542b48a6e56b253ee1244e8daaf22678fc1c827887185c2c588907f63e"
+        },
+        "limen.indicators.rolling_volatility": {
+          "path": "limen/indicators/rolling_volatility.py",
+          "sha256": "7830f3e29bbd9a7c8353e9d18186ebdad75d9f9af841a100092a9dd629720f29"
+        },
+        "limen.indicators.rsi": {
+          "path": "limen/indicators/rsi.py",
+          "sha256": "5779dcf0cffc5472d986fe9adff75a955a4cbf41bb227a12a2a4357764025431"
+        },
+        "limen.indicators.rsi_sma": {
+          "path": "limen/indicators/rsi_sma.py",
+          "sha256": "21b304b402eb113886d40f327b8eb39b658aa662e53080e3d9cb511c0b9788c0"
+        },
+        "limen.indicators.sar": {
+          "path": "limen/indicators/sar.py",
+          "sha256": "98761d6ea311a1a4b3f9d906bfa437a5de97053a08d7e5463f0d4d9f1f15ce0a"
+        },
+        "limen.indicators.sarext": {
+          "path": "limen/indicators/sarext.py",
+          "sha256": "115318feae5ccfb6a5a9733eab42786b106221aa3ac0eff0fcbde169840b5baf"
+        },
+        "limen.indicators.sma": {
+          "path": "limen/indicators/sma.py",
+          "sha256": "5f184da393d855c73b80d81b5feb10046aca6d82a1f440e3ddfd1de7ee0650dd"
+        },
+        "limen.indicators.sma_deviation_std": {
+          "path": "limen/indicators/sma_deviation_std.py",
+          "sha256": "e774c4d8cdb1ce16a0fbea8102a674c90b30a3dd77bd906885556103c3e9276b"
+        },
+        "limen.indicators.stddev": {
+          "path": "limen/indicators/stddev.py",
+          "sha256": "c9a9d8ca5f6020544696479404b25906866e92ddbe83089b42932f791ac5593f"
+        },
+        "limen.indicators.stoch": {
+          "path": "limen/indicators/stoch.py",
+          "sha256": "f86935ac56d9d3833a8714f8b754dae1655cf63f09b706c304a0481315cbb033"
+        },
+        "limen.indicators.stochastic_oscillator": {
+          "path": "limen/indicators/stochastic_oscillator.py",
+          "sha256": "309cdfed1b90c385faa28b70c8c7e2334ac21b221c2b6971faccd3ad9f7e2217"
+        },
+        "limen.indicators.stochf": {
+          "path": "limen/indicators/stochf.py",
+          "sha256": "028338d2b2271db3a91c7a1e2bfdc5f3ecab8f00c8edf268979f64f27ca6c4d6"
+        },
+        "limen.indicators.stochrsi": {
+          "path": "limen/indicators/stochrsi.py",
+          "sha256": "dd3ac83b3aa1ed8b75c556dd207e4309232187352d8eff5b7a31ddc935eae433"
+        },
+        "limen.indicators.t3": {
+          "path": "limen/indicators/t3.py",
+          "sha256": "3aaad32bbe68953a50a67f452677e64bac5556be4e3ee91e082f11897282e432"
+        },
+        "limen.indicators.tema": {
+          "path": "limen/indicators/tema.py",
+          "sha256": "5a217cd691dda445bacdd6f616f083bb21e98732f7d41259dce5679441444b5b"
+        },
+        "limen.indicators.trange": {
+          "path": "limen/indicators/trange.py",
+          "sha256": "8bba2f3b6276162eef4fb3eacfb47dd4489655a762985bea09d7aeb2cf4b2b7a"
+        },
+        "limen.indicators.trima": {
+          "path": "limen/indicators/trima.py",
+          "sha256": "03c698598ecb2a996b2efdf6787815143d4f46dd8d66bed7387fdc3f8775e6eb"
+        },
+        "limen.indicators.trix": {
+          "path": "limen/indicators/trix.py",
+          "sha256": "44d81db4a407ff4ba72e550e05254cd670c5a7c268b50156fe359de9ff9c23d5"
+        },
+        "limen.indicators.tsf": {
+          "path": "limen/indicators/tsf.py",
+          "sha256": "217083fd389a2afadd0ebe89074f358e5287fd5cce518ef9bfb6aaaa487f3e78"
+        },
+        "limen.indicators.typprice": {
+          "path": "limen/indicators/typprice.py",
+          "sha256": "14bcecdf605cc2d3d60684d51c7b5d1ae358cdba464419bd777bd8d45c02a08b"
+        },
+        "limen.indicators.ultosc": {
+          "path": "limen/indicators/ultosc.py",
+          "sha256": "4d0342ab5af3e1b7de13c6f2650bca9bc380cac5e6c8fd3b0e034d50210cb214"
+        },
+        "limen.indicators.var": {
+          "path": "limen/indicators/var.py",
+          "sha256": "61c79fb78c0066ad04942573b081c3b96c4904d6f4d02e6ef8f9d4e188bd42d9"
+        },
+        "limen.indicators.wclprice": {
+          "path": "limen/indicators/wclprice.py",
+          "sha256": "ba9a803f183ff5710e2fc9441fdf2befd2a0f101727c7b6472db72fd3f2c7bbe"
+        },
+        "limen.indicators.wilder_rsi": {
+          "path": "limen/indicators/wilder_rsi.py",
+          "sha256": "d8b2876baba68a37472a8bdb4bb8feb6b04f70b8ca867ec51e716098a512be73"
+        },
+        "limen.indicators.willr": {
+          "path": "limen/indicators/willr.py",
+          "sha256": "ca0cd8ab68e9e75301793d7cf986b4856c4ce885d1de66d4d9e5282d1cc9fa57"
+        },
+        "limen.indicators.window_return": {
+          "path": "limen/indicators/window_return.py",
+          "sha256": "41f33a3a8e0ce03e1d88ddefc5b18e981cba102a24233c2528b3e369943987f1"
+        },
+        "limen.indicators.wma": {
+          "path": "limen/indicators/wma.py",
+          "sha256": "1aaced63d59df93776228ff7e919b25dfb253780c72d8193657f2ef8efcddfff"
+        },
+        "limen.metrics": {
+          "path": "limen/metrics/__init__.py",
+          "sha256": "5e96c1d644c4aaab679382d6be9797e9fc2ee592b4d21cd71341a38b221312a0"
+        },
+        "limen.metrics.balanced_metric": {
+          "path": "limen/metrics/balanced_metric.py",
+          "sha256": "d47ef7f8842806fc0ffeadfde9991dd1b9ce3256a355c86466a25874fcff123c"
+        },
+        "limen.metrics.binary_metrics": {
+          "path": "limen/metrics/binary_metrics.py",
+          "sha256": "49f1fb995c90c228f2af4425ae9c0a754a1f4259f71937967dd41854851e6505"
+        },
+        "limen.metrics.continuous_metrics": {
+          "path": "limen/metrics/continuous_metrics.py",
+          "sha256": "dad9fd9262148a238046049b3dc74c5aee511b4be96d29d8e0703598b121f430"
+        },
+        "limen.metrics.deflated_sharpe_ratio": {
+          "path": "limen/metrics/deflated_sharpe_ratio.py",
+          "sha256": "d5ea9c5a17716fcd1669d07fb022e3f31af6ec4ffcf929d9f312e0bfb969adc9"
+        },
+        "limen.metrics.multiclass_metrics": {
+          "path": "limen/metrics/multiclass_metrics.py",
+          "sha256": "f6ceef3f456713f7c0a873cf2a450694997b93eb6a8a9d1fad4a676a90fc6980"
+        },
+        "limen.metrics.probability_of_backtest_overfitting": {
+          "path": "limen/metrics/probability_of_backtest_overfitting.py",
+          "sha256": "88a2496cd7d50da3ffb5dc418417154849b699413eb4246a427feaa9e3ea122c"
+        },
+        "limen.metrics.rule_based_metrics": {
+          "path": "limen/metrics/rule_based_metrics.py",
+          "sha256": "555cba95e2495de2ec7d1f05c28743773e8b9395a445e8e1a939e6461969b15a"
+        },
+        "limen.metrics.safe_ovr_auc": {
+          "path": "limen/metrics/safe_ovr_auc.py",
+          "sha256": "7e98fd7f1ff85144e14f2d089edb1ad40d4a3ead13144ad686c1ff3a9b66df3f"
+        },
+        "limen.utils": {
+          "path": "limen/utils/__init__.py",
+          "sha256": "100eab83239e2ef805fb1871b2b2f001a6a22381054b1faeb4394dbafdc5561f"
+        },
+        "limen.utils.adf_test": {
+          "path": "limen/utils/adf_test.py",
+          "sha256": "c0df49a19e55fd841c59b8a758de45d761e19ea528098d0e2088a15d62476787"
+        },
+        "limen.utils.confidence_filtering_system": {
+          "path": "limen/utils/confidence_filtering_system.py",
+          "sha256": "379f9a7fbf957d01daec6cc84fbb86ce0adc10e36daf3fb05eca2606b245ee20"
+        },
+        "limen.utils.data_dict_to_numpy": {
+          "path": "limen/utils/data_dict_to_numpy.py",
+          "sha256": "a5fc7c03fe1b10bb0b7a63c4baa85dc129f952972ca4e5f08572239db38fcf05"
+        },
+        "limen.utils.filter_lines_by_quantile": {
+          "path": "limen/utils/filter_lines_by_quantile.py",
+          "sha256": "d6e64784becb126e5909965ad84b66ca3420139c1a9d1834c0697c849d882ef4"
+        },
+        "limen.utils.find_price_lines": {
+          "path": "limen/utils/find_price_lines.py",
+          "sha256": "df3e2302a7835112316c287f88ae7d43d6d92f1aa597c844e39c2c6c1f745b5a"
+        },
+        "limen.utils.param_space": {
+          "path": "limen/utils/param_space.py",
+          "sha256": "7363c28434e8dcd494816e5a7ce1318172b54fe5d29b5d87eb77aff8a3b73717"
+        },
+        "limen.utils.reporting": {
+          "path": "limen/utils/reporting.py",
+          "sha256": "7d13fe9f620a49ab5f42ea1fe09944e363c87ae173ddc661f1311102eec25b49"
+        },
+        "limen._optional": {
+          "path": "limen/_optional.py",
+          "sha256": "c0aff714218a246545dac37b8de7155531b3d6dcc02bf604addacfc6aed9bf21"
+        },
+        "limen.backtest.funding_presets": {
+          "path": "limen/backtest/funding_presets.py",
+          "sha256": "ace67a5d1450ad8d1da0f54a5cf0437a2f5f849cb5d6dae226b8d0f9a05c06c5"
+        },
+        "limen.calibration": {
+          "path": "limen/calibration/__init__.py",
+          "sha256": "dc6ed39b6ef60ef78cf7ebe4810f73f1f3bfe6ea88b62b70d04d3daf9e6125f7"
+        },
+        "limen.calibration._objective_threshold": {
+          "path": "limen/calibration/_objective_threshold.py",
+          "sha256": "62e452708c0032bf433f1f03b15b2f146ffaf56dede6dca2504720794265c89f"
+        },
+        "limen.calibration.pipeline": {
+          "path": "limen/calibration/pipeline.py",
+          "sha256": "6024d0cd543869b26f8eb0a4bfa8b494324f59fd33d7e983bf40f147092bb2e2"
+        },
+        "limen.calibration.probability": {
+          "path": "limen/calibration/probability.py",
+          "sha256": "52defebd193f1926f8c66edfe1d534f85a78eb5c45f91ad0704a46cda4c4e6d3"
+        },
+        "limen.calibration.threshold": {
+          "path": "limen/calibration/threshold.py",
+          "sha256": "849a78a3b8efb3433ebf3bb5042fe292c8f9d7e4315b689127ba4d47b5470903"
+        },
+        "limen.data": {
+          "path": "limen/data/__init__.py",
+          "sha256": "abf5853ea206ed713613fe5abdf74afef20d1318b8558b1310ee5b65abf712f1"
+        },
+        "limen.data._internal": {
+          "namespace_paths": [
+            "limen/data/_internal"
+          ]
+        },
+        "limen.data._internal.binance_file_to_polars": {
+          "path": "limen/data/_internal/binance_file_to_polars.py",
+          "sha256": "162c246e7a6499fd60d896c243b604fc70f168010be9ed3fb1270abab89dc5bf"
+        },
+        "limen.data.bars": {
+          "path": "limen/data/bars/__init__.py",
+          "sha256": "354a63f7d9e08143b8dfa0148b1e45c82cf19b850c63c447479e990d1139fd32"
+        },
+        "limen.data.bars.standard_bars": {
+          "path": "limen/data/bars/standard_bars.py",
+          "sha256": "2cafc5911b04fd03f9bd73eccba3ae81b25c89fc42f2d9947dcff212a5ef88dc"
+        },
+        "limen.data.historical_data": {
+          "path": "limen/data/historical_data.py",
+          "sha256": "965f47aa7777508afe28bc77d67f5013770411fdb5a2183af7b3988736dc3ea0"
+        },
+        "limen.data.utils": {
+          "path": "limen/data/utils/__init__.py",
+          "sha256": "3b541f9c34985bf1da8924cfe9f968290092632918ed52e1c7141b3723ac2587"
+        },
+        "limen.data.utils.compute_data_bars": {
+          "path": "limen/data/utils/compute_data_bars.py",
+          "sha256": "331e6edb2f6522bb62699cb08e4c5b6b8319be2c3af8c89feb4def500a1c83f3"
+        },
+        "limen.data.utils.random_slice": {
+          "path": "limen/data/utils/random_slice.py",
+          "sha256": "83199c75af701b3e4b889e91453513688c8e407166e41c2209093676d2573eee"
+        },
+        "limen.data.utils.split_walk_forward": {
+          "path": "limen/data/utils/split_walk_forward.py",
+          "sha256": "18deea84643c1e81887c709df09328c4584f36c57779d38e0ea200e48c74dd2c"
+        },
+        "limen.data.utils.splits": {
+          "path": "limen/data/utils/splits.py",
+          "sha256": "1a2a8119091deca861238c20e68c4d6f20133f297eff2e5b573c1334f42296db"
+        },
+        "limen.experiment": {
+          "path": "limen/experiment/__init__.py",
+          "sha256": "1066c05d491d3bacc321b15c32ab75628a55e0365490e16cc5f9ca9e193970e0"
+        },
+        "limen.experiment._backtest_provenance": {
+          "path": "limen/experiment/_backtest_provenance.py",
+          "sha256": "9c9f3c6965eb0046e668d6c7eefe17868dd2c98c4ddb019254764b46080fbc3b"
+        },
+        "limen.experiment._column_shims": {
+          "path": "limen/experiment/_column_shims.py",
+          "sha256": "94e54e26d729ad8c52db352e517da53be4a4e494b638bc580a7ffe1a92cc9cfc"
+        },
+        "limen.experiment._fixed_trade_sources": {
+          "path": "limen/experiment/_fixed_trade_sources.py",
+          "sha256": "45fc5add853c9e3643200102a727e89f58cfa77c928e838592539603fdb3613d"
+        },
+        "limen.experiment._grid_resume": {
+          "path": "limen/experiment/_grid_resume.py",
+          "sha256": "27ed16c08faf2cb77920e7674f34ad0e3e68db0e52e370888a767427a00d97ad"
+        },
+        "limen.experiment._objective": {
+          "path": "limen/experiment/_objective.py",
+          "sha256": "f8d93367e0a3f34d92fe09b098cde1678bba70c47ba2091e83128f86b742303d"
+        },
+        "limen.experiment._objective_run": {
+          "path": "limen/experiment/_objective_run.py",
+          "sha256": "fef3d7e4004cef712c9ab7d43172b93921ca9cb859b2492c141000f583fab75a"
+        },
+        "limen.experiment._parallel_commit": {
+          "path": "limen/experiment/_parallel_commit.py",
+          "sha256": "437e84ff377219e12b67eed11be35c77067684eca4314c41bd20d61c1d5079c6"
+        },
+        "limen.experiment._parallel_resume": {
+          "path": "limen/experiment/_parallel_resume.py",
+          "sha256": "db7ce494423877b21025ae2769cd1f46e1aecdeaf997546ffd7bfc0d57f31a2d"
+        },
+        "limen.experiment._parallel_rounds": {
+          "path": "limen/experiment/_parallel_rounds.py",
+          "sha256": "e2bafce8acf945f95f0d41487e46d85c7bc35081462523d295f06bd85ca36692"
+        },
+        "limen.experiment._parallel_worker": {
+          "path": "limen/experiment/_parallel_worker.py",
+          "sha256": "3c8d40d9b71db94401539be82dd8ee115bf822e8539913295e9865c1cd5495f7"
+        },
+        "limen.experiment._prepare_backtest_data": {
+          "path": "limen/experiment/_prepare_backtest_data.py",
+          "sha256": "8c6800f2049ded544cede268a66cd2f2023d75b9f0bca50a2e5d8b46b427ad81"
+        },
+        "limen.experiment._prepare_trade_context": {
+          "path": "limen/experiment/_prepare_trade_context.py",
+          "sha256": "49b8c84bd5b65f90229b5fc1b78ede5ad2ff2275957dcf7817151cd8cc47864a"
+        },
+        "limen.experiment._recording": {
+          "path": "limen/experiment/_recording.py",
+          "sha256": "ad08b967f88810613db7f42b1afb566e4bfa3e25a948e71c234b3e281bd26b33"
+        },
+        "limen.experiment._resolve_backtest_config": {
+          "path": "limen/experiment/_resolve_backtest_config.py",
+          "sha256": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f"
+        },
+        "limen.experiment._resolve_trade_policy": {
+          "path": "limen/experiment/_resolve_trade_policy.py",
+          "sha256": "be3a6085d3d0fa237d264ac4b73b71fe6527daf1d1720c73091c9feacad5d961"
+        },
+        "limen.experiment._round_signals": {
+          "path": "limen/experiment/_round_signals.py",
+          "sha256": "3988c110f814d1a4389f18d75475767621173648c35b43b7a6eaf8a7d3363b2c"
+        },
+        "limen.experiment._round_storage": {
+          "path": "limen/experiment/_round_storage.py",
+          "sha256": "03a79bb6ae3b45eeb5a60ffc20fba3c7d36c2b6a9101e28a38280e0ae0c42688"
+        },
+        "limen.experiment._shim_fractional_diff": {
+          "path": "limen/experiment/_shim_fractional_diff.py",
+          "sha256": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac"
+        },
+        "limen.experiment._walk_forward_run": {
+          "path": "limen/experiment/_walk_forward_run.py",
+          "sha256": "d01ced6d3cf2329e4b17b34860e3d0841ba1684fb0ecf5e9edc4c39d969aced3"
+        },
+        "limen.experiment._walk_forward_split": {
+          "path": "limen/experiment/_walk_forward_split.py",
+          "sha256": "485a9605a9ea280d9d2224af0460824f93bfd16e519cfa199a60fb89a4925a15"
+        },
+        "limen.experiment.acceptance_report": {
+          "path": "limen/experiment/acceptance_report.py",
+          "sha256": "2d50ac9adaca846fc66ad1cf04f8d172815420938151491d9c1a46153df6e05f"
+        },
+        "limen.experiment.checkpoint_manager": {
+          "path": "limen/experiment/checkpoint_manager.py",
+          "sha256": "308f553fe52badecd691e5981f2d66a9ce43e795a6a5f4bea7134bca6a6b1939"
+        },
+        "limen.experiment.convergence_report": {
+          "path": "limen/experiment/convergence_report.py",
+          "sha256": "63a3cda8861a939ebfa5a6f1aaecd2abd9e3bab4663acace92542414e2d0e0b3"
+        },
+        "limen.experiment.errors": {
+          "path": "limen/experiment/errors.py",
+          "sha256": "dbf7edfb45abd2156a255588e04454b3ed285defa741ed15f6cd3c2a6f54e5f5"
+        },
+        "limen.experiment.experiment_core": {
+          "path": "limen/experiment/experiment_core.py",
+          "sha256": "b6175ec72765536895b46007217cb10e57e1c40742367577764d19d4c80bd48e"
+        },
+        "limen.experiment.feedback_controller": {
+          "path": "limen/experiment/feedback_controller.py",
+          "sha256": "1c7301cb8e295e40a9d81d1ef8f81640986acb299f501a542472fbbb480eb2a5"
+        },
+        "limen.experiment.manifest_core": {
+          "path": "limen/experiment/manifest_core.py",
+          "sha256": "e414f8a252dc2242e4a54e8edd68783795d5722dab3d0eca32b012dd2b11630d"
+        },
+        "limen.experiment.msq": {
+          "path": "limen/experiment/msq.py",
+          "sha256": "00de2dfe50addf196d59bd73a9b7d9e507c9c698d0648663e9ec03c9d4bf4c05"
+        },
+        "limen.experiment.param_domain": {
+          "path": "limen/experiment/param_domain.py",
+          "sha256": "f0c5fb40f8e47f92a9cd00fae30c3daa8e440290ccad16d65789c3ebc0667cba"
+        },
+        "limen.experiment.param_search": {
+          "path": "limen/experiment/param_search/__init__.py",
+          "sha256": "0428f114569749bd7564043cc36b781576cb0699092ed09504846c5975963a0a"
+        },
+        "limen.experiment.param_search._grid_permutation": {
+          "path": "limen/experiment/param_search/_grid_permutation.py",
+          "sha256": "58f6841d4e201d17c034d6d583906587e5097906ad5a260de825b5eab0d7d79a"
+        },
+        "limen.experiment.param_search.grid_strategy": {
+          "path": "limen/experiment/param_search/grid_strategy.py",
+          "sha256": "cbf9555aec65fae891a862f5a0ca69d1d953ed2c378181974890b9b22aab0671"
+        },
+        "limen.experiment.param_search.random_strategy": {
+          "path": "limen/experiment/param_search/random_strategy.py",
+          "sha256": "6dd7aa26330c8914dc97c53287cd14b2352cc94195072c0c5f743030fc3e8ed8"
+        },
+        "limen.experiment.param_search.registry": {
+          "path": "limen/experiment/param_search/registry.py",
+          "sha256": "b4e0839d83324713737a1f7ed058b2b639fe693f37616387efb44354ce49b073"
+        },
+        "limen.experiment.param_search.search_strategy": {
+          "path": "limen/experiment/param_search/search_strategy.py",
+          "sha256": "341ad7db28bda8eb7a07c87b78ae6813e38e968915bf69c89cbfc9665aef6ee3"
+        },
+        "limen.experiment.param_search.sobol_strategy": {
+          "path": "limen/experiment/param_search/sobol_strategy.py",
+          "sha256": "0d013ba7549062d534a49f940a794352357e8aea5f68dd2bada8c815745b1230"
+        },
+        "limen.experiment.reducer": {
+          "path": "limen/experiment/reducer/__init__.py",
+          "sha256": "fe13c13da5a287838fc039837cc8db77f797bf7dddeeb4e480f55713f6396a3c"
+        },
+        "limen.experiment.reducer.budget_reducer": {
+          "path": "limen/experiment/reducer/budget_reducer.py",
+          "sha256": "24b197924de1ddcd51d9a2ba8748f0b2857a2a9639b5e32c99d23b1979341d8d"
+        },
+        "limen.experiment.reducer.correlation_reducer": {
+          "path": "limen/experiment/reducer/correlation_reducer.py",
+          "sha256": "ab984a80efac06dc52acf12c6ffc107456ed174d1e27639b7922afd6cfb76cab"
+        },
+        "limen.experiment.reducer.filter_types": {
+          "path": "limen/experiment/reducer/filter_types.py",
+          "sha256": "b018c3128b2e06d1a32597a3e496aaf2aba7be500bb2901ab3e49d206dea77c1"
+        },
+        "limen.experiment.reducer.focus_reducer": {
+          "path": "limen/experiment/reducer/focus_reducer.py",
+          "sha256": "ab75187ef076fb1b07d5ae1479bb0d214ce7a6a3a5896d37e2f6b56ad47b9a60"
+        },
+        "limen.experiment.reducer.pruning_strategy": {
+          "path": "limen/experiment/reducer/pruning_strategy.py",
+          "sha256": "95d65763141cf38706bea94b6a48b99e966e5d5dc73978262a79e22ef95c9fd7"
+        },
+        "limen.experiment.reducer.registry": {
+          "path": "limen/experiment/reducer/registry.py",
+          "sha256": "56590ddcb2151c9adfeee200201a7678763226d4aea8a03e4185d9cd15949c28"
+        },
+        "limen.experiment.reducer.sanity_reducer": {
+          "path": "limen/experiment/reducer/sanity_reducer.py",
+          "sha256": "ab43f65eb67745a3002d9937d74691e4e38ec9e9c638dae57e59b30a8ea96375"
+        },
+        "limen.experiment.reducer.saturation_reducer": {
+          "path": "limen/experiment/reducer/saturation_reducer.py",
+          "sha256": "a75527b2145cdf58f79d619f433c9910eb5800653f51c8dac65f63c1e2bde677"
+        },
+        "limen.log": {
+          "path": "limen/log/__init__.py",
+          "sha256": "fcec345fe6019e2712c9dc88b63943616aae92632a9cd4b130f0f604cd482eba"
+        },
+        "limen.log._experiment_backtest_results": {
+          "path": "limen/log/_experiment_backtest_results.py",
+          "sha256": "4745cada1d0afe13386c6b200be9866ce0937f214d56c7dcedc59b0a48bc2fa4"
+        },
+        "limen.log._experiment_confusion_metrics": {
+          "path": "limen/log/_experiment_confusion_metrics.py",
+          "sha256": "6a38b3c44ec9d301d91799efcc22b72e6a29e886af18712f70fff5a0b31d6910"
+        },
+        "limen.log._experiment_parameter_correlation": {
+          "path": "limen/log/_experiment_parameter_correlation.py",
+          "sha256": "1aa615e5376a2fb0e7fd2c36a59a339ee3c179a7c513b4f5c0271aec0479e98c"
+        },
+        "limen.log._experiment_parameter_importance": {
+          "path": "limen/log/_experiment_parameter_importance.py",
+          "sha256": "7c0b0607d8d59aef225bc573823803ae4027cc9d284480d21ebaab219e7627ba"
+        },
+        "limen.log._permutation_confusion_metrics": {
+          "path": "limen/log/_permutation_confusion_metrics.py",
+          "sha256": "725c7372d390e5dcdcbf233b9f4191d031b1fbe5f4936ce11d7fc1d609e82630"
+        },
+        "limen.log._permutation_prediction_performance": {
+          "path": "limen/log/_permutation_prediction_performance.py",
+          "sha256": "9c3ae66d6d12fdf5d8f5bbdc3f1e70e2a70cd7afe8614928b98f39210e3fe0ec"
+        },
+        "limen.log._permutation_returns": {
+          "path": "limen/log/_permutation_returns.py",
+          "sha256": "fdb14b7ba25aebcd74e96f7be48ae9506495bb2acb8ffe4d306380eeaa097480"
+        },
+        "limen.log._read_from_file": {
+          "path": "limen/log/_read_from_file.py",
+          "sha256": "6b31da0e4e0bbba67147763601dee255c1cf99feaea0947b2e5e702dae1f8716"
+        },
+        "limen.log.log": {
+          "path": "limen/log/log.py",
+          "sha256": "3414bda87e0dbb218cc442e30d24ffe1f9329f0d51c277d080dab9fe1ee99277"
+        },
+        "limen.scalers": {
+          "path": "limen/scalers/__init__.py",
+          "sha256": "29fb7e39ed50d41845765685ed24d6ada931a85a1fbce38365f54ab0d313cb39"
+        },
+        "limen.scalers.causal_rolling_robust_scaler": {
+          "path": "limen/scalers/causal_rolling_robust_scaler.py",
+          "sha256": "25979ca885248b246022655c40f985c38811b556dfbe49b12fb8ada4fc4cd6dc"
+        },
+        "limen.scalers.linear_scaler": {
+          "path": "limen/scalers/linear_scaler.py",
+          "sha256": "e954e3c4adfc35bf2af4c1ae33b6d1618ff3f166f3233361441f69d70ba913f3"
+        },
+        "limen.scalers.logreg_scaler": {
+          "path": "limen/scalers/logreg_scaler.py",
+          "sha256": "02380ab75b2b114c0c47a3d28cc20f8bdd99365bc178ef00c97150190d226eff"
+        },
+        "limen.scalers.rank_gauss_scaler": {
+          "path": "limen/scalers/rank_gauss_scaler.py",
+          "sha256": "8d8c4a2e9e7ef4037100a90c39646278cbe76af86acc19c4613b71fb45007cf6"
+        },
+        "limen.scalers.registry": {
+          "path": "limen/scalers/registry.py",
+          "sha256": "a45ba915c2b092d5e9765865cd566e635047a761939c223a5736154385684da7"
+        },
+        "limen.scalers.robust_scaler": {
+          "path": "limen/scalers/robust_scaler.py",
+          "sha256": "80e0c94e1973982b37fe783d96997ee26cc2d30bdf9a0778d56831065fcca1ab"
+        },
+        "limen.sfd": {
+          "path": "limen/sfd/__init__.py",
+          "sha256": "589b805b16a2104e7409654b9d00d5775fa3d56bf78b4cb058a29e991a3a342a"
+        },
+        "limen.sfd.reference_architecture": {
+          "path": "limen/sfd/reference_architecture/__init__.py",
+          "sha256": "4df4dc9a4d963640d55661ab0843f42bcedba113e992456750c3e2368b952b43"
+        },
+        "limen.sfd.reference_architecture._backtest_evaluation": {
+          "path": "limen/sfd/reference_architecture/_backtest_evaluation.py",
+          "sha256": "1fdcbecc7d9baf8f1340a03c228f797d85a8f246bf631b59c78f1072167c2073"
+        },
+        "limen.sfd.reference_architecture.base": {
+          "path": "limen/sfd/reference_architecture/base.py",
+          "sha256": "a233996110cbe7faa56b3557d3afb39fa2079e098648c5abbf8181b3e8c8d91e"
+        },
+        "limen.sfd.reference_architecture.direction_sizing": {
+          "path": "limen/sfd/reference_architecture/direction_sizing.py",
+          "sha256": "97dd72c5f687e3ea232d32b8e8498561196562dcd68236a07bbfd607ddf07e1b"
+        },
+        "limen.sfd.reference_architecture.dlinear_regressor": {
+          "path": "limen/sfd/reference_architecture/dlinear_regressor.py",
+          "sha256": "0789d91b908015fc2b267875b3c252c026a9a52afb4652de0b43713c0db5bc04"
+        },
+        "limen.sfd.reference_architecture.lightgbm_binary": {
+          "path": "limen/sfd/reference_architecture/lightgbm_binary.py",
+          "sha256": "9f0642220f0b9a9794b0bac86247ce5cced1916793b391fb017b415defb9b0b0"
+        },
+        "limen.sfd.reference_architecture.logreg_binary": {
+          "path": "limen/sfd/reference_architecture/logreg_binary.py",
+          "sha256": "8af7715887d12a4a69f66f0b2a1e2c62de648a11d0b1c6effa0c8bfd86ab4e9d"
+        },
+        "limen.sfd.reference_architecture.random_binary": {
+          "path": "limen/sfd/reference_architecture/random_binary.py",
+          "sha256": "bd7f01ce60ffcad57bb7533c6905c9ed50c0c03543c55b85e277824c3ca3f83d"
+        },
+        "limen.sfd.reference_architecture.ridge_regressor": {
+          "path": "limen/sfd/reference_architecture/ridge_regressor.py",
+          "sha256": "6daa7418b1e99a595701f0a5ead7165df2ef42630a4946135b6c9e446a7d2fef"
+        },
+        "limen.sfd.reference_architecture.rule_based": {
+          "path": "limen/sfd/reference_architecture/rule_based.py",
+          "sha256": "10674f4bf93c65fc4467c19416457ecc2cc9633e9127eb6e2334da1a6fdb6d61"
+        },
+        "limen.sfd.reference_architecture.tabpfn_binary": {
+          "path": "limen/sfd/reference_architecture/tabpfn_binary.py",
+          "sha256": "5cce5c6adb5a580607c8bf860e128488294f3877208d59c2e04f6aaef8b75a56"
+        },
+        "limen.sfd.reference_architecture.xgboost_regressor": {
+          "path": "limen/sfd/reference_architecture/xgboost_regressor.py",
+          "sha256": "515feedfd8aad76fed36cfda450d9af3fdda27d61944dd136deb26f619039c84"
+        },
+        "limen.sfd.rule_based": {
+          "path": "limen/sfd/rule_based/__init__.py",
+          "sha256": "56c8df23490f1693ea1e4f8ad3f31b3e0a7aa236ae5381c31220961ffc1b4f4c"
+        },
+        "limen.sfd.rule_based._temporal": {
+          "path": "limen/sfd/rule_based/_temporal.py",
+          "sha256": "f4365e19d6f225c81d3831f3e40940befd5b517ba5560f638d9e08798265190c"
+        },
+        "limen.sfd.rule_based.config": {
+          "path": "limen/sfd/rule_based/config.py",
+          "sha256": "5879b4e1c0e968a69ad1e1d838099b6289ea32841981dcce354289fbd1cd180b"
+        },
+        "limen.sfd.rule_based.predicates": {
+          "path": "limen/sfd/rule_based/predicates.py",
+          "sha256": "6b0a6825d9d9bb3f858830cec5df8e4415527ad8e8a946c68053bafc5b47ea16"
+        },
+        "limen.targets": {
+          "path": "limen/targets/__init__.py",
+          "sha256": "4d522a02221594a9ae169e571cd54c54cb9eba03451c1eac9b8973be2f0d55d5"
+        },
+        "limen.targets.ema_breakout": {
+          "path": "limen/targets/ema_breakout.py",
+          "sha256": "77fa6ea0f4b9761cb1099b70129d1ff9e433de3073765d1e53ecf2d0ffb5dce4"
+        },
+        "limen.targets.exit_quality": {
+          "path": "limen/targets/exit_quality.py",
+          "sha256": "e4c1f0a58b23b47d1fb18a267f7950ec952986c5dc53f9ab3a8a1b21a090d7d1"
+        },
+        "limen.targets.forward_breakout": {
+          "path": "limen/targets/forward_breakout.py",
+          "sha256": "b090a010e3e388bf3f0caabf50bcac5c468c682af23565b9edbf9de340ea8c07"
+        },
+        "limen.targets.forward_vol_normalized_return": {
+          "path": "limen/targets/forward_vol_normalized_return.py",
+          "sha256": "14aa3e700e350020abe591df49497f15b2edd565740011bab9247d83a0ed9b07"
+        },
+        "limen.targets.identity": {
+          "path": "limen/targets/identity.py",
+          "sha256": "42c3a9ae1aed5e664fd25d23dcfb108e7eb7a092db6bc28b4bb6c50cf3ff50fc"
+        },
+        "limen.targets.next_bar_down": {
+          "path": "limen/targets/next_bar_down.py",
+          "sha256": "deea34a088a8655f41823618f84e99fd51f49a37ffd58992993e587c28cb3860"
+        },
+        "limen.targets.next_bar_up": {
+          "path": "limen/targets/next_bar_up.py",
+          "sha256": "9cd85091ef7b291a41e6c2197053bf625b0ce24161743bbb0efa8f7c1ce27108"
+        },
+        "limen.targets.next_return": {
+          "path": "limen/targets/next_return.py",
+          "sha256": "dc396c813df1382f5fe3b8d5d1a1372308b475d7663b9e9291c1755f31c26d46"
+        },
+        "limen.targets.quantile_binary": {
+          "path": "limen/targets/quantile_binary.py",
+          "sha256": "9453b62d5a3997fca940bd61714731edcbf45db7b339d17fe3587dded2f0bfce"
+        },
+        "limen.targets.random_binary": {
+          "path": "limen/targets/random_binary.py",
+          "sha256": "918b649f54e9e9a1d37296ac23b6e05a3c7b3dd540c3250354df89c2d76b39da"
+        },
+        "limen.targets.risk_reward_ratio": {
+          "path": "limen/targets/risk_reward_ratio.py",
+          "sha256": "f089d4e8aec22fe8da2b12267c17597e97efadf3f4e2849d73b2e2e24ed4b01f"
+        },
+        "limen.targets.threshold_binary": {
+          "path": "limen/targets/threshold_binary.py",
+          "sha256": "0ec67e7c3358f1a2b4daebcc807693b6c9b7acd951f972f8b9343a46f38eb840"
+        },
+        "limen.targets.trade_outcome": {
+          "path": "limen/targets/trade_outcome.py",
+          "sha256": "7038ca84301160beb2da00578c24ba2dce651ed360c956e70aa588c4a269d0e3"
+        },
+        "limen.targets.tradeline_long_binary": {
+          "path": "limen/targets/tradeline_long_binary.py",
+          "sha256": "825ea7fa31756f4b9d20d7dd12a04923ad2e5f7bbce920cb29a728c9bb4b64e1"
+        },
+        "limen.targets.triple_barrier": {
+          "path": "limen/targets/triple_barrier.py",
+          "sha256": "91457e862737ef52f622fa07cac30cc0b160dc0dc17c9d41b98387023029b2b4"
+        },
+        "limen.targets.vol_normalized_return": {
+          "path": "limen/targets/vol_normalized_return.py",
+          "sha256": "0d19ef9f38267ff5117b53a0a3e47f0357ab4be700ec56526c7827ae9d28e7fb"
+        },
+        "limen.yaml": {
+          "path": "limen/yaml/__init__.py",
+          "sha256": "208a1c6aee05b45b0fb7bfbc5ed8e0ec543553244474ccb19fe4596599c3b41f"
+        },
+        "limen.yaml._backtest_spec": {
+          "path": "limen/yaml/_backtest_spec.py",
+          "sha256": "0808855ff8f2487fcdbece447e72aef25615c0a5e6c21f226fcc9756f8b32edb"
+        },
+        "limen.yaml._feature_shim_spec": {
+          "path": "limen/yaml/_feature_shim_spec.py",
+          "sha256": "bed2f7cf08d3f4587ce836b548d8c73540d3801699432519a57ee507ff8f2d07"
+        },
+        "limen.yaml._objective_spec": {
+          "path": "limen/yaml/_objective_spec.py",
+          "sha256": "8333f00b8e9e731d6fb0124df478b74ef0d02b19a3be04c1fd8e0c3f7ca8a982"
+        },
+        "limen.yaml._recording_spec": {
+          "path": "limen/yaml/_recording_spec.py",
+          "sha256": "2bce42e979d2ae59f633f418b60c526d09609269243a4c1493d6c8b2be954ad3"
+        },
+        "limen.yaml._temporal_spec": {
+          "path": "limen/yaml/_temporal_spec.py",
+          "sha256": "25a2be761c47bca3a7f79e4dbd9d557c94b60e2fc64605a91e0805327db83cc5"
+        },
+        "limen.yaml.compiler": {
+          "path": "limen/yaml/compiler.py",
+          "sha256": "647f844a4eb3778334cc019ca448e0f2d3abfebe5d4cb47d44976daefb60f944"
+        },
+        "limen.yaml.config": {
+          "path": "limen/yaml/config.py",
+          "sha256": "55c80a4704450766c1015602b1d97e83298f8907dfaef092938717cf7e0fb4f3"
+        },
+        "limen.yaml.errors": {
+          "path": "limen/yaml/errors.py",
+          "sha256": "1ecbce89379078cf9abbb42075fcf2a2f06fb2238e5b8d6f9fab45bf3155fbea"
+        },
+        "limen.yaml.parser": {
+          "path": "limen/yaml/parser.py",
+          "sha256": "654c8bb0007c0ad7f8c90d43ce17f0ee208df5adfab8841f27f96c7e69f3907c"
+        },
+        "limen.yaml.profiler": {
+          "path": "limen/yaml/profiler.py",
+          "sha256": "daa7a0d386346b126defda3d8c47de6a1f96487e5e78bb4547e395fe20c7de69"
+        },
+        "limen.yaml.resolver": {
+          "path": "limen/yaml/resolver.py",
+          "sha256": "73f405a2b29992d19dec2cd582d282a68d87d7391a30e2ba10c59900de1c3974"
+        },
+        "limen.yaml.rules": {
+          "path": "limen/yaml/rules.py",
+          "sha256": "4cdb2d474d31cae62c4cca8a76367a2948e1ff4ae6c83f52c9dfa3133d0c7ee1"
+        },
+        "limen.yaml.schema": {
+          "path": "limen/yaml/schema.py",
+          "sha256": "ae85817be0a5a5eff0f22df4dd024794898b7827ff2e12a3e1dbecbeb72dec61"
+        },
+        "limen.yaml.store": {
+          "path": "limen/yaml/store.py",
+          "sha256": "04e73c16a55fa50866ce88327022fc35cfc4e74ba50f252b35c65e58ed3f90e2"
+        },
+        "limen.yaml.validator": {
+          "path": "limen/yaml/validator.py",
+          "sha256": "63cb82bba07dca7fa9372037e982e3dc448410594929acbda7ef96bd046c082d"
+        }
+      },
+      "optimized": {
+        "limen": {
+          "path": "limen/__init__.py",
+          "sha256": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74"
+        },
+        "limen.backtest": {
+          "path": "limen/backtest/__init__.py",
+          "sha256": "23f7cd1ee46b34e14ea35b5f415ef9e2c8d151bb62fdccdb162697e99cb532d4"
+        },
+        "limen.backtest._event_clock": {
+          "path": "limen/backtest/_event_clock.py",
+          "sha256": "4d0505b0b531763c930963b90a597eeae0226994a3c4d78f9acab5e653ce51fb"
+        },
+        "limen.backtest._event_plan": {
+          "path": "limen/backtest/_event_plan.py",
+          "sha256": "dc79d4c325b13c49ec1263e18a798bf65784cf76991f87389af0da776665b8bd"
+        },
+        "limen.backtest._long_flat_tp_sl": {
+          "path": "limen/backtest/_long_flat_tp_sl.py",
+          "sha256": "b2802f3940a11694c830f8320ccd3f56fff3f4aa1acfcbcab42d09c4612abee3"
+        },
+        "limen.backtest._snapshot_execution": {
+          "path": "limen/backtest/_snapshot_execution.py",
+          "sha256": "0d64bfac719d5e47caefd0e9c6ff8892bc665f108faf0a889c7e6a9f57209737"
+        },
+        "limen.backtest._snapshot_ledger": {
+          "path": "limen/backtest/_snapshot_ledger.py",
+          "sha256": "11746e677bf32309311a00aaab656f2d4339619c16e4614e9ef8d3758701ffed"
+        },
+        "limen.backtest.backtest_snapshot": {
+          "path": "limen/backtest/backtest_snapshot.py",
+          "sha256": "f2ffaf2b8ce78c109fa93d34dbb4c367f8095067561dde15f4cb76c13c91815c"
+        },
+        "limen.backtest.execution_events": {
+          "path": "limen/backtest/execution_events.py",
+          "sha256": "c9c1cde8b1a560ded65c725554f7d0e2661ab1361f2e85a235f98b7434b57b78"
+        },
+        "limen.backtest.funding_adapter": {
+          "path": "limen/backtest/funding_adapter.py",
+          "sha256": "db98751d05827fb2d1575ac0f659987564a7a1bec11e4bd601d0aebd5a1d9581"
+        },
+        "limen.backtest.long_flat_strategy": {
+          "path": "limen/backtest/long_flat_strategy.py",
+          "sha256": "4d0fdbbe0672179c1cc93582042b8682a24aa1ca1b720a00ba9c56d802b0e893"
+        },
+        "limen.backtest.trade_contract": {
+          "path": "limen/backtest/trade_contract.py",
+          "sha256": "b5cb356348eeef97b0bf338d3064aafcfea52fb3489a84a2347ed17bab1e8fbc"
+        },
+        "limen.backtest.trade_execution": {
+          "path": "limen/backtest/trade_execution.py",
+          "sha256": "10107cb6f2bb75cc5c88e6e33a6164d080402770bd8e2391c6f3a0ca87f025ca"
+        },
+        "limen.features": {
+          "path": "limen/features/__init__.py",
+          "sha256": "37a8863988d201fe869a8f07074ed689c19649f9bac82c634991497376590513"
+        },
+        "limen.features.absorption_intensity": {
+          "path": "limen/features/absorption_intensity.py",
+          "sha256": "d259943079840620a743f0bafc422b4080d9b875f7d26cc0fb96706731000e85"
+        },
+        "limen.features.active_lines": {
+          "path": "limen/features/active_lines.py",
+          "sha256": "eb5165c93fc1bae9bec41084bdcf8211bffd1de523f4ed8a996be805efc7501b"
+        },
+        "limen.features.active_quantile_count": {
+          "path": "limen/features/active_quantile_count.py",
+          "sha256": "01c8fbac89853bfec7978e1f8c83d0d0bf2fa9fbab4bd70d15ff55b5e3a274a4"
+        },
+        "limen.features.amihud_illiquidity": {
+          "path": "limen/features/amihud_illiquidity.py",
+          "sha256": "de32b11c2c622a98559a6774f87e907d47248df7cb6da1c557a02856d1bb33b8"
+        },
+        "limen.features.atr_percent_sma": {
+          "path": "limen/features/atr_percent_sma.py",
+          "sha256": "adedc2799f38d806d76dc4be8eb93bb686561770fd21e891812aab8c2b513020"
+        },
+        "limen.features.atr_sma": {
+          "path": "limen/features/atr_sma.py",
+          "sha256": "9f1eddbb7dead90465ddc1651c9922e4f8e1d33963ab11d8709287dabe4b09c6"
+        },
+        "limen.features.body_to_range": {
+          "path": "limen/features/body_to_range.py",
+          "sha256": "8b4ec0fe8d1179ed48fa275ed0f2f7b174da5ecd7f3af595ccf748acfe5bd507"
+        },
+        "limen.features.breakout_features": {
+          "path": "limen/features/breakout_features.py",
+          "sha256": "8a2b2005236934be0c2a869d9824b77243f14320e7891440f484015e77e5a07b"
+        },
+        "limen.features.breakout_percentile_regime": {
+          "path": "limen/features/breakout_percentile_regime.py",
+          "sha256": "ba665cb89d63f26e6b07db482b7a283e54ae93fe816e0988b11dd77e7131a782"
+        },
+        "limen.features.bulk_volume_classification": {
+          "path": "limen/features/bulk_volume_classification.py",
+          "sha256": "1106ff7824d64dc88edef31aa435f7a35048ce51e8f9e0550949578fdd285539"
+        },
+        "limen.features.calendar_time_features": {
+          "path": "limen/features/calendar_time_features.py",
+          "sha256": "dc6d691e478a5c96186f2e81b79246c148cc81867285e85930d532cc44e55646"
+        },
+        "limen.features.close_ma_distance_atr": {
+          "path": "limen/features/close_ma_distance_atr.py",
+          "sha256": "e5ca2e5050a0828c98d06941da49ab74e3e3262b0d68b3888496cc887bf2baab"
+        },
+        "limen.features.close_position": {
+          "path": "limen/features/close_position.py",
+          "sha256": "5af281756311dcae1f987fc5fcab707447c813e4030cbeffa15d2e489c80d3c8"
+        },
+        "limen.features.close_position_rolling": {
+          "path": "limen/features/close_position_rolling.py",
+          "sha256": "0cf8fbf2ea082d06e69276da4ca37113654fd321b3fb59c7d465ee66530ff1fb"
+        },
+        "limen.features.close_to_extremes": {
+          "path": "limen/features/close_to_extremes.py",
+          "sha256": "84abcd07c9f789476e4903e60802cf54b3fc0c14955f5c104cc962f1f7a15da4"
+        },
+        "limen.features.conserved_flux_renormalization": {
+          "path": "limen/features/conserved_flux_renormalization.py",
+          "sha256": "7bf8774cfc2d41c9865857bf7ca395b7572acd0395e777d298490473836ee287"
+        },
+        "limen.features.cusum_filter": {
+          "path": "limen/features/cusum_filter.py",
+          "sha256": "ff7f8d9367817abe8362349d4e65b2b93599bb82379f85cd2acbb4f2fd922363"
+        },
+        "limen.features.cyclical_time_features": {
+          "path": "limen/features/cyclical_time_features.py",
+          "sha256": "d2ce917eace74d8eb9da9c379f00ee5b30d82996f1e4a214bdad0bdfaa40e0b8"
+        },
+        "limen.features.distance_from_high": {
+          "path": "limen/features/distance_from_high.py",
+          "sha256": "dc5c869fa576d3764627d95590d5dda0ea85aa88b763603ab39a8ed6918f08e8"
+        },
+        "limen.features.distance_from_low": {
+          "path": "limen/features/distance_from_low.py",
+          "sha256": "5d5f9e09e93d4c87fb6f40b40ad63d6aeb9ee4ba160a345e0c9434d9a6c59c16"
+        },
+        "limen.features.distance_from_ma": {
+          "path": "limen/features/distance_from_ma.py",
+          "sha256": "a74ebfc733e1cd4e0e3d905d3dda20e9cda4040616b7ed364fa7c90f3138eebe"
+        },
+        "limen.features.dollar_bar_crash_reversal": {
+          "path": "limen/features/dollar_bar_crash_reversal.py",
+          "sha256": "ac2eabb9f2abe581aaa62045a9e2ddcdd3a18d59fb388919ba44aba77ab8ce67"
+        },
+        "limen.features.dollar_volume": {
+          "path": "limen/features/dollar_volume.py",
+          "sha256": "b3a2858e60b68efe981fbd716e5c932841f784ed937afb1d52b06df0f2a8688f"
+        },
+        "limen.features.downside_volatility_ratio": {
+          "path": "limen/features/downside_volatility_ratio.py",
+          "sha256": "4b622a978dfd15ccf85225d5d1b99ada07e25ce63a9467056a3e685de38da235"
+        },
+        "limen.features.dynamic_stop_loss": {
+          "path": "limen/features/dynamic_stop_loss.py",
+          "sha256": "6264e82bee3e5ab771bd9c0ec9823b02454e153aca09ccd62d58ff03b0dfed5e"
+        },
+        "limen.features.dynamic_target": {
+          "path": "limen/features/dynamic_target.py",
+          "sha256": "6a83160b9424bf89de2cfd029685af34499bfe5935a0ebb7252333f461547377"
+        },
+        "limen.features.ema_alignment": {
+          "path": "limen/features/ema_alignment.py",
+          "sha256": "f47c4d7b78b1d47b64f307df2ffc15f963e1aa36b98b22e18f07f5ac73ee6f49"
+        },
+        "limen.features.entry_score_microstructure": {
+          "path": "limen/features/entry_score_microstructure.py",
+          "sha256": "5b641573561ee9c9e809c711e787deff25458141fb75ee1ec27ea73958566bb5"
+        },
+        "limen.features.feature_aliases": {
+          "path": "limen/features/feature_aliases.py",
+          "sha256": "6296bf9b5f8f5ba39961be4ad265385e956f390553aa8708fe6d3f57067598a9"
+        },
+        "limen.features.fractional_diff": {
+          "path": "limen/features/fractional_diff.py",
+          "sha256": "e54b3f87cd582443643975420942a8ddf8ffcad5bae9a96dc64268957bf689d1"
+        },
+        "limen.features.gap_high": {
+          "path": "limen/features/gap_high.py",
+          "sha256": "54de367ba9084f24df822a84e53c19fe2e9bd4edd3bd48277de4d02f4353be75"
+        },
+        "limen.features.garman_klass_volatility": {
+          "path": "limen/features/garman_klass_volatility.py",
+          "sha256": "954988ea8bea5f28944b90e9df9987b044f1de00e1dde506a1627a78200e18b1"
+        },
+        "limen.features.hh_hl_structure_regime": {
+          "path": "limen/features/hh_hl_structure_regime.py",
+          "sha256": "c33ae77d6c91040c3b538649994a1a33087e742e57bff3257bf39b6cd7e97eca"
+        },
+        "limen.features.hours_since_big_move": {
+          "path": "limen/features/hours_since_big_move.py",
+          "sha256": "5452966ba143aac186985d2c184d5afa8b9100abb61e5635843336e684b2679d"
+        },
+        "limen.features.hours_since_quantile_line": {
+          "path": "limen/features/hours_since_quantile_line.py",
+          "sha256": "292d725e6be80a22600330cccaf003353e29d0275a1acb4e94c81bf70c9e15a8"
+        },
+        "limen.features.ichimoku_cloud": {
+          "path": "limen/features/ichimoku_cloud.py",
+          "sha256": "1e8779a28609a1c444351a8d04d2c7726e737fae12043ac55f290835a94ae9b5"
+        },
+        "limen.features.illiquidity_shock": {
+          "path": "limen/features/illiquidity_shock.py",
+          "sha256": "5a38d3150ee4fd506c9050e3a64f376a0485ee9f73c16943cd5f21ce2b9650ab"
+        },
+        "limen.features.is_funding_hour": {
+          "path": "limen/features/is_funding_hour.py",
+          "sha256": "4c7a9749bb27943af1b79b5ef85cb83df5957897ff40120bc759e8d042550982"
+        },
+        "limen.features.is_us_open_hour": {
+          "path": "limen/features/is_us_open_hour.py",
+          "sha256": "5d14132b6de6721a013cdabf88980bde4cb8dac7a1d1b95b792d9609e78ae214"
+        },
+        "limen.features.jump_variation_proxy": {
+          "path": "limen/features/jump_variation_proxy.py",
+          "sha256": "1f31d7ef11bc4fb740557e4ea7b3c987bc6115a0d4b66cdc11acf2ff7d9c7128"
+        },
+        "limen.features.kaufman_efficiency_ratio": {
+          "path": "limen/features/kaufman_efficiency_ratio.py",
+          "sha256": "0140e7aabb2f845d658ab323376c99bd846130bf0b37c474f5c7f71df931953b"
+        },
+        "limen.features.kline_imbalance": {
+          "path": "limen/features/kline_imbalance.py",
+          "sha256": "ae973507a1d60e662909841a77c138de693ca751ef421a4318fdf8035bca7755"
+        },
+        "limen.features.lagged_features": {
+          "path": "limen/features/lagged_features.py",
+          "sha256": "a72c26448ebe91ca9ac6b6e6d576e929dc4ab01a0d43c078acab3c1786d868c0"
+        },
+        "limen.features.liquidity_drop": {
+          "path": "limen/features/liquidity_drop.py",
+          "sha256": "44b12d7f8edf4cddacbb78f87537d72c79fdb1b5aa39dc1e6ff87fe1c7eb832f"
+        },
+        "limen.features.liquidity_range": {
+          "path": "limen/features/liquidity_range.py",
+          "sha256": "8e7aef45711ff5c38a77b9b795f6f0ad38eb5f39eb1c01c4462d5b886e49b565"
+        },
+        "limen.features.log_returns": {
+          "path": "limen/features/log_returns.py",
+          "sha256": "d151ad41211e0a0c81163ee072da0889c0b4d756f34763f699422617b8fe9c3c"
+        },
+        "limen.features.ma_slope_regime": {
+          "path": "limen/features/ma_slope_regime.py",
+          "sha256": "747634de2a122fe81958008eb366c657f95e44c62611a7034ff19a4bfb305942"
+        },
+        "limen.features.maker_liquidity_share": {
+          "path": "limen/features/maker_liquidity_share.py",
+          "sha256": "65ed6ef1cdaa96b01e6e2e1738ea2ed5d2c9b1fea83ceb05d05ae4e7af098cfd"
+        },
+        "limen.features.maker_volume_ratio": {
+          "path": "limen/features/maker_volume_ratio.py",
+          "sha256": "b3dbf9ca87ca490e87c42cdda255b4124506078be4961f3073e412aa13b23b3c"
+        },
+        "limen.features.maker_volume_share": {
+          "path": "limen/features/maker_volume_share.py",
+          "sha256": "8216040ef6efba634714dd5d2bac3905601040b04f9580a5b8217a172c6895c9"
+        },
+        "limen.features.market_regime": {
+          "path": "limen/features/market_regime.py",
+          "sha256": "b30593ed7064059e99602b24cfbb8ac8bd24693399e868c7a2848c40326e3d1d"
+        },
+        "limen.features.micro_momentum": {
+          "path": "limen/features/micro_momentum.py",
+          "sha256": "04d9ce74c6897cf45e8fcda74dee4189674b530b847e6c1b2433f363f2b6138b"
+        },
+        "limen.features.momentum_confirmation": {
+          "path": "limen/features/momentum_confirmation.py",
+          "sha256": "8ae7b241a928faf2213a64c2a27c47855271ab768e0ba6e91d20d264a9aafe7d"
+        },
+        "limen.features.momentum_periods": {
+          "path": "limen/features/momentum_periods.py",
+          "sha256": "925cadbdd84756c8496f8a68ba663c920d2838151dced7d0d177551218ac1e5f"
+        },
+        "limen.features.momentum_weight": {
+          "path": "limen/features/momentum_weight.py",
+          "sha256": "9af8465f515511d156cf2d8f0554b7ce85968264c1f2cc7ab0262cdcc3f779e2"
+        },
+        "limen.features.narrow_range": {
+          "path": "limen/features/narrow_range.py",
+          "sha256": "732753432b8de58022edde991d0baa7f7c7eb1f24933e01392cd3331f0ac806a"
+        },
+        "limen.features.order_flow_imbalance": {
+          "path": "limen/features/order_flow_imbalance.py",
+          "sha256": "f23b13627539764e3b4478ca69c19cf3dfc00884ff46b94b8041da187ea8a39d"
+        },
+        "limen.features.parkinson_vol_of_vol": {
+          "path": "limen/features/parkinson_vol_of_vol.py",
+          "sha256": "c38072c286158a12041fee724ed771f9bd31f974690a07d54e205654755facb8"
+        },
+        "limen.features.parkinson_volatility": {
+          "path": "limen/features/parkinson_volatility.py",
+          "sha256": "1462095720dfea9e2de836d7125a83d82262b81d2153cc26ad0076f1edb3e95e"
+        },
+        "limen.features.position_in_candle": {
+          "path": "limen/features/position_in_candle.py",
+          "sha256": "c230a64b9f575ad0824afdc9841584c61ee05730cf455159a1f8d2654ab9af17"
+        },
+        "limen.features.position_in_range": {
+          "path": "limen/features/position_in_range.py",
+          "sha256": "377e0e587e9d9b7eda90238c7184b33cee0ec39cdca289813e3d5275f2312e5e"
+        },
+        "limen.features.price_lines": {
+          "path": "limen/features/price_lines.py",
+          "sha256": "a08200c41346efdb01ba44d352cb59606b23fa88cdf20f7dc101e57d4972c25e"
+        },
+        "limen.features.price_range_position": {
+          "path": "limen/features/price_range_position.py",
+          "sha256": "6f0ec5d45cbab46370cf68de0d1d8d203316d601735d4d2f7874c04d4bcc8280"
+        },
+        "limen.features.price_vs_band_regime": {
+          "path": "limen/features/price_vs_band_regime.py",
+          "sha256": "c7e0ac8d872b3e12f9301754b972cfae08a3ff22e8d38875a1503731b5a3da32"
+        },
+        "limen.features.quantile_line_density": {
+          "path": "limen/features/quantile_line_density.py",
+          "sha256": "97ba3deac9ca873b89ecab8b0fa70fd8d8843e9891de11d4d4b4aab0195b2f47"
+        },
+        "limen.features.quantile_price_lines": {
+          "path": "limen/features/quantile_price_lines.py",
+          "sha256": "eb79ecbc48f649865c40792d6d1d55b0663dc477c54abb6d7262400716f40385"
+        },
+        "limen.features.range_overlap": {
+          "path": "limen/features/range_overlap.py",
+          "sha256": "e2f20b4e47860c41b9f3eb8e3d3de96a5c9d06ae6cfd10dc92a40df06d3c1bc1"
+        },
+        "limen.features.range_pct": {
+          "path": "limen/features/range_pct.py",
+          "sha256": "35ef83b4962697dabf00a123712c3d001256ff8e5422f129efeeafd2c00c4e9e"
+        },
+        "limen.features.range_per_dollar_volume": {
+          "path": "limen/features/range_per_dollar_volume.py",
+          "sha256": "74aac836305062f0375437797c33011c1ad1afc4c033708645788e12b1d186ad"
+        },
+        "limen.features.realized_kurtosis": {
+          "path": "limen/features/realized_kurtosis.py",
+          "sha256": "a3a345290ed062b371f1ddd3d09c4b0d9ef3714001e3308febfac8c65bbb12b3"
+        },
+        "limen.features.realized_semivariance": {
+          "path": "limen/features/realized_semivariance.py",
+          "sha256": "3552ea3709ca6fcc6e2cdfce23eee180c52d75f1a47f2a35fe63bb3512d34332"
+        },
+        "limen.features.realized_skewness": {
+          "path": "limen/features/realized_skewness.py",
+          "sha256": "93b46d667d732c55ff949fc563cc1334e089b3f111f9817f33c2a0389156c09f"
+        },
+        "limen.features.regime_multiplier": {
+          "path": "limen/features/regime_multiplier.py",
+          "sha256": "13142b8d7b659e9c0028d6f8abf8df3ca1d22dd102f335e49e553c7af9ef3eb1"
+        },
+        "limen.features.rejection_intensity": {
+          "path": "limen/features/rejection_intensity.py",
+          "sha256": "909c1a892f00eda1a5a5df24b421b52e1708e1ce72c27ff0984ec4952dce8d89"
+        },
+        "limen.features.relative_range_seasonality": {
+          "path": "limen/features/relative_range_seasonality.py",
+          "sha256": "08f1cd020e67c304d9c1ef5ce6b00105e1322f4ce3ef9b488513585d42ff6084"
+        },
+        "limen.features.relative_volatility_seasonality": {
+          "path": "limen/features/relative_volatility_seasonality.py",
+          "sha256": "1c540f5511de111c04c46e7d32208ddc9798ca9ff1a8ee7a8d36487dac234bd2"
+        },
+        "limen.features.relative_volume_seasonality": {
+          "path": "limen/features/relative_volume_seasonality.py",
+          "sha256": "72e9ab247f5282e2251cdd2ac62b6d189d8c94bedf678ee2b7e620525ced6c94"
+        },
+        "limen.features.return_autocorrelation": {
+          "path": "limen/features/return_autocorrelation.py",
+          "sha256": "756aafa29f0321b04e91039f58aebf9e072365ae9b43748d326fc19ad1a9e68f"
+        },
+        "limen.features.return_per_dollar_volume": {
+          "path": "limen/features/return_per_dollar_volume.py",
+          "sha256": "54abaade09e45417825b14b39874e9e677e4f8c8574ea1425f74ff0973e214d4"
+        },
+        "limen.features.return_volatility_correlation": {
+          "path": "limen/features/return_volatility_correlation.py",
+          "sha256": "c70880e9b9a85988edfb2ad49137e55e17029c7d66305441da4b015aa7eb646c"
+        },
+        "limen.features.returns_lags": {
+          "path": "limen/features/returns_lags.py",
+          "sha256": "43c5c459383821bee004a4e9a681153613bb41b0ba19fddbc7eea33f643a073e"
+        },
+        "limen.features.rogers_satchell_volatility": {
+          "path": "limen/features/rogers_satchell_volatility.py",
+          "sha256": "06a64844f8854d36099cea5cae3b22e5ba14a6dffc451a3ecaa5d195224ce5a8"
+        },
+        "limen.features.rolling_zscore": {
+          "path": "limen/features/rolling_zscore.py",
+          "sha256": "24cb409fa643a4f55ceb14abe2a039f44aae921fc1bf3cc9ebcba37627ee9e3d"
+        },
+        "limen.features.sma_crossover": {
+          "path": "limen/features/sma_crossover.py",
+          "sha256": "a79603fbc7a60ebd26059b4b4048b19cefe6ce5a0eba2a6879b5e8fef01356eb"
+        },
+        "limen.features.sma_ratios": {
+          "path": "limen/features/sma_ratios.py",
+          "sha256": "1a9492edc61918c0bb1dbbc1b64d6c9938bf8e2f0edd9584f7db0b556e133b22"
+        },
+        "limen.features.spread": {
+          "path": "limen/features/spread.py",
+          "sha256": "bbfb20abe584ec58f7c5b6cc8a7602460a1330668b4f8954b6054f0792d97a4f"
+        },
+        "limen.features.spread_percent": {
+          "path": "limen/features/spread_percent.py",
+          "sha256": "69d092a0ada21e96a56ead21dcf7e2549bd24ba74aded64775017e66e196d459"
+        },
+        "limen.features.stochastic_k_abs": {
+          "path": "limen/features/stochastic_k_abs.py",
+          "sha256": "b506f56e93d4477fd8ebbb736ef2d92e729aa2830a053575b5cd31f02fa2cfe2"
+        },
+        "limen.features.tail_event_intensity": {
+          "path": "limen/features/tail_event_intensity.py",
+          "sha256": "ffc190d8c130dad1083537d9faf6e3831a38f1971dd115e68df7a3033b5a6f77"
+        },
+        "limen.features.taker_imbalance_ratio": {
+          "path": "limen/features/taker_imbalance_ratio.py",
+          "sha256": "a0deb6d2a1111a07ec762791a0453f2789cb0d94ebc1fa0a07cecdb8d3629066"
+        },
+        "limen.features.time_to_funding": {
+          "path": "limen/features/time_to_funding.py",
+          "sha256": "def7e2b9ed6aa9a266a147d4560e7cd40d0b09a4f84ae02531d92a943331168b"
+        },
+        "limen.features.trade_density": {
+          "path": "limen/features/trade_density.py",
+          "sha256": "ce63583eed9ab6efd8e246e6dae1c225c1ae04533b6412c9d1bebe15d48954b9"
+        },
+        "limen.features.trade_imbalance": {
+          "path": "limen/features/trade_imbalance.py",
+          "sha256": "764a5c80a0a340bd5ba238b271926da26a54d8c1cb79a00f6dd0e74d6ecbc2d5"
+        },
+        "limen.features.trade_size_ratio": {
+          "path": "limen/features/trade_size_ratio.py",
+          "sha256": "b21db13249d0878e4b9f382c9a14dbadc9e0021fb0ab5ccbc89ca92b970a36cc"
+        },
+        "limen.features.trend_coherence": {
+          "path": "limen/features/trend_coherence.py",
+          "sha256": "07f64908a2e27cdbe939420bfe3cb7d871a1e7d72e20586de35e849e5cb05d0d"
+        },
+        "limen.features.trend_strength": {
+          "path": "limen/features/trend_strength.py",
+          "sha256": "a618ea8ed840144803475ea714eed9f65e11469745f45ecc339482f3b091e908"
+        },
+        "limen.features.volatility_1h": {
+          "path": "limen/features/volatility_1h.py",
+          "sha256": "8792ccf43bee730a92f0cefe066dd4b7d77955005132d03c2a0bb4c98dd4d96a"
+        },
+        "limen.features.volatility_measure": {
+          "path": "limen/features/volatility_measure.py",
+          "sha256": "6354ad922179267b8a6b2bf326b95d5c7a82062b3ebdc072c7897073fb6028b8"
+        },
+        "limen.features.volatility_of_volatility": {
+          "path": "limen/features/volatility_of_volatility.py",
+          "sha256": "c6c561ea841a25ed3f90f2b243c36a7db13a88e8b541dd981dd2f30c019604b2"
+        },
+        "limen.features.volatility_ratio": {
+          "path": "limen/features/volatility_ratio.py",
+          "sha256": "4510ce875f17b7355f02185bb77658398ed3ede7a8fa790e80e25e8b6b0dbe55"
+        },
+        "limen.features.volatility_spike": {
+          "path": "limen/features/volatility_spike.py",
+          "sha256": "96f5654fc91a6802b901fb99ae475cff5aca4248e220c774d67e44cc105e89b4"
+        },
+        "limen.features.volatility_term_structure": {
+          "path": "limen/features/volatility_term_structure.py",
+          "sha256": "f2c89fde8639d264877a9e04ee81068811cf54a26bfcbfd2ea6b12fad0fc29b7"
+        },
+        "limen.features.volatility_weight": {
+          "path": "limen/features/volatility_weight.py",
+          "sha256": "ca00d1e78dce1b7b62cca7b74071d5eaa3b1a219a70abc799d1e3222a290c330"
+        },
+        "limen.features.volume_ratio": {
+          "path": "limen/features/volume_ratio.py",
+          "sha256": "e53d6670206804b94592fec6df10c1ed1d222140e7f5557a09d78021a842bfdc"
+        },
+        "limen.features.volume_regime": {
+          "path": "limen/features/volume_regime.py",
+          "sha256": "f55b8f2bd1831b801887dd4831334c893580910621078afde3af78e85e0f1a42"
+        },
+        "limen.features.volume_spike": {
+          "path": "limen/features/volume_spike.py",
+          "sha256": "8d942631bb940ae5cfca79596fed8cdf482eb5b0e057b7ce9925fd09e6df37a5"
+        },
+        "limen.features.volume_to_range": {
+          "path": "limen/features/volume_to_range.py",
+          "sha256": "95c9d3535d013fc1dba85b63bf8184098f6f67ae095e7dca765c56d5f3fe0c87"
+        },
+        "limen.features.volume_trend": {
+          "path": "limen/features/volume_trend.py",
+          "sha256": "ec39c3ba10f0033bf83588d88e3736dd3a7ae5aa84c7ff1d37b2998ebde19149"
+        },
+        "limen.features.volume_volatility_correlation": {
+          "path": "limen/features/volume_volatility_correlation.py",
+          "sha256": "0f6a3a3239cbda85fa38b9be6f18dac7291ecbbbc972f64de18f2061ae8a6cce"
+        },
+        "limen.features.vpin": {
+          "path": "limen/features/vpin.py",
+          "sha256": "23c30ca901509683837215953365030a3a38bc3bbf15bc02d671d6e032e776fb"
+        },
+        "limen.features.vwap": {
+          "path": "limen/features/vwap.py",
+          "sha256": "a77fd04d3dd67957e17230636a993d349c5c5bb83de32a7e5a8b4f6f680455fe"
+        },
+        "limen.features.wick_imbalance": {
+          "path": "limen/features/wick_imbalance.py",
+          "sha256": "7d9d621254b6e2c23190402b4d3996be923d0315de6bb3cd94546a5e9b8af307"
+        },
+        "limen.features.wick_proportion": {
+          "path": "limen/features/wick_proportion.py",
+          "sha256": "b61b1d7edef308202a7c35043559096a671a5022c3e1d6cc5474a1dd84c90d1e"
+        },
+        "limen.features.window_return_regime": {
+          "path": "limen/features/window_return_regime.py",
+          "sha256": "54eb83ef2a735fb1c5e005a3cd6684a54a41f03678fa6a5796bf62496b062463"
+        },
+        "limen.features.yang_zhang_volatility": {
+          "path": "limen/features/yang_zhang_volatility.py",
+          "sha256": "2f32b165f062a9e618efadabebea546fb5ff82788ff4e770eda2a71e14d336a5"
+        },
+        "limen.indicators": {
+          "path": "limen/indicators/__init__.py",
+          "sha256": "0bf3a2a74f450d1a0aab66a5bfeb3c4e6fd88e1c767bc6c5fede3638be521184"
+        },
+        "limen.indicators._atr": {
+          "path": "limen/indicators/_atr.py",
+          "sha256": "61070fa94c6c541baa8a2e58382f42d6ac3b4b3e57a26079c67c0d8ba8cfc435"
+        },
+        "limen.indicators._ema": {
+          "path": "limen/indicators/_ema.py",
+          "sha256": "9e0e31bc809805c59db34de4823d00b119d472ee7503b81436e0c7a0960e87d1"
+        },
+        "limen.indicators._hilbert": {
+          "path": "limen/indicators/_hilbert.py",
+          "sha256": "b5bfac436ff43b77e28c30847d91c7ae12e9a921fd7b22f44b22cb6f3770d36b"
+        },
+        "limen.indicators.ad": {
+          "path": "limen/indicators/ad.py",
+          "sha256": "05267461bc5e6598a3b5d642c79200031a90d8dff8ba76c2849ead8f670e95cd"
+        },
+        "limen.indicators.adosc": {
+          "path": "limen/indicators/adosc.py",
+          "sha256": "25a052787f993b4f0ff426f5b6fc710a1ffec63f55369a2a2232490fd5ae5058"
+        },
+        "limen.indicators.apo": {
+          "path": "limen/indicators/apo.py",
+          "sha256": "c4061f311e5ca054b3b4c1dc02d9daafa4b55d5ed32455920913e75a0b310ca2"
+        },
+        "limen.indicators.atr": {
+          "path": "limen/indicators/atr.py",
+          "sha256": "43269cadca91601ca950e44f9532c68a6b677221a5a78d91fb0ea16968371a26"
+        },
+        "limen.indicators.avgprice": {
+          "path": "limen/indicators/avgprice.py",
+          "sha256": "50695d787e005df02da2bb62c97973b8102ea4aa0458afa6850c960969c5b114"
+        },
+        "limen.indicators.bbands": {
+          "path": "limen/indicators/bbands.py",
+          "sha256": "6a12367022cc4c36914735e320b108eb45e4d6c0c296fced22a9300c337af1e7"
+        },
+        "limen.indicators.body_pct": {
+          "path": "limen/indicators/body_pct.py",
+          "sha256": "7c8851868d684d35e1efe47c0aeefe69363e865489006fecc2688c9d041567c9"
+        },
+        "limen.indicators.bollinger_bands": {
+          "path": "limen/indicators/bollinger_bands.py",
+          "sha256": "ff6566c761a25dca08bac64ce7e9dcb72187c0bed2ef566ae92fa91232c9c550"
+        },
+        "limen.indicators.bollinger_position": {
+          "path": "limen/indicators/bollinger_position.py",
+          "sha256": "664f72c67b786868e3a7c272ad30c3487ef8bf23a10a9ec2071f2872e744e9de"
+        },
+        "limen.indicators.bop": {
+          "path": "limen/indicators/bop.py",
+          "sha256": "0061bbc10658bcab2eb4f6995ad008e9d463fd766f1f26c4a1032697de8b105a"
+        },
+        "limen.indicators.cci": {
+          "path": "limen/indicators/cci.py",
+          "sha256": "b57cb44358691aede8075f036c84596920801b346350cea815dca25bc8e59ed6"
+        },
+        "limen.indicators.cdl2crows": {
+          "path": "limen/indicators/cdl2crows.py",
+          "sha256": "8210c77be15f241f0b7366cd6336e9d060ed7adc5e4b4c667f5aebcf99ef9c7c"
+        },
+        "limen.indicators.cdl3blackcrows": {
+          "path": "limen/indicators/cdl3blackcrows.py",
+          "sha256": "26e6370618a5f560c9c3ab0b8df509737dcb2102deadeac13e9d5fee9a79b5a8"
+        },
+        "limen.indicators.cdl3inside": {
+          "path": "limen/indicators/cdl3inside.py",
+          "sha256": "308000aaac0ea763db25ad765fb6bf67123a7f7ce512d47f583a2b0189e20779"
+        },
+        "limen.indicators.cdl3linestrike": {
+          "path": "limen/indicators/cdl3linestrike.py",
+          "sha256": "32766379b92ffd9c93dc09b80c35c94ce50639d4899205bdd79d4ee7d522e87b"
+        },
+        "limen.indicators.cdl3starsinsouth": {
+          "path": "limen/indicators/cdl3starsinsouth.py",
+          "sha256": "aa913b92a61b65b002149f8c4dd53501198e0970fd5ca185074df95a45509d09"
+        },
+        "limen.indicators.cdl3whitesoldiers": {
+          "path": "limen/indicators/cdl3whitesoldiers.py",
+          "sha256": "0cffde871839d9c3e68a9092a970305e41ae6e3867c23999a3d6f640f6a9adc4"
+        },
+        "limen.indicators.cdlabandonedbaby": {
+          "path": "limen/indicators/cdlabandonedbaby.py",
+          "sha256": "65c68742af14fcd3f2f063a2930a5068530b6b448c41f1a69d562cd9d80cdba1"
+        },
+        "limen.indicators.cdladvancedblock": {
+          "path": "limen/indicators/cdladvancedblock.py",
+          "sha256": "7de193be46e34cc9da4fe18445732ce86db0b1dc51984ba4d51331ea033eefc3"
+        },
+        "limen.indicators.cdlbelthold": {
+          "path": "limen/indicators/cdlbelthold.py",
+          "sha256": "a6a67b0ea9181eb9774c9b3647bc54837a6ed28f6f549d1c3da52abfb586c25f"
+        },
+        "limen.indicators.cdlclosingmarubozu": {
+          "path": "limen/indicators/cdlclosingmarubozu.py",
+          "sha256": "92db5619a7af401f1017c159f3d0fa700522f293ed0c76bc216615ff456607e3"
+        },
+        "limen.indicators.cdlconcealbabyswall": {
+          "path": "limen/indicators/cdlconcealbabyswall.py",
+          "sha256": "f0463b84138859e5606f9e4194a238feed46446aa727b7ad13170c1e1e16fab1"
+        },
+        "limen.indicators.cdlcounterattack": {
+          "path": "limen/indicators/cdlcounterattack.py",
+          "sha256": "30705875abf9804ace9ffe5461f516389853e5f444e216064953b5c590892331"
+        },
+        "limen.indicators.cdldarkcloudcover": {
+          "path": "limen/indicators/cdldarkcloudcover.py",
+          "sha256": "a7bef1483fd7953e09bc580535b6f4a85a420c34c820907203b390beb2158577"
+        },
+        "limen.indicators.cdldoji": {
+          "path": "limen/indicators/cdldoji.py",
+          "sha256": "db43e6d89407cc7ce75fdaf4099e6c395dccc1a8f264a2f8a0d1d0d27d63a215"
+        },
+        "limen.indicators.cdldragonflydoji": {
+          "path": "limen/indicators/cdldragonflydoji.py",
+          "sha256": "0f6338f1a6d5a64d1ac5e309a66feec63ea3ad8aa58cc2464c1051c95bed6387"
+        },
+        "limen.indicators.cdlengulfing": {
+          "path": "limen/indicators/cdlengulfing.py",
+          "sha256": "5a4306349320fd30bf8f515821ed14ea2f787e9aed9d0f2615cc9a28b02afc84"
+        },
+        "limen.indicators.cdlgravestonedoji": {
+          "path": "limen/indicators/cdlgravestonedoji.py",
+          "sha256": "3dee4bfebe521a7094781ead6ffdac70f3da6f2ce32ff981feabba427bbace05"
+        },
+        "limen.indicators.cdlhammer": {
+          "path": "limen/indicators/cdlhammer.py",
+          "sha256": "7531db72b9ec33f31f16181f2e004bc431b16f6e9702fdb2b1aff72f0c5a7bca"
+        },
+        "limen.indicators.cdlhangingman": {
+          "path": "limen/indicators/cdlhangingman.py",
+          "sha256": "6d1a7cbf4a8b120a8bca1327489f30bdfac013c3cd1bbedf43588441895163ed"
+        },
+        "limen.indicators.cdlharami": {
+          "path": "limen/indicators/cdlharami.py",
+          "sha256": "2c3bd85bea039188c465f1dba87206fe41259e524a94be059ffcac28ae11b88c"
+        },
+        "limen.indicators.cdlharamicross": {
+          "path": "limen/indicators/cdlharamicross.py",
+          "sha256": "159cf17dadd625a53dc1c762cf31f82e3d75e8d7f31e9063063f6b75bc1b0907"
+        },
+        "limen.indicators.cdlhighwave": {
+          "path": "limen/indicators/cdlhighwave.py",
+          "sha256": "1b77b164a0d4e65012a8d234c691021a18bba29495e0b2ed1e8c52a4753f5937"
+        },
+        "limen.indicators.cdlhikkake": {
+          "path": "limen/indicators/cdlhikkake.py",
+          "sha256": "3022f2e615f6babea783dcf0f0bdfb6e5fc04c7287b4cad50561baf5b24d361f"
+        },
+        "limen.indicators.cdlhikkakemod": {
+          "path": "limen/indicators/cdlhikkakemod.py",
+          "sha256": "0a43c8f0609621a93836ca6f2052d5e94fe6a8c7a7ae5cc536dbc304d763b848"
+        },
+        "limen.indicators.cdlhomingpigeon": {
+          "path": "limen/indicators/cdlhomingpigeon.py",
+          "sha256": "a9a7a834f0c7a7d4f02462dd2948b97c06e6903e98c85190227f9e9b667bd44f"
+        },
+        "limen.indicators.cdlidentical3crows": {
+          "path": "limen/indicators/cdlidentical3crows.py",
+          "sha256": "1713049964cd93ec46b7296be2bfb0387ef299c443c30e556c7e8fd2591e6a10"
+        },
+        "limen.indicators.cdlinvertedhammer": {
+          "path": "limen/indicators/cdlinvertedhammer.py",
+          "sha256": "6bac6c2fae136f765abae75b0330db1fb7de1293824a7c830adf4784db0b39cd"
+        },
+        "limen.indicators.cdlladderbottom": {
+          "path": "limen/indicators/cdlladderbottom.py",
+          "sha256": "5dfc3802f182cf9d9692712ebb83ea2bb896a5d051e1ac2256d573f315d83e09"
+        },
+        "limen.indicators.cdllongleggeddoji": {
+          "path": "limen/indicators/cdllongleggeddoji.py",
+          "sha256": "d6f42ea5fe85268f51e4166c5d0f74285c39d5fea85d6728bc9cde5265cee310"
+        },
+        "limen.indicators.cdllongline": {
+          "path": "limen/indicators/cdllongline.py",
+          "sha256": "9ac1db2b3e5afbfe670c320fd0e17e82553b842d64e4bcbb709d5faa60631f06"
+        },
+        "limen.indicators.cdlmarubozu": {
+          "path": "limen/indicators/cdlmarubozu.py",
+          "sha256": "c1d45a07e66fb2f8d04f5441d4e7ffeab038e55d5c1a65d9a68be242b199a0c3"
+        },
+        "limen.indicators.cdlmatchinglow": {
+          "path": "limen/indicators/cdlmatchinglow.py",
+          "sha256": "d106dba9a368db576a2f08ef6a5abf9c696101b06d3a48cfab171d55d151b660"
+        },
+        "limen.indicators.cdlmathold": {
+          "path": "limen/indicators/cdlmathold.py",
+          "sha256": "6b0f475e9a1530b9f86e472ebe4f5fabb4b883e06c34d0f3a8b0fb6660c5241e"
+        },
+        "limen.indicators.cdlonneck": {
+          "path": "limen/indicators/cdlonneck.py",
+          "sha256": "fe7b83b745c6ee8c9f845f6650604623123fe987fe0b8868dde353852933aa5c"
+        },
+        "limen.indicators.cdlpiercing": {
+          "path": "limen/indicators/cdlpiercing.py",
+          "sha256": "5fe31d9dc1e90d0fbdaeede0bedae3a0f3d9dcf11937b4b67288692a4598f1e7"
+        },
+        "limen.indicators.cdlrickshawman": {
+          "path": "limen/indicators/cdlrickshawman.py",
+          "sha256": "326c81bf16cff345d2c5626fb16429b2c6b403588614ffa6a705ae4d485f26ff"
+        },
+        "limen.indicators.cdlrisefall3methods": {
+          "path": "limen/indicators/cdlrisefall3methods.py",
+          "sha256": "d39756cf5ec46880163f0fff17849b8ff138bc697317fe72e22d1c5a5ac98f8e"
+        },
+        "limen.indicators.cdlseparatinglines": {
+          "path": "limen/indicators/cdlseparatinglines.py",
+          "sha256": "d96b784e51172db8fd512765feaf4ee3d5bfc0cec2086eae21d9b586e8bae3c4"
+        },
+        "limen.indicators.cdlshootingstar": {
+          "path": "limen/indicators/cdlshootingstar.py",
+          "sha256": "ab01efe1eeaa34b80246f93d38fbaeb470fd308442ab965174380a18eadc0111"
+        },
+        "limen.indicators.cdlshortline": {
+          "path": "limen/indicators/cdlshortline.py",
+          "sha256": "9d7b4c1a939fe55a1f42b4304d53974c8e5cccdfe26d2801b75366db369a2bd5"
+        },
+        "limen.indicators.cdlspinningtop": {
+          "path": "limen/indicators/cdlspinningtop.py",
+          "sha256": "54731f65cdb1ccdbdf9948a7056ed53a75b521913b56d4c56745b3eed4fc0ceb"
+        },
+        "limen.indicators.cdlstalledpattern": {
+          "path": "limen/indicators/cdlstalledpattern.py",
+          "sha256": "6501509746b3a59899fc528e2602f55fbb2570bd5569a8e7ba3bf93daab79f70"
+        },
+        "limen.indicators.cdlsticksandwich": {
+          "path": "limen/indicators/cdlsticksandwich.py",
+          "sha256": "d6aff1fc6f70a5e863ecdaac542166b3d2b12f3b73fee13195354765536c9067"
+        },
+        "limen.indicators.cdltakuri": {
+          "path": "limen/indicators/cdltakuri.py",
+          "sha256": "0d84ce4d73075e4c7a8a1016f15df1066edfd77e1bd43bde565a7d5087819ac1"
+        },
+        "limen.indicators.cdlthrusting": {
+          "path": "limen/indicators/cdlthrusting.py",
+          "sha256": "60186925d8a25932d7dacbf9817a8cbcbfb12c98bb19a50940de26cbcb1ce559"
+        },
+        "limen.indicators.cdltristar": {
+          "path": "limen/indicators/cdltristar.py",
+          "sha256": "40b7ff3032f8cf9ca3a788272aef7a290dc8b5d58c9303d495e07768b1fa311f"
+        },
+        "limen.indicators.cdlunique3river": {
+          "path": "limen/indicators/cdlunique3river.py",
+          "sha256": "d43f21ec6fa34b90ccc0505c89aeb4979c037e3e38cf28004964f3004b69a29f"
+        },
+        "limen.indicators.cmo": {
+          "path": "limen/indicators/cmo.py",
+          "sha256": "958ee9fd706e06c1ddb951ebf8461a82922ee3650c6725029ad29e5a5b59be06"
+        },
+        "limen.indicators.dema": {
+          "path": "limen/indicators/dema.py",
+          "sha256": "365ddad8f6961ed6587eb71544c5dc74a3ca078ae2f712b0583528238721acd3"
+        },
+        "limen.indicators.ema": {
+          "path": "limen/indicators/ema.py",
+          "sha256": "72c1ad7cba84accb71163cf916f50732a10fe3d286dc9f0c05a26605aa993b64"
+        },
+        "limen.indicators.ht_dcperiod": {
+          "path": "limen/indicators/ht_dcperiod.py",
+          "sha256": "02fb632362819846f136a35549b8b099b9c0a7bd8e0dbae2f5cb0cdc5e802d5e"
+        },
+        "limen.indicators.ht_dcphase": {
+          "path": "limen/indicators/ht_dcphase.py",
+          "sha256": "7f17bac7523d3f0bfaabb663cc5069a7a16b64a934f77bfe31f60b2e87a754dc"
+        },
+        "limen.indicators.ht_phasor": {
+          "path": "limen/indicators/ht_phasor.py",
+          "sha256": "e929244e5b0901b6bcbba54eb5404f388eed5b7c9d51788c3b4c8c27240b8f47"
+        },
+        "limen.indicators.ht_sine": {
+          "path": "limen/indicators/ht_sine.py",
+          "sha256": "f205fbd24c3f379eaba77db33188bc3b7d05a05322320acd6d0b845fcbab2d8a"
+        },
+        "limen.indicators.ht_trendline": {
+          "path": "limen/indicators/ht_trendline.py",
+          "sha256": "b2b84b9020dacad9065475372d05f21331d6d817dde3d0d6a74f04d11f257c38"
+        },
+        "limen.indicators.ht_trendmode": {
+          "path": "limen/indicators/ht_trendmode.py",
+          "sha256": "06d9be17c6a0f5715f19c0d77c0cbcd930c53f62e95a8dcb274d47147e280b66"
+        },
+        "limen.indicators.kama": {
+          "path": "limen/indicators/kama.py",
+          "sha256": "0bbd79f10babdba6a124ef15303f45a073b4cdacaabe6338f5462af9890d2d4a"
+        },
+        "limen.indicators.linearreg": {
+          "path": "limen/indicators/linearreg.py",
+          "sha256": "396c9462170d415e9186b35ee224bffe67d047e6dadabdb5f59cd3926a52470b"
+        },
+        "limen.indicators.linearreg_angle": {
+          "path": "limen/indicators/linearreg_angle.py",
+          "sha256": "4e10d57799d1c8e26b6882ade9ea8b340f8a1a21fa8429ae1c47faedca620f8e"
+        },
+        "limen.indicators.linearreg_intercept": {
+          "path": "limen/indicators/linearreg_intercept.py",
+          "sha256": "7322cfce38001c4b40c8d5dddfd2ce39cba0ffa1101d50799b3939e895d9be83"
+        },
+        "limen.indicators.linearreg_slope": {
+          "path": "limen/indicators/linearreg_slope.py",
+          "sha256": "80decc5a185d4219e4a9537bc8b74c614665d0825d77ba4bc3d253d6b13fa77d"
+        },
+        "limen.indicators.ma": {
+          "path": "limen/indicators/ma.py",
+          "sha256": "5a1bd519674c33715b41fffa2aa32339b384720d329de6f5bf7728d45e50c7fe"
+        },
+        "limen.indicators.macd": {
+          "path": "limen/indicators/macd.py",
+          "sha256": "cf53538ea4692d98a4384f504661d8611b0db4ab3ed9164f2f928beddea13fe5"
+        },
+        "limen.indicators.macdext": {
+          "path": "limen/indicators/macdext.py",
+          "sha256": "8b65dd5bdba784756c8601804225ecf6e6c2e7ccc24b8681f3f9b91b90a71f42"
+        },
+        "limen.indicators.macdfix": {
+          "path": "limen/indicators/macdfix.py",
+          "sha256": "5cc7f86392b889525ae47bf4c927f783d66c6cfe4ae7c9428f54ead5f3b18ff8"
+        },
+        "limen.indicators.mama": {
+          "path": "limen/indicators/mama.py",
+          "sha256": "d0fc0cac1ccd50201e55a7b4b3846403ff4b2a73538cb344868fe8abca614782"
+        },
+        "limen.indicators.medprice": {
+          "path": "limen/indicators/medprice.py",
+          "sha256": "e0383ba4e8e5a20f936617138019439c465fe46861a9b8297de1759533246a0a"
+        },
+        "limen.indicators.mfi": {
+          "path": "limen/indicators/mfi.py",
+          "sha256": "29f9682696930406046b3bfa51b242df8ef53cf986aaaa8fb13d72d552c27ce0"
+        },
+        "limen.indicators.midpoint": {
+          "path": "limen/indicators/midpoint.py",
+          "sha256": "1ec5ba8e35f5d656fc2c4158a6a29b0fef56d6e116fe308dc8bdf35ef612955e"
+        },
+        "limen.indicators.midprice": {
+          "path": "limen/indicators/midprice.py",
+          "sha256": "283af80a72a17c760954f5cc1e6a58e59a45d393779447c730cc1c35da54fd20"
+        },
+        "limen.indicators.mom": {
+          "path": "limen/indicators/mom.py",
+          "sha256": "3f6d00f951eff6dd023f0d603f9cf386ab8b859a04285def9b77458e390623d5"
+        },
+        "limen.indicators.natr": {
+          "path": "limen/indicators/natr.py",
+          "sha256": "5d7b99c8592368b068ba450fb57a5cf63518897e190f166ff6593329285c78a7"
+        },
+        "limen.indicators.obv": {
+          "path": "limen/indicators/obv.py",
+          "sha256": "816b54628738a5333c0be01aa56d76945850501466b6bd53417d4fe85c7be03b"
+        },
+        "limen.indicators.ppo": {
+          "path": "limen/indicators/ppo.py",
+          "sha256": "bdc36850a6a1f9035b3d87c279083d940337f2169e8ba7835cea52f9fe23307f"
+        },
+        "limen.indicators.price_change_pct": {
+          "path": "limen/indicators/price_change_pct.py",
+          "sha256": "e66d022910da566412d9d740ad37ecb4dd9489cbfd424b3cabdf2262717ec9c4"
+        },
+        "limen.indicators.returns": {
+          "path": "limen/indicators/returns.py",
+          "sha256": "775755afc005fbce76f75b0821aea987320591966559ffd157d9a99a9aa04bd4"
+        },
+        "limen.indicators.roc": {
+          "path": "limen/indicators/roc.py",
+          "sha256": "ddb15f471d4660afbb6198084e14022f2d1a89b41106b3be338c460000a0f007"
+        },
+        "limen.indicators.rocp": {
+          "path": "limen/indicators/rocp.py",
+          "sha256": "a14b001d7b8db0ae101bb91283d24d429602cf036beeba173e15de8d93c38a46"
+        },
+        "limen.indicators.rocr": {
+          "path": "limen/indicators/rocr.py",
+          "sha256": "5574ea6e3606605ab45ec1438814cf9c2e69cf1928dc60c55825e8127b4392c0"
+        },
+        "limen.indicators.rocr100": {
+          "path": "limen/indicators/rocr100.py",
+          "sha256": "cfebef542b48a6e56b253ee1244e8daaf22678fc1c827887185c2c588907f63e"
+        },
+        "limen.indicators.rolling_volatility": {
+          "path": "limen/indicators/rolling_volatility.py",
+          "sha256": "7830f3e29bbd9a7c8353e9d18186ebdad75d9f9af841a100092a9dd629720f29"
+        },
+        "limen.indicators.rsi": {
+          "path": "limen/indicators/rsi.py",
+          "sha256": "5779dcf0cffc5472d986fe9adff75a955a4cbf41bb227a12a2a4357764025431"
+        },
+        "limen.indicators.rsi_sma": {
+          "path": "limen/indicators/rsi_sma.py",
+          "sha256": "21b304b402eb113886d40f327b8eb39b658aa662e53080e3d9cb511c0b9788c0"
+        },
+        "limen.indicators.sar": {
+          "path": "limen/indicators/sar.py",
+          "sha256": "98761d6ea311a1a4b3f9d906bfa437a5de97053a08d7e5463f0d4d9f1f15ce0a"
+        },
+        "limen.indicators.sarext": {
+          "path": "limen/indicators/sarext.py",
+          "sha256": "115318feae5ccfb6a5a9733eab42786b106221aa3ac0eff0fcbde169840b5baf"
+        },
+        "limen.indicators.sma": {
+          "path": "limen/indicators/sma.py",
+          "sha256": "5f184da393d855c73b80d81b5feb10046aca6d82a1f440e3ddfd1de7ee0650dd"
+        },
+        "limen.indicators.sma_deviation_std": {
+          "path": "limen/indicators/sma_deviation_std.py",
+          "sha256": "e774c4d8cdb1ce16a0fbea8102a674c90b30a3dd77bd906885556103c3e9276b"
+        },
+        "limen.indicators.stddev": {
+          "path": "limen/indicators/stddev.py",
+          "sha256": "c9a9d8ca5f6020544696479404b25906866e92ddbe83089b42932f791ac5593f"
+        },
+        "limen.indicators.stoch": {
+          "path": "limen/indicators/stoch.py",
+          "sha256": "f86935ac56d9d3833a8714f8b754dae1655cf63f09b706c304a0481315cbb033"
+        },
+        "limen.indicators.stochastic_oscillator": {
+          "path": "limen/indicators/stochastic_oscillator.py",
+          "sha256": "309cdfed1b90c385faa28b70c8c7e2334ac21b221c2b6971faccd3ad9f7e2217"
+        },
+        "limen.indicators.stochf": {
+          "path": "limen/indicators/stochf.py",
+          "sha256": "028338d2b2271db3a91c7a1e2bfdc5f3ecab8f00c8edf268979f64f27ca6c4d6"
+        },
+        "limen.indicators.stochrsi": {
+          "path": "limen/indicators/stochrsi.py",
+          "sha256": "dd3ac83b3aa1ed8b75c556dd207e4309232187352d8eff5b7a31ddc935eae433"
+        },
+        "limen.indicators.t3": {
+          "path": "limen/indicators/t3.py",
+          "sha256": "3aaad32bbe68953a50a67f452677e64bac5556be4e3ee91e082f11897282e432"
+        },
+        "limen.indicators.tema": {
+          "path": "limen/indicators/tema.py",
+          "sha256": "5a217cd691dda445bacdd6f616f083bb21e98732f7d41259dce5679441444b5b"
+        },
+        "limen.indicators.trange": {
+          "path": "limen/indicators/trange.py",
+          "sha256": "8bba2f3b6276162eef4fb3eacfb47dd4489655a762985bea09d7aeb2cf4b2b7a"
+        },
+        "limen.indicators.trima": {
+          "path": "limen/indicators/trima.py",
+          "sha256": "03c698598ecb2a996b2efdf6787815143d4f46dd8d66bed7387fdc3f8775e6eb"
+        },
+        "limen.indicators.trix": {
+          "path": "limen/indicators/trix.py",
+          "sha256": "44d81db4a407ff4ba72e550e05254cd670c5a7c268b50156fe359de9ff9c23d5"
+        },
+        "limen.indicators.tsf": {
+          "path": "limen/indicators/tsf.py",
+          "sha256": "217083fd389a2afadd0ebe89074f358e5287fd5cce518ef9bfb6aaaa487f3e78"
+        },
+        "limen.indicators.typprice": {
+          "path": "limen/indicators/typprice.py",
+          "sha256": "14bcecdf605cc2d3d60684d51c7b5d1ae358cdba464419bd777bd8d45c02a08b"
+        },
+        "limen.indicators.ultosc": {
+          "path": "limen/indicators/ultosc.py",
+          "sha256": "4d0342ab5af3e1b7de13c6f2650bca9bc380cac5e6c8fd3b0e034d50210cb214"
+        },
+        "limen.indicators.var": {
+          "path": "limen/indicators/var.py",
+          "sha256": "61c79fb78c0066ad04942573b081c3b96c4904d6f4d02e6ef8f9d4e188bd42d9"
+        },
+        "limen.indicators.wclprice": {
+          "path": "limen/indicators/wclprice.py",
+          "sha256": "ba9a803f183ff5710e2fc9441fdf2befd2a0f101727c7b6472db72fd3f2c7bbe"
+        },
+        "limen.indicators.wilder_rsi": {
+          "path": "limen/indicators/wilder_rsi.py",
+          "sha256": "d8b2876baba68a37472a8bdb4bb8feb6b04f70b8ca867ec51e716098a512be73"
+        },
+        "limen.indicators.willr": {
+          "path": "limen/indicators/willr.py",
+          "sha256": "ca0cd8ab68e9e75301793d7cf986b4856c4ce885d1de66d4d9e5282d1cc9fa57"
+        },
+        "limen.indicators.window_return": {
+          "path": "limen/indicators/window_return.py",
+          "sha256": "41f33a3a8e0ce03e1d88ddefc5b18e981cba102a24233c2528b3e369943987f1"
+        },
+        "limen.indicators.wma": {
+          "path": "limen/indicators/wma.py",
+          "sha256": "1aaced63d59df93776228ff7e919b25dfb253780c72d8193657f2ef8efcddfff"
+        },
+        "limen.metrics": {
+          "path": "limen/metrics/__init__.py",
+          "sha256": "5e96c1d644c4aaab679382d6be9797e9fc2ee592b4d21cd71341a38b221312a0"
+        },
+        "limen.metrics.balanced_metric": {
+          "path": "limen/metrics/balanced_metric.py",
+          "sha256": "d47ef7f8842806fc0ffeadfde9991dd1b9ce3256a355c86466a25874fcff123c"
+        },
+        "limen.metrics.binary_metrics": {
+          "path": "limen/metrics/binary_metrics.py",
+          "sha256": "49f1fb995c90c228f2af4425ae9c0a754a1f4259f71937967dd41854851e6505"
+        },
+        "limen.metrics.continuous_metrics": {
+          "path": "limen/metrics/continuous_metrics.py",
+          "sha256": "dad9fd9262148a238046049b3dc74c5aee511b4be96d29d8e0703598b121f430"
+        },
+        "limen.metrics.deflated_sharpe_ratio": {
+          "path": "limen/metrics/deflated_sharpe_ratio.py",
+          "sha256": "d5ea9c5a17716fcd1669d07fb022e3f31af6ec4ffcf929d9f312e0bfb969adc9"
+        },
+        "limen.metrics.multiclass_metrics": {
+          "path": "limen/metrics/multiclass_metrics.py",
+          "sha256": "f6ceef3f456713f7c0a873cf2a450694997b93eb6a8a9d1fad4a676a90fc6980"
+        },
+        "limen.metrics.probability_of_backtest_overfitting": {
+          "path": "limen/metrics/probability_of_backtest_overfitting.py",
+          "sha256": "88a2496cd7d50da3ffb5dc418417154849b699413eb4246a427feaa9e3ea122c"
+        },
+        "limen.metrics.rule_based_metrics": {
+          "path": "limen/metrics/rule_based_metrics.py",
+          "sha256": "555cba95e2495de2ec7d1f05c28743773e8b9395a445e8e1a939e6461969b15a"
+        },
+        "limen.metrics.safe_ovr_auc": {
+          "path": "limen/metrics/safe_ovr_auc.py",
+          "sha256": "7e98fd7f1ff85144e14f2d089edb1ad40d4a3ead13144ad686c1ff3a9b66df3f"
+        },
+        "limen.utils": {
+          "path": "limen/utils/__init__.py",
+          "sha256": "100eab83239e2ef805fb1871b2b2f001a6a22381054b1faeb4394dbafdc5561f"
+        },
+        "limen.utils._computation_cache": {
+          "path": "limen/utils/_computation_cache.py",
+          "sha256": "fdfde1c293b575e30aa8fd2108f2b9362b58cca834d061b5e73071dae0d1fa5c"
+        },
+        "limen.utils._line_arrays": {
+          "path": "limen/utils/_line_arrays.py",
+          "sha256": "3a026d9c11f6e2bfe6188f963b23cc5482921e5f36ef597483f8db49bf7e6c0c"
+        },
+        "limen.utils.adf_test": {
+          "path": "limen/utils/adf_test.py",
+          "sha256": "c0df49a19e55fd841c59b8a758de45d761e19ea528098d0e2088a15d62476787"
+        },
+        "limen.utils.confidence_filtering_system": {
+          "path": "limen/utils/confidence_filtering_system.py",
+          "sha256": "379f9a7fbf957d01daec6cc84fbb86ce0adc10e36daf3fb05eca2606b245ee20"
+        },
+        "limen.utils.data_dict_to_numpy": {
+          "path": "limen/utils/data_dict_to_numpy.py",
+          "sha256": "a5fc7c03fe1b10bb0b7a63c4baa85dc129f952972ca4e5f08572239db38fcf05"
+        },
+        "limen.utils.filter_lines_by_quantile": {
+          "path": "limen/utils/filter_lines_by_quantile.py",
+          "sha256": "d6e64784becb126e5909965ad84b66ca3420139c1a9d1834c0697c849d882ef4"
+        },
+        "limen.utils.find_price_lines": {
+          "path": "limen/utils/find_price_lines.py",
+          "sha256": "ce1cf62365bb9ed03a45d4a09ec5386b4a9380dca9d1634e603f3eaa7f2f5e3c"
+        },
+        "limen.utils.param_space": {
+          "path": "limen/utils/param_space.py",
+          "sha256": "7363c28434e8dcd494816e5a7ce1318172b54fe5d29b5d87eb77aff8a3b73717"
+        },
+        "limen.utils.reporting": {
+          "path": "limen/utils/reporting.py",
+          "sha256": "7d13fe9f620a49ab5f42ea1fe09944e363c87ae173ddc661f1311102eec25b49"
+        },
+        "limen._optional": {
+          "path": "limen/_optional.py",
+          "sha256": "c0aff714218a246545dac37b8de7155531b3d6dcc02bf604addacfc6aed9bf21"
+        },
+        "limen.backtest.funding_presets": {
+          "path": "limen/backtest/funding_presets.py",
+          "sha256": "ace67a5d1450ad8d1da0f54a5cf0437a2f5f849cb5d6dae226b8d0f9a05c06c5"
+        },
+        "limen.calibration": {
+          "path": "limen/calibration/__init__.py",
+          "sha256": "dc6ed39b6ef60ef78cf7ebe4810f73f1f3bfe6ea88b62b70d04d3daf9e6125f7"
+        },
+        "limen.calibration._objective_threshold": {
+          "path": "limen/calibration/_objective_threshold.py",
+          "sha256": "62e452708c0032bf433f1f03b15b2f146ffaf56dede6dca2504720794265c89f"
+        },
+        "limen.calibration.pipeline": {
+          "path": "limen/calibration/pipeline.py",
+          "sha256": "6024d0cd543869b26f8eb0a4bfa8b494324f59fd33d7e983bf40f147092bb2e2"
+        },
+        "limen.calibration.probability": {
+          "path": "limen/calibration/probability.py",
+          "sha256": "52defebd193f1926f8c66edfe1d534f85a78eb5c45f91ad0704a46cda4c4e6d3"
+        },
+        "limen.calibration.threshold": {
+          "path": "limen/calibration/threshold.py",
+          "sha256": "849a78a3b8efb3433ebf3bb5042fe292c8f9d7e4315b689127ba4d47b5470903"
+        },
+        "limen.data": {
+          "path": "limen/data/__init__.py",
+          "sha256": "abf5853ea206ed713613fe5abdf74afef20d1318b8558b1310ee5b65abf712f1"
+        },
+        "limen.data._internal": {
+          "namespace_paths": [
+            "limen/data/_internal"
+          ]
+        },
+        "limen.data._internal.binance_file_to_polars": {
+          "path": "limen/data/_internal/binance_file_to_polars.py",
+          "sha256": "162c246e7a6499fd60d896c243b604fc70f168010be9ed3fb1270abab89dc5bf"
+        },
+        "limen.data.bars": {
+          "path": "limen/data/bars/__init__.py",
+          "sha256": "354a63f7d9e08143b8dfa0148b1e45c82cf19b850c63c447479e990d1139fd32"
+        },
+        "limen.data.bars.standard_bars": {
+          "path": "limen/data/bars/standard_bars.py",
+          "sha256": "2cafc5911b04fd03f9bd73eccba3ae81b25c89fc42f2d9947dcff212a5ef88dc"
+        },
+        "limen.data.historical_data": {
+          "path": "limen/data/historical_data.py",
+          "sha256": "965f47aa7777508afe28bc77d67f5013770411fdb5a2183af7b3988736dc3ea0"
+        },
+        "limen.data.utils": {
+          "path": "limen/data/utils/__init__.py",
+          "sha256": "3b541f9c34985bf1da8924cfe9f968290092632918ed52e1c7141b3723ac2587"
+        },
+        "limen.data.utils.compute_data_bars": {
+          "path": "limen/data/utils/compute_data_bars.py",
+          "sha256": "331e6edb2f6522bb62699cb08e4c5b6b8319be2c3af8c89feb4def500a1c83f3"
+        },
+        "limen.data.utils.random_slice": {
+          "path": "limen/data/utils/random_slice.py",
+          "sha256": "83199c75af701b3e4b889e91453513688c8e407166e41c2209093676d2573eee"
+        },
+        "limen.data.utils.split_walk_forward": {
+          "path": "limen/data/utils/split_walk_forward.py",
+          "sha256": "18deea84643c1e81887c709df09328c4584f36c57779d38e0ea200e48c74dd2c"
+        },
+        "limen.data.utils.splits": {
+          "path": "limen/data/utils/splits.py",
+          "sha256": "1a2a8119091deca861238c20e68c4d6f20133f297eff2e5b573c1334f42296db"
+        },
+        "limen.experiment": {
+          "path": "limen/experiment/__init__.py",
+          "sha256": "1066c05d491d3bacc321b15c32ab75628a55e0365490e16cc5f9ca9e193970e0"
+        },
+        "limen.experiment._backtest_provenance": {
+          "path": "limen/experiment/_backtest_provenance.py",
+          "sha256": "9c9f3c6965eb0046e668d6c7eefe17868dd2c98c4ddb019254764b46080fbc3b"
+        },
+        "limen.experiment._column_shims": {
+          "path": "limen/experiment/_column_shims.py",
+          "sha256": "94e54e26d729ad8c52db352e517da53be4a4e494b638bc580a7ffe1a92cc9cfc"
+        },
+        "limen.experiment._fixed_trade_sources": {
+          "path": "limen/experiment/_fixed_trade_sources.py",
+          "sha256": "45fc5add853c9e3643200102a727e89f58cfa77c928e838592539603fdb3613d"
+        },
+        "limen.experiment._grid_resume": {
+          "path": "limen/experiment/_grid_resume.py",
+          "sha256": "27ed16c08faf2cb77920e7674f34ad0e3e68db0e52e370888a767427a00d97ad"
+        },
+        "limen.experiment._objective": {
+          "path": "limen/experiment/_objective.py",
+          "sha256": "f8d93367e0a3f34d92fe09b098cde1678bba70c47ba2091e83128f86b742303d"
+        },
+        "limen.experiment._objective_run": {
+          "path": "limen/experiment/_objective_run.py",
+          "sha256": "fef3d7e4004cef712c9ab7d43172b93921ca9cb859b2492c141000f583fab75a"
+        },
+        "limen.experiment._parallel_commit": {
+          "path": "limen/experiment/_parallel_commit.py",
+          "sha256": "437e84ff377219e12b67eed11be35c77067684eca4314c41bd20d61c1d5079c6"
+        },
+        "limen.experiment._parallel_resume": {
+          "path": "limen/experiment/_parallel_resume.py",
+          "sha256": "db7ce494423877b21025ae2769cd1f46e1aecdeaf997546ffd7bfc0d57f31a2d"
+        },
+        "limen.experiment._parallel_rounds": {
+          "path": "limen/experiment/_parallel_rounds.py",
+          "sha256": "e2bafce8acf945f95f0d41487e46d85c7bc35081462523d295f06bd85ca36692"
+        },
+        "limen.experiment._parallel_worker": {
+          "path": "limen/experiment/_parallel_worker.py",
+          "sha256": "3c8d40d9b71db94401539be82dd8ee115bf822e8539913295e9865c1cd5495f7"
+        },
+        "limen.experiment._prepare_backtest_data": {
+          "path": "limen/experiment/_prepare_backtest_data.py",
+          "sha256": "8c6800f2049ded544cede268a66cd2f2023d75b9f0bca50a2e5d8b46b427ad81"
+        },
+        "limen.experiment._prepare_trade_context": {
+          "path": "limen/experiment/_prepare_trade_context.py",
+          "sha256": "206146659fc84792021bd0b7b0ac2196aa107ba29ace9b7c0fc6f958d10882e9"
+        },
+        "limen.experiment._recording": {
+          "path": "limen/experiment/_recording.py",
+          "sha256": "ad08b967f88810613db7f42b1afb566e4bfa3e25a948e71c234b3e281bd26b33"
+        },
+        "limen.experiment._resolve_backtest_config": {
+          "path": "limen/experiment/_resolve_backtest_config.py",
+          "sha256": "b409fa9c7175c32c9e452052233b1969b93be2257ce18b635b54f99865ac5f5f"
+        },
+        "limen.experiment._resolve_trade_policy": {
+          "path": "limen/experiment/_resolve_trade_policy.py",
+          "sha256": "be3a6085d3d0fa237d264ac4b73b71fe6527daf1d1720c73091c9feacad5d961"
+        },
+        "limen.experiment._round_signals": {
+          "path": "limen/experiment/_round_signals.py",
+          "sha256": "3988c110f814d1a4389f18d75475767621173648c35b43b7a6eaf8a7d3363b2c"
+        },
+        "limen.experiment._round_storage": {
+          "path": "limen/experiment/_round_storage.py",
+          "sha256": "03a79bb6ae3b45eeb5a60ffc20fba3c7d36c2b6a9101e28a38280e0ae0c42688"
+        },
+        "limen.experiment._shim_fractional_diff": {
+          "path": "limen/experiment/_shim_fractional_diff.py",
+          "sha256": "b0fc724b946c4d33ac0998b094c15e3ccc26cf61c883d630a79de3c4d78ff8ac"
+        },
+        "limen.experiment._walk_forward_run": {
+          "path": "limen/experiment/_walk_forward_run.py",
+          "sha256": "d01ced6d3cf2329e4b17b34860e3d0841ba1684fb0ecf5e9edc4c39d969aced3"
+        },
+        "limen.experiment._walk_forward_split": {
+          "path": "limen/experiment/_walk_forward_split.py",
+          "sha256": "485a9605a9ea280d9d2224af0460824f93bfd16e519cfa199a60fb89a4925a15"
+        },
+        "limen.experiment.acceptance_report": {
+          "path": "limen/experiment/acceptance_report.py",
+          "sha256": "2d50ac9adaca846fc66ad1cf04f8d172815420938151491d9c1a46153df6e05f"
+        },
+        "limen.experiment.checkpoint_manager": {
+          "path": "limen/experiment/checkpoint_manager.py",
+          "sha256": "308f553fe52badecd691e5981f2d66a9ce43e795a6a5f4bea7134bca6a6b1939"
+        },
+        "limen.experiment.convergence_report": {
+          "path": "limen/experiment/convergence_report.py",
+          "sha256": "63a3cda8861a939ebfa5a6f1aaecd2abd9e3bab4663acace92542414e2d0e0b3"
+        },
+        "limen.experiment.errors": {
+          "path": "limen/experiment/errors.py",
+          "sha256": "dbf7edfb45abd2156a255588e04454b3ed285defa741ed15f6cd3c2a6f54e5f5"
+        },
+        "limen.experiment.experiment_core": {
+          "path": "limen/experiment/experiment_core.py",
+          "sha256": "e186f89c9b5c5375c40bbc14d951c244cfb7a926992387b5d3d8680161eec55c"
+        },
+        "limen.experiment.feedback_controller": {
+          "path": "limen/experiment/feedback_controller.py",
+          "sha256": "1c7301cb8e295e40a9d81d1ef8f81640986acb299f501a542472fbbb480eb2a5"
+        },
+        "limen.experiment.manifest_core": {
+          "path": "limen/experiment/manifest_core.py",
+          "sha256": "e414f8a252dc2242e4a54e8edd68783795d5722dab3d0eca32b012dd2b11630d"
+        },
+        "limen.experiment.msq": {
+          "path": "limen/experiment/msq.py",
+          "sha256": "00de2dfe50addf196d59bd73a9b7d9e507c9c698d0648663e9ec03c9d4bf4c05"
+        },
+        "limen.experiment.param_domain": {
+          "path": "limen/experiment/param_domain.py",
+          "sha256": "f0c5fb40f8e47f92a9cd00fae30c3daa8e440290ccad16d65789c3ebc0667cba"
+        },
+        "limen.experiment.param_search": {
+          "path": "limen/experiment/param_search/__init__.py",
+          "sha256": "0428f114569749bd7564043cc36b781576cb0699092ed09504846c5975963a0a"
+        },
+        "limen.experiment.param_search._grid_permutation": {
+          "path": "limen/experiment/param_search/_grid_permutation.py",
+          "sha256": "58f6841d4e201d17c034d6d583906587e5097906ad5a260de825b5eab0d7d79a"
+        },
+        "limen.experiment.param_search.grid_strategy": {
+          "path": "limen/experiment/param_search/grid_strategy.py",
+          "sha256": "cbf9555aec65fae891a862f5a0ca69d1d953ed2c378181974890b9b22aab0671"
+        },
+        "limen.experiment.param_search.random_strategy": {
+          "path": "limen/experiment/param_search/random_strategy.py",
+          "sha256": "6dd7aa26330c8914dc97c53287cd14b2352cc94195072c0c5f743030fc3e8ed8"
+        },
+        "limen.experiment.param_search.registry": {
+          "path": "limen/experiment/param_search/registry.py",
+          "sha256": "b4e0839d83324713737a1f7ed058b2b639fe693f37616387efb44354ce49b073"
+        },
+        "limen.experiment.param_search.search_strategy": {
+          "path": "limen/experiment/param_search/search_strategy.py",
+          "sha256": "341ad7db28bda8eb7a07c87b78ae6813e38e968915bf69c89cbfc9665aef6ee3"
+        },
+        "limen.experiment.param_search.sobol_strategy": {
+          "path": "limen/experiment/param_search/sobol_strategy.py",
+          "sha256": "0d013ba7549062d534a49f940a794352357e8aea5f68dd2bada8c815745b1230"
+        },
+        "limen.experiment.reducer": {
+          "path": "limen/experiment/reducer/__init__.py",
+          "sha256": "fe13c13da5a287838fc039837cc8db77f797bf7dddeeb4e480f55713f6396a3c"
+        },
+        "limen.experiment.reducer.budget_reducer": {
+          "path": "limen/experiment/reducer/budget_reducer.py",
+          "sha256": "24b197924de1ddcd51d9a2ba8748f0b2857a2a9639b5e32c99d23b1979341d8d"
+        },
+        "limen.experiment.reducer.correlation_reducer": {
+          "path": "limen/experiment/reducer/correlation_reducer.py",
+          "sha256": "ab984a80efac06dc52acf12c6ffc107456ed174d1e27639b7922afd6cfb76cab"
+        },
+        "limen.experiment.reducer.filter_types": {
+          "path": "limen/experiment/reducer/filter_types.py",
+          "sha256": "b018c3128b2e06d1a32597a3e496aaf2aba7be500bb2901ab3e49d206dea77c1"
+        },
+        "limen.experiment.reducer.focus_reducer": {
+          "path": "limen/experiment/reducer/focus_reducer.py",
+          "sha256": "ab75187ef076fb1b07d5ae1479bb0d214ce7a6a3a5896d37e2f6b56ad47b9a60"
+        },
+        "limen.experiment.reducer.pruning_strategy": {
+          "path": "limen/experiment/reducer/pruning_strategy.py",
+          "sha256": "95d65763141cf38706bea94b6a48b99e966e5d5dc73978262a79e22ef95c9fd7"
+        },
+        "limen.experiment.reducer.registry": {
+          "path": "limen/experiment/reducer/registry.py",
+          "sha256": "56590ddcb2151c9adfeee200201a7678763226d4aea8a03e4185d9cd15949c28"
+        },
+        "limen.experiment.reducer.sanity_reducer": {
+          "path": "limen/experiment/reducer/sanity_reducer.py",
+          "sha256": "ab43f65eb67745a3002d9937d74691e4e38ec9e9c638dae57e59b30a8ea96375"
+        },
+        "limen.experiment.reducer.saturation_reducer": {
+          "path": "limen/experiment/reducer/saturation_reducer.py",
+          "sha256": "a75527b2145cdf58f79d619f433c9910eb5800653f51c8dac65f63c1e2bde677"
+        },
+        "limen.log": {
+          "path": "limen/log/__init__.py",
+          "sha256": "fcec345fe6019e2712c9dc88b63943616aae92632a9cd4b130f0f604cd482eba"
+        },
+        "limen.log._experiment_backtest_results": {
+          "path": "limen/log/_experiment_backtest_results.py",
+          "sha256": "4745cada1d0afe13386c6b200be9866ce0937f214d56c7dcedc59b0a48bc2fa4"
+        },
+        "limen.log._experiment_confusion_metrics": {
+          "path": "limen/log/_experiment_confusion_metrics.py",
+          "sha256": "6a38b3c44ec9d301d91799efcc22b72e6a29e886af18712f70fff5a0b31d6910"
+        },
+        "limen.log._experiment_parameter_correlation": {
+          "path": "limen/log/_experiment_parameter_correlation.py",
+          "sha256": "1aa615e5376a2fb0e7fd2c36a59a339ee3c179a7c513b4f5c0271aec0479e98c"
+        },
+        "limen.log._experiment_parameter_importance": {
+          "path": "limen/log/_experiment_parameter_importance.py",
+          "sha256": "7c0b0607d8d59aef225bc573823803ae4027cc9d284480d21ebaab219e7627ba"
+        },
+        "limen.log._permutation_confusion_metrics": {
+          "path": "limen/log/_permutation_confusion_metrics.py",
+          "sha256": "725c7372d390e5dcdcbf233b9f4191d031b1fbe5f4936ce11d7fc1d609e82630"
+        },
+        "limen.log._permutation_prediction_performance": {
+          "path": "limen/log/_permutation_prediction_performance.py",
+          "sha256": "9c3ae66d6d12fdf5d8f5bbdc3f1e70e2a70cd7afe8614928b98f39210e3fe0ec"
+        },
+        "limen.log._permutation_returns": {
+          "path": "limen/log/_permutation_returns.py",
+          "sha256": "fdb14b7ba25aebcd74e96f7be48ae9506495bb2acb8ffe4d306380eeaa097480"
+        },
+        "limen.log._read_from_file": {
+          "path": "limen/log/_read_from_file.py",
+          "sha256": "6b31da0e4e0bbba67147763601dee255c1cf99feaea0947b2e5e702dae1f8716"
+        },
+        "limen.log.log": {
+          "path": "limen/log/log.py",
+          "sha256": "3414bda87e0dbb218cc442e30d24ffe1f9329f0d51c277d080dab9fe1ee99277"
+        },
+        "limen.scalers": {
+          "path": "limen/scalers/__init__.py",
+          "sha256": "29fb7e39ed50d41845765685ed24d6ada931a85a1fbce38365f54ab0d313cb39"
+        },
+        "limen.scalers.causal_rolling_robust_scaler": {
+          "path": "limen/scalers/causal_rolling_robust_scaler.py",
+          "sha256": "25979ca885248b246022655c40f985c38811b556dfbe49b12fb8ada4fc4cd6dc"
+        },
+        "limen.scalers.linear_scaler": {
+          "path": "limen/scalers/linear_scaler.py",
+          "sha256": "e954e3c4adfc35bf2af4c1ae33b6d1618ff3f166f3233361441f69d70ba913f3"
+        },
+        "limen.scalers.logreg_scaler": {
+          "path": "limen/scalers/logreg_scaler.py",
+          "sha256": "02380ab75b2b114c0c47a3d28cc20f8bdd99365bc178ef00c97150190d226eff"
+        },
+        "limen.scalers.rank_gauss_scaler": {
+          "path": "limen/scalers/rank_gauss_scaler.py",
+          "sha256": "8d8c4a2e9e7ef4037100a90c39646278cbe76af86acc19c4613b71fb45007cf6"
+        },
+        "limen.scalers.registry": {
+          "path": "limen/scalers/registry.py",
+          "sha256": "a45ba915c2b092d5e9765865cd566e635047a761939c223a5736154385684da7"
+        },
+        "limen.scalers.robust_scaler": {
+          "path": "limen/scalers/robust_scaler.py",
+          "sha256": "80e0c94e1973982b37fe783d96997ee26cc2d30bdf9a0778d56831065fcca1ab"
+        },
+        "limen.sfd": {
+          "path": "limen/sfd/__init__.py",
+          "sha256": "589b805b16a2104e7409654b9d00d5775fa3d56bf78b4cb058a29e991a3a342a"
+        },
+        "limen.sfd.reference_architecture": {
+          "path": "limen/sfd/reference_architecture/__init__.py",
+          "sha256": "4df4dc9a4d963640d55661ab0843f42bcedba113e992456750c3e2368b952b43"
+        },
+        "limen.sfd.reference_architecture._backtest_evaluation": {
+          "path": "limen/sfd/reference_architecture/_backtest_evaluation.py",
+          "sha256": "1fdcbecc7d9baf8f1340a03c228f797d85a8f246bf631b59c78f1072167c2073"
+        },
+        "limen.sfd.reference_architecture.base": {
+          "path": "limen/sfd/reference_architecture/base.py",
+          "sha256": "a233996110cbe7faa56b3557d3afb39fa2079e098648c5abbf8181b3e8c8d91e"
+        },
+        "limen.sfd.reference_architecture.direction_sizing": {
+          "path": "limen/sfd/reference_architecture/direction_sizing.py",
+          "sha256": "97dd72c5f687e3ea232d32b8e8498561196562dcd68236a07bbfd607ddf07e1b"
+        },
+        "limen.sfd.reference_architecture.dlinear_regressor": {
+          "path": "limen/sfd/reference_architecture/dlinear_regressor.py",
+          "sha256": "0789d91b908015fc2b267875b3c252c026a9a52afb4652de0b43713c0db5bc04"
+        },
+        "limen.sfd.reference_architecture.lightgbm_binary": {
+          "path": "limen/sfd/reference_architecture/lightgbm_binary.py",
+          "sha256": "9f0642220f0b9a9794b0bac86247ce5cced1916793b391fb017b415defb9b0b0"
+        },
+        "limen.sfd.reference_architecture.logreg_binary": {
+          "path": "limen/sfd/reference_architecture/logreg_binary.py",
+          "sha256": "8af7715887d12a4a69f66f0b2a1e2c62de648a11d0b1c6effa0c8bfd86ab4e9d"
+        },
+        "limen.sfd.reference_architecture.random_binary": {
+          "path": "limen/sfd/reference_architecture/random_binary.py",
+          "sha256": "bd7f01ce60ffcad57bb7533c6905c9ed50c0c03543c55b85e277824c3ca3f83d"
+        },
+        "limen.sfd.reference_architecture.ridge_regressor": {
+          "path": "limen/sfd/reference_architecture/ridge_regressor.py",
+          "sha256": "6daa7418b1e99a595701f0a5ead7165df2ef42630a4946135b6c9e446a7d2fef"
+        },
+        "limen.sfd.reference_architecture.rule_based": {
+          "path": "limen/sfd/reference_architecture/rule_based.py",
+          "sha256": "10674f4bf93c65fc4467c19416457ecc2cc9633e9127eb6e2334da1a6fdb6d61"
+        },
+        "limen.sfd.reference_architecture.tabpfn_binary": {
+          "path": "limen/sfd/reference_architecture/tabpfn_binary.py",
+          "sha256": "5cce5c6adb5a580607c8bf860e128488294f3877208d59c2e04f6aaef8b75a56"
+        },
+        "limen.sfd.reference_architecture.xgboost_regressor": {
+          "path": "limen/sfd/reference_architecture/xgboost_regressor.py",
+          "sha256": "515feedfd8aad76fed36cfda450d9af3fdda27d61944dd136deb26f619039c84"
+        },
+        "limen.sfd.rule_based": {
+          "path": "limen/sfd/rule_based/__init__.py",
+          "sha256": "56c8df23490f1693ea1e4f8ad3f31b3e0a7aa236ae5381c31220961ffc1b4f4c"
+        },
+        "limen.sfd.rule_based._temporal": {
+          "path": "limen/sfd/rule_based/_temporal.py",
+          "sha256": "f4365e19d6f225c81d3831f3e40940befd5b517ba5560f638d9e08798265190c"
+        },
+        "limen.sfd.rule_based.config": {
+          "path": "limen/sfd/rule_based/config.py",
+          "sha256": "5879b4e1c0e968a69ad1e1d838099b6289ea32841981dcce354289fbd1cd180b"
+        },
+        "limen.sfd.rule_based.predicates": {
+          "path": "limen/sfd/rule_based/predicates.py",
+          "sha256": "6b0a6825d9d9bb3f858830cec5df8e4415527ad8e8a946c68053bafc5b47ea16"
+        },
+        "limen.targets": {
+          "path": "limen/targets/__init__.py",
+          "sha256": "4d522a02221594a9ae169e571cd54c54cb9eba03451c1eac9b8973be2f0d55d5"
+        },
+        "limen.targets.ema_breakout": {
+          "path": "limen/targets/ema_breakout.py",
+          "sha256": "77fa6ea0f4b9761cb1099b70129d1ff9e433de3073765d1e53ecf2d0ffb5dce4"
+        },
+        "limen.targets.exit_quality": {
+          "path": "limen/targets/exit_quality.py",
+          "sha256": "e4c1f0a58b23b47d1fb18a267f7950ec952986c5dc53f9ab3a8a1b21a090d7d1"
+        },
+        "limen.targets.forward_breakout": {
+          "path": "limen/targets/forward_breakout.py",
+          "sha256": "b090a010e3e388bf3f0caabf50bcac5c468c682af23565b9edbf9de340ea8c07"
+        },
+        "limen.targets.forward_vol_normalized_return": {
+          "path": "limen/targets/forward_vol_normalized_return.py",
+          "sha256": "14aa3e700e350020abe591df49497f15b2edd565740011bab9247d83a0ed9b07"
+        },
+        "limen.targets.identity": {
+          "path": "limen/targets/identity.py",
+          "sha256": "42c3a9ae1aed5e664fd25d23dcfb108e7eb7a092db6bc28b4bb6c50cf3ff50fc"
+        },
+        "limen.targets.next_bar_down": {
+          "path": "limen/targets/next_bar_down.py",
+          "sha256": "deea34a088a8655f41823618f84e99fd51f49a37ffd58992993e587c28cb3860"
+        },
+        "limen.targets.next_bar_up": {
+          "path": "limen/targets/next_bar_up.py",
+          "sha256": "9cd85091ef7b291a41e6c2197053bf625b0ce24161743bbb0efa8f7c1ce27108"
+        },
+        "limen.targets.next_return": {
+          "path": "limen/targets/next_return.py",
+          "sha256": "dc396c813df1382f5fe3b8d5d1a1372308b475d7663b9e9291c1755f31c26d46"
+        },
+        "limen.targets.quantile_binary": {
+          "path": "limen/targets/quantile_binary.py",
+          "sha256": "9453b62d5a3997fca940bd61714731edcbf45db7b339d17fe3587dded2f0bfce"
+        },
+        "limen.targets.random_binary": {
+          "path": "limen/targets/random_binary.py",
+          "sha256": "918b649f54e9e9a1d37296ac23b6e05a3c7b3dd540c3250354df89c2d76b39da"
+        },
+        "limen.targets.risk_reward_ratio": {
+          "path": "limen/targets/risk_reward_ratio.py",
+          "sha256": "f089d4e8aec22fe8da2b12267c17597e97efadf3f4e2849d73b2e2e24ed4b01f"
+        },
+        "limen.targets.threshold_binary": {
+          "path": "limen/targets/threshold_binary.py",
+          "sha256": "0ec67e7c3358f1a2b4daebcc807693b6c9b7acd951f972f8b9343a46f38eb840"
+        },
+        "limen.targets.trade_outcome": {
+          "path": "limen/targets/trade_outcome.py",
+          "sha256": "5ce941863c695c6083b504a04baf10a5bb18f720577ba809f4780a6eed5c10b6"
+        },
+        "limen.targets.tradeline_long_binary": {
+          "path": "limen/targets/tradeline_long_binary.py",
+          "sha256": "102d6c3c4cd7ce277c69312e14bf56f7ae168c58a7d55bb76f81ecb27189b846"
+        },
+        "limen.targets.triple_barrier": {
+          "path": "limen/targets/triple_barrier.py",
+          "sha256": "91457e862737ef52f622fa07cac30cc0b160dc0dc17c9d41b98387023029b2b4"
+        },
+        "limen.targets.vol_normalized_return": {
+          "path": "limen/targets/vol_normalized_return.py",
+          "sha256": "0d19ef9f38267ff5117b53a0a3e47f0357ab4be700ec56526c7827ae9d28e7fb"
+        },
+        "limen.yaml": {
+          "path": "limen/yaml/__init__.py",
+          "sha256": "208a1c6aee05b45b0fb7bfbc5ed8e0ec543553244474ccb19fe4596599c3b41f"
+        },
+        "limen.yaml._backtest_spec": {
+          "path": "limen/yaml/_backtest_spec.py",
+          "sha256": "0808855ff8f2487fcdbece447e72aef25615c0a5e6c21f226fcc9756f8b32edb"
+        },
+        "limen.yaml._feature_shim_spec": {
+          "path": "limen/yaml/_feature_shim_spec.py",
+          "sha256": "bed2f7cf08d3f4587ce836b548d8c73540d3801699432519a57ee507ff8f2d07"
+        },
+        "limen.yaml._objective_spec": {
+          "path": "limen/yaml/_objective_spec.py",
+          "sha256": "8333f00b8e9e731d6fb0124df478b74ef0d02b19a3be04c1fd8e0c3f7ca8a982"
+        },
+        "limen.yaml._recording_spec": {
+          "path": "limen/yaml/_recording_spec.py",
+          "sha256": "2bce42e979d2ae59f633f418b60c526d09609269243a4c1493d6c8b2be954ad3"
+        },
+        "limen.yaml._temporal_spec": {
+          "path": "limen/yaml/_temporal_spec.py",
+          "sha256": "25a2be761c47bca3a7f79e4dbd9d557c94b60e2fc64605a91e0805327db83cc5"
+        },
+        "limen.yaml.compiler": {
+          "path": "limen/yaml/compiler.py",
+          "sha256": "647f844a4eb3778334cc019ca448e0f2d3abfebe5d4cb47d44976daefb60f944"
+        },
+        "limen.yaml.config": {
+          "path": "limen/yaml/config.py",
+          "sha256": "55c80a4704450766c1015602b1d97e83298f8907dfaef092938717cf7e0fb4f3"
+        },
+        "limen.yaml.errors": {
+          "path": "limen/yaml/errors.py",
+          "sha256": "1ecbce89379078cf9abbb42075fcf2a2f06fb2238e5b8d6f9fab45bf3155fbea"
+        },
+        "limen.yaml.parser": {
+          "path": "limen/yaml/parser.py",
+          "sha256": "654c8bb0007c0ad7f8c90d43ce17f0ee208df5adfab8841f27f96c7e69f3907c"
+        },
+        "limen.yaml.profiler": {
+          "path": "limen/yaml/profiler.py",
+          "sha256": "daa7a0d386346b126defda3d8c47de6a1f96487e5e78bb4547e395fe20c7de69"
+        },
+        "limen.yaml.resolver": {
+          "path": "limen/yaml/resolver.py",
+          "sha256": "73f405a2b29992d19dec2cd582d282a68d87d7391a30e2ba10c59900de1c3974"
+        },
+        "limen.yaml.rules": {
+          "path": "limen/yaml/rules.py",
+          "sha256": "4cdb2d474d31cae62c4cca8a76367a2948e1ff4ae6c83f52c9dfa3133d0c7ee1"
+        },
+        "limen.yaml.schema": {
+          "path": "limen/yaml/schema.py",
+          "sha256": "ae85817be0a5a5eff0f22df4dd024794898b7827ff2e12a3e1dbecbeb72dec61"
+        },
+        "limen.yaml.store": {
+          "path": "limen/yaml/store.py",
+          "sha256": "04e73c16a55fa50866ce88327022fc35cfc4e74ba50f252b35c65e58ed3f90e2"
+        },
+        "limen.yaml.validator": {
+          "path": "limen/yaml/validator.py",
+          "sha256": "63cb82bba07dca7fa9372037e982e3dc448410594929acbda7ef96bd046c082d"
+        }
+      }
+    }
+  }
+}

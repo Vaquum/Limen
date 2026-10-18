@@ -9,12 +9,16 @@ OBSERVATION_COLUMNS: tuple[str, ...] = ('row_id', 'start_ns', 'end_ns', 'open_av
 SIGNAL_COLUMNS: tuple[str, ...] = ('row_id', 'available_at_ns', 'target')
 
 
-def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
+def validate_initial(inputs: TradeInputs) -> None:
     for value in cast(tuple[object, object], (inputs.partition_start_ns, inputs.partition_end_ns)):
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError('Partition timestamps must be integer UTC nanoseconds')
     if finite_number(inputs.initial_equity, 'initial equity') <= 0 or inputs.partition_end_ns < inputs.partition_start_ns:
         raise ValueError('Positive initial equity and ordered partition bounds are required')
+
+
+def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
+    validate_initial(inputs)
     observations = inputs.observations
     if not observations.height or set(OBSERVATION_COLUMNS) - set(observations.columns):
         raise ValueError('Execution observations require recorded prices and interval/availability timestamps')
@@ -47,7 +51,13 @@ def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
         raise ValueError('Execution source fingerprint changed')
 
 
-def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[ExecutionEvent, ...]:
+def timer_clock(policy: TradePolicy) -> tuple[int, int]:
+    if policy.timer_interval_seconds is None:
+        return 0, 0
+    return round(policy.timer_interval_seconds * NANOSECONDS), round(policy.timer_phase_utc_seconds * NANOSECONDS)
+
+
+def source_execution_events(inputs: TradeInputs, policy: TradePolicy, *, include_timers: bool) -> tuple[ExecutionEvent, ...]:
     validate_observations(inputs, policy)
     if set(SIGNAL_COLUMNS) - set(inputs.signals.columns) or inputs.signals['row_id'].is_duplicated().any():
         raise ValueError('Signals require unique row identity, availability and target')
@@ -65,12 +75,12 @@ def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[Executio
         time = int(row['available_at_ns'])
         events.append(ExecutionEvent(f'signal:{row["row_id"]}', time, 'signal', str(row['row_id']), time))
     if policy.timer_interval_seconds is not None:
-        interval = round(policy.timer_interval_seconds * NANOSECONDS)
-        phase = round(policy.timer_phase_utc_seconds * NANOSECONDS)
+        interval, phase = timer_clock(policy)
         if interval <= 0:
             raise ValueError('Timer cadence is below timestamp precision')
         first = phase + -(-(inputs.partition_start_ns - phase) // interval) * interval
-        events.extend(ExecutionEvent(f'timer:{time}', time, 'timer', None, time) for time in range(first, inputs.partition_end_ns + 1, interval))
+        if include_timers:
+            events.extend(ExecutionEvent(f'timer:{time}', time, 'timer', None, time) for time in range(first, inputs.partition_end_ns + 1, interval))
     # Funding clocks are added by the native funding preparation, independently
     # of prediction/bar clocks.
     if inputs.funding_events is not None:
@@ -96,6 +106,10 @@ def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[Executio
     selected = [event for event in events if inputs.partition_start_ns <= event.time_ns <= inputs.partition_end_ns]
     selected.append(ExecutionEvent(f'end:{inputs.partition_end_ns}', inputs.partition_end_ns, 'timer', None, inputs.partition_end_ns))
     return tuple(sorted(selected, key=lambda event: (event.time_ns, priority[event.kind], event.observation_phase == 'open', (signal_order if event.kind == 'signal' else source_order).get(str(event.source_row_id), 0), event.event_id)))
+
+
+def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[ExecutionEvent, ...]:
+    return source_execution_events(inputs, policy, include_timers=True)
 
 
 def with_predictions(inputs: TradeInputs, predictions: object) -> TradeInputs:

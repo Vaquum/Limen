@@ -432,3 +432,49 @@ portfolio constraints. It also does not test GPU execution, large parameter
 sweeps or optimizer scheduling. Its recorded windows and fixed rules support bounded
 correctness and timing observations; they do not establish out-of-sample
 profitability, capacity or future live returns.
+
+## Backtest computation reuse
+
+The computation-reuse comparison runs the baseline and candidate source trees in
+separate processes against the same recorded market data and prepared signals.
+It requires absolute numerical error no greater than `1e-10`, with zero relative
+tolerance. Table schemas, row and column order, null masks, identifiers, clocks
+and contract digests must agree. Snapshot regressions use the tighter `1e-12`
+absolute tolerance and preserve the original CVaR tail summation order.
+
+```bash
+mkdir -p /tmp/limen-backtest-baseline
+git archive ec254c73f0ff47cfcc2017e262458b2d5f671fb0 | tar -x -C /tmp/limen-backtest-baseline
+python -m tests.benchmark_backtest_reuse \
+  --baseline-root /tmp/limen-backtest-baseline \
+  --output "$(mktemp -d /tmp/limen-backtest-reuse.XXXXXX)/campaign"
+```
+
+The benchmark measures the snapshot ledger, complete snapshot evaluation,
+repeated line features, full timer-driven event execution and forward trade
+labels. First-call and warm timings are separate. The timer case retains every
+audit state row; label evaluation retains both directions and all label metadata.
+Source loading and shared signal preparation are excluded from each timed case.
+The report records source-code hashes, input checksums, dependency versions and
+the maximum absolute numerical error for every case.
+
+### Recorded comparison: 2026-10-18
+
+Baseline `ec254c73` and computation-reuse code `4754d096` ran on the same host with one native thread, NumPy 2.5.1 and Polars 1.42.1. These are medians of three warm samples; they describe the named workloads and do not predict a complete experiment sweep.
+
+| Workload | Baseline | Reuse | Speedup |
+|---|---:|---:|---:|
+| Snapshot ledger, 8,784 bars | 1.177 ms | 0.699 ms | 1.69x |
+| Complete snapshot, 8,784 bars | 1.597 ms | 1.103 ms | 1.45x |
+| 32 rounds of two line features | 607.907 ms | 163.300 ms | 3.72x |
+| Timer execution, all 43,201 state rows | 211.680 ms | 17.638 ms | 12.00x |
+| 168 hourly bars with recorded funding | 10.115 ms | 2.616 ms | 3.87x |
+| 256 forward candidates, TP/SL exits | 859.438 ms | 22.610 ms | 38.01x |
+
+Every compared numeric output had maximum absolute error **0.0**, exceeding the required ten-decimal equivalence. Non-numeric output contracts also matched, including all timer ledger rows, both label directions, funding cashflows and provenance. See the [machine-readable report](benchmarks/backtest-reuse/report.json) and [CSV summary](benchmarks/backtest-reuse/summary.csv) for source/input hashes and all timing samples.
+
+The standalone campaign fails on numerical/structural differences or any named warm speedup at or below 1.0. CI checks the committed report's acceptance, current source/fixture hashes, independent baseline outputs and deterministic operation counts. Ratios remain host-dependent; funded timers and joint feature/target throughput have no measured speed claim.
+
+A second campaign with identical production-code hashes also matched exactly. Its process peak RSS (including imports, inputs and output persistence) was 307.8 → 270.1 MiB for line features, 305.3 → 258.1 MiB for timer execution, and within 1.3 MiB of baseline for the other four cases. Cold timings and normalized RSS for all six cases are in the report's `resource_campaign`; these observations do not establish a universal memory or cold-latency bound.
+
+Line-feature reuse is bounded to one invocation. Event plans retain validated source clocks and use content-addressed identities; changed predictions retain dynamic validation. Timer blocks reconstruct all original state rows. Unfunded forward candidates stop after their independent episode closes; candidates that remain open still inspect the remaining events. Funded candidates retain full execution, including custom adapter behavior.
