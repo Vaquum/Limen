@@ -251,18 +251,18 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             assert isinstance(report['pbo'], float)
             assert isinstance(report['verdicts']['max_pbo'], bool)
     elif case == 'nonpersisted_pbo':
-        class _Admitted(RuntimeError):
+        class _AdmittedError(RuntimeError):
             pass
 
         def admitted(loop, *args, **kwargs):
             assert loop._recording is None
-            raise _Admitted('full retention')
+            raise _AdmittedError('full retention')
 
         config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
         monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', admitted)
         for search, directory in ((False, tmp_path / 'standard'), (True, None), (False, None)):
             loop = _loop(config, directory, search=search, bars=_bars('walk_forward'))
-            with pytest.raises(_Admitted, match='full retention'):
+            with pytest.raises(_AdmittedError, match='full retention'):
                 _run(loop, record_execution=False, record_model_outputs=False)
             if directory is not None:
                 assert not directory.exists()
