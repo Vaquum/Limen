@@ -119,6 +119,26 @@ PBO requires at least two trials, an even block count of at least two, exact div
 
 These statistics reuse the sweep's test observations to assess selection. They are not a second untouched holdout. The trial count includes successfully recorded tracks in this artifact; it omits failed trials and earlier unrecorded searches and estimates no effective independent trial count. Purging and embargo depend on the declared geometry and cannot repair a feature that already reads future data. DSR's trial-count approximation and moment correction do not establish independence, stationarity or a calibrated forecast of live success. CSCV redistributes recorded blocks and is not a new chronological walk-forward evaluation. Correlated trials, serial dependence and changing market regimes limit interpretation. The report provides no formal research falsification proof; passing verdicts establish neither causal validity nor future profitability.
 
+### Comparing a recorded experiment family
+
+`limen.experiment.family_acceptance_report.family_acceptance_report` assesses explicitly supplied walk-forward runs together. Set `run_directories` to their existing experiment-directory `Path` objects and `project_root` to the project containing their committed-manifest store:
+
+```python
+from limen.experiment.family_acceptance_report import family_acceptance_report
+
+report = family_acceptance_report(run_directories, project_root=project_root)
+```
+
+The returned dictionary is JSON-serializable. It reads existing artifacts without modifying them, discovering other runs, replaying execution or writing over per-run reports. `runs` records source paths, UTC creation chronology and available manifest ancestry. Missing ancestry and chronology remain explicit; unknown chronology sorts after known runs, with directory paths breaking ties. Each `trials` entry preserves its recorded trial identity together with its source directory.
+
+`comparisons` contains one assessment per proven evaluation sample. Snapshot comparisons require the same resolved declared data source, ordered test timestamps and recorded market-return observations in each fold. Recorded initial market nulls remain nulls. Signed-execution comparisons additionally use retained execution-source, product/currency, rule, partition and signal-availability evidence; they never mix with snapshot returns. The evidence summary exposes sample bounds, timestamp and market fingerprints, and return semantics. Different samples remain separate; no intersection, padding or timestamp reconstruction occurs.
+
+Models, features, targets, training windows and strategy/cost parameters remain eligible variations when that evaluation evidence matches. A repeat requires the same declared SFD candidate configuration and round parameters, recorded implementation version, evaluation evidence and net returns. Display metadata, search-grid breadth and post-run acceptance thresholds do not distinguish candidates. Equal returns alone never collapse distinct candidates. Repeat entries identify their first chronological occurrence and the reason; repeated directory inputs are listed separately and read once.
+
+Each comparison reports the full-track Sharpe winner, distinct recorded trial count, trial-Sharpe variance, DSR and PBO. Ties retain chronological run order and persisted trial order. `n_blocks=2` uses the standard report's partitioning; another valid even count can be supplied for this family report. Insufficient evidence or a degenerate statistic produces an explicit reason and no numeric result for that assessment. Malformed or contradictory storage raises. `coverage` counts retained trials, distinct compared trials, repeats and unavailable trials; missing return artifacts leave the underlying trial coverage unknown.
+
+These are conditional assessments of supplied retained successful trials. Separate comparison groups are not one complete family statistic. Lineage does not prove comparability, creation time does not establish when results were viewed, and declaration/market fingerprints do not authenticate an external data provider. Failed or unrecorded searches and semantically equivalent configurations written differently may remain outside the repeat accounting. The selection/dependence limitations above still apply; this report supplies neither an effective independent trial count nor an untouched holdout.
+
 ## Choosing `x`
 
 `permutation_confusion_metrics()` and `experiment_confusion_metrics()` work on a chosen column `x`.
