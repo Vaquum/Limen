@@ -239,9 +239,10 @@ def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -
     if not all(isinstance(trial, str) for trial in identifiers):
         raise ValueError('Recorded trial identities must be strings')
     identities = cast(list[str], identifiers)
-    if records.keys() - set(identities):
+    identity_set = set(identities)
+    if records.keys() - identity_set:
         raise ValueError('Recorded trials are absent from trial_returns.parquet')
-    ordered = [trial for trial in records if trial in set(identities)]
+    ordered = [trial for trial in records if trial in identity_set]
     ordered.extend(trial for trial in identities if trial not in records)
     trials: list[Trial] = []
     for trial in ordered:
