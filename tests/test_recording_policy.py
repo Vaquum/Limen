@@ -473,6 +473,20 @@ def test_consumer_contracts(case, campaigns, tmp_path):
             chosen.append(cohort.permutation_ids)
         assert predictions[0] == predictions[1]
         assert chosen[0] == chosen[1]
+        legacy = tmp_path / 'legacy-alignment'
+        shutil.copytree(captured['full']['path'], legacy)
+        metadata_path = legacy / 'metadata.json'
+        metadata = json.loads(metadata_path.read_text())
+        metadata['recording'] = LEAN
+        metadata_path.write_text(json.dumps(metadata))
+        storage.round_path(legacy).unlink()
+        for original in captured['full']['records']:
+            record = _project(original, LEAN)
+            record['trade_contract'] = original['trade_contract']
+            storage.append_record(storage.round_path(legacy), record)
+        original = captured['full']['records'][0]
+        sensor = Trainer(legacy, data=captured['bars']).train([original['round_id']])[0]
+        assert sensor.trade_contract == original['trade_contract']
         trainer = Trainer(captured['lean']['path'], data=captured['bars'])
         row = captured['lean']['records'][0]
         assert 'signal_rows' not in row['trade_contract']
