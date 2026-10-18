@@ -442,7 +442,6 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
 
 
 def _write_yaml(config, path):
-    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     stream = io.StringIO()
     YAML().dump(config, stream)
     path.write_text(stream.getvalue())

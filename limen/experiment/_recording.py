@@ -95,13 +95,9 @@ def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | No
         ('predictions', 'preds'), ('trade_ledger', 'trade_ledger'), ('fold_details', 'folds'),
     ) if not policy[setting]}
     projected = {key: value for key, value in record.items() if key not in excluded}
-    if not policy['alignment'] and 'alignment' in projected:
-        alignment = cast(Mapping[str, object], projected['alignment'])
-        projected['alignment'] = {key: value for key, value in alignment.items()
-                                  if key not in ('missing_datetimes', 'test_datetimes')}
-    if not policy['alignment'] and 'trade_contract' in projected:
-        contract = cast(Mapping[str, object], projected['trade_contract'])
-        projected['trade_contract'] = {key: value for key, value in contract.items() if key != 'signal_rows'}
+    for name, fields in (('alignment', ('missing_datetimes', 'test_datetimes')), ('trade_contract', ('signal_rows',))):
+        if not policy['alignment'] and name in projected:
+            projected[name] = {key: value for key, value in cast(Mapping[str, object], projected[name]).items() if key not in fields}
     if 'folds' in projected:
         projected['folds'] = [project_record(fold, policy)
                               for fold in cast(list[Mapping[str, object]], projected['folds'])]
