@@ -638,8 +638,8 @@ def test_sensor_reproduces_training_metrics_on_val_test() -> None:
         n_correct = sum(1 for p, y in zip(test_preds, y_test, strict=False) if p.prediction == y)
         sensor_accuracy = n_correct / len(y_test)
 
-        # results.csv stores metrics rounded to 3 decimal places
-        assert round(sensor_accuracy, 3) == training_accuracy, (
+        # Sensor and training metrics retain computed precision.
+        assert sensor_accuracy == training_accuracy, (
             f'sensor accuracy {sensor_accuracy} does not match training accuracy {training_accuracy}'
         )
 
@@ -742,7 +742,7 @@ def test_sensor_reproduces_training_metrics_with_rolling_scaler() -> None:
             training_accuracy = (
                 results.filter(pl.col('id') == str(sensor.permutation_id))['accuracy'][0]
             )
-            assert round(sensor_accuracy, 3) == training_accuracy, (
+            assert sensor_accuracy == training_accuracy, (
                 f'sensor (window={w}) accuracy {sensor_accuracy:.4f} '
                 f'!= training {training_accuracy}'
             )

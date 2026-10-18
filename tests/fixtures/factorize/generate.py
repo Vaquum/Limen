@@ -20,12 +20,13 @@ from limen.data import HistoricalData
 
 NUMERICAL_ENV = {
     'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1',
+    'OPENBLAS_CORETYPE': 'NEHALEM',
     'NPY_DISABLE_CPU_FEATURES': 'SSSE3,SSE41,POPCNT,SSE42,AVX,F16C,FMA3,AVX2,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR',
 }
 
 ROOT = Path(__file__).resolve().parents[3]
 MARKET = ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet'
-BASELINE = 'cda37a02d526c72360c56da4c75dc0626d08cd4c'
+BASELINE = '7746615031a9a2af30905bc218977b624f718143'
 CASES = ('binary_costs','directional_barriers','interleaved','rule_based')
 
 def fixture_source(**_kwargs: object) -> pl.DataFrame:
@@ -139,6 +140,15 @@ def canonical(value: object, *, in_csv: bool = False) -> object:
     raise TypeError(type(value).__name__)
 
 
+def baseline_surface(captured: dict) -> dict:
+    # Keep the original comparison columns; these independent additions have separate tests.
+    return {**captured,
+            'columns': [key for key in captured['columns'] if key != '_convergence_warning'],
+            'metadata': {key: value for key, value in captured['metadata'].items() if key != 'recording'},
+            'rows': [{key: value for key, value in row.items() if key != '_convergence_warning'}
+                     for row in captured['rows']]}
+
+
 def stable(captured: dict) -> dict:
     excluded = {'created_at', 'round_storage', 'limen_version', 'manifest_id', 'yaml_reference', 'factorize'}
     return {'columns': captured['columns'],
@@ -199,7 +209,7 @@ def main():
             (args.out / f'{name}.json').write_text(json.dumps(captured))
             continue
         with tempfile.TemporaryDirectory() as temp:
-            result=execute(name,Path(temp))
+            result=baseline_surface(execute(name,Path(temp)))
         evidence={'source_sha':BASELINE,'case':name,
                   'market_sha256':hashlib.sha256(MARKET.read_bytes()).hexdigest(),
                   'python':platform.python_version(),'platform':platform.platform(),
@@ -207,10 +217,10 @@ def main():
                   'threads':{k:os.environ.get(k) for k in
                              NUMERICAL_ENV},
                   'digest_12dp':digest(result),
-                  'component_digests': component_digests(result),
                   'round_ids':[row['round_id'] for row in result['round_data']],
-                  'columns':result['columns'],'row_count':len(result['rows'])}
+                  'columns':result['columns'],'row_count':len(result['rows']),
+                  'component_digests': component_digests(result)}
         dest=args.out/f'{name}.json'
-        dest.write_text(json.dumps(evidence,indent=2,default=str))
+        dest.write_text(json.dumps(evidence,indent=2,default=str)+'\n')
 if __name__=='__main__':
     main()

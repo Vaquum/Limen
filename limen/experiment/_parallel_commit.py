@@ -112,7 +112,7 @@ class ParallelCommit:
         row.update(round_params)
         row.update({key: value for key, value in payload.parameters.items() if not key.startswith('_')})
         row['id'] = identity
-        row['execution_time'] = round(payload.elapsed, 2)
+        row['execution_time'] = payload.elapsed
         row['_warnings'] = json.dumps(payload.warnings)
         row['_convergence_warning'] = payload.convergence
         _ = row.setdefault('strict_mode_error', None)

@@ -1,6 +1,5 @@
 from typing import Any
 from typing import Protocol
-from typing import cast
 
 import numpy as np
 import numpy.typing as npt
@@ -54,14 +53,14 @@ def binary_metrics(data: dict[str, Any],
     y_test = np.asarray(data['y_test'])
     negatives = int((y_test == 0).sum())
     false_positives = int(_sk_metrics().confusion_matrix(y_test, preds, labels=[0, 1])[0, 1])
-    fpr = float('nan') if negatives == 0 else round(false_positives / negatives, 3)
+    fpr = float('nan') if negatives == 0 else false_positives / negatives
     auc = (float('nan') if np.unique(y_test).size < _BINARY_CLASS_COUNT
-           else round(cast(float, _sk_metrics().roc_auc_score(y_test, probs)), 3))
+           else float(_sk_metrics().roc_auc_score(y_test, probs)))
 
-    round_results = {'recall': round(_sk_metrics().recall_score(y_test, preds, zero_division=0), 3),
-                     'precision': round(_sk_metrics().precision_score(y_test, preds, zero_division=0), 3),
+    round_results = {'recall': float(_sk_metrics().recall_score(y_test, preds, zero_division=0)),
+                     'precision': float(_sk_metrics().precision_score(y_test, preds, zero_division=0)),
                      'fpr': fpr,
                      'auc': auc,
-                     'accuracy': round(_sk_metrics().accuracy_score(y_test, preds), 3)}
+                     'accuracy': float(_sk_metrics().accuracy_score(y_test, preds))}
 
     return round_results

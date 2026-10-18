@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer.filter_types import FILTER_SAMPLE, SAMPLE_HASH_RULE
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
 
@@ -200,14 +200,13 @@ class MSQ:
 
         log_kwargs: dict[str, Any] = {'key': key}
         if filter_type is not None:
-            log_kwargs['filter_type'] = filter_type
-            log_kwargs['filter_params'] = dict(cast('dict[str, Any]', filter_params))
+            params = dict(cast('dict[str, Any]', filter_params))
+            log_kwargs.update(filter_type=filter_type, filter_params=params)
+            self._named_filter_descriptors[key] = (filter_type, dict(params))
+        else:
+            _ = self._named_filter_descriptors.pop(key, None)
         self._log_intervention('set_filter', **log_kwargs)
         self._named_filters[key] = condition
-        if filter_type is not None:
-            self._named_filter_descriptors[key] = (filter_type, dict(cast('dict[str, Any]', filter_params)))
-        elif key in self._named_filter_descriptors:
-            del self._named_filter_descriptors[key]
 
 
     def clear_filter(self, key: str) -> None:
@@ -418,7 +417,8 @@ class MSQ:
             'custom_filters_count': len(self._custom_filters),
             'named_filter_keys': list(self._named_filters.keys()),
             'named_filter_descriptors': {
-                k: list(v) for k, v in self._named_filter_descriptors.items()
+                k: [kind, {'hash_rule': SAMPLE_HASH_RULE, **params} if kind == FILTER_SAMPLE else params]
+                for k, (kind, params) in self._named_filter_descriptors.items()
             },
             'intervention_log': list(self._intervention_log),
             'strategy_state': self._strategy.get_state(),
@@ -442,6 +442,10 @@ class MSQ:
 
         from limen.experiment.reducer.filter_types import FILTER_BUILDERS
 
+        descriptors = state.get('named_filter_descriptors', {})
+        if any(kind == FILTER_SAMPLE and params.get('hash_rule') != SAMPLE_HASH_RULE for kind, params in descriptors.values()):
+            raise ValueError('Cannot resume an unversioned or unsupported sampling hash rule; use the original package version or start a new experiment')
+
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
@@ -452,7 +456,6 @@ class MSQ:
         self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
-        descriptors = state.get('named_filter_descriptors', {})
         restored_keys: set[str] = set()
         for key, (filter_type, filter_params) in descriptors.items():
             builder = FILTER_BUILDERS.get(filter_type)

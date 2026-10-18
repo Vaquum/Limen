@@ -20,6 +20,7 @@ FILTER_EXCLUDE_VALUE = 'exclude_value'
 FILTER_KEEP_VALUES = 'keep_values'
 FILTER_KEEP_BETWEEN = 'keep_between'
 FILTER_SAMPLE = 'sample'
+SAMPLE_HASH_RULE = 'blake2b-64-v1'
 
 
 def _build_exclude_value(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
@@ -42,17 +43,19 @@ def _build_keep_between(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
 
 def _build_sample(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
 
+    if fp.get('hash_rule', SAMPLE_HASH_RULE) != SAMPLE_HASH_RULE:
+        raise ValueError('Unsupported sampling hash rule')
     param, value, fraction = fp['param'], fp['value'], fp['fraction']
     if not 0.0 <= fraction <= 1.0:
         raise ValueError(
             f"FILTER_SAMPLE fraction must be between 0.0 and 1.0, got {fraction}"
         )
-    threshold = round(fraction * 10_000)
+    numerator, denominator = float(fraction).as_integer_ratio()
     return lambda c: (
         c.get(param) == value
         and int.from_bytes(hashlib.blake2b(
             str(sorted(c.items())).encode(), digest_size=8,
-        ).digest(), 'big') % 10_000 >= threshold
+        ).digest(), 'big') * denominator >= numerator * (1 << 64)
     )
 
 

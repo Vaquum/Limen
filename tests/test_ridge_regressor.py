@@ -67,7 +67,7 @@ def test_ridge_evaluation_contract(ridge_data, inline_metrics, with_price):
     assert preds.shape == (len(data['y_test']),)
     assert np.isfinite(preds).all()
     assert {'bias', 'mae', 'rmse', 'r2', 'mape'} <= result.keys()
-    assert result['mae'] == round(float(np.mean(np.abs(preds - np.asarray(data['y_test'])))), 3)
+    assert result['mae'] == float(np.mean(np.abs(preds - np.asarray(data['y_test']))))
     assert '_probs' not in result
     assert any(key.startswith('confusion_') for key in result) == inline_metrics
     assert any(key.startswith('backtest_') for key in result) == (inline_metrics and with_price)

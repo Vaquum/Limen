@@ -382,7 +382,7 @@ class UniversalExperimentLoop:
 
             _: Any = round_results.setdefault('strict_mode_error', None)
             round_results['id'] = i
-            round_results['execution_time'] = round(time.time() - start_time, 2)
+            round_results['execution_time'] = time.time() - start_time
 
             if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
@@ -684,7 +684,7 @@ class UniversalExperimentLoop:
                 self._alignment.append(data_dict['_alignment'])
 
             round_results['id'] = current_hash
-            round_results['execution_time'] = round(time.time() - start_time, 2)
+            round_results['execution_time'] = time.time() - start_time
 
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)

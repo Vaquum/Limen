@@ -17,6 +17,6 @@ def momentum_weight(data: pl.DataFrame, period: int = 12, weight_multiplier: flo
     '''
 
     return data.with_columns([
-        ((pl.col('close').pct_change(period) > 0).cast(pl.Float32) * weight_multiplier + base_weight)
+        ((pl.col('close').pct_change(period) > 0).cast(pl.Float64) * weight_multiplier + base_weight)
         .alias('momentum_weight')
     ])

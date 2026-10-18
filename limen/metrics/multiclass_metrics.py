@@ -44,10 +44,10 @@ def multiclass_metrics(data: dict[str, Any],
         dict: Dictionary containing precision, recall, auc, and accuracy metrics
     '''
 
-    round_results = {'precision': round(_sk_metrics().precision_score(data['y_test'], preds, average=average), 3),
-                     'recall': round(_sk_metrics().recall_score(data['y_test'], preds, average=average), 3),
-                     'auc': round(safe_ovr_auc(data['y_test'], np.asarray(probs)), 3),
-                     'accuracy': round(_sk_metrics().accuracy_score(data['y_test'], preds), 3)}
+    round_results = {'precision': float(_sk_metrics().precision_score(data['y_test'], preds, average=average)),
+                     'recall': float(_sk_metrics().recall_score(data['y_test'], preds, average=average)),
+                     'auc': float(safe_ovr_auc(data['y_test'], np.asarray(probs))),
+                     'accuracy': float(_sk_metrics().accuracy_score(data['y_test'], preds))}
 
     return round_results
 

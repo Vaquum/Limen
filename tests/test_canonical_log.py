@@ -83,14 +83,14 @@ def _confusion_oracle(data, predictions):
              'tn': (predictions == 0) & (actuals == 0),
              'fn': (predictions == 0) & (actuals == 1)}
     result: dict[str, float] = {key: int(mask.sum()) for key, mask in masks.items()}
-    result['precision'] = round(result['tp'] / (result['tp'] + result['fp']), 3) if result['tp'] + result['fp'] else 0.0
-    result['recall'] = round(result['tp'] / (result['tp'] + result['fn']), 3) if result['tp'] + result['fn'] else 0.0
+    result['precision'] = result['tp'] / (result['tp'] + result['fp']) if result['tp'] + result['fp'] else 0.0
+    result['recall'] = result['tp'] / (result['tp'] + result['fn']) if result['tp'] + result['fn'] else 0.0
     prices = data['price_data_for_backtest']
     opens, closes = prices['open'].to_numpy(), prices['close'].to_numpy()
     returns = (closes[1:] - opens[1:]) / opens[1:] * 100
     for key, mask in masks.items():
         selected = returns[mask[:-1] & np.isfinite(returns)]
-        result[f'{key}_mean_return_pct'] = round(float(selected.mean()), 3) if selected.size else np.nan
+        result[f'{key}_mean_return_pct'] = float(selected.mean()) if selected.size else np.nan
     return result
 
 

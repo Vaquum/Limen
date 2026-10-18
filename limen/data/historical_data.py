@@ -676,16 +676,6 @@ def _base_interval_seconds(data: pl.DataFrame) -> int:
     return int(min_diff_seconds)
 
 
-def _round_spot_kline_columns(data: pl.DataFrame) -> pl.DataFrame:
-    return data.with_columns([
-        pl.col('mean').round(5),
-        pl.col('std').round(6),
-        pl.col('volume').round(9),
-        pl.col('liquidity_sum').round(1),
-        pl.col('maker_liquidity').round(1),
-    ])
-
-
 def _canonical_spot_kline_columns() -> list[str]:
     return [
         'datetime',
@@ -751,7 +741,7 @@ def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
     canonical_columns = _canonical_spot_kline_columns()
 
     if kline_size == base_interval:
-        return _round_spot_kline_columns(data.select(canonical_columns))
+        return data.select(canonical_columns)
 
     bucket_ms = kline_size * 1000
     weighted = data.with_columns([
@@ -812,7 +802,7 @@ def _aggregate_spot_klines(data: pl.DataFrame, kline_size: int) -> pl.DataFrame:
         .sort('datetime')
     )
 
-    return _round_spot_kline_columns(aggregated)
+    return aggregated
 
 
 def _normalize_spot_dollar_klines(data: pl.DataFrame) -> pl.DataFrame:
@@ -879,7 +869,7 @@ def _aggregate_spot_dollar_klines(
             )
 
         if dollar_bar_size == source_dollar_bar_size:
-            return _round_spot_kline_columns(data)
+            return data
 
     grouped = _with_spot_dollar_groups(data, dollar_bar_size)
 
@@ -934,7 +924,7 @@ def _aggregate_spot_dollar_klines(
         .sort('datetime')
     )
 
-    return _round_spot_kline_columns(aggregated)
+    return aggregated
 
 
 class HistoricalData:

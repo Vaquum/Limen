@@ -28,19 +28,10 @@ from limen.yaml import validate
 from limen.yaml.compiler import build_manifest
 
 from tests.fixtures.factorize.generate import (
-    BASELINE, CASES, MARKET, canonical, component_digests, digest, execute, manifest, pinned_captures,
+    BASELINE, CASES, MARKET, baseline_surface, canonical, component_digests, digest, execute, manifest, pinned_captures,
 )
 
 GOLDENS = Path(__file__).parent / 'fixtures/factorize'
-
-
-def _original_surface(captured: dict) -> dict:
-    # Main added this evidence column after the immutable source snapshot.
-    return {**captured,
-            'columns': [key for key in captured['columns'] if key != '_convergence_warning'],
-            'metadata': {key: value for key, value in captured['metadata'].items() if key != 'recording'},
-            'rows': [{key: value for key, value in row.items() if key != '_convergence_warning'}
-                     for row in captured['rows']]}
 
 
 def _loop(case: str, directory: Path, *, settings: dict | None = None, **kwargs: object) -> UniversalExperimentLoop:
@@ -94,7 +85,7 @@ def test_cli_manifest_switch(tmp_path: Path) -> None:
     assert not (tmp_path / 'direct/results.csv').exists()
 
 
-def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path: Path) -> None:
+def test_four_cli_experiments_match_precision_baseline_at_12_decimals(tmp_path: Path) -> None:
     locked = sys.platform == 'linux' and sys.version_info[:2] in ((3, 10), (3, 12)) and np.__version__ == '2.2.6'
     captures = pinned_captures(tmp_path / 'pinned') if locked else {}
     for name in CASES:
@@ -103,20 +94,20 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
         assert baseline['market_sha256'] == hashlib.sha256(MARKET.read_bytes()).hexdigest()
         off = captures[name]['off'] if locked else execute(name, tmp_path / name / 'off')
         on = captures[name]['on'] if locked else execute(name, tmp_path / name / 'on', factorize=True)
-        off_digest, on_digest = digest(_original_surface(off)), digest(_original_surface(on))
+        off_digest, on_digest = digest(baseline_surface(off)), digest(baseline_surface(on))
         # Frozen goldens require the locked Linux numerical runtime.
         if locked:
             if off_digest != baseline['digest_12dp']:
-                actual = component_digests(_original_surface(off))
+                actual = component_digests(baseline_surface(off))
                 differences = {key: (expected, actual.get(key))
                                for key, expected in baseline['component_digests'].items()
                                if actual.get(key) != expected}
-                pytest.fail(f'{name}: original Limen vs switch-off: {differences}')
-            assert on_digest == baseline['digest_12dp'], f'{name}: original Limen vs factorized'
+                pytest.fail(f'{name}: precision baseline vs switch-off: {differences}')
+            assert on_digest == baseline['digest_12dp'], f'{name}: precision baseline vs factorized'
         else:
             assert off_digest == on_digest, f'{name}: current on/off parity'
         assert off['columns'] == on['columns']
-        assert _original_surface(off)['columns'] == baseline['columns']
+        assert baseline_surface(off)['columns'] == baseline['columns']
         assert all(row['_convergence_warning'] == 'False' for row in on['rows'])
         assert len(off['rows']) == len(on['rows']) == baseline['row_count']
         assert [r['round_id'] for r in on['round_data']] == baseline['round_ids']
@@ -143,7 +134,7 @@ def test_four_cli_experiments_match_pre_feature_baseline_at_12_decimals(tmp_path
 
     altered = copy.deepcopy(off)
     altered['rows'][0][col] = '123.123456789124'
-    assert digest(_original_surface(altered)) != off_digest
+    assert digest(baseline_surface(altered)) != off_digest
     assert canonical(1.000000000001) != canonical(1.000000000002)
     assert canonical(-0.0) != canonical(0.0)
     assert canonical(float('nan')) != canonical(None)

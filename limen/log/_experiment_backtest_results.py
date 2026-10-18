@@ -49,8 +49,8 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
         if valid.empty:
             return False
 
-        integer_like = np.isclose(valid, np.round(valid)).all()
-        unique_count = pd.Index(np.round(valid).astype(int)).nunique()
+        integer_like = (valid == np.trunc(valid)).all()
+        unique_count = valid.nunique()
 
         return bool(integer_like and (valid >= 0).all() and unique_count > BINARY_CLASS_COUNT)
 
