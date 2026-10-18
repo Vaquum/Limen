@@ -6,6 +6,7 @@ from typing import Any
 from typing import cast
 
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.reducer.filter_types import FILTER_SAMPLE, SAMPLE_HASH_RULE
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
 
@@ -198,6 +199,9 @@ class MSQ:
                 'MSQ filter_type and filter_params must both be provided or both omitted.'
             )
 
+        if filter_type == FILTER_SAMPLE and filter_params is not None:
+            filter_params = dict(filter_params)
+            _ = filter_params.setdefault('hash_rule', SAMPLE_HASH_RULE)
         log_kwargs: dict[str, Any] = {'key': key}
         if filter_type is not None:
             log_kwargs['filter_type'] = filter_type
@@ -442,6 +446,11 @@ class MSQ:
 
         from limen.experiment.reducer.filter_types import FILTER_BUILDERS
 
+        descriptors = state.get('named_filter_descriptors', {})
+        if any(kind == FILTER_SAMPLE and params.get('hash_rule') != SAMPLE_HASH_RULE
+               for kind, params in descriptors.values()):
+            raise ValueError('Cannot resume an unversioned or unsupported sampling hash rule; use the original package version or start a new experiment')
+
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
@@ -452,7 +461,6 @@ class MSQ:
         self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
-        descriptors = state.get('named_filter_descriptors', {})
         restored_keys: set[str] = set()
         for key, (filter_type, filter_params) in descriptors.items():
             builder = FILTER_BUILDERS.get(filter_type)

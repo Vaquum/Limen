@@ -12,7 +12,8 @@ from sklearn import metrics
 from limen.backtest.long_flat_strategy import long_flat_strategy
 from limen.cohort.sfc.top_n import select
 from limen.data.historical_data import _aggregate_spot_dollar_klines, _aggregate_spot_klines
-from limen.experiment.reducer.filter_types import _build_sample
+from limen.experiment.reducer.filter_types import _build_sample, FILTER_SAMPLE, SAMPLE_HASH_RULE
+from tests.test_msq import _make_msq
 from limen.features.entry_score_microstructure import entry_score_microstructure
 from limen.features.fractional_diff import find_min_d
 from limen.features.momentum_confirmation import momentum_confirmation
@@ -180,6 +181,21 @@ def test_sampling_preserves_sub_basis_point_fractions(bars, monkeypatch):
     assert not reject(combo)
     assert _build_sample({'param': 'param', 'value': combo['param'], 'fraction': 0.0})(combo)
     assert not _build_sample({'param': 'param', 'value': combo['param'], 'fraction': 1.0})(combo)
+
+
+def test_sampling_checkpoint_versions_selection_rule(bars):
+    values = bars['mean'].head(8).to_list()
+    original, _ = _make_msq({'p': values})
+    params = {'param': 'p', 'value': values[0], 'fraction': 0.5}
+    original.set_filter('sample', _build_sample(params), filter_type=FILTER_SAMPLE, filter_params=params)
+    state = original.get_state()
+    assert state['named_filter_descriptors']['sample'][1]['hash_rule'] == SAMPLE_HASH_RULE
+    restored, _ = _make_msq({'p': values})
+    restored.set_state(state)
+    assert list(restored) == list(original)
+    del state['named_filter_descriptors']['sample'][1]['hash_rule']
+    with pytest.raises(ValueError, match='use the original package version'):
+        restored.set_state(state)
 
 
 def test_fractional_search_preserves_declared_grid(bars, monkeypatch):
