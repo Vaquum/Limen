@@ -198,7 +198,7 @@ def open_text(path: Path, *, limit: int | None = None, tail: bool = False) -> It
         def lines() -> Iterator[str]:
             previous = -1
             for raw, end in islice(_frames(stream, path, tail=tail), limit):
-                decoded = _json(raw, path)
+                decoded = _json(raw, path, end)
                 if path.suffix != '.gz':
                     if isinstance(decoded, dict):
                         _ = _restore(cast(dict[str, object], decoded), path.parent, None)
@@ -269,8 +269,8 @@ def propagate(error: BaseException) -> None:
         raise error
 
 
-def _json(raw: str | bytes, path: Path) -> object:
+def _json(raw: str | bytes, path: Path, end: int | None = None) -> object:
     try:
         return cast(object, json.loads(raw))
     except (ValueError, UnicodeDecodeError) as exc:
-        raise RoundStorageError(f'Malformed JSON in {path}') from exc
+        raise RoundStorageError(f'Malformed JSON in {path}' + (f' ending at byte {end}' if end is not None else '')) from exc
