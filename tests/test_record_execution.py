@@ -81,6 +81,7 @@ def _loop(config, recorded_bars, path, *, search=True):
 
 
 def _run(loop, **kwargs):
+    kwargs.setdefault('recording', dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None and loop._experiment_dir is not None else None)
     loop.run('recorded_execution', n_permutations=2, prep_each_round=True, progress_bar=False, **kwargs)
 
 
@@ -253,7 +254,7 @@ def test_python_resume_preserves_setting_and_rounds(record_execution, legacy_mar
 def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypatch):
     config = _config()
     path = tmp_path / 'experiment'
-    config['uel'].update(output_path=str(path), record_execution=True)
+    config['uel'].update(output_path=str(path), record_execution=True, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     yaml_path = tmp_path / 'experiment.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
@@ -436,7 +437,8 @@ def test_market_arrays_follow_native_target_window_ends(recorded_bars, tmp_path)
     config['sfd']['manifest']['target']['transform_params']['periods'] = '{lookahead_hours}'
     config['sfd']['params'] = {'alpha': [0.1], 'solver': ['svd'], 'lookahead_hours': [24, 48, 72]}
     loop = _loop(config, recorded_bars, tmp_path)
-    loop.run('market_windows', n_permutations=3, prep_each_round=True, progress_bar=False, record_execution=True)
+    loop.run('market_windows', n_permutations=3, prep_each_round=True, progress_bar=False, record_execution=True,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     records = _records(tmp_path)
     assert len(records) == 3
     lengths = {}

@@ -106,7 +106,8 @@ def _loop(config, bars, path, *, search=True, callback=None, ratios=None, reduce
 def _run(loop, *, resume=False, n_permutations=2):
     loop.run('walk_forward', n_permutations=n_permutations, prep_each_round=True,
              random_search=False, progress_bar=False, post_processing=True,
-             record_execution=loop._search_strategy is not None, resume=resume)
+             record_execution=loop._search_strategy is not None, resume=resume,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None else None)
 
 
 def _fold_manifest(manifest, fold):
@@ -309,7 +310,8 @@ def test_fold_local_fits_calibration_and_objective(tmp_path, monkeypatch):
     monkeypatch.setattr(LogRegBinary, 'train', capture_train)
     loop.manifest.prediction_calibration_config.calibration_func = capture_calibration
     loop.run('objective_folds', n_permutations=1, prep_each_round=True,
-             progress_bar=False, record_execution=True, record_model_outputs=True)
+             progress_bar=False, record_execution=True, record_model_outputs=True,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     assert len(trained) == len(calibrated) == 2
     assert trained[0][0] is not trained[1][0]
     assert calibrated[0][3] is not calibrated[1][3]

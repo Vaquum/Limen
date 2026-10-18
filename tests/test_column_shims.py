@@ -121,6 +121,7 @@ def _loop(config, bars, directory):
 
 
 def _run(loop, count=1, **kwargs):
+    kwargs.setdefault('recording', dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None and loop._experiment_dir is not None else None)
     loop.run('recorded_column_shims', n_permutations=count, prep_each_round=True,
              progress_bar=False, record_model_outputs=True, **kwargs)
 

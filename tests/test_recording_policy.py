@@ -4,6 +4,7 @@ import itertools
 import json
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import polars as pl
@@ -21,6 +22,7 @@ from limen.experiment._recording import parse_recording
 from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.errors import StrictModeError
 from limen.inference import Trainer
+from limen.inference.errors import ReconstructionError
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
@@ -126,6 +128,8 @@ def _project(record, policy):
         expected.pop('preds', None)
     if not policy['trade_ledger']:
         expected.pop('trade_ledger', None)
+    if not policy['alignment'] and 'trade_contract' in expected:
+        expected['trade_contract'].pop('signal_rows', None)
     if not policy['alignment'] and 'alignment' in expected:
         expected['alignment'].pop('missing_datetimes', None)
         expected['alignment'].pop('test_datetimes', None)
@@ -138,7 +142,7 @@ def campaigns(tmp_path_factory):
     for kind in ('serial', 'factorized', 'parallel', 'walk_forward'):
         config, bars = _config(kind), _bars(kind)
         pairs = []
-        for label, options in (('full', {}), ('lean', {'recording': LEAN})):
+        for label, options in (('full', {'recording': FULL}), ('lean', {})):
             path = tmp_path_factory.mktemp(f'recording-{kind}-{label}')
             loop = _loop(config, path, bars=bars)
             _run(loop, kind=kind, **options)
@@ -147,7 +151,36 @@ def campaigns(tmp_path_factory):
     return result
 
 
-@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'compiled_sources'))
+@pytest.mark.parametrize('kind', ('serial', 'factorized', 'walk_forward', 'native'))
+def test_bar_payloads_default_off(kind, tmp_path):
+    config = _config(kind)
+    if kind == 'native':
+        compiled = CompiledSFD(config)
+        sfd = SimpleNamespace(__name__=__name__, params=compiled.params, manifest=compiled.manifest)
+        loop = UniversalExperimentLoop(sfd=sfd, data=_bars(), experiment_dir=tmp_path,
+                                       search_strategy=build_search_strategy(config))
+    else:
+        loop = _loop(config, tmp_path, bars=_bars(kind))
+    loop.run('default_recording', n_permutations=1, prep_each_round=True, progress_bar=False)
+    records = _records(tmp_path)
+    assert len(records) == loop.experiment_log.height == 1
+    excluded = {'preds', 'probs', 'execution', 'market', 'trade_ledger', 'folds',
+                'missing_datetimes', 'test_datetimes', 'signal_rows'}
+
+    def check(value):
+        if isinstance(value, dict):
+            assert not excluded.intersection(value)
+            for child in value.values():
+                check(child)
+        elif isinstance(value, list):
+            for child in value:
+                check(child)
+
+    check(records)
+    assert json.loads((tmp_path / 'metadata.json').read_text())['recording'] == LEAN
+
+
+@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'nonpersisted_pbo', 'compiled_sources'))
 def test_policy_validation(case, tmp_path, monkeypatch):
     config = _config('walk_forward')
     if case in ('yaml', 'native'):
@@ -169,7 +202,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 with pytest.raises((TypeError, ValueError), match='recording'):
                     _run(loop, recording=policy)
             assert not path.exists()
-        for policy in ({}, FULL, {'predictions': False}):
+        for policy in ({}, FULL, {'predictions': True}):
             candidate = copy.deepcopy(config)
             candidate['uel']['recording'] = policy
             assert validate(candidate).valid
@@ -182,16 +215,23 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not directory.exists()
     elif case == 'pbo_admission':
         config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
+        invalid = validate(config)
+        assert not invalid.valid
+        assert any('PBO' in error.message or 'max_pbo' in error.message for error in invalid.errors)
+        path = tmp_path / 'implicit-pbo'
+        with pytest.raises(ValueError, match=r'PBO|max_pbo'):
+            _run(_loop(config, path, bars=_bars('walk_forward')), kind='walk_forward')
+        assert not path.exists()
         for key in ('alignment', 'fold_details'):
             candidate = copy.deepcopy(config)
-            candidate['uel']['recording'] = {key: False}
+            candidate['uel']['recording'] = {**FULL, key: False}
             report = validate(candidate)
             assert not report.valid
             assert any('PBO' in error.message or 'max_pbo' in error.message for error in report.errors)
             path = tmp_path / (key + '-native')
             loop = _loop(config, path, bars=_bars('walk_forward'))
             with pytest.raises(ValueError, match=r'PBO|max_pbo'):
-                _run(loop, kind='walk_forward', recording={key: False})
+                _run(loop, kind='walk_forward', recording={**FULL, key: False})
             assert not path.exists()
             candidate['uel']['output_path'] = str(tmp_path / (key + '-cli'))
             yaml_path = tmp_path / (key + '.yaml')
@@ -202,7 +242,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             assert not Path(candidate['uel']['output_path']).exists()
         for key in ('predictions', 'trade_ledger'):
             candidate = copy.deepcopy(config)
-            candidate['uel']['recording'] = {key: False}
+            candidate['uel']['recording'] = {**FULL, key: False}
             assert validate(candidate).valid
             path = tmp_path / (key + '-allowed')
             loop = _loop(candidate, path, bars=_bars('walk_forward'))
@@ -210,6 +250,22 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             report = json.loads((path / 'acceptance_report.json').read_text())
             assert isinstance(report['pbo'], float)
             assert isinstance(report['verdicts']['max_pbo'], bool)
+    elif case == 'nonpersisted_pbo':
+        class _AdmittedError(RuntimeError):
+            pass
+
+        def admitted(loop, *args, **kwargs):
+            assert loop._recording is None
+            raise _AdmittedError('full retention')
+
+        config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
+        monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', admitted)
+        for search, directory in ((False, tmp_path / 'standard'), (True, None), (False, None)):
+            loop = _loop(config, directory, search=search, bars=_bars('walk_forward'))
+            with pytest.raises(_AdmittedError, match='full retention'):
+                _run(loop, record_execution=False, record_model_outputs=False)
+            if directory is not None:
+                assert not directory.exists()
     elif case == 'compiled_sources':
         class _PolicyResolvedError(RuntimeError):
             pass
@@ -218,7 +274,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             raise _PolicyResolvedError('recording admission completed')
 
         monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', resolved_before_dispatch)
-        config['uel']['recording'] = {'predictions': False}
+        config['uel']['recording'] = {'predictions': True}
         unchanged = copy.deepcopy(config)
         no_policy = copy.deepcopy(config)
         del no_policy['uel']['recording']
@@ -226,9 +282,9 @@ def test_policy_validation(case, tmp_path, monkeypatch):
         bars = _bars('walk_forward')
         for workers in (1, 2):
             for label, declaration, expected in (
-                ('yaml', None, {**FULL, 'predictions': False}),
-                ('partial', {'trade_ledger': False}, {**FULL, 'trade_ledger': False}),
-                ('empty', {}, FULL),
+                ('yaml', None, {**LEAN, 'predictions': True}),
+                ('partial', {'trade_ledger': True}, {**LEAN, 'trade_ledger': True}),
+                ('empty', {}, LEAN),
             ):
                 path = tmp_path / f'{workers}-{label}'
                 loop = _loop(config, path, bars=bars, reference=None)
@@ -239,7 +295,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not path.exists()
             for label, declaration in (('omitted', None), ('native', FULL)):
                 conflicting = copy.deepcopy(config)
-                conflicting['uel']['recording'] = {'alignment': False}
+                conflicting['uel']['recording'] = {'alignment': True}
                 path = tmp_path / f'{workers}-conflict-{label}'
                 loop = _loop(config, path, bars=bars, reference=conflicting)
                 options = {} if declaration is None else {'recording': declaration}
@@ -248,7 +304,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not path.exists()
         assert config == unchanged
     else:
-        config['uel']['recording'] = {'predictions': False}
+        config['uel']['recording'] = {'alignment': True, 'fold_details': True}
         for label, options in (('yaml', {}), ('native', {'recording': FULL})):
             path = tmp_path / label
             loop = _loop(config, path, bars=_bars('walk_forward'),
@@ -258,8 +314,8 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             assert all(('preds' in fold) == (label == 'native')
                        for record in records for fold in record['folds'])
             metadata = json.loads((path / 'metadata.json').read_text())
-            assert metadata['recording'] == (FULL if label == 'native' else {**FULL, 'predictions': False})
-            assert metadata['yaml_reference']['uel']['recording'] == {'predictions': False}
+            assert metadata['recording'] == (FULL if label == 'native' else {**LEAN, 'alignment': True, 'fold_details': True})
+            assert metadata['yaml_reference']['uel']['recording'] == {'alignment': True, 'fold_details': True}
             assert metadata['manifest_id'] == canonical_manifest_id(config)
             if label == 'native':
                 resumed = _loop(config, path, bars=_bars('walk_forward'), reference=None)
@@ -278,7 +334,7 @@ def test_payload_projection(kind, campaigns, tmp_path):
         assert any(record['trade_ledger']['states'] for record in full['records'])
         for original, projected in zip(full['records'], lean['records'], strict=True):
             for key in ('trade_contract', 'trade_contract_digest', 'learning_binding'):
-                assert projected.get(key) == original.get(key)
+                assert projected.get(key) == _project(original, LEAN).get(key)
         raw_full = sum(len(json.dumps(record)) for record in full['records'])
         raw_lean = sum(len(json.dumps(record)) for record in lean['records'])
         assert raw_lean < raw_full
@@ -295,7 +351,7 @@ def test_payload_projection(kind, campaigns, tmp_path):
                 assert right['trade_ledger'] == left['trade_ledger']
             elif kind == 'walk_forward':
                 assert all('preds' in fold and 'net_returns' in fold for fold in right['folds'])
-    assert 'recording' not in json.loads((full['path'] / 'metadata.json').read_text())
+    assert json.loads((full['path'] / 'metadata.json').read_text())['recording'] == FULL
     assert json.loads((lean['path'] / 'metadata.json').read_text())['recording'] == LEAN
     expected_identity = canonical_manifest_id(captured['config'])
     for saved in (full, lean):
@@ -417,8 +473,31 @@ def test_consumer_contracts(case, campaigns, tmp_path):
             chosen.append(cohort.permutation_ids)
         assert predictions[0] == predictions[1]
         assert chosen[0] == chosen[1]
+        legacy = tmp_path / 'legacy-alignment'
+        shutil.copytree(captured['full']['path'], legacy)
+        metadata_path = legacy / 'metadata.json'
+        metadata = json.loads(metadata_path.read_text())
+        metadata['recording'] = LEAN
+        metadata_path.write_text(json.dumps(metadata))
+        storage.round_path(legacy).unlink()
+        for original in captured['full']['records']:
+            record = _project(original, LEAN)
+            record['trade_contract'] = original['trade_contract']
+            storage.append_record(storage.round_path(legacy), record)
+        original = captured['full']['records'][0]
+        sensor = Trainer(legacy, data=captured['bars']).train([original['round_id']])[0]
+        assert sensor.trade_contract == original['trade_contract']
+        trainer = Trainer(captured['lean']['path'], data=captured['bars'])
+        row = captured['lean']['records'][0]
+        assert 'signal_rows' not in row['trade_contract']
+        for key in ('trade_contract', 'trade_contract_digest'):
+            original = trainer._round_data[row['round_id']][key]
+            trainer._round_data[row['round_id']][key] = {} if key == 'trade_contract' else '0' * 64
+            with pytest.raises(ReconstructionError, match='exact trade'):
+                trainer.train([row['round_id']])
+            trainer._round_data[row['round_id']][key] = original
     elif case == 'resume_rejection':
-        policies = [None, FULL, LEAN, *({key: False} for key in FULL)]
+        policies = [None, FULL, LEAN, *({**FULL, key: False} for key in FULL)]
         for kind, captured in campaigns.items():
             for saved in ('full', 'lean'):
                 for index, policy in enumerate(policies):
@@ -436,7 +515,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
                 path = tmp_path / f'{kind}-changed-yaml-{label}'
                 shutil.copytree(captured['full']['path'], path)
                 candidate = copy.deepcopy(captured['config'])
-                candidate['uel']['recording'] = {'alignment': False}
+                candidate['uel']['recording'] = {'alignment': True}
                 loop = _loop(candidate, path, bars=captured['bars'])
                 before = _snapshot(path)
                 with pytest.raises(ValueError, match='recording'):
@@ -451,10 +530,19 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         _run(loop, resume=True)
         assert _records(path) == records
         assert_frame_equal(loop.experiment_log, persisted)
+        metadata_path = path / 'metadata.json'
+        metadata = json.loads(metadata_path.read_text())
+        del metadata['recording']
+        metadata_path.write_text(json.dumps(metadata))
+        legacy = _loop(captured['config'], path, bars=captured['bars'])
+        _run(legacy, resume=True)
+        assert legacy._recording == FULL
+        assert _records(path) == records
+        assert_frame_equal(legacy.experiment_log, persisted)
     elif case == 'cli':
         config = _config('walk_forward')
         config['sfd']['manifest']['data_source']['params']['row_count_limit'] = 384
-        config['uel'].update(recording=LEAN, output_path=str(tmp_path / 'cli-run'),
+        config['uel'].update(output_path=str(tmp_path / 'cli-run'),
                              output_format='parquet', record_execution=True, record_model_outputs=True)
         yaml_path = tmp_path / 'recording.yaml'
         YAML().dump(config, yaml_path)
@@ -481,7 +569,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
     else:
         config = _config()
         logs = []
-        for label, declaration in (('full', None), ('lean', LEAN)):
+        for label, declaration in (('full', FULL), ('lean', LEAN)):
             policy = None if declaration is None else dict(declaration)
             loop = _loop(config, tmp_path / label)
             original = loop.model

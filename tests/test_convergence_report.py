@@ -26,7 +26,8 @@ def _run(loop, count, *, resume=False, post_processing=False):
         warnings.simplefilter('always')
         loop.run('results', n_permutations=count, prep_each_round=True,
                  random_search=False, progress_bar=False,
-                 post_processing=post_processing, resume=resume)
+                 post_processing=post_processing, resume=resume,
+                 recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None and loop._experiment_dir is not None else None)
     return emitted
 
 

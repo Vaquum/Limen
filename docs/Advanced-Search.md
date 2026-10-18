@@ -33,7 +33,7 @@ The important mental model is:
 1. `SearchStrategy` proposes combinations
 2. `MSQ` decides what is still legal
 3. feedback mutates `MSQ` and sometimes the underlying `ParamDomain`
-4. checkpoints preserve enough state to continue later with `resume=True`
+4. checkpoints and full recording preserve enough state to continue later with `resume=True`
 
 ## Choose a built-in strategy
 
@@ -126,7 +126,7 @@ When `experiment_dir` is set, Python/MSQ writes:
 | File | Meaning |
 |---|---|
 | `results.csv` | streaming round log |
-| `round_data.jsonl.gz` | round params, stored predictions, and alignment metadata |
+| `round_data.jsonl.gz` | round params and payloads selected by the [recording policy](Universal-Experiment-Loop.md#recording-policy) |
 | `checkpoint.json` | search state for resume |
 | `audit.jsonl` | feedback-cycle audit trail |
 | `metadata.json` | experiment metadata used by `Trainer` |
@@ -136,7 +136,7 @@ Unlike the other files above, `interventions.json` is not produced by the run. I
 
 ## Resume flow
 
-Python/MSQ can resume from a saved checkpoint when the original strategy and configuration are reconstructed:
+Python/MSQ can resume from a saved checkpoint when all four [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
 
 ```python
 uel.run(

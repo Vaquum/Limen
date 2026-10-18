@@ -38,6 +38,7 @@ def _original_surface(captured: dict) -> dict:
     # Main added this evidence column after the immutable source snapshot.
     return {**captured,
             'columns': [key for key in captured['columns'] if key != '_convergence_warning'],
+            'metadata': {key: value for key, value in captured['metadata'].items() if key != 'recording'},
             'rows': [{key: value for key, value in row.items() if key != '_convergence_warning'}
                      for row in captured['rows']]}
 
@@ -46,13 +47,14 @@ def _loop(case: str, directory: Path, *, settings: dict | None = None, **kwargs:
     cfg = manifest(case)
     if settings:
         cfg['sfd']['params'].update(settings)
+    cfg['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     params = cfg['sfd']['params']
     compiled = build_manifest(cfg)
     sfd = SimpleNamespace(__name__='limen.sfd.factorize_fixture',
                           params=lambda: params, manifest=lambda: compiled)
     strategy = kwargs.pop('strategy', GridStrategy(ParamDomain(params)))
     return UniversalExperimentLoop(sfd=sfd, data=pl.read_parquet(MARKET),
-                                   search_strategy=strategy, experiment_dir=directory,
+                                   search_strategy=strategy, experiment_dir=directory, yaml_reference=cfg,
                                    **kwargs)
 
 

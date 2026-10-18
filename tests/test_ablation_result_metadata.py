@@ -56,7 +56,8 @@ def _make_uel(path, msq, counts, *, ablation=True, seeds=(42,), feedback_interva
 
 def _run(uel, n, *, post_processing=True, resume=False):
     uel.run('results', n_permutations=n, prep_each_round=True, random_search=False,
-            post_processing=post_processing, progress_bar=False, resume=resume)
+            post_processing=post_processing, progress_bar=False, resume=resume,
+                 recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if uel._search_strategy is not None and uel._experiment_dir is not None else None)
 
 
 def _csv_rows(path):

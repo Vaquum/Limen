@@ -168,7 +168,7 @@ Set `uel.output_format: parquet` to also write `results.parquet`. Set `uel.outpu
 
 Runtime boundaries:
 
-- `limen run --resume` requires an existing results directory with `metadata.json` containing `yaml_reference`, a readable checkpoint, consistent `round_data.jsonl.gz` through the checkpoint round, and `results.csv`.
+- `limen run --resume` requires full [recording evidence](Universal-Experiment-Loop.md#recording-policy) enabled on the initial run, an existing results directory with `metadata.json` containing `yaml_reference`, a readable checkpoint, consistent `round_data.jsonl.gz` through the checkpoint round, and `results.csv`.
 - `limen run --dry-run` does not test data-source availability beyond compilation needs.
 - CLI commands report process success through exit codes; they do not write an external audit record unless the command itself creates project artifacts.
 - `limen commit` mutates git state in the target project; use it only when the manifest store commit is intended.

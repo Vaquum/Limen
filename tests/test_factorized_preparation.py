@@ -80,7 +80,8 @@ def _run(loop, *, enabled=None, count=4, resume=False, retained=False):
     kwargs = {} if enabled is None else {'factorize': enabled}
     loop.run('fitted_preparation', n_permutations=count, prep_each_round=True,
              progress_bar=False, resume=resume, post_processing=retained,
-             record_execution=True, record_model_outputs=True, **kwargs)
+             record_execution=True, record_model_outputs=True,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True), **kwargs)
 
 
 def _rounds(config, bars=None):
