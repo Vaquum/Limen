@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import logging
 
 import numpy as np
@@ -174,20 +176,19 @@ def find_min_d(data: pl.DataFrame,
 
     fracdiff_col = f"{col}{FRACDIFF_SUFFIX}"
 
-    d = d_start
-    while d <= d_end:
+    start, end, increment = (Decimal(str(value)) for value in (d_start, d_end, step))
+    count = max(0, int((end - start) // increment) + 1) if end >= start else 0
+    for index in range(count):
+        d = float(start + index * increment)
         diffed = fractional_diff(data, d=d, cols=[col], threshold=threshold)
 
         if fracdiff_col not in diffed.collect_schema().names():
-            d = round(d + step, 10)
             continue
 
         series = diffed[fracdiff_col]
         if series.drop_nulls().len() > 0:
             result = adf_test(series, significance_level=significance_level)
             if result.stationary:
-                return round(d, 10)
-
-        d = round(d + step, 10)
+                return d
 
     return d_end

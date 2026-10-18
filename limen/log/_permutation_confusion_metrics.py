@@ -59,7 +59,7 @@ def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
 
     def _mean(mask: npt.NDArray[np.bool_]) -> float:
         values = return_pct[mask]
-        return round(float(values.mean()), 3) if values.size else np.nan
+        return float(float(values.mean())) if values.size else np.nan
 
     return {
         'tp_mean_return_pct': _mean((pred_arr == 1) & (actual_arr == 1)),
@@ -212,10 +212,10 @@ def permutation_confusion_metrics(self: Any,
 
     return pd.DataFrame.from_records([{
         **(id_cols or {}),
-        'pred_pos_rate_pct': round(float(pred_pos_rate) * 100.0, 1),
-        'actual_pos_rate_pct': round(float(actual_pos_rate) * 100.0, 1),
-        'precision_pct': round(float(precision) * 100.0, 1),
-        'recall_pct': round(float(recall) * 100.0, 1),
+        'pred_pos_rate_pct': float(float(pred_pos_rate) * 100.0),
+        'actual_pos_rate_pct': float(float(actual_pos_rate) * 100.0),
+        'precision_pct': float(float(precision) * 100.0),
+        'recall_pct': float(float(recall) * 100.0),
         'tp_x_mean': float(tp['mean']),
         'fp_x_mean': float(fp['mean']),
         'tp_x_median': float(tp['median']),

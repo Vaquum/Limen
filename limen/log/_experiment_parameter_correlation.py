@@ -110,7 +110,7 @@ def experiment_parameter_correlation(self: Any,
         return s.drop(labels=[metric], errors='ignore')
 
     blocks: list[pd.DataFrame] = []
-    realized_pcts: list[int] = []
+    realized_pcts: list[float] = []
 
     for h in heads:
         n = max(int(total_n * h), 1) if isinstance(h, float) and h <= 1.0 else int(h)
@@ -139,13 +139,13 @@ def experiment_parameter_correlation(self: Any,
         median_sign = np.sign(med)
         sign_stability = cast(pd.DataFrame, np.sign(boot_df)).eq(median_sign, axis=0).mean(axis=1)
 
-        cohort_pct = round(100 * n / total_n)
+        cohort_pct = 100 * n / total_n
         realized_pcts.append(cohort_pct)
 
         block = pd.DataFrame(
             {
                 'feature': base.index,
-                'cohort_pct': cohort_pct,   # integer 0..100
+                'cohort_pct': cohort_pct,
                 'n_rows': n,
                 'corr': base.values,
                 'corr_med': med.values,
@@ -161,8 +161,8 @@ def experiment_parameter_correlation(self: Any,
 
     res = pd.concat(blocks, ignore_index=True)
 
-    order: list[int] = []
-    seen: set[int] = set()
+    order: list[float] = []
+    seen: set[float] = set()
     for pct in realized_pcts:
         if pct not in seen:
             order.append(pct)

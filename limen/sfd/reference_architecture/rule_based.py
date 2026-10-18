@@ -12,7 +12,6 @@ from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 BPS_PER_UNIT = 10_000.0
-BPS_DECIMALS = 1
 
 
 def _compounded_trade_pnl_summary(
@@ -31,7 +30,7 @@ def _compounded_trade_pnl_summary(
         for bar_return in result.net[start:end + 1]:
             compounded *= 1.0 + float(bar_return) * notional_rate
         trade_returns.append(compounded - 1.0)
-    mean_bps = round(float(np.mean(trade_returns)) * BPS_PER_UNIT, BPS_DECIMALS)
+    mean_bps = float(float(np.mean(trade_returns)) * BPS_PER_UNIT)
     return mean_bps, len(trade_returns)
 
 

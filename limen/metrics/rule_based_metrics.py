@@ -14,8 +14,8 @@ def _count_entries(pos: npt.NDArray[np.integer[Any]]) -> int:
     return int(pos[0] == 1) + int(np.sum(np.diff(pos) > 0))
 
 
-def _round_or_none(x: float, decimals: int = 3) -> float | None:
-    return round(x, decimals) if not np.isnan(x) else None
+def _float_or_none(x: float) -> float | None:
+    return float(x) if not np.isnan(x) else None
 
 
 def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]],
@@ -44,7 +44,7 @@ def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]],
     for split in _SPLITS:
         pos = np.asarray(positions.get(split, np.array([], dtype=np.int64)))
         results[f'num_trades_{split}'] = _count_entries(pos)
-        results[f'position_rate_{split}'] = round(float(pos.mean()), 3) if len(pos) > 0 else 0.0
+        results[f'position_rate_{split}'] = float(pos.mean()) if len(pos) > 0 else 0.0
         bt = backtest_results.get(split, {})
         split_bt[split] = bt
         for k, v in bt.items():
@@ -56,7 +56,7 @@ def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]],
 
     drawdown_std_bps = float(np.std(valid_drawdowns, ddof=1)) if len(valid_drawdowns) >= _MIN_SPLITS else float('nan')
 
-    results['drawdown_std_bps'] = _round_or_none(drawdown_std_bps)
+    results['drawdown_std_bps'] = _float_or_none(drawdown_std_bps)
     results['is_stable'] = False
 
     return results

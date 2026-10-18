@@ -47,12 +47,12 @@ def _build_sample(fp: dict[str, Any]) -> Callable[[dict[str, Any]], bool]:
         raise ValueError(
             f"FILTER_SAMPLE fraction must be between 0.0 and 1.0, got {fraction}"
         )
-    threshold = round(fraction * 10_000)
+    numerator, denominator = float(fraction).as_integer_ratio()
     return lambda c: (
         c.get(param) == value
         and int.from_bytes(hashlib.blake2b(
             str(sorted(c.items())).encode(), digest_size=8,
-        ).digest(), 'big') % 10_000 >= threshold
+        ).digest(), 'big') * denominator >= numerator * (1 << 64)
     )
 
 

@@ -511,7 +511,7 @@ def test_tp_sl_real_fixture_rule_based_entry_evaluation(market, tmp_path):
         trades = [np.prod(1 + execution.net[a:b] * 0.5) - 1
                   for a, b in zip(np.flatnonzero(changes == 1), np.flatnonzero(changes == -1), strict=True)]
         assert count == len(trades)
-        assert pnl == pytest.approx(round(float(np.mean(trades)) * 10000, 1) if trades else float('nan'), nan_ok=True)
+        assert pnl == pytest.approx(float(np.mean(trades)) * 10000 if trades else float('nan'), nan_ok=True)
         assert expected['pnl_per_trade_bps'] == pytest.approx(pnl, nan_ok=True)
         assert expected['num_executed_trades'] == count
         for key, value in metrics.items():

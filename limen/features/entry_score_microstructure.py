@@ -65,7 +65,7 @@ def entry_score_microstructure(data: pl.DataFrame,
 
     df = df.with_columns([
         ((1 - pl.col('position_in_candle')) * entry_position_weight_base +
-         (pl.col('micro_momentum') > 0).cast(pl.Float32) * entry_momentum_weight_base +
+         (pl.col('micro_momentum') > 0).cast(pl.Float64) * entry_momentum_weight_base +
          pl.col('volume_spike').clip(entry_volume_spike_min, entry_volume_spike_max) / entry_volume_spike_normalizer * entry_volume_weight_base +
          (1 - (pl.col('spread_percent') / pl.col('spread_percent').rolling_mean(window_size=spread_mean_period)).clip(entry_spread_ratio_min, entry_spread_ratio_max)) * entry_spread_weight_base)
         .alias('entry_score_base')
@@ -76,14 +76,14 @@ def entry_score_microstructure(data: pl.DataFrame,
         pl.when(pl.col('volatility_regime') == 'low')
             .then(
                 (1 - pl.col('position_in_candle')) * entry_position_weight_low_vol +
-                (pl.col('micro_momentum') > 0).cast(pl.Float32) * entry_momentum_weight_low_vol +
+                (pl.col('micro_momentum') > 0).cast(pl.Float64) * entry_momentum_weight_low_vol +
                 pl.col('volume_spike').clip(entry_volume_spike_min, entry_volume_spike_max) / entry_volume_spike_normalizer * entry_volume_weight_low_vol +
                 (1 - (pl.col('spread_percent') / pl.col('spread_percent').rolling_mean(window_size=spread_mean_period)).clip(entry_spread_ratio_min, entry_spread_ratio_max)) * entry_spread_weight_low_vol
             )
             .when(pl.col('volatility_regime') == 'high')
             .then(
                 (1 - pl.col('position_in_candle')) * entry_position_weight_high_vol +
-                (pl.col('micro_momentum') > 0).cast(pl.Float32) * entry_momentum_weight_high_vol +
+                (pl.col('micro_momentum') > 0).cast(pl.Float64) * entry_momentum_weight_high_vol +
                 pl.col('volume_spike').clip(entry_volume_spike_min, entry_volume_spike_max) / entry_volume_spike_normalizer * entry_volume_weight_high_vol +
                 (1 - (pl.col('spread_percent') / pl.col('spread_percent').rolling_mean(window_size=spread_mean_period)).clip(entry_spread_ratio_min, entry_spread_ratio_max)) * entry_spread_weight_high_vol
             )

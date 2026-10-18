@@ -52,9 +52,9 @@ def continuous_metrics(data: dict[str, Any],
     mape = _sk_metrics().mean_absolute_percentage_error(y_test, preds_array) * 100
 
     return {
-        'bias': round(bias, 3),
-        'mae': round(mae, 3),
-        'rmse': round(rmse, 3),
-        'r2': round(r2, 3),
-        'mape': round(mape, 3),
+        'bias': float(bias),
+        'mae': float(mae),
+        'rmse': float(rmse),
+        'r2': float(r2),
+        'mape': float(mape),
     }

@@ -153,7 +153,21 @@ By default each UEL candidate repeats preparation, training, and prediction. Eli
 
 Snapshot backtests produce 20 columns over one population: every bar in the window.
 
-All ledger values retain their computed floating-point precision. Round only for display, after recording and ranking results; small per-bar returns, costs, and deployed inventory remain distinguishable from zero.
+### Numerical precision
+
+All package measurements retain their computed floating-point precision through calculation, recording, serialization, filtering and ranking. Round only the final display text. This includes ledger values, classification and regression metrics, confusion rates and returns, rule statistics, historical market aggregates, weighted features, cohort percentages and execution timings. A small nonzero measurement must remain distinguishable from zero; nearby scores must remain distinguishable for selection. Full precision means retaining the computed value, not recovering precision absent from source data or a model backend.
+
+| Surface | Precision rule |
+|---|---|
+| Numeric API values, CSV and JSON artifacts | Preserve computed values; no decimal rounding or formatting before storage or ranking. |
+| Feature weights | Calculate with Float64; do not force configurable weights into Float32. |
+| Fractional differentiation search | Evaluate the declared decimal start/step grid, including its endpoint, without a fixed decimal cutoff. |
+| Sampling filter | Compare the declared fraction against the full 64-bit deterministic hash range; no 1/10,000 buckets. Membership can differ from earlier releases. |
+| Cohort correlation index | Retain `100 * n_rows / total_rows`; adjacent small cohorts keep distinct percentages. |
+| CLI profile text | Format seconds to three decimals for measured per-permutation time; duration estimates use one decimal and counts use two decimals with their unit suffix. |
+| Diagnostic text | Format reported thresholds and reasons for readability; decisions use the original values. |
+
+Remaining numerical rounding expresses discrete contracts: execution, funding and outcome clocks convert seconds to integer nanoseconds with Python's nearest/ties-to-even `round`; focus-reducer integer domains use nearest integer candidates and outward floor/ceil bounds; execution quantities round toward zero to the declared lot step; CVaR selects an integer tail count; bar formation assigns integer time/notional buckets. Classification labels and row/window counts are discrete by definition. These operations do not justify rounding continuous measurements. `tests/test_rounding_precision.py` checks recorded-data calculations and the remaining explicit rounding inventory.
 
 Table 4. Distribution columns report `p5`, `p50`, and `p95`.
 

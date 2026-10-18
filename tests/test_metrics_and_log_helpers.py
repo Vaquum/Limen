@@ -48,7 +48,7 @@ def test_binary_metrics_computes_two_class_outcome() -> None:
     result = binary_metrics(data, preds, probs)
 
     assert result['recall'] == 1.0
-    assert result['precision'] == 0.667
+    assert result['precision'] == 2 / 3
     assert result['fpr'] == 0.5
     assert result['auc'] == 1.0
     assert result['accuracy'] == 0.75
@@ -935,7 +935,7 @@ def test_prepare_snapshot_backtest_input_rejects_non_numeric_logged_values() -> 
         )
 
 
-def test_multiclass_metrics_returns_expected_rounded_summary() -> None:
+def test_multiclass_metrics_returns_expected_summary() -> None:
     data = {'y_test': [0, 1, 2, 0]}
     preds = [0, 2, 1, 0]
     probs = np.asarray([
@@ -948,10 +948,10 @@ def test_multiclass_metrics_returns_expected_rounded_summary() -> None:
     result = multiclass_metrics(data, preds, probs)
 
     expected = {
-        'precision': round(precision_score(data['y_test'], preds, average='macro'), 3),
-        'recall': round(recall_score(data['y_test'], preds, average='macro'), 3),
-        'auc': round(safe_ovr_auc(data['y_test'], probs), 3),
-        'accuracy': round(accuracy_score(data['y_test'], preds), 3),
+        'precision': precision_score(data['y_test'], preds, average='macro'),
+        'recall': recall_score(data['y_test'], preds, average='macro'),
+        'auc': safe_ovr_auc(data['y_test'], probs),
+        'accuracy': accuracy_score(data['y_test'], preds),
     }
 
     assert result == expected

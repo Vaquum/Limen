@@ -30,8 +30,8 @@ def momentum_confirmation(df: pl.DataFrame,
     ])
 
     return df.with_columns([
-        ((pl.col(f'momentum_{short_period}') > 0).cast(pl.Float32) * short_weight +
-         (pl.col(f'momentum_{long_period}') > 0).cast(pl.Float32) * long_weight)
+        ((pl.col(f'momentum_{short_period}') > 0).cast(pl.Float64) * short_weight +
+         (pl.col(f'momentum_{long_period}') > 0).cast(pl.Float64) * long_weight)
         .alias('momentum_score')
     ])
 
