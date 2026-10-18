@@ -20,12 +20,13 @@ from limen.data import HistoricalData
 
 NUMERICAL_ENV = {
     'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1',
+    'OPENBLAS_CORETYPE': 'NEHALEM',
     'NPY_DISABLE_CPU_FEATURES': 'SSSE3,SSE41,POPCNT,SSE42,AVX,F16C,FMA3,AVX2,AVX512F,AVX512CD,AVX512_KNL,AVX512_KNM,AVX512_SKX,AVX512_CLX,AVX512_CNL,AVX512_ICL,AVX512_SPR',
 }
 
 ROOT = Path(__file__).resolve().parents[3]
 MARKET = ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet'
-BASELINE = '4f3b225154d2260c6d7243a3a296051f02b8a80f'
+BASELINE = '7746615031a9a2af30905bc218977b624f718143'
 CASES = ('binary_costs','directional_barriers','interleaved','rule_based')
 
 def fixture_source(**_kwargs: object) -> pl.DataFrame:
