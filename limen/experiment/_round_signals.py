@@ -11,7 +11,7 @@ def count(value: object) -> int | None:
         return None
     values = cast(list[object], value)
     if any((item is not None and type(item) not in (bool, int, float)) or
-           (type(item) is float and not math.isfinite(cast(float, item))) for item in values):
+           (type(item) is float and not math.isfinite(item)) for item in values):
         return None
     return len(values)
 

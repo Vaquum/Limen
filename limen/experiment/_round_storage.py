@@ -13,7 +13,7 @@ from itertools import islice
 from pathlib import Path
 from typing import BinaryIO, cast
 
-from limen.experiment import _round_signals as _signals
+import limen.experiment._round_signals as _signals
 
 __all__: list[str] = []
 
