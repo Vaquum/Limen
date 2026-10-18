@@ -1685,3 +1685,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.31.1] - 2026-10-18
 
 - Share retained prediction and probability arrays within new compact run artifacts while preserving complete logical round evidence, legacy recordings and existing resume validation.
+
+## [5.32.0] - 2026-10-18
+
+- Add advisory Random Forest parameter importance from recorded round rows, with grouped held-out evaluation and reproducible permutation dispersion.
