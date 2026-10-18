@@ -9,7 +9,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-import yaml
+from ruamel.yaml import YAML
 
 from limen.experiment import _round_storage as storage
 from limen.experiment._factorize import FactorizedRounds
@@ -230,10 +230,11 @@ def test_native_typed_domain_is_preserved_at_restore(tmp_path, monkeypatch):
 
 
 def test_fresh_process_cli_example_and_resume(tmp_path):
-    config = yaml.safe_load((ROOT / 'docs/examples/factorized_shuffle.yaml').read_text())
+    config = YAML(typ='safe').load((ROOT / 'docs/examples/factorized_shuffle.yaml').read_text())
     config['sfd']['manifest']['data_source']['params']['file_path_or_url'] = str(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet')
     source = tmp_path / 'manifest.yaml'
-    source.write_text(yaml.safe_dump(config))
+    with source.open('w') as stream:
+        YAML().dump(config, stream)
     env = {**os.environ, 'PYTHONPATH': str(ROOT), 'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'POLARS_MAX_THREADS': '1'}
     stop_script = '''from limen.experiment import UniversalExperimentLoop
 original = UniversalExperimentLoop._checkpoint
