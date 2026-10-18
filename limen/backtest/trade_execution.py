@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from collections.abc import Mapping
-from itertools import groupby
+from collections.abc import Callable, Mapping
 from typing import Literal, cast
 
 import polars as pl
 
-from limen.backtest.execution_events import execution_events
+from limen.backtest._event_clock import _clock_batches
+from limen.backtest._event_plan import _EventPlan, _event_plan
 from limen.backtest.funding_adapter import FundingAdapter, FundingContext, resolve_adapter
-from limen.backtest.trade_contract import BPS, NANOSECONDS, ExecutionEvent, JsonValue, TradeInputs, TradeLedger, TradePolicy, contract_digest, export_trade_contract, finite_number
+from limen.backtest.trade_contract import BPS, NANOSECONDS, ExecutionEvent, JsonValue, TradeInputs, TradeLedger, TradePolicy, finite_number
 
 _STATE_SCHEMA = {'event_id': pl.String, 'time_ns': pl.Int64, 'cash': pl.Float64, 'accrued_funding': pl.Float64, 'quantity': pl.Float64, 'basis': pl.Float64, 'equity': pl.Float64, 'last_signal': pl.Float64, 'pending_intent_id': pl.String, 'episode_id': pl.String, 'forced_exit_latched': pl.Boolean, 'signal_sample': pl.Boolean}
 _INTENT_SCHEMA = {'intent_id': pl.String, 'episode_id': pl.String, 'requested_at_ns': pl.Int64, 'target': pl.Float64, 'reason': pl.String, 'status': pl.String}
@@ -67,6 +67,7 @@ class _Account:
     queued_signal: dict[str, JsonValue] | None = None
     ready_at_ns: int = 0
     states: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
+    state_blocks: list[pl.DataFrame] = field(default_factory=list[pl.DataFrame])
     intents: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
     fills: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
     episodes: list[dict[str, JsonValue]] = field(default_factory=list[dict[str, JsonValue]])
@@ -213,13 +214,9 @@ def _barrier_price(account: _Account, observation: dict[str, object], event: Exe
 
 def _metrics(account: _Account, initial: float, states: pl.DataFrame) -> dict[str, float]:
     ending = float(states['equity'][-1])
-    peak = initial
-    drawdown = 0.0
-    for equity in states['equity']:
-        peak = max(peak, equity)
-        drawdown = min(drawdown, equity / peak - 1)
+    drawdown = float(states.select((pl.col('equity') / pl.max_horizontal(pl.col('equity').cum_max(), pl.lit(initial)) - 1).min()).item())
     samples = states.filter(pl.col('signal_sample'))
-    sample_exposures = [cast(float, row['absolute_exposure']) for row in account.states if row['signal_sample']]
+    sample_exposures = samples['absolute_exposure']
     completed = [row for row in account.episodes if row['closed_at_ns'] is not None]
     fees = sum(cast(float, row['fee']) for row in account.fills)
     slip = sum(cast(float, row['slippage']) for row in account.fills)
@@ -246,61 +243,118 @@ def _fund(account: _Account, adapter: FundingAdapter, row: dict[str, object], st
     account.funding.append({'event_id': flow.event_id, 'episode_id': None if account.episode is None else account.episode['episode_id'], 'start_ns': start, 'end_ns': end, 'quantity': account.quantity, 'rate_decimal': context.rate_decimal, 'valuation_price': valuation, 'recognized_delta': recognized, 'cash_delta': cash, 'currency': flow.currency})
 
 
+def _timer_block(account: _Account, times: range, price: float, *, keep_states: bool) -> None:
+    if not times:
+        return
+    if not keep_states:
+        account.equity(price)
+        return
+    schema = {**_STATE_SCHEMA, 'absolute_exposure': pl.Float64}
+    if account.states:
+        account.state_blocks.append(_frame(account.states, schema))
+        account.states.clear()
+    account.record(times.start, price, f'timer:{times.start}', False)
+    row = account.states.pop()
+    row['absolute_exposure'] = abs(account.quantity) * price / account.equity(price)
+    block = pl.DataFrame({'time_ns': pl.int_range(times.start, times.stop, step=times.step, eager=True)}).with_columns(
+        pl.format('timer:{}', pl.col('time_ns')).alias('event_id'),
+        *(pl.lit(row[name], dtype=dtype).alias(name) for name, dtype in schema.items() if name not in ('time_ns', 'event_id')),
+    ).select(*schema)
+    account.state_blocks.append(block)
+
+
+def _timer_span(account: _Account, times: range, price: float, *, keep_states: bool) -> None:
+    due = times.stop
+    if account.episode is not None and account.policy.max_holding_seconds is not None:
+        deadline = cast(int, account.episode['first_fill_ns']) + round(account.policy.max_holding_seconds * NANOSECONDS)
+        due = max(times.start, times.start + -(-(deadline - times.start) // times.step) * times.step)
+        due = min(due, times.stop)
+    _timer_block(account, range(times.start, due, times.step), price, keep_states=keep_states)
+    if due < times.stop:
+        account.force_exit(due, 'time_stop')
+        _timer_block(account, range(due, times.stop, times.step), price, keep_states=keep_states)
+
+
+def _execute(
+    account: _Account, plan: _EventPlan, signals: Mapping[str, object] | float,
+    start: int, end: int, adapter: FundingAdapter | None,
+    *, selected: Callable[[ExecutionEvent], bool] | None = None,
+    stop_at_close: bool = False, keep_states: bool = True,
+) -> None:
+    policy = account.policy
+    active: dict[str, object] | None = None
+    previous = start
+    price = 0.0
+    for batch in _clock_batches(plan, policy, start, end, selected):
+        if isinstance(batch, range) and adapter is None:
+            _timer_span(account, batch, price, keep_states=keep_states)
+            previous = batch[-1]
+            continue
+        clocks = ((time, (ExecutionEvent(f'timer:{time}', time, 'timer', None, time),)) for time in batch) if isinstance(batch, range) else (batch,)
+        for time_ns, group in clocks:
+            active, price = _execute_batch(account, plan, signals, adapter, active, previous, price, time_ns, group)
+            previous = time_ns
+            if keep_states:
+                account.record(time_ns, price, group[-1].event_id, any(event.kind == 'signal' for event in group))
+                account.states[-1]['absolute_exposure'] = abs(account.quantity) * price / account.equity(price)
+            else:
+                account.equity(price)
+            if stop_at_close and account.episodes and account.episode is None:
+                return
+
+
+def _execute_batch(
+    account: _Account, plan: _EventPlan, signals: Mapping[str, object] | float,
+    adapter: FundingAdapter | None, active: dict[str, object] | None,
+    previous: int, price: float, time_ns: int, group: tuple[ExecutionEvent, ...],
+) -> tuple[dict[str, object] | None, float]:
+    policy = account.policy
+    if adapter is not None:
+        if active is not None and time_ns > previous:
+            _fund(account, adapter, active, previous, time_ns, price, 'accrual')
+        for event in group:
+            if event.kind == 'funding':
+                row = plan.funding[str(event.source_row_id)]
+                if row['kind'] == 'accrual':
+                    if event.time_ns < cast(int, row['end_ns']):
+                        active = row
+                    elif active is row:
+                        active = None
+                else:
+                    _fund(account, adapter, row, time_ns, time_ns, price, str(row['kind']))
+    observed = [event for event in group if event.kind == 'observation']
+    for event in observed:
+        row = plan.observations[str(event.source_row_id)]
+        price = float(cast(float, row['open' if event.observation_phase == 'open' else 'close']))
+        barrier = _barrier_price(account, row, event)
+        if barrier is not None:
+            reference, reason = barrier
+            account.force_exit(time_ns, reason)
+            account.reconcile(reference, event, exits_only=True)
+    declared = any(event.kind in ('signal', 'timer') and not event.event_id.startswith('end:') for event in group)
+    if declared and account.episode is not None and policy.max_holding_seconds is not None and time_ns >= cast(int, account.episode['first_fill_ns']) + round(policy.max_holding_seconds * NANOSECONDS):
+        account.force_exit(time_ns, 'time_stop')
+    for event in group:
+        if event.kind == 'signal':
+            account.accept_signal(signals if isinstance(signals, float) else signals[str(event.source_row_id)], time_ns)
+    if observed:
+        account.reconcile(price, observed[-1])
+    return active, price
+
+
 def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
     adapter = resolve_adapter(policy.funding) if policy.funding is not None else None
     if (adapter is not None) != (inputs.funding_events is not None):
         raise ValueError('Funding policy and normalized events must be supplied together')
-    events = execution_events(inputs, policy)
-    binding = contract_digest(export_trade_contract(policy, inputs))
-    account = _Account(policy, inputs.initial_equity, binding[:16])
-    observations = {str(row['row_id']): cast(dict[str, object], row) for row in inputs.observations.iter_rows(named=True)}
+    plan = _event_plan(inputs, policy)
+    account = _Account(policy, inputs.initial_equity, plan.binding[:16])
     signals = {str(row['row_id']): row['target'] for row in inputs.signals.iter_rows(named=True)}
-    funding = {str(row['event_id']): cast(dict[str, object], row) for row in inputs.funding_events.iter_rows(named=True)} if inputs.funding_events is not None else {}
-    active: dict[str, object] | None = None
-    previous = inputs.partition_start_ns
-    price = 0.0
-    for time_ns, batch in groupby(events, key=lambda event: event.time_ns):
-        group = list(batch)
-        if adapter is not None:
-            if active is not None and time_ns > previous:
-                _fund(account, adapter, active, previous, time_ns, price, 'accrual')
-            for event in group:
-                if event.kind == 'funding':
-                    row = funding[str(event.source_row_id)]
-                    if row['kind'] == 'accrual':
-                        if event.time_ns < cast(int, row['end_ns']):
-                            active = row
-                        elif active is row:
-                            active = None
-                    else:
-                        _fund(account, adapter, row, time_ns, time_ns, price, str(row['kind']))
-        previous = time_ns
-        observed = [event for event in group if event.kind == 'observation']
-        for event in observed:
-            row = observations[str(event.source_row_id)]
-            price = float(cast(float, row['open' if event.observation_phase == 'open' else 'close']))
-            barrier = _barrier_price(account, row, event)
-            if barrier is not None:
-                reference, reason = barrier
-                account.force_exit(time_ns, reason)
-                account.reconcile(reference, event, exits_only=True)
-        declared = any(event.kind in ('signal', 'timer') and not event.event_id.startswith('end:') for event in group)
-        if declared and account.episode is not None and policy.max_holding_seconds is not None and time_ns >= cast(int, account.episode['first_fill_ns']) + round(policy.max_holding_seconds * NANOSECONDS):
-            account.force_exit(time_ns, 'time_stop')
-        for event in group:
-            if event.kind == 'signal':
-                account.accept_signal(signals[str(event.source_row_id)], time_ns)
-        if observed:
-            account.reconcile(price, observed[-1])
-        # No price at this event means the intent stays pending. Recording the
-        # last causal mark does not make it an executable current price.
-        account.record(time_ns, price, group[-1].event_id, any(event.kind == 'signal' for event in group))
-        account.states[-1]['absolute_exposure'] = abs(account.quantity) * price / account.equity(price)
+    _execute(account, plan, signals, inputs.partition_start_ns, inputs.partition_end_ns, adapter)
     schema = {**_STATE_SCHEMA, 'absolute_exposure': pl.Float64}
-    states = _frame(account.states, schema)
+    states = pl.concat([*account.state_blocks, _frame(account.states, schema)]) if account.state_blocks else _frame(account.states, schema)
     prior = pl.col('equity').shift(1).fill_null(inputs.initial_equity)
     states = states.with_columns((pl.col('equity') / prior - 1).alias('net_return'))
-    return TradeLedger(states, _frame(account.intents, _INTENT_SCHEMA), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, _EPISODE_SCHEMA), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), binding)
+    return TradeLedger(states, _frame(account.intents, _INTENT_SCHEMA), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, _EPISODE_SCHEMA), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), plan.binding)
 
 
 __all__ = ['trade_execution']

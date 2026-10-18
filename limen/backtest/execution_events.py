@@ -47,7 +47,7 @@ def validate_observations(inputs: TradeInputs, policy: TradePolicy) -> None:
         raise ValueError('Execution source fingerprint changed')
 
 
-def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[ExecutionEvent, ...]:
+def _execution_events(inputs: TradeInputs, policy: TradePolicy, *, include_timers: bool) -> tuple[ExecutionEvent, ...]:
     validate_observations(inputs, policy)
     if set(SIGNAL_COLUMNS) - set(inputs.signals.columns) or inputs.signals['row_id'].is_duplicated().any():
         raise ValueError('Signals require unique row identity, availability and target')
@@ -70,7 +70,8 @@ def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[Executio
         if interval <= 0:
             raise ValueError('Timer cadence is below timestamp precision')
         first = phase + -(-(inputs.partition_start_ns - phase) // interval) * interval
-        events.extend(ExecutionEvent(f'timer:{time}', time, 'timer', None, time) for time in range(first, inputs.partition_end_ns + 1, interval))
+        if include_timers:
+            events.extend(ExecutionEvent(f'timer:{time}', time, 'timer', None, time) for time in range(first, inputs.partition_end_ns + 1, interval))
     # Funding clocks are added by the native funding preparation, independently
     # of prediction/bar clocks.
     if inputs.funding_events is not None:
@@ -96,6 +97,10 @@ def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[Executio
     selected = [event for event in events if inputs.partition_start_ns <= event.time_ns <= inputs.partition_end_ns]
     selected.append(ExecutionEvent(f'end:{inputs.partition_end_ns}', inputs.partition_end_ns, 'timer', None, inputs.partition_end_ns))
     return tuple(sorted(selected, key=lambda event: (event.time_ns, priority[event.kind], event.observation_phase == 'open', (signal_order if event.kind == 'signal' else source_order).get(str(event.source_row_id), 0), event.event_id)))
+
+
+def execution_events(inputs: TradeInputs, policy: TradePolicy) -> tuple[ExecutionEvent, ...]:
+    return _execution_events(inputs, policy, include_timers=True)
 
 
 def with_predictions(inputs: TradeInputs, predictions: object) -> TradeInputs:

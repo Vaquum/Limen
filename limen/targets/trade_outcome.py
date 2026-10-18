@@ -6,9 +6,9 @@ from typing import ClassVar, Literal, cast
 
 import polars as pl
 
-from limen.backtest.execution_events import execution_events
-from limen.backtest.trade_contract import NANOSECONDS, TradeInputs, TradePolicy, contract_digest, export_trade_contract, finite_number, source_binding
-from limen.backtest.trade_execution import trade_execution
+from limen.backtest._event_plan import _EventPlan, _event_plan
+from limen.backtest.trade_contract import ExecutionEvent, NANOSECONDS, TradeInputs, TradePolicy, contract_digest, export_trade_contract, finite_number, source_binding
+from limen.backtest.trade_execution import _Account, _execute, trade_execution
 
 
 @dataclass(frozen=True)
@@ -32,6 +32,7 @@ class _Timeline:
     signals: list[int]
     starts: list[int]
     available: list[int]
+    plan: _EventPlan
 
 
 def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float, timeline: _Timeline) -> dict[str, object]:
@@ -52,6 +53,21 @@ def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float
                     end = min(end, timeline.prices[exit_index])
     first = max(0, bisect_left(timeline.available, available) - 1)
     last = bisect_right(timeline.starts, end)
+    if inputs.funding_events is None and policy.funding is None:
+        start = max(inputs.partition_start_ns, timeline.starts[first])
+        plan = timeline.plan
+        def selected(event: ExecutionEvent) -> bool:
+            if event.kind == 'observation':
+                return first <= plan.observation_order[str(event.source_row_id)] < last
+            return event.kind != 'signal' or plan.signal_order[str(event.source_row_id)] >= index
+        account = _Account(policy, inputs.initial_equity, plan.binding[:16])
+        _execute(account, plan, side, start, end, None, selected=selected, stop_at_close=True, keep_states=False)
+        episodes = account.episodes
+        if not episodes or episodes[0]['closed_at_ns'] is None:
+            return {'return': None, 'available': False, 'entry_ns': None if not episodes else episodes[0]['first_fill_ns'], 'exit_ns': None, 'label_available_ns': None, 'exit_reason': None}
+        episode = episodes[0]
+        net_return = finite_number(episode['net_pnl'], 'completed candidate PnL') / finite_number(episode['entry_equity'], 'candidate entry equity')
+        return {'return': net_return, 'available': True, 'entry_ns': episode['first_fill_ns'], 'exit_ns': episode['closed_at_ns'], 'label_available_ns': episode['closed_at_ns'], 'exit_reason': episode['exit_reason']}
     observations = inputs.observations.slice(first, last - first)
     start = max(inputs.partition_start_ns, int(observations['start_ns'][0]))
     signals = inputs.signals.slice(index, bisect_right(timeline.signals, end) - index).with_columns(pl.lit(side).alias('target'))
@@ -110,8 +126,8 @@ class TradeOutcomeTarget:
             raise ValueError('Trade target context changed its bound execution contract')
         mapping = data.select('datetime').join(inputs.signals.select('datetime', 'row_id'), on='datetime', how='left', maintain_order='left')
         policy = replace(trade_context.policy, prediction_mode='target_exposure', notional_rate=1.0)
-        events = execution_events(inputs, policy)
-        timeline = _Timeline(sorted({event.time_ns for event in events if event.kind == 'observation'}), inputs.signals['available_at_ns'].to_list(), inputs.observations['start_ns'].to_list(), inputs.observations['available_at_ns'].to_list())
+        plan = _event_plan(inputs, policy)
+        timeline = _Timeline(sorted({event.time_ns for event in plan.events if event.kind == 'observation'}), inputs.signals['available_at_ns'].to_list(), inputs.observations['start_ns'].to_list(), inputs.observations['available_at_ns'].to_list(), plan)
         positions = {identity: index for index, identity in enumerate(inputs.signals['row_id'])}
         results: list[dict[str, object]] = []
         for identity in mapping['row_id']:
