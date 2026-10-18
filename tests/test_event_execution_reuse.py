@@ -103,7 +103,7 @@ def test_recorded_funding_keeps_every_original_clock_and_cashflow(custom):
     ADAPTER_CALLS.clear()
     actual = trade_execution(inputs, policy)
     assert_ledgers(actual, expected)
-    assert ADAPTER_CALLS == calls
+    assert calls == ADAPTER_CALLS
     assert actual.states.height > inputs.observations.height
     if custom:
         assert len(calls) == actual.funding.height > 0
