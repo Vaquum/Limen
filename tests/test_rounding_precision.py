@@ -163,6 +163,30 @@ def test_recorded_weighted_features_retain_float64(bars):
     assert scored.filter(pl.col('micro_momentum') > 0)['entry_score'].drop_nulls()[0] == weight
 
 
+@pytest.mark.parametrize('dtype', [pl.Float32, pl.Float64])
+@pytest.mark.parametrize('regime', ['base', 'low', 'high'])
+@pytest.mark.parametrize('component', ['position', 'momentum', 'volume', 'spread'])
+def test_every_entry_component_weights_in_float64(bars, dtype, regime, component):
+    source = bars.with_columns(pl.col(pl.Float64).cast(dtype), pl.lit(regime).alias('volatility_regime'))
+    weight = float(bars['maker_ratio'][0])
+    suffix = 'base' if regime == 'base' else f'{regime}_vol'
+    kwargs = {f'entry_{name}_weight_{suffix}': weight if name == component else 0.0
+              for name in ('position', 'momentum', 'volume', 'spread')}
+    scored = entry_score_microstructure(source, **kwargs)
+    spread = scored['spread_percent'].cast(pl.Float64)
+    components = {
+        'position': 1 - scored['position_in_candle'].cast(pl.Float64),
+        'momentum': (scored['micro_momentum'] > 0).cast(pl.Float64),
+        'volume': scored['volume_spike'].cast(pl.Float64).clip(0.5, 1.5) / 1.5,
+        'spread': 1 - (spread / spread.rolling_mean(48)).clip(0, 2),
+    }
+    valid = scored['entry_score'].is_not_null()
+    assert valid.any()
+    assert scored['entry_score'].dtype == pl.Float64
+    np.testing.assert_array_equal(scored['entry_score'].filter(valid).to_numpy(),
+                                  (components[component] * weight).filter(valid).to_numpy())
+
+
 def test_recorded_cohort_percentages_stay_distinct(bars):
     data = pd.DataFrame({'metric': bars['close'], 'parameter': bars['volume']})
     report = experiment_parameter_correlation(SimpleNamespace(experiment_log=data), 'metric',
