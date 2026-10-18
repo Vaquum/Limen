@@ -1,5 +1,8 @@
 from collections.abc import Mapping
 from typing import cast
+from pathlib import Path
+
+import polars as pl
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.grid_strategy import GridStrategy
@@ -41,3 +44,12 @@ def validate_factorized_grid(strategy: SearchStrategy) -> None:
     state = strategy.get_state()
     if state.get('shuffle') and (state.get('permutation_version') != _SHUFFLE_VERSION or type(state.get('seed')) is not int):
         raise ValueError('factorize requires version 2 seeded grid shuffle after restore')
+
+
+def complete_failed_header(path: Path, columns: list[str] | None, keys: list[str],
+                           log: pl.DataFrame | None) -> list[str] | None:
+    if columns and set(keys) - set(columns) and log is not None and log['strict_mode_error'].null_count() == 0:
+        previous = pl.read_csv(path, infer_schema=False)
+        columns = list(dict.fromkeys([*keys, *columns]))
+        previous.select(pl.col(key) if key in previous.columns else pl.lit(None).alias(key) for key in columns).write_csv(path)
+    return columns

@@ -23,7 +23,7 @@ from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
-from limen.experiment._grid_resume import add_grid_metadata, validate_factorized_grid, validate_grid_resume
+from limen.experiment._grid_resume import add_grid_metadata, complete_failed_header, validate_factorized_grid, validate_grid_resume
 from limen.experiment._recording import prepare_recording, project_record
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
@@ -703,10 +703,8 @@ class UniversalExperimentLoop:
             if self._walk_forward is not None and round_succeeded and csv_header:
                 csv_header = self._walk_forward.complete_failed_header(csv_path, csv_header, list(round_results))
 
-            if round_succeeded and csv_header and set(round_results) - set(csv_header) and self.experiment_log is not None and self.experiment_log['strict_mode_error'].null_count() == 0:
-                previous = pl.read_csv(csv_path, infer_schema=False)
-                csv_header = list(dict.fromkeys([*round_results, *csv_header]))
-                previous.select(pl.col(key) if key in previous.columns else pl.lit(None).alias(key) for key in csv_header).write_csv(csv_path)
+            if round_succeeded:
+                csv_header = complete_failed_header(csv_path, csv_header, list(round_results), self.experiment_log)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             if write_header and not round_succeeded:
                 _pending_csv_rows.append(dict(round_results))
@@ -797,7 +795,6 @@ class UniversalExperimentLoop:
                                      *,
                                      resume: bool) -> None:
 
-        '''Validate preconditions for MSQ-based execution.'''
 
         if resume:
             if not self._experiment_dir:
@@ -815,7 +812,6 @@ class UniversalExperimentLoop:
                                experiment_name: str,
                                n_permutations: int) -> dict[str, Any]:
 
-        '''Create MSQ, FeedbackController, CheckpointManager, and file paths.'''
 
         if self._search_strategy is None:
             raise ValueError('UniversalExperimentLoop MSQ execution requires a search_strategy')
@@ -870,7 +866,6 @@ class UniversalExperimentLoop:
                                    round_data_path: Path | None,
                                    retain_round_artifacts: bool) -> int:
 
-        '''Restore experiment state from checkpoint and data files.'''
 
         if self._experiment_dir is None or self._search_strategy is None:
             raise ValueError('UniversalExperimentLoop checkpoint restore requires experiment_dir and search_strategy')
@@ -968,7 +963,6 @@ class UniversalExperimentLoop:
     def _truncate_round_data(round_data_path: Path,
                               start_round: int) -> None:
 
-        '''Truncate round_data.jsonl to only contain rounds before start_round.'''
 
         _storage.truncate_rounds(round_data_path, start_round)
 
@@ -976,7 +970,6 @@ class UniversalExperimentLoop:
     def _flush_results(self,
                        accumulator: list[dict[str, Any]]) -> None:
 
-        '''Flush accumulated round results into experiment_log.'''
 
         if not accumulator:
             return
@@ -992,7 +985,6 @@ class UniversalExperimentLoop:
 
     def _guard_stale_artifacts(self) -> None:
 
-        '''Raise FileExistsError if experiment_dir has leftover artifacts.'''
 
         if not self._experiment_dir or not self._experiment_dir.exists():
             return
@@ -1027,7 +1019,6 @@ class UniversalExperimentLoop:
 
 
     def _write_metadata(self, experiment_dir: Path, *, context_parameter_keys: list[str] | None = None) -> None:
-        '''Persist experiment provenance and effective recording settings.'''
 
         if self._sfd_module_name is None:
             raise ValueError(

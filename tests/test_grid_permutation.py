@@ -79,6 +79,23 @@ def test_versioned_resume_preserves_stream_and_native_level_types():
     assert state['permutation_version'] == 2
 
 
+@pytest.mark.parametrize('versionless', [False, True])
+def test_seedless_in_memory_restore_keeps_existing_permutation(versionless):
+    strategy = GridStrategy(ParamDomain({'candidate': list(range(385))}), shuffle=True)
+    for _ in range(11):
+        next(strategy)
+    state = copy.deepcopy(strategy.get_state())
+    if versionless:
+        del state['permutation_version']
+        del state['domain_digest']
+    expected = list(strategy)
+    with patch('limen.experiment.param_search.grid_strategy._lcg_params',
+               side_effect=AssertionError('in-memory restore regenerated the seedless permutation')) as regenerate:
+        strategy.set_state(state)
+        assert list(strategy) == expected
+    regenerate.assert_not_called()
+
+
 def test_versionless_checkpoint_replays_original_affine_order():
     domain = ParamDomain({'candidate': list(range(385))})
     strategy = GridStrategy(domain, shuffle=True, seed=42)

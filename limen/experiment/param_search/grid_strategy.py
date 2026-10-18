@@ -104,7 +104,7 @@ class GridStrategy(SearchStrategy):
         index, generated = state['current_index'], state['generated_count']
         if type(index) is not int or type(generated) is not int or not 0 <= generated <= index <= self._total:
             raise ValueError('GridStrategy checkpoint traversal counters are invalid')
-        if self._shuffle and self._total > 0 and version == 1:
+        if self._shuffle and self._total > 0 and version == 1 and self._permutation_version != version:
             self._lcg_multiplier, self._lcg_increment = _lcg_params(self._total, self._seed)
         self._permutation_version = version
         self._current_index, self._generated_count = index, generated
