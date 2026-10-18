@@ -3,7 +3,8 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.features.price_lines import line_active_count, line_recency
-from limen.utils.find_price_lines import LineArrays, price_line_arrays
+from limen.utils.find_price_lines import LineArrays, _cached_price_line_arrays
+from limen.utils._computation_cache import ComputationCache, current_cache, reuse_series
 
 DEFAULT_QUANTILE_THRESHOLD = 0.75
 DEFAULT_DENSITY_LOOKBACK_HOURS = 48
@@ -95,20 +96,19 @@ def quantile_price_lines(data: pl.DataFrame,
 
     return_dtype = pl.Struct(return_fields)
 
+    cache = current_cache()
+
+    def columns(series: pl.Series) -> pl.Series:
+        close = series.to_numpy()
+        return reuse_series(cache, 'quantile_price_lines', close,
+                            (max_duration_hours, min_height_pct, quantile_threshold, density_lookback_hours, momentum_lookback_hours, height_lookback_hours, include_research_only),
+                            lambda: _quantile_line_columns(close, max_duration_hours, min_height_pct, quantile_threshold, density_lookback_hours, momentum_lookback_hours, height_lookback_hours, include_research_only, _cache=cache))
+
     return data.with_columns(
         pl.col('close')
         .cast(pl.Float64)
         .map_batches(
-            lambda s: _quantile_line_columns(
-                s.to_numpy(),
-                max_duration_hours,
-                min_height_pct,
-                quantile_threshold,
-                density_lookback_hours,
-                momentum_lookback_hours,
-                height_lookback_hours,
-                include_research_only,
-            ),
+            columns,
             return_dtype=return_dtype,
         )
         .alias(STRUCT_COL)
@@ -122,7 +122,8 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
                            density_lookback_hours: int,
                            momentum_lookback_hours: int,
                            height_lookback_hours: int,
-                           include_research_only: bool) -> pl.Series:
+                           include_research_only: bool, *,
+                           _cache: ComputationCache | None = None) -> pl.Series:
 
     '''
     Compute the five or six quantile-line columns as a struct series.
@@ -141,7 +142,7 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
         pl.Series: Struct series with the quantile-line fields
     '''
 
-    long_lines, short_lines = price_line_arrays(close, max_duration_hours, min_height_pct)
+    long_lines, short_lines = _cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
 
     long_lines_q = _filter_quantile(long_lines, quantile_threshold)
     short_lines_q = _filter_quantile(short_lines, quantile_threshold)

@@ -513,3 +513,17 @@ Measured on 5.31.1 using fixture SHA-256 `a634bbd4` (prefix), the first 1,200 ro
 | Sixteen rounds, four repeated pairs | 193,534 | 131,557 | 200,704 / 167,936 |
 
 The repeated case saves 61,977 bytes (32.0%), including format metadata and every market/signal blob. It uses eleven recording files rather than three. The production sweep took 0.354 seconds; the separate serialization samples took 0.016 seconds for v1 and 0.027 seconds for v2. These single local samples show write overhead, not a speedup. Allocated bytes depend on filesystem block size; unique/single cases can use more blocks despite slightly fewer serialized bytes. The regression asserts a relative saving on the repeated recorded case, not fixed compressed sizes or timing.
+
+### Reuse of line computations
+
+Each `run()` invocation owns a bounded cache for deterministic price-line
+primitives and line-feature columns. It applies to ordinary sequential sweeps,
+including random search, without enabling `factorize`. Keys contain the consumed
+Float64 close values and the complete typed parameter set. Changed input order,
+prices or carried context therefore require fresh computation whenever they
+change the consumed values. The cache does not retain fitted scalers, models,
+complete prepared frames or target labels. Returned arrays and series remain
+isolated from cache storage. Entries are released when the invocation exits.
+
+This reuse preserves the existing preparation, prediction, recording and search
+contracts. Parallel processes retain their existing execution behavior.

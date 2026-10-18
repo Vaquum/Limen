@@ -3,6 +3,8 @@ from typing import Any
 import numpy as np
 import numpy.typing as npt
 
+from limen.utils._computation_cache import ComputationCache, current_cache, reuse_line_arrays
+
 __all__ = ['LineArrays', 'find_price_lines', 'price_line_arrays']
 
 MIN_DURATION_BARS = 1
@@ -52,6 +54,17 @@ LineArrays = tuple[npt.NDArray[np.intp], npt.NDArray[np.intp], npt.NDArray[np.fl
 
 def price_line_arrays(close: npt.ArrayLike,
                       max_duration_hours: int, min_height_pct: float) -> tuple[LineArrays, LineArrays]:
+    return _cached_price_line_arrays(close, max_duration_hours, min_height_pct, current_cache())
+
+
+def _cached_price_line_arrays(close: npt.ArrayLike, max_duration_hours: int,
+                              min_height_pct: float,
+                              cache: ComputationCache | None) -> tuple[LineArrays, LineArrays]:
+    return reuse_line_arrays(close, max_duration_hours, min_height_pct, cache, _compute_price_line_arrays)
+
+
+def _compute_price_line_arrays(close: npt.ArrayLike, max_duration_hours: int,
+                               min_height_pct: float) -> tuple[LineArrays, LineArrays]:
     if max_duration_hours < MIN_MAX_DURATION_HOURS:
         raise ValueError('find_price_lines max_duration_hours must be at least 2')
     if min_height_pct <= 0:

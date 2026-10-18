@@ -1,7 +1,7 @@
 import numpy as np
 import polars as pl
 
-from limen.utils.find_price_lines import find_price_lines
+from limen.utils.find_price_lines import price_line_arrays
 
 DEFAULT_LOOKAHEAD_HOURS = 48
 DEFAULT_CONFIRMATION_HOURS = 24
@@ -43,16 +43,16 @@ class TradelineLongBinaryTarget:
         if not 0 <= long_threshold_percentile <= PERCENTILE_UPPER_BOUND:
             raise ValueError('TradelineLongBinaryTarget long_threshold_percentile must be between 0 and 100')
 
-        long_lines, _ = find_price_lines(
+        long_lines, _ = price_line_arrays(
             train_data['close'].to_numpy(), max_duration_hours, min_height_pct
         )
 
-        if not long_lines:
+        if not len(long_lines[0]):
             raise ValueError(
                 'TradelineLongBinaryTarget found no long price lines in the training split; loosen max_duration_hours or min_height_pct'
             )
 
-        heights = np.abs(np.array([line['height_pct'] for line in long_lines]))
+        heights = np.abs(long_lines[2])
 
         self.target_name = target_name
         self.threshold: float = float(np.percentile(heights, long_threshold_percentile))
