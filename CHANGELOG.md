@@ -2,11 +2,6 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
-## [5.31.0] - 2026-10-18
-
-- Add seeded finite shuffled grid traversal to deterministic factorized runs, with versioned resume and bounded LRU reuse.
-- Preserve terminal strict failures across mixed result batches and cold-cache recovery.
-
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -1681,3 +1676,11 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.30.2] - 2026-10-17
 
 - Reject coverage command, probe and collection regressions; execute supported and unsupported backend proofs in the covered test job.
+
+# v5.31.0
+
+## [5.31.0] - 2026-10-18
+
+- Add seeded finite shuffled grid traversal to deterministic factorized runs, with versioned resume and bounded LRU reuse.
+- Preserve terminal strict failures across mixed result batches and cold-cache recovery.
+

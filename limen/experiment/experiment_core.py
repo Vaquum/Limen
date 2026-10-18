@@ -400,6 +400,10 @@ class UniversalExperimentLoop:
                 log_batches.append(objective_frame(self.manifest, results_accumulator))
                 results_accumulator = []
 
+            if round_succeeded and csv_header and set(round_results) - set(csv_header) and self.experiment_log is not None and self.experiment_log['strict_mode_error'].null_count() == 0:
+                previous = pl.read_csv(csv_path)
+                csv_header = list(dict.fromkeys([*round_results, *csv_header]))
+                previous.select(pl.col(key) if key in previous.columns else pl.lit(None).alias(key) for key in csv_header).write_csv(csv_path)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             if write_header and not round_succeeded:
                 _pending_csv_rows.append(dict(round_results))
@@ -703,6 +707,10 @@ class UniversalExperimentLoop:
             if self._walk_forward is not None and round_succeeded and csv_header:
                 csv_header = self._walk_forward.complete_failed_header(csv_path, csv_header, list(round_results))
 
+            if round_succeeded and csv_header and set(round_results) - set(csv_header) and self.experiment_log is not None and self.experiment_log['strict_mode_error'].null_count() == 0:
+                previous = pl.read_csv(csv_path)
+                csv_header = list(dict.fromkeys([*round_results, *csv_header]))
+                previous.select(pl.col(key) if key in previous.columns else pl.lit(None).alias(key) for key in csv_header).write_csv(csv_path)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             if write_header and not round_succeeded:
                 _pending_csv_rows.append(dict(round_results))

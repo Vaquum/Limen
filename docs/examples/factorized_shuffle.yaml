@@ -11,13 +11,14 @@ sfd:
       method: limen.data.HistoricalData.get_any_file
       params:
         file_path_or_url: tests/fixtures/spot_1h_20240101_20241231.parquet
+        row_count_limit: 192
     split_dates:
-      train_start: '2024-01-01'
-      train_end: '2024-01-04'
-      val_start: '2024-01-04'
-      val_end: '2024-01-05'
-      test_start: '2024-01-05'
-      test_end: '2024-01-07'
+      train_start: '2024-12-25'
+      train_end: '2024-12-28'
+      val_start: '2024-12-28'
+      val_end: '2024-12-29'
+      test_start: '2024-12-29'
+      test_end: '2024-12-31'
       test_predict_guard: false
     indicators:
     - func: limen.indicators.window_return
