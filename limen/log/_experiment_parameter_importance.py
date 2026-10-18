@@ -19,6 +19,12 @@ class _Regressor(Protocol):
     def score(self, x: pd.DataFrame, y: pd.Series) -> float: ...
 
 
+class _Splitter(Protocol):
+    def split(self, x: pd.DataFrame, *, groups: npt.NDArray[np.intp]) -> Iterator[
+        tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]
+    ]: ...
+
+
 make_pipeline = cast(Callable[..., _Regressor], vars(import_module('sklearn.pipeline'))['make_pipeline'])
 permutation_importance = cast(Callable[..., Mapping[str, npt.NDArray[np.float64]]],
                               vars(import_module('sklearn.inspection'))['permutation_importance'])
@@ -76,9 +82,8 @@ def experiment_parameter_importance(
     n_configurations = len(np.unique(groups))
     if n_configurations < _MIN_CONFIGURATIONS:
         raise ValueError('Parameter importance requires at least 20 distinct configurations')
-    split = cast(Callable[..., Iterator[tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]]],
-                 getattr(GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=random_state), 'split'))
-    train, evaluation = next(split(frame, groups=groups))
+    splitter = cast(_Splitter, GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=random_state))
+    train, evaluation = next(splitter.split(frame, groups=groups))
     x_train, x_evaluation = frame.iloc[train], frame.iloc[evaluation]
     y_train, y_evaluation = target.iloc[train], target.iloc[evaluation]
     if y_evaluation.nunique() == 1:
