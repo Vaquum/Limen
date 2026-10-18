@@ -30,7 +30,7 @@ def _compounded_trade_pnl_summary(
         for bar_return in result.net[start:end + 1]:
             compounded *= 1.0 + float(bar_return) * notional_rate
         trade_returns.append(compounded - 1.0)
-    mean_bps = float(float(np.mean(trade_returns)) * BPS_PER_UNIT)
+    mean_bps = float(np.mean(trade_returns)) * BPS_PER_UNIT
     return mean_bps, len(trade_returns)
 
 

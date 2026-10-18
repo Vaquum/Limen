@@ -1,6 +1,5 @@
-from decimal import Decimal
-
 import logging
+from decimal import Decimal
 
 import numpy as np
 import numpy.typing as npt
@@ -177,7 +176,7 @@ def find_min_d(data: pl.DataFrame,
     fracdiff_col = f"{col}{FRACDIFF_SUFFIX}"
 
     start, end, increment = (Decimal(str(value)) for value in (d_start, d_end, step))
-    count = max(0, int((end - start) // increment) + 1) if end >= start else 0
+    count = int((end - start) // increment) + 1 if end >= start else 0
     for index in range(count):
         d = float(start + index * increment)
         diffed = fractional_diff(data, d=d, cols=[col], threshold=threshold)

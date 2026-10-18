@@ -17,6 +17,7 @@ from limen.features.entry_score_microstructure import entry_score_microstructure
 from limen.features.fractional_diff import find_min_d
 from limen.features.momentum_confirmation import momentum_confirmation
 from limen.features.momentum_weight import momentum_weight
+from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
 from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct, permutation_confusion_metrics
 from limen.metrics.binary_metrics import binary_metrics
@@ -126,9 +127,9 @@ def test_recorded_aggregates_preserve_precision(bars):
         assert aggregate[name][0] == pairs[name].sum()
     expected_mean = (pairs['mean'] * pairs['no_of_trades']).sum() / pairs['no_of_trades'].sum()
     assert aggregate['mean'][0] == expected_mean
-    dollar = pl.read_parquet(ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet')
-    assert _aggregate_spot_dollar_klines(dollar, 1, 1).equals(dollar)
-    combined = _aggregate_spot_dollar_klines(dollar, 2, 1)
+    dollar = _aggregate_spot_dollar_klines(bars, 100_000_000, None)
+    assert _aggregate_spot_dollar_klines(dollar, 100_000_000, 100_000_000).equals(dollar)
+    combined = _aggregate_spot_dollar_klines(dollar, 200_000_000, 100_000_000)
     assert combined['volume'].sum() == pytest.approx(dollar['volume'].sum())
     assert any(aggregate[name][0] != round(aggregate[name][0], decimals)
                for name, decimals in [('mean', 5), ('std', 6), ('volume', 9), ('liquidity_sum', 1)])
@@ -190,6 +191,15 @@ def test_fractional_search_preserves_declared_grid(bars, monkeypatch):
     assert len(visited) == 3
     assert found == end
     assert len(set(visited)) == 3
+
+
+def test_near_integer_recorded_scores_remain_directional(bars):
+    returns = (bars['close'] / bars['open'] - 1).to_numpy()
+    classes = np.searchsorted(np.quantile(returns, [1 / 3, 2 / 3]), returns)
+    scores = classes + 1 + np.abs(returns) * 1e-6
+    frame = pd.DataFrame({'predictions': scores})
+    prepared = _prepare_snapshot_backtest_input(frame)
+    assert (prepared['predictions'] == 1).all()
 
 
 def test_package_rounding_inventory():
