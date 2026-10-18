@@ -12,11 +12,12 @@ from limen.features.price_lines import price_lines
 from limen.sfd.rule_based.common_strategies import strategy_signals
 from limen.targets.trade_outcome import TradeOutcomeTarget, TradeTargetContext
 from tests.backtest_reuse.worker import _trade_case
-from tests.benchmark_backtest_reuse import _assert_campaign_contract, _code_digest, _compare
+from tests.benchmark_backtest_reuse import _assert_campaign_contract, _compare
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / 'docs/benchmarks/backtest-reuse/report.json'
 BASELINE_SOURCE_SHA256 = 'e5af427c931a5f65d854c829a4934f142efeeb0ae07e4bdb41ef70927128dc9f'
+OPTIMIZED_SOURCE_SHA256 = 'bd9c90f37d7619fcddd8f899ad15a9fe4f46d09ca401b10b34cfa03b7e864d1b'
 
 
 @pytest.fixture(scope='module')
@@ -148,8 +149,10 @@ def test_recorded_benchmark_report_meets_acceptance_contract():
     _assert_campaign_contract(report)
     _assert_campaign_contract(report['resource_campaign'])
     assert report['resource_campaign']['source_code_sha256'] == report['source_code_sha256']
-    assert report['source_code_sha256']['optimized'] == _code_digest(ROOT)
+    assert report['source_code_sha256']['optimized'] == OPTIMIZED_SOURCE_SHA256
     assert report['source_code_sha256']['baseline'] == BASELINE_SOURCE_SHA256
+    assert report['candidate_commit'] == report['source_commits']['optimized'] == '4754d0962be79fd8a20859b7017a0b8c4876d4a2'
+    assert report['baseline_commit'] == report['source_commits']['baseline'] == 'ec254c73f0ff47cfcc2017e262458b2d5f671fb0'
     for role, name in (
         ('primary', 'spot_1h_20240101_20241231.parquet'),
         ('target', 'spot_15m_20250101_20250531.parquet'),

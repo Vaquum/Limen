@@ -1711,3 +1711,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.34.1] - 2026-10-18
 
 - Reduce repeated backtest computation while preserving equal-input outputs through ten decimal places.
+
+## [5.34.2] - 2026-10-19
+
+- Bind frozen backtest benchmark provenance to its measured source digests and revisions so unrelated package changes preserve historical evidence validation.
