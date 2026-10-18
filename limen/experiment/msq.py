@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
-from typing import Any
-from typing import cast
+from typing import Any, cast
 
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.reducer.filter_types import FILTER_SAMPLE, SAMPLE_HASH_RULE
