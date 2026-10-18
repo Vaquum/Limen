@@ -87,6 +87,7 @@ def manifest(case: str) -> dict:
 
 def execute(case: str, directory: Path, factorize: bool | None = None) -> dict:
     cfg=manifest(case)
+    cfg['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     if factorize is not None:
         cfg['uel']['factorize']=factorize
     directory.mkdir(parents=True,exist_ok=True)

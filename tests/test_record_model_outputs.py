@@ -74,6 +74,7 @@ def _loop(config, bars, path, *, search=True):
 
 
 def _run(loop, **kwargs):
+    kwargs.setdefault('recording', dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None and loop._experiment_dir is not None else None)
     loop.run('recorded_model_outputs', n_permutations=2, prep_each_round=True, progress_bar=False, **kwargs)
 
 
@@ -293,7 +294,7 @@ def test_python_resume_rejects_changed_setting_without_rewriting(record_outputs,
 def test_cli_records_and_resumes_independently_of_execution(record_execution, recorded_bars, tmp_path, monkeypatch):
     config = _config('lightgbm', calibrated=True)
     path = tmp_path / 'experiment'
-    config['uel'].update(output_path=str(path), record_model_outputs=True, record_execution=record_execution)
+    config['uel'].update(output_path=str(path), record_model_outputs=True, record_execution=record_execution, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     yaml_path = tmp_path / 'experiment.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)

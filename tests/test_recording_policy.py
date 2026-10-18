@@ -21,6 +21,7 @@ from limen.experiment._recording import parse_recording
 from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.errors import StrictModeError
 from limen.inference import Trainer
+from limen.inference.errors import ReconstructionError
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
@@ -127,6 +128,8 @@ def _project(record, policy):
         expected.pop('preds', None)
     if not policy['trade_ledger']:
         expected.pop('trade_ledger', None)
+    if not policy['alignment'] and 'trade_contract' in expected:
+        expected['trade_contract'].pop('signal_rows', None)
     if not policy['alignment'] and 'alignment' in expected:
         expected['alignment'].pop('missing_datetimes', None)
         expected['alignment'].pop('test_datetimes', None)
@@ -284,7 +287,7 @@ def test_payload_projection(kind, campaigns, tmp_path):
         assert any(record['trade_ledger']['states'] for record in full['records'])
         for original, projected in zip(full['records'], lean['records'], strict=True):
             for key in ('trade_contract', 'trade_contract_digest', 'learning_binding'):
-                assert projected.get(key) == original.get(key)
+                assert projected.get(key) == _project(original, LEAN).get(key)
         raw_full = sum(len(json.dumps(record)) for record in full['records'])
         raw_lean = sum(len(json.dumps(record)) for record in lean['records'])
         assert raw_lean < raw_full
@@ -423,6 +426,15 @@ def test_consumer_contracts(case, campaigns, tmp_path):
             chosen.append(cohort.permutation_ids)
         assert predictions[0] == predictions[1]
         assert chosen[0] == chosen[1]
+        trainer = Trainer(captured['lean']['path'], data=captured['bars'])
+        row = captured['lean']['records'][0]
+        assert 'signal_rows' not in row['trade_contract']
+        for key in ('trade_contract', 'trade_contract_digest'):
+            original = trainer._round_data[row['round_id']][key]
+            trainer._round_data[row['round_id']][key] = {} if key == 'trade_contract' else '0' * 64
+            with pytest.raises(ReconstructionError, match='exact trade'):
+                trainer.train([row['round_id']])
+            trainer._round_data[row['round_id']][key] = original
     elif case == 'resume_rejection':
         policies = [None, FULL, LEAN, *({key: False} for key in FULL)]
         for kind, captured in campaigns.items():

@@ -80,7 +80,7 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
     validate_pbo_recording(policy, acceptance)
     if (value is not None or configured is not None) and (not has_search or directory is None):
         raise ValueError('recording requires search_strategy and experiment_dir')
-    if resume:
+    if resume and has_search and directory is not None:
         if saved is not None and saved != policy:
             raise ValueError('Cannot resume with a different recording policy')
         if not all(policy.values()):
@@ -99,6 +99,9 @@ def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | No
         alignment = cast(Mapping[str, object], projected['alignment'])
         projected['alignment'] = {key: value for key, value in alignment.items()
                                   if key not in ('missing_datetimes', 'test_datetimes')}
+    if not policy['alignment'] and 'trade_contract' in projected:
+        contract = cast(Mapping[str, object], projected['trade_contract'])
+        projected['trade_contract'] = {key: value for key, value in contract.items() if key != 'signal_rows'}
     if 'folds' in projected:
         projected['folds'] = [project_record(fold, policy)
                               for fold in cast(list[Mapping[str, object]], projected['folds'])]

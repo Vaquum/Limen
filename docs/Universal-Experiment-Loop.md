@@ -291,7 +291,7 @@ Python resume must pass the same flag; CLI resume uses the effective setting sav
 
 ### Record model outputs
 
-Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl.gz`, in the same order as `preds`, with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
+Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl.gz`, in test-row order (matching `preds` when enabled), with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
 
 LightGBM and XGBoost add `best_iteration` to `results.csv`: the number of boosting iterations actually used for prediction. LightGBM uses its positive `best_iteration_`, otherwise `n_iter_`. Tree-based XGBoost uses its zero-based best iteration plus one, otherwise the fitted booster's round count. XGBoost `gblinear` uses the final fitted round count because it does not retain an earlier model. Counts are available with early stopping disabled and with `inline_metrics=False`.
 
@@ -304,7 +304,7 @@ Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ 
 | Key | When `false` |
 |---|---|
 | `predictions` | Omit saved `preds`, including within retained folds. |
-| `alignment` | Omit row-sized `missing_datetimes` and fold `test_datetimes`; retain first/last dated bounds and exact source bindings. |
+| `alignment` | Omit row-sized `missing_datetimes`, fold `test_datetimes` and contract `signal_rows`; retain dated bounds, source checksums and the full contract digest. |
 | `trade_ledger` | Omit the complete event ledger; retain the trade contract, its digest and learning binding. |
 | `fold_details` | Omit the entire nested `folds` payload, including fold-local results, bounds and provenance; retain the outer occurrence identity and parameters. |
 
@@ -340,7 +340,7 @@ The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests
 | Event | 245,352 | 36,981 | Ledger 89.13%; retained trade contract 10.23% |
 | Walk-forward | 31,677 | 10,311 | Fold results 34.99%; alignment 20.34%; execution 19.41% |
 
-Omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. Exact trade provenance remains despite its cost. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
+In the recorded full-payload baseline, omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. With alignment recording disabled, per-signal identities are also omitted; Trainer compares reconstructed contract fields and the original full contract digest. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
 
 Reproduce the event probe from the repository root using the existing recorded-execution helpers:
 
@@ -361,7 +361,7 @@ with tempfile.TemporaryDirectory() as temporary:
     }}
     bars = pl.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
     loop = probe._loop(config, bars, directory)
-    probe._run(loop, record_execution=True, record_model_outputs=True)
+    probe._run(loop, record_execution=True, record_model_outputs=True, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     full = [(json.dumps(record) + '\n').encode('utf-8') for record in probe._records(directory)]
     lean = [(json.dumps({k: v for k, v in json.loads(row).items() if k != 'trade_ledger'}) + '\n').encode('utf-8') for row in full]
     print('logical full/without ledger:', sum(map(len, full)), sum(map(len, lean)))
@@ -398,6 +398,7 @@ uel = limen.UniversalExperimentLoop(
 uel.run(
     experiment_name='advanced-budget',
     n_permutations=6,
+    recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
 )
 ```
 
@@ -405,7 +406,7 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 ## Resume in practice
 
-Python/MSQ runs can resume when an `experiment_dir` and a checkpoint are available:
+Python/MSQ runs can resume when all four recording groups were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
 
 ```python
 uel.run(

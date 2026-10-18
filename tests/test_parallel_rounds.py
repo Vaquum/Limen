@@ -116,6 +116,7 @@ def run_loop(config, directory, *, workers=None, resume=False, callback=None, co
             prep_each_round=True, progress_bar=False,
             record_execution=True, record_model_outputs=True,
             workers=workers, resume=resume, context_params=context_params,
+            recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
         )
     return loop
 
@@ -441,6 +442,7 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
 
 
 def _write_yaml(config, path):
+    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     stream = io.StringIO()
     YAML().dump(config, stream)
     path.write_text(stream.getvalue())
@@ -576,7 +578,8 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
             loop = make_loop(config, directory, callback=stop_strict_prefix)
             loop.run(config['metadata']['name'], n_permutations=6,
                      prep_each_round=True, progress_bar=False, workers=2,
-                     record_execution=True, record_model_outputs=True, context_params=context_params)
+                     record_execution=True, record_model_outputs=True, context_params=context_params,
+                     recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     frame = assert_artifacts(directory)
     checkpoint = json.loads((directory / 'checkpoint.json').read_text())
     assert checkpoint['metadata']['experiment_round'] + 1 == frame.height

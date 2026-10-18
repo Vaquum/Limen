@@ -127,6 +127,7 @@ def _loop(config, bars, directory, *, native=False, search=True):
 
 
 def _run(loop, name='fixed_sources', **kwargs):
+    kwargs.setdefault('recording', dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None and loop._experiment_dir is not None else None)
     loop.run(name, n_permutations=2, prep_each_round=True, random_search=False,
              progress_bar=False, record_execution=loop._search_strategy is not None,
              record_model_outputs=loop._search_strategy is not None, **kwargs)

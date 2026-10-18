@@ -1,4 +1,5 @@
 import limen.experiment._round_storage as _storage
+from limen.experiment._recording import parse_recording, project_record
 import json
 from collections.abc import Mapping
 from limen.backtest.trade_contract import JsonValue
@@ -260,8 +261,9 @@ class Trainer:
 
             data_dict = self._manifest.prepare_data(self._data, round_params)
             expected = self._round_data[pid]
+            policy = parse_recording(self._metadata['recording']) if 'recording' in self._metadata else None
             frozen_contract = expected.get('trade_contract')
-            if frozen_contract is not None and (frozen_contract != data_dict.get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
+            if frozen_contract is not None and (frozen_contract != project_record(data_dict, policy).get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
                 raise ReconstructionError(f'Permutation {pid}: exact trade rules/source/output identity changed')
             results = self._manifest.run_model(data_dict, round_params)
             binding = expected.get('learning_binding')
