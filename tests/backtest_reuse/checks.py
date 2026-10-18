@@ -41,7 +41,8 @@ def main() -> None:
         if result.returncode not in (0, 1):
             raise RuntimeError(result.stderr or result.stdout)
         report = json.loads(result.stdout)
-        print(json.dumps(report['summary'], indent=2), flush=True)
+        sys.stdout.write(json.dumps(report['summary'], indent=2) + '\n')
+        sys.stdout.flush()
         with tempfile.TemporaryDirectory(prefix='limen-backtest-typing-') as directory:
             path = Path(directory) / 'pyright.json'
             path.write_text(result.stdout)

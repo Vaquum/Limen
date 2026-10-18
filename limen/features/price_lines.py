@@ -2,7 +2,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.utils.find_price_lines import LineArrays, _cached_price_line_arrays
+from limen.utils.find_price_lines import LineArrays
+from limen.utils._line_arrays import cached_price_line_arrays
 from limen.utils._computation_cache import ComputationCache, current_cache, reuse_series
 
 __all__ = ['line_active_count', 'line_recency', 'price_lines']
@@ -118,7 +119,7 @@ def _price_line_columns(close: npt.NDArray[np.float64],
         pl.Series: Struct series with the line-based fields
     '''
 
-    long_lines, short_lines = _cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
+    long_lines, short_lines = cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
 
     n_rows = close.shape[0]
     ends = np.sort(np.concatenate([long_lines[1], short_lines[1]]))

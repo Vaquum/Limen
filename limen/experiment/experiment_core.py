@@ -8,8 +8,7 @@ import time
 import warnings
 from collections.abc import Callable, Mapping
 from contextlib import nullcontext
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 

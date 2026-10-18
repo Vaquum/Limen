@@ -3,7 +3,8 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.features.price_lines import line_active_count, line_recency
-from limen.utils.find_price_lines import LineArrays, _cached_price_line_arrays
+from limen.utils.find_price_lines import LineArrays
+from limen.utils._line_arrays import cached_price_line_arrays
 from limen.utils._computation_cache import ComputationCache, current_cache, reuse_series
 
 DEFAULT_QUANTILE_THRESHOLD = 0.75
@@ -142,7 +143,7 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
         pl.Series: Struct series with the quantile-line fields
     '''
 
-    long_lines, short_lines = _cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
+    long_lines, short_lines = cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
 
     long_lines_q = _filter_quantile(long_lines, quantile_threshold)
     short_lines_q = _filter_quantile(short_lines, quantile_threshold)

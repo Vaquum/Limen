@@ -54,13 +54,16 @@ def _compare(baseline, optimized):
     import polars as pl
     from polars.testing import assert_frame_equal
 
-    maximum = 0.0
+    errors = {}
+    float_values = 0
     with (np.load(baseline / 'arrays.npz', allow_pickle=False) as expected,
           np.load(optimized / 'arrays.npz', allow_pickle=False) as actual):
         if actual.files != expected.files:
             raise AssertionError('Output array names or order changed')
         for name in actual.files:
-            maximum = max(maximum, _assert_array(actual[name], expected[name], name))
+            errors[f'arrays:{name}'] = _assert_array(actual[name], expected[name], name)
+            if actual[name].dtype.kind in 'fc':
+                float_values += actual[name].size
     names = sorted(path.name for path in baseline.glob('*.parquet'))
     if names != sorted(path.name for path in optimized.glob('*.parquet')):
         raise AssertionError('Output table names changed')
@@ -69,10 +72,14 @@ def _compare(baseline, optimized):
         assert_frame_equal(actual, expected, check_exact=False, abs_tol=ATOL, rel_tol=0)
         for column, dtype in actual.schema.items():
             if dtype.is_float():
-                maximum = max(maximum, _assert_array(actual[column].to_numpy(),
-                                                      expected[column].to_numpy(),
-                                                      f'{name}:{column}'))
-    return maximum
+                label = f'{name}:{column}'
+                errors[label] = _assert_array(actual[column].to_numpy(),
+                                              expected[column].to_numpy(), label)
+                float_values += actual.height
+    return {'max_absolute_error': max(errors.values()),
+            'max_absolute_error_by_output': errors,
+            'floating_values_compared': float_values,
+            'tables_compared': names}
 
 
 def _prepare(args):
@@ -144,8 +151,8 @@ def campaign(args):
                 cwd=args.output, env=environment, check=True, timeout=240,
             )
             record['results'][name] = json.loads((directory / 'timing.json').read_text())
-        record['max_absolute_error'] = _compare(args.output / scenario / 'baseline',
-                                                 args.output / scenario / 'optimized')
+        record.update(_compare(args.output / scenario / 'baseline',
+                               args.output / scenario / 'optimized'))
         before, after = (record['results'][name]['timing'] for name in roots)
         record['warm_speedup'] = before['median_ms'] / after['median_ms']
         record['first_call_speedup'] = before['first_call_ms'] / after['first_call_ms']

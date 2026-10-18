@@ -22,7 +22,7 @@ def bars():
 
 
 def _detector_calls(monkeypatch):
-    module = import_module('limen.utils.find_price_lines')
+    module = import_module('limen.utils._line_arrays')
     original = module._compute_price_line_arrays
     calls = []
 
@@ -134,9 +134,8 @@ def test_errors_and_typed_parameters_survive_hits(bars):
             price_lines(bars, 24, .001, big_move_lookback_hours=0)
         with pytest.raises(ValueError, match='include_research_only'):
             price_lines(bars, 24, .001, include_research_only=1)
-    with pytest.raises(ValueError, match='nonnegative integer'):
-        with computation_reuse(max_bytes=-1):
-            pytest.fail('Negative cache budget was accepted')
+    with pytest.raises(ValueError, match='nonnegative integer'), computation_reuse(max_bytes=-1):
+        pytest.fail('Negative cache budget was accepted')
 
 
 def test_expired_lazy_context_and_nested_invocations(bars, monkeypatch):
@@ -191,9 +190,9 @@ def test_random_sweep_reuses_transforms_with_fresh_fitted_state(tmp_path, bars, 
         fitted = []
         original = MLManifest.prepare_data
 
-        def capture(*args, **kwargs):
-            data = original(*args, **kwargs)
-            fitted.append(data['_fitted_params'])
+        def capture(*args, _original=original, _fitted=fitted, **kwargs):
+            data = _original(*args, **kwargs)
+            _fitted.append(data['_fitted_params'])
             return data
 
         with monkeypatch.context() as hooks:

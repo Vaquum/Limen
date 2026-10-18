@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 import polars as pl
 
-from limen.backtest._event_plan import _event_plan
+from limen.backtest._event_plan import event_plan
 from limen.backtest.execution_events import OBSERVATION_COLUMNS
 from limen.backtest.funding_adapter import prepare_funding, resolve_adapter
 from limen.backtest.trade_contract import NANOSECONDS, RULE_VERSION, JsonValue, TradeInputs, TradeLedger, TradePolicy, contract_digest, export_trade_contract, json_value, source_binding
@@ -126,7 +126,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
             sources.append(source_binding(funding, f'funding:partition:{index}', start, end, 1, 'normalized_funding_support'))
         signals = mapping.select('row_id', 'available_at_ns').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
         partition = TradeInputs(initial, start, end, signals, observations, funding, tuple(sources))
-        _event_plan(partition, policy)
+        _ = event_plan(partition, policy)
         inputs.append(partition)
         model_rows.append(mapping)
     return PreparedTradeContext(policy, tuple(inputs), tuple(model_rows), source_settings(config, params))

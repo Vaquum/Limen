@@ -6,23 +6,23 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from sys import getsizeof
 from threading import RLock
-from typing import TYPE_CHECKING, TypeVar, cast
+from typing import TypeVar, cast
 
 import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-if TYPE_CHECKING:
-    from limen.utils.find_price_lines import LineArrays
-
 __all__: list[str] = []
 
 _Value = TypeVar('_Value')
 _Key = tuple[object, ...]
+LineArrays = tuple[npt.NDArray[np.intp], npt.NDArray[np.intp], npt.NDArray[np.float64]]
+_MIN_MAX_DURATION_HOURS = 2
 
 
 class _BoundedCache:
     def __init__(self, max_bytes: int) -> None:
+        super().__init__()
         self.max_bytes = max_bytes
         self.bytes = 0
         self.entries: OrderedDict[_Key, tuple[object, int]] = OrderedDict()
@@ -57,6 +57,7 @@ class _BoundedCache:
 
 class ComputationCache:
     def __init__(self, max_bytes: int = 128 * 1024 * 1024) -> None:
+        super().__init__()
         if type(max_bytes) is not int or max_bytes < 0:
             raise ValueError('Computation cache max_bytes must be a nonnegative integer')
         self.primitives = _BoundedCache(max_bytes // 2)
@@ -96,7 +97,7 @@ def reuse_series(cache: ComputationCache | None, kind: str,
     key = array_key(kind, values, params) if cache is not None else None
     if cache is None or key is None:
         return compute()
-    return cache.features.resolve(key, compute, lambda value: value.estimated_size()).clone()
+    return cache.features.resolve(key, compute, lambda value: int(value.estimated_size())).clone()
 
 
 def reuse_line_arrays(close: npt.ArrayLike, max_duration_hours: int, min_height_pct: float,
@@ -105,7 +106,7 @@ def reuse_line_arrays(close: npt.ArrayLike, max_duration_hours: int, min_height_
                       ) -> tuple[LineArrays, LineArrays]:
     if cache is None:
         return compute(close, max_duration_hours, min_height_pct)
-    if max_duration_hours < 2:
+    if max_duration_hours < _MIN_MAX_DURATION_HOURS:
         raise ValueError('find_price_lines max_duration_hours must be at least 2')
     if min_height_pct <= 0:
         raise ValueError('find_price_lines min_height_pct must be positive')

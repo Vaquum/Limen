@@ -110,7 +110,7 @@ def _feature_case(args, frame):
                                                  include_research_only=False)
                 names = [name for name in lines.columns if name not in frame.columns]
                 quantile_names = [name for name in quantiles.columns if name not in frame.columns]
-                outputs.append(lines.select(names).hstack(quantiles.select(quantile_names))
+                outputs.append(lines.select(names).hstack(quantiles.select(quantile_names)))
         return pl.concat(outputs, how='vertical')
 
     result, timing = _measure(calculate, args.repeats, 1)
