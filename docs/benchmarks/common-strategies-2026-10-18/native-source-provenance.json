@@ -1,0 +1,14 @@
+{
+  "frozen_source_revision": "8640fd3bc378413d6fde4afa97fce188f60ad94f",
+  "reproduction_source_revision": "8640fd3bc378413d6fde4afa97fce188f60ad94f",
+  "association_recorded_after_execution": true,
+  "association_recorded_utc": "2026-10-18T19:34:11.004403+00:00",
+  "commit_created_after_native_run": true,
+  "execution_time_git_head_recorded": false,
+  "execution_time_source_code_sha256_recorded": false,
+  "execution_time_git_head": null,
+  "execution_time_source_code_sha256": null,
+  "basis": "The native Python source was frozen before the UEL run. Campaign coordination confirms that the unchanged frozen source was subsequently committed as this revision. This revision association was added after the run; it was not captured in the native execution artifacts.",
+  "source_stability_check": "The original runner compared native Python source digests before and after UEL. That check passed before the inspector assertion stopped serialization; neither the digest value nor the captured HEAD survived in a result artifact.",
+  "limitation": "Use this revision to reproduce the frozen source. Do not describe it or a subsequently calculated code digest as execution-time provenance recorded by the native run."
+}

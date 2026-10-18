@@ -1,0 +1,7 @@
+input,strategy,portfolio_count,evaluation_rows,engine,status,cold_engine_ms,cold_common_outputs_ms,warm_engine_median_ms,warm_engine_p95_ms,warm_common_median_ms,warm_common_p95_ms,snapshot_median_ms,peak_rss_mib,total_return,max_drawdown,entries,max_abs_equity_error,reason
+/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_1h_20240101_20241231.parquet,batch,8,8783,limen,verified,7.705826,10.532745,4.414503,6.553009199999998,6.658048,9.255517899999997,,111.93359375,,,,7.82310962677002e-08,
+/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_1h_20240101_20241231.parquet,batch,8,8783,vectorbt,verified,18624.174461,26095.804969,19.705102,22.3397052,41.328181,46.701043,,521.37109375,,,,0.0,
+/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_1h_20240101_20241231.parquet,batch,8,8783,vectorbt_rust,verified,16.061019,35.3117,12.422593,15.2885637,26.734431,30.400333999999997,,318.9921875,,,,0.0,
+/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_15m_20250101_20250531.parquet,batch,8,14495,limen,verified,9.353979,12.450075,5.740067,6.9997177,8.523469,11.1612101,,117.5625,,,,1.1315569281578064e-07,
+/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_15m_20250101_20250531.parquet,batch,8,14495,vectorbt,verified,15290.853014,22354.423984,25.74328,29.8759088,42.592813,53.4898743,,547.421875,,,,0.0,
+/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_15m_20250101_20250531.parquet,batch,8,14495,vectorbt_rust,verified,23.850831,48.904536,19.430187,22.019907099999998,43.848533,54.63629529999999,,339.19921875,,,,0.0,

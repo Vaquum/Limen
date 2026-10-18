@@ -55,6 +55,21 @@ python3.12 -m venv ../vectorbt-benchmark-env
   'numba==0.68.0' 'llvmlite==0.50.0'
 ```
 
+To reproduce the complete recorded package stacks, use the published
+[Limen environment pins](benchmarks/common-strategies-2026-10-18/limen-requirements.txt)
+and [vectorbt environment pins](benchmarks/common-strategies-2026-10-18/vectorbt-requirements.txt)
+in place of the installation commands above. They pin every installed
+distribution except the editable Limen checkout, which is installed separately
+from the measured source revision:
+
+```bash
+../limen-benchmark-env/bin/python -m pip install \
+  -r docs/benchmarks/common-strategies-2026-10-18/limen-requirements.txt
+../limen-benchmark-env/bin/python -m pip install --no-deps -e .
+../vectorbt-benchmark-env/bin/python -m pip install \
+  -r docs/benchmarks/common-strategies-2026-10-18/vectorbt-requirements.txt
+```
+
 Limen declares `pandas>=2.3,<3`; vectorbt 1.1.2 declares
 `pandas>=3.0.3,<4`. Separate environments preserve both dependency contracts.
 The controller prepares NumPy archives once, and competitor workers read those
@@ -282,6 +297,114 @@ repeat count, correctness status, and the exact timing scope. Publish failed
 or unavailable cases alongside successful ones. Only `verified` cases support
 performance comparisons under this contract.
 
+### 2026-10-18 campaign
+
+Both campaigns completed: **80 of 80 individual cases** passed verification
+(two inputs, eight strategies and five engines), and **six of six matrix
+cases** passed verification (two inputs and three engines, with all eight
+independent portfolio columns checked in each case). Every warm repeat also
+passed the same financial-output checks. The largest recorded absolute equity
+error against the independent cash replay was `1.132e-7` account-currency
+units; the report records this error on each worker's first result.
+
+The individual and matrix campaigns use Limen 5.34.0 at source revision
+`8640fd3bc378413d6fde4afa97fce188f60ad94f`, Python 3.12.14 and the package
+versions pinned above. The runtime is Linux 6.18.55 on x86-64 with glibc 2.39,
+nine reported logical CPUs and affinity covering those nine CPUs. The CPU
+model is unavailable; the reported processor value is only `x86_64`.
+Supported thread settings are fixed to one as recorded in each report.
+
+Both campaigns recorded the same implementation digest,
+`962f8208ce303c37a034a437301820a1e951ed72b447a00ebb2a8296d5d393ba`.
+The individual report records a clean checkout. The matrix report records
+the documentation and evidence edits made while the individual campaign
+ran; runtime source stayed unchanged. The aggregate reports preserve those
+working-tree observations without alteration.
+
+Both inputs are recorded BTCUSDT spot bars. The final real bar of each
+fixture supplies terminal settlement and is excluded from evaluation. All
+timestamps below are UTC; full input-file and signal digests are retained
+in the reports.
+
+| Input | Evaluated bars | First evaluated bar | Last evaluated bar | Settlement bar |
+|---|---:|---|---|---|
+| Hourly 2024 | 8,783 | 2024-01-01 00:00 | 2024-12-31 22:00 | 2024-12-31 23:00 |
+| 15-minute 2025 | 14,495 | 2025-01-01 00:00 | 2025-05-31 23:30 | 2025-05-31 23:45 |
+
+For individual strategies, the table aggregates in two stages: first take
+the median of seven warm repetitions for each strategy, then take the median
+of those eight strategy medians for each input and engine. Each range gives
+the minimum and maximum of those same eight strategy medians. The ranges
+describe strategy-to-strategy variation; they are not confidence intervals
+or the minimum and maximum of all timing samples. Engine-API time and time to
+produce the common equity, fills and summary remain separate columns.
+
+| Input | Engine | API ms: median [min, max] | Common outputs ms: median [min, max] |
+|---|---|---:|---:|
+| Hourly 2024 | Limen kernel | 0.532 [0.409, 1.393] | 0.918 [0.725, 2.450] |
+| Hourly 2024 | vectorbt Numba | 5.022 [4.586, 7.406] | 9.766 [8.642, 15.570] |
+| Hourly 2024 | vectorbt Rust | 3.854 [3.350, 5.534] | 8.049 [7.235, 11.715] |
+| Hourly 2024 | backtesting.py | 60.955 [54.995, 78.524] | 61.463 [55.304, 78.902] |
+| Hourly 2024 | Backtrader | 1208.464 [984.100, 1523.669] | 1209.572 [985.203, 1524.841] |
+| 15-minute 2025 | Limen kernel | 0.807 [0.745, 0.902] | 1.232 [1.152, 1.407] |
+| 15-minute 2025 | vectorbt Numba | 5.687 [5.540, 6.407] | 12.013 [10.399, 15.561] |
+| 15-minute 2025 | vectorbt Rust | 4.006 [3.379, 5.485] | 8.484 [7.670, 14.171] |
+| 15-minute 2025 | backtesting.py | 85.010 [79.328, 165.000] | 85.605 [79.807, 166.420] |
+| 15-minute 2025 | Backtrader | 1723.801 [1614.486, 2381.252] | 1727.248 [1615.651, 2383.199] |
+
+### Complete public snapshot
+
+Limen's full public snapshot uses the same two-stage aggregation and is
+reported separately because it additionally computes its native bar-metric
+summary. These are warm calls to `backtest_snapshot`; its first-call field
+also follows the return-kernel runs and is not a fresh-process cold snapshot.
+
+| Input | Full snapshot ms: median [min, max] |
+|---|---:|
+| Hourly 2024 | 3.537 [2.863, 14.907] |
+| 15-minute 2025 | 4.846 [4.184, 6.903] |
+
+### Eight-portfolio matrix
+
+The matrix is a separate workload: each measurement executes all eight
+independent strategy portfolios, and the table reports the median and
+minimum/maximum of its seven whole-matrix repetitions. Limen makes eight
+serial kernel calls; vectorbt makes one matrix portfolio call. The values
+measure the entire eight-portfolio operation, without division by eight.
+
+| Input | Engine | API ms: median [min, max] | Common outputs ms: median [min, max] |
+|---|---|---:|---:|
+| Hourly 2024 | Limen, eight serial calls | 4.415 [3.737, 7.315] | 6.658 [6.379, 10.200] |
+| Hourly 2024 | vectorbt Numba matrix | 19.705 [16.878, 22.671] | 41.328 [30.911, 47.188] |
+| Hourly 2024 | vectorbt Rust matrix | 12.423 [10.298, 15.983] | 26.734 [23.038, 30.765] |
+| 15-minute 2025 | Limen, eight serial calls | 5.740 [5.085, 7.126] | 8.523 [7.981, 11.396] |
+| 15-minute 2025 | vectorbt Numba matrix | 25.743 [23.558, 30.233] | 42.593 [41.257, 54.749] |
+| 15-minute 2025 | vectorbt Rust matrix | 19.430 [18.506, 22.453] | 43.849 [38.705, 57.869] |
+
+### Interpretation and evidence
+
+Limen's common-output path had the lowest aggregate warm time in both
+individual windows and both matrix windows measured here. Its full snapshot
+required 3.537 and 4.846 ms at the same aggregate statistic, showing the
+additional work behind the public research interface. Public APIs retain
+their different native responsibilities, so these results support the stated
+workloads and timing scopes. They do not establish a universal engine ranking.
+Seven warm samples describe local timing variation and do not estimate tail
+latency.
+
+The following aggregate reports are byte-preserved copies of the completed
+campaign outputs. They retain the first execution sample, all warm samples,
+setup and memory measurements, package versions and correctness evidence.
+The derived summary records unrounded table values and the exact aggregation
+rules. Full per-scenario NumPy archives accompany the campaign output; the
+compact documentation evidence contains the aggregate reports and summaries.
+
+| Evidence | JSON | CSV |
+|---|---|---|
+| Individual campaign | [Full report](benchmarks/common-strategies-2026-10-18/single-report.json) | [Per-case rows](benchmarks/common-strategies-2026-10-18/single-report.csv) |
+| Matrix campaign | [Full report](benchmarks/common-strategies-2026-10-18/matrix-report.json) | [Per-case rows](benchmarks/common-strategies-2026-10-18/matrix-report.csv) |
+| Derived timing tables | [Summary and report hashes](benchmarks/common-strategies-2026-10-18/performance-summary.json) | [Unrounded summary](benchmarks/common-strategies-2026-10-18/performance-summary.csv) |
+
 ## Costed SFD research and current limits
 
 Run the [common-strategy SFD](Common-Strategies.md#run-the-eight-strategy-grid)
@@ -290,6 +413,11 @@ separately for native strategy results with fees and slippage. Its defaults are
 test partitions independently, so state and indicator warm-up restart at each
 split. The engine benchmark instead prepares one continuous evaluated window
 and uses zero costs.
+
+The completed [2026-10-18 native run](Common-Strategies.md#recorded-costed-results-2026-10-18)
+reports all eight strategies' costed returns, maximum drawdowns and trade
+counts on the 1,598-row held-out test split. Those research results use a
+different window and state-reset protocol from the speed comparison.
 
 Zero costs are an explicit limit of cross-engine parity here. Limen's legacy
 snapshot deducts entry fees using its deployed arithmetic; an affordable

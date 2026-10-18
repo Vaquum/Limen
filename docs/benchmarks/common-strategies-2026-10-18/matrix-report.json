@@ -1,0 +1,1319 @@
+{
+  "schema_version": 1,
+  "started_utc": "2026-10-18T19:42:30.809594+00:00",
+  "commit": "8640fd3bc378413d6fde4afa97fce188f60ad94f",
+  "working_tree": "M docs/Backtest-Benchmarks.md\n M docs/Common-Strategies.md\n?? docs/benchmarks/",
+  "code_sha256": "962f8208ce303c37a034a437301820a1e951ed72b447a00ebb2a8296d5d393ba",
+  "limen_version": "5.34.0",
+  "platform": "Linux-6.18.55-x86_64-with-glibc2.39",
+  "machine": "x86_64",
+  "processor": "x86_64",
+  "logical_cpus": 9,
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "versions": {
+    "python": "3.12.14",
+    "vaquum-limen": "5.34.0",
+    "numpy": "2.5.4",
+    "pandas": "2.3.3",
+    "polars": "1.44.2",
+    "vectorbt": null,
+    "vectorbt-rust": null,
+    "numba": null,
+    "llvmlite": null,
+    "backtesting": "0.6.6",
+    "backtrader": "1.9.78.123"
+  },
+  "engine_pythons": {
+    "limen": "/workspace/scratch/a1e54cfe0798/benchmark-venv/bin/python",
+    "vectorbt": "/workspace/scratch/a1e54cfe0798/vectorbt-venv/bin/python",
+    "vectorbt_rust": "/workspace/scratch/a1e54cfe0798/vectorbt-venv/bin/python",
+    "backtesting_py": "/workspace/scratch/a1e54cfe0798/benchmark-venv/bin/python",
+    "backtrader": "/workspace/scratch/a1e54cfe0798/benchmark-venv/bin/python"
+  },
+  "repeats": 7,
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "POLARS_MAX_THREADS": "1",
+    "NUMBA_NUM_THREADS": "1",
+    "RAYON_NUM_THREADS": "1",
+    "OMP_THREAD_LIMIT": "1"
+  },
+  "workload": "independent strategy matrix",
+  "strategy_parameters": {
+    "buy_and_hold": {},
+    "sma_cross": {
+      "fast_period": 50,
+      "slow_period": 200
+    },
+    "ema_cross": {
+      "fast_period": 12,
+      "slow_period": 26
+    },
+    "macd": {
+      "fast_period": 12,
+      "slow_period": 26,
+      "signal_period": 9
+    },
+    "rsi_mean_reversion": {
+      "period": 14,
+      "entry_threshold": 30.0,
+      "exit_threshold": 70.0
+    },
+    "bollinger_mean_reversion": {
+      "period": 20,
+      "standard_deviations": 2.0,
+      "ddof": 0
+    },
+    "donchian_breakout": {
+      "entry_period": 20,
+      "exit_period": 10
+    },
+    "time_series_momentum": {
+      "period": 20
+    }
+  },
+  "excluded_inputs": [
+    {
+      "input": "tests/fixtures/indicator_equivalence_long.parquet",
+      "reason": "OHLCV-only indicator fixture has no recorded timestamps; chronological and event-clock validation is unavailable"
+    }
+  ],
+  "contract": {
+    "initial_cash": 1000000.0,
+    "fee_bps": 0,
+    "slip_bps": 0,
+    "liquidity": "unconstrained fills at the recorded close; volume participation is not modeled",
+    "execution_lag_bars": 1,
+    "position": "all-in long or flat",
+    "timing": "signal at close t holds close t to close t+1; final evaluated close liquidates",
+    "settlement": "one additional real source bar; excluded from evaluation and strategy preparation",
+    "equity_rtol": 1e-10,
+    "equity_atol": 1e-06,
+    "parity": "every equity sample, held bar, fill bar, side and price; independent cash replay and Limen",
+    "costed_comparison": "unsupported: legacy snapshot entry-fee accounting differs from affordable cash-spot sizing",
+    "timing_scopes": "engine API; API plus common equity/fills/summary extraction; Limen full snapshot separately",
+    "cold": "fresh process and unique empty Numba disk cache; imports/preparation reported separately",
+    "memory": "process high-water RSS, including imports and preparation; not allocation-only engine memory",
+    "comparison_limit": "public APIs perform unequal additional native work; no universal engine ranking",
+    "batch_scope": "each column has its own initial cash and accounting; Limen serial calls versus one vectorbt matrix call; no cash sharing",
+    "tail_statistic_limit": "p95 is a sample percentile; few repeats do not establish tail latency"
+  },
+  "scenarios": [
+    {
+      "strategy": "batch",
+      "strategy_columns": [
+        "buy_and_hold",
+        "sma_cross",
+        "ema_cross",
+        "macd",
+        "rsi_mean_reversion",
+        "bollinger_mean_reversion",
+        "donchian_breakout",
+        "time_series_momentum"
+      ],
+      "portfolio_count": 8,
+      "evaluation_rows": 8783,
+      "source_rows_including_settlement": 8784,
+      "evaluation_start": "2024-01-01 00:00:00+00:00",
+      "evaluation_end": "2024-12-31 22:00:00+00:00",
+      "settlement_timestamp": "2024-12-31 23:00:00+00:00",
+      "prepared_arrays_sha256": "395b0b6ff0bed0bb28f54d7039b8e01b8c492d20567ef8945845f2cc36c28f29",
+      "signals_sha256": "bf68053679394045b4561d0d89a6911a870b438b1c18a894dfa9d92ffe9be273",
+      "signal_preparation": {
+        "first_call_ms": 31.220786,
+        "warm": {
+          "median_ms": 30.292734,
+          "p95_ms": 32.835021899999994,
+          "samples_ms": [
+            33.615435,
+            28.180408,
+            30.292734,
+            31.014058,
+            23.395806,
+            25.485945,
+            30.788034
+          ]
+        }
+      },
+      "prepared_path": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_1h_20240101_20241231-a634bbd4-8783-batch/prepared.npz",
+      "input": "/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_1h_20240101_20241231.parquet",
+      "input_file_sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+      "parquet_read_validate_ms": 57.53639,
+      "results": [
+        {
+          "engine": "limen",
+          "status": "verified",
+          "python_executable": "/workspace/scratch/a1e54cfe0798/benchmark-venv/bin/python",
+          "versions": {
+            "python": "3.12.14",
+            "vaquum-limen": "5.34.0",
+            "numpy": "2.5.4",
+            "pandas": "2.3.3",
+            "polars": "1.44.2",
+            "vectorbt": null,
+            "vectorbt-rust": null,
+            "numba": null,
+            "llvmlite": null,
+            "backtesting": "0.6.6",
+            "backtrader": "1.9.78.123"
+          },
+          "evaluation_rows": 8783,
+          "processed_rows": 8783,
+          "portfolio_count": 8,
+          "threads": {
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
+            "NUMBA_NUM_THREADS": "1",
+            "RAYON_NUM_THREADS": "1",
+            "OMP_THREAD_LIMIT": "1"
+          },
+          "numba_cache_dir": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_1h_20240101_20241231-a634bbd4-8783-batch/limen-numba-cache",
+          "rss_before_adapter_mib": 111.93359375,
+          "adapter_preparation_ms": 181.467654,
+          "scope": "independent portfolios evaluated by serial long_flat_strategy calls",
+          "settings": {
+            "execution_mode": "serial calls",
+            "portfolio_count": 8,
+            "cash_sharing": false,
+            "execution_lag_bars": 1
+          },
+          "cold": {
+            "engine_ms": 7.705826,
+            "normalization_ms": 2.826919,
+            "common_outputs_ms": 10.532745,
+            "cpu_ms": 10.53414
+          },
+          "metrics": {
+            "portfolio_count": 8,
+            "by_strategy": {
+              "buy_and_hold": {
+                "final_equity": 2201020.2181366165,
+                "total_return": 1.2010202181366165,
+                "max_drawdown": -0.3231069072207581,
+                "mean_bar_return": 0.00010561123563607608,
+                "held_fraction": 0.9998861436866674,
+                "entries": 1,
+                "exits": 1
+              },
+              "sma_cross": {
+                "final_equity": 1830874.6846070187,
+                "total_return": 0.8308746846070187,
+                "max_drawdown": -0.18992204415299196,
+                "mean_bar_return": 7.703467140290217e-05,
+                "held_fraction": 0.5550495274962997,
+                "entries": 26,
+                "exits": 26
+              },
+              "ema_cross": {
+                "final_equity": 1928056.4565196324,
+                "total_return": 0.9280564565196323,
+                "max_drawdown": -0.21140443526231745,
+                "mean_bar_return": 8.225960847264803e-05,
+                "held_fraction": 0.5560742343162929,
+                "entries": 146,
+                "exits": 146
+              },
+              "macd": {
+                "final_equity": 1251463.9599237544,
+                "total_return": 0.2514639599237545,
+                "max_drawdown": -0.21068733556468078,
+                "mean_bar_return": 3.328310487060597e-05,
+                "held_fraction": 0.4842309006034385,
+                "entries": 333,
+                "exits": 333
+              },
+              "rsi_mean_reversion": {
+                "final_equity": 1046498.3567404007,
+                "total_return": 0.046498356740400704,
+                "max_drawdown": -0.26216296296296215,
+                "mean_bar_return": 1.3774954181887251e-05,
+                "held_fraction": 0.4804736422634635,
+                "entries": 31,
+                "exits": 31
+              },
+              "bollinger_mean_reversion": {
+                "final_equity": 1247596.373613559,
+                "total_return": 0.2475963736135589,
+                "max_drawdown": -0.22497720507884833,
+                "mean_bar_return": 3.0432430568653e-05,
+                "held_fraction": 0.25583513605829444,
+                "entries": 170,
+                "exits": 170
+              },
+              "donchian_breakout": {
+                "final_equity": 1540555.2943505389,
+                "total_return": 0.540555294350539,
+                "max_drawdown": -0.13887847931750918,
+                "mean_bar_return": 5.5276332782969256e-05,
+                "held_fraction": 0.42354548559717636,
+                "entries": 125,
+                "exits": 125
+              },
+              "time_series_momentum": {
+                "final_equity": 1647691.6511885675,
+                "total_return": 0.6476916511885675,
+                "max_drawdown": -0.2299798047872863,
+                "mean_bar_return": 6.449552849466827e-05,
+                "held_fraction": 0.5314812706364568,
+                "entries": 474,
+                "exits": 474
+              }
+            }
+          },
+          "warm": {
+            "engine_ms": {
+              "median_ms": 4.414503,
+              "p95_ms": 6.553009199999998,
+              "samples_ms": [
+                4.414503,
+                4.44525,
+                3.736861,
+                4.215867,
+                7.315044,
+                4.148878,
+                4.774928
+              ]
+            },
+            "normalization_ms": {
+              "median_ms": 2.324052,
+              "p95_ms": 2.8608169,
+              "samples_ms": [
+                2.281597,
+                1.933936,
+                2.803846,
+                2.324052,
+                2.885233,
+                2.50917,
+                2.276152
+              ]
+            },
+            "common_outputs_ms": {
+              "median_ms": 6.658048,
+              "p95_ms": 9.255517899999997,
+              "samples_ms": [
+                6.6961,
+                6.379186,
+                6.540707,
+                6.539919,
+                10.200277,
+                6.658048,
+                7.05108
+              ]
+            },
+            "cpu_ms": {
+              "median_ms": 6.659269,
+              "p95_ms": 9.256873799999997,
+              "samples_ms": [
+                6.69772,
+                6.380016,
+                6.540888,
+                6.540593,
+                10.20171,
+                6.659269,
+                7.052256
+              ]
+            }
+          },
+          "peak_rss_mib": 111.93359375,
+          "max_abs_equity_error": 7.82310962677002e-08,
+          "max_relative_equity_error": 3.196302838629506e-14,
+          "limen_imported": true,
+          "process_wall_ms": 555.757947,
+          "worker_returncode": 0
+        },
+        {
+          "engine": "vectorbt",
+          "status": "verified",
+          "python_executable": "/workspace/scratch/a1e54cfe0798/vectorbt-venv/bin/python",
+          "versions": {
+            "python": "3.12.14",
+            "vaquum-limen": null,
+            "numpy": "2.5.4",
+            "pandas": "3.0.6",
+            "polars": null,
+            "vectorbt": "1.1.2",
+            "vectorbt-rust": "1.1.2",
+            "numba": "0.68.0",
+            "llvmlite": "0.50.0",
+            "backtesting": null,
+            "backtrader": null
+          },
+          "evaluation_rows": 8783,
+          "processed_rows": 8784,
+          "portfolio_count": 8,
+          "threads": {
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
+            "NUMBA_NUM_THREADS": "1",
+            "RAYON_NUM_THREADS": "1",
+            "OMP_THREAD_LIMIT": "1"
+          },
+          "numba_cache_dir": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_1h_20240101_20241231-a634bbd4-8783-batch/vectorbt-numba-cache",
+          "rss_before_adapter_mib": 112.18359375,
+          "adapter_preparation_ms": 3440.135396,
+          "scope": "Portfolio.from_signals plus common output extraction",
+          "settings": {
+            "backend": "numba",
+            "size": "infinite amount (all affordable units)",
+            "cash_sharing": false,
+            "portfolio_count": 8,
+            "execution_mode": "one matrix call"
+          },
+          "cold": {
+            "engine_ms": 18624.174461,
+            "normalization_ms": 7471.630508,
+            "common_outputs_ms": 26095.804969,
+            "cpu_ms": 26090.745252
+          },
+          "metrics": {
+            "portfolio_count": 8,
+            "by_strategy": {
+              "buy_and_hold": {
+                "final_equity": 2201020.2181365467,
+                "total_return": 1.2010202181365468,
+                "max_drawdown": -0.3231069072207683,
+                "mean_bar_return": 0.00010561123563607336,
+                "held_fraction": 0.9998861436866674,
+                "entries": 1,
+                "exits": 1
+              },
+              "sma_cross": {
+                "final_equity": 1830874.6846070276,
+                "total_return": 0.8308746846070276,
+                "max_drawdown": -0.18992204415299008,
+                "mean_bar_return": 7.70346714029033e-05,
+                "held_fraction": 0.5550495274962997,
+                "entries": 26,
+                "exits": 26
+              },
+              "ema_cross": {
+                "final_equity": 1928056.45651966,
+                "total_return": 0.9280564565196601,
+                "max_drawdown": -0.21140443526231434,
+                "mean_bar_return": 8.225960847264961e-05,
+                "held_fraction": 0.5560742343162929,
+                "entries": 146,
+                "exits": 146
+              },
+              "macd": {
+                "final_equity": 1251463.959923764,
+                "total_return": 0.251463959923764,
+                "max_drawdown": -0.21068733556467656,
+                "mean_bar_return": 3.328310487060759e-05,
+                "held_fraction": 0.4842309006034385,
+                "entries": 333,
+                "exits": 333
+              },
+              "rsi_mean_reversion": {
+                "final_equity": 1046498.3567403989,
+                "total_return": 0.04649835674039893,
+                "max_drawdown": -0.2621629629629628,
+                "mean_bar_return": 1.377495418188701e-05,
+                "held_fraction": 0.4804736422634635,
+                "entries": 31,
+                "exits": 31
+              },
+              "bollinger_mean_reversion": {
+                "final_equity": 1247596.373613559,
+                "total_return": 0.2475963736135589,
+                "max_drawdown": -0.22497720507884977,
+                "mean_bar_return": 3.043243056865333e-05,
+                "held_fraction": 0.25583513605829444,
+                "entries": 170,
+                "exits": 170
+              },
+              "donchian_breakout": {
+                "final_equity": 1540555.2943505375,
+                "total_return": 0.5405552943505374,
+                "max_drawdown": -0.13887847931750874,
+                "mean_bar_return": 5.5276332782969994e-05,
+                "held_fraction": 0.42354548559717636,
+                "entries": 125,
+                "exits": 125
+              },
+              "time_series_momentum": {
+                "final_equity": 1647691.6511885696,
+                "total_return": 0.6476916511885695,
+                "max_drawdown": -0.2299798047872863,
+                "mean_bar_return": 6.449552849466898e-05,
+                "held_fraction": 0.5314812706364568,
+                "entries": 474,
+                "exits": 474
+              }
+            }
+          },
+          "warm": {
+            "engine_ms": {
+              "median_ms": 19.705102,
+              "p95_ms": 22.3397052,
+              "samples_ms": [
+                16.878053,
+                21.567664,
+                17.9779,
+                20.892304,
+                18.535108,
+                22.67058,
+                19.705102
+              ]
+            },
+            "normalization_ms": {
+              "median_ms": 19.661785,
+              "p95_ms": 25.335987,
+              "samples_ms": [
+                16.047081,
+                25.620315,
+                23.350281,
+                24.672555,
+                18.845147,
+                19.661785,
+                11.205643
+              ]
+            },
+            "common_outputs_ms": {
+              "median_ms": 41.328181,
+              "p95_ms": 46.701043,
+              "samples_ms": [
+                32.925134,
+                47.187979,
+                41.328181,
+                45.564859,
+                37.380255,
+                42.332365,
+                30.910745
+              ]
+            },
+            "cpu_ms": {
+              "median_ms": 41.329958,
+              "p95_ms": 46.703778899999996,
+              "samples_ms": [
+                32.928132,
+                47.190777,
+                41.329958,
+                45.56745,
+                37.383111,
+                42.334847,
+                30.913092
+              ]
+            }
+          },
+          "peak_rss_mib": 521.37109375,
+          "max_abs_equity_error": 0.0,
+          "max_relative_equity_error": 0.0,
+          "limen_imported": false,
+          "process_wall_ms": 30728.091777,
+          "worker_returncode": 0
+        },
+        {
+          "engine": "vectorbt_rust",
+          "status": "verified",
+          "python_executable": "/workspace/scratch/a1e54cfe0798/vectorbt-venv/bin/python",
+          "versions": {
+            "python": "3.12.14",
+            "vaquum-limen": null,
+            "numpy": "2.5.4",
+            "pandas": "3.0.6",
+            "polars": null,
+            "vectorbt": "1.1.2",
+            "vectorbt-rust": "1.1.2",
+            "numba": "0.68.0",
+            "llvmlite": "0.50.0",
+            "backtesting": null,
+            "backtrader": null
+          },
+          "evaluation_rows": 8783,
+          "processed_rows": 8784,
+          "portfolio_count": 8,
+          "threads": {
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
+            "NUMBA_NUM_THREADS": "1",
+            "RAYON_NUM_THREADS": "1",
+            "OMP_THREAD_LIMIT": "1"
+          },
+          "numba_cache_dir": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_1h_20240101_20241231-a634bbd4-8783-batch/vectorbt_rust-numba-cache",
+          "rss_before_adapter_mib": 112.6328125,
+          "adapter_preparation_ms": 2318.459352,
+          "scope": "Portfolio.from_signals plus common output extraction",
+          "settings": {
+            "backend": "rust",
+            "size": "infinite amount (all affordable units)",
+            "cash_sharing": false,
+            "portfolio_count": 8,
+            "execution_mode": "one matrix call"
+          },
+          "cold": {
+            "engine_ms": 16.061019,
+            "normalization_ms": 19.250681,
+            "common_outputs_ms": 35.3117,
+            "cpu_ms": 35.314357
+          },
+          "metrics": {
+            "portfolio_count": 8,
+            "by_strategy": {
+              "buy_and_hold": {
+                "final_equity": 2201020.2181365467,
+                "total_return": 1.2010202181365468,
+                "max_drawdown": -0.3231069072207683,
+                "mean_bar_return": 0.00010561123563607336,
+                "held_fraction": 0.9998861436866674,
+                "entries": 1,
+                "exits": 1
+              },
+              "sma_cross": {
+                "final_equity": 1830874.6846070276,
+                "total_return": 0.8308746846070276,
+                "max_drawdown": -0.18992204415299008,
+                "mean_bar_return": 7.70346714029033e-05,
+                "held_fraction": 0.5550495274962997,
+                "entries": 26,
+                "exits": 26
+              },
+              "ema_cross": {
+                "final_equity": 1928056.45651966,
+                "total_return": 0.9280564565196601,
+                "max_drawdown": -0.21140443526231434,
+                "mean_bar_return": 8.225960847264961e-05,
+                "held_fraction": 0.5560742343162929,
+                "entries": 146,
+                "exits": 146
+              },
+              "macd": {
+                "final_equity": 1251463.959923764,
+                "total_return": 0.251463959923764,
+                "max_drawdown": -0.21068733556467656,
+                "mean_bar_return": 3.328310487060759e-05,
+                "held_fraction": 0.4842309006034385,
+                "entries": 333,
+                "exits": 333
+              },
+              "rsi_mean_reversion": {
+                "final_equity": 1046498.3567403989,
+                "total_return": 0.04649835674039893,
+                "max_drawdown": -0.2621629629629628,
+                "mean_bar_return": 1.377495418188701e-05,
+                "held_fraction": 0.4804736422634635,
+                "entries": 31,
+                "exits": 31
+              },
+              "bollinger_mean_reversion": {
+                "final_equity": 1247596.373613559,
+                "total_return": 0.2475963736135589,
+                "max_drawdown": -0.22497720507884977,
+                "mean_bar_return": 3.043243056865333e-05,
+                "held_fraction": 0.25583513605829444,
+                "entries": 170,
+                "exits": 170
+              },
+              "donchian_breakout": {
+                "final_equity": 1540555.2943505375,
+                "total_return": 0.5405552943505374,
+                "max_drawdown": -0.13887847931750874,
+                "mean_bar_return": 5.5276332782969994e-05,
+                "held_fraction": 0.42354548559717636,
+                "entries": 125,
+                "exits": 125
+              },
+              "time_series_momentum": {
+                "final_equity": 1647691.6511885696,
+                "total_return": 0.6476916511885695,
+                "max_drawdown": -0.2299798047872863,
+                "mean_bar_return": 6.449552849466898e-05,
+                "held_fraction": 0.5314812706364568,
+                "entries": 474,
+                "exits": 474
+              }
+            }
+          },
+          "warm": {
+            "engine_ms": {
+              "median_ms": 12.422593,
+              "p95_ms": 15.2885637,
+              "samples_ms": [
+                15.982884,
+                12.107164,
+                12.392001,
+                12.422593,
+                10.298396,
+                13.668483,
+                12.896446
+              ]
+            },
+            "normalization_ms": {
+              "median_ms": 14.34243,
+              "p95_ms": 16.718480999999997,
+              "samples_ms": [
+                14.78162,
+                17.44344,
+                14.34243,
+                14.288478,
+                12.740103,
+                12.39996,
+                15.02691
+              ]
+            },
+            "common_outputs_ms": {
+              "median_ms": 26.734431,
+              "p95_ms": 30.400333999999997,
+              "samples_ms": [
+                30.764504,
+                29.550604,
+                26.734431,
+                26.711071,
+                23.038499,
+                26.068443,
+                27.923356
+              ]
+            },
+            "cpu_ms": {
+              "median_ms": 26.726576,
+              "p95_ms": 30.403180499999998,
+              "samples_ms": [
+                30.767124,
+                29.553979,
+                26.726576,
+                26.702353,
+                23.04109,
+                26.070541,
+                27.925746
+              ]
+            }
+          },
+          "peak_rss_mib": 318.9921875,
+          "max_abs_equity_error": 0.0,
+          "max_relative_equity_error": 0.0,
+          "limen_imported": false,
+          "process_wall_ms": 3156.059902,
+          "worker_returncode": 0
+        }
+      ]
+    },
+    {
+      "strategy": "batch",
+      "strategy_columns": [
+        "buy_and_hold",
+        "sma_cross",
+        "ema_cross",
+        "macd",
+        "rsi_mean_reversion",
+        "bollinger_mean_reversion",
+        "donchian_breakout",
+        "time_series_momentum"
+      ],
+      "portfolio_count": 8,
+      "evaluation_rows": 14495,
+      "source_rows_including_settlement": 14496,
+      "evaluation_start": "2025-01-01 00:00:00+00:00",
+      "evaluation_end": "2025-05-31 23:30:00+00:00",
+      "settlement_timestamp": "2025-05-31 23:45:00+00:00",
+      "prepared_arrays_sha256": "94382851ec3de3fb15697ab5ca4ee4e8ece23e10893cf7615cc92b06dc0219fe",
+      "signals_sha256": "a6f2ac429db0be7d76cde24f6be0b034fd3a1e6938322501dfc0dc43dd0f0bd5",
+      "signal_preparation": {
+        "first_call_ms": 41.700507,
+        "warm": {
+          "median_ms": 39.316487,
+          "p95_ms": 47.76783439999999,
+          "samples_ms": [
+            51.049721,
+            40.110099,
+            39.522837,
+            36.167969,
+            39.316487,
+            36.663074,
+            37.561528
+          ]
+        }
+      },
+      "prepared_path": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_15m_20250101_20250531-eb3392d7-14495-batch/prepared.npz",
+      "input": "/workspace/scratch/a1e54cfe0798/Limen/tests/fixtures/spot_15m_20250101_20250531.parquet",
+      "input_file_sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
+      "parquet_read_validate_ms": 15.983614,
+      "results": [
+        {
+          "engine": "limen",
+          "status": "verified",
+          "python_executable": "/workspace/scratch/a1e54cfe0798/benchmark-venv/bin/python",
+          "versions": {
+            "python": "3.12.14",
+            "vaquum-limen": "5.34.0",
+            "numpy": "2.5.4",
+            "pandas": "2.3.3",
+            "polars": "1.44.2",
+            "vectorbt": null,
+            "vectorbt-rust": null,
+            "numba": null,
+            "llvmlite": null,
+            "backtesting": "0.6.6",
+            "backtrader": "1.9.78.123"
+          },
+          "evaluation_rows": 14495,
+          "processed_rows": 14495,
+          "portfolio_count": 8,
+          "threads": {
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
+            "NUMBA_NUM_THREADS": "1",
+            "RAYON_NUM_THREADS": "1",
+            "OMP_THREAD_LIMIT": "1"
+          },
+          "numba_cache_dir": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_15m_20250101_20250531-eb3392d7-14495-batch/limen-numba-cache",
+          "rss_before_adapter_mib": 117.5625,
+          "adapter_preparation_ms": 119.877859,
+          "scope": "independent portfolios evaluated by serial long_flat_strategy calls",
+          "settings": {
+            "execution_mode": "serial calls",
+            "portfolio_count": 8,
+            "cash_sharing": false,
+            "execution_lag_bars": 1
+          },
+          "cold": {
+            "engine_ms": 9.353979,
+            "normalization_ms": 3.096096,
+            "common_outputs_ms": 12.450075,
+            "cpu_ms": 12.372002
+          },
+          "metrics": {
+            "portfolio_count": 8,
+            "by_strategy": {
+              "buy_and_hold": {
+                "final_equity": 1117382.9639431152,
+                "total_return": 0.1173829639431152,
+                "max_drawdown": -0.3146108544477606,
+                "mean_bar_return": 1.143256562500101e-05,
+                "held_fraction": 0.9999310106933426,
+                "entries": 1,
+                "exits": 1
+              },
+              "sma_cross": {
+                "final_equity": 877740.5867089139,
+                "total_return": -0.12225941329108614,
+                "max_drawdown": -0.28649137021752713,
+                "mean_bar_return": -7.239703084226773e-06,
+                "held_fraction": 0.5272852707830287,
+                "entries": 49,
+                "exits": 49
+              },
+              "ema_cross": {
+                "final_equity": 1169560.476349429,
+                "total_return": 0.16956047634942895,
+                "max_drawdown": -0.17042352881625134,
+                "mean_bar_return": 1.2649042038026584e-05,
+                "held_fraction": 0.517764746464298,
+                "entries": 250,
+                "exits": 250
+              },
+              "macd": {
+                "final_equity": 972446.6966401476,
+                "total_return": -0.0275533033598524,
+                "max_drawdown": -0.15194576015812644,
+                "mean_bar_return": -1.1278054460521224e-07,
+                "held_fraction": 0.4964470507071404,
+                "entries": 575,
+                "exits": 575
+              },
+              "rsi_mean_reversion": {
+                "final_equity": 1133743.7695879017,
+                "total_return": 0.13374376958790157,
+                "max_drawdown": -0.21919448889897142,
+                "mean_bar_return": 1.0935976721278661e-05,
+                "held_fraction": 0.5270093135563988,
+                "entries": 48,
+                "exits": 48
+              },
+              "bollinger_mean_reversion": {
+                "final_equity": 1035670.2575504173,
+                "total_return": 0.035670257550417306,
+                "max_drawdown": -0.15936709966794105,
+                "mean_bar_return": 3.711881300467591e-06,
+                "held_fraction": 0.2576750603656433,
+                "entries": 266,
+                "exits": 266
+              },
+              "donchian_breakout": {
+                "final_equity": 908577.1981931374,
+                "total_return": -0.09142280180686257,
+                "max_drawdown": -0.16932614968372506,
+                "mean_bar_return": -5.294490429382262e-06,
+                "held_fraction": 0.36481545360469125,
+                "entries": 228,
+                "exits": 228
+              },
+              "time_series_momentum": {
+                "final_equity": 871218.120889044,
+                "total_return": -0.12878187911095595,
+                "max_drawdown": -0.2057590989097251,
+                "mean_bar_return": -7.704686260744333e-06,
+                "held_fraction": 0.5132804415315626,
+                "entries": 820,
+                "exits": 820
+              }
+            }
+          },
+          "warm": {
+            "engine_ms": {
+              "median_ms": 5.740067,
+              "p95_ms": 6.9997177,
+              "samples_ms": [
+                6.705976,
+                5.374408,
+                5.740067,
+                5.085277,
+                6.425491,
+                5.704735,
+                7.125607
+              ]
+            },
+            "normalization_ms": {
+              "median_ms": 2.916009,
+              "p95_ms": 4.2456379,
+              "samples_ms": [
+                2.961789,
+                2.606364,
+                2.649791,
+                2.916009,
+                4.188114,
+                2.818734,
+                4.270291
+              ]
+            },
+            "common_outputs_ms": {
+              "median_ms": 8.523469,
+              "p95_ms": 11.1612101,
+              "samples_ms": [
+                9.667765,
+                7.980772,
+                8.389858,
+                8.001286,
+                10.613605,
+                8.523469,
+                11.395898
+              ]
+            },
+            "cpu_ms": {
+              "median_ms": 8.52506,
+              "p95_ms": 11.162296,
+              "samples_ms": [
+                9.668437,
+                7.981388,
+                8.390367,
+                8.002649,
+                10.615435,
+                8.52506,
+                11.396665
+              ]
+            }
+          },
+          "peak_rss_mib": 117.5625,
+          "max_abs_equity_error": 1.1315569281578064e-07,
+          "max_relative_equity_error": 9.697873534894555e-14,
+          "limen_imported": true,
+          "process_wall_ms": 495.62473,
+          "worker_returncode": 0
+        },
+        {
+          "engine": "vectorbt",
+          "status": "verified",
+          "python_executable": "/workspace/scratch/a1e54cfe0798/vectorbt-venv/bin/python",
+          "versions": {
+            "python": "3.12.14",
+            "vaquum-limen": null,
+            "numpy": "2.5.4",
+            "pandas": "3.0.6",
+            "polars": null,
+            "vectorbt": "1.1.2",
+            "vectorbt-rust": "1.1.2",
+            "numba": "0.68.0",
+            "llvmlite": "0.50.0",
+            "backtesting": null,
+            "backtrader": null
+          },
+          "evaluation_rows": 14495,
+          "processed_rows": 14496,
+          "portfolio_count": 8,
+          "threads": {
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
+            "NUMBA_NUM_THREADS": "1",
+            "RAYON_NUM_THREADS": "1",
+            "OMP_THREAD_LIMIT": "1"
+          },
+          "numba_cache_dir": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_15m_20250101_20250531-eb3392d7-14495-batch/vectorbt-numba-cache",
+          "rss_before_adapter_mib": 117.5625,
+          "adapter_preparation_ms": 2461.980466,
+          "scope": "Portfolio.from_signals plus common output extraction",
+          "settings": {
+            "backend": "numba",
+            "size": "infinite amount (all affordable units)",
+            "cash_sharing": false,
+            "portfolio_count": 8,
+            "execution_mode": "one matrix call"
+          },
+          "cold": {
+            "engine_ms": 15290.853014,
+            "normalization_ms": 7063.57097,
+            "common_outputs_ms": 22354.423984,
+            "cpu_ms": 22342.892033
+          },
+          "metrics": {
+            "portfolio_count": 8,
+            "by_strategy": {
+              "buy_and_hold": {
+                "final_equity": 1117382.9639432232,
+                "total_return": 0.11738296394322334,
+                "max_drawdown": -0.31461085444772774,
+                "mean_bar_return": 1.1432565625008033e-05,
+                "held_fraction": 0.9999310106933426,
+                "entries": 1,
+                "exits": 1
+              },
+              "sma_cross": {
+                "final_equity": 877740.5867089131,
+                "total_return": -0.12225941329108692,
+                "max_drawdown": -0.28649137021752913,
+                "mean_bar_return": -7.239703084226374e-06,
+                "held_fraction": 0.5272852707830287,
+                "entries": 49,
+                "exits": 49
+              },
+              "ema_cross": {
+                "final_equity": 1169560.476349436,
+                "total_return": 0.16956047634943605,
+                "max_drawdown": -0.17042352881625145,
+                "mean_bar_return": 1.2649042038026982e-05,
+                "held_fraction": 0.517764746464298,
+                "entries": 250,
+                "exits": 250
+              },
+              "macd": {
+                "final_equity": 972446.6966401635,
+                "total_return": -0.027553303359836412,
+                "max_drawdown": -0.1519457601581229,
+                "mean_bar_return": -1.1278054460349653e-07,
+                "held_fraction": 0.4964470507071404,
+                "entries": 575,
+                "exits": 575
+              },
+              "rsi_mean_reversion": {
+                "final_equity": 1133743.7695879114,
+                "total_return": 0.13374376958791134,
+                "max_drawdown": -0.2191944888989693,
+                "mean_bar_return": 1.0935976721279311e-05,
+                "held_fraction": 0.5270093135563988,
+                "entries": 48,
+                "exits": 48
+              },
+              "bollinger_mean_reversion": {
+                "final_equity": 1035670.2575504179,
+                "total_return": 0.03567025755041797,
+                "max_drawdown": -0.1593670996679427,
+                "mean_bar_return": 3.711881300467591e-06,
+                "held_fraction": 0.2576750603656433,
+                "entries": 266,
+                "exits": 266
+              },
+              "donchian_breakout": {
+                "final_equity": 908577.1981931407,
+                "total_return": -0.09142280180685936,
+                "max_drawdown": -0.16932614968372306,
+                "mean_bar_return": -5.294490429381987e-06,
+                "held_fraction": 0.36481545360469125,
+                "entries": 228,
+                "exits": 228
+              },
+              "time_series_momentum": {
+                "final_equity": 871218.1208890409,
+                "total_return": -0.12878187911095917,
+                "max_drawdown": -0.20575909890972222,
+                "mean_bar_return": -7.704686260743888e-06,
+                "held_fraction": 0.5132804415315626,
+                "entries": 820,
+                "exits": 820
+              }
+            }
+          },
+          "warm": {
+            "engine_ms": {
+              "median_ms": 25.74328,
+              "p95_ms": 29.8759088,
+              "samples_ms": [
+                24.174752,
+                25.74328,
+                23.557884,
+                30.232541,
+                24.924931,
+                27.618593,
+                29.043767
+              ]
+            },
+            "normalization_ms": {
+              "median_ms": 18.263158,
+              "p95_ms": 24.0415177,
+              "samples_ms": [
+                17.082115,
+                16.122907,
+                18.263158,
+                24.51649,
+                22.631177,
+                22.933249,
+                13.549046
+              ]
+            },
+            "common_outputs_ms": {
+              "median_ms": 42.592813,
+              "p95_ms": 53.4898743,
+              "samples_ms": [
+                41.256867,
+                41.866187,
+                41.821042,
+                54.749031,
+                47.556108,
+                50.551842,
+                42.592813
+              ]
+            },
+            "cpu_ms": {
+              "median_ms": 42.596901,
+              "p95_ms": 53.494301099999994,
+              "samples_ms": [
+                41.291335,
+                41.84453,
+                41.824379,
+                54.753687,
+                47.560963,
+                50.555734,
+                42.596901
+              ]
+            }
+          },
+          "peak_rss_mib": 547.421875,
+          "max_abs_equity_error": 0.0,
+          "max_relative_equity_error": 0.0,
+          "limen_imported": false,
+          "process_wall_ms": 26150.635153,
+          "worker_returncode": 0
+        },
+        {
+          "engine": "vectorbt_rust",
+          "status": "verified",
+          "python_executable": "/workspace/scratch/a1e54cfe0798/vectorbt-venv/bin/python",
+          "versions": {
+            "python": "3.12.14",
+            "vaquum-limen": null,
+            "numpy": "2.5.4",
+            "pandas": "3.0.6",
+            "polars": null,
+            "vectorbt": "1.1.2",
+            "vectorbt-rust": "1.1.2",
+            "numba": "0.68.0",
+            "llvmlite": "0.50.0",
+            "backtesting": null,
+            "backtrader": null
+          },
+          "evaluation_rows": 14495,
+          "processed_rows": 14496,
+          "portfolio_count": 8,
+          "threads": {
+            "OMP_NUM_THREADS": "1",
+            "OPENBLAS_NUM_THREADS": "1",
+            "MKL_NUM_THREADS": "1",
+            "VECLIB_MAXIMUM_THREADS": "1",
+            "BLIS_NUM_THREADS": "1",
+            "POLARS_MAX_THREADS": "1",
+            "NUMBA_NUM_THREADS": "1",
+            "RAYON_NUM_THREADS": "1",
+            "OMP_THREAD_LIMIT": "1"
+          },
+          "numba_cache_dir": "/workspace/scratch/a1e54cfe0798/backtest-matrix-canonical-20261018-v1/spot_15m_20250101_20250531-eb3392d7-14495-batch/vectorbt_rust-numba-cache",
+          "rss_before_adapter_mib": 117.5625,
+          "adapter_preparation_ms": 2726.273689,
+          "scope": "Portfolio.from_signals plus common output extraction",
+          "settings": {
+            "backend": "rust",
+            "size": "infinite amount (all affordable units)",
+            "cash_sharing": false,
+            "portfolio_count": 8,
+            "execution_mode": "one matrix call"
+          },
+          "cold": {
+            "engine_ms": 23.850831,
+            "normalization_ms": 25.053705,
+            "common_outputs_ms": 48.904536,
+            "cpu_ms": 48.908571
+          },
+          "metrics": {
+            "portfolio_count": 8,
+            "by_strategy": {
+              "buy_and_hold": {
+                "final_equity": 1117382.9639432232,
+                "total_return": 0.11738296394322334,
+                "max_drawdown": -0.31461085444772774,
+                "mean_bar_return": 1.1432565625008033e-05,
+                "held_fraction": 0.9999310106933426,
+                "entries": 1,
+                "exits": 1
+              },
+              "sma_cross": {
+                "final_equity": 877740.5867089131,
+                "total_return": -0.12225941329108692,
+                "max_drawdown": -0.28649137021752913,
+                "mean_bar_return": -7.239703084226374e-06,
+                "held_fraction": 0.5272852707830287,
+                "entries": 49,
+                "exits": 49
+              },
+              "ema_cross": {
+                "final_equity": 1169560.476349436,
+                "total_return": 0.16956047634943605,
+                "max_drawdown": -0.17042352881625145,
+                "mean_bar_return": 1.2649042038026982e-05,
+                "held_fraction": 0.517764746464298,
+                "entries": 250,
+                "exits": 250
+              },
+              "macd": {
+                "final_equity": 972446.6966401635,
+                "total_return": -0.027553303359836412,
+                "max_drawdown": -0.1519457601581229,
+                "mean_bar_return": -1.1278054460349653e-07,
+                "held_fraction": 0.4964470507071404,
+                "entries": 575,
+                "exits": 575
+              },
+              "rsi_mean_reversion": {
+                "final_equity": 1133743.7695879114,
+                "total_return": 0.13374376958791134,
+                "max_drawdown": -0.2191944888989693,
+                "mean_bar_return": 1.0935976721279311e-05,
+                "held_fraction": 0.5270093135563988,
+                "entries": 48,
+                "exits": 48
+              },
+              "bollinger_mean_reversion": {
+                "final_equity": 1035670.2575504179,
+                "total_return": 0.03567025755041797,
+                "max_drawdown": -0.1593670996679427,
+                "mean_bar_return": 3.711881300467591e-06,
+                "held_fraction": 0.2576750603656433,
+                "entries": 266,
+                "exits": 266
+              },
+              "donchian_breakout": {
+                "final_equity": 908577.1981931407,
+                "total_return": -0.09142280180685936,
+                "max_drawdown": -0.16932614968372306,
+                "mean_bar_return": -5.294490429381987e-06,
+                "held_fraction": 0.36481545360469125,
+                "entries": 228,
+                "exits": 228
+              },
+              "time_series_momentum": {
+                "final_equity": 871218.1208890409,
+                "total_return": -0.12878187911095917,
+                "max_drawdown": -0.20575909890972222,
+                "mean_bar_return": -7.704686260743888e-06,
+                "held_fraction": 0.5132804415315626,
+                "entries": 820,
+                "exits": 820
+              }
+            }
+          },
+          "warm": {
+            "engine_ms": {
+              "median_ms": 19.430187,
+              "p95_ms": 22.019907099999998,
+              "samples_ms": [
+                19.699526,
+                19.273482,
+                19.14848,
+                21.010204,
+                22.452637,
+                18.505746,
+                19.430187
+              ]
+            },
+            "normalization_ms": {
+              "median_ms": 21.580744,
+              "p95_ms": 34.84179669999999,
+              "samples_ms": [
+                24.816414,
+                38.595196,
+                21.011122,
+                26.083865,
+                21.395896,
+                21.580744,
+                19.275123
+              ]
+            },
+            "common_outputs_ms": {
+              "median_ms": 43.848533,
+              "p95_ms": 54.63629529999999,
+              "samples_ms": [
+                44.51594,
+                57.868678,
+                40.159602,
+                47.094069,
+                43.848533,
+                40.08649,
+                38.70531
+              ]
+            },
+            "cpu_ms": {
+              "median_ms": 43.841675,
+              "p95_ms": 54.6410674,
+              "samples_ms": [
+                44.519725,
+                57.873679,
+                40.163679,
+                47.098307,
+                43.841675,
+                40.089751,
+                38.708031
+              ]
+            }
+          },
+          "peak_rss_mib": 339.19921875,
+          "max_abs_equity_error": 0.0,
+          "max_relative_equity_error": 0.0,
+          "limen_imported": false,
+          "process_wall_ms": 3710.082389,
+          "worker_returncode": 0
+        }
+      ]
+    }
+  ],
+  "finished_utc": "2026-10-18T19:43:36.432768+00:00",
+  "status": "completed"
+}
