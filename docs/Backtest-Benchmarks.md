@@ -473,7 +473,7 @@ Baseline `ec254c73` and computation-reuse code `4754d096` ran on the same host w
 
 Every compared numeric output had maximum absolute error **0.0**, exceeding the required ten-decimal equivalence. Non-numeric output contracts also matched, including all timer ledger rows, both label directions, funding cashflows and provenance. See the [machine-readable report](benchmarks/backtest-reuse/report.json) and [CSV summary](benchmarks/backtest-reuse/summary.csv) for source/input hashes and all timing samples.
 
-The standalone campaign fails on numerical/structural differences or any named warm speedup at or below 1.0. CI checks the committed report's acceptance, current source/fixture hashes, independent baseline outputs and deterministic operation counts. Ratios remain host-dependent; funded timers and joint feature/target throughput have no measured speed claim.
+The standalone campaign fails on numerical/structural differences or any named warm speedup at or below 1.0. CI checks the committed report's acceptance, recorded source identities and current fixture hashes, independent baseline outputs and deterministic operation counts. Ratios remain host-dependent; funded timers and joint feature/target throughput have no measured speed claim.
 
 A second campaign with identical production-code hashes also matched exactly. Its process peak RSS (including imports, inputs and output persistence) was 307.8 → 270.1 MiB for line features, 305.3 → 258.1 MiB for timer execution, and within 1.3 MiB of baseline for the other four cases. Cold timings and normalized RSS for all six cases are in the report's `resource_campaign`; these observations do not establish a universal memory or cold-latency bound.
 
