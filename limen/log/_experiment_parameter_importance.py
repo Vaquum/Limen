@@ -20,7 +20,7 @@ class _Regressor(Protocol):
 
 
 class _Splitter(Protocol):
-    def split(self, x: pd.DataFrame, *, groups: npt.NDArray[np.intp]) -> Iterator[
+    def split(self, x: pd.DataFrame, *, groups: npt.ArrayLike) -> Iterator[
         tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]
     ]: ...
 
