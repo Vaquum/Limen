@@ -180,7 +180,7 @@ def test_bar_payloads_default_off(kind, tmp_path):
     assert json.loads((tmp_path / 'metadata.json').read_text())['recording'] == LEAN
 
 
-@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'compiled_sources'))
+@pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'nonpersisted_pbo', 'compiled_sources'))
 def test_policy_validation(case, tmp_path, monkeypatch):
     config = _config('walk_forward')
     if case in ('yaml', 'native'):
@@ -202,7 +202,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 with pytest.raises((TypeError, ValueError), match='recording'):
                     _run(loop, recording=policy)
             assert not path.exists()
-        for policy in ({}, FULL, {'predictions': False}):
+        for policy in ({}, FULL, {'predictions': True}):
             candidate = copy.deepcopy(config)
             candidate['uel']['recording'] = policy
             assert validate(candidate).valid
@@ -215,7 +215,9 @@ def test_policy_validation(case, tmp_path, monkeypatch):
                 assert not directory.exists()
     elif case == 'pbo_admission':
         config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
-        assert not validate(config).valid
+        invalid = validate(config)
+        assert not invalid.valid
+        assert any('PBO' in error.message or 'max_pbo' in error.message for error in invalid.errors)
         path = tmp_path / 'implicit-pbo'
         with pytest.raises(ValueError, match=r'PBO|max_pbo'):
             _run(_loop(config, path, bars=_bars('walk_forward')), kind='walk_forward')
@@ -248,6 +250,22 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             report = json.loads((path / 'acceptance_report.json').read_text())
             assert isinstance(report['pbo'], float)
             assert isinstance(report['verdicts']['max_pbo'], bool)
+    elif case == 'nonpersisted_pbo':
+        class _Admitted(RuntimeError):
+            pass
+
+        def admitted(loop, *args, **kwargs):
+            assert loop._recording is None
+            raise _Admitted('full retention')
+
+        config['sfd']['manifest']['acceptance'] = {'max_pbo': 0.9}
+        monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', admitted)
+        for search, directory in ((False, tmp_path / 'standard'), (True, None), (False, None)):
+            loop = _loop(config, directory, search=search, bars=_bars('walk_forward'))
+            with pytest.raises(_Admitted, match='full retention'):
+                _run(loop, record_execution=False, record_model_outputs=False)
+            if directory is not None:
+                assert not directory.exists()
     elif case == 'compiled_sources':
         class _PolicyResolvedError(RuntimeError):
             pass
@@ -256,7 +274,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
             raise _PolicyResolvedError('recording admission completed')
 
         monkeypatch.setattr('limen.experiment._parallel_rounds.begin_run', resolved_before_dispatch)
-        config['uel']['recording'] = {'predictions': False}
+        config['uel']['recording'] = {'predictions': True}
         unchanged = copy.deepcopy(config)
         no_policy = copy.deepcopy(config)
         del no_policy['uel']['recording']
@@ -264,7 +282,7 @@ def test_policy_validation(case, tmp_path, monkeypatch):
         bars = _bars('walk_forward')
         for workers in (1, 2):
             for label, declaration, expected in (
-                ('yaml', None, LEAN),
+                ('yaml', None, {**LEAN, 'predictions': True}),
                 ('partial', {'trade_ledger': True}, {**LEAN, 'trade_ledger': True}),
                 ('empty', {}, LEAN),
             ):
@@ -465,7 +483,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
                 trainer.train([row['round_id']])
             trainer._round_data[row['round_id']][key] = original
     elif case == 'resume_rejection':
-        policies = [None, FULL, LEAN, *({key: False} for key in FULL)]
+        policies = [None, FULL, LEAN, *({**FULL, key: False} for key in FULL)]
         for kind, captured in campaigns.items():
             for saved in ('full', 'lean'):
                 for index, policy in enumerate(policies):

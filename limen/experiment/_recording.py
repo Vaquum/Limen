@@ -77,7 +77,7 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
             declared = saved
 
     policy = parse_recording(declared) if declared is not None else dict(_DEFAULTS)
-    validate_pbo_recording(policy, acceptance)
+    validate_pbo_recording(policy if has_search and directory is not None else None, acceptance)
     if (value is not None or configured is not None) and (not has_search or directory is None):
         raise ValueError('recording requires search_strategy and experiment_dir')
     if resume and has_search and directory is not None:

@@ -134,7 +134,7 @@ uel.run(
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
-| `recording` | choose saved round-log payload groups; all enabled by default; requires `search_strategy` and `experiment_dir`; see [recording policy](#recording-policy) |
+| `recording` | choose saved round-log payload groups; all disabled by default; explicit policies require `search_strategy` and `experiment_dir`; see [recording policy](#recording-policy) |
 | `factorize` | opt-in reuse of fitted preparation state across model variations, and predictions across independent snapshot economics, in a deterministic persisted MSQ grid; default `false` |
 
 ### Factorized snapshot grids
