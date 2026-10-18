@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_first
-  limen_version: "5.30.2"
+  limen_version: "5.31.0"
   mode: development
   description: First logistic-regression binary classifier
 

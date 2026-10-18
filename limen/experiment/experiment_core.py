@@ -23,6 +23,7 @@ from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
+from limen.experiment._grid_resume import add_grid_metadata, validate_grid_resume
 from limen.experiment._recording import prepare_recording, project_record
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
@@ -346,7 +347,7 @@ class UniversalExperimentLoop:
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', i, exc)
-                round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
+                round_results: dict[str, Any] = {'strict_mode_error': str(exc) or type(exc).__name__}
                 round_succeeded = False
 
             if maintain_details_in_params is True:
@@ -635,7 +636,7 @@ class UniversalExperimentLoop:
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', current_round, exc)
-                round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
+                round_results: dict[str, Any] = {'strict_mode_error': str(exc) or type(exc).__name__}
             except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
@@ -884,7 +885,8 @@ class UniversalExperimentLoop:
             raise ValueError('Cannot resume with a different factorize setting')
         validate_objective_resume(self.manifest, metadata, csv_path)
         validate_walk_forward_resume(self.manifest, metadata)
-        domain.set_state(checkpoint_data['domain_state'])
+        validate_grid_resume(self._search_strategy, domain, checkpoint_data, metadata, factorize=self._factorize)
+        domain.set_state(domain.get_state() if self._factorize else checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
 
         if 'feedback_controller_state' in checkpoint_data:
@@ -975,7 +977,7 @@ class UniversalExperimentLoop:
         batch = objective_frame(self.manifest, accumulator)
         if self.experiment_log is not None:
             self.experiment_log = pl.concat(
-                [self.experiment_log, batch], how='diagonal_relaxed' if self._walk_forward is not None else 'vertical_relaxed',
+                [self.experiment_log, batch], how='diagonal_relaxed',
             )
         else:
             self.experiment_log = batch
@@ -1038,6 +1040,7 @@ class UniversalExperimentLoop:
             metadata['recording'] = self._recording
         if self._factorize:
             metadata['factorize'] = True
+        add_grid_metadata(self._search_strategy, metadata)
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
             metadata['split_walk_forward'] = self._walk_forward.config.as_dict()

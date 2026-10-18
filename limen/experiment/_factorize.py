@@ -34,6 +34,7 @@ from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_
 _BACKTEST_FIELDS = ('fee_bps', 'slip_bps', 'notional_rate', 'take_profit_bps', 'stop_loss_bps')
 _RESERVED = frozenset(('bar_type', 'feature_groups', 'use_calibration', 'use_threshold'))
 _FEATURES = frozenset((window_return, lag_range, dollar_bar_crash_reversal))
+_CACHE_LIMIT = 128
 
 
 def _fail(reason: str) -> NoReturn:
@@ -97,8 +98,6 @@ def _check_manifest(manifest: Manifest, domain: Mapping[str, list[object]], axes
     if any(entry.include_if is not None or entry.group is not None for entry in manifest.feature_transforms):
         _fail('dynamic feature selection')
 
-    if function is None:
-        _fail('missing architecture')
     assert function is not None
     sig = inspect.signature(function)
     if any(param.kind == inspect.Parameter.VAR_KEYWORD for param in sig.parameters.values()):
@@ -126,11 +125,8 @@ def _check_manifest(manifest: Manifest, domain: Mapping[str, list[object]], axes
 def _candidate_settings(domain: Mapping[str, list[object]], axes: frozenset[str]) -> list[dict[str, object]]:
     """Only values that can change eligibility need a scan, not the Cartesian grid."""
     settings = {key: values[0] for key, values in domain.items()}
-    checks = [settings]
-    for key, values in domain.items():
-        if key not in axes:
-            checks.extend([{**settings, key: value} for value in values[1:]])
-    return checks
+    return [settings, *({**settings, key: value} for key, values in domain.items()
+                        if key not in axes for value in values[1:])]
 
 
 @dataclass
@@ -150,12 +146,12 @@ class FactorizedRounds:
                  prep: Callable[..., dict[str, object]], model: Callable[..., dict[str, object]],
                  data: pl.DataFrame, record_execution: bool, record_model_outputs: bool,
                  intervention_path: Path | None = None) -> None:
-        super().__init__()
         if type(strategy) is not GridStrategy:
-            _fail('unshuffled GridStrategy is required')
+            _fail('GridStrategy is required')
         assert isinstance(strategy, GridStrategy)
-        if strategy.get_state()['shuffle']:
-            _fail('unshuffled GridStrategy is required')
+        state = strategy.get_state()
+        if state['shuffle'] and (type(state['seed']) is not int or state.get('permutation_version') != 2):
+            _fail('shuffled GridStrategy requires an integer seed and permutation version 2')
         if pruning or callback:
             _fail('pruning and callbacks are not supported')
         if prep != manifest.prepare_data or model != manifest.run_model or any(name in vars(manifest) for name in ('prepare_data', 'run_model')):
@@ -183,7 +179,7 @@ class FactorizedRounds:
         if set(params) != set(self.domain) or any(not any(type(value) is type(admitted) and value == admitted for admitted in self.domain[key]) for key, value in params.items()):
             _fail('candidate is outside the preflight domain')
         key = json.dumps({k: v for k, v in params.items() if k not in self.axes}, sort_keys=True, default=str)
-        entry = self.cache.get(key)
+        entry = self.cache.pop(key, None)
         if entry is None:
             prep_key: str | None = None
             fitted: dict[str, object] = {}
@@ -229,10 +225,15 @@ class FactorizedRounds:
                     evidence[split] = frame.select(col for col in ('datetime', 'open', 'high', 'low', 'close') if col in frame.columns)
             converged_warning = bool(convergence_warning(caught, True))
             if self.preparation is not None and prep_key is not None:
+                if prep_key not in self.preparation.cache and len(self.preparation.cache) >= _CACHE_LIMIT:
+                    del self.preparation.cache[next(iter(self.preparation.cache))]
                 self.preparation.cache[prep_key] = fitted
+            if len(self.cache) >= _CACHE_LIMIT:
+                del self.cache[next(iter(self.cache))]
             self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions, converged_warning)
             return data, result, recorded, converged_warning
 
+        self.cache[key] = entry
         data = dict(entry.data)
         if self.preparation is not None:
             data.update(self.preparation.evidence(cast(dict[str, object], entry.data['_fitted_params'])))

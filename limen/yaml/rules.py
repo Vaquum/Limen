@@ -1205,9 +1205,14 @@ class UelSpec:
                 ))
 
         strategy = uel.get('search_strategy')
-        if is_mapping(strategy) and strategy.get('seed') is not None:
-            seed = strategy['seed']
-            if not isinstance(seed, int) or isinstance(seed, bool):
+        if is_mapping(strategy):
+            seed = strategy.get('seed')
+            shuffle = strategy.get('shuffle', False)
+            if 'shuffle' in strategy and strategy.get('type', 'random') != 'grid':
+                errors.append(YAMLError(message="'uel.search_strategy.shuffle' is only supported for grid search", path='uel.search_strategy.shuffle'))
+            if type(shuffle) is not bool:
+                errors.append(YAMLError(message="'uel.search_strategy.shuffle' must be a bool", path='uel.search_strategy.shuffle'))
+            if (seed is not None or (shuffle is True and strategy.get('type') == 'grid')) and type(seed) is not int:
                 errors.append(YAMLError(
                     message=f"'uel.search_strategy.seed' must be an int (got {type(seed).__name__})",
                     path='uel.search_strategy.seed',

@@ -51,22 +51,22 @@ def supports_preparation(manifest: MLManifest) -> bool:
 class FittedPreparation:
     def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
                  references: Callable[[object, str], bool]) -> None:
-        super().__init__()
         self.manifest = manifest
         architecture = manifest.architecture_function
         if architecture is None:
             raise ValueError('Fitted preparation requires an architecture')
-        model_names = inspect.signature(architecture).parameters
         consumers = [value for attr, value in vars(manifest).items()
                      if attr not in ('backtest_config', 'architecture_function', 'architecture_params')]
         self.names = frozenset(name for name in domain if name not in axes and (
-            name not in model_names or any(references(value, name) for value in consumers)))
+            name not in inspect.signature(architecture).parameters or any(references(value, name) for value in consumers)))
         self.cache: dict[str, dict[str, object]] = {}
 
     def prepare(self, raw: pl.DataFrame, params: dict[str, object],
                 prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
         key = json.dumps({name: params[name] for name in self.names}, sort_keys=True, default=str)
-        saved = self.cache.get(key)
+        saved = self.cache.pop(key, None)
+        if saved is not None:
+            self.cache[key] = saved
         prepare_fitted = cast(Callable[..., dict[str, object]], vars(MLManifest)['_prepare_data_with_fitted'])
         data = (prep(raw, round_params=params) if saved is None else
                 prepare_fitted(self.manifest, raw, params, copy.deepcopy(saved)))

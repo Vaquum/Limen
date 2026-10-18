@@ -2,6 +2,11 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
+## [5.31.0] - 2026-10-18
+
+- Add seeded finite shuffled grid traversal to deterministic factorized runs, with versioned resume and bounded LRU reuse.
+- Preserve terminal strict failures across mixed result batches and cold-cache recovery.
+
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds

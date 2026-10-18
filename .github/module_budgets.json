@@ -462,5 +462,7 @@
   "limen/sfd/rule_based/_temporal.py": 80,
   "limen/yaml/_temporal_spec.py": 40,
   "limen/experiment/_recording.py": 90,
-  "limen/yaml/_recording_spec.py": 30
+  "limen/yaml/_recording_spec.py": 30,
+  "limen/experiment/param_search/_grid_permutation.py": 100,
+  "limen/experiment/_grid_resume.py": 60
 }
