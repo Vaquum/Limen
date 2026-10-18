@@ -4,6 +4,7 @@ import numpy as np
 import polars as pl
 import pytest
 
+import limen.backtest._snapshot_ledger as ledger_module
 from limen.backtest._snapshot_execution import snapshot_with_execution
 from limen.backtest._snapshot_ledger import snapshot_ledger
 from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS
@@ -79,3 +80,34 @@ def test_partitioned_tail_preserves_full_sort_summation_order(recorded):
         expected = reference_ledger(truncated, 1.0)
         _assert_metrics(actual, expected)
         assert actual['cvar_95_pnl_bps'] == expected['cvar_95_pnl_bps']
+
+
+def test_snapshot_groups_quantiles_and_sorts_only_cvar_tail(recorded, monkeypatch):
+    columns = _columns(recorded, strategy_signals(recorded, 'sma_cross'))
+    _, result = snapshot_with_execution(columns)
+    quantile_calls, partition_calls, sort_sizes = [], [], []
+
+    class ObservedNumpy:
+        def __getattr__(self, name):
+            return getattr(np, name)
+
+        def quantile(self, values, quantiles):
+            quantile_calls.append(tuple(quantiles))
+            return np.quantile(values, quantiles)
+
+        def partition(self, values, kth):
+            partition_calls.append((values.size, kth))
+            return np.partition(values, kth)
+
+        def sort(self, values):
+            sort_sizes.append(values.size)
+            return np.sort(values)
+
+    with monkeypatch.context() as observed:
+        observed.setattr(ledger_module, 'np', ObservedNumpy())
+        actual = snapshot_ledger(result, 1.0)
+    tail_count = int(np.floor(0.05 * result.net.size))
+    assert quantile_calls == [(0.05, 0.50, 0.95)] * 4
+    assert partition_calls == [(result.net.size, tail_count - 1)]
+    assert sort_sizes == [tail_count]
+    _assert_metrics(actual, reference_ledger(result, 1.0))

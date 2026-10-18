@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 
@@ -11,10 +12,11 @@ from limen.features.price_lines import price_lines
 from limen.sfd.rule_based.common_strategies import strategy_signals
 from limen.targets.trade_outcome import TradeOutcomeTarget, TradeTargetContext
 from tests.backtest_reuse.worker import _trade_case
-from tests.benchmark_backtest_reuse import _assert_campaign_contract, _compare
+from tests.benchmark_backtest_reuse import _assert_campaign_contract, _code_digest, _compare
 
 ROOT = Path(__file__).resolve().parents[1]
 REPORT = ROOT / 'docs/benchmarks/backtest-reuse/report.json'
+BASELINE_SOURCE_SHA256 = 'e5af427c931a5f65d854c829a4934f142efeeb0ae07e4bdb41ef70927128dc9f'
 
 
 @pytest.fixture(scope='module')
@@ -144,6 +146,15 @@ def test_comparator_rejects_recorded_output_corruption(
 def test_recorded_benchmark_report_meets_acceptance_contract():
     report = json.loads(REPORT.read_text())
     _assert_campaign_contract(report)
+    assert report['source_code_sha256']['optimized'] == _code_digest(ROOT)
+    assert report['source_code_sha256']['baseline'] == BASELINE_SOURCE_SHA256
+    for role, name in (
+        ('primary', 'spot_1h_20240101_20241231.parquet'),
+        ('target', 'spot_15m_20250101_20250531.parquet'),
+        ('funding', 'btcusdt_funding_20240101_20240108.json'),
+    ):
+        fixture = ROOT / 'tests/fixtures' / name
+        assert report['sources'][role]['sha256'] == hashlib.sha256(fixture.read_bytes()).hexdigest()
 
 
 @pytest.mark.parametrize('corruption', ('equivalence', 'error', 'equal_speed',
