@@ -443,9 +443,11 @@ and contract digests must agree. Snapshot regressions use the tighter `1e-12`
 absolute tolerance and preserve the original CVaR tail summation order.
 
 ```bash
+mkdir -p /tmp/limen-backtest-baseline
+git archive ec254c73f0ff47cfcc2017e262458b2d5f671fb0 | tar -x -C /tmp/limen-backtest-baseline
 python -m tests.benchmark_backtest_reuse \
-  --baseline-root /path/to/baseline \
-  --output /tmp/limen-backtest-reuse-results
+  --baseline-root /tmp/limen-backtest-baseline \
+  --output "$(mktemp -d /tmp/limen-backtest-reuse.XXXXXX)/campaign"
 ```
 
 The benchmark measures the snapshot ledger, complete snapshot evaluation,
@@ -470,5 +472,9 @@ Baseline `ec254c73` and computation-reuse code `4754d096` ran on the same host w
 | 256 forward candidates, TP/SL exits | 859.438 ms | 22.610 ms | 38.01x |
 
 Every compared numeric output had maximum absolute error **0.0**, exceeding the required ten-decimal equivalence. Non-numeric output contracts also matched, including all timer ledger rows, both label directions, funding cashflows and provenance. See the [machine-readable report](benchmarks/backtest-reuse/report.json) and [CSV summary](benchmarks/backtest-reuse/summary.csv) for source/input hashes and all timing samples.
+
+The standalone campaign fails on numerical/structural differences or any named warm speedup at or below 1.0. CI checks the committed report's acceptance, current source/fixture hashes, independent baseline outputs and deterministic operation counts. Ratios remain host-dependent; funded timers and joint feature/target throughput have no measured speed claim.
+
+A second campaign with identical production-code hashes also matched exactly. Its process peak RSS (including imports, inputs and output persistence) was 307.8 → 270.1 MiB for line features, 305.3 → 258.1 MiB for timer execution, and within 1.3 MiB of baseline for the other four cases. Cold timings and normalized RSS for all six cases are in the report's `resource_campaign`; these observations do not establish a universal memory or cold-latency bound.
 
 Line-feature reuse is bounded to one invocation. Event plans retain validated source clocks and use content-addressed identities; changed predictions retain dynamic validation. Timer blocks reconstruct all original state rows. Unfunded forward candidates stop after their independent episode closes; candidates that remain open still inspect the remaining events. Funded candidates retain full execution, including custom adapter behavior.

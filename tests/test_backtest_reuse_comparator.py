@@ -146,6 +146,8 @@ def test_comparator_rejects_recorded_output_corruption(
 def test_recorded_benchmark_report_meets_acceptance_contract():
     report = json.loads(REPORT.read_text())
     _assert_campaign_contract(report)
+    _assert_campaign_contract(report['resource_campaign'])
+    assert report['resource_campaign']['source_code_sha256'] == report['source_code_sha256']
     assert report['source_code_sha256']['optimized'] == _code_digest(ROOT)
     assert report['source_code_sha256']['baseline'] == BASELINE_SOURCE_SHA256
     for role, name in (
