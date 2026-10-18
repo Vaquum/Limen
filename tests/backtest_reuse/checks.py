@@ -28,6 +28,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('plane', choices=('suite', 'static', 'typing'))
     parser.add_argument('--typing-python', type=Path, default=ROOT / '.venv/bin/python')
+    parser.add_argument('--pr-url', help='PR for static budget checks; defaults to the current branch')
     args = parser.parse_args()
     os.environ['PATH'] = str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH']
     directory = Path(tempfile.mkdtemp(prefix='limen-backtest-check-'))
@@ -48,7 +49,7 @@ def main() -> None:
             run(f'governance/{gate}.py')
         run('governance/fail_loud_gate.py', '--base-budget',
             base_budget('fail_loud_budget', directory))
-        body = subprocess.run(['gh', 'pr', 'view', 'https://github.com/Vaquum/Limen/pull/974',
+        body = subprocess.run(['gh', 'pr', 'view', *([args.pr_url] if args.pr_url else []),
                                '--json', 'body', '--jq', '.body'],
                               cwd=ROOT, check=True, capture_output=True, text=True)
         body_path = directory / 'pr-body.md'

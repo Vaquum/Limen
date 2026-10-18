@@ -5,6 +5,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -19,6 +20,7 @@ SCENARIOS = ('snapshot_ledger', 'snapshot_full', 'line_features',
 THREADS = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
            'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'POLARS_MAX_THREADS')
 ATOL = 1e-10
+MIN_WARM_SPEEDUP = 1.0
 
 
 def _code_digest(root):
@@ -82,6 +84,23 @@ def _compare(baseline, optimized):
             'tables_compared': names}
 
 
+def _assert_campaign_contract(report, workloads=SCENARIOS):
+    if report['equivalent'] is not True:
+        raise AssertionError('Recorded benchmark equivalence failed')
+    records = report['scenarios']
+    if tuple(record['scenario'] for record in records) != tuple(workloads):
+        raise AssertionError('Recorded benchmark workloads are missing or out of order')
+    for record in records:
+        if record['equivalent'] is not True:
+            raise AssertionError(f'{record["scenario"]}: numerical equivalence failed')
+        error = record['max_absolute_error']
+        if not math.isfinite(error) or not 0 <= error <= ATOL:
+            raise AssertionError(f'{record["scenario"]}: absolute error exceeds {ATOL}')
+        speedup = record['warm_speedup']
+        if not math.isfinite(speedup) or speedup <= MIN_WARM_SPEEDUP:
+            raise AssertionError(f'{record["scenario"]}: warm speedup must exceed {MIN_WARM_SPEEDUP}')
+
+
 def _prepare(args):
     import numpy as np
 
@@ -128,10 +147,15 @@ def campaign(args):
               'rounds': args.rounds, 'target_rows': args.target_rows,
               'threads': dict.fromkeys(THREADS, '1'),
               'contract': {'absolute_tolerance': ATOL, 'relative_tolerance': 0,
+                           'minimum_warm_speedup_exclusive': MIN_WARM_SPEEDUP,
+                           'required_workloads': list(args.scenarios),
                            'non_numeric_outputs': 'exact names, order, schemas, nulls, IDs and clocks',
                            'scope': 'source reads and signal preparation excluded; complete declared computation included',
                            'cold': 'first timed call in a fresh implementation process',
                            'warm': 'median of repeated calls within that process',
+                           'cold_and_memory': 'advisory; no universal cold-call or memory regression bound',
+                           'memory_scope': 'matched fresh-process high-water RSS, including imports, source loading and output persistence; timings include the materialized declared computation and exclude source reads and output persistence',
+                           'rss_units': 'resource.ru_maxrss: bytes on Darwin, KiB on Linux; normalized to bytes and MiB',
                            'p95': 'sample percentile; three repeats do not establish tail latency'},
               'scenarios': []}
     environment = {**os.environ, **dict.fromkeys(THREADS, '1'), 'PYTHONHASHSEED': '0'}
@@ -156,6 +180,8 @@ def campaign(args):
         before, after = (record['results'][name]['timing'] for name in roots)
         record['warm_speedup'] = before['median_ms'] / after['median_ms']
         record['first_call_speedup'] = before['first_call_ms'] / after['first_call_ms']
+        record['peak_rss_ratio'] = (record['results']['optimized']['peak_process_rss_bytes']
+                                    / record['results']['baseline']['peak_process_rss_bytes'])
         record['equivalent'] = True
         report['scenarios'].append(record)
         (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -166,7 +192,10 @@ def campaign(args):
         raise RuntimeError('Implementation changed during measurement; campaign is invalid')
     report['finished_utc'] = datetime.now(timezone.utc).isoformat()
     report['equivalent'] = True
+    report['performance_passed'] = all(record['warm_speedup'] > MIN_WARM_SPEEDUP
+                                       for record in report['scenarios'])
     (args.output / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
+    _assert_campaign_contract(report, args.scenarios)
 
 
 def main():

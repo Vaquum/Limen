@@ -1,6 +1,6 @@
 from dataclasses import replace
+import hashlib
 from importlib import import_module
-from itertools import groupby
 from pathlib import Path
 from unittest.mock import patch
 
@@ -10,15 +10,22 @@ import pytest
 from polars.testing import assert_frame_equal
 
 from limen.backtest._event_plan import event_plan
-from limen.backtest.execution_events import execution_events
-from limen.backtest.funding_adapter import prepare_funding, resolve_adapter
-from limen.backtest.trade_contract import ProductSpec, TradeInputs, TradeLedger, TradePolicy, source_binding
-from limen.backtest.trade_execution import Account, _EPISODE_SCHEMA, _FILL_SCHEMA, _FUNDING_SCHEMA, _INTENT_SCHEMA, _STATE_SCHEMA, _execute_batch, _frame, _metrics, trade_execution
+from limen.backtest.funding_adapter import funding_adapter, prepare_funding
+from limen.backtest.trade_contract import ProductSpec, TradeInputs, TradePolicy, source_binding
+from limen.backtest.trade_execution import trade_execution
 from limen.experiment._prepare_trade_context import normalize_observations
 from limen.experiment._resolve_trade_policy import FundingConfig, resolve_funding
 from limen.experiment.manifest_core import DataSourceConfig
 from limen.sfd.rule_based.common_strategies import strategy_signals
+from tests.backtest_reuse.event_reference import trade_execution as reference_trade_execution
 from tests.test_fixed_trade_sources import _funding_frame
+
+ADAPTER_CALLS = []
+
+
+def recorded_adapter(context, *, params):
+    ADAPTER_CALLS.append(context)
+    return funding_adapter(context, params=params)
 
 
 def recorded_inputs():
@@ -37,21 +44,15 @@ def recorded_inputs():
     return inputs, TradePolicy(ProductSpec('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-12, 0.0))
 
 
-def sequential_ledger(inputs, policy):
-    plan = event_plan(inputs, policy)
-    account = Account(policy, inputs.initial_equity, plan.binding[:16])
-    signals = dict(zip(inputs.signals['row_id'], inputs.signals['target'], strict=True))
-    adapter = resolve_adapter(policy.funding) if policy.funding is not None else None
-    active, previous, price = None, inputs.partition_start_ns, 0.0
-    for time_ns, batch in groupby(execution_events(inputs, policy), key=lambda event: event.time_ns):
-        group = tuple(batch)
-        active, price = _execute_batch(account, plan, signals, adapter, active, previous, price, time_ns, group)
-        previous = time_ns
-        account.record(time_ns, price, group[-1].event_id, any(event.kind == 'signal' for event in group))
-        account.states[-1]['absolute_exposure'] = abs(account.quantity) * price / account.equity(price)
-    states = _frame(account.states, {**_STATE_SCHEMA, 'absolute_exposure': pl.Float64})
-    states = states.with_columns((pl.col('equity') / pl.col('equity').shift(1).fill_null(inputs.initial_equity) - 1).alias('net_return'))
-    return TradeLedger(states, _frame(account.intents, _INTENT_SCHEMA), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, _EPISODE_SCHEMA), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), plan.binding)
+def test_event_reference_sources_match_prechange():
+    expected = {
+        'event_reference.py': '3caaa90ff0fb32c47bfda8fa113db615d97241c9f4836ed79e1ce57d65229cb5',
+        'execution_events_reference.py': 'c8522b4b45d7bc12a56a11e740b2a556b4dd7c574a13453b59304831e1a57688',
+    }
+    for name, checksum in expected.items():
+        source = (Path(__file__).parent / 'backtest_reuse' / name).read_text().split('# BEGIN FROZEN SOURCE\n', 1)[1]
+        original = source.replace('from tests.backtest_reuse.execution_events_reference import execution_events', 'from limen.backtest.execution_events import execution_events')
+        assert hashlib.sha256(original.encode()).hexdigest() == checksum
 
 
 def assert_ledgers(actual, expected):
@@ -66,18 +67,18 @@ def test_timer_blocks_preserve_every_sequential_state(holding, barrier, phase):
     inputs, policy = recorded_inputs()
     policy = replace(policy, timer_interval_seconds=60, timer_phase_utc_seconds=phase,
                      max_holding_seconds=holding, take_profit_bps=barrier, stop_loss_bps=barrier)
-    expected = sequential_ledger(inputs, policy)
+    expected = reference_trade_execution(inputs, policy)
     actual = trade_execution(inputs, policy)
     assert_ledgers(actual, expected)
     assert actual.states.height > inputs.observations.height * 10
 
 
-def test_recorded_funding_keeps_every_original_clock_and_cashflow():
+def recorded_funded_inputs():
     path = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
     market = pl.read_parquet(path, n_rows=168)
     observations = normalize_observations(market, interval_seconds=3600)
     signals = pl.DataFrame({'row_id': [f'signal:{i}' for i in range(market.height)],
-                           'available_at_ns': observations['available_at_ns'], 'target': [1.0] * market.height})
+                           'available_at_ns': observations['available_at_ns'], 'target': strategy_signals(market, 'buy_and_hold').astype(float)})
     start, end = int(observations['start_ns'][0]), int(observations['available_at_ns'][-1])
     history = _funding_frame()
     funding = resolve_funding(FundingConfig(preset='binance_btcusdt', data_source=DataSourceConfig(lambda: history)), {})
@@ -87,7 +88,25 @@ def test_recorded_funding_keeps_every_original_clock_and_cashflow():
                source_binding(events, 'recorded Binance Jan2024 funding', start, end, 1, 'recorded realized settlement'))
     inputs = TradeInputs(10000, start, end, signals, observations, events, sources)
     policy = TradePolicy(ProductSpec('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-12, 0.0), funding=funding, timer_interval_seconds=600)
-    assert_ledgers(trade_execution(inputs, policy), sequential_ledger(inputs, policy))
+    return inputs, policy
+
+
+@pytest.mark.parametrize('custom', [False, True])
+def test_recorded_funding_keeps_every_original_clock_and_cashflow(custom):
+    inputs, policy = recorded_funded_inputs()
+    if custom:
+        assert policy.funding is not None
+        policy = replace(policy, funding=replace(policy.funding, adapter_ref=f'{__name__}.recorded_adapter', adapter_version='recorded-wrapper-v1'))
+    ADAPTER_CALLS.clear()
+    expected = reference_trade_execution(inputs, policy)
+    calls = ADAPTER_CALLS.copy()
+    ADAPTER_CALLS.clear()
+    actual = trade_execution(inputs, policy)
+    assert_ledgers(actual, expected)
+    assert ADAPTER_CALLS == calls
+    assert actual.states.height > inputs.observations.height
+    if custom:
+        assert len(calls) == actual.funding.height > 0
 
 
 def test_equal_sources_reuse_plan_but_targets_remain_fresh():
@@ -99,7 +118,7 @@ def test_equal_sources_reuse_plan_but_targets_remain_fresh():
         clone = replace(inputs, observations=inputs.observations.clone(), signals=inputs.signals.clone())
         assert_ledgers(trade_execution(clone, policy), original)
         changed = replace(clone, signals=clone.signals.with_columns(-pl.col('target')))
-        assert_ledgers(trade_execution(changed, policy), sequential_ledger(changed, policy))
+        assert_ledgers(trade_execution(changed, policy), reference_trade_execution(changed, policy))
         assert compile_events.call_count == 1
         invalid = replace(inputs, signals=inputs.signals.with_columns(pl.lit(float('nan')).alias('target')))
         with pytest.raises(ValueError, match='finite'):
@@ -147,3 +166,33 @@ def test_narrow_partition_retains_only_referenced_source_rows():
     assert set(plan.observations) == referenced
     assert set(plan.observation_order) == referenced
     assert len(plan.observations) < inputs.observations.height
+
+
+def assert_rejected_like_reference(inputs, policy):
+    with pytest.raises(ValueError) as expected:
+        reference_trade_execution(inputs, policy)
+    with pytest.raises(ValueError) as actual:
+        trade_execution(inputs, policy)
+    assert str(actual.value) == str(expected.value)
+
+
+@pytest.mark.parametrize('change', ['clock_order', 'partition_end', 'precision'])
+def test_warm_plan_rejects_changed_clock_partition_and_precision(change):
+    inputs, policy = recorded_inputs()
+    trade_execution(inputs, policy)
+    if change == 'clock_order':
+        inputs = replace(inputs, signals=inputs.signals.reverse())
+    elif change == 'partition_end':
+        inputs = replace(inputs, partition_end_ns=inputs.partition_end_ns - 1)
+    else:
+        policy = replace(policy, max_price_gap_seconds=899)
+    assert_rejected_like_reference(inputs, policy)
+
+
+def test_warm_plan_rejects_changed_recorded_funding():
+    inputs, policy = recorded_funded_inputs()
+    trade_execution(inputs, policy)
+    events = inputs.funding_events
+    assert events is not None
+    events.replace_column(events.get_column_index('rate_decimal'), events['rate_decimal'].reverse())
+    assert_rejected_like_reference(inputs, policy)

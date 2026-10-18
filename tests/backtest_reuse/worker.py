@@ -4,11 +4,30 @@ from __future__ import annotations
 import argparse
 from contextlib import nullcontext
 from dataclasses import replace
+import hashlib
 import json
 from pathlib import Path
 import platform
+import resource
 import sys
 import time
+
+
+def _peak_rss_bytes():
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return int(peak if sys.platform == 'darwin' else peak * 1024)
+
+
+def _module_sources(root):
+    result = {}
+    for name, module in sorted(sys.modules.items()):
+        if name == 'limen' or name.startswith('limen.'):
+            path = Path(module.__file__).resolve()
+            if not path.is_relative_to(root):
+                raise ValueError(f'{name} was imported outside the requested source tree: {path}')
+            result[name] = {'path': str(path),
+                            'sha256': hashlib.sha256(path.read_bytes()).hexdigest()}
+    return result
 
 
 def _measure(calculate, repeats, iterations):
@@ -251,9 +270,13 @@ def main():
     report = {'scenario': args.scenario, 'variant': args.variant, 'source_root': str(args.root),
               'python': platform.python_version(), 'numpy': np.__version__,
               'polars': pl.__version__, 'limen': limen.__version__,
-              'limen_source': limen.__file__, 'timing': timing}
+              'limen_source': limen.__file__, 'loaded_module_sources': _module_sources(args.root),
+              'peak_process_rss_bytes': _peak_rss_bytes(), 'timing': timing}
+    report['peak_process_rss_mib'] = report['peak_process_rss_bytes'] / 1024 ** 2
     (args.output / 'timing.json').write_text(json.dumps(report, indent=2) + '\n')
-    sys.stdout.write(json.dumps(report) + '\n')
+    sys.stdout.write(json.dumps({name: report[name] for name in
+                                ('scenario', 'variant', 'source_root',
+                                 'peak_process_rss_mib', 'timing')}) + '\n')
 
 
 if __name__ == '__main__':
