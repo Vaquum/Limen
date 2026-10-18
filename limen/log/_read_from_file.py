@@ -34,7 +34,7 @@ def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
         else:
             lines = []
 
-    data = pd.read_csv(StringIO(''.join(lines)))
+    data = pd.read_csv(StringIO(''.join(lines)), float_precision='round_trip')
 
     for col in data.columns:
         if pd.api.types.is_object_dtype(data[col]) or pd.api.types.is_string_dtype(data[col]):

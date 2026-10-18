@@ -159,7 +159,7 @@ All package measurements retain their computed floating-point precision through 
 
 | Surface | Precision rule |
 |---|---|
-| Numeric API values, CSV and JSON artifacts | Preserve computed values; no decimal rounding or formatting before storage or ranking. |
+| Numeric API values, CSV and JSON artifacts | Preserve computed values; no decimal rounding or formatting before storage or ranking. `Log` uses round-trip CSV float parsing. |
 | Feature weights | Calculate with Float64; do not force configurable weights into Float32. |
 | Fractional differentiation search | Evaluate the declared decimal start/step grid, including its endpoint, without a fixed decimal cutoff. |
 | Sampling filter | Compare the declared fraction against the full 64-bit deterministic hash range; no 1/10,000 buckets. Membership can differ from earlier releases. |

@@ -17,6 +17,7 @@ from limen.features.entry_score_microstructure import entry_score_microstructure
 from limen.features.fractional_diff import find_min_d
 from limen.features.momentum_confirmation import momentum_confirmation
 from limen.features.momentum_weight import momentum_weight
+from limen.log.log import Log
 from limen.log._experiment_backtest_results import _prepare_snapshot_backtest_input
 from limen.log._experiment_parameter_correlation import experiment_parameter_correlation
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct, permutation_confusion_metrics
@@ -81,6 +82,14 @@ def test_recorded_metrics_preserve_precision(bars, tmp_path):
     saved = pl.read_csv(path)
     assert saved['accuracy'].to_list() == scores
     assert select({'results': saved}, column='accuracy', n=2) == [1, 0]
+
+
+def test_recorded_returns_survive_log_csv_exactly(bars, tmp_path):
+    returns = ((bars['close'] - bars['open']) / bars['open']).to_numpy()
+    path = tmp_path / 'results.csv'
+    pl.DataFrame({'id': np.arange(len(returns)), 'return': returns}).write_csv(path)
+    restored = Log(file_path=str(path)).experiment_log['return'].to_numpy()
+    np.testing.assert_array_equal(restored, returns)
 
 
 def test_recorded_confusion_and_rule_metrics_preserve_precision(bars):
