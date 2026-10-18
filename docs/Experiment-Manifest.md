@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.33.0"
+  limen_version: "5.34.0"
   mode: development
 
 sfd:
@@ -99,7 +99,8 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 |---|---|---|---|
 | `n_permutations` | int | required | round budget; rejected if bool, zero, negative, or larger than the parameter space |
 | `workers` | int | `1` | maximum concurrent isolated round evaluations; positive non-boolean integer; see [parallel rounds](#parallel-rounds) |
-| `search_strategy.type` | `random` or `grid` | `random` | `random` lazily samples the parameter space; `grid` enumerates it exhaustively |
+| `search_strategy.type` | `random`, `grid` or `sobol` | `random` | random sampling, exhaustive grid traversal or [seeded Sobol sampling](Advanced-Search.md#seeded-sobol-sampling) |
+| `search_strategy.seed` | int | none | candidate-generation seed; required, non-boolean and nonnegative for Sobol |
 | `search_strategy.shuffle` | bool | `false` | grid-only seeded finite permutation; true requires an integer `seed`; see [seeded traversal](Advanced-Search.md#seeded-finite-traversal) |
 | `prep_each_round` | bool | `true` | compatibility setting; ordinary CLI/MSQ execution always prepares each candidate |
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
@@ -112,7 +113,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
 | `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
 
-NOTE: `search_strategy.seed` seeds random sampling or a grid with `shuffle: true`. An unshuffled grid keeps its declared enumeration order. The traversal seed does not seed models.
+NOTE: `search_strategy.seed` seeds random sampling, Sobol sampling or a grid with `shuffle: true`. An unshuffled grid keeps its declared enumeration order. The traversal seed does not seed models. Sobol always uses scrambling and rejects additional strategy fields; see [Sobol's mapping and resume contract](Advanced-Search.md#seeded-sobol-sampling).
 
 `pruning_strategies` declares reducers that fire every `feedback_interval` rounds during a run — see [Reducers And Feedback](Reducers-And-Feedback.md) for the reducer catalog, YAML syntax, and tuning.
 
@@ -452,7 +453,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.33.0"
+  limen_version: "5.34.0"
   mode: development
 sfd:
   manifest:
@@ -509,7 +510,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.33.0"
+  limen_version: "5.34.0"
   mode: development
 sfd:
   manifest:

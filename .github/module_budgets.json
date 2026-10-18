@@ -114,6 +114,7 @@
   "limen/experiment/param_search/random_strategy.py": 60,
   "limen/experiment/param_search/registry.py": 10,
   "limen/experiment/param_search/search_strategy.py": 130,
+  "limen/experiment/param_search/sobol_strategy.py": 110,
   "limen/experiment/reducer/__init__.py": 30,
   "limen/experiment/reducer/budget_reducer.py": 230,
   "limen/experiment/reducer/correlation_reducer.py": 250,

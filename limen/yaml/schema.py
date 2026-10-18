@@ -5,7 +5,7 @@ VERSION = '1.0'
 VALID_MODES = {'production', 'development'}
 VALID_MANIFEST_TYPES = {'ml', 'rule_based'}
 VALID_OUTPUT_FORMATS = {'csv', 'parquet'}
-VALID_SEARCH_STRATEGY_TYPES = {'random', 'grid'}
+VALID_SEARCH_STRATEGY_TYPES = {'random', 'grid', 'sobol'}
 
 TOP_LEVEL_REQUIRED = {'schema_version', 'metadata', 'sfd', 'uel'}
 
