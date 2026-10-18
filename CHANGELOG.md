@@ -2,10 +2,6 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
-## [5.35.0] - 2026-10-19
-
-- Add a family acceptance report over comparable recorded walk-forward trials, with provenance, repeat accounting and conditional DSR/PBO assessments.
-
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -1719,3 +1715,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.34.2] - 2026-10-19
 
 - Bind frozen backtest benchmark provenance to its measured source digests and revisions so unrelated package changes preserve historical evidence validation.
+
+## [5.35.0] - 2026-10-19
+
+- Add a family acceptance report over comparable recorded walk-forward trials, with provenance, repeat accounting and conditional DSR/PBO assessments.

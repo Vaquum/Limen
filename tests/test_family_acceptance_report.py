@@ -11,7 +11,7 @@ from ruamel.yaml import YAML
 from limen.experiment import _round_storage as storage
 from limen.experiment.family_acceptance_report import family_acceptance_report
 from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfitting
-from limen.yaml.store import STORE_RELATIVE, commit_manifest
+from limen.yaml.store import commit_manifest
 from tests.test_walk_forward_uel import _bars, _config, _loop, _run
 
 
