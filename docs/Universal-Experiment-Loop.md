@@ -500,3 +500,13 @@ Sharing benefits repeated arrays. Unique or small arrays can cost more, includin
 ### Recorded signal-sharing measurement
 
 Reproduce the implemented-format comparison with `python -m pytest -q -s tests/test_round_signals.py -k recorded_storage_savings --log-cli-level=INFO`. It uses the existing recorded hourly fixture, fixed train/validation/test dates, deterministic single-threaded LightGBM parameters and a 16-round factorized sweep across four fee values. Accounting includes the round log, all market/signal blobs and reference metadata; resolved records must equal the v1 representation exactly. The test reports single-round costs as well as the repeated workload. These are small recorded-workload measurements, not campaign projections or a throughput promise.
+
+Measured on 5.31.1 using fixture SHA-256 `a634bbd4` (prefix), the first 1,200 rows and 503 retained test rows. Splits are train Jan 1–20, validation Jan 20–25 and test Jan 25–Feb 15, 2024. The test pins lookback `[2, 4]`, LightGBM estimators `[16, 32]` and fees `[4, 9, 14, 19]`; the remaining deterministic model parameters and recording flags are in its `economic_sweep` fixture. Four distinct prediction/probability pairs recur across the fee values.
+
+| Recorded workload | v1 bytes, all recording files | v2 bytes, all recording files | v1 / v2 allocated bytes |
+|---|---:|---:|---:|
+| One round | 16,960 | 16,852 | 24,576 / 32,768 |
+| Four distinct pairs | 52,388 | 51,966 | 61,440 / 90,112 |
+| Sixteen rounds, four repeated pairs | 193,534 | 131,557 | 200,704 / 167,936 |
+
+The repeated case saves 61,977 bytes (32.0%), including format metadata and every market/signal blob. It uses eleven recording files rather than three. The production sweep took 0.354 seconds; the separate serialization samples took 0.016 seconds for v1 and 0.027 seconds for v2. These single local samples show write overhead, not a speedup. Allocated bytes depend on filesystem block size; unique/single cases can use more blocks despite slightly fewer serialized bytes. The regression asserts a relative saving on the repeated recorded case, not fixed compressed sizes or timing.
