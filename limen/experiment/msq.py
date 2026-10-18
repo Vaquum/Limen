@@ -202,7 +202,7 @@ class MSQ:
         if filter_type is not None:
             params = dict(cast('dict[str, Any]', filter_params))
             log_kwargs.update(filter_type=filter_type, filter_params=params)
-            self._named_filter_descriptors[key] = (filter_type, params)
+            self._named_filter_descriptors[key] = (filter_type, dict(params))
         else:
             _ = self._named_filter_descriptors.pop(key, None)
         self._log_intervention('set_filter', **log_kwargs)

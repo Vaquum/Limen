@@ -214,6 +214,8 @@ def test_sampling_checkpoint_versions_selection_rule(bars):
     original.set_filter('sample', _build_sample(params), filter_type=FILTER_SAMPLE, filter_params=params)
     state = original.get_state()
     assert state['named_filter_descriptors']['sample'][1]['hash_rule'] == SAMPLE_HASH_RULE
+    state['intervention_log'][-1]['filter_params']['fraction'] = 0.25
+    assert original.get_state()['named_filter_descriptors']['sample'][1]['fraction'] == 0.5
     restored, _ = _make_msq({'p': values})
     restored.set_state(state)
     assert list(restored) == list(original)
