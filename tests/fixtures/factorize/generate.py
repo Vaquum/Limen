@@ -216,10 +216,10 @@ def main():
                   'threads':{k:os.environ.get(k) for k in
                              NUMERICAL_ENV},
                   'digest_12dp':digest(result),
-                  'component_digests': component_digests(result),
                   'round_ids':[row['round_id'] for row in result['round_data']],
-                  'columns':result['columns'],'row_count':len(result['rows'])}
+                  'columns':result['columns'],'row_count':len(result['rows']),
+                  'component_digests': component_digests(result)}
         dest=args.out/f'{name}.json'
-        dest.write_text(json.dumps(evidence,indent=2,default=str))
+        dest.write_text(json.dumps(evidence,indent=2,default=str)+'\n')
 if __name__=='__main__':
     main()
