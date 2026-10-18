@@ -50,7 +50,7 @@ def test_event_reference_sources_match_prechange():
         'execution_events_reference.py': 'c8522b4b45d7bc12a56a11e740b2a556b4dd7c574a13453b59304831e1a57688',
     }
     for name, checksum in expected.items():
-        source = (Path(__file__).parent / 'backtest_reuse' / name).read_text().split('# BEGIN FROZEN SOURCE\n', 1)[1]
+        source = (Path(__file__).parent / 'backtest_reuse' / name).read_text().split('# BEGIN FROZEN SOURCE' + chr(10), 1)[1]
         original = source.replace('from tests.backtest_reuse.execution_events_reference import execution_events', 'from limen.backtest.execution_events import execution_events')
         assert hashlib.sha256(original.encode()).hexdigest() == checksum
 
