@@ -3,6 +3,7 @@ import copy
 import inspect
 import json
 from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -465,14 +466,18 @@ def test_tp_sl_real_fixture_inline_post_run_parity(market, tmp_path):
     loop = UniversalExperimentLoop(sfd=sfd, data=bars, experiment_dir=tmp_path)
     loop.run('parity', n_permutations=4, prep_each_round=True, random_search=False, post_processing=True, progress_bar=False)
     assert loop.experiment_backtest_results.shape == (4, 20)
+    normalize = partial(_prepare_snapshot_backtest_input, prediction_kind='directional')
     for i in range(4):
+        replay = snapshot_backtest_round(loop._log, i, normalize)
+        assert list(replay) == BACKTEST_SNAPSHOT_COLUMNS
         for key, value in loop.experiment_backtest_results.iloc[i].items():
+            np.testing.assert_equal(replay[key], value)
             np.testing.assert_equal(loop.experiment_log[f'backtest_{key}'][i], value)
         fresh = manifest.prepare_data(bars, loop.round_params[i])
         assert fresh['_backtest_provenance'] == loop._alignment[i]['_backtest_provenance']
         np.testing.assert_equal(manifest.run_model(fresh, loop.round_params[i])['_preds'], loop.preds[i])
     legacy = SimpleNamespace(round_params=loop.round_params, permutation_prediction_performance=loop._log.permutation_prediction_performance)
-    old = pl.DataFrame([snapshot_backtest_round(legacy, i, _prepare_snapshot_backtest_input)
+    old = pl.DataFrame([snapshot_backtest_round(legacy, i, normalize)
                         for i in range(4)]).to_pandas()
     assert old['inventory_per_bar'].iloc[0] != loop.experiment_backtest_results['inventory_per_bar'].iloc[0]
     baseline_inventory = float(old['inventory_per_bar'].iloc[0])
@@ -481,13 +486,13 @@ def test_tp_sl_real_fixture_inline_post_run_parity(market, tmp_path):
     assert 'high' not in loop._log.permutation_prediction_performance(0).columns
     missing_witness = loop._log._alignment[0].pop('_backtest_provenance')
     with pytest.raises(ValueError, match='provenance'):
-        snapshot_backtest_round(loop._log, 0, _prepare_snapshot_backtest_input)
+        snapshot_backtest_round(loop._log, 0, normalize)
     assert loop._log.experiment_backtest_results().equals(loop.experiment_backtest_results)
     loop._log._alignment[0]['_backtest_provenance'] = missing_witness
     original_data = loop._log.data
     loop._log.data = bars.reverse()
     with pytest.raises(ValueError, match='source identity'):
-        snapshot_backtest_round(loop._log, 0, _prepare_snapshot_backtest_input)
+        snapshot_backtest_round(loop._log, 0, normalize)
     assert loop._log.experiment_backtest_results().equals(loop.experiment_backtest_results)
     loop._log.data = original_data
 

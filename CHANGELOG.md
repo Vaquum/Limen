@@ -1716,6 +1716,10 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Bind frozen backtest benchmark provenance to its measured source digests and revisions so unrelated package changes preserve historical evidence validation.
 
+## [5.34.3] - 2026-10-19
+
+- Require explicit directional interpretation for nonbinary predictions in the internal legacy snapshot helper; require upstream probability thresholding.
+
 ## [5.35.0] - 2026-10-19
 
 - Add a family acceptance report over comparable recorded walk-forward trials, with provenance, repeat accounting and conditional DSR/PBO assessments.
