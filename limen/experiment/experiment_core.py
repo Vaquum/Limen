@@ -23,7 +23,7 @@ from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
-from limen.experiment._grid_resume import add_grid_metadata, validate_grid_resume
+from limen.experiment._grid_resume import add_grid_metadata, validate_factorized_grid, validate_grid_resume
 from limen.experiment._recording import prepare_recording, project_record
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
@@ -400,10 +400,6 @@ class UniversalExperimentLoop:
                 log_batches.append(objective_frame(self.manifest, results_accumulator))
                 results_accumulator = []
 
-            if round_succeeded and csv_header and set(round_results) - set(csv_header) and self.experiment_log is not None and self.experiment_log['strict_mode_error'].null_count() == 0:
-                previous = pl.read_csv(csv_path)
-                csv_header = list(dict.fromkeys([*round_results, *csv_header]))
-                previous.select(pl.col(key) if key in previous.columns else pl.lit(None).alias(key) for key in csv_header).write_csv(csv_path)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             if write_header and not round_succeeded:
                 _pending_csv_rows.append(dict(round_results))
@@ -896,6 +892,8 @@ class UniversalExperimentLoop:
         validate_grid_resume(self._search_strategy, domain, checkpoint_data, metadata, factorize=self._factorize)
         domain.set_state(domain.get_state() if self._factorize else checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
+        if self._factorize:
+            validate_factorized_grid(self._search_strategy)
 
         if 'feedback_controller_state' in checkpoint_data:
             feedback_controller.set_state(

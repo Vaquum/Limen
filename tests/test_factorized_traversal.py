@@ -16,6 +16,7 @@ from limen.experiment._factorize import FactorizedRounds
 from limen.experiment.errors import StrictModeError
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search.grid_strategy import GridStrategy
+from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from tests.test_factorize_equivalence import _numeric_equal
 from tests.test_factorized_preparation import _config, _instrument, _loop, _run, _science
 
@@ -76,7 +77,7 @@ def test_recorded_traversal_contract(tmp_path, monkeypatch):
     _numeric_equal(captured[1], _science(tmp_path / 'split'))
 
 
-@pytest.mark.parametrize('change', ['seed', 'version', 'removed_version', 'metadata', 'domain_order', 'domain_value', 'saved_domain'])
+@pytest.mark.parametrize('change', ['seed', 'version', 'removed_version', 'metadata', 'missing_legacy_declarations', 'domain_order', 'domain_value', 'saved_domain'])
 def test_resume_rejects_before_mutation(tmp_path, monkeypatch, change):
     cfg = _shuffled()
     loop = _loop(cfg, tmp_path)
@@ -95,6 +96,14 @@ def test_resume_rejects_before_mutation(tmp_path, monkeypatch, change):
         del strategy['permutation_version']
         checkpoint_path.write_text(json.dumps(checkpoint))
     elif change == 'metadata':
+        metadata_path = tmp_path / 'metadata.json'
+        metadata = json.loads(metadata_path.read_text())
+        del metadata['grid_shuffle_version']
+        metadata_path.write_text(json.dumps(metadata))
+    elif change == 'missing_legacy_declarations':
+        for key in ('permutation_version', 'shuffle', 'seed', 'domain_digest'):
+            strategy.pop(key)
+        checkpoint_path.write_text(json.dumps(checkpoint))
         metadata_path = tmp_path / 'metadata.json'
         metadata = json.loads(metadata_path.read_text())
         del metadata['grid_shuffle_version']
@@ -159,17 +168,25 @@ def test_interrupted_cache_miss_replays_same_candidate(tmp_path, monkeypatch):
     split = _loop(cfg, tmp_path / 'split')
     original = FactorizedRounds.evaluate
     attempts = []
+    interrupting = [False]
+    original_train = LightGBMBinary.train
+
+    def train(*args, **kwargs):
+        if interrupting[0]:
+            split._shutdown_requested = True
+            raise KeyboardInterrupt
+        return original_train(*args, **kwargs)
 
     def interrupt(self, params):
         attempts.append(dict(params))
         if len(attempts) == 4:
             self.cache.clear()
-            split._shutdown_requested = True
-            raise KeyboardInterrupt
+            interrupting[0] = True
         return original(self, params)
 
     with monkeypatch.context() as hooks:
         hooks.setattr(FactorizedRounds, 'evaluate', interrupt)
+        hooks.setattr(LightGBMBinary, 'train', train)
         _run(split, enabled=True, count=8)
     checkpoint = json.loads((tmp_path / 'split/checkpoint.json').read_text())
     assert checkpoint['metadata']['experiment_round'] == 2

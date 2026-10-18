@@ -183,26 +183,29 @@ def _nested_levels(sizes, seed, count):
                 for axis, offset in enumerate(_digits(index, sizes))) for index in range(count)]
 
 
-@pytest.mark.parametrize('sizes', [(6, 3, 5, 4, 4), (3, 5, 2, 7, 5)])
-def test_measured_early_joint_coverage_with_negative_controls(sizes):
-    count, total = 2 * max(a * b for a, b in itertools.combinations(sizes, 2)), math.prod(sizes)
-    measured, affine, nested = [], [], []
-    for seed in range(8):
-        order = [_permuted_index(index, total, seed) for index in range(count)]
-        marginal, joint = _coverage(order, sizes)
-        assert min(marginal) == 1.0
-        measured.append(joint)
-        affine.append(_coverage([_lcg_map(index, total, *_lcg_params(total, seed))
-                                 for index in range(count)], sizes)[1])
-        nested.append(_coverage(_nested_levels(sizes, seed, count), sizes)[1])
-    means = [statistics.mean(projection) for projection in zip(*measured, strict=True)]
-    assert min(itertools.chain.from_iterable(measured)) >= .65
-    assert min(means) >= .8
-    assert any(statistics.mean(projection) < .8 for projection in zip(*affine, strict=True))
-    assert any(statistics.mean(projection) < .8 for projection in zip(*nested, strict=True))
-    print('prefix coverage', sizes, count, 'v2 minimum/mean',
-          min(itertools.chain.from_iterable(measured)), min(means),
-          'affine minimum mean', min(map(statistics.mean, zip(*affine, strict=True))))
+def test_measured_early_joint_coverage_with_negative_controls():
+    affine_failures = []
+    for sizes in ((6, 3, 5, 4, 4), (3, 5, 2, 7, 5)):
+        count, total = 2 * max(a * b for a, b in itertools.combinations(sizes, 2)), math.prod(sizes)
+        measured, affine, nested = [], [], []
+        for seed in range(8):
+            order = [_permuted_index(index, total, seed) for index in range(count)]
+            marginal, joint = _coverage(order, sizes)
+            assert min(marginal) == 1.0
+            measured.append(joint)
+            affine.append(_coverage([_lcg_map(index, total, *_lcg_params(total, seed))
+                                     for index in range(count)], sizes)[1])
+            nested.append(_coverage(_nested_levels(sizes, seed, count), sizes)[1])
+        means = [statistics.mean(projection) for projection in zip(*measured, strict=True)]
+        assert min(itertools.chain.from_iterable(measured)) >= .65
+        assert min(means) >= .8
+        affine_failures.append(any(statistics.mean(projection) < .8
+                                   for projection in zip(*affine, strict=True)))
+        assert any(statistics.mean(projection) < .8 for projection in zip(*nested, strict=True))
+        print('prefix coverage', sizes, count, 'v2 minimum/mean',
+              min(itertools.chain.from_iterable(measured)), min(means),
+              'affine minimum mean', min(map(statistics.mean, zip(*affine, strict=True))))
+    assert any(affine_failures)
 
 
 def test_seed_orders_are_not_rotations_of_one_cycle():
@@ -210,4 +213,6 @@ def test_seed_orders_are_not_rotations_of_one_cycle():
     second = [_permuted_index(index, 385, 2) for index in range(385)]
     start = first.index(second[0])
     assert second != first[start:] + first[:start]
-    print('frozen v2 prefix', [_permuted_index(index, 385, 42) for index in range(16)])
+    assert [_permuted_index(index, 385, 42) for index in range(16)] == [
+        379, 98, 54, 7, 346, 155, 79, 87, 375, 112, 364, 382, 225, 177, 216, 146,
+    ]
