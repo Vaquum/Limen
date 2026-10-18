@@ -22,6 +22,12 @@ def _module_sources(root):
     result = {}
     for name, module in sorted(sys.modules.items()):
         if name == 'limen' or name.startswith('limen.'):
+            if module.__file__ is None:
+                paths = [Path(path).resolve() for path in module.__path__]
+                if not paths or any(not path.is_relative_to(root) for path in paths):
+                    raise ValueError(f'{name} namespace is outside the requested source tree: {paths}')
+                result[name] = {'namespace_paths': [str(path) for path in paths]}
+                continue
             path = Path(module.__file__).resolve()
             if not path.is_relative_to(root):
                 raise ValueError(f'{name} was imported outside the requested source tree: {path}')
