@@ -18,6 +18,7 @@ Does **not** own the parameter domain (`limen.experiment.param_domain`), the sea
 | `SearchStrategy` | Abstract base for strategies | Iterators that yield `dict[str, Any]` combinations and observe domain mutations |
 | `GridStrategy` | Exhaustive grid over the domain | Deterministic full sweep |
 | `RandomStrategy` | Sampled combinations | Accepts a `seed` for reproducibility |
+| `SobolStrategy` | Scrambled Sobol candidate sampling | Requires a nonnegative integer `seed`; discrete projection is not exhaustive |
 | `STRATEGY_REGISTRY` | Name-to-class lookup | Resolves the strategy named in a manifest |
 
 ## Adjacent modules
@@ -32,14 +33,16 @@ param_search/
 ├── search_strategy.py   # SearchStrategy abstract base
 ├── grid_strategy.py     # Exhaustive grid
 ├── random_strategy.py   # Random sampling
+├── sobol_strategy.py    # Seeded scrambled Sobol sampling
 └── registry.py          # STRATEGY_REGISTRY
 ```
 
 ## Things to know
 
-- A strategy is an iterator: it yields one parameter `dict` per permutation and stops when the domain is exhausted.
+- A strategy is an iterator that yields one parameter `dict` per proposal. Grid stops at exhaustion; sampled strategies can fail when bounded duplicate retries find no novel combination.
 - Strategies hold a reference to their `ParamDomain` and register as observers, so reducers that mutate the domain mid-run change what the strategy yields next.
 - `RandomStrategy` is only reproducible when constructed with an explicit `seed`.
+- `SobolStrategy(domain, seed=42)` is also exported from this package; its mapping, limits and checkpoint contract are documented in [Advanced Search](../../../docs/Advanced-Search.md#seeded-sobol-sampling).
 
 ## Read next
 

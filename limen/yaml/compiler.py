@@ -5,6 +5,7 @@ from typing import cast
 
 from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.experiment.param_search.random_strategy import RandomStrategy
+from limen.experiment.param_search.sobol_strategy import SobolStrategy
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment._walk_forward_split import read_walk_forward_config
 from limen.experiment.manifest_core import Manifest
@@ -340,7 +341,7 @@ def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:
     return uel_cfg
 
 
-def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStrategy:
+def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStrategy | SobolStrategy:
 
     '''Build the declared search, requiring a literal seed for shuffled YAML grids.'''
 
@@ -356,6 +357,10 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     domain = ParamDomain(params)
     strategy_type = strategy_cfg.get('type', 'random')
     seed = strategy_cfg.get('seed')
+    if strategy_type == 'sobol':
+        if set(strategy_cfg) - {'type', 'seed'}:
+            raise ValueError("'uel.search_strategy' Sobol supports only 'type' and 'seed'")
+        return SobolStrategy(domain, seed=seed)
     if strategy_type == 'grid':
         shuffle = strategy_cfg.get('shuffle', False)
         if type(shuffle) is not bool:
@@ -367,7 +372,7 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
         if 'shuffle' in strategy_cfg:
             raise ValueError("'uel.search_strategy.shuffle' is only supported for grid search")
         return RandomStrategy(domain, seed=None if seed is None else int(seed))
-    raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random' or 'grid'.")
+    raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random', 'grid' or 'sobol'.")
 
 
 def build_pruning_strategies(yaml_dict: dict[str, Any]) -> list[PruningStrategy]:

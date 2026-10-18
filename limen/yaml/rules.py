@@ -1207,6 +1207,11 @@ class UelSpec:
         strategy = uel.get('search_strategy')
         if is_mapping(strategy):
             seed = strategy.get('seed')
+            if strategy.get('type') == 'sobol':
+                if set(strategy) - {'type', 'seed'}:
+                    errors.append(YAMLError(message="Sobol search supports only 'type' and 'seed'", path='uel.search_strategy'))
+                if type(seed) is not int or seed < 0:
+                    errors.append(YAMLError(message='Sobol search requires a nonnegative integer seed', path='uel.search_strategy.seed'))
             shuffle = strategy.get('shuffle', False)
             if 'shuffle' in strategy and strategy.get('type', 'random') != 'grid':
                 errors.append(YAMLError(message="'uel.search_strategy.shuffle' is only supported for grid search", path='uel.search_strategy.shuffle'))
