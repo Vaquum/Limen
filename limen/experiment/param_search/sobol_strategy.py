@@ -62,7 +62,7 @@ class SobolStrategy(SearchStrategy):
                 self._generated_count += 1
                 return combo
         raise RuntimeError(
-            f'SobolStrategy failed to generate a novel combination after {MAX_DEDUP_RETRIES} '
+            f'SobolStrategy failed to generate a novel combination after {MAX_DEDUP_RETRIES} ' +
             f'retries. Domain may be nearly exhausted ({len(self._seen)} seen).'
         )
 
@@ -96,6 +96,6 @@ class SobolStrategy(SearchStrategy):
             raise ValueError('SobolStrategy checkpoint traversal counters are invalid')
         engine = self._new_engine(seed)
         if index:
-            engine.fast_forward(index)
+            _ = engine.fast_forward(index)
         self._engine = engine
         self._raw_index, self._generated_count = index, generated

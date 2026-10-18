@@ -360,6 +360,8 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     if strategy_type == 'sobol':
         if set(strategy_cfg) - {'type', 'seed'}:
             raise ValueError("'uel.search_strategy' Sobol supports only 'type' and 'seed'")
+        if type(seed) is not int or seed < 0:
+            raise ValueError('Sobol search requires a nonnegative integer seed')
         return SobolStrategy(domain, seed=seed)
     if strategy_type == 'grid':
         shuffle = strategy_cfg.get('shuffle', False)
