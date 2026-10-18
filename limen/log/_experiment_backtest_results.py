@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 import numpy as np
 import pandas as pd
 
@@ -26,9 +26,12 @@ def captured_metrics(source: object, names: list[str], prefix: str) -> pd.DataFr
     return frame[columns].rename(columns=dict(zip(columns, names, strict=True))).reset_index(drop=True).copy()
 
 
-def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
+def _prepare_snapshot_backtest_input(df: pd.DataFrame, *, prediction_kind: Literal['binary', 'directional'] = 'binary') -> pd.DataFrame:
 
-    '''Normalize binary or directional predictions for explicit snapshot replay.'''
+    '''Require binary predictions unless directional interpretation is explicit.'''
+
+    if prediction_kind not in ('binary', 'directional'):
+        raise ValueError("prediction_kind must be 'binary' or 'directional'")
 
     def _is_binary(series: pd.Series) -> bool:
         valid = series.dropna()
@@ -46,13 +49,7 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     def _is_unsupported_multiclass(series: pd.Series) -> bool:
         BINARY_CLASS_COUNT = 2
         valid = series.dropna()
-        if valid.empty:
-            return False
-
-        integer_like = (valid == np.trunc(valid)).all()
-        unique_count = valid.nunique()
-
-        return bool(integer_like and (valid >= 0).all() and unique_count > BINARY_CLASS_COUNT)
+        return bool((valid == np.trunc(valid)).all() and (valid >= 0).all() and valid.nunique() > BINARY_CLASS_COUNT)
 
     result = df.copy()
     pred = _to_numeric_strict(result['predictions'], 'prediction')
@@ -60,15 +57,18 @@ def _prepare_snapshot_backtest_input(df: pd.DataFrame) -> pd.DataFrame:
     if 'actuals' in result:
         actual = _to_numeric_strict(result['actuals'], 'actual')
         if _is_unsupported_multiclass(actual):
-            raise ValueError('snapshot backtest does not support multiclass actuals; use binary predictions or directional regression scores')
+            raise ValueError("snapshot backtest does not support multiclass actuals; use binary predictions or supported directional scores with prediction_kind='directional'")
 
     if _is_binary(pred):
         return result
 
     if _is_unsupported_multiclass(pred):
         raise ValueError(
-            'snapshot backtest does not support multiclass predictions; use binary predictions or directional regression scores'
+            "snapshot backtest does not support multiclass predictions; use binary predictions or supported directional scores with prediction_kind='directional'"
         )
+
+    if prediction_kind == 'binary':
+        raise ValueError("snapshot backtest requires binary predictions; use prediction_kind='directional' for directional scores or threshold probabilities upstream")
 
     result['predictions'] = (pred > 0).astype(int)
 

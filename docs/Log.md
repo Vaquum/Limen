@@ -195,7 +195,7 @@ Intensive scalars:
 
 - `wins_per_bar`, `pnl_per_bar_bps`, `avg_win_bps`, `avg_loss_bps`, `cvar_95_pnl_bps`, `trades_per_bar`, `inventory_per_bar`, `cost_per_bar_bps`
 
-The metrics were computed with each round's declared trading policy during execution; aggregate reads preserve those numbers. Source changes after capture cannot change the aggregate result. For explicit snapshot inputs, TP/SL provenance and source requirements, see [Backtest](Backtest.md#tunable-take-profit-and-stop-loss).
+The metrics were computed with each round's declared trading policy during execution; aggregate reads preserve those numbers. Source changes after capture cannot change the aggregate result. Aggregate readers do not invoke the [internal legacy snapshot helper](Backtest.md#internal-legacy-snapshot-normalization). For explicit snapshot inputs, TP/SL provenance and source requirements, see [Backtest](Backtest.md#tunable-take-profit-and-stop-loss).
 
 ## Parameter correlation surface
 

@@ -1,5 +1,6 @@
 import inspect
 import re
+from functools import partial
 from pathlib import Path
 
 import numpy as np
@@ -899,7 +900,8 @@ def test_completed_bar_signal_proves_next_bar_alignment() -> None:
 
 def test_snapshot_backtest_round_directionalizes_regression_predictions() -> None:
     result = snapshot_backtest_round(
-        _DummyRegressionBacktestLog(), 0, _prepare_snapshot_backtest_input,
+        _DummyRegressionBacktestLog(), 0,
+        partial(_prepare_snapshot_backtest_input, prediction_kind='directional'),
     )
 
     expected = backtest_snapshot(

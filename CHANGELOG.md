@@ -1711,3 +1711,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.34.1] - 2026-10-18
 
 - Reduce repeated backtest computation while preserving equal-input outputs through ten decimal places.
+
+## [5.34.2] - 2026-10-19
+
+- Require explicit directional interpretation for nonbinary predictions in the internal legacy snapshot helper; require upstream probability thresholding.
