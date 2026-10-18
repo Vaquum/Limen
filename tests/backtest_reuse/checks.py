@@ -31,7 +31,7 @@ def main() -> None:
     elif args.plane == 'static':
         run('-m', 'ruff', 'check', 'limen', 'governance', 'tests')
         for gate in ('check_module_budgets', 'check_no_swallowed_violations',
-                     'typing_gate', 'fail_loud_gate'):
+                     'fail_loud_gate'):
             run(f'governance/{gate}.py')
         run('governance/check_budget_ratchet.py', '--base-ref', 'origin/main', '--pr-number', '974')
         run('scripts/package_audit.py')

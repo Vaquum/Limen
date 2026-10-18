@@ -455,3 +455,20 @@ audit state row; label evaluation retains both directions and all label metadata
 Source loading and shared signal preparation are excluded from each timed case.
 The report records source-code hashes, input checksums, dependency versions and
 the maximum absolute numerical error for every case.
+
+### Recorded comparison: 2026-10-18
+
+Baseline `ec254c73` and computation-reuse code `4754d096` ran on the same host with one native thread, NumPy 2.5.1 and Polars 1.42.1. These are medians of three warm samples; they describe the named workloads and do not predict a complete experiment sweep.
+
+| Workload | Baseline | Reuse | Speedup |
+|---|---:|---:|---:|
+| Snapshot ledger, 8,784 bars | 1.177 ms | 0.699 ms | 1.69x |
+| Complete snapshot, 8,784 bars | 1.597 ms | 1.103 ms | 1.45x |
+| 32 rounds of two line features | 607.907 ms | 163.300 ms | 3.72x |
+| Timer execution, all 43,201 state rows | 211.680 ms | 17.638 ms | 12.00x |
+| 168 hourly bars with recorded funding | 10.115 ms | 2.616 ms | 3.87x |
+| 256 forward candidates, TP/SL exits | 859.438 ms | 22.610 ms | 38.01x |
+
+Every compared numeric output had maximum absolute error **0.0**, exceeding the required ten-decimal equivalence. Non-numeric output contracts also matched, including all timer ledger rows, both label directions, funding cashflows and provenance. See the [machine-readable report](benchmarks/backtest-reuse/report.json) and [CSV summary](benchmarks/backtest-reuse/summary.csv) for source/input hashes and all timing samples.
+
+Line-feature reuse is bounded to one invocation. Event plans retain validated source clocks and use content-addressed identities; changed predictions retain dynamic validation. Timer blocks reconstruct all original state rows. Unfunded forward candidates stop after their independent episode closes; candidates that remain open still inspect the remaining events. Funded candidates retain full execution, including custom adapter behavior.

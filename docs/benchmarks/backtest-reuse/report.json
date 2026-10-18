@@ -1,0 +1,502 @@
+{
+  "started_utc": "2026-10-18T20:31:52.474366+00:00",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "python": "3.12.12 (main, Nov 19 2025, 22:30:44) [Clang 21.1.4 ]",
+  "source_roots": {
+    "baseline": "/private/tmp/limen-backtest-reuse/baseline",
+    "optimized": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen"
+  },
+  "source_code_sha256": {
+    "baseline": "e5af427c931a5f65d854c829a4934f142efeeb0ae07e4bdb41ef70927128dc9f",
+    "optimized": "bd9c90f37d7619fcddd8f899ad15a9fe4f46d09ca401b10b34cfa03b7e864d1b"
+  },
+  "worker_sha256": "98f580ba04ca147201f0020a141388b6610e2128a807eb49ca5c48a16cb44678",
+  "sources": {
+    "primary": {
+      "path": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/tests/fixtures/spot_1h_20240101_20241231.parquet",
+      "sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+      "rows": 8784,
+      "prepared_sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
+      "signal_sha256": "b6643cb3439d27c3fcd06d86382efcf524f467190e2fb21fbae02d02e40da685"
+    },
+    "target": {
+      "path": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/tests/fixtures/spot_15m_20250101_20250531.parquet",
+      "sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
+      "rows": 14496,
+      "prepared_sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
+      "signal_sha256": "d63a6252f86f03b35e6c59fd2ae8960e8bd01c80ae2362154aa822ec31050447"
+    },
+    "funding": {
+      "path": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/tests/fixtures/btcusdt_funding_20240101_20240108.json",
+      "sha256": "4352c58c5467ba48b5d13039052085e3bd59c089d6e1455bf99f4063279c3df2"
+    }
+  },
+  "strategy": "ema_cross",
+  "timer_strategy": "buy_and_hold",
+  "repeats": 3,
+  "rounds": 32,
+  "target_rows": 128,
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1",
+    "BLIS_NUM_THREADS": "1",
+    "POLARS_MAX_THREADS": "1"
+  },
+  "contract": {
+    "absolute_tolerance": 1e-10,
+    "relative_tolerance": 0,
+    "non_numeric_outputs": "exact names, order, schemas, nulls, IDs and clocks",
+    "scope": "source reads and signal preparation excluded; complete declared computation included",
+    "cold": "first timed call in a fresh implementation process",
+    "warm": "median of repeated calls within that process",
+    "p95": "sample percentile; three repeats do not establish tail latency"
+  },
+  "scenarios": [
+    {
+      "scenario": "snapshot_ledger",
+      "results": {
+        "baseline": {
+          "scenario": "snapshot_ledger",
+          "variant": "baseline",
+          "source_root": "/private/tmp/limen-backtest-reuse/baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "/private/tmp/limen-backtest-reuse/baseline/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 1.166958,
+            "samples_ms": [
+              1.1770896,
+              1.25660625,
+              1.1625125
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 1.1770896,
+            "p95_ms": 1.248654585
+          }
+        },
+        "optimized": {
+          "scenario": "snapshot_ledger",
+          "variant": "optimized",
+          "source_root": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 0.808292,
+            "samples_ms": [
+              0.72623125,
+              0.6985479,
+              0.678425
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 0.6985479,
+            "p95_ms": 0.723462915
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:pos": 0.0,
+        "arrays:gross": 0.0,
+        "arrays:net": 0.0
+      },
+      "floating_values_compared": 26372,
+      "tables_compared": [],
+      "warm_speedup": 1.685052091631798,
+      "first_call_speedup": 1.4437332053267877,
+      "equivalent": true
+    },
+    {
+      "scenario": "snapshot_full",
+      "results": {
+        "baseline": {
+          "scenario": "snapshot_full",
+          "variant": "baseline",
+          "source_root": "/private/tmp/limen-backtest-reuse/baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "/private/tmp/limen-backtest-reuse/baseline/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 6.34375,
+            "samples_ms": [
+              1.60661875,
+              1.59700415,
+              1.5928396
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 1.59700415,
+            "p95_ms": 1.60565729
+          }
+        },
+        "optimized": {
+          "scenario": "snapshot_full",
+          "variant": "optimized",
+          "source_root": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 6.142709,
+            "samples_ms": [
+              1.10258125,
+              1.11474375,
+              1.0719
+            ],
+            "iterations_per_sample": 20,
+            "median_ms": 1.10258125,
+            "p95_ms": 1.1135275
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:pos": 0.0,
+        "arrays:gross": 0.0,
+        "arrays:net": 0.0
+      },
+      "floating_values_compared": 26372,
+      "tables_compared": [],
+      "warm_speedup": 1.4484230980710038,
+      "first_call_speedup": 1.0327283939382446,
+      "equivalent": true
+    },
+    {
+      "scenario": "line_features",
+      "results": {
+        "baseline": {
+          "scenario": "line_features",
+          "variant": "baseline",
+          "source_root": "/private/tmp/limen-backtest-reuse/baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "/private/tmp/limen-backtest-reuse/baseline/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 619.245375,
+            "samples_ms": [
+              604.496,
+              613.113,
+              607.907459
+            ],
+            "iterations_per_sample": 1,
+            "rounds": 32,
+            "scope": "two line features per round; four detector keys and eight quantile-feature keys",
+            "median_ms": 607.907459,
+            "p95_ms": 612.5924459
+          }
+        },
+        "optimized": {
+          "scenario": "line_features",
+          "variant": "optimized",
+          "source_root": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 135.6105,
+            "samples_ms": [
+              117.657542,
+              232.873167,
+              163.300083
+            ],
+            "iterations_per_sample": 1,
+            "rounds": 32,
+            "scope": "two line features per round; four detector keys and eight quantile-feature keys",
+            "median_ms": 163.300083,
+            "p95_ms": 225.91585859999998
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:rows": 0.0,
+        "arrays:columns": 0.0,
+        "features.parquet:hours_since_big_move": 0.0,
+        "features.parquet:line_momentum_6h": 0.0,
+        "features.parquet:trending_score": 0.0,
+        "features.parquet:reversal_potential": 0.0,
+        "features.parquet:hours_since_quantile_line": 0.0,
+        "features.parquet:quantile_momentum_6h": 0.0,
+        "features.parquet:avg_quantile_height_24h": 0.0,
+        "features.parquet:quantile_direction_bias": 0.0
+      },
+      "floating_values_compared": 2248704,
+      "tables_compared": [
+        "features.parquet"
+      ],
+      "warm_speedup": 3.722640232828296,
+      "first_call_speedup": 4.566352716050748,
+      "equivalent": true
+    },
+    {
+      "scenario": "timer_execution",
+      "results": {
+        "baseline": {
+          "scenario": "timer_execution",
+          "variant": "baseline",
+          "source_root": "/private/tmp/limen-backtest-reuse/baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "/private/tmp/limen-backtest-reuse/baseline/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 274.26675,
+            "samples_ms": [
+              211.680375,
+              208.185833,
+              306.209333
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 43201,
+            "scope": "full event execution, all audit state rows and metrics; one-second timers",
+            "median_ms": 211.680375,
+            "p95_ms": 296.7564372
+          }
+        },
+        "optimized": {
+          "scenario": "timer_execution",
+          "variant": "optimized",
+          "source_root": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 41.308583,
+            "samples_ms": [
+              17.637875,
+              18.047166,
+              11.73925
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 43201,
+            "scope": "full event execution, all audit state rows and metrics; one-second timers",
+            "median_ms": 17.637875,
+            "p95_ms": 18.0062369
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:contract_digest": 0.0,
+        "episodes.parquet:anchor_price": 0.0,
+        "episodes.parquet:net_pnl": 0.0,
+        "episodes.parquet:entry_equity": 0.0,
+        "fills.parquet:quantity_delta": 0.0,
+        "fills.parquet:reference_price": 0.0,
+        "fills.parquet:fill_price": 0.0,
+        "fills.parquet:fee": 0.0,
+        "fills.parquet:slippage": 0.0,
+        "funding.parquet:quantity": 0.0,
+        "funding.parquet:rate_decimal": 0.0,
+        "funding.parquet:valuation_price": 0.0,
+        "funding.parquet:recognized_delta": 0.0,
+        "funding.parquet:cash_delta": 0.0,
+        "intents.parquet:target": 0.0,
+        "states.parquet:cash": 0.0,
+        "states.parquet:accrued_funding": 0.0,
+        "states.parquet:quantity": 0.0,
+        "states.parquet:basis": 0.0,
+        "states.parquet:equity": 0.0,
+        "states.parquet:last_signal": 0.0,
+        "states.parquet:absolute_exposure": 0.0,
+        "states.parquet:net_return": 0.0
+      },
+      "floating_values_compared": 345635,
+      "tables_compared": [
+        "episodes.parquet",
+        "fills.parquet",
+        "funding.parquet",
+        "intents.parquet",
+        "states.parquet"
+      ],
+      "warm_speedup": 12.001467013458253,
+      "first_call_speedup": 6.639461585985654,
+      "equivalent": true
+    },
+    {
+      "scenario": "funded_execution",
+      "results": {
+        "baseline": {
+          "scenario": "funded_execution",
+          "variant": "baseline",
+          "source_root": "/private/tmp/limen-backtest-reuse/baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "/private/tmp/limen-backtest-reuse/baseline/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 21.113042,
+            "samples_ms": [
+              15.500584,
+              9.431209,
+              10.114917
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 172,
+            "funding_rows": 22,
+            "held_funding_rows": 13,
+            "scope": "full event execution with recorded discrete funding; 168 hourly bars, no timer",
+            "median_ms": 10.114917,
+            "p95_ms": 14.9620173
+          }
+        },
+        "optimized": {
+          "scenario": "funded_execution",
+          "variant": "optimized",
+          "source_root": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 8.102167,
+            "samples_ms": [
+              2.662417,
+              2.616458,
+              2.346542
+            ],
+            "iterations_per_sample": 1,
+            "state_rows": 172,
+            "funding_rows": 22,
+            "held_funding_rows": 13,
+            "scope": "full event execution with recorded discrete funding; 168 hourly bars, no timer",
+            "median_ms": 2.616458,
+            "p95_ms": 2.6578211
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:metric_names": 0.0,
+        "arrays:metrics": 0.0,
+        "arrays:contract_digest": 0.0,
+        "episodes.parquet:anchor_price": 0.0,
+        "episodes.parquet:net_pnl": 0.0,
+        "episodes.parquet:entry_equity": 0.0,
+        "fills.parquet:quantity_delta": 0.0,
+        "fills.parquet:reference_price": 0.0,
+        "fills.parquet:fill_price": 0.0,
+        "fills.parquet:fee": 0.0,
+        "fills.parquet:slippage": 0.0,
+        "funding.parquet:quantity": 0.0,
+        "funding.parquet:rate_decimal": 0.0,
+        "funding.parquet:valuation_price": 0.0,
+        "funding.parquet:recognized_delta": 0.0,
+        "funding.parquet:cash_delta": 0.0,
+        "intents.parquet:target": 0.0,
+        "states.parquet:cash": 0.0,
+        "states.parquet:accrued_funding": 0.0,
+        "states.parquet:quantity": 0.0,
+        "states.parquet:basis": 0.0,
+        "states.parquet:equity": 0.0,
+        "states.parquet:last_signal": 0.0,
+        "states.parquet:absolute_exposure": 0.0,
+        "states.parquet:net_return": 0.0
+      },
+      "floating_values_compared": 1552,
+      "tables_compared": [
+        "episodes.parquet",
+        "fills.parquet",
+        "funding.parquet",
+        "intents.parquet",
+        "states.parquet"
+      ],
+      "warm_speedup": 3.8658816613910867,
+      "first_call_speedup": 2.6058512494249997,
+      "equivalent": true
+    },
+    {
+      "scenario": "forward_labels",
+      "results": {
+        "baseline": {
+          "scenario": "forward_labels",
+          "variant": "baseline",
+          "source_root": "/private/tmp/limen-backtest-reuse/baseline",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.0",
+          "limen_source": "/private/tmp/limen-backtest-reuse/baseline/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 1224.423834,
+            "samples_ms": [
+              2131.426625,
+              859.43825,
+              775.861084
+            ],
+            "iterations_per_sample": 1,
+            "candidates": 256,
+            "scope": "both forward trade outcomes per recorded row; TP/SL-only exits",
+            "median_ms": 859.43825,
+            "p95_ms": 2004.2277875
+          }
+        },
+        "optimized": {
+          "scenario": "forward_labels",
+          "variant": "optimized",
+          "source_root": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen",
+          "python": "3.12.12",
+          "numpy": "2.5.1",
+          "polars": "1.42.1",
+          "limen": "5.34.1",
+          "limen_source": "/Users/mikkokotila/.codex/worktrees/backtest-computation-reuse/Limen/limen/__init__.py",
+          "timing": {
+            "first_call_ms": 28.791292,
+            "samples_ms": [
+              47.551791,
+              22.61025,
+              11.147875
+            ],
+            "iterations_per_sample": 1,
+            "candidates": 256,
+            "scope": "both forward trade outcomes per recorded row; TP/SL-only exits",
+            "median_ms": 22.61025,
+            "p95_ms": 45.0576369
+          }
+        }
+      },
+      "max_absolute_error": 0.0,
+      "max_absolute_error_by_output": {
+        "arrays:outcome": 0.0,
+        "labels.parquet:long_return": 0.0,
+        "labels.parquet:short_return": 0.0
+      },
+      "floating_values_compared": 384,
+      "tables_compared": [
+        "labels.parquet"
+      ],
+      "warm_speedup": 38.01100164748289,
+      "first_call_speedup": 42.5275751432065,
+      "equivalent": true
+    }
+  ],
+  "finished_utc": "2026-10-18T20:32:23.104651+00:00",
+  "equivalent": true,
+  "baseline_commit": "ec254c73f0ff47cfcc2017e262458b2d5f671fb0",
+  "candidate_commit": "4754d0962be79fd8a20859b7017a0b8c4876d4a2",
+  "interpretation": "Component workload medians on this host, not a forecast for a complete research sweep. Three warm samples; preserve exact recorded outputs. Documentation/validation-runner changes after this code identity do not change the recorded Limen source-code hash."
+}
