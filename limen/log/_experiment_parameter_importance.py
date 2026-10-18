@@ -1,27 +1,34 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
+from importlib import import_module
 from numbers import Real
-from typing import TYPE_CHECKING
+from typing import Protocol, cast
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.inspection import permutation_importance
 from sklearn.model_selection import GroupShuffleSplit
-from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import OneHotEncoder
 
-if TYPE_CHECKING:
-    from limen.log.log import Log
+
+class _Regressor(Protocol):
+    def fit(self, x: pd.DataFrame, y: pd.Series) -> object: ...
+    def score(self, x: pd.DataFrame, y: pd.Series) -> float: ...
+
+
+make_pipeline = cast(Callable[..., _Regressor], vars(import_module('sklearn.pipeline'))['make_pipeline'])
+permutation_importance = cast(Callable[..., Mapping[str, npt.NDArray[np.float64]]],
+                              vars(import_module('sklearn.inspection'))['permutation_importance'])
 
 _MIN_CONFIGURATIONS = 20
 _MIN_REPEATS = 2
 
 
 def experiment_parameter_importance(
-    self: Log,
+    self: object,
     metric: str,
     *,
     parameters: Sequence[str],
@@ -32,7 +39,7 @@ def experiment_parameter_importance(
     if isinstance(parameters, (str, bytes)) or not parameters:
         raise ValueError('Parameter importance requires explicit parameter columns')
     columns = list(parameters)
-    if (any(not isinstance(name, str) or not name for name in columns)
+    if (any(type(name) is not str or not name for name in columns)
             or len(set(columns)) != len(columns) or metric in columns):
         raise ValueError('Parameter columns must be unique names excluding the metric')
     if type(random_state) is not int or not 0 <= random_state < 2**32:
@@ -40,15 +47,15 @@ def experiment_parameter_importance(
     if type(n_repeats) is not int or n_repeats < _MIN_REPEATS:
         raise ValueError('n_repeats must be an integer of at least 2')
 
-    captured = self._captured_log
-    if (not isinstance(metric, str) or not metric or not captured.columns.is_unique
+    captured = cast(pd.DataFrame, vars(self)['_captured_log'])
+    if (type(metric) is not str or not metric or not captured.columns.is_unique
             or any(name not in captured for name in [*columns, metric])):
         raise ValueError('Parameter importance requires existing, unambiguous columns')
     if 'strict_mode_error' in captured:
         captured = captured.loc[captured['strict_mode_error'].isna()
                                 | captured['strict_mode_error'].eq('')]
     frame = captured.loc[:, columns].copy()
-    categorical = []
+    categorical: list[str] = []
     for name in columns:
         values = frame[name]
         if values.isna().any():
@@ -69,8 +76,9 @@ def experiment_parameter_importance(
     n_configurations = len(np.unique(groups))
     if n_configurations < _MIN_CONFIGURATIONS:
         raise ValueError('Parameter importance requires at least 20 distinct configurations')
-    train, evaluation = next(GroupShuffleSplit(n_splits=1, test_size=0.25,
-                                               random_state=random_state).split(frame, groups=groups))
+    split = cast(Callable[..., Iterator[tuple[npt.NDArray[np.intp], npt.NDArray[np.intp]]]],
+                 getattr(GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=random_state), 'split'))
+    train, evaluation = next(split(frame, groups=groups))
     x_train, x_evaluation = frame.iloc[train], frame.iloc[evaluation]
     y_train, y_evaluation = target.iloc[train], target.iloc[evaluation]
     if y_evaluation.nunique() == 1:
@@ -81,12 +89,12 @@ def experiment_parameter_importance(
     )
     model = make_pipeline(encoder, RandomForestRegressor(n_estimators=100, n_jobs=1,
                                                         random_state=random_state))
-    model.fit(x_train, y_train)
+    _ = model.fit(x_train, y_train)
     baseline = float(model.score(x_evaluation, y_evaluation))
     result = permutation_importance(model, x_evaluation, y_evaluation, scoring='r2',
                                     n_repeats=n_repeats, random_state=random_state, n_jobs=1)
-    means = np.asarray(result.importances_mean, dtype=float)
-    deviations = np.asarray(result.importances_std, dtype=float)
+    means = np.asarray(result['importances_mean'], dtype=float)
+    deviations = np.asarray(result['importances_std'], dtype=float)
     if not np.isfinite(baseline) or not np.isfinite(means).all() or not np.isfinite(deviations).all():
         raise ValueError('Parameter importance produced nonfinite scores')
     return pd.DataFrame({
