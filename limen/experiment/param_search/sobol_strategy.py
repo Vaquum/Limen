@@ -56,7 +56,7 @@ class SobolStrategy(SearchStrategy):
             self._raw_index += 1
             combo: dict[str, object] = {
                 key: values[int(coordinate * len(values))]
-                for key, values, coordinate in zip(self._keys, self._values, point)
+                for key, values, coordinate in zip(self._keys, self._values, point, strict=True)
             }
             if self._is_unseen(combo):
                 self._generated_count += 1

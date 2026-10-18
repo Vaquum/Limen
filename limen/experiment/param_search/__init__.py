@@ -6,6 +6,6 @@ from limen.experiment.param_search.sobol_strategy import SobolStrategy
 
 __all__ = [
     'STRATEGY_REGISTRY',
-    'GridStrategy', 'RandomStrategy', 'SobolStrategy',
-    'SearchStrategy',
+    'GridStrategy', 'RandomStrategy', 'SearchStrategy',
+    'SobolStrategy',
 ]
