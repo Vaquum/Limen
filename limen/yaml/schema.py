@@ -78,7 +78,7 @@ UEL_OPTIONAL = {
     'output_path',
 }
 SEARCH_STRATEGY_REQUIRED = {'type'}
-SEARCH_STRATEGY_OPTIONAL = {'seed'}
+SEARCH_STRATEGY_OPTIONAL = {'seed', 'shuffle'}
 PRUNING_STRATEGY_REQUIRED = {'type'}
 PRUNING_STRATEGY_OPTIONAL = {'params'}
 

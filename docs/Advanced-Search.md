@@ -42,7 +42,7 @@ The important mental model is:
 | `GridStrategy` | Enumerate combinations deterministically; execute up to the permutation budget. | `uel.search_strategy.type: grid` |
 | `RandomStrategy` | Lazily sample unseen combinations; accepts a candidate-generation seed. | `uel.search_strategy.type: random`, optionally with `seed` |
 
-CLI defaults to random search. YAML grid search creates an unshuffled grid and does not apply `seed`; Python `GridStrategy` additionally accepts `shuffle` and `seed`. In Python, select either strategy over the SFD's parameter space:
+CLI defaults to random search. Grid search is unshuffled by default. From 5.31.0, YAML and Python accept a seeded finite shuffle; YAML `shuffle: true` requires an integer seed. A shuffle declaration on random search is rejected. In Python, select either strategy over the SFD's parameter space:
 
 ```python
 from limen.experiment.param_domain import ParamDomain
@@ -53,6 +53,27 @@ strategy = GridStrategy(domain)
 ```
 
 Use the [Python/MSQ example](Universal-Experiment-Loop.md#direct-python-run) for the complete data-loading and execution flow. Random search deduplicates repeated draws and can fail near domain exhaustion; use grid search when exhaustive coverage is required. A search seed does not control model or preparation randomness.
+
+## Seeded finite traversal
+
+```yaml
+uel:
+  factorize: true
+  search_strategy:
+    type: grid
+    shuffle: true
+    seed: 42
+```
+
+Native equivalent: `GridStrategy(domain, shuffle=True, seed=42)` with the existing `run(..., factorize=True)` switch. The [recorded example](examples/factorized_shuffle.yaml) runs from the repository root with `limen run docs/examples/factorized_shuffle.yaml`.
+
+Fresh seeded shuffled grids use version 2: eight balanced Feistel rounds with SHAKE-256, cycle-walked into the finite index domain. Candidate generation never materializes the Cartesian product or a permutation list. Cycle-walk cost varies. Sorted parameter keys and declared level order define the mixed-radix mapping. The seed changes the permutation; the round budget does not, so increasing it extends the same prefix. Exhaustion stops normally; existing full-parameter hash deduplication still collapses duplicate-valued levels.
+
+This is joint candidate traversal, rather than shuffling levels before nested enumeration. Tests measure marginal and pair-projection prefix coverage over pinned unequal domains/seeds against affine and nested-enumeration controls. They establish those cases, not a universal prefix-coverage guarantee or uniform random sampling. A search seed does not seed models.
+
+Version and ordered-domain identity are saved in strategy state; existing metadata independently pins version 2. Factorized resume rejects seed/version/ordered-domain changes before rewriting artifacts and restarts reuse caches empty. Versionless old integer-seeded shuffled checkpoints retain their affine version-1 order on the ordinary path. Seedless native shuffle remains legacy version 1, without a reproducible resume guarantee, and is not admitted by factorization. Existing unshuffled behavior is unchanged.
+
+Factorized traversal retains its [snapshot admission and cache limits](Universal-Experiment-Loop.md#factorized-snapshot-grids). Live pruning, callbacks and interventions remain excluded; use a new immutable manifest for a follow-up search.
 
 ## Optional persistence and feedback
 

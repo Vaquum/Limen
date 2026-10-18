@@ -1,52 +1,39 @@
 from __future__ import annotations
 
 import math
-import random
 from typing import Any
 
 from typing_extensions import override
 
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search._grid_permutation import (
+    lcg_map, lcg_params, permuted_index, SHUFFLE_VERSION, domain_digest,
+)
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
-GOLDEN_RATIO_CONJUGATE = 0.6180339887498949
+__all__ = ['GridStrategy']
 
 
 class GridStrategy(SearchStrategy):
+    """Finite mixed-radix traversal; seeded shuffle uses a versioned permutation."""
 
-    '''
-    Exhaustive enumeration of all parameter combinations.
-
-    Uses index-to-combination modular arithmetic for O(1) generation
-    per sample. Optional shuffle reorders the enumeration via LCG
-    (linear congruential generator) for better early coverage.
-    Memory grows with yielded combos due to _seen tracking, which
-    is acceptable because Grid targets small search spaces.
-
-    '''
-
-    def __init__(self,
-                 domain: ParamDomain,
-                 *,
-                 seed: int | None = None,
+    def __init__(self, domain: ParamDomain, *, seed: int | None = None,
                  shuffle: bool = False) -> None:
-
+        if type(shuffle) is not bool:
+            raise ValueError('GridStrategy shuffle must be a bool')
+        if seed is not None and type(seed) is not int:
+            raise ValueError('GridStrategy seed must be a non-boolean integer or None')
         super().__init__(domain, seed=seed)
         self._shuffle = shuffle
+        self._permutation_version = SHUFFLE_VERSION if shuffle and seed is not None else 1
         self._rebuild()
-
 
     @property
     @override
     def is_finite(self) -> bool:
-
         return True
 
-
     def _rebuild(self) -> None:
-
-        '''Recompute keys, sizes, total, and LCG params from current domain.'''
-
         params = self._domain.params
         self._keys = sorted(params.keys())
         self._values = [params[k] for k in self._keys]
@@ -54,28 +41,18 @@ class GridStrategy(SearchStrategy):
         self._total = math.prod(self._sizes)
         self._current_index = 0
         self._generated_count = 0
-
-        if self._shuffle and self._total > 0:
-            self._lcg_multiplier, self._lcg_increment = _lcg_params(
-                self._total, self._seed,
-            )
-
+        if self._shuffle and self._total > 0 and self._permutation_version == 1:
+            self._lcg_multiplier, self._lcg_increment = lcg_params(self._total, self._seed)
 
     def _permute_index(self, logical_index: int) -> int:
-
         if not self._shuffle:
             return logical_index
-
-        return _lcg_map(
-            logical_index, self._total,
-            self._lcg_multiplier, self._lcg_increment,
-        )
-
+        if self._permutation_version == SHUFFLE_VERSION:
+            assert self._seed is not None
+            return permuted_index(logical_index, self._total, self._seed)
+        return lcg_map(logical_index, self._total, self._lcg_multiplier, self._lcg_increment)
 
     def _index_to_combo(self, index: int) -> dict[str, Any]:
-
-        '''Convert flat index to parameter combination via modular arithmetic.'''
-
         combo: dict[str, Any] = {}
         remaining = index
         for i, key in enumerate(self._keys):
@@ -83,10 +60,8 @@ class GridStrategy(SearchStrategy):
             remaining //= self._sizes[i]
         return combo
 
-
     @override
     def __next__(self) -> dict[str, Any]:
-
         while self._current_index < self._total:
             physical = self._permute_index(self._current_index)
             combo = self._index_to_combo(physical)
@@ -94,81 +69,42 @@ class GridStrategy(SearchStrategy):
             if self._is_unseen(combo):
                 self._generated_count += 1
                 return combo
-
         raise StopIteration
 
-
     @override
-    def on_domain_changed(
-        self, _domain: ParamDomain, _changed_params: list[str],
-    ) -> None:
-
+    def on_domain_changed(self, _domain: ParamDomain, _changed_params: list[str]) -> None:
         self._rebuild()
-
 
     @override
     def get_state(self) -> dict[str, Any]:
-
         return {
             'current_index': self._current_index,
             'generated_count': self._generated_count,
             'shuffle': self._shuffle,
             'seed': self._seed,
+            'permutation_version': self._permutation_version,
+            'domain_digest': domain_digest(self._domain.params),
         }
-
 
     @override
     def set_state(self, state: dict[str, Any]) -> None:
-
-        saved_shuffle = state.get('shuffle')
-        saved_seed = state.get('seed')
+        saved_shuffle, saved_seed = state.get('shuffle'), state.get('seed')
+        version = state.get('permutation_version', 1)
+        if type(version) is not int or version not in (1, SHUFFLE_VERSION):
+            raise ValueError('GridStrategy checkpoint permutation version is unsupported')
         if saved_shuffle is not None and saved_shuffle != self._shuffle:
-            raise ValueError(
-                f"GridStrategy Checkpoint shuffle={saved_shuffle} does not match current shuffle={self._shuffle}."
-            )
+            raise ValueError('GridStrategy checkpoint shuffle does not match current shuffle')
         if saved_seed is not None and saved_seed != self._seed:
-            raise ValueError(
-                f"GridStrategy Checkpoint seed={saved_seed} does not match current seed={self._seed}."
-            )
-        self._current_index = state['current_index']
-        self._generated_count = state['generated_count']
-
-
-def _lcg_params(n: int, seed: int | None) -> tuple[int, int]:
-
-    '''
-    Compute LCG parameters for a full-period permutation of [0, n).
-
-    Finds a multiplier coprime to n and a seeded increment for
-    a linear congruential generator that visits every index exactly once.
-
-    Args:
-        n (int): Size of the space to permute
-        seed (int | None): Seed for choosing increment
-
-    Returns:
-        tuple[int, int]: (multiplier, increment) for the LCG
-    '''
-
-    multiplier = _find_coprime(n)
-    rng = random.Random(seed)
-    increment = rng.randint(0, n - 1)
-    return multiplier, increment
-
-
-def _find_coprime(n: int) -> int:
-
-    '''Find a value coprime to n that provides good mixing.'''
-
-    candidate = max(2, int(n * GOLDEN_RATIO_CONJUGATE))
-    while math.gcd(candidate, n) != 1:
-        candidate += 1
-    return candidate
-
-
-def _lcg_map(logical_index: int, n: int,
-             multiplier: int, increment: int) -> int:
-
-    '''Map logical index to physical index via LCG.'''
-
-    return (multiplier * logical_index + increment) % n
+            raise ValueError('GridStrategy checkpoint seed does not match current seed')
+        if version == SHUFFLE_VERSION:
+            if not self._shuffle or saved_shuffle is not True or type(saved_seed) is not int or saved_seed != self._seed:
+                raise ValueError('GridStrategy version 2 requires matching seeded shuffle')
+            if state.get('domain_digest') != domain_digest(self._domain.params):
+                raise ValueError('GridStrategy checkpoint ordered domain does not match current domain')
+        index, generated = state['current_index'], state['generated_count']
+        if type(index) is not int or type(generated) is not int or not 0 <= generated <= index <= self._total:
+            raise ValueError('GridStrategy checkpoint traversal counters are invalid')
+        if self._shuffle and self._total > 0 and version == 1 and self._permutation_version != version:
+            self._lcg_multiplier, self._lcg_increment = lcg_params(self._total, self._seed)
+        self._permutation_version = version
+        self._current_index, self._generated_count = index, generated

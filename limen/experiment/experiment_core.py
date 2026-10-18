@@ -23,6 +23,7 @@ from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
+from limen.experiment._grid_resume import add_grid_metadata, complete_failed_header, validate_factorized_grid, validate_grid_resume
 from limen.experiment._recording import prepare_recording, project_record
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
@@ -346,7 +347,7 @@ class UniversalExperimentLoop:
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', i, exc)
-                round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
+                round_results: dict[str, Any] = {'strict_mode_error': str(exc) or type(exc).__name__}
                 round_succeeded = False
 
             if maintain_details_in_params is True:
@@ -635,7 +636,7 @@ class UniversalExperimentLoop:
                 round_succeeded = True
             except StrictModeError as exc:
                 logger.error('Round %d failed strict mode check: %s', current_round, exc)
-                round_results: dict[str, Any] = {'strict_mode_error': str(exc)}
+                round_results: dict[str, Any] = {'strict_mode_error': str(exc) or type(exc).__name__}
             except KeyboardInterrupt:
                 if self._shutdown_requested:
                     logger.info(
@@ -702,6 +703,8 @@ class UniversalExperimentLoop:
             if self._walk_forward is not None and round_succeeded and csv_header:
                 csv_header = self._walk_forward.complete_failed_header(csv_path, csv_header, list(round_results))
 
+            if round_succeeded:
+                csv_header = complete_failed_header(csv_path, csv_header, list(round_results), self.experiment_log)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
             if write_header and not round_succeeded:
                 _pending_csv_rows.append(dict(round_results))
@@ -792,7 +795,6 @@ class UniversalExperimentLoop:
                                      *,
                                      resume: bool) -> None:
 
-        '''Validate preconditions for MSQ-based execution.'''
 
         if resume:
             if not self._experiment_dir:
@@ -810,7 +812,6 @@ class UniversalExperimentLoop:
                                experiment_name: str,
                                n_permutations: int) -> dict[str, Any]:
 
-        '''Create MSQ, FeedbackController, CheckpointManager, and file paths.'''
 
         if self._search_strategy is None:
             raise ValueError('UniversalExperimentLoop MSQ execution requires a search_strategy')
@@ -865,7 +866,6 @@ class UniversalExperimentLoop:
                                    round_data_path: Path | None,
                                    retain_round_artifacts: bool) -> int:
 
-        '''Restore experiment state from checkpoint and data files.'''
 
         if self._experiment_dir is None or self._search_strategy is None:
             raise ValueError('UniversalExperimentLoop checkpoint restore requires experiment_dir and search_strategy')
@@ -884,8 +884,11 @@ class UniversalExperimentLoop:
             raise ValueError('Cannot resume with a different factorize setting')
         validate_objective_resume(self.manifest, metadata, csv_path)
         validate_walk_forward_resume(self.manifest, metadata)
-        domain.set_state(checkpoint_data['domain_state'])
+        validate_grid_resume(self._search_strategy, domain, checkpoint_data, metadata, factorize=self._factorize)
+        domain.set_state(domain.get_state() if self._factorize else checkpoint_data['domain_state'])
         msq.set_state(checkpoint_data['msq_state'])
+        if self._factorize:
+            validate_factorized_grid(self._search_strategy)
 
         if 'feedback_controller_state' in checkpoint_data:
             feedback_controller.set_state(
@@ -914,7 +917,8 @@ class UniversalExperimentLoop:
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
-        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean})
+        string_params = {key: pl.String for key, values in domain.params.items() if self._factorize and all(isinstance(value, str) for value in values)}
+        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean, **string_params})
         if '_convergence_warning' not in experiment_log.columns or experiment_log['_convergence_warning'].null_count() == experiment_log.height:
             experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
@@ -950,7 +954,7 @@ class UniversalExperimentLoop:
 
         if round_data_path.exists():
             self._truncate_round_data(round_data_path, start_round)
-        experiment_log.write_csv(csv_path)
+        (pl.read_csv(csv_path, n_rows=start_round, infer_schema=False) if self._factorize else experiment_log).write_csv(csv_path)
 
         return start_round
 
@@ -959,7 +963,6 @@ class UniversalExperimentLoop:
     def _truncate_round_data(round_data_path: Path,
                               start_round: int) -> None:
 
-        '''Truncate round_data.jsonl to only contain rounds before start_round.'''
 
         _storage.truncate_rounds(round_data_path, start_round)
 
@@ -967,7 +970,6 @@ class UniversalExperimentLoop:
     def _flush_results(self,
                        accumulator: list[dict[str, Any]]) -> None:
 
-        '''Flush accumulated round results into experiment_log.'''
 
         if not accumulator:
             return
@@ -975,7 +977,7 @@ class UniversalExperimentLoop:
         batch = objective_frame(self.manifest, accumulator)
         if self.experiment_log is not None:
             self.experiment_log = pl.concat(
-                [self.experiment_log, batch], how='diagonal_relaxed' if self._walk_forward is not None else 'vertical_relaxed',
+                [self.experiment_log, batch], how='diagonal_relaxed',
             )
         else:
             self.experiment_log = batch
@@ -983,7 +985,6 @@ class UniversalExperimentLoop:
 
     def _guard_stale_artifacts(self) -> None:
 
-        '''Raise FileExistsError if experiment_dir has leftover artifacts.'''
 
         if not self._experiment_dir or not self._experiment_dir.exists():
             return
@@ -1018,7 +1019,6 @@ class UniversalExperimentLoop:
 
 
     def _write_metadata(self, experiment_dir: Path, *, context_parameter_keys: list[str] | None = None) -> None:
-        '''Persist experiment provenance and effective recording settings.'''
 
         if self._sfd_module_name is None:
             raise ValueError(
@@ -1038,6 +1038,7 @@ class UniversalExperimentLoop:
             metadata['recording'] = self._recording
         if self._factorize:
             metadata['factorize'] = True
+        add_grid_metadata(self._search_strategy, metadata)
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
             metadata['split_walk_forward'] = self._walk_forward.config.as_dict()

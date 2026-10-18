@@ -342,19 +342,7 @@ def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:
 
 def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStrategy:
 
-    '''
-    Build a search strategy from a validated YAML experiment dict.
-
-    Args:
-        yaml_dict (dict): Parsed and validated YAML experiment dict
-
-    Returns:
-        RandomStrategy | GridStrategy: Configured search strategy
-
-    Raises:
-        ValueError: If uel.search_strategy is not a mapping or has an unknown type
-
-    '''
+    '''Build the declared search, requiring a literal seed for shuffled YAML grids.'''
 
     uel_cfg = _uel_config(yaml_dict)
     sfd_cfg: dict[str, Any] = yaml_dict.get('sfd') or {}
@@ -368,12 +356,17 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
     domain = ParamDomain(params)
     strategy_type = strategy_cfg.get('type', 'random')
     seed = strategy_cfg.get('seed')
-    if seed is not None:
-        seed = int(seed)
     if strategy_type == 'grid':
-        return GridStrategy(domain)
+        shuffle = strategy_cfg.get('shuffle', False)
+        if type(shuffle) is not bool:
+            raise ValueError("'uel.search_strategy.shuffle' must be a bool")
+        if (seed is not None or shuffle) and type(seed) is not int:
+            raise ValueError("'uel.search_strategy.seed' must be an int; shuffled grids require a seed")
+        return GridStrategy(domain, seed=seed, shuffle=shuffle)
     if strategy_type == 'random':
-        return RandomStrategy(domain, seed=seed)
+        if 'shuffle' in strategy_cfg:
+            raise ValueError("'uel.search_strategy.shuffle' is only supported for grid search")
+        return RandomStrategy(domain, seed=None if seed is None else int(seed))
     raise ValueError(f"Unknown search strategy type: '{strategy_type}'. Expected 'random' or 'grid'.")
 
 

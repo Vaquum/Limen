@@ -1676,3 +1676,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.30.2] - 2026-10-17
 
 - Reject coverage command, probe and collection regressions; execute supported and unsupported backend proofs in the covered test job.
+
+## [5.31.0] - 2026-10-18
+
+- Add seeded finite shuffled grid traversal to deterministic factorized runs, with versioned resume and bounded LRU reuse.
+- Preserve terminal strict failures across mixed result batches and cold-cache recovery.
