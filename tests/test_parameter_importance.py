@@ -111,6 +111,12 @@ def test_recorded_parameter_importance(recorded_importance):
 def test_invalid_importance_inputs(recorded_importance):
     _, _, rows = recorded_importance
     log = _log(rows)
+    numeric_objects = rows.copy()
+    numeric_objects[['lookback', METRIC]] = numeric_objects[['lookback', METRIC]].astype(object)
+    assert_frame_equal(
+        _log(numeric_objects).experiment_parameter_importance(METRIC, parameters=PARAMETERS, n_repeats=2),
+        log.experiment_parameter_importance(METRIC, parameters=PARAMETERS, n_repeats=2),
+    )
     for kwargs in ({'parameters': []}, {'parameters': 'lookback'},
                    {'parameters': ['lookback', 'lookback']}, {'parameters': ['missing']},
                    {'parameters': [METRIC]}, {'parameters': [True]}):
