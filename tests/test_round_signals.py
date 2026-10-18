@@ -70,7 +70,9 @@ def _v1(directory, records, *, plain=False):
             digest = hashlib.sha256(raw).hexdigest()
             folder = directory / 'round_market'
             folder.mkdir(exist_ok=True)
-            (folder / (digest + '.json.gz')).write_bytes(gzip.compress(raw, compresslevel=1, mtime=0))
+            blob = folder / (digest + '.json.gz')
+            if not blob.exists():
+                blob.write_bytes(gzip.compress(raw, compresslevel=1, mtime=0))
             wire = {('market_ref' if key == 'market' else key):
                     (digest if key == 'market' else value) for key, value in wire.items()}
         raw = (json.dumps(wire) + '\n').encode()
@@ -237,7 +239,7 @@ def test_recovery(tmp_path, economic_sweep, monkeypatch):
 
 
 @pytest.mark.parametrize('damage', ('missing', 'gzip', 'digest', 'payload_type', 'nested', 'nonfinite',
-                                  'count', 'boolean_count', 'reference_type', 'conflict', 'cross_length', 'unknown', 'legacy'))
+                                  'count', 'boolean_count', 'reference_type', 'conflict', 'cross_length', 'inline_cross_length', 'unknown', 'legacy'))
 def test_committed_reference_rejection_is_read_only(tmp_path, economic_sweep, damage):
     directory = tmp_path / damage
     shutil.copytree(economic_sweep['directory'], directory)
@@ -263,6 +265,9 @@ def test_committed_reference_rejection_is_read_only(tmp_path, economic_sweep, da
         reference['sha256'] = []
     elif damage == 'conflict':
         records[0]['preds'] = economic_sweep['records'][0]['preds']
+    elif damage == 'inline_cross_length':
+        records[0].pop('probs_ref')
+        records[0]['probs'] = []
     elif damage == 'cross_length':
         raw = _canonical([])
         digest = hashlib.sha256(raw).hexdigest()

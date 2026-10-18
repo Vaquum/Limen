@@ -125,7 +125,7 @@ def _restore(record: dict[str, object], directory: Path, storage: object) -> dic
             raise RoundStorageError(f'Invalid signal payload or count in {path}')
         value = value if signal else _market(value, path, _row_count(record))
         record = {(field if name == key else name): (value if name == key else item) for name, item in record.items()}
-    if storage == FORMAT and not _signals.aligned(record, signals):
+    if signals and not _signals.aligned(record, ('preds', 'probs'), eligible=True):
         raise RoundStorageError(f'Signal lengths differ from predictions or execution alignment in {directory}')
     return record
 
