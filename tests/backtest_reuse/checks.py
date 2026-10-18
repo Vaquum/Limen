@@ -18,7 +18,7 @@ def run(*arguments: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('plane', choices=('suite', 'static', 'typing'))
+    parser.add_argument('plane', choices=('suite', 'static', 'typing', 'benchmark'))
     args = parser.parse_args()
     os.environ['PATH'] = str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH']
     if args.plane == 'suite':
@@ -35,6 +35,10 @@ def main() -> None:
             run(f'governance/{gate}.py')
         run('governance/check_budget_ratchet.py', '--base-ref', 'origin/main', '--pr-number', '974')
         run('scripts/package_audit.py')
+    elif args.plane == 'benchmark':
+        run('-m', 'tests.benchmark_backtest_reuse', '--baseline-root',
+            '/private/tmp/limen-backtest-reuse/baseline', '--output',
+            '/private/tmp/limen-backtest-reuse/results')
     else:
         result = subprocess.run([sys.executable, '-m', 'pyright', '--outputjson'],
                                 cwd=ROOT, check=False, capture_output=True, text=True)
