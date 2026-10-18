@@ -37,6 +37,7 @@ def _loop(config, path, *, reducers=(), search=True):
 
 
 def _run(loop, **kwargs):
+    kwargs.setdefault('recording', dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True) if loop._search_strategy is not None and loop._experiment_dir is not None else None)
     loop.run('objective_resume', n_permutations=2, prep_each_round=True, progress_bar=False, **kwargs)
 
 

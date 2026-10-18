@@ -17,10 +17,10 @@ class RecordingSpec:
             if isinstance(container, Mapping) and 'recording' in container:
                 errors.append(YAMLError(message='Declare recording only under uel', path=path))
         uel = yaml_dict.get('uel')
-        if not isinstance(uel, Mapping) or 'recording' not in uel:
+        if not isinstance(uel, Mapping):
             return
         try:
-            policy = parse_recording(cast(Mapping[str, object], uel)['recording'])
+            policy = parse_recording(cast(Mapping[str, object], uel).get('recording', {}))
             raw_acceptance = cast(Mapping[str, object], manifest).get('acceptance') if isinstance(manifest, Mapping) else None
             acceptance = cast(Mapping[str, object], raw_acceptance) if isinstance(raw_acceptance, Mapping) else None
             validate_pbo_recording(policy, acceptance)

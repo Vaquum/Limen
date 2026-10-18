@@ -39,7 +39,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg_first
-  limen_version: "5.31.1"
+  limen_version: "5.31.2"
   mode: development
   description: First logistic-regression binary classifier
 
@@ -127,8 +127,9 @@ limen run logreg-first.yaml
 
 For parallel CPU classification rounds, set every model `n_jobs` value to `1`
 and run `limen run logreg-first.yaml --workers 4`. YAML `uel.workers` supplies the
-default; the CLI overrides it. Resume with `limen run --resume RESULTS_DIR` to
-reuse the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
+default; the CLI overrides it. Runs created with full
+[recording evidence](Universal-Experiment-Loop.md#recording-policy) can resume with
+`limen run --resume RESULTS_DIR`, reusing the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
 for admission, feedback ordering and stop/recovery limits. The example above has
 one permutation; a larger search is needed to occupy several workers.
 

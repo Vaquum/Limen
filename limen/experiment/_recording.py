@@ -5,7 +5,7 @@ from typing import cast
 
 __all__: list[str] = []
 
-_DEFAULTS: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+_DEFAULTS: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), False)
 
 
 def parse_recording(value: object) -> dict[str, bool]:
@@ -66,26 +66,26 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
         if not isinstance(metadata, Mapping):
             raise ValueError('Cannot resume: metadata must be a mapping')
         metadata = cast(Mapping[str, object], metadata)
-        saved = parse_recording(metadata['recording']) if 'recording' in metadata else dict(_DEFAULTS)
+        saved = parse_recording(metadata['recording']) if 'recording' in metadata else dict.fromkeys(_DEFAULTS, True)
         original = metadata.get('yaml_reference')
         if reference is not None and isinstance(original, Mapping):
             if (_configured(cast(Mapping[str, object], original)) or _DEFAULTS) != (configured or _DEFAULTS):
                 raise ValueError('Cannot resume with a different YAML recording declaration')
         elif configured is not None and configured != saved:
             raise ValueError('Cannot resume with a different recording policy')
-        if value is None and 'recording' in metadata:
-            declared = metadata['recording']
+        if value is None and (configured is None or 'recording' in metadata):
+            declared = saved
 
     policy = parse_recording(declared) if declared is not None else dict(_DEFAULTS)
-    validate_pbo_recording(policy, acceptance)
-    if declared is not None and (not has_search or directory is None):
+    validate_pbo_recording(policy if has_search and directory is not None else None, acceptance)
+    if (value is not None or configured is not None) and (not has_search or directory is None):
         raise ValueError('recording requires search_strategy and experiment_dir')
-    if resume:
+    if resume and has_search and directory is not None:
         if saved is not None and saved != policy:
             raise ValueError('Cannot resume with a different recording policy')
         if not all(policy.values()):
             raise ValueError('Cannot resume a lighter recording policy: complete recorded recovery evidence is required')
-    return policy if declared is not None else None
+    return policy if has_search and directory is not None else None
 
 
 def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | None) -> dict[str, object]:
@@ -95,10 +95,9 @@ def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | No
         ('predictions', 'preds'), ('trade_ledger', 'trade_ledger'), ('fold_details', 'folds'),
     ) if not policy[setting]}
     projected = {key: value for key, value in record.items() if key not in excluded}
-    if not policy['alignment'] and 'alignment' in projected:
-        alignment = cast(Mapping[str, object], projected['alignment'])
-        projected['alignment'] = {key: value for key, value in alignment.items()
-                                  if key not in ('missing_datetimes', 'test_datetimes')}
+    for name, fields in (('alignment', ('missing_datetimes', 'test_datetimes')), ('trade_contract', ('signal_rows',))):
+        if not policy['alignment'] and name in projected:
+            projected[name] = {key: value for key, value in cast(Mapping[str, object], projected[name]).items() if key not in fields}
     if 'folds' in projected:
         projected['folds'] = [project_record(fold, policy)
                               for fold in cast(list[Mapping[str, object]], projected['folds'])]

@@ -288,7 +288,9 @@ def test_trainer_sensor_preserve_signed_exposure(yaml_experiment):
     for sensor, identity in zip(sensors, ids, strict=True):
         stored = trainer._round_data[identity]
         assert sensor.prediction_mode == 'target_exposure'
-        assert sensor.trade_contract == stored['trade_contract']
+        assert 'signal_rows' not in stored['trade_contract']
+        assert sensor.trade_contract['signal_rows']
+        assert {key: value for key, value in sensor.trade_contract.items() if key != 'signal_rows'} == stored['trade_contract']
         bars = sensor.predict_all(recorded_source(limit=384))
         valid = [bar for bar in bars if bar.reason is None]
         assert valid and all(bar.trade_contract_digest == stored['trade_contract_digest'] for bar in valid)

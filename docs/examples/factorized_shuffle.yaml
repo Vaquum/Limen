@@ -2,7 +2,7 @@ schema_version: '1.0'
 metadata:
   name: factorized_shuffle
   description: Bounded seeded factorized traversal over recorded hourly observations
-  limen_version: 5.31.1
+  limen_version: 5.31.2
   mode: development
 sfd:
   manifest:
@@ -74,6 +74,11 @@ sfd:
     colsample_bytree:
     - 1.0
 uel:
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
   n_permutations: 8
   prep_each_round: true
   search_strategy:

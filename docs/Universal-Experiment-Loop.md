@@ -134,7 +134,7 @@ uel.run(
 | `progress_bar` | render the experiment progress bar; on by default, disable for headless runs |
 | `record_execution` | persist test snapshot series and unscaled market returns; off by default; requires `search_strategy` and `experiment_dir` |
 | `record_model_outputs` | persist test probabilities and boosting iteration counts; off by default; requires `search_strategy` and `experiment_dir` |
-| `recording` | choose saved round-log payload groups; all enabled by default; requires `search_strategy` and `experiment_dir`; see [recording policy](#recording-policy) |
+| `recording` | choose saved round-log payload groups; all disabled by default; explicit policies require `search_strategy` and `experiment_dir`; see [recording policy](#recording-policy) |
 | `factorize` | opt-in reuse of fitted preparation state across model variations, and predictions across independent snapshot economics, in a deterministic persisted MSQ grid; default `false` |
 
 ### Factorized snapshot grids
@@ -291,7 +291,7 @@ Python resume must pass the same flag; CLI resume uses the effective setting sav
 
 ### Record model outputs
 
-Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl.gz`, in the same order as `preds`, with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
+Set `uel.record_model_outputs: true` in YAML, or pass `record_model_outputs=True` to `run()`. Each successful round records `probs` in `round_data.jsonl.gz`, in test-row order (matching `preds` when enabled), with `optimal_threshold` and `threshold_rule`. These are the original test probabilities used for that evaluation, including calibration when enabled. Apply `>` for uncalibrated predictions and `>=` for the calibration/threshold path; the uncalibrated threshold is `0.5`. RandomBinary records its existing `0.1`/`0.9` surrogate scores, which encode its sampled predictions. One-class LightGBM fits retain their original scores and record a constant decision boundary: `0`/`>=` for class `1`, or `1`/`>` for class `0`. Architectures without probabilities record `probs: null`.
 
 LightGBM and XGBoost add `best_iteration` to `results.csv`: the number of boosting iterations actually used for prediction. LightGBM uses its positive `best_iteration_`, otherwise `n_iter_`. Tree-based XGBoost uses its zero-based best iteration plus one, otherwise the fitted booster's round count. XGBoost `gblinear` uses the final fitted round count because it does not retain an earlier model. Counts are available with early stopping disabled and with `inline_metrics=False`.
 
@@ -299,12 +299,12 @@ The option is independent of `record_execution` and `post_processing`; leaving i
 
 ### Recording policy
 
-Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ run to omit named groups from `round_data.jsonl.gz`. Every group defaults to `true`; omitted policy and explicit all-true policy preserve the existing logical payloads. Values must be literal booleans: unknown keys, parameter references and non-booleans are errors. Explicit policies require both `search_strategy` and `experiment_dir`.
+Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ run to omit named groups from `round_data.jsonl.gz`. Every group defaults to `false`; new runs omit bar-level payloads unless explicitly enabled. An explicit all-true policy restores full recording. Values must be literal booleans: unknown keys, parameter references and non-booleans are errors. Explicit policies require both `search_strategy` and `experiment_dir`.
 
 | Key | When `false` |
 |---|---|
 | `predictions` | Omit saved `preds`, including within retained folds. |
-| `alignment` | Omit row-sized `missing_datetimes` and fold `test_datetimes`; retain first/last dated bounds and exact source bindings. |
+| `alignment` | Omit row-sized `missing_datetimes`, fold `test_datetimes` and contract `signal_rows`; retain dated bounds, source checksums and the full contract digest. |
 | `trade_ledger` | Omit the complete event ledger; retain the trade contract, its digest and learning binding. |
 | `fold_details` | Omit the entire nested `folds` payload, including fold-local results, bounds and provenance; retain the outer occurrence identity and parameters. |
 
@@ -312,19 +312,21 @@ For example, add this block to an existing YAML `uel` configuration:
 
 ```yaml
 recording:
-  predictions: false
-  trade_ledger: false
+  predictions: true
+  alignment: true
+  trade_ledger: true
+  fold_details: true
 ```
 
-The Python equivalent is `uel.run(..., recording={"predictions": False, "trade_ledger": False})`. On a new run, `recording=None` uses the configured YAML policy, or all-true defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `true`: native `{"trade_ledger": False}` overrides YAML `{"predictions": False}` with predictions enabled.
+The Python equivalent is `uel.run(..., recording=dict.fromkeys(("predictions", "alignment", "trade_ledger", "fold_details"), True))`. On a new run, `recording=None` uses the configured YAML policy, or all-false defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `false`: native `{"trade_ledger": True}` overrides YAML `{"predictions": True}` with predictions disabled.
 
-For a compiled SFD, its compiled YAML is authoritative even without a separate `yaml_reference`. A conflicting recording declaration in an explicitly supplied `yaml_reference` rejects before artifacts. New explicitly configured recording runs retain the original compiled YAML through the existing `yaml_reference` metadata. The frozen effective policy is stored separately as `metadata.recording`. Changing YAML `uel.recording` changes the existing canonical manifest ID; a native override preserves the source YAML and its ID. Neither operation changes the manifest-ID algorithm. Omitted no-policy execution retains its existing behavior.
+For a compiled SFD, its compiled YAML is authoritative even without a separate `yaml_reference`. A conflicting recording declaration in an explicitly supplied `yaml_reference` rejects before artifacts. New persisted recording runs retain the original compiled YAML through the existing `yaml_reference` metadata. The frozen effective policy is stored separately as `metadata.recording`. Changing YAML `uel.recording` changes the existing canonical manifest ID; a native override preserves the source YAML and its ID. Neither operation changes the manifest-ID algorithm. New persisted runs save the effective policy even when no policy was declared.
 
 This policy filters copied serialized records only. Models, predictions used for scoring, scalar CSV/Parquet results, feedback and live `post_processing` retain their full evidence. When folds remain, the other controls apply within them. Walk-forward `trial_returns.parquet` and DSR computation are unchanged. Existing `record_execution` and `record_model_outputs` remain independent and off by default: omitted predictions can coexist with recorded execution, market returns or probabilities.
 
-Disabling `fold_details` or `alignment` makes PBO unavailable because the saved log lacks its required fold/timestamp evidence. These omissions are allowed unless PBO is selected through `acceptance.max_pbo`; that conflict raises before run artifacts are created. Without a PBO threshold, the report records `pbo: null` with an explanation while retaining DSR. Directly requesting `max_pbo` from `acceptance_report` on an incompatible saved log also raises before either report file is written. Full/default recording retains existing acceptance behavior.
+Disabling `fold_details` or `alignment` makes PBO unavailable because the saved log lacks its required fold/timestamp evidence. These omissions are allowed unless PBO is selected through `acceptance.max_pbo`; that conflict raises before run artifacts are created. Without a PBO threshold, the report records `pbo: null` with an explanation while retaining DSR. Directly requesting `max_pbo` from `acceptance_report` on an incompatible saved log also raises before either report file is written. PBO requires explicitly enabling both `alignment` and `fold_details`; full recording retains existing acceptance behavior.
 
-Any policy containing `false` makes the run non-resumable, even if that group is absent from its particular records. Python and CLI reject lighter saved/requested policies or changed policies before modifying artifacts. On resume, an omitted policy uses saved metadata; legacy metadata without a policy means all-true defaults. Full/default resume keeps its existing behavior.
+Default runs and any policy containing `false` are non-resumable, even if that group is absent from its particular records. Python and CLI reject lighter saved/requested policies or changed policies before modifying artifacts. On resume, an omitted policy uses saved metadata; legacy metadata without a policy means all-true recording. Existing full logs retain their resume behavior; enable all four groups when creating a new resumable run.
 
 Supported single-split Trainer/Sensor reconstruction and built-in Cohort selection retain their identities, parameters, scalar results and required exact trade/learning bindings. Omitted row-level evidence cannot be inspected from the log; custom readers must require the fields they use. Existing walk-forward Trainer limitations remain. Reducing recording changes stored evidence, not live retention or model/preparation memory.
 
@@ -338,7 +340,7 @@ The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests
 | Event | 245,352 | 36,981 | Ledger 89.13%; retained trade contract 10.23% |
 | Walk-forward | 31,677 | 10,311 | Fold results 34.99%; alignment 20.34%; execution 19.41% |
 
-Omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. Exact trade provenance remains despite its cost. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
+In the recorded full-payload baseline, omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. With alignment recording disabled, per-signal identities are also omitted; Trainer compares reconstructed contract fields and the original full contract digest. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
 
 Reproduce the event probe from the repository root using the existing recorded-execution helpers:
 
@@ -359,7 +361,7 @@ with tempfile.TemporaryDirectory() as temporary:
     }}
     bars = pl.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
     loop = probe._loop(config, bars, directory)
-    probe._run(loop, record_execution=True, record_model_outputs=True)
+    probe._run(loop, record_execution=True, record_model_outputs=True, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     full = [(json.dumps(record) + '\n').encode('utf-8') for record in probe._records(directory)]
     lean = [(json.dumps({k: v for k, v in json.loads(row).items() if k != 'trade_ledger'}) + '\n').encode('utf-8') for row in full]
     print('logical full/without ledger:', sum(map(len, full)), sum(map(len, lean)))
@@ -396,6 +398,7 @@ uel = limen.UniversalExperimentLoop(
 uel.run(
     experiment_name='advanced-budget',
     n_permutations=6,
+    recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
 )
 ```
 
@@ -403,7 +406,7 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 ## Resume in practice
 
-Python/MSQ runs can resume when an `experiment_dir` and a checkpoint are available:
+Python/MSQ runs can resume when all four recording groups were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
 
 ```python
 uel.run(

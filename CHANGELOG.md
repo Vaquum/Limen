@@ -1685,3 +1685,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.31.1] - 2026-10-18
 
 - Share retained prediction and probability arrays within new compact run artifacts while preserving complete logical round evidence, legacy recordings and existing resume validation.
+
+## [5.31.2] - 2026-10-18
+
+- Omit predictions, row timestamp arrays, contract signal rows, trade ledgers and fold details from new run logs by default; retain explicit recording opt-ins and legacy full-log resume.
