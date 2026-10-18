@@ -299,7 +299,7 @@ def test_temporal_factorization_preserves_records_and_signal_reuse(recorded_temp
             loop.run('recorded_temporal_parameters', n_permutations=16, prep_each_round=True,
                      progress_bar=False, post_processing=True, record_execution=True,
                      factorize=factorize,
-             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
+                     recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
         assert counts == {'prep': expected, 'model': expected}
         assert loop.manifest.strategy.conditions == original['sfd']['manifest']['strategy']['conditions']
         with (directory / 'results.csv').open(newline='') as stream:

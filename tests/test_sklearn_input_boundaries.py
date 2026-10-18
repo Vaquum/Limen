@@ -380,7 +380,7 @@ def test_recorded_trainer_sensor_replays_sklearn_boundaries(
         warnings.simplefilter('always')
         loop.run('sklearn_input_boundary', n_permutations=1, prep_each_round=True,
                  progress_bar=False, record_execution=True, record_model_outputs=True,
-             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
+                 recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
         record = json.loads(_storage.text(_storage.round_path(directory)))
         sensor = Trainer(directory, data=recorded_boundary_bars).train([record['round_id']])[0]
         replay = sensor.predict_all(recorded_boundary_bars)

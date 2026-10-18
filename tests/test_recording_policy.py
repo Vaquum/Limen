@@ -4,6 +4,7 @@ import itertools
 import json
 import shutil
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 import polars as pl
@@ -66,7 +67,6 @@ def _config(kind='serial'):
                 'check_after_pct': 0.0,
             },
         }]
-    config['uel'].pop('recording', None)
     manifest = config['sfd']['manifest']
     manifest['data_source'] = {
         'method': 'limen.data.HistoricalData.get_any_file',
@@ -149,6 +149,35 @@ def campaigns(tmp_path_factory):
             pairs.append({'loop': loop, 'path': path, 'records': _records(path)})
         result[kind] = {'config': config, 'bars': bars, 'full': pairs[0], 'lean': pairs[1]}
     return result
+
+
+@pytest.mark.parametrize('kind', ('serial', 'factorized', 'walk_forward', 'native'))
+def test_bar_payloads_default_off(kind, tmp_path):
+    config = _config(kind)
+    if kind == 'native':
+        compiled = CompiledSFD(config)
+        sfd = SimpleNamespace(__name__=__name__, params=compiled.params, manifest=compiled.manifest)
+        loop = UniversalExperimentLoop(sfd=sfd, data=_bars(), experiment_dir=tmp_path,
+                                       search_strategy=build_search_strategy(config))
+    else:
+        loop = _loop(config, tmp_path, bars=_bars(kind))
+    loop.run('default_recording', n_permutations=1, prep_each_round=True, progress_bar=False)
+    records = _records(tmp_path)
+    assert len(records) == loop.experiment_log.height == 1
+    excluded = {'preds', 'probs', 'execution', 'market', 'trade_ledger', 'folds',
+                'missing_datetimes', 'test_datetimes', 'signal_rows'}
+
+    def check(value):
+        if isinstance(value, dict):
+            assert not excluded.intersection(value)
+            for child in value.values():
+                check(child)
+        elif isinstance(value, list):
+            for child in value:
+                check(child)
+
+    check(records)
+    assert json.loads((tmp_path / 'metadata.json').read_text())['recording'] == LEAN
 
 
 @pytest.mark.parametrize('case', ('yaml', 'native', 'precedence', 'admission', 'pbo_admission', 'compiled_sources'))

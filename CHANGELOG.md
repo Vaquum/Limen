@@ -1688,4 +1688,4 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.31.2] - 2026-10-18
 
-- Omit predictions, row timestamp arrays, trade ledgers and fold details from new run logs by default; retain explicit recording opt-ins and legacy full-log resume.
+- Omit predictions, row timestamp arrays, contract signal rows, trade ledgers and fold details from new run logs by default; retain explicit recording opt-ins and legacy full-log resume.
