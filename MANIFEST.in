@@ -17,6 +17,7 @@ include SUPPORT.md
 include THIRD_PARTY.md
 include .markdownlint.json
 recursive-include docs *.md *.yaml
+recursive-include docs/benchmarks *.csv *.json *.txt
 include docs/examples/xgboost_sweep.py
 include docs-site/CLOUDFLARE.md
 include docs-site/docusaurus.config.js
