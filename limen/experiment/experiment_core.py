@@ -704,7 +704,7 @@ class UniversalExperimentLoop:
                 csv_header = self._walk_forward.complete_failed_header(csv_path, csv_header, list(round_results))
 
             if round_succeeded and csv_header and set(round_results) - set(csv_header) and self.experiment_log is not None and self.experiment_log['strict_mode_error'].null_count() == 0:
-                previous = pl.read_csv(csv_path)
+                previous = pl.read_csv(csv_path, infer_schema=False)
                 csv_header = list(dict.fromkeys([*round_results, *csv_header]))
                 previous.select(pl.col(key) if key in previous.columns else pl.lit(None).alias(key) for key in csv_header).write_csv(csv_path)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
@@ -922,7 +922,8 @@ class UniversalExperimentLoop:
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
-        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean})
+        string_params = {key: pl.String for key, values in domain.params.items() if self._factorize and all(isinstance(value, str) for value in values)}
+        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean, **string_params})
         if '_convergence_warning' not in experiment_log.columns or experiment_log['_convergence_warning'].null_count() == experiment_log.height:
             experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
@@ -958,7 +959,7 @@ class UniversalExperimentLoop:
 
         if round_data_path.exists():
             self._truncate_round_data(round_data_path, start_round)
-        experiment_log.write_csv(csv_path)
+        (pl.read_csv(csv_path, n_rows=start_round, infer_schema=False) if self._factorize else experiment_log).write_csv(csv_path)
 
         return start_round
 

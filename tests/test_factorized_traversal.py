@@ -125,6 +125,7 @@ def test_resume_rejects_before_mutation(tmp_path, monkeypatch, change):
 @pytest.mark.parametrize('failed', [(0,), (3,), (7,), (0, 1, 2), tuple(range(8))])
 def test_terminal_failures_and_cold_resume(tmp_path, monkeypatch, failed):
     cfg = _shuffled()
+    cfg['sfd']['params']['tag'] = ['001']
     ordered = list(GridStrategy(ParamDomain(cfg['sfd']['params']), shuffle=True, seed=42))
     rejected = [{k: v for k, v in ordered[index].items() if not k.startswith('_')} for index in failed]
     original = FactorizedRounds.evaluate
@@ -144,6 +145,9 @@ def test_terminal_failures_and_cold_resume(tmp_path, monkeypatch, failed):
     _run(resumed, enabled=True, count=8, resume=True)
     for path in (tmp_path / 'full', tmp_path / 'split'):
         rows = pl.read_csv(path / 'results.csv', infer_schema_length=None)
+        import csv
+        with (path / 'results.csv').open(newline='') as stream:
+            assert all(row['tag'] == '001' for row in csv.DictReader(stream))
         assert rows['_round_index'].to_list() == list(range(8))
         assert rows['strict_mode_error'].is_not_null().sum() == len(failed)
         assert rows['strict_mode_error'].drop_nulls().to_list() == ['StrictModeError'] * len(failed)
