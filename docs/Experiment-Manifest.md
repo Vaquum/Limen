@@ -171,6 +171,7 @@ empty-prefix checkpoint before dispatch and a final checkpoint on graceful stop
 or completion. A subsequent signal may force termination. SIGKILL or power loss
 inside an artifact write has no additional recovery guarantee.
 
+With full [recording evidence](Universal-Experiment-Loop.md#recording-policy) enabled on the initial run,
 `limen run --resume RESULTS_DIR` reuses saved workers and thread policy; old
 metadata without these fields resumes serially. An explicit changed policy is
 rejected before truncation or rewriting. Committed CSV occurrences must join to
