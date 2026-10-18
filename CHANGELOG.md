@@ -1681,3 +1681,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add seeded finite shuffled grid traversal to deterministic factorized runs, with versioned resume and bounded LRU reuse.
 - Preserve terminal strict failures across mixed result batches and cold-cache recovery.
+
+## [5.31.1] - 2026-10-18
+
+- Share retained prediction and probability arrays within new compact run artifacts while preserving complete logical round evidence, legacy recordings and existing resume validation.

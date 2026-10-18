@@ -990,7 +990,7 @@ class UniversalExperimentLoop:
             return
 
         artifact_files = [
-            'results.csv', 'round_data.jsonl', 'round_data.jsonl.gz', 'round_market', 'checkpoint.json',
+            'results.csv', 'round_data.jsonl', 'round_data.jsonl.gz', 'round_market', 'round_signals', 'checkpoint.json',
             'audit.jsonl', 'interventions.json', 'metadata.json',
         ]
         existing = [
