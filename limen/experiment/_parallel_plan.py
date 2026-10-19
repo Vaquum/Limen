@@ -5,7 +5,7 @@ import inspect
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from importlib import import_module
-from typing import cast
+from typing import Protocol, cast
 
 import polars as pl
 
@@ -17,6 +17,10 @@ import limen.experiment.manifest_core as _manifest
 from limen.scalers.registry import SCALER_REGISTRY
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(_manifest)['_resolve_params'])
+
+
+class _TargetClass(Protocol):
+    transform: Callable[..., object]
 
 
 @dataclass(frozen=True)
@@ -212,7 +216,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
     target = manifest.target_class_config
     if target is not None:
         result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2)
-        result['target']['transform_params'] = _configured('target.transform', getattr(target.target_class, 'transform'), target.transform_params, params, skip=2)
+        result['target']['transform_params'] = _configured('target.transform', cast(_TargetClass, target.target_class).transform, target.transform_params, params, skip=2)
         result.update({'target.fit': result['target'], 'target.transform': result['target']})
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
@@ -231,7 +235,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if manifest.ablation_config is not None:
             seed = params.get(manifest.ablation_config.seed_key)
             result['ablation'] = {'random_state': 0 if seed is None else seed}
-        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], getattr(import_module('limen.experiment._column_shims'), '_resolved'))
+        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], vars(import_module('limen.experiment._column_shims'))['_resolved'])
         result.update(pca={'svd_solver': 'full'}, feature_shims={'specs': resolve_shims(manifest.feature_shims, params), 'round_params': dict(params)})
         calibration = manifest.prediction_calibration_config
         if calibration is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):

@@ -267,10 +267,11 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
 
 
 def _assert_dispatch_refusal(plan, seeded, params):
+    from importlib import import_module
     from tests.test_parallel_rounds import recorded_source
     from limen.experiment import _parallel_worker as worker
     from limen.experiment.manifest_core import MLManifest
-    from limen.sfd.reference_architecture import tabpfn_binary as tabpfn_module
+    tabpfn_module = import_module('limen.sfd.reference_architecture.tabpfn_binary')
     def no_preparation(*_args, **_kwargs):
         raise AssertionError('unsafe candidate reached preparation or optional backend')
     with pytest.MonkeyPatch.context() as patch:
