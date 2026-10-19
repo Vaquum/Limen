@@ -26,15 +26,18 @@ def verify(interface, name, result, output, inputs):
         assert set(result['runs']) == expected
         identities = []
         bars = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet', n_rows=1440)
-        for rows in result['runs'].values():
+        for strategy, rows in result['runs'].items():
             assert len(rows) == 4
             if interface == 'python':
                 assert {(row['window'], row['alpha']) for row in rows} == {(w, a) for w in (4, 12) for a in (.1, 1.)}
                 for row in rows:
                     assert row['validation_net_return'] == pytest.approx(ridge_score(bars, row['window'], row['alpha']), rel=1e-10, abs=1e-12)
             else:
-                assert {row['C'] for row in rows} == {.1, .5, 1., 2.}
-                identities.append({row['C']: row['id'] for row in rows})
+                if strategy == 'factorized':
+                    assert {(row['C'], row['fee']) for row in rows} == {(c, fee) for c in (.5, 1.) for fee in (7., 9.)}
+                else:
+                    assert {row['C'] for row in rows} == {.1, .5, 1., 2.}
+                    identities.append({row['C']: row['id'] for row in rows})
         if identities:
             assert all(identity == identities[0] for identity in identities)
     elif name == 'recovery':

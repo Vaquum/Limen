@@ -44,14 +44,14 @@ def execute(config, output, *, bars=None, callback=None, resume=False, project_r
 def search(data_dir, output):
     results = {}
     for kind in ('grid', 'random', 'sobol', 'shuffled', 'factorized'):
-        config = configuration('search', data_dir)
+        config = configuration('factorized' if kind == 'factorized' else 'search', data_dir)
         config['uel']['search_strategy'] = {'type': kind if kind in ('random', 'sobol') else 'grid'}
         if kind in ('random', 'sobol'):
             config['uel']['search_strategy']['seed'] = 42
         if kind in ('shuffled', 'factorized'):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
-        results[kind] = loop.experiment_log.select('id', 'C', 'accuracy').to_dicts()
+        results[kind] = loop.experiment_log.select('id', 'C', 'accuracy', *(['fee'] if kind == 'factorized' else [])).to_dicts()
     return {'runs': results, 'seed': 42}
 # endregion search
 
