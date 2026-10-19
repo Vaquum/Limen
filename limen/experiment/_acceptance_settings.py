@@ -59,7 +59,7 @@ def saved_pbo_blocks(metadata: Mapping[str, object]) -> int:
     if isinstance(reference, Mapping):
         settings = _yaml_acceptance(cast(Mapping[str, object], reference))
         declared = pbo_blocks(settings)
-        if 'pbo_blocks' in settings and count != declared:
+        if count != declared:
             raise ValueError('Saved pbo_blocks conflicts with saved YAML acceptance')
     return count
 

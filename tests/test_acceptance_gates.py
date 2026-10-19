@@ -432,7 +432,6 @@ def pbo_runs(acceptance_runs, tmp_path_factory):
 
 def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
     from click.testing import CliRunner
-    import yaml
     from limen.cli.main import cli
     from limen.experiment import UniversalExperimentLoop
     from limen.experiment.acceptance_report import read_acceptance
@@ -444,7 +443,7 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         config['sfd']['manifest']['acceptance'] = {'pbo_blocks': count}
         assert validate(config).valid
         yaml_path = tmp_path / 'valid.yaml'
-        yaml_path.write_text(yaml.safe_dump(json.loads(json.dumps(config))))
+        yaml_path.write_text(json.dumps(config))
         assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code == 0
         assert Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=count).acceptance == {'pbo_blocks': count}
         assert type(read_acceptance({'pbo_blocks': count})['pbo_blocks']) is int
@@ -458,7 +457,7 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         assert not validation.valid
         assert any(error.path == 'sfd.manifest.acceptance' for error in validation.errors)
         yaml_path = tmp_path / 'invalid.yaml'
-        yaml_path.write_text(yaml.safe_dump(json.loads(json.dumps(config))))
+        yaml_path.write_text(json.dumps(config))
         assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code != 0
         with pytest.raises(ValueError, match='pbo_blocks'):
             Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=value)
@@ -588,6 +587,13 @@ def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
     corrupted = copy.deepcopy(metadata)
     corrupted['yaml_reference']['sfd']['manifest']['acceptance']['pbo_blocks'] = 2
     (path / 'metadata.json').write_text(json.dumps(corrupted))
+    snapshot = _artifact_snapshot(path)
+    with pytest.raises(ValueError, match='Saved pbo_blocks conflicts'):
+        acceptance_report(path)
+    assert _artifact_snapshot(path) == snapshot
+    omitted_yaml_count = copy.deepcopy(metadata)
+    omitted_yaml_count['yaml_reference']['sfd']['manifest']['acceptance'].pop('pbo_blocks')
+    (path / 'metadata.json').write_text(json.dumps(omitted_yaml_count))
     snapshot = _artifact_snapshot(path)
     with pytest.raises(ValueError, match='Saved pbo_blocks conflicts'):
         acceptance_report(path)
