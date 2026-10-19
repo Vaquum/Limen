@@ -15,7 +15,7 @@ from functools import partial
 import pytest
 import polars as pl
 
-from limen._parallel_contract import ParallelRoundContract, declare_parallel
+from limen._parallel_contract import ParallelRoundContract, declare_parallel, seeded_stage
 from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, source_digest
 from limen.experiment._parallel_plan import ScalerFactory, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
@@ -56,6 +56,17 @@ class CallerRolling:
 
     def transform(self, data):
         return _caller_feature(data, self.window)
+
+
+class CallerTarget(RandomBinaryTarget):
+    '''Importable caller target using the native seeded noise benchmark.'''
+
+
+def _target_probe(plan, params):
+    from tests.test_parallel_rounds import recorded_source
+    validate_resources(plan, params)
+    data = copy.deepcopy(plan.manifest).prepare_data(recorded_source(), params)
+    return {key: data[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
 
 
 def _carried_probe(plan, params):
@@ -112,6 +123,12 @@ def test_frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
+        from tests.test_parallel_rounds import parallel_config
+        declare_parallel(CallerTarget, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
+        target = build_manifest(parallel_config()).with_target_label('noise', CallerTarget, fit_params={'random_state': '{target_seed}'})
+        frozen = freeze_manifest(target, None)
+        params = _parameters() | {'target_seed': 42}
+        assert pool.submit(_target_probe, frozen, params).result(timeout=30) == _target_probe(frozen, params)
     original.split_config = (2, 1, 1)
     assert plan.manifest.split_config != original.split_config
     with pytest.raises(ValueError, match='unchanged compiled YAML'):
@@ -217,13 +234,19 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     with pytest.raises(ValueError, match='target: fixed integer seed'):
         validate_resources(freeze_manifest(omitted, None), params)
     _assert_dispatch_refusal(plan, seeded, params)
-    from tests.test_parallel_rounds import parallel_config, records, run_loop
+    from tests.test_parallel_rounds import assert_runs_equal, parallel_config, records, run_loop
     configuration = parallel_config()
     configuration['uel']['n_permutations'] = 2
     configuration['sfd']['params']['tuple_tag'] = [(1, 2), (3, 4)]
+    configuration['sfd']['params']['target_seed'] = [42]
+    configuration['sfd']['manifest']['target'] = {'name': 'noise', 'class': 'limen.targets.RandomBinaryTarget',
+                                               'fit_params': {'random_state': '{target_seed}'}}
     configuration['uel'].pop('pruning_strategies')
     directory = tmp_path / 'recorded'
     loop = run_loop(configuration, directory, workers=2)
+    serial = tmp_path / 'serial-target'
+    run_loop(configuration, serial, workers=1)
+    assert_runs_equal(directory, serial)
     saved = records(directory)
     assert len(saved) == 2 and all(type(row['round_params']['tuple_tag']) is tuple for row in saved)
     contract = next(stage.contract for stage in vars(loop)['_parallel_plan'].stages if stage.path == 'architecture')
