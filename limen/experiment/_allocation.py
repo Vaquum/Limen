@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import cast
+from typing import Protocol, cast
 
 import polars as pl
 
@@ -88,3 +88,16 @@ def attach(manifest: object, raw: pl.DataFrame, params: Mapping[str, object], da
 
 def run(manifest: object, data: dict[str, object], params: Mapping[str, object]) -> dict[str, object]:
     return cast(dict[str, object], _helper('run')(manifest, data, params))
+
+
+class _Allocating(Protocol):
+    def with_allocation(self, method: Callable[..., dict[str, object]], params: Mapping[str, object] | None = None) -> object: ...
+
+def apply_yaml(manifest: _Allocating, declaration: Mapping[str, object], resolve: Callable[[str], object], resolve_params: Callable[[dict[str, object]], dict[str, object]]) -> None:
+    config = declaration.get('allocation')
+    if config is not None:
+        if not isinstance(config, Mapping):
+            raise ValueError('Allocation declaration requires a mapping')
+        values = cast(Mapping[str, object], config)
+        method = cast(Callable[..., dict[str, object]], resolve(cast(str, values['method'])))
+        _ = manifest.with_allocation(method, resolve_params(dict(cast(Mapping[str, object], values.get('params') or {}))))

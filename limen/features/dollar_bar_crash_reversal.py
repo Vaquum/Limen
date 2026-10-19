@@ -88,12 +88,9 @@ def dollar_bar_crash_reversal(
     hold_minutes: int,
     *, bar_interval_seconds: int | None = None,
 ) -> pl.DataFrame | pl.LazyFrame:
-    '''Build the 15M-dollar-bar crash-reversal long/flat position signal.
+    '''Build prior-only momentum/robust-flow crash-reversal positions.
 
-    Momentum compares each close with the latest open at or before four hours
-    earlier. Maker flow is standardized against prior-only 30-day rolling
-    medians and median absolute deviations. A trigger remains active for the
-    requested wall-clock hold window.
+    Hold triggers for the wall-clock window; a verified interval removes the next-row day-mask dependency.
     '''
 
     validated_data = _validate_data(data)

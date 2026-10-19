@@ -5,11 +5,11 @@ from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
+from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
-from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
+from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
 from collections.abc import Mapping
-from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
+from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
 import copy
 import inspect
 import importlib
@@ -775,20 +775,9 @@ class Manifest:
         return _resolve_backtest_config(self.backtest_config, round_params)
 
     def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
-        policy = self.resolve_trade_policy(round_params)
-        _validate_cached_context(self.backtest_config, policy, data, round_params)
-        if _configured_barriers(self.backtest_config) and policy is None:
-            data['_backtest_configured'] = True
-        else:
-            data.pop('_backtest_configured', None)
-        data.pop('_trade_ledger', None)
-        _preflight_backtest(data)
-        resolved = self.resolve_backtest_config(round_params)
-        for key in BACKTEST_KEYS:
-            if key in resolved:
-                data[f'backtest_{key}'] = resolved[key]
-            else:
-                data.pop(f'backtest_{key}', None)
+        from limen.experiment._manifest_preparation import apply_backtest_cost
+        apply_backtest_cost(self, data, round_params)
+
 
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
