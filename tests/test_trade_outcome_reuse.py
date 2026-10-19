@@ -70,12 +70,71 @@ def test_candidate_does_not_rebuild_or_materialize_suffix_ledgers():
     policy = replace(policy, take_profit_bps=10, stop_loss_bps=10)
     context = TradeTargetContext(policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(policy, inputs)))
     frame = inputs.signals.select('datetime')
-    module = import_module('limen.targets.trade_outcome')
-    with patch.object(module, 'trade_execution', side_effect=AssertionError('unnecessary full ledger')):
+    module = import_module('limen.backtest.trade_execution')
+    with patch.object(module, '_metrics', side_effect=AssertionError('unnecessary full ledger')):
         target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
         target.transform(frame, trade_context=context)
     assert target.outcomes.rows['long_available'].sum() > 0
     assert target.outcomes.rows['short_available'].sum() > 0
+
+
+@pytest.mark.parametrize('mechanism', ['discrete', 'continuous'])
+@pytest.mark.parametrize('case', ['closed', 'open_tail', 'never_filled', 'barriers'])
+def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
+    from tests.test_funding_adapter import _funded
+    from tests.test_event_execution_reuse import ADAPTER_CALLS, recorded_adapter
+
+    inputs, policy = recorded_inputs()
+    inputs, policy = _funded(inputs, replace(policy, max_holding_seconds=1800), mechanism=mechanism)
+    policy = replace(policy, prediction_mode='target_exposure', notional_rate=1.0, funding=replace(policy.funding, adapter_ref=f'{recorded_adapter.__module__}.recorded_adapter', adapter_version='recorded-wrapper-v1'))
+    if case == 'open_tail':
+        policy = replace(policy, max_holding_seconds=1e9)
+    elif case == 'never_filled':
+        policy = replace(policy, product=replace(policy.product, min_notional=1e9))
+    elif case == 'barriers':
+        policy = replace(policy, take_profit_bps_column='tp', stop_loss_bps_column='sl')
+        inputs = replace(inputs, signals=inputs.signals.with_columns(pl.lit(10.0).alias('tp'), pl.lit(10.0).alias('sl'), pl.lit(True).alias('__barrier_ready__')))
+    frame = inputs.signals.select('datetime')
+    context = TradeTargetContext(policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(policy, inputs)))
+    # Compare each original clipped candidate's complete ledger and adapter calls.
+    from limen.targets.trade_outcome import _Timeline, _candidate
+    from limen.backtest._event_plan import event_plan
+    module = import_module('limen.targets.trade_outcome')
+    original_execute = module.execute_event_plan
+    expected = []
+    calls = []
+
+    def full_ledger(account, plan, signals, start, end, adapter, **kwargs):
+        observations = inputs.observations.filter(pl.col('row_id').is_in(plan.observation_order))
+        funding = inputs.funding_events.filter(pl.col('event_id').is_in(plan.funding))
+        selected = inputs.signals.filter(pl.col('row_id').is_in(plan.signal_order)).with_columns(pl.Series('target', [signals[str(identity)]['target'] if isinstance(signals[str(identity)], dict) else signals[str(identity)] for identity in inputs.signals['row_id'] if str(identity) in plan.signal_order]))
+        sources = (*inputs.sources, source_binding(observations, 'oracle:prices', start, end, 1, 'recorded candidate'), source_binding(funding, 'oracle:funding', start, end, 1, 'recorded candidate'))
+        candidate = replace(inputs, partition_start_ns=start, partition_end_ns=end, observations=observations, funding_events=funding, signals=selected, sources=sources)
+        ADAPTER_CALLS.clear()
+        ledger = trade_execution(candidate, policy)
+        expected_calls = ADAPTER_CALLS.copy()
+        calls.extend(expected_calls)
+        ADAPTER_CALLS.clear()
+        original_execute(account, plan, signals, start, end, adapter, **kwargs)
+        assert ADAPTER_CALLS == expected_calls
+        assert [{key: value for key, value in row.items() if key != 'episode_id'} for row in account.episodes] == [{key: value for key, value in row.items() if key != 'episode_id'} for row in ledger.episodes.to_dicts()]
+
+    plan = event_plan(inputs, policy)
+    timeline = _Timeline(sorted({event.time_ns for event in plan.events if event.kind == 'observation'}), inputs.signals['available_at_ns'].to_list(), inputs.observations['start_ns'].to_list(), inputs.observations['available_at_ns'].to_list(), plan)
+    with patch.object(module, 'execute_event_plan', side_effect=full_ledger):
+        for index, identity in enumerate(inputs.signals['row_id']):
+            row = {'row_id': identity}
+            for side, sign in [('long', 1.0), ('short', -1.0)]:
+                row.update({f'{side}_{key}': value for key, value in _candidate(inputs, policy, index, sign, timeline).items()})
+            expected.append(row)
+    engine = import_module('limen.backtest.trade_execution')
+    ADAPTER_CALLS.clear()
+    with patch.object(module, 'event_plan', wraps=module.event_plan) as compile_plan, patch.object(engine, '_metrics', side_effect=AssertionError('unnecessary full ledger')):
+        target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
+        target.transform(frame, trade_context=context)
+    assert compile_plan.call_count == 1 + frame.height
+    assert ADAPTER_CALLS == calls
+    assert_frame_equal(target.outcomes.rows, pl.DataFrame(expected, schema=target.outcomes.rows.schema), check_exact=True)
 
 
 def test_label_fast_path_still_validates_late_source_rows():
