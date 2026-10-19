@@ -54,7 +54,7 @@ _CURRENT: ContextVar[_Operation | None] = ContextVar('holdout_operation', defaul
 
 
 def binding_of(manifest: object) -> ProjectBinding | None:
-    return cast(ProjectBinding | None, getattr(manifest, '_holdout_binding', None))
+    return cast(ProjectBinding | None, vars(manifest).get('_holdout_binding'))
 
 
 def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding | None:
@@ -220,8 +220,9 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
 
 def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, test_mode: bool,
                     project_root: str | Path | None, experiment_dir: str | Path | None) -> tuple[ResearchManifest | None, pl.DataFrame, Callable[..., dict[str, object]] | None, Callable[..., dict[str, object]] | None]:
-    factory = getattr(sfd, 'manifest', None)
-    manifest = cast(Callable[[], ResearchManifest], factory)() if callable(factory) else None
+    manifest = cast(Callable[[], ResearchManifest], sfd.manifest)() if hasattr(sfd, 'manifest') else None
+    if hasattr(sfd, 'manifest') and manifest is None:
+        raise ValueError('SFD manifest factory returned no manifest')
     hint = cast(str | Path | None, getattr(sfd, '_holdout_project_root', None))
     binding = bind_manifest(manifest, project_root, experiment_dir, hint) if manifest is not None else bind(project_root, experiment_dir, hint)
     if manifest is None:

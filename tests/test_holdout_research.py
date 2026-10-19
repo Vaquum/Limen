@@ -22,6 +22,7 @@ from limen.inference import Trainer
 from limen.log.log import Log
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
+from limen.yaml.profiler import profile
 from tests.test_trainer import _E2E_LOGREG_YAML
 
 _FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
@@ -177,12 +178,15 @@ def _reservations(root):
         return db.execute("SELECT id FROM reservations WHERE state='active'").fetchall()
 
 
-def test_holdout_revision_admission(tmp_path, monkeypatch):
+def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
     root = _project(tmp_path / 'project')
     config = _configuration(root)
     old = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
     assert not (root / 'manifests/holdout.sqlite3').exists()
     custom = UniversalExperimentLoop(data=old.data, sfd=SimpleNamespace(__name__='custom', params=lambda: {'choice': [1]}, prep=lambda *_: {}, model=lambda *_: {}), project_root=root)
+    for invalid in (None, lambda: None):
+        with pytest.raises((TypeError, ValueError)):
+            UniversalExperimentLoop(data=old.data, sfd=SimpleNamespace(manifest=invalid), project_root=root)
     empty = history.bind(root)
     with pytest.raises(ValueError, match='active reservation'):
         history.start_research(empty, 'experiment')
@@ -239,10 +243,16 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
     assert new.data.height == 96
     # A file-location hint binds even when CLI is launched outside the project.
     monkeypatch.chdir(tmp_path)
-    assert run_profile(root / 'research.yaml') is False
     config['uel']['workers'] = 2
-    (root / 'research.yaml').write_text(json.dumps(config))
-    assert run_experiment(root / 'research.yaml', progress_bar=False) is False
+    with patch('limen.experiment._holdout_source._read_any_file') as loader:
+        assert run_profile(root / 'research.yaml') is False
+        assert 'Holdout research refuses profile' in capsys.readouterr().out
+        with pytest.raises(ValueError, match='Holdout research refuses profile'):
+            profile(CompiledSFD(config, project_root=root))
+        (root / 'research.yaml').write_text(json.dumps(config))
+        assert run_experiment(root / 'research.yaml', progress_bar=False) is False
+        assert 'Holdout research refuses' in capsys.readouterr().out
+        loader.assert_not_called()
     other = _project(tmp_path / 'other')
     with pytest.raises(ValueError, match='root hints disagree'):
         UniversalExperimentLoop(sfd=CompiledSFD(_configuration(other), project_root=other), project_root=root)

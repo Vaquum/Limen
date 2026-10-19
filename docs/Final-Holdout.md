@@ -4,6 +4,10 @@ Reserve a project's final time window before running research. Supported experim
 
 This records local workflow protection. It cannot establish that a person, another project or an external process has never read these observations. Physical source materialization can exceed the admitted research prefix; provenance records both quantities.
 
+## Prerequisites
+
+Use a Git project containing `limen.toml`, supported native OHLC data and serial built-in research. Preserve its local history as described below before cloning or restoring the project.
+
 ## Reservation lifecycle
 
 Run from a Git project containing `limen.toml`:
