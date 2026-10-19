@@ -163,7 +163,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             features.append(meta.slice(local, 1))
     if not labels:
         raise StrictModeError('No causal OOF primary opportunities after observed flat')
-    rows = pl.DataFrame(labels)
+    rows = pl.DataFrame(labels, infer_schema_length=None)
     feature_frame = pl.concat(features)
     return OpportunityLabels(rows, feature_frame, {'folds': bindings, 'candidate_exposure': min(1, context.policy.max_exposure),
         'ordered_completion': contract_digest({'rows': json_value(rows.select('opportunity_id', 'decision_row_id', 'label_available_ns').to_dicts())}),

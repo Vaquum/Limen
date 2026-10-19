@@ -1821,4 +1821,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.45.2] - 2026-10-20
 
+- Infer nullable allocation opportunity fields across all observed labels so late censored opportunities retain their text reason after the first100 rows; preserve strict conversion and causal supervision.
+
+## [5.45.3] - 2026-10-20
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
