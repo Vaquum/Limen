@@ -126,7 +126,12 @@ def holdout(data_dir, output):
     cohort, _, selected, retained = project.run_research(bars, str(output / 'selection'))
     tape = cohort.predict_all(bars[1428:1920])[12:]
     # A decision at the current completed close trades the next open-to-close.
-    positions = np.sign([point.prediction for point in tape[:-1]])
+    predictions = []
+    for point in tape[:-1]:
+        if point.prediction is None:
+            raise ValueError('A final assessment decision is unavailable: ' + str(point.reason))
+        predictions.append(point.prediction)
+    positions = np.sign(np.asarray(predictions, dtype=np.float64))
     next_returns = bars['close'].to_numpy()[1441:1920] / bars['open'].to_numpy()[1441:1920] - 1
     net = positions * next_returns - abs(positions) * .0002
     pl.DataFrame({'decision': [point.datetime for point in tape[:-1]], 'position': positions, 'net_return': net}).write_parquet(output / 'assessment.parquet')
