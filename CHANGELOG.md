@@ -1796,3 +1796,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.44.1] - 2026-10-19
 
 - Fit automatic fractional shims within each chronological direction/sizing prefix and align feature-valid supervision by source row identity.
+
+## [5.44.2] - 2026-10-19
+
+- Make quantile-line end features prefix-causal while preserving retrospective active counts.
