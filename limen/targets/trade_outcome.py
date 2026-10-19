@@ -34,7 +34,7 @@ class _Timeline:
     starts: list[int]
     available: list[int]
     plan: EventPlan
-    candidates: dict[int, EventPlan] = field(default_factory=dict)
+    candidates: dict[int, EventPlan] = field(default_factory=dict[int, EventPlan])
 
 
 def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float, timeline: _Timeline) -> dict[str, object]:
