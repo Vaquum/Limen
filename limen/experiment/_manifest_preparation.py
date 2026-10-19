@@ -86,12 +86,12 @@ def apply_backtest_cost(manifest: SetupManifest, data: dict[str, object], round_
     if configured_barriers(manifest.backtest_config) and policy is None:
         data['_backtest_configured'] = True
     else:
-        data.pop('_backtest_configured', None)
-    data.pop('_trade_ledger', None)
+        _ = data.pop('_backtest_configured', None)
+    _ = data.pop('_trade_ledger', None)
     preflight_backtest(data)
     resolved = manifest.resolve_backtest_config(round_params)
     for key in BACKTEST_KEYS:
         if key in resolved:
             data[f'backtest_{key}'] = resolved[key]
         else:
-            data.pop(f'backtest_{key}', None)
+            _ = data.pop(f'backtest_{key}', None)
