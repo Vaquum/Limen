@@ -60,6 +60,8 @@ def _writer_record(loop, path, record):
             if field in record:
                 alignment[field] = record[field]
         alignment['model_outputs'] = {key: record[key] for key in ('probs', 'optimal_threshold', 'threshold_rule') if key in record}
+    if 'parallel_plan' in record:
+        alignment['parallel_record'] = record
     loop._append_round_data(path, record['round_id'], record['round_params'], record.get('preds', []), alignment, round_index=record['_round_index'])
 
 

@@ -774,7 +774,7 @@ def test_parallel_periodic_checkpoint_preserves_callback_filters(tmp_path):
     columns = [name for name in right.columns if name not in _TRANSIENT]
     assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
                        rel_tol=1e-10, abs_tol=1e-12)
-    _assert_same(records(parallel), records(serial))
+    assert_runs_equal(parallel, serial)
     assert pl.read_csv(parallel / 'results.csv')['C'].to_list() == [0.1, 0.3, 0.5, 1.0, 5.0, 10.0]
     assert json.loads((parallel / 'metadata.json').read_text())['context_parameter_keys'] == sorted(context_params)
     assert 'context_parameter_keys' not in json.loads((serial / 'metadata.json').read_text())

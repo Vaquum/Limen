@@ -85,15 +85,17 @@ def validate_evidence(record: Mapping[str, object], *, event: bool, snapshot: bo
             raise ValueError('Cannot resume parallel run with inconsistent recorded predictions')
 
 
-def _wire(value: object) -> object:
+def _wire(value: object, *, metrics: bool = False, hashing: bool = False) -> object:
     if isinstance(value, date):
         return value.isoformat()
     if isinstance(value, Mapping):
-        return {key: _wire(item) for key, item in cast(Mapping[str, object], value).items()}
+        return {key: _wire(item, metrics=metrics or key == 'results', hashing=hashing) for key, item in cast(Mapping[str, object], value).items()}
     if isinstance(value, (list, tuple)):
-        return [_wire(item) for item in cast(list[object] | tuple[object, ...], value)]
+        return [_wire(item, metrics=metrics, hashing=hashing) for item in cast(list[object] | tuple[object, ...], value)]
     if hasattr(value, 'tolist'):
-        return _wire(cast(_ArrayValues, value).tolist())
+        return _wire(cast(_ArrayValues, value).tolist(), metrics=metrics, hashing=hashing)
+    if metrics and type(value) is float and not math.isfinite(value):
+        return ['undefined_metric', value.hex()] if hashing else value
     return json_value(value)
 
 
@@ -103,7 +105,7 @@ def stamp(record: dict[str, object], context: Mapping[str, object], contract: Pa
                    for fold in cast(list[Mapping[str, object]], record['folds'])) if 'folds' in record else record.get('probs') is not None
     evidence = {'version': VERSION, 'kind': contract.prediction_kind, 'count': count,
                 'has_probabilities': supplied}
-    record['parallel_output'] = evidence | {'digest': digest((context, evidence, record))}
+    record['parallel_output'] = evidence | {'digest': digest((context, evidence, _wire(record, hashing=True)))}
 
 
 def validate_record(record: Mapping[str, object], context: Mapping[str, object], contract: ParallelRoundContract,
@@ -119,8 +121,8 @@ def validate_record(record: Mapping[str, object], context: Mapping[str, object],
         raise ValueError('Cannot resume parallel run with invalid iteration evidence')
     payload = {key: value for key, value in record.items() if key not in ('parallel_output', 'parallel_parameters')}
     evidence = {key: value for key, value in marker.items() if key != 'digest'}
-    if marker.get('digest') != digest((context, evidence, payload)):
-        raise ValueError('Cannot resume parallel run with mismatched output digest')
+    if marker.get('digest') != digest((context, evidence, _wire(payload, hashing=True))):
+        raise ValueError('Cannot resume parallel run with mismatched output evidence digest')
     if 'folds' in record:
         folds = record['folds']
         if not isinstance(folds, list) or not folds:

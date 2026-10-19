@@ -104,7 +104,7 @@ def worker_metadata(host: object, metadata: dict[str, object], *, context_parame
 
 def checkpoint_encoding(host: object) -> int | None:
     attributes = cast(dict[str, object], vars(host))
-    return 1 if cast(int, attributes['_workers']) > 1 and not attributes.get('_parallel_legacy') else None
+    return 1 if cast(int, attributes.get('_workers', 1)) > 1 and not attributes.get('_parallel_legacy') else None
 
 
 def content_hash(host: object, params: dict[str, object]) -> str:

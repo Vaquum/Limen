@@ -230,7 +230,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
             for name in ('calibration', 'threshold'):
                 function = getattr(config, f'{name}_func')
                 if function is not None and params.get(f'use_{name}', True):
-                    result[name] = _defaults(function, getattr(config, f'{name}_params'), skip=2)
+                    result[name] = _defaults(function, getattr(config, f'{name}_params'), skip=3 if name == 'calibration' else 2, path=name)
     return result
 
 
