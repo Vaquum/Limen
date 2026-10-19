@@ -10,8 +10,8 @@ import bisect
 import calendar
 import hashlib
 import json
+import logging
 import time
-import urllib.request
 import zipfile
 import zlib
 from collections import Counter, defaultdict
@@ -20,6 +20,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import polars as pl
+import requests
 
 REVISION = '54b07b4bebc5574a065d3fbf4432634cf9148f50'
 DATES = ('2026-06-01', '2026-06-29', '2026-08-01')
@@ -64,7 +65,9 @@ def source_file(cache, kind, day, part=0):
     expected = PINS[kind, day][0] if part == 0 else BOUNDARIES[day]
     path = cache / f'{kind}-{day}-part{part}.parquet'
     if not path.exists():
-        urllib.request.urlretrieve(uri, path)
+        response = requests.get(uri, timeout=60)
+        response.raise_for_status()
+        path.write_bytes(response.content)
     if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
         raise ValueError(f'Source hash mismatch: {relative}')
     return path, uri
@@ -113,11 +116,27 @@ def estimates(rows):
     return result
 
 
+
+def timing_offsets(observed, mids, start, distances):
+    # Stable sort retains source-row order among equal event timestamps.
+    fills = sorted(observed, key=lambda item: item[1]['event']['time'])
+    event_times = [raw['event']['time'] for _, raw in fills]
+    for row in mids:
+        at = ns(row['time']) // 1_000_000
+        if not start // 1_000_000 < at < start // 1_000_000 + 1_200_000:
+            continue
+        for offset, values in distances.items():
+            index = bisect.bisect_right(event_times, at + offset) - 1
+            if index >= 0:
+                values.append(abs(Decimal(row['mid_px']) - Decimal(fills[index][1]['event']['px'])))
+
+
 def reproduce(cache, output, capture_ns=None):
     cache.mkdir(parents=True, exist_ok=True)
     output.mkdir(parents=True, exist_ok=True)
     assets, admitted, diagnostic, rebates, benchmark, boundary = [], [], [], [], [], {}
     summary, sensitivity, ordinal_checks = {}, {}, {}
+    wider_all, distances = [], {offset: [] for offset in (-500, 0, 250, 1000)}
     existing = output / 'provenance.json'
     captured = capture_ns if capture_ns is not None else (json.loads(existing.read_text())['normalized_at_ns'] if existing.exists() else time.time_ns())
     for day in DATES:
@@ -136,6 +155,7 @@ def reproduce(cache, output, capture_ns=None):
         trade_path, _ = source_file(cache, 'trades', day)
         trade = pl.read_parquet(trade_path).with_row_index('__source_row').filter(pl.col('symbol') == 'BTC')
         observed = [(int(index), json.loads(value)) for index, value in zip(trade['__source_row'], trade['raw_json'], strict=True)]
+        timing_offsets(observed, mids, start, distances)
         if not start <= observed[0][1]['event']['time'] * 1_000_000 < start + 60_000_000_000 or observed[-1][1]['event']['time'] * 1_000_000 <= start + 1_200_000_000_000:
             raise ValueError('First trade shard does not cover selected window')
         following, uri = source_file(cache, 'trades', day, 1)
@@ -184,6 +204,7 @@ def reproduce(cache, output, capture_ns=None):
         summary[day] = {**dict(counts), 'day_side': {name: dict(value) for name, value in day_sides.items()},
                         'quote_notionals': {name: str(value) for name, value in sorted(notionals.items())}}
         sensitivity[day] = estimates(wider)
+        wider_all.extend(wider)
         ordinal_checks[day] = {'market_btc_rows': market.height, 'trade_btc_rows': trade.height}
         if day == DATES[2]:
             for time_ns, row in zip(times, mids, strict=True):
@@ -197,7 +218,10 @@ def reproduce(cache, output, capture_ns=None):
               'captured_at_ns': captured, 'reference_id': REFERENCE, 'reference_convention': 'minute_midpoint_label',
               'windows': [[ns(day+'T00:00:00Z'), ns(day+'T00:20:00Z')] for day in DATES], 'supersedes': None}
     diagnostics = {'qualification': 'post_hoc_not_preregistered', 'method_age_ns': 1_000_000_000,
-                   'wider_age_4s_daily': sensitivity, 'one_minute_all_age': estimates(diagnostic),
+                   'wider_age_4s_daily': sensitivity, 'wider_age_4s_aggregate': estimates(wider_all),
+                   'last_trade_mean_absolute_mid_distance_usdc': {str(offset): {'n': len(values), 'mean': str(sum(values) / len(values))}
+                                                                  for offset, values in distances.items()},
+                   'one_minute_all_age': estimates(diagnostic),
                    'archive_latest_date': '2026-08-11', 'archive_last_modified': '2026-08-12',
                    'reference_time': 'minute_label_snapshot_inferred', 'fee_tier': 'unknown_account_specific'}
     members = {}
@@ -228,7 +252,7 @@ def reproduce(cache, output, capture_ns=None):
     total = sum(path.stat().st_size for path in output.iterdir() if path.is_file())
     if total > 1024*1024 or len(admitted) != 363 or len(diagnostic) != 1262 or len(benchmark) != 24:
         raise ValueError('Pinned fixture population or byte budget differs')
-    print(json.dumps({'selected_legs': len(admitted), 'diagnostic_legs': len(diagnostic), 'benchmark_rows': len(benchmark), 'fixture_bytes': total, 'goldens': provenance['goldens']}, indent=2))
+    logging.getLogger(__name__).info('%s', json.dumps({'selected_legs': len(admitted), 'diagnostic_legs': len(diagnostic), 'benchmark_rows': len(benchmark), 'fixture_bytes': total, 'goldens': provenance['goldens']}, indent=2))
 
 
 if __name__ == '__main__':
@@ -237,4 +261,5 @@ if __name__ == '__main__':
     parser.add_argument('--capture-ns', type=int, help='Preserve the recorded original normalization instant for byte reproduction')
     parser.add_argument('--output', type=Path, default=Path(__file__).parent)
     arguments = parser.parse_args()
+    logging.basicConfig(level=logging.INFO)
     reproduce(arguments.raw_cache, arguments.output, arguments.capture_ns)

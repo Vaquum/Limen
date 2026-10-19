@@ -55,6 +55,7 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
     assert report['method'] == 'minute_midpoint_1s_v1'
     assert report['clocks']['available_at_ns'] == CUTOFF
     assert report['clocks']['historical_delivery'] == 'unknown'
+    assert report['clocks']['created_at_ns'] >= report['clocks']['available_at_ns']
     assert report['support']['selected_legs'] == report['support']['admitted_legs'] == 363
     assert report['support']['disposition'] == 'retrospective_low_effective_support'
     assert report['support']['parent_completeness'] == 'requested_and_terminal_unknown'
@@ -89,7 +90,7 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
     assert restored.report() == calibration.report()
     report['estimates'].clear()
     assert calibration.report()['estimates']['buy']['parents'] == 142
-    with pytest.raises(AttributeError, match='immutable'):
+    with pytest.raises(AttributeError):
         calibration._payload = {}
 
     fault = json.loads(artifact.read_text())
@@ -114,6 +115,25 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
         if field == 'fee':
             assert changed['estimates']['buy']['fee_bps'] is None
             assert changed['estimates']['slip_bps'] == calibration.report()['estimates']['slip_bps']
+    # Identity and currency faults preserve the recorded economic values.
+    pair = copy.deepcopy([facts['fills'][0], next(fill for fill in facts['fills']
+        if fill['parent_id'] != facts['fills'][0]['parent_id'])])
+    pair[0].update(account='a:b', parent_id='c')
+    pair[1].update(account='a', parent_id='b:c')
+    assert _cost_statistics._estimate(pair, CUTOFF, 'USDC')['parents'] == 2
+    foreign = copy.deepcopy(facts)
+    for fill in foreign['fills']:
+        fill['fee_currency'] = 'foreign-unit-metadata-fault'
+    foreign_report = CostCalibration.from_history(_write_fault(tmp_path / 'fault-fee-unit.json', foreign), cutoff_ns=CUTOFF).report()
+    for side in ('buy', 'sell'):
+        assert foreign_report['estimates'][side]['fee_bps'] is None
+        assert foreign_report['estimates'][side]['known_builder_fee'] == '0'
+        assert foreign_report['estimates'][side]['builder_fee_present_legs'] == 0
+    for receipt in ('received_at_ns', 'reference_received_at_ns', 'fee_received_at_ns'):
+        fault = copy.deepcopy(facts)
+        fault['fills'][0][receipt] = 0
+        with pytest.raises(ValueError, match='cannot precede'):
+            CostCalibration.from_history(_write_fault(tmp_path / f'fault-early-{receipt}.json', fault), cutoff_ns=0)
     late = CostCalibration.from_history(path, cutoff_ns=CUTOFF - 1).report()
     assert late['support']['disposition'] == 'unavailable'
     assert late['estimates']['slip_bps'] is None
@@ -125,7 +145,7 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
             fault['fills'].append(copy.deepcopy(fault['fills'][0]))
         else:
             fault['fills'].pop()
-        with pytest.raises(ValueError, match='Duplicate|Selected fill count'):
+        with pytest.raises(ValueError, match=r'Duplicate|Selected fill count'):
             CostCalibration.from_history(_write_fault(tmp_path / f'fault-{label}.json', fault), cutoff_ns=CUTOFF)
     fault = copy.deepcopy(facts)
     fault['source']['reference_max_age_ns'] = 60_000_000_000

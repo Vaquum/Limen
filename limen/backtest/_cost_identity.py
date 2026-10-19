@@ -34,7 +34,7 @@ def _frame(frame: pl.DataFrame, active: set[int]) -> JsonValue:
             tag = ['Datetime', dtype.time_unit, dtype.time_zone]
         elif isinstance(dtype, pl.Duration):
             tag = ['Duration', dtype.time_unit, None]
-        elif dtype in _PRIMITIVES:
+        elif dtype.base_type() in _PRIMITIVES:
             tag, temporal = str(dtype), False
         else:
             raise ValueError(f'Unsupported canonical frame dtype: {dtype}')
@@ -45,23 +45,31 @@ def _frame(frame: pl.DataFrame, active: set[int]) -> JsonValue:
     return ['frame', schema, rows]
 
 
-def _node(value: object, active: set[int]) -> JsonValue:
+def _scalar(value: object) -> JsonValue:
+    result: JsonValue = None
     if value is None:
-        return ['null']
-    if type(value) is bool:
-        return ['bool', value]
-    if type(value) is str:
-        return ['str', value]
-    if type(value) is int:
-        return ['int', str(value)]
-    if type(value) is float:
+        result = ['null']
+    elif type(value) is bool:
+        result = ['bool', value]
+    elif type(value) is str:
+        result = ['str', value]
+    elif type(value) is int:
+        result = ['int', str(value)]
+    elif type(value) is float:
         if not math.isfinite(value):
             raise ValueError('Nonfinite canonical float')
-        return ['float', value.hex()]
-    if isinstance(value, Decimal):
+        result = ['float', value.hex()]
+    elif isinstance(value, Decimal):
         if not value.is_finite():
             raise ValueError('Nonfinite canonical Decimal')
-        return ['decimal', str(value)]
+        result = ['decimal', str(value)]
+    return result
+
+
+def _node(value: object, active: set[int]) -> JsonValue:
+    scalar = _scalar(value)
+    if scalar is not None:
+        return scalar
     identity = id(value)
     if identity in active:
         raise ValueError('Cyclic canonical value')

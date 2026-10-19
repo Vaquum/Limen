@@ -8,6 +8,8 @@ from limen.backtest.trade_contract import JsonValue, json_value
 
 METHOD = 'minute_midpoint_1s_v1'
 MAX_AGE_NS = 1_000_000_000
+SHA256_HEX_LENGTH = 64
+_WINDOW_BOUNDS = 2
 _HISTORY = frozenset(('version', 'source', 'fills', 'source_window_summary', 'source_diagnostics'))
 _SOURCE = frozenset(('identity', 'assets', 'venue', 'environment', 'product', 'captured_at_ns',
                      'reference_id', 'reference_convention', 'windows', 'supersedes'))
@@ -22,18 +24,18 @@ _FILL = frozenset(('leg_id', 'account', 'parent_id', 'source_asset_sha256', 'sou
 def mapping(value: object, keys: frozenset[str] | None = None) -> dict[str, JsonValue]:
     if not isinstance(value, Mapping):
         raise ValueError('Execution-cost record must be a mapping')
-    converted = json_value(value)
+    converted = json_value(cast(Mapping[object, object], value))
     if not isinstance(converted, dict):
         raise ValueError('Execution-cost record must contain JSON values')
-    if keys is not None and set(converted) != keys:
-        raise ValueError(f'Execution-cost record keys differ: {sorted(set(converted) ^ keys)}')
+    if keys is not None and frozenset(converted) != keys:
+        raise ValueError(f'Execution-cost record keys differ: {sorted(frozenset(converted) ^ keys)}')
     return converted
 
 
 def integer(value: object, name: str, *, minimum: int = 0) -> int:
-    if type(value) is not int or cast(int, value) < minimum:
+    if type(value) is not int or value < minimum:
         raise ValueError(f'{name} must be an integer >= {minimum}')
-    return cast(int, value)
+    return value
 
 
 def text(value: object, name: str) -> str:
@@ -60,9 +62,9 @@ def rows(value: object, name: str) -> list[dict[str, JsonValue]]:
     return [mapping(row) for row in cast(list[object], value)]
 
 
-def _hash(value: object) -> str:
+def digest_id(value: object) -> str:
     result = text(value, 'SHA-256')
-    if len(result) != 64 or any(char not in '0123456789abcdef' for char in result):
+    if len(result) != SHA256_HEX_LENGTH or any(char not in '0123456789abcdef' for char in result):
         raise ValueError('Malformed SHA-256')
     return result
 
@@ -80,7 +82,7 @@ def _source(value: object) -> dict[str, JsonValue]:
         _ = text(item, name)
     _ = integer(source['captured_at_ns'], 'captured_at_ns')
     if source['supersedes'] is not None:
-        _ = _hash(source['supersedes'])
+        _ = digest_id(source['supersedes'])
     assets = rows(source['assets'], 'assets')
     if not assets:
         raise ValueError('History requires pinned source assets')
@@ -88,7 +90,7 @@ def _source(value: object) -> dict[str, JsonValue]:
     for asset in assets:
         _ = mapping(asset, _ASSET)
         _ = text(asset['locator'], 'asset locator')
-        sha = _hash(asset['sha256'])
+        sha = digest_id(asset['sha256'])
         if sha in seen:
             raise ValueError('Duplicate source asset')
         seen.add(sha)
@@ -100,7 +102,7 @@ def _source(value: object) -> dict[str, JsonValue]:
         raise ValueError('History requires explicit source windows')
     previous = -1
     for item in windows:
-        if not isinstance(item, list) or len(item) != 2:
+        if not isinstance(item, list) or len(item) != _WINDOW_BOUNDS:
             raise ValueError('Source window must be [start_ns, end_ns)')
         start, end = (integer(item[index], 'window time') for index in (0, 1))
         if not previous <= start < end:
@@ -112,7 +114,7 @@ def _source(value: object) -> dict[str, JsonValue]:
 def selected(fill: Mapping[str, JsonValue]) -> bool:
     reference_time = fill['reference_time_ns']
     return (fill['role'] == 'taker' and (reference_time is None or (type(reference_time) is int
-            and 0 <= cast(int, fill['time_ns']) - cast(int, reference_time) <= MAX_AGE_NS)))
+            and 0 <= cast(int, fill['time_ns']) - reference_time <= MAX_AGE_NS)))
 
 
 def validate(value: object) -> dict[str, JsonValue]:
@@ -142,12 +144,16 @@ def validate(value: object) -> dict[str, JsonValue]:
         for name in ('intra_block_index', 'node_local_time_ns', 'fee_received_at_ns', 'reference_time_ns', 'reference_received_at_ns'):
             if fill[name] is not None:
                 _ = integer(fill[name], name)
+        for receipt, event in (('received_at_ns', 'time_ns'), ('fee_received_at_ns', 'time_ns'),
+                               ('reference_received_at_ns', 'reference_time_ns')):
+            if fill[receipt] is not None and fill[event] is not None and cast(int, fill[receipt]) < cast(int, fill[event]):
+                raise ValueError(f'{receipt} cannot precede {event}')
         windows = cast(list[list[int]], source['windows'])
         if not any(start <= cast(int, fill['time_ns']) < end for start, end in windows):
             raise ValueError('Fill is outside the declared source windows')
         if fill['reference_time_ns'] is not None and cast(int, fill['reference_time_ns']) > cast(int, fill['time_ns']):
             raise ValueError('Fill reference cannot come from the future')
-        sha = _hash(fill['source_asset_sha256'])
+        sha = digest_id(fill['source_asset_sha256'])
         if sha not in assets:
             raise ValueError('Fill has no pinned source asset')
         order = (cast(int, fill['time_ns']), cast(int, fill['block_number']), sha,
@@ -160,9 +166,9 @@ def validate(value: object) -> dict[str, JsonValue]:
         for name in ('fee', 'builder_fee', 'reference_price'):
             if fill[name] is not None:
                 _ = decimal(fill[name], name, positive=name == 'reference_price')
-        if fill['role'] == 'taker' and fill['builder_fee'] is not None and fill['fee'] is not None:
-            if not 0 <= decimal(fill['builder_fee'], 'builder fee') <= decimal(fill['fee'], 'fee'):
-                raise ValueError('Known taker builder fee must be included in total fee')
+        if (fill['role'] == 'taker' and fill['builder_fee'] is not None and fill['fee'] is not None
+                and not 0 <= decimal(fill['builder_fee'], 'builder fee') <= decimal(fill['fee'], 'fee')):
+            raise ValueError('Known taker builder fee must be included in total fee')
     summary = mapping(history['source_window_summary'])
     expected = integer(summary.get('selected_legs'), 'declared selected count')
     if expected != sum(selected(fill) for fill in fills):

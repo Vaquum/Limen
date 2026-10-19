@@ -2,10 +2,6 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
-## [5.45.0] - 2026-10-19
-
-- Add immutable recorded-fill price-cost calibration with explicit evidence limits and preserved account fees.
-
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -1805,3 +1801,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Define Limen's executable research book contract: two comprehensive tested projects, exact source/output bindings, merged-source and current-validation evidence, the owned reader, and complete reference/developer coverage.
 - Align the documentation task router with Python Research and Compiled Research while retaining the current production renderer and its recorded deployment defects.
+
+## [5.45.0] - 2026-10-19
+
+- Add immutable recorded-fill price-cost calibration with explicit evidence limits and preserved account fees.

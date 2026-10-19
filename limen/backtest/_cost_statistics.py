@@ -12,6 +12,9 @@ from limen.backtest.trade_contract import JsonValue
 
 _ZERO = Decimal(0)
 _BPS = Decimal(10_000)
+_MIN_JACKKNIFE_DAYS = 2
+_MIN_OBSERVED_PARENTS = 20
+_MIN_FILL_DAYS = 3
 
 
 def _day(fill: Mapping[str, JsonValue]) -> str:
@@ -20,8 +23,8 @@ def _day(fill: Mapping[str, JsonValue]) -> str:
 
 def _estimate(fills: Sequence[Mapping[str, JsonValue]], cutoff_ns: int, currency: str) -> dict[str, JsonValue]:
     reference_total, quote_total, cost, fees, builder = (_ZERO for _ in range(5))
-    parents: dict[str, Decimal] = defaultdict(Decimal)
-    parent_costs: dict[str, Decimal] = defaultdict(Decimal)
+    parents: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
+    parent_costs: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
     accounts: dict[str, Decimal] = defaultdict(Decimal)
     account_fees: dict[str, Decimal] = defaultdict(Decimal)
     price_complete = fee_complete = True
@@ -43,7 +46,7 @@ def _estimate(fills: Sequence[Mapping[str, JsonValue]], cutoff_ns: int, currency
             if fill['parent_id'] is None:
                 missing_parents += 1
             else:
-                parent = account + ':' + cast(str, fill['parent_id'])
+                parent = (account, cast(str, fill['parent_id']))
                 parents[parent] += referenced
                 parent_costs[parent] += signed
         if (fill['fee'] is None or fill['fee_currency'] != currency or fill['fee_received_at_ns'] is None
@@ -52,7 +55,7 @@ def _estimate(fills: Sequence[Mapping[str, JsonValue]], cutoff_ns: int, currency
         else:
             fees += history.decimal(fill['fee'], 'fee')
             account_fees[account] += history.decimal(fill['fee'], 'fee')
-        if (fill['builder_fee'] is not None and fill['fee_received_at_ns'] is not None
+        if (fill['builder_fee'] is not None and fill['fee_currency'] == currency and fill['fee_received_at_ns'] is not None
                 and cast(int, fill['fee_received_at_ns']) <= cutoff_ns):
             builder += history.decimal(fill['builder_fee'], 'builder fee')
             builder_count += 1
@@ -91,10 +94,10 @@ def _sensitivity(fills: Sequence[Mapping[str, JsonValue]], cutoff_ns: int, curre
                                    'day_cluster_count': len(days), 'coverage_guarantee': False}
     for name in ('price_cost_bps', 'fee_bps'):
         values = [item[name] for item in deleted.values()]
-        if len(values) >= 2 and all(isinstance(value, str) for value in values):
+        if len(values) >= _MIN_JACKKNIFE_DAYS and all(isinstance(value, str) for value in values):
             numeric = [Decimal(cast(str, value)) for value in values]
-            mean = sum(numeric) / len(numeric)
-            variance = Decimal(len(numeric) - 1) / len(numeric) * sum((value - mean) ** 2 for value in numeric)
+            mean = sum(numeric, _ZERO) / len(numeric)
+            variance = Decimal(len(numeric) - 1) / len(numeric) * sum(((value - mean) ** 2 for value in numeric), _ZERO)
             result[name] = {'min': str(min(numeric)), 'max': str(max(numeric)), 'jackknife_se': str(variance.sqrt())}
         else:
             result[name] = None
@@ -139,7 +142,7 @@ def report(value: Mapping[str, JsonValue], cutoff_ns: int) -> dict[str, JsonValu
         estimate = _estimate(side_fills, cutoff_ns, currency)
         estimates[side] = estimate
         sensitivities[side] = _sensitivity(side_fills, cutoff_ns, currency)
-        if cast(int, estimate['parents']) < 20 or cast(int, estimate['days']) < 3:
+        if cast(int, estimate['parents']) < _MIN_OBSERVED_PARENTS or cast(int, estimate['days']) < _MIN_FILL_DAYS:
             reasons.append(f'thin_observed_support:{side}')
         if estimate['missing_parent_legs']:
             reasons.append(f'unknown_parent_identity:{side}')
@@ -149,7 +152,7 @@ def report(value: Mapping[str, JsonValue], cutoff_ns: int) -> dict[str, JsonValu
         elif Decimal(cast(str, price)) < 0:
             reasons.append(f'negative_price_constant:{side}')
         effective = estimate['parent_effective_n']
-        if effective is not None and Decimal(cast(str, effective)) < 20:
+        if effective is not None and Decimal(cast(str, effective)) < _MIN_OBSERVED_PARENTS:
             thin_effective.append(side)
         for day in sorted({_day(fill) for fill in selected}):
             group = [fill for fill in side_fills if _day(fill) == day]
@@ -159,7 +162,7 @@ def report(value: Mapping[str, JsonValue], cutoff_ns: int) -> dict[str, JsonValu
                                          'admitted_estimate': _estimate(group, cutoff_ns, currency)}
     slip = None
     if not reasons:
-        slip = str(sum(Decimal(cast(str, history.mapping(estimates[side])['price_cost_bps'])) for side in ('buy', 'sell')) / 2)
+        slip = str(sum((Decimal(cast(str, history.mapping(estimates[side])['price_cost_bps'])) for side in ('buy', 'sell')), _ZERO) / 2)
     disposition = ('unavailable' if reasons else
                    'retrospective_low_effective_support' if thin_effective else 'retrospective_cost_scenario')
     estimates['slip_bps'] = slip

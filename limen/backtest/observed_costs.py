@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal, TypedDict, cast
 
@@ -54,6 +55,7 @@ class ComparisonReport(TypedDict):
     limitations: JsonValue
 
 
+@dataclass(frozen=True, slots=True, eq=False)
 class CostCalibration:
     """Immutable recorded-price stress with separately reported account fees.
 
@@ -62,22 +64,17 @@ class CostCalibration:
     never establish the fees a different account will pay.
     """
 
-    __slots__ = ('_payload', '_digest')
     _payload: dict[str, JsonValue]
-    _digest: str
+    _digest: str = field(init=False)
 
-    def __init__(self) -> None:
-        raise TypeError('Use CostCalibration.from_history() or CostCalibration.read()')
-
-    def __setattr__(self, name: str, value: object) -> None:
-        raise AttributeError('CostCalibration is immutable')
+    def __post_init__(self) -> None:
+        payload = _history.mapping(self._payload, _PAYLOAD_KEYS)
+        object.__setattr__(self, '_payload', payload)
+        object.__setattr__(self, '_digest', _identity.digest(self._content()))
 
     @classmethod
     def _create(cls, payload: dict[str, JsonValue]) -> CostCalibration:
-        instance = object.__new__(cls)
-        object.__setattr__(instance, '_payload', copy.deepcopy(payload))
-        object.__setattr__(instance, '_digest', _identity.digest(instance._content()))
-        return instance
+        return cls(payload)
 
     def _content(self) -> dict[str, JsonValue]:
         return {'format': _FORMAT, 'version': 1, 'payload': self._payload}
@@ -89,17 +86,17 @@ class CostCalibration:
         history = _history.validate(_identity.read_json(path))
         report = _statistics.report(history, cutoff)
         clocks = _history.mapping(report['clocks'])
+        created_at_ns = time.time_ns()
+        report['clocks'] = {**clocks, 'created_at_ns': created_at_ns}
         return cls._create({'history': history, 'method': _history.METHOD, 'cutoff_ns': cutoff,
-                            'available_at_ns': clocks['available_at_ns'], 'created_at_ns': time.time_ns(),
+                            'available_at_ns': clocks['available_at_ns'], 'created_at_ns': created_at_ns,
                             'report': report})
 
     @classmethod
     def read(cls, path: str | Path, *, expected_digest: str) -> CostCalibration:
         """Read externally pinned content without re-estimating its rates."""
         envelope = _history.mapping(_identity.read_json(path), _ENVELOPE_KEYS)
-        expected = _history.text(expected_digest, 'expected digest')
-        if len(expected) != 64 or any(char not in '0123456789abcdef' for char in expected):
-            raise ValueError('Malformed expected calibration digest')
+        expected = _history.digest_id(expected_digest)
         if envelope['format'] != _FORMAT or type(envelope['version']) is not int or envelope['version'] != 1:
             raise ValueError('Unsupported calibration artifact format/version')
         payload = _history.mapping(envelope['payload'], _PAYLOAD_KEYS)
@@ -113,7 +110,7 @@ class CostCalibration:
         report = _history.mapping(payload['report'], _REPORT_KEYS)
         clocks = _history.mapping(report['clocks'])
         if (report['method'] != payload['method'] or clocks.get('available_at_ns') != payload['available_at_ns']
-                or clocks.get('cutoff_ns') != payload['cutoff_ns']):
+                or clocks.get('cutoff_ns') != payload['cutoff_ns'] or clocks.get('created_at_ns') != payload['created_at_ns']):
             raise ValueError('Calibration artifact clocks/method contradict its report')
         result = cls._create(payload)
         if envelope['digest'] != expected or result.digest != expected:
