@@ -51,7 +51,7 @@ def search(data_dir, output):
         if kind in ('shuffled', 'factorized'):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
-        results[kind] = loop.experiment_log.select('id', 'C', 'balanced_metric').to_dicts()
+        results[kind] = loop.experiment_log.select('id', 'C', 'accuracy').to_dicts()
     return {'runs': results, 'seed': 42}
 # endregion search
 
@@ -116,7 +116,7 @@ def calibration(data_dir, output):
     config = configuration('calibration', data_dir)
     loop = execute(config, output / 'experiment')
     sensors = Trainer(output / 'experiment').train(loop.experiment_log['id'].to_list())
-    return {'modes': loop.experiment_log.select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'balanced_metric').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
+    return {'modes': loop.experiment_log.select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
 # endregion calibration
 
 
@@ -134,7 +134,7 @@ def execution(data_dir, output):
 def bars(data_dir, output):
     config = configuration('bars', data_dir)
     loop = execute(config, output / 'experiment')
-    return {'rounds': loop.experiment_log.height, 'modes': loop.experiment_log.select('bar_type', 'balanced_metric').to_dicts(), 'placement': 'bar formation runs separately after each chronological split'}
+    return {'rounds': loop.experiment_log.height, 'modes': loop.experiment_log.select('bar_type', 'accuracy').to_dicts(), 'placement': 'bar formation runs separately after each chronological split'}
 # endregion bars
 
 

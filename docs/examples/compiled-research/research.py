@@ -45,7 +45,7 @@ def main():
         report = {"interface": "compiled", "scenario": args.scenario, "scenarios": reports}
         args.output_dir.mkdir(parents=True, exist_ok=True)
         (args.output_dir / "summary.json").write_text(json.dumps(report, indent=2, allow_nan=False, default=str) + "\n")
-        print(json.dumps(report, indent=2, allow_nan=False, default=str))
+        print(json.dumps({"interface": report["interface"], "scenario": args.scenario, "executed": list(reports), "summary": str((args.output_dir / "summary.json").resolve())}, indent=2))
         return
     loop, sensors, selected = run_research(args.data_dir, args.output_dir)
     report = {"interface": "compiled", "scenario": args.scenario,
