@@ -12,7 +12,11 @@ from build_bundle import build
 
 
 def run(argv, *, cwd, env=None):
-    subprocess.run([str(arg) for arg in argv], cwd=cwd, env=env, check=True, timeout=90)
+    environment = dict(os.environ if env is None else env)
+    for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
+        environment.pop(name, None)
+    environment['PYTHONNOUSERSITE'] = '1'
+    subprocess.run([str(arg) for arg in argv], cwd=cwd, env=environment, check=True, timeout=90)
 
 
 def unpack(bundle: Path, target: Path):

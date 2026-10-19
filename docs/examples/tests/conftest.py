@@ -53,7 +53,10 @@ def research_proof(python_project, compiled_project, tmp_path_factory, request):
     spec = importlib.util.spec_from_file_location('book_wheel_proof', ROOT / 'docs/examples/tests/wheel_proof.py')
     wheel_proof = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(wheel_proof)
-    wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'))
+    # A caller's checkout must not replace the installed wheel in project runs.
+    with pytest.MonkeyPatch.context() as environment:
+        environment.setenv('PYTHONPATH', str(ROOT))
+        wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'))
     request.config.stash[PROOF] = wheel
     return {'python': {'rounds': python_project[2][1].experiment_log.height},
             'compiled': {'rounds': compiled_project[2][0].experiment_log.height}}
