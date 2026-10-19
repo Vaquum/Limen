@@ -48,9 +48,9 @@ class ExternalRobust:
 class FittedProbabilityAdjustment:
     def __init__(self, estimator, x, y):
         self.estimator = estimator
-        self.offset = float(np.mean(np.asarray(y)) - np.mean(estimator.predict_proba(x)[:, 1]))
+        self.offset = float(np.mean(np.asarray(y)) - np.mean(estimator.predict_proba(np.asarray(x))[:, 1]))
     def predict_proba(self, x):
-        positive = np.clip(self.estimator.predict_proba(x)[:, 1] + self.offset, 0, 1)
+        positive = np.clip(self.estimator.predict_proba(np.asarray(x))[:, 1] + self.offset, 0, 1)
         return np.column_stack((1 - positive, positive))
 
 
