@@ -102,11 +102,16 @@ def output_rows(mapped: object, count: int) -> Sequence[object]:
 
 
 def scalar(value: object) -> int | float:
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError('Python Sensor mapped values must be real numeric scalars')
-    if isinstance(value, Integral):
-        return int(value)
-    number = float(value)
+    if type(value) is int:
+        return value
+    if type(value) is float:
+        number = value
+    else:
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise ValueError('Python Sensor mapped values must be real numeric scalars')
+        if isinstance(value, Integral):
+            return int(value)
+        number = float(value)
     if not isfinite(number):
         raise ValueError('Python Sensor mapped values must be finite')
     return number
