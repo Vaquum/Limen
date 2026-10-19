@@ -8,6 +8,7 @@ export function initSearch(){
   }
   button.hidden=false;button.addEventListener('click',open);
   dialog.querySelector('[data-search-close]').addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>opener?.focus());
+  dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();dialog.close();}});
   input.addEventListener('input',()=>{results.replaceChildren();if(!index)return;const query=input.value.trim().toLowerCase();if(query.length<2)return;
     const found=index.map(page=>({...page,at:page.text.toLowerCase().indexOf(query)})).filter(page=>page.at>=0||page.title.toLowerCase().includes(query)).sort((a,b)=>Number(b.title.toLowerCase().includes(query))-Number(a.title.toLowerCase().includes(query))).slice(0,20);
     for(const page of found){const li=document.createElement('li'),a=document.createElement('a'),p=document.createElement('p');a.href=page.route;a.textContent=page.title;p.textContent=page.text.slice(Math.max(0,page.at-48),Math.max(0,page.at-48)+180);li.append(a,p);results.append(li);}
