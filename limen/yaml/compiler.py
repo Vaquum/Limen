@@ -73,6 +73,7 @@ def _build_ml_manifest(m: dict[str, Any]) -> MLManifest:
     po = m.get('params_override')
     if po is not None:
         manifest = cast(MLManifest, manifest.with_params_override(**dict(po)))
+    _apply_allocation(manifest, m)
     return manifest
 
 
@@ -87,6 +88,13 @@ def _build_rule_based_manifest(m: dict[str, Any]) -> RuleBasedManifest:
         entry=strat['entry'],
     )
     _ = manifest.with_reference_architecture(resolve(m['reference_architecture']))
+    return _apply_allocation(manifest, m)
+
+
+def _apply_allocation(manifest: Manifest, declaration: dict[str, Any]) -> Manifest:
+    config = declaration.get('allocation')
+    if config is not None:
+        _ = manifest.with_allocation(resolve(config['method']), _resolve_func_params(dict(config.get('params') or {})))
     return manifest
 
 

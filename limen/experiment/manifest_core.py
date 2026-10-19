@@ -1,3 +1,4 @@
+import limen.experiment._allocation as _allocation
 import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
@@ -261,6 +262,7 @@ class Manifest:
     architecture_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     metrics_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     backtest_config: BacktestConfig | None = None
+    allocation_config: _allocation.AllocationConfig | None = None
 
     def _add_transform(self,
                        func: Callable[..., Any],
@@ -759,6 +761,12 @@ class Manifest:
             max_price_gap_seconds, execution_data_source, funding, take_profit_bps_column, stop_loss_bps_column, barrier_features, source_interval_seconds)
         return self
 
+    def with_allocation(self: _TManifest, method: Callable[..., dict[str, object]], params: Mapping[str, object] | None = None) -> _TManifest:
+        if self.allocation_config is not None:
+            raise ValueError('Allocation is already configured')
+        self.allocation_config = _allocation.AllocationConfig(method, dict(params or {}))
+        return self
+
     def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None:
         return _resolve_trade_policy(self.backtest_config, round_params)
 
@@ -803,6 +811,8 @@ class Manifest:
         Required parameters (no defaults) must be in round_params.
         '''
 
+        if (allocated := _allocation.run(self, data, round_params)) is not None:
+            return allocated
         model_kwargs = self.resolve_model_kwargs(round_params)
         self._apply_backtest_cost(data, round_params)
         if self.architecture_function is None:
@@ -1124,12 +1134,14 @@ class MLManifest(Manifest):
             attach_outcomes(data_dict, private_labels, raw_features, split_data[0],
                 scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
                 deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
-        return data_dict
+        return _allocation.attach(self, raw_data, round_params, data_dict)
 
     @override
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
 
+        if (allocated := _allocation.run(self, data, round_params)) is not None:
+            return allocated
         model_kwargs = self.resolve_model_kwargs(round_params)
         if self.architecture_function is None:
             raise ValueError('MLManifest run_model requires a configured architecture_function')
@@ -1289,7 +1301,7 @@ class RuleBasedManifest(Manifest):
         data_dict = _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
-        return data_dict
+        return _allocation.attach(self, raw_data, round_params, data_dict)
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.DataFrame:
@@ -1893,6 +1905,7 @@ def _run_prepare_setup(
         round_params: dict[str, Any],
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
+    _allocation.admit(manifest, round_params)
     raw_data = _holdout.admit(manifest, raw_data)
     resolved = None
     if manifest.pre_split_data_selector:
