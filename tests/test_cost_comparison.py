@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import copy
 import json
+import socket
+from types import SimpleNamespace
 from dataclasses import replace
 from decimal import Decimal
 
@@ -10,10 +12,14 @@ import pytest
 from polars.testing import assert_frame_equal
 
 from limen.backtest import _cost_comparison
+from limen.backtest.funding_adapter import ADAPTER_VERSION, prepare_funding
+from limen.experiment import UniversalExperimentLoop
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.backtest.observed_costs import CostCalibration, CostCandidate
-from limen.backtest.trade_contract import ProductSpec, TradeInputs, TradePolicy, source_binding
+from limen.backtest.trade_contract import FundingPolicy, ProductSpec, TradeInputs, TradePolicy, source_binding
 from limen.backtest.trade_execution import trade_execution
-from tests.test_observed_costs import CUTOFF, FIXTURE, _history
+from tests.test_observed_costs import CUTOFF, FIXTURE, _history, _no_estimation, _no_network
 
 
 def _recorded_candidate(mode, hour=1):
@@ -27,7 +33,7 @@ def _recorded_candidate(mode, hour=1):
         pl.col('replay_available_at_ns').alias('open_available_at_ns'), pl.col('replay_available_at_ns').alias('available_at_ns'),
         *(pl.col('price').alias(name) for name in ('open', 'high', 'low', 'close')))
     # Hypothetical strategy targets/equity; every execution price is recorded.
-    targets = [1.0, 0.0, 1.0, 0.0, 0.0] if mode == 'binary' else [1.0, -0.5, 0.25, 0.0, 0.0]
+    targets = [1.0, 1.0, 0.0, 0.0, 0.0] if mode == 'binary' else [1.0, 1.0, -0.5, -0.5, 0.0]
     signals = selected.select('row_id', pl.col('time_ns').alias('available_at_ns')).with_columns(pl.Series('target', targets))
     start, end = selected['time_ns'][0], selected['time_ns'][-1]
     binding = source_binding(observations, 'recorded_midpoints', start, end, 1, 'retrospective_assumed_exchange_label')
@@ -41,11 +47,28 @@ def _recorded_candidate(mode, hour=1):
     return inputs, policy, conditions, benchmark
 
 
+@pytest.fixture(scope='module')
+def calibration(tmp_path_factory):
+    history_path, _ = _history(tmp_path_factory.mktemp('recorded_cost_calibration'))
+    return CostCalibration.from_history(history_path, cutoff_ns=CUTOFF)
+
+
 @pytest.mark.parametrize('mode', ['binary', 'target_exposure'])
-def test_frozen_event_scenarios(tmp_path, monkeypatch, mode):
-    history_path, _ = _history(tmp_path)
-    calibration = CostCalibration.from_history(history_path, cutoff_ns=CUTOFF)
+@pytest.mark.parametrize('funded', [False, True], ids=['unfunded', 'software-scenario-funding'])
+@pytest.mark.parametrize('barrier', [None, 'take_profit_bps', 'stop_loss_bps'], ids=['no-barrier', 'software-tp', 'software-sl'])
+@pytest.mark.parametrize('lag', [0.0, 60.0], ids=['immediate', 'next-recorded-minute'])
+def test_frozen_event_scenarios(tmp_path, monkeypatch, mode, funded, barrier, lag, calibration):
+    monkeypatch.setattr(socket, 'socket', _no_network)
     inputs, policy, conditions, benchmark = _recorded_candidate(mode)
+    policy = replace(policy, execution_lag_seconds=lag, **({barrier: 0.01} if barrier else {}))
+    if funded:
+        funding = FundingPolicy('limen.backtest.funding_adapter.funding_adapter', ADAPTER_VERSION,
+            {'rate': 0.001, 'rate_unit': 'decimal', 'settlement_interval_seconds': 60.0},
+            None, None, 'discrete', 3600.0, 'execution_proxy', 'USDC', 'scenario')
+        events = prepare_funding(funding, None, inputs.partition_start_ns, inputs.partition_end_ns)
+        inputs = replace(inputs, funding_events=events, sources=(*inputs.sources,
+            source_binding(events, 'software_scenario_funding', inputs.partition_start_ns, inputs.partition_end_ns, 1, 'hypothetical_rate_on_recorded_clock')))
+        policy = replace(policy, funding=funding)
     second_policy = replace(policy, slip_bps=7.0)
     first = CostCandidate(inputs, policy, 'recorded-test:first', conditions, benchmark)
     second = CostCandidate(inputs, second_policy, 'recorded-test:second', conditions, benchmark)
@@ -93,3 +116,73 @@ def test_frozen_event_scenarios(tmp_path, monkeypatch, mode):
     object.__setattr__(first, '_snapshot', damaged)
     with pytest.raises(ValueError, match='Frozen candidate'):
         calibration.compare({'first': first})
+
+
+class _CallerModel:
+    def __init__(self):
+        self.fit_count = 0
+
+    def fit(self, frame):
+        self.fit_count += 1
+        self.mean = frame['price'].mean()
+        return self
+
+    def predict(self, frame, mode, scale):
+        values = [1.0 if price >= self.mean else (0.0 if mode == 'binary' else -scale) for price in frame['price']]
+        values[-1] = 0.0  # Explicit hypothetical terminal strategy decision.
+        return pl.Series('target', values, dtype=pl.Float64)
+
+
+@pytest.mark.parametrize('mode', ['binary', 'target_exposure'])
+def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
+    monkeypatch.setattr(socket, 'socket', _no_network)
+    artifact = tmp_path / 'calibration.json'
+    pinned = calibration.write(artifact)
+    pin_file = tmp_path / 'caller-research-specification.json'
+    pin_file.write_text(json.dumps({'calibration_digest': pinned}))
+    retained, comparisons = [], []
+    for hour in (1, 2):
+        expected = json.loads(pin_file.read_text())['calibration_digest']
+        with monkeypatch.context() as context:
+            from limen.backtest import _cost_statistics
+            context.setattr(_cost_statistics, 'report', _no_estimation)
+            loaded = CostCalibration.read(artifact, expected_digest=expected)
+        inputs, policy, conditions, benchmark = _recorded_candidate(mode, hour)
+        first = inputs.partition_start_ns - 180_000_000_000
+        recorded = benchmark.filter(pl.col('time_ns').is_between(first, inputs.partition_end_ns))
+        space = {'scale': [0.5]}
+
+        def prep(frame, params):
+            return {'train': frame.head(3), 'evaluation': frame.tail(5), 'scale': params['scale']}
+
+        def model(data, params):
+            fitted = _CallerModel().fit(data['train'])
+            predictions = fitted.predict(data['evaluation'], mode, params['scale'])
+            original_bytes = predictions.to_numpy().tobytes()
+            frozen = replace(inputs, signals=inputs.signals.with_columns(predictions))
+            candidate = CostCandidate(frozen, policy, f'caller-owned:experiment-{hour}', conditions, benchmark)
+            with monkeypatch.context() as context:
+                context.setattr(fitted, 'fit', _no_estimation)
+                result = loaded.compare({'caller': candidate})
+            assert predictions.to_numpy().tobytes() == original_bytes
+            assert fitted.fit_count == 1
+            retained.append((fitted, original_bytes))
+            comparisons.append(result)
+            result.write(tmp_path / f'comparison-{hour}.json')
+            return {'original_return': result.ledger('caller', 'original').metrics['total_return'],
+                    'calibrated_return': result.ledger('caller', 'calibrated').metrics['total_return']}
+
+        sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+        loop = UniversalExperimentLoop(data=recorded, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)))
+        loop.run(str(tmp_path / f'python-experiment-{hour}'), n_permutations=1,
+                 workers=1, post_processing=False, progress_bar=False)
+        assert loop.manifest is None
+        assert loop.experiment_log.height == 1
+        assert loop.experiment_log['calibrated_return'][0] == comparisons[-1].ledger('caller', 'calibrated').metrics['total_return']
+        assert comparisons[-1].ledger('caller', 'calibrated').fills.height > 0
+        assert comparisons[-1].report()['calibration_digest'] == pinned
+    assert len(retained) == len({id(model) for model, _ in retained}) == 2
+    assert all(model.fit_count == 1 for model, _ in retained)
+    first_result, later_result = [value.report()['candidates']['caller'] for value in comparisons]
+    assert first_result['input_digest'] != later_result['input_digest']
+    assert first_result['application_digest'] != later_result['application_digest']
