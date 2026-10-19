@@ -9,7 +9,7 @@ from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, prepare_trade_context, source_interval
 from limen.experiment._prepare_backtest_data import prepare_backtest_data
 from limen.experiment._resolve_backtest_config import configured_barriers
-from limen.experiment._resolve_trade_policy import BacktestConfig
+from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig
 
 _M = TypeVar('_M')
 
@@ -18,8 +18,8 @@ class SetupManifest(Protocol):
     @property
     def backtest_config(self) -> BacktestConfig | None: ...
     @property
-    def data_source_config(self) -> object: ...
-    def resolve_trade_policy(self, params: Mapping[str, object]) -> TradePolicy | None: ...
+    def data_source_config(self) -> SourceConfig | None: ...
+    def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None: ...
 
 
 def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame],

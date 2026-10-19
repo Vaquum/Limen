@@ -1,3 +1,4 @@
+from limen.experiment._holdout_research import initialize_compiled, cached_manifest
 import inspect
 from pathlib import Path
 from datetime import date
@@ -298,10 +299,8 @@ class CompiledSFD:
 
         super().__init__()
 
-        self._holdout_project_root = project_root
-        self._yaml = yaml_dict
+        self._yaml, self._holdout_project_root, self.__name__ = initialize_compiled(yaml_dict, project_root)
         self._manifest_cache: Manifest | None = None
-        self.__name__ = f"yaml:{yaml_dict['metadata']['name']}"
 
     def params(self) -> dict[str, list[Any]]:
 
@@ -313,11 +312,7 @@ class CompiledSFD:
 
         '''Return the compiled Manifest, built once and cached.'''
 
-        if self._manifest_cache is None:
-            self._manifest_cache = build_manifest(self._yaml)
-            from limen.experiment._holdout_research import bind_manifest
-            _ = bind_manifest(self._manifest_cache, self._holdout_project_root)
-        return self._manifest_cache
+        return cached_manifest(self, build_manifest)
 
 
 def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:

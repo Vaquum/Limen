@@ -1,3 +1,4 @@
+from limen.experiment._holdout_research import prepare_walk_forward
 import limen.experiment._round_storage as _storage
 import copy
 import json
@@ -142,14 +143,7 @@ class WalkForwardRun:
         return pl.DataFrame(self.rows, infer_schema_length=None) if self.rows else pl.DataFrame()
 
     def prepare(self, raw: pl.DataFrame, round_params: Mapping[str, object] | None = None) -> dict[str, object]:
-        from limen.experiment._holdout_research import reject_modes
-        reject_modes(self.manifest)
-        params = dict(round_params or {})
-        if self.manifest.pre_split_data_selector is not None:
-            func, base_params = self.manifest.pre_split_data_selector
-            raw = func(raw, **_resolve_params(base_params, params))
-        self._preflight(raw, require_validation=_requires_fold_validation(self.manifest, params))
-        return {'_walk_forward_params': params, '_walk_forward_raw': raw}
+        return prepare_walk_forward(self, raw, round_params, _resolve_params, _requires_fold_validation)
 
     def evaluate(self, data: dict[str, object], round_params: dict[str, object]) -> dict[str, object]:
         raw = data.get('_walk_forward_raw')

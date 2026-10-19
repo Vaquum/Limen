@@ -100,7 +100,7 @@ def source_spec(manifest: SourceManifest, binding: ProjectBinding) -> tuple[str,
     config = manifest.data_source_config
     if config is None or binding.interval_seconds is None:
         raise ValueError('Holdout research requires a declared native source/interval')
-    params = dict(cast(Mapping[str, object], config.params))
+    params = dict(config.params)
     method = getattr(config.method, '__func__', config.method)
     owner = getattr(config.method, '__self__', None)
     if owner is not None and type(owner) is not HistoricalData:

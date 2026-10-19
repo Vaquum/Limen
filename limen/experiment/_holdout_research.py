@@ -32,8 +32,8 @@ class ResearchManifest(SourceManifest, Protocol):
     def architecture_function(self) -> object | None: ...
     def fetch_data(self) -> pl.DataFrame: ...
     def fetch_test_data(self) -> pl.DataFrame: ...
-    def prepare_data(self, raw: pl.DataFrame, params: dict[str, object]) -> dict[str, object]: ...
-    def run_model(self, raw: dict[str, object], params: dict[str, object]) -> dict[str, object]: ...
+    def prepare_data(self, raw_data: pl.DataFrame, round_params: dict[str, object]) -> dict[str, object]: ...
+    def run_model(self, data: dict[str, object], round_params: dict[str, object]) -> dict[str, object]: ...
 
 _P = ParamSpec('_P')
 _R = TypeVar('_R')
@@ -351,3 +351,35 @@ def bind_round(manifest: object, provenance: Mapping[str, object], round_id: str
     value['research_record_id'] = start_research(binding, 'experiment')
     finish_research(binding, str(value['research_record_id']), value)
     return value
+
+
+_Y = TypeVar('_Y', bound=Mapping[str, object])
+
+
+def initialize_compiled(reference: _Y, project_root: str | Path | None) -> tuple[_Y, str | Path | None, str]:
+    metadata = cast(Mapping[str, object], reference['metadata'])
+    return reference, project_root, f"yaml:{metadata['name']}"
+
+
+def cached_manifest(host: object, builder: Callable[[_Y], _T]) -> _T:
+    attrs = cast(dict[str, object], vars(host))
+    if attrs['_manifest_cache'] is None:
+        manifest = builder(cast(_Y, attrs['_yaml']))
+        _ = bind_manifest(manifest, cast(str | Path | None, attrs['_holdout_project_root']))
+        attrs['_manifest_cache'] = manifest
+    return cast(_T, attrs['_manifest_cache'])
+
+
+def prepare_walk_forward(host: object, raw: pl.DataFrame, round_params: Mapping[str, object] | None,
+                         resolve_params: Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]],
+                         requires_validation: Callable[..., bool]) -> dict[str, object]:
+    manifest = getattr(host, 'manifest', None)
+    reject_modes(manifest)
+    params = dict(round_params or {})
+    selector = getattr(manifest, 'pre_split_data_selector', None)
+    if selector is not None:
+        func, base = cast(tuple[Callable[..., pl.DataFrame], Mapping[str, object]], selector)
+        raw = func(raw, **resolve_params(base, params))
+    preflight = cast(Callable[..., None], getattr(host, '_preflight', None))
+    preflight(raw, require_validation=requires_validation(manifest, params))
+    return {'_walk_forward_params': params, '_walk_forward_raw': raw}
