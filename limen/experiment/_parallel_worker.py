@@ -162,7 +162,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
             manifest = copy.deepcopy(_worker_plan.manifest)
             validate_resources(_worker_plan, params)
             _ = _native_pools()
-            vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
+            vars(manifest).update(_frozen_trade_sources=(_worker_sources.execution, _worker_sources.funding), _parallel_evidence=True)
             folds = None
             if manifest.split_walk_forward is None:
                 data = cast(dict[str, object], manifest.prepare_data(_worker_sources.learning, params))
@@ -173,11 +173,10 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
             data['_record_model_outputs'] = _worker_record_model_outputs
             count = 0
             if folds is None:
-                test = data['test']
+                test = data['x_test'] if isinstance(manifest, MLManifest) else data['test']
                 if not isinstance(test, pl.DataFrame):
                     raise ValueError('Parallel round requires independently prepared test rows')
                 count = test.height
-                cast(dict[str, object], data['_alignment'])['test_datetimes'] = test['datetime'].to_list()
             if folds is None:
                 results = cast(dict[str, object], manifest.run_model(data, params))
             else:
