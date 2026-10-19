@@ -37,6 +37,9 @@ jobs:
       - name: Check documentation Python
         run: python docs/examples/check_sources.py
 
+      - name: Check bindings without prior execution evidence
+        run: python -m pytest --import-mode=importlib docs/examples/tests/test_docs_examples.py -k 'not exact_bindings_and_coverage' -q --docs-evidence .docs-evidence/bindings-only.json
+
       - name: Prepare hashed offline research dependencies
         run: python docs/examples/prepare_environment.py
 

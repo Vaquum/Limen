@@ -106,14 +106,29 @@ def pytest_runtest_logreport(report):
 
 
 def pytest_sessionfinish(session, exitstatus):
-    if exitstatus != 0 or PROOF not in session.config.stash or not REPORTS or any(outcome != 'passed' for _, outcome in REPORTS):
-        return
     import json
+    target = Path(session.config.getoption('--docs-evidence'))
+    if exitstatus != 0 or PROOF not in session.config.stash or not REPORTS or any(outcome != 'passed' for _, outcome in REPORTS):
+        target.write_text(json.dumps({'status': 'failed' if exitstatus else 'incomplete', 'reason': 'Complete research validation did not finish.'}) + '\n')
+        return
     import os
     import platform
     import subprocess
     from check_evidence import all_bindings, digest, validate_evidence
     from build_bundle import INPUTS
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    details = catalogue['scenario_details']
+    tests = {name for name, _ in REPORTS}
+    required = {test for identity, entry in details.items()
+                for test in [entry['test'] + '[' + identity.replace('/', '-') + ']', *entry.get('extra_tests', [])]}
+    missing = sorted(required - tests)
+    if missing:
+        target.write_text(json.dumps({'status': 'incomplete', 'missing_tests': missing}) + '\n')
+        directory = ROOT / 'docs/examples/tests'
+        if any(directory.is_relative_to(Path(str(argument).split('::')[0]).resolve()) for argument in session.config.args):
+            raise ValueError('Required scenario tests did not execute: ' + ', '.join(missing))
+        print('Selected tests passed; complete research evidence remains unpublished because required tests were not selected.', file=sys.stderr)
+        return
     wheel = session.config.stash[PROOF]
     git = lambda *args: subprocess.check_output(['git', *args], cwd=ROOT, text=True).strip()
     tested, tree = git('rev-parse', 'HEAD'), git('rev-parse', 'HEAD^{tree}')
@@ -125,13 +140,6 @@ def pytest_sessionfinish(session, exitstatus):
     sources = [item | {'region': '__file__'} for item in provenance['files']]
     excerpts = {(item['path'], item['region']): item for item in all_bindings(ROOT)}
     sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values()]
-    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
-    details = catalogue['scenario_details']
-    tests = {name for name, _ in REPORTS}
-    for identity, entry in details.items():
-        required = {entry['test'] + '[' + identity.replace('/', '-') + ']', *entry.get('extra_tests', [])}
-        if not required <= tests:
-            raise ValueError('Required scenario test did not execute: ' + identity)
     record = {
         'schema_version': 1, 'mode': 'candidate',
         'revision': {'head': head, 'tested_commit': tested, 'tree': tree, 'dirty': bool(git('status', '--porcelain', '--untracked-files=normal'))},
@@ -148,5 +156,4 @@ def pytest_sessionfinish(session, exitstatus):
     record['displays'] = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())['displays']
     version = (ROOT / 'pyproject.toml').read_text().split('version = "', 1)[1].split('"', 1)[0]
     validate_evidence(record, ROOT, head=head, tree=tree, version=version)
-    target = Path(session.config.getoption('--docs-evidence'))
     target.write_text(json.dumps(record, indent=2, allow_nan=False) + '\n')
