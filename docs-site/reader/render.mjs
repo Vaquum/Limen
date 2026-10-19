@@ -10,10 +10,10 @@ export const content=JSON.parse(readFileSync(new URL('./content.json',import.met
 export const hash=value=>createHash('sha256').update(value).digest('hex');
 export const escape=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 export function slug(text){return text.replace(/[^\p{L}\p{N}_\- ]/gu,'').trim().toLowerCase().replaceAll(' ','-');}
-function documentText(markdown){
+function documentText(markdown,{omitPreamble=false}={}){
   const tokens=new MarkdownIt({html:true}).parse(markdown,{}),lines=markdown.split('\n');
   const at=tokens.findIndex(token=>token.type==='heading_open'&&token.tag==='h1');
-  const removed=[];if(at>=0)removed.push(tokens[at].map);
+  const removed=[];if(at>=0){removed.push(tokens[at].map);if(omitPreamble)removed.push([0,tokens[at].map[0]]);}
   let first=at>=0?at+3:0;
   while(tokens[first]?.type==='html_block'&&tokens[first].content.trim().startsWith('<!--'))first++;
   if(tokens[first]?.type==='blockquote_open')first++;
@@ -59,7 +59,7 @@ export function renderMarkdown(page,pages,evidence){
   const originalTableOpen=md.renderer.rules.table_open||(()=>'<table>');const originalTableClose=md.renderer.rules.table_close||(()=>'</table>');
   md.renderer.rules.table_open=(...args)=>'<div class="table-scroll" tabindex="0" role="region" aria-label="Scrollable reference table">'+originalTableOpen(...args);
   md.renderer.rules.table_close=(...args)=>originalTableClose(...args)+'</div>';
-  const {body,introduction}=documentText(page.markdown);return {html:md.render(body),headings,introduction};
+  const {body,introduction}=documentText(page.markdown,page);return {html:md.render(body),headings,introduction};
 }
 export function renderPage(page,pages,evidence,{product=content.product.id}={}){
   const {html,headings,introduction}=renderMarkdown(page,pages,evidence);const book=pages.filter(p=>p.bookOrder!==undefined).sort((a,b)=>a.bookOrder-b.bookOrder);const at=book.indexOf(page),next=at>=0?book[at+1]:null,previous=at>0?book[at-1]:null;

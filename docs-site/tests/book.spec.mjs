@@ -21,9 +21,13 @@ test('complete research chapter',async({page})=>{
   expect((await page.request.get('/limen/')).headers()['content-security-policy']).toContain("font-src 'self'");
   await page.screenshot({path:path.join(root,'.docs-evidence/browser',test.info().project.name+'-chapter.png'),fullPage:false});
   const about=await (await page.request.get('/limen/about/')).text();expect(about.match(/<h1(?:\s|>)/g)).toHaveLength(1);
+  expect(about.match(/<img[^>]+src="https?:/g)).toBeNull();
   const reference=await (await page.request.get('/limen/reference/trainer/')).text();
   const lead=reference.match(/<p class="hero-lead">([^]*?)<\/p>/)[1];
   expect(lead).toContain('round storage format');expect(lead).not.toContain('[round storage format]');expect(lead).not.toContain('`');
+  await page.getByRole('link',{name:'the two interfaces',exact:true}).click();
+  await expect(page).toHaveURL(/about\/#two-interfaces-different-purposes$/);
+  await expect(page.locator('#two-interfaces-different-purposes')).toBeInViewport();
 });
 
 test('reference returns to the same passage and focus',async({page})=>{

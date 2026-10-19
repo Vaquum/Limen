@@ -23,7 +23,8 @@
       "bookOrder": 2
     },
     "README.md": {
-      "route": "/about/"
+      "route": "/about/",
+      "omitPreamble": true
     },
     "docs/Trainer.md": {
       "route": "/reference/trainer/"
