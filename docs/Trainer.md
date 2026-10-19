@@ -267,4 +267,4 @@ The operating model is:
 - Continue to [Cohort](Cohort.md) to bind selected sensors into an ensemble inference surface.
 - Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run layer that produces result directories.
 
-See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.
+See [Reserve and assess final observations](Final-Holdout.md) for project research exclusion, frozen fitted-selection assessment, retained scenario evidence and the limits of local exposure history.

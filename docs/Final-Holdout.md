@@ -1,4 +1,4 @@
-# Reserve final observations
+# Reserve and assess final observations
 
 Reserve a project's final time window before running research. Supported experiments, Trainer refits and Log reconstruction then admit only native bars ending at or before the earliest active reservation. The exclusion applies before selectors, splitting and fitted preparation, including caller-supplied or reassigned frames.
 
@@ -62,4 +62,44 @@ This is local coordination, not tamper-proof storage or shared-filesystem coordi
 
 ## Final assessment
 
-This release supplies reservation, research exclusion and preparation provenance. Freezing fitted selections and allocating final assessments are delivered separately by [S980B](https://github.com/Vaquum/Limen/issues/995); those APIs are not available yet. Existing [acceptance reports](Benchmark.md) remain research diagnostics. Keep their walk-forward limitations separate from a final holdout claim.
+After protected research and a validated Trainer refit, freeze the selected Sensor or populated Cohort before accessing the final window:
+
+```python
+from limen.experiment.holdout import (
+    freeze_holdout_selection, final_holdout_report, read_holdout_report,
+)
+
+# selected is an already fitted Sensor or Cohort from this project's Trainer.
+frozen = freeze_holdout_selection(
+    selected,
+    context_start='2024-11-01',
+    scenarios=[dict(fee_bps=5.0, slip_bps=5.0, notional_rate=0.25,
+                    execution_lag_bars=1, take_profit_bps=None,
+                    stop_loss_bps=None)],
+)
+report = final_holdout_report(frozen, project_root=root,
+                              reservation_id=reservation_id)
+retained = read_holdout_report(root, report['attempt_id'])
+```
+
+Context is an explicit UTC date strictly before the final start. Optional `start`/`end` narrow the reservation, retaining half-open bounds. Final start must follow every member's test end. The entire context and final interval must have complete native support. Each final bar uses the same context anchor and only observations through that bar. Each member predicts once; scenarios share that tape. No fitting, calibration, threshold selection or model promotion occurs.
+
+Supported selections are exact ordinary YAML-backed binary Sensor/Cohort objects with fitted LogRegBinary or LightGBMBinary, ordered Trainer schemas and matching completed project research records. Cached pipelines must still match their YAML declaration. Configured calibration must already be fitted; Python-backed Sensors, positive native LightGBM best iteration, legacy provenance, custom predictors, nonordinary splits, formed bars, trade contracts and decoder lookback above one are refused before allocation. Original selection mutation cannot change the frozen copy. One handle permits sequential reuse; concurrent use is refused.
+
+Each scenario requires exactly the six keys shown. Fees and slippage are finite nonnegative basis points; notional is in `(0,1]`; execution lag is a positive integer; TP/SL are null or finite positive basis points. Boolean numbers are refused. Order and duplicates are retained. Execution starts flat, excludes context positions, applies lag and forces terminal exit using existing snapshot economics. Raw positions are 0/1 and raw returns are unit-notional fractions. Deployed positions and gross/net/cost returns multiply raw values by notional once; summary returns already use that deployed fraction.
+
+Optional `evaluation_target` accepts an initialized exact NextBarUpTarget or NextBarDownTarget. Labels are computed after predictions from final rows only; the terminal label is unavailable. Accuracy, precision, recall, FPR and AUC disclose denominators/support. Missing labels, zero denominators, one-class AUC, absent probabilities and undefined return summaries are null with an explicit reason. Majority-vote probabilities remain null.
+
+## Attempts and evidence
+
+Allocation commits a serialized project assessment index and planned support before reading context or final data. Every subsequent error carries its attempt ID and retains failed exposure; a killed process may leave `started` with unknown outcome. Warm-up failure consumes an attempt. A new frozen selection with an earlier context or narrower window creates another attempt; it does not erase previous access. Any attempt prevents withdrawal; explicit release remains available.
+
+History migrates atomically from v1 to v2 under the reservation lease. Older reservation-only installations refuse v2. The shared admission lease covers evaluation and finalization, preventing a reservation change mid-assessment while allowing separately serialized allocations.
+
+Reports retain allocation-time prior attempts/reservations and overlap classes. Failed and started attempts count equally with completed attempts. `initial-recorded` is conditional on completed hosted-native local research evidence, an active unreleased reservation and no previous planned support intersecting the final window. Overlap makes later assessments `subsequent`; release makes them `post-release`; local/caller training data is `unknown`. Shared unreserved context alone does not defeat initial-recorded status. External exposure is always unknown.
+
+Each completed attempt stores `manifests/holdout/<attempt_id>/rows.parquet` and `report.json`. Rows retain context and final OHLC, original source columns/types, row hashes, member and aggregate predictions, availability reasons, optional labels and raw/deployed scenario ledgers. Other source columns use a `source_` prefix, repeated until unique when a name would collide; the report retains the original-to-retained name map. Strict JSON metrics contain no NaN/Infinity. History stores both artifact hashes; retrieval verifies completed status, identities, hashes and schemas without loading market data or running models. Partial files from failed writes remain unadvertised evidence. Preserve the evidence directory with the marker and history during backup.
+
+Specification and fitted-state digests pin the selected pipeline, fitted object and environment. They are witnesses for this installed environment, not portable independently refitted model identities. Repeat assessments can share science and row hashes while having different attempt IDs, exposure classes and history.
+
+Existing [acceptance reports](Benchmark.md) remain research diagnostics. Their walk-forward limitations remain separate from a final holdout claim.

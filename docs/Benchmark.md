@@ -187,4 +187,4 @@ This protects the TP/FP comparison from domination by extreme outcome values.
 - Continue to [Backtest](Backtest.md) to see how benchmark-quality signals translate into long-only trading economics.
 - Continue to [Log](Log.md) for the broader post-run workflow around benchmark, backtest, and parameter correlation.
 
-See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.
+See [Reserve and assess final observations](Final-Holdout.md) for project research exclusion, frozen fitted-selection assessment, retained scenario evidence and the limits of local exposure history.
