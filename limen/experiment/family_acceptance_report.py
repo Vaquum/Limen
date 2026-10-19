@@ -17,10 +17,12 @@ _MINIMUM_PBO_BLOCKS = 2
 def _assessment(trials: list[evidence.Trial], n_blocks: int, n_family: int,
                 n_groups: int, n_ungrouped: int, coverage_known: bool) -> dict[str, object]:
     values = np.stack([trial.values for trial in trials])
+    proof = evidence.mapping(trials[0].evidence, 'comparison evidence')
+    folds = cast(list[dict[str, object]], proof['folds'])
     errors: dict[str, str] = {}
     report: dict[str, object] = {
         'evaluation': trials[0].evaluation, 'members': [trial.identity for trial in trials],
-        'evidence': trials[0].evidence,
+        'evidence': {'folds': [{key: value for key, value in fold.items() if key != 'missing_datetimes'} for fold in folds]},
         'n_trials': len(trials), 'n_bars': values.shape[1], 'n_blocks': n_blocks,
         'n_family_trials': n_family, 'n_group_trials': len(trials),
         'n_trials_without_group': n_ungrouped, 'n_trials_outside_group': n_family - len(trials), 'n_groups': n_groups,
@@ -47,8 +49,8 @@ def _assessment(trials: list[evidence.Trial], n_blocks: int, n_family: int,
     except (ValueError, FloatingPointError) as exc:
         errors['deflated_sharpe_probability'] = str(exc)
     try:
-        if trials[0].evidence is not None and trials[0].evidence['pbo_unavailable'] is not None:
-            raise ValueError(str(trials[0].evidence['pbo_unavailable']))
+        if proof['pbo_unavailable'] is not None:
+            raise ValueError(str(proof['pbo_unavailable']))
         report['pbo'] = probability_of_backtest_overfitting(values, n_blocks=n_blocks)
     except (ValueError, FloatingPointError) as exc:
         errors['pbo'] = str(exc)

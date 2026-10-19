@@ -137,8 +137,6 @@ def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
     contract = fold.get('trade_contract')
     if contract is not None:
         declaration = mapping(contract, 'trade contract')
-        if declaration.get('signal_rows') is None:
-            raise EvidenceUnavailableError('Recorded signal availability is missing; recording.alignment is required')
         if contract_digest(cast(dict[str, JsonValue], declaration)) != fold.get('trade_contract_digest'):
             raise ValueError('Recorded trade contract digest mismatch')
         policy = mapping(declaration.get('policy'), 'trade policy')

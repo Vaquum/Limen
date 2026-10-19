@@ -15,6 +15,7 @@ from ruamel.yaml import YAML
 
 from limen.experiment import _round_storage as storage
 from limen.experiment import RuleBasedManifest
+from limen.experiment._recording import project_record
 from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.errors import StrictModeError
 from limen.experiment.family_acceptance_report import family_acceptance_report
@@ -107,6 +108,9 @@ def test_family_combines_comparable_runs(family_runs):
     assert group['pbo'] is None
     assert list(group['errors']) == ['pbo']
     assert 'open/high/low' in group['errors']['pbo']
+    assert set(group['evidence']) == {'folds'}
+    assert all('missing_datetimes' not in fold for fold in group['evidence']['folds'])
+    assert {trial['evidence']['round_params']['entry_return'] for trial in report['trials']} == {0.0, 0.001, 0.002}
     assert group['members'][0] == {'directory': str(paths[0]), 'trial': next(iter(parent_tracks))}
     child_run = next(run for run in report['runs'] if run['directory'] == str(paths[1]))
     assert [item['manifest_id'] for item in child_run['lineage']] == [root_id, child_id]
@@ -215,7 +219,7 @@ def test_family_accepts_empty_source_params(family_runs, tmp_path, source_params
     _experiment(config, _bars(), directory, project)
     report = family_acceptance_report([directory], project_root=project)
     assert report['coverage']['unavailable'] == 0
-    assert report['comparisons'][0]['evidence']['source']['params'] == {}
+    assert all(trial['evidence']['source']['params'] == {} for trial in report['trials'])
     assert report['comparisons'][0]['n_trials'] == 2
 
 
@@ -343,14 +347,14 @@ def test_family_signed_cost_variations_and_recording_omissions(family_runs, sign
     assert group['n_trials'] == 6
     assert group['pbo'] == probability_of_backtest_overfitting(np.stack([*list(_tracks(signed_run).values()), *list(_tracks(varied).values())]), n_blocks=2)
     projected = _copy_run(signed_run, tmp_path / 'projected')
-    records = _records(projected)
-    for record in records:
-        for fold in record['folds']:
-            del fold['trade_contract']['signal_rows']
-    _write_records(projected, records)
+    metadata = json.loads((projected / 'metadata.json').read_text())
+    policy = {**metadata['recording'], 'alignment': False}
+    metadata['recording'] = policy
+    (projected / 'metadata.json').write_text(json.dumps(metadata))
+    _write_records(projected, [project_record(record, policy) for record in _records(projected)])
     omitted = family_acceptance_report([projected, signed_run], project_root=project)
     assert omitted['coverage']['unavailable'] == 2
-    assert all('signal availability' in trial['unavailable'] for trial in omitted['trials'] if trial['directory'] == str(projected))
+    assert all('test timestamps' in trial['unavailable'] for trial in omitted['trials'] if trial['directory'] == str(projected))
 
 
 def test_family_execution_witness_and_nondefault_blocks(family_runs, signed_run, tmp_path):
@@ -363,12 +367,13 @@ def test_family_execution_witness_and_nondefault_blocks(family_runs, signed_run,
     assert group['n_bars'] == 96 and group['n_blocks'] == 4
     assert group['pbo'] == probability_of_backtest_overfitting(np.stack(list(_tracks(longer).values())), n_blocks=4)
     assert len(family_acceptance_report([signed_run, longer], project_root=project)['comparisons']) == 2
-    damaged = _copy_run(signed_run, tmp_path / 'bad_contract')
-    records = _records(damaged)
-    records[0]['folds'][0]['trade_contract']['rule_version'] += '-tampered'
-    _write_records(damaged, records)
-    with pytest.raises(ValueError, match='contract digest mismatch'):
-        family_acceptance_report([damaged], project_root=project)
+    for field in ('rule_version', 'signal_rows'):
+        damaged = _copy_run(signed_run, tmp_path / field)
+        records = _records(damaged)
+        del records[0]['folds'][0]['trade_contract'][field]
+        _write_records(damaged, records)
+        with pytest.raises(ValueError, match='contract digest mismatch'):
+            family_acceptance_report([damaged], project_root=project)
     config = _config()
     config['sfd']['manifest']['backtest'].update(take_profit_bps=50.0, stop_loss_bps=50.0)
     barriers = tmp_path / 'barriers'
