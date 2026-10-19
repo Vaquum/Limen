@@ -126,7 +126,7 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
         calls.extend(expected_calls)
         ADAPTER_CALLS.clear()
         original_execute(account, plan, signals, start, end, adapter, **kwargs)
-        assert ADAPTER_CALLS == expected_calls
+        assert expected_calls == ADAPTER_CALLS
         for actual, expected_episode in zip(account.episodes, ledger.episodes.to_dicts(), strict=True):
             # Open episodes have no outcome label; only the full ledger marks
             # their unused PnL to the final state in its aggregate metrics.
@@ -147,7 +147,7 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
         target = TradeOutcomeTarget(frame, 'outcome', trade_context=context)
         target.transform(frame, trade_context=context)
     assert compile_plan.call_count == 1 + frame.height
-    assert ADAPTER_CALLS == calls
+    assert calls == ADAPTER_CALLS
     assert_frame_equal(target.outcomes.rows, pl.DataFrame(expected, schema=target.outcomes.rows.schema), check_exact=True)
 
 
