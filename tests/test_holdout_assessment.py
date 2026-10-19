@@ -239,11 +239,11 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         stack.enter_context(_mutated_selection(trained[0][0]))
         stack.enter_context(patch.object(assessment, '_tape', side_effect=traced_tape))
         for path in paths:
-            stack.enter_context(patch(path, side_effect=lambda *args, **kwargs: calls.append('fit')))
+            stack.enter_context(patch(path, new=lambda *args, **kwargs: calls.append('fit')))
         for sensor in trained[0] + trained[1]:
             for value in sensor._fitted_params.values():
                 if type(value).__module__.startswith(('limen.scalers.', 'limen.targets.')):
-                    stack.enter_context(patch.object(type(value), '__init__', side_effect=lambda *args, **kwargs: calls.append('fitted-transform')))
+                    stack.enter_context(patch.object(type(value), '__init__', new=lambda *args, **kwargs: calls.append('fitted-transform')))
         report = _report(frozen, assessment_case)
     assert calls == []
     assert report['spec']['target']['params']['target_name'] == 'observed_up'
@@ -643,18 +643,12 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                         def adjust(self, values):
                             return np.clip(values + self.offset, 0, 1)
                     result['_probs'] = LocalOffset().adjust(result['_probs'])
-                elif self.helper_class == 'import':
-                    import tests.test_holdout_assessment
-                    result['_probs'] = tests.test_holdout_assessment.later_probabilities(result['_probs'])
-                elif self.helper_class == 'alias':
-                    import tests.test_holdout_assessment as helpers
-                    result['_probs'] = helpers.later_probabilities(result['_probs'])
                 elif self.helper_class == 'registry':
                     result['_probs'] = _OFFSET_REGISTRY['offset']().adjust(result['_probs'])
                 else:
                     result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
             return result
-    for helper_class in (False, True, 'local', 'import', 'alias', 'registry'):
+    for helper_class in (False, True, 'local', 'registry'):
         branched = copy.deepcopy(assessment_case[2][0][0])
         branched._model.__class__ = Branch
         branched._model.research_x = late._model.research_x.copy()
@@ -669,6 +663,26 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(branch_handle, assessment_case)
                 assert loader.call_count == 0
+    class Imported(LogRegBinary):
+        def predict(self, data):
+            import tests.test_holdout_assessment
+            result = super().predict(data)
+            result['_probs'] = tests.test_holdout_assessment.later_probabilities(result['_probs'])
+            return result
+    class Aliased(LogRegBinary):
+        def predict(self, data):
+            import tests.test_holdout_assessment as helpers
+            result = super().predict(data)
+            result['_probs'] = helpers.later_probabilities(result['_probs'])
+            return result
+    for implementation in (Imported, Aliased):
+        imported = copy.deepcopy(assessment_case[2][0][0])
+        imported._model.__class__ = implementation
+        imported_handle = _freeze(imported)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(imported_handle, assessment_case)
+            assert loader.call_count == 0
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
