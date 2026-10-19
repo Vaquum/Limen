@@ -35,6 +35,8 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
     if policy is not None and manifest.backtest_config is not None:
         from limen.experiment._dynamic_barriers import prepare_barriers
         interval = manifest.backtest_config.source_interval_seconds or source_interval(manifest.data_source_config)
+        if any(not split.height for split in raw_splits):
+            raise ValueError('Event execution requires nonempty declared partitions')
         history = pl.concat(raw_splits) if raw_history is None else raw_history.filter(pl.col('datetime') <= raw_splits[-1]['datetime'][-1])
         barriers = prepare_barriers(manifest.backtest_config, policy, history)
         trade = prepare_trade_context(manifest.backtest_config, policy, raw_splits, splits, round_params, interval_seconds=interval, frozen_sources=frozen, barriers=barriers)

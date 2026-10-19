@@ -5,16 +5,23 @@ from hashlib import sha256
 from importlib import import_module
 from inspect import getsourcefile
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypedDict, cast
 
 import polars as pl
 
-from limen.backtest.trade_contract import TradePolicy, finite_number
+from limen.backtest.trade_contract import JsonValue, TradePolicy, finite_number
 
 if TYPE_CHECKING:
     from limen.experiment._resolve_trade_policy import BacktestConfig
 
 __all__: list[str] = []
+
+
+class _BarrierPolicy(TypedDict):
+    take_profit_bps_column: str | None
+    stop_loss_bps_column: str | None
+    barrier_spec: Mapping[str, JsonValue] | None
+    source_interval_seconds: float | None
 
 
 def dynamic_barriers(config: object) -> bool:
@@ -32,15 +39,15 @@ def admit_research_run(manifest: object, workers: int, resume: bool) -> None:
         raise ValueError('Research-only dynamic barriers/allocation require fresh serial runs; resume and native workers>1 are unsupported')
 
 
-def barrier_policy(config: BacktestConfig, params: Mapping[str, object]) -> dict[str, object]:
+def barrier_policy(config: BacktestConfig, params: Mapping[str, object]) -> _BarrierPolicy:
     from limen.experiment._resolve_trade_policy import resolve_json
 
-    columns = [getattr(config, f'{name}_column') for name in ('take_profit_bps', 'stop_loss_bps')]
+    columns = [config.take_profit_bps_column, config.stop_loss_bps_column]
     if any(value is not None and (not isinstance(value, str) or not value.isidentifier() or value.startswith('__')) for value in columns):
         raise ValueError('Barrier column names must be literal public identifiers')
     if dynamic_barriers(config) and (not any(columns) or config.barrier_features is None):
         raise ValueError('Dynamic columns require an isolated barrier_features producer')
-    spec = None
+    spec: Mapping[str, JsonValue] | None = None
     if config.barrier_features is not None:
         method = config.barrier_features.method
         module, name = getattr(method, '__module__', ''), getattr(method, '__qualname__', '')
@@ -69,7 +76,7 @@ def prepare_barriers(config: BacktestConfig, policy: TradePolicy, raw: pl.DataFr
     source = raw.select('datetime', 'open', 'high', 'low', 'close')
     resolved = cast(Mapping[str, object], policy.barrier_spec['params'])
     produced = config.barrier_features.method(source.clone(), **resolved)
-    if not isinstance(produced, pl.DataFrame) or not produced['datetime'].equals(source['datetime']):
+    if not isinstance(produced, pl.DataFrame) or 'datetime' not in produced.columns or not produced['datetime'].equals(source['datetime']):
         raise ValueError('Barrier producer changed original source membership')
     columns = [name for name in (policy.take_profit_bps_column, policy.stop_loss_bps_column) if name is not None]
     if {'__barrier_ready__', *columns} - set(produced.columns):

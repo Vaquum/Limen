@@ -371,7 +371,6 @@ zero relative tolerance; schemas, identities, clocks and missing-value masks are
 unchanged. See [computation-reuse comparisons](Backtest-Benchmarks.md#backtest-computation-reuse)
 for the recorded-data measurement contract and command.
 
-
 ## Causal entry barriers (research only)
 
 Use `backtest.take_profit_bps_column` and/or `stop_loss_bps_column` instead of the corresponding scalar. Declare an explicit product and a private `barrier_features` producer. It receives admitted, unsplit recorded datetime/OHLC history through the test end; primary features and targets never receive its sidecars. Generic regular sources can declare literal `source_interval_seconds` (for example 3600).

@@ -52,7 +52,7 @@ def _yaml():
         'schema_version': '1.0', 'metadata': {'name': 'dynamic_barrier_proof', 'mode': 'development', 'limen_version': __version__},
         'sfd': {'manifest': {
             'type': 'rule_based', 'data_source': {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(FIXTURE.resolve())}},
-            'split_dates': {'train_start': '2024-01-02', 'train_end': '2024-01-03', 'val_start': '2024-01-04', 'val_end': '2024-01-04', 'test_start': '2024-01-05', 'test_end': '2024-01-05'},
+            'split_dates': {'train_start': '2024-01-02', 'train_end': '2024-01-03', 'val_start': '2024-01-04', 'val_end': '2024-01-05', 'test_start': '2024-01-05', 'test_end': '2024-01-06'},
             'strategy': {'conditions': [{'id': 'entry', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], 'entry': 'entry'},
             'reference_architecture': 'limen.sfd.reference_architecture.rule_based.rule_based',
             'backtest': {'product': {'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC', 'quote_currency': 'USDT', 'quantity_step': 0.00001, 'min_notional': 5},
@@ -112,7 +112,7 @@ def test_native_yaml_and_outcome_contract_parity(tmp_path):
     from tests.test_target_exposure import _case
 
     manifest, raw, data = _native()
-    assert validate(_yaml()).is_valid
+    assert validate(_yaml()).valid
     expected = volatility_barriers(raw, span=6, regime_span=24, min_periods=3)
     for mapping, partition in zip(data['_trade_context'].model_rows, data['_trade_context'].partitions, strict=True):
         distances = mapping.select('datetime').join(expected, on='datetime', maintain_order='left')

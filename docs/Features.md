@@ -21,7 +21,6 @@ from limen.features import kline_imbalance, vwap
 from limen.indicators import atr, roc
 from limen.sfd.reference_architecture import logreg_binary
 
-
 def manifest():
     return (
         MLManifest()
@@ -317,7 +316,6 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 - [Calibration](Calibration.md) for post-model probability calibration and threshold optimization
 - [Experiment Manifest](Experiment-Manifest.md) for how features plug into the split-first manifest pipeline
 - [Utilities](Utilities.md) for the exported `adf_test()` helper that `find_min_d` builds on
-
 
 ## Private volatility barriers
 
