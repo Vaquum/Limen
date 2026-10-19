@@ -218,13 +218,15 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
     return guarded
 
 
-def initialize_loop(sfd: object, data: pl.DataFrame | None, *, test_mode: bool,
+def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, test_mode: bool,
                     project_root: str | Path | None, experiment_dir: str | Path | None) -> tuple[ResearchManifest | None, pl.DataFrame, Callable[..., dict[str, object]] | None, Callable[..., dict[str, object]] | None]:
     factory = getattr(sfd, 'manifest', None)
     manifest = cast(Callable[[], ResearchManifest], factory)() if callable(factory) else None
     hint = cast(str | Path | None, getattr(sfd, '_holdout_project_root', None))
     binding = bind_manifest(manifest, project_root, experiment_dir, hint) if manifest is not None else bind(project_root, experiment_dir, hint)
     if manifest is None:
+        if binding is not None:
+            vars(host)['_holdout_binding'] = binding
         if binding is not None and binding.cutoff_ns is not None:
             raise ValueError('Holdout research refuses custom-function SFDs')
         if data is None:
@@ -249,7 +251,15 @@ def run_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_
     @wraps(func)
     def guarded(host: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         manifest = getattr(host, 'manifest', None)
-        if manifest is None or binding_of(manifest) is None:
+        if manifest is None:
+            binding = binding_of(host)
+            with admission(binding.root) if binding is not None else nullcontext():
+                if binding is not None:
+                    check_binding(binding)
+                    if binding.cutoff_ns is not None:
+                        raise ValueError('Holdout research refuses custom-function SFDs')
+                return func(host, *args, **kwargs)
+        if binding_of(manifest) is None:
             return func(host, *args, **kwargs)
         values = inspect.signature(func).bind(host, *args, **kwargs)
         values.apply_defaults()

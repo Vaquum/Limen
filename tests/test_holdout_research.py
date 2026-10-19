@@ -176,6 +176,7 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
     config = _configuration(root)
     old = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root)
     assert not (root / 'manifests/holdout.sqlite3').exists()
+    custom = UniversalExperimentLoop(data=old.data, sfd=SimpleNamespace(__name__='custom', params=lambda: {'choice': [1]}, prep=lambda *_: {}, model=lambda *_: {}), project_root=root)
     empty = history.bind(root)
     with pytest.raises(ValueError, match='active reservation'):
         history.start_research(empty, 'experiment')
@@ -185,6 +186,10 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
         with pytest.raises(sqlite3.OperationalError):
             function(*args)
     assert not (root / 'manifests/holdout.sqlite3').exists()
+    ordinary = tmp_path / 'ordinary'
+    ordinary.mkdir()
+    (ordinary / 'limen.toml').write_text('[project]\nname="ordinary"\n')
+    assert history.bind(ordinary) is None
     context = multiprocessing.get_context('spawn')
     parent, child = context.Pipe()
     process = context.Process(target=_lease_worker, args=(str(root), child))
@@ -209,8 +214,9 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
             history.finish_research(binding, record, {})
         with pytest.raises(ValueError, match='unknown'):
             history.finish_research(binding, str(uuid4()), {})
-        with pytest.raises(ValueError, match='revision changed'):
-            old.run('stale', n_permutations=1, progress_bar=False)
+        for stale in (old, custom):
+            with pytest.raises(ValueError, match='revision changed'):
+                stale.run('stale', n_permutations=1, progress_bar=False)
     finally:
         parent.send('stop')
         process.join(timeout=5)

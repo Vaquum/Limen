@@ -81,7 +81,7 @@ class UniversalExperimentLoop:
         self.prep: Callable[..., dict[str, Any]] | None = None
         self.model: Callable[..., dict[str, Any]] | None = None
 
-        bound_manifest, self.data, self.prep, self.model = _holdout.initialize_loop(sfd, data, test_mode=test_mode,
+        bound_manifest, self.data, self.prep, self.model = _holdout.initialize_loop(self, sfd, data, test_mode=test_mode,
                                  project_root=project_root, experiment_dir=experiment_dir)
         self.manifest = cast(Manifest | None, bound_manifest)
 

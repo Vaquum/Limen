@@ -177,7 +177,12 @@ def bind(*hints: str | Path | None) -> ProjectBinding | None:
     if not roots:
         return None
     root = roots.pop()
-    _ = _git(root, 'rev-parse', '--is-inside-work-tree')
+    from limen.cli.git_utils import run_git
+    probe = run_git(['rev-parse', '--is-inside-work-tree'], cwd=root)
+    if probe.returncode:
+        if (root / _MARKER).exists() or (root / _HISTORY).exists():
+            raise ValueError('Protected holdout history requires its Git project')
+        return None
     with admission(root):
         return read_binding(root)
 
