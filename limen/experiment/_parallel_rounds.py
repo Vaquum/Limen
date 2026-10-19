@@ -18,6 +18,7 @@ from typing import cast
 import polars as pl
 from tqdm import tqdm
 
+from limen.experiment._dynamic_barriers import admit_research_run
 from limen.experiment._parallel_commit import ParallelCommit
 from limen.experiment._parallel_resume import restore_parallel
 from limen.experiment._parallel_worker import FrozenRoundSources, RoundPayload, evaluate_round as _evaluate_round, freeze_sources, startup_limits, validate_parallel, worker_init
@@ -78,6 +79,7 @@ def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: 
         raise ValueError('Cannot resume with a different worker or native-thread policy')
     if type(effective) is int and effective > 1 and any(value is not None for value in overrides):
         raise ValueError('Parallel rounds reject parameter, preparation and model overrides')
+    admit_research_run(attributes['manifest'], effective, resume)
     admit_parallel(host, effective, prep_each_round, post_processing=post_processing,
                    factorize=factorize, context_params=context_params)
     attributes.update(_workers=effective, _shutdown_requested=False)

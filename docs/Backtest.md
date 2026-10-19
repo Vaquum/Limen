@@ -370,3 +370,25 @@ Equal-input numerical comparisons require absolute error at most `1e-10` with
 zero relative tolerance; schemas, identities, clocks and missing-value masks are
 unchanged. See [computation-reuse comparisons](Backtest-Benchmarks.md#backtest-computation-reuse)
 for the recorded-data measurement contract and command.
+
+## Causal entry barriers (research only)
+
+Use `backtest.take_profit_bps_column` and/or `stop_loss_bps_column` instead of the corresponding scalar. Declare an explicit product and a private `barrier_features` producer. It receives admitted, unsplit recorded datetime/OHLC history through the test end; primary features and targets never receive its sidecars. Generic regular sources can declare literal `source_interval_seconds` (for example 3600).
+
+```yaml
+backtest:
+  take_profit_bps_column: volatility_take_profit_bps
+  stop_loss_bps_column: volatility_stop_loss_bps
+  source_interval_seconds: 3600
+  barrier_features:
+    method: limen.features.volatility_barriers.volatility_barriers
+    params: {span: 24, regime_span: 168, min_periods: 24}
+```
+
+Keep the existing product/economics declaration alongside this fragment. Numeric producer parameters accept `{param}` search references; producer identity and column names are literals. Scalar and column declarations for the same side conflict. Resampled/ambiguous bars are unsupported.
+
+The latest surviving pending intent owns decision-time distances; the first actual fill freezes distances around its fill price. Adds and reductions retain that anchor and the elapsed deadline. Reversals use the reversing decision's distances for the new episode. Barrier/timeout ordering, adverse gap pricing and forced-exit latching retain their existing rules. This does not add a liquidity partial-fill model.
+
+Hypothetical `TradeOutcomeTarget` candidates inside warmup are unavailable with reason `barrier_warmup`; this does not simulate a primary entry.
+
+A producer declares `__barrier_ready__`: false only for a leading warmup prefix with null distances. An entry in that prefix makes the entire sampled candidate unavailable (`StrictModeError`); later readiness cannot manufacture a new entry. Interior missing, nonfinite or nonpositive distances are errors. Distances must be below 10000 bps. Original distance-bearing context is required for Log replay; file-only omitted context cannot reconstruct it. Trainer/Sensor promotion, resume and native workers >1 reject these research configurations.

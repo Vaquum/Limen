@@ -3,7 +3,7 @@ from typing import cast
 
 import polars as pl
 
-from limen.backtest.trade_contract import ExecutionEvent, NANOSECONDS, TradeInputs, TradePolicy, finite_number, source_binding
+from limen.backtest.trade_contract import BPS, ExecutionEvent, NANOSECONDS, TradeInputs, TradePolicy, finite_number, source_binding
 
 OBSERVATION_COLUMNS: tuple[str, ...] = ('row_id', 'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns', 'open', 'high', 'low', 'close')
 SIGNAL_COLUMNS: tuple[str, ...] = ('row_id', 'available_at_ns', 'target')
@@ -55,6 +55,25 @@ def timer_clock(policy: TradePolicy) -> tuple[int, int]:
     if policy.timer_interval_seconds is None:
         return 0, 0
     return round(policy.timer_interval_seconds * NANOSECONDS), round(policy.timer_phase_utc_seconds * NANOSECONDS)
+
+
+def validate_signal_barriers(inputs: TradeInputs, policy: TradePolicy) -> None:
+    columns = [name for name in (policy.take_profit_bps_column, policy.stop_loss_bps_column) if name is not None]
+    if not columns:
+        return
+    required = ['__barrier_ready__', *columns]
+    if set(required) - set(inputs.signals.columns):
+        raise ValueError('Dynamic barriers require original distance/readiness signal context')
+    ready = inputs.signals['__barrier_ready__']
+    if ready.dtype != pl.Boolean or ready.null_count() or not ready.is_sorted():
+        raise ValueError('Barrier readiness must be a declared contiguous leading warmup')
+    for name in columns:
+        for value, usable in zip(inputs.signals[name], ready, strict=True):
+            if not usable:
+                if value is not None:
+                    raise ValueError('Barrier warmup values must be null')
+            elif value is None or not 0 < finite_number(value, name) < BPS:
+                raise ValueError(f'Malformed ready barrier distance: {name}')
 
 
 def source_execution_events(inputs: TradeInputs, policy: TradePolicy, *, include_timers: bool) -> tuple[ExecutionEvent, ...]:

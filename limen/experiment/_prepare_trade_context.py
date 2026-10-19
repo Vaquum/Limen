@@ -80,7 +80,7 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
     return timing.with_columns(pl.Series('row_id', [f'row:{index}' for index in range(data.height)]), *[data[key] for key in ('open', 'high', 'low', 'close')]).select(OBSERVATION_COLUMNS)
 
 
-def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_splits: list[pl.DataFrame], bars: list[pl.DataFrame], params: Mapping[str, object], *, interval_seconds: object = None, frozen_sources: FrozenTradeSources | None = None) -> PreparedTradeContext:
+def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_splits: list[pl.DataFrame], bars: list[pl.DataFrame], params: Mapping[str, object], *, interval_seconds: object = None, frozen_sources: FrozenTradeSources | None = None, barriers: pl.DataFrame | None = None) -> PreparedTradeContext:
     interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params, 'recorded source interval')
     if callable(frozen_sources):
         frozen_sources = frozen_sources(config, params)
@@ -115,16 +115,20 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
                 raise ValueError('Bar membership exceeds its true source partition')
             rows.append({'datetime': model['datetime'][position], 'row_id': f'partition:{index}:bar:{position}', 'available_at_ns': int(raw_prices['available_at_ns'][last])})
         mapping = pl.DataFrame(rows).with_columns(model['datetime'])
+        if barriers is not None:
+            if 'bar_count' in model.columns and model['bar_count'].ne(1).any():
+                raise ValueError('Dynamic barriers reject resampled/ambiguous model bars')
+            mapping = mapping.join(barriers, on='datetime', how='left', maintain_order='left')
         if mapping['datetime'].is_duplicated().any():
             raise ValueError('Trade model rows require unambiguous source identity')
         start, end = int(raw_prices['start_ns'][0]), int(raw_prices['available_at_ns'][-1])
         observations = raw_prices if execution is None else execution.filter((pl.col('start_ns') <= end) & (pl.col('end_ns') >= start))
         funding = prepare_funding(policy.funding, history, start, end) if policy.funding is not None else None
         sources = [source_binding(observations, f'execution:partition:{index}', start, end, _precision(observations), 'causal_recorded_prices')]
-        sources.append(source_binding(mapping, f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
+        sources.append(source_binding(mapping.select('datetime', 'row_id', 'available_at_ns'), f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
         if funding is not None:
             sources.append(source_binding(funding, f'funding:partition:{index}', start, end, 1, 'normalized_funding_support'))
-        signals = mapping.select('row_id', 'available_at_ns').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
+        signals = mapping.drop('datetime').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
         partition = TradeInputs(initial, start, end, signals, observations, funding, tuple(sources))
         _ = event_plan(partition, policy)
         inputs.append(partition)
@@ -172,7 +176,7 @@ def select_trade_rows(inputs: TradeInputs, mapping: pl.DataFrame, rows: pl.DataF
     identities = rows.select('datetime').join(mapping, on='datetime', how='left', maintain_order='left')
     if identities['row_id'].null_count() or identities['row_id'].is_duplicated().any():
         raise ValueError('Prepared inference rows do not match source identity')
-    signals = identities.select('row_id', 'available_at_ns').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
+    signals = identities.select('row_id').join(inputs.signals, on='row_id', how='left', maintain_order='left')
     return replace(inputs, signals=signals)
 
 
@@ -215,7 +219,7 @@ def target_context(context: PreparedTradeContext | None, index: int) -> TradeTar
     if context is None:
         raise ValueError('Trade outcomes require configured execution economics before target fitting')
     original = context.partitions[index]
-    signals = context.model_rows[index].with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))
+    signals = context.model_rows[index].select('datetime', 'row_id').join(original.signals, on='row_id', how='left', maintain_order='left')
     inputs = replace(original, signals=signals)
     return TradeTargetContext(context.policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(context.policy, inputs)))
 

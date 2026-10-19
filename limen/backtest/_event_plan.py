@@ -1,9 +1,9 @@
 from collections import OrderedDict
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from threading import Lock
 from typing import cast
 
-from limen.backtest.execution_events import OBSERVATION_COLUMNS, SIGNAL_COLUMNS, source_execution_events, validate_initial
+from limen.backtest.execution_events import OBSERVATION_COLUMNS, SIGNAL_COLUMNS, source_execution_events, validate_initial, validate_signal_barriers
 from limen.backtest.trade_contract import ExecutionEvent, TradeInputs, TradePolicy, contract_digest, export_trade_contract, json_value, source_binding
 
 
@@ -27,8 +27,11 @@ _PLAN_LOCK = Lock()
 def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
     # Hash current buffers, rather than object identity: frozen TradeInputs can
     # still contain a DataFrame or funding parameter mapping changed in place.
+    projected = json_value(policy)
+    if isinstance(projected, dict):
+        _ = projected.pop('barrier_spec', None)
     return contract_digest({
-        'policy': json_value(policy), 'sources': json_value(inputs.sources),
+        'policy': projected, 'sources': json_value(inputs.sources),
         'initial_equity': str(inputs.initial_equity),
         'partition': [str(inputs.partition_start_ns), str(inputs.partition_end_ns)],
         'observations': source_binding(inputs.observations, '', 0, 0, 1, '').checksum,
@@ -40,6 +43,7 @@ def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
 
 def event_plan(inputs: TradeInputs, policy: TradePolicy) -> EventPlan:
     validate_initial(inputs)
+    validate_signal_barriers(inputs, policy)
     if set(OBSERVATION_COLUMNS) - set(inputs.observations.columns) or set(SIGNAL_COLUMNS) - set(inputs.signals.columns):
         _ = source_execution_events(inputs, policy, include_timers=False)
     key = _plan_key(inputs, policy)
@@ -47,7 +51,7 @@ def event_plan(inputs: TradeInputs, policy: TradePolicy) -> EventPlan:
         existing = _PLANS.get(key)
         if existing is not None:
             _PLANS.move_to_end(key)
-            return existing
+            return replace(existing, binding=contract_digest(export_trade_contract(policy, inputs))) if policy.take_profit_bps_column or policy.stop_loss_bps_column else existing
     events = source_execution_events(inputs, policy, include_timers=False)
     observation_ids = {event.source_row_id for event in events if event.kind == 'observation'}
     funding_ids = {event.source_row_id for event in events if event.kind == 'funding'}

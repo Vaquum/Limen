@@ -5,6 +5,7 @@ import limen.inference._fold_sensor as _fold_guard
 from collections.abc import Mapping, Sequence
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract
+from limen.experiment._dynamic_barriers import research_reference
 import logging
 from datetime import datetime
 from typing import Any, Literal
@@ -40,9 +41,8 @@ class Sensor:
 
 
         super().__init__()
-
         _fold_guard.reject_manual(yaml_reference, self)
-        self._yaml_reference = copy.deepcopy(yaml_reference)
+        self._yaml_reference = research_reference(yaml_reference)
         self._model = model
         self._fitted_params = dict(fitted_params)
         self._round_params = dict(round_params)

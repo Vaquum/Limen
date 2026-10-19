@@ -317,3 +317,9 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 - [Calibration](Calibration.md) for post-model probability calibration and threshold optimization
 - [Experiment Manifest](Experiment-Manifest.md) for how features plug into the split-first manifest pipeline
 - [Utilities](Utilities.md) for the exported `adf_test()` helper that `find_min_d` builds on
+
+## Private volatility barriers
+
+`limen.features.volatility_barriers.volatility_barriers` is a private backtest producer, not an ordinary primary-feature transform; see [Backtest](Backtest.md#causal-entry-barriers-research-only) for configuration and evidence restrictions.
+
+For simple close return `r[t] = close[t]/close[t-1]-1`, calculate EWMA standard deviations of `r[t-1]` using spans 24 and 168 by default (`adjust=True`, `bias=False`, 24 observations minimum). Require integer `2 <= min_periods <= span <= regime_span`. The first `min_periods+1` rows are warmup. Select regime multiplier 0.8 below fast/slow ratio 0.75, 1.2 above 1.25 and 1 otherwise, including equality and both-zero volatility. TP/SL are `10000 * fast_std * regime_multiplier * side_multiple`, clipped to shared minimum/maximum (10/2000 bps). Default TP/SL multiples are 2/1. All coefficients are finite positive; clips are ordered and below 10000 bps. No future return or partition-local EWMA restart enters the calculation.

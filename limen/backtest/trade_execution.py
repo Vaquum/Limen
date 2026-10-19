@@ -81,8 +81,10 @@ class Account:
             raise ValueError(f'Nonpositive equity or maintenance margin breach: equity={equity}, quantity={self.quantity}, price={price}')
         return equity
 
-    def intent(self, target: float, time_ns: int, reason: str) -> None:
+    def intent(self, target: float, time_ns: int, reason: str, distances: Mapping[str, JsonValue] | None = None) -> None:
         item: dict[str, JsonValue] = {'intent_id': f'{self.prefix}:intent:{len(self.intents)}', 'episode_id': None if self.episode is None else self.episode['episode_id'], 'requested_at_ns': time_ns, 'target': target, 'reason': reason, 'status': 'pending'}
+        if distances is not None:
+            item.update(distances)
         self.intents.append(item)
         if reason == 'signal' and self.pending is not None and self.pending['reason'] != 'signal':
             if self.queued_signal is not None:
@@ -95,7 +97,8 @@ class Account:
         self.ready_at_ns = time_ns + (round(self.policy.execution_lag_seconds * NANOSECONDS) if reason == 'signal' else 0)
 
     def accept_signal(self, value: object, time_ns: int) -> None:
-        signal = _canonical_signal(value, self.policy)
+        row: Mapping[str, object] = cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
+        signal = _canonical_signal(row['target'] if isinstance(value, Mapping) else value, self.policy)
         if signal is None:
             return
         changed = abs(signal - self.last_signal) > self.policy.signal_change_bps / BPS
@@ -110,7 +113,16 @@ class Account:
                     raise ValueError('Target exceeds resolved maximum exposure')
                 if fraction < 0 and self.policy.product.kind == 'cash_spot':
                     raise ValueError('Cash spot cannot open borrowed shorts')
-                self.intent(fraction, time_ns, 'signal')
+                distances: dict[str, JsonValue] = {}
+                if self.policy.take_profit_bps_column or self.policy.stop_loss_bps_column:
+                    for name in ('take_profit_bps', 'stop_loss_bps'):
+                        column = getattr(self.policy, f'{name}_column')
+                        distances[name] = cast(JsonValue, row.get(column)) if column else getattr(self.policy, name)
+                    entering = fraction != 0 and (self.quantity == 0 or fraction * self.quantity < 0)
+                    if entering and row.get('__barrier_ready__') is not True:
+                        from limen.experiment.errors import StrictModeError
+                        raise StrictModeError(f'Barrier warmup at entry row={row.get("row_id")} time_ns={time_ns} columns={self.policy.take_profit_bps_column,self.policy.stop_loss_bps_column} settings={self.policy.barrier_spec}')
+                self.intent(fraction, time_ns, 'signal', distances or None)
 
     def force_exit(self, time_ns: int, reason: str) -> None:
         if self.quantity != 0 and (self.pending is None or self.pending['reason'] == 'signal'):
@@ -136,6 +148,8 @@ class Account:
                     raise ValueError('Fill is unaffordable under collateral/cost rules')
                 if self.quantity == 0:
                     episode: dict[str, JsonValue] = {'episode_id': f'{self.prefix}:episode:{len(self.episodes)}', 'side': 1 if new_quantity > 0 else -1, 'first_fill_ns': event.time_ns, 'anchor_price': fill_price, 'closed_at_ns': None, 'net_pnl': 0.0, 'entry_equity': before, 'exit_reason': None}
+                    if self.policy.take_profit_bps_column or self.policy.stop_loss_bps_column:
+                        episode.update({name: self.pending.get(name) for name in ('take_profit_bps', 'stop_loss_bps')})
                     self.episode = episode
                     self.episodes.append(episode)
                 if self.episode is None:
@@ -168,10 +182,10 @@ class Account:
                 break
             target = cast(float, self.pending['target'])
             if target * self.quantity < 0:
-                opposite = target
+                opposite, distances = target, dict(self.pending)
                 self.fill(0.0, price, event)
                 self.pending = None
-                self.intent(opposite, event.time_ns, 'signal')
+                self.intent(opposite, event.time_ns, 'signal', {name: distances[name] for name in ('take_profit_bps', 'stop_loss_bps') if name in distances})
                 self.ready_at_ns = event.time_ns
             if self.pending is None:
                 raise ValueError('Reconciliation lost its pending intent')
@@ -190,7 +204,9 @@ class Account:
 
 def _barrier_price(account: Account, observation: dict[str, object], event: ExecutionEvent) -> tuple[float, str] | None:
     policy = account.policy
-    if account.episode is None or (policy.take_profit_bps is None and policy.stop_loss_bps is None) or (event.observation_phase == 'close' and cast(int, account.episode['first_fill_ns']) >= int(cast(int, observation['end_ns']))):
+    take_bps = cast(float | None, account.episode.get('take_profit_bps', policy.take_profit_bps)) if account.episode else None
+    stop_bps = cast(float | None, account.episode.get('stop_loss_bps', policy.stop_loss_bps)) if account.episode else None
+    if account.episode is None or (take_bps is None and stop_bps is None) or (event.observation_phase == 'close' and cast(int, account.episode['first_fill_ns']) >= int(cast(int, observation['end_ns']))):
         return None
     if event.observation_phase == 'close' and account.last_fill_ns is not None and account.last_fill_ns > int(cast(int, observation['start_ns'])):
         raise ValueError('Pre-entry/resize OHLC extrema require finer execution evidence')
@@ -199,8 +215,8 @@ def _barrier_price(account: Account, observation: dict[str, object], event: Exec
     opening = float(cast(float, observation['open']))
     high = float(cast(float, observation['high'])) if event.observation_phase == 'close' else opening
     low = float(cast(float, observation['low'])) if event.observation_phase == 'close' else opening
-    stop = anchor * (1 - side * policy.stop_loss_bps / BPS) if policy.stop_loss_bps is not None else None
-    take = anchor * (1 + side * policy.take_profit_bps / BPS) if policy.take_profit_bps is not None else None
+    stop = anchor * (1 - side * stop_bps / BPS) if stop_bps is not None else None
+    take = anchor * (1 + side * take_bps / BPS) if take_bps is not None else None
     if stop is not None and side * (opening - stop) <= 0:
         return opening, 'stop_loss'
     if take is not None and side * (opening - take) >= 0:
@@ -348,13 +364,14 @@ def trade_execution(inputs: TradeInputs, policy: TradePolicy) -> TradeLedger:
         raise ValueError('Funding policy and normalized events must be supplied together')
     plan = event_plan(inputs, policy)
     account = Account(policy, inputs.initial_equity, plan.binding[:16])
-    signals = {str(row['row_id']): row['target'] for row in inputs.signals.iter_rows(named=True)}
+    signals = {str(row['row_id']): row if policy.take_profit_bps_column or policy.stop_loss_bps_column else row['target'] for row in inputs.signals.iter_rows(named=True)}
     execute_event_plan(account, plan, signals, inputs.partition_start_ns, inputs.partition_end_ns, adapter)
     schema = {**_STATE_SCHEMA, 'absolute_exposure': pl.Float64}
     states = pl.concat([*account.state_blocks, _frame(account.states, schema)]) if account.state_blocks else _frame(account.states, schema)
     prior = pl.col('equity').shift(1).fill_null(inputs.initial_equity)
     states = states.with_columns((pl.col('equity') / prior - 1).alias('net_return'))
-    return TradeLedger(states, _frame(account.intents, _INTENT_SCHEMA), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, _EPISODE_SCHEMA), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), plan.binding)
+    extras = {'take_profit_bps': pl.Float64, 'stop_loss_bps': pl.Float64} if policy.take_profit_bps_column or policy.stop_loss_bps_column else {}
+    return TradeLedger(states, _frame(account.intents, {**_INTENT_SCHEMA, **extras}), _frame(account.fills, _FILL_SCHEMA), _frame(account.episodes, {**_EPISODE_SCHEMA, **extras}), _frame(account.funding, _FUNDING_SCHEMA), _metrics(account, inputs.initial_equity, states), plan.binding)
 
 
 __all__ = ['trade_execution']
