@@ -8,6 +8,7 @@ import inspect
 import dis
 import marshal
 import pickle
+import sys
 from types import ModuleType
 from typing import cast
 
@@ -60,6 +61,9 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
         elif inspect.ismethod(item):
             result = ('method', node(item.__func__), node(item.__self__))
+        elif inspect.isbuiltin(item):
+            owner = getattr(item, '__self__', None)
+            result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
         elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
             result = ('function', item.__module__, item.__qualname__, marshal.dumps(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure))
@@ -120,7 +124,7 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(fitted_witness(value))
-            if value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
+            if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
                 return
             visit(value.__defaults__)
             visit(value.__kwdefaults__)

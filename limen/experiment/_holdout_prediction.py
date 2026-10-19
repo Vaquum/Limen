@@ -53,9 +53,12 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             collect(root)
     numpy_state, python_state = fitted_witness(np.random.get_state()), random.getstate()
     previous = sys.getprofile()
+    violation = False
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
+        nonlocal violation
         if event == 'call' and (frame.f_code in forbidden or frame.f_code.co_name in _EFFECTS):
+            violation = True
             raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
         if previous is not None:
             previous(frame, event, arg)
@@ -63,6 +66,8 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     sys.setprofile(profile)
     try:
         yield
+        if violation:
+            raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
         if fitted_witness(np.random.get_state()) != numpy_state or random.getstate() != python_state:
             raise ValueError('Holdout inference consumed randomness')
     finally:
@@ -85,6 +90,7 @@ def validate_prediction(sensor: Sensor) -> None:
     state = fitted_witness(roots)
     with readonly_prediction([sensor]):
         first = sensor.predict(raw)
+    with readonly_prediction([sensor]):
         second = sensor.predict(raw)
     if fitted_witness(roots) != state:
         raise ValueError('Holdout inference mutated fitted state')

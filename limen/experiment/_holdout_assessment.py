@@ -103,7 +103,8 @@ def _tape(selection: Sensor | Cohort, raw: pl.DataFrame, start: int, failures: _
             retained: list[dict[str, object]] = []
             for ordinal, sensor in enumerate(sensors):
                 failures.member_id, failures.bar_ns = f'{sensor.manifest_id}:{sensor.permutation_id}', bar_ns
-                bar = sensor.predict(raw.head(index + 1))
+                with readonly_prediction([sensor]):
+                    bar = sensor.predict(raw.head(index + 1))
                 if failures.message is not None:
                     raise ValueError(failures.message)
                 _valid(bar, timestamp)
@@ -177,8 +178,7 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 stage = 'predict'
                 before = state_digest(selection)
                 dependencies = prediction_dependencies(selection)
-                with readonly_prediction(members(selection)):
-                    tape = _tape(selection, raw, planned['start_ns'], failures)
+                tape = _tape(selection, raw, planned['start_ns'], failures)
                 if state_digest(selection) != before or prediction_dependencies(selection) != dependencies:
                     raise ValueError('Holdout inference changed fitted state/dependencies')
                 failures.member_id, failures.bar_ns = None, None

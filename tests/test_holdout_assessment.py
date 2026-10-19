@@ -517,7 +517,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(frozen, assessment_case)
         assert loader.call_count == 0
-    for kind, reason in ((Lazy, 'fixed fitted'), (Random, 'random dependency'), (Mutating, 'mutated fitted state'), (Nonpreserving, 'copy changed')):
+    for kind, reason in ((Lazy, 'attempted fitting'), (Random, 'random dependency'), (Mutating, 'mutated fitted state'), (Nonpreserving, 'copy changed')):
         changed = copy.deepcopy(assessment_case[2][0][0])
         changed._model.__class__ = kind
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:

@@ -305,9 +305,9 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
             versions[package] = version(package)
         except PackageNotFoundError:
             versions[package] = None
-    for member in members(selection):
-        validate_prediction(member)
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
+    for member in members(snapshot[0]):
+        validate_prediction(member)
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
