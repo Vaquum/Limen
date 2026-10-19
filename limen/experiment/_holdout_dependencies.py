@@ -19,7 +19,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_functions', 'object_array', 'restore_iterations']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_functions', 'object_array']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -56,7 +56,9 @@ def children(value: object) -> tuple[object, ...]:
         return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (value.tolist(), *_attributes(cast(object, value)).values())
-    if isinstance(value, (type, ModuleType, np.ndarray, pl.DataFrame, pl.Series)) or inspect.isroutine(value) or _booster(value):
+    if isinstance(value, np.ndarray):
+        return tuple(_attributes(cast(object, value)).values())
+    if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or inspect.isroutine(value) or _booster(value):
         return ()
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, vars(value))
@@ -103,7 +105,7 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
         elif inspect.ismethod(item):
             result = ('method', node(item.__func__), node(item.__self__))
-        elif inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item):
+        elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
         elif isinstance(item, logging.Logger):
             result = ('logger', item.name)
@@ -115,6 +117,8 @@ def fitted_witness(value: object) -> bytes:
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
         elif isinstance(item, partial):
             result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
+        elif isinstance(item, (str, int, float, bytes)):
+            result = (kind, tuple(base.__repr__(item) for base in (str, int, float, bytes) if isinstance(item, base)), node(_attributes(item)))
         elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
             result = (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()), state)
@@ -136,24 +140,6 @@ def fitted_witness(value: object) -> bytes:
     return pickle.dumps(node(value), protocol=5)
 
 
-def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
-    seen: set[int] = set()
-
-    def visit(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)) or id(value) in seen:
-            return
-        seen.add(id(value))
-        if _booster(value):
-            from lightgbm import Booster
-            original = cast(Booster, value)
-            copied = cast(Booster, memo[id(value)])
-            copied.best_iteration = original.best_iteration
-        for part in children(value):
-            visit(part)
-
-    visit(source)
-
-
 def inference_functions(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> tuple[list[object], list[object]]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
@@ -165,7 +151,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
     processed: dict[int, set[str]] = {}
 
     def visit(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)):
+        if value is None or type(value) in (str, bool, int, float, bytes) or isinstance(value, np.generic):
             return
         if type(value) is logging.Logger:
             evidence.append(fitted_witness(value))
@@ -183,6 +169,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             visit(value.func)
             visit(value.args)
             visit(value.keywords)
+            visit(vars(value))
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(function_witness(value))
@@ -197,14 +184,14 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             for cell in value.__closure__ or ():
                 visit(cell.cell_contents)
             instructions = _instructions(value.__code__)
-            references = dict(value.__globals__)
-            references.update(zip(value.__code__.co_freevars, (cell.cell_contents for cell in value.__closure__ or ()), strict=True))
+            references = {name: [part] for name, part in value.__globals__.items()}
+            references.update((name, [cell.cell_contents]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True))
             imported: ModuleType | None = None
             chained_import = False
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
-                if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD'):
+                if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     chained_import = instructions[index - 1].argval is None
@@ -218,36 +205,38 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     binding = getattr(imported, name)
                     if chained_import and isinstance(binding, ModuleType):
                         imported = binding
-                elif instruction.opname in ('STORE_FAST', 'STORE_DEREF') and binding is not None:
-                    references[name], binding = binding, None
-                if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_DEREF', 'LOAD_FAST') or name not in references:
+                elif instruction.opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME') and binding is not None:
+                    references.setdefault(name, []).append(binding)
+                    binding = None
+                if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
-                available = value.__globals__ if instruction.opname == 'LOAD_GLOBAL' else references
-                if name not in available:
-                    continue
-                item = cast(object, available[name])
-                following = index + 1
-                for attribute in instructions[following:]:
-                    if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD'):
-                        break
-                    if not hasattr(item, str(attribute.argval)):
-                        break
-                    item = getattr(item, str(attribute.argval))
-                    following += 1
-                if following < len(instructions) and instructions[following].opname in ('STORE_FAST', 'STORE_DEREF'):
-                    references[str(instructions[following].argval)] = item
-                if not isinstance(item, ModuleType):
-                    try:
-                        witness = function_witness(item) if inspect.isfunction(item) else fitted_witness(item)
-                        evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
-                        visit(item)
-                    except (ValueError, TypeError, pickle.PickleError) as exc:
-                        raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
-        elif inspect.isroutine(value):
+                for item in tuple(references.get(name, ())):
+                    following = index + 1
+                    for attribute in instructions[following:]:
+                        if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD') or not hasattr(item, str(attribute.argval)):
+                            break
+                        item = getattr(item, str(attribute.argval))
+                        following += 1
+                    if following < len(instructions) and instructions[following].opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME'):
+                        aliases = references.setdefault(str(instructions[following].argval), [])
+                        if all(part is not item for part in aliases):
+                            aliases.append(item)
+                    if not isinstance(item, ModuleType):
+                        try:
+                            witness = function_witness(item) if inspect.isfunction(item) else fitted_witness(item)
+                            evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
+                            visit(item)
+                        except (ValueError, TypeError, pickle.PickleError) as exc:
+                            raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
+        elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
             evidence.append(fitted_witness(value))
         elif object_array(value):
             visit(value.tolist())
-        elif not isinstance(value, (ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
+            visit(_attributes(value))
+            if type(value) is not np.ndarray:
+                objects.append(value)
+                methods(value)
+        elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray and not _booster(value):
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
                 objects.append(value)
                 methods(value)
@@ -257,27 +246,25 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
 
     def methods(value: object) -> None:
         cls = value if isinstance(value, type) else type(value)
-        pending = ['predict', 'predict_proba', 'transform', '__call__', '__getattr__', '__getattribute__']
+        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__len__', '__contains__'} | attributes
         if isinstance(value, type):
-            pending.extend(('__new__', '__init__'))
-        pending.extend(name for parent in cls.__mro__ for name in parent.__dict__ if name in attributes)
+            names.update(('__new__', '__init__'))
         done = processed.setdefault(id(value), set())
-        while pending:
-            name = pending.pop()
-            if name in done or fitting_call(cls.__module__, f'{cls.__qualname__}.{name}'):
-                continue
-            done.add(name)
-            method = inspect.getattr_static(cls, name, None)
-            if method is None:
-                continue
-            evidence.append((cls.__module__, cls.__qualname__, name, type(method).__module__, type(method).__qualname__))
-            if isinstance(method, property):
-                method = method.fget
-            if isinstance(method, (staticmethod, classmethod)):
-                method = method.__func__
-            if method is not None and not inspect.isdatadescriptor(method):
-                evidence.append((cls.__module__, cls.__qualname__, name, function_witness(method) if inspect.isfunction(method) else fitted_witness(method)))
-                visit(method)
+        for parent in cls.__mro__:
+            for name in names.intersection(parent.__dict__):
+                key = f'{parent.__module__}.{parent.__qualname__}:{name}'
+                if key in done or fitting_call(parent.__module__, f'{parent.__qualname__}.{name}'):
+                    continue
+                done.add(key)
+                method = parent.__dict__[name]
+                evidence.append((key, type(method).__module__, type(method).__qualname__))
+                if isinstance(method, property):
+                    method = method.fget
+                if isinstance(method, (staticmethod, classmethod)):
+                    method = method.__func__
+                if method is not None:
+                    evidence.append((key, function_witness(method) if inspect.isfunction(method) else fitted_witness(method)))
+                    visit(method)
 
     for value in values:
         visit(value)

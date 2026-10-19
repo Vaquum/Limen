@@ -25,8 +25,8 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
-from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness, restore_iterations
-from limen.experiment._holdout_prediction import validate_inference_dependencies, validate_prediction
+from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness
+from limen.experiment._holdout_prediction import restore_iterations, validate_inference_dependencies, validate_prediction
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary

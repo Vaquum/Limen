@@ -784,6 +784,83 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(relative_handle, assessment_case)
             assert loader.call_count == 0
+    class FloatPolicy(float):
+        def adjust(self, values):
+            return np.clip(values + float(self), 0, 1)
+    class NonpreservingFloat(FloatPolicy):
+        def __deepcopy__(self, memo):
+            return type(self)(float(self) + 0.1)
+    mapped._model.policy = FloatPolicy(expected_offset)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingFloat(expected_offset)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class BranchImports(LogRegBinary):
+        def predict(self, data):
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                import limen.calibration as helpers
+            else:
+                from . import test_holdout_research as helpers
+            result = super().predict(data)
+            result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
+            return result
+    class Reflective(LogRegBinary):
+        def adjust(self, values):
+            return later_probabilities(values)
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = getattr(self, 'adjust')(result['_probs'])
+            return result
+    class Derived(Reflective):
+        def predict(self, data):
+            return super().predict(data)
+    class ClassBody(LogRegBinary):
+        def predict(self, data):
+            class Local:
+                offset = _LATE_RULES['offset']
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + Local.offset, 0, 1)
+            return result
+    class Descriptor:
+        def __get__(self, instance, owner=None):
+            return later_probabilities
+        def __set__(self, instance, value):
+            raise AssertionError('Read-only prediction descriptor')
+    class Described(LogRegBinary):
+        adjust = Descriptor()
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.adjust(result['_probs'])
+            return result
+    from collections import defaultdict
+    from functools import partial
+    class Factory(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.default_factory(result['_probs'])
+            return result
+    class PartialState(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.adjust(result['_probs'])
+            return result
+    for implementation in (BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState):
+        selection = copy.deepcopy(assessment_case[2][0][0])
+        selection._model.__class__ = implementation
+        selection._model.research_x = late._model.research_x.copy()
+        if implementation is Factory:
+            selection._model.policy = defaultdict(later_probabilities)
+        if implementation is PartialState:
+            selection._model.policy = partial(identity_probabilities)
+            selection._model.policy.adjust = later_probabilities
+        with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True), patch('tests.test_holdout_research.f17_later_probabilities', identity_probabilities, create=True):
+            selected = _freeze(selection)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(selected, assessment_case)
+                assert loader.call_count == 0
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)

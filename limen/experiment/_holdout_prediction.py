@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 import inspect
 from functools import partial
@@ -16,8 +16,26 @@ from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fi
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
-__all__ = ['readonly_prediction', 'validate_inference_dependencies', 'validate_prediction']
+__all__ = ['readonly_prediction', 'restore_iterations', 'validate_inference_dependencies', 'validate_prediction']
 _EFFECTS = FITTING_METHODS
+
+
+def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
+    seen: set[int] = set()
+
+    def visit(value: object) -> None:
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)) or id(value) in seen:
+            return
+        seen.add(id(value))
+        if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
+            from lightgbm import Booster
+            original = cast(Booster, value)
+            copied = cast(Booster, memo[id(value)])
+            copied.best_iteration = original.best_iteration
+        for part in children(value):
+            visit(part)
+
+    visit(source)
 
 
 def _roots(sensor: Sensor) -> list[object]:
