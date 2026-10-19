@@ -104,8 +104,10 @@ class MetaAllocationModel(ReferenceModel):
         for factory in (self.probability_factory, self.sizing_factory):
             if not isinstance(getattr(factory, 'deterministic', None), bool):
                 raise ValueError('Component factories require an explicit determinism declaration')
-        self.probability_model = cast(_ProbabilityEstimator, self.probability_factory(seed=seed, **cast(Mapping[str, JsonValue], params.get('probability_params') or {'C': 1, 'max_iter': 1000})))
-        self.sizing_model = self.sizing_factory(seed=seed, **cast(Mapping[str, JsonValue], params.get('sizing_params') or {'alpha': 1}))
+        probability_params = params.get('probability_params')
+        sizing_params = params.get('sizing_params')
+        self.probability_model = cast(_ProbabilityEstimator, self.probability_factory(seed=seed, **cast(Mapping[str, JsonValue], {'C': 1, 'max_iter': 1000} if probability_params is None else probability_params)))
+        self.sizing_model = self.sizing_factory(seed=seed, **cast(Mapping[str, JsonValue], {'alpha': 1} if sizing_params is None else sizing_params))
         _ = self.probability_model.fit(x, y[available])
         _ = self.sizing_model.fit(x, returns[available])
         if not np.array_equal(self.probability_model.classes_, [0, 1]):

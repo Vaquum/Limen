@@ -133,7 +133,7 @@ def test_yaml_cli_allocation_contract(tmp_path):
 
     config = _config()
     assert validate(config).valid
-    for malformed in (123, [], 'invalid'):
+    for malformed in (123, [], 'invalid', {}):
         invalid = deepcopy(config)
         invalid['sfd']['manifest']['allocation'] = malformed
         assert not validate(invalid).valid
@@ -167,6 +167,10 @@ def test_research_promotion_rejects_before_training(tmp_path):
     from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
 
     config = _config()
+    backtest = config['sfd']['manifest']['backtest']
+    for key in ('take_profit_bps_column', 'stop_loss_bps_column', 'barrier_features'):
+        backtest.pop(key)
+    backtest['stop_loss_bps'] = 100
     (tmp_path / 'metadata.json').write_text(json.dumps({'yaml_reference': config}))
     with patch.object(Trainer, '_load_round_data', side_effect=AssertionError('late rejection')), pytest.raises(ValueError, match='research-only'):
         Trainer(tmp_path)
@@ -234,3 +238,72 @@ def test_component_probabilities_reject_invalid_nonentry_values():
     probabilities[flat] = [-0.1, 1.1]
     with patch.object(model.probability_model, 'predict_proba', return_value=probabilities), pytest.raises(ValueError, match='Malformed take probabilities'):
         model._compose(batch)
+
+
+@pytest.mark.parametrize('ml', [False, True])
+def test_recorded_availability_columns_never_become_meta_features(ml):
+    from limen.experiment._prepare_trade_context import normalize_observations
+    config = _config(ml)
+    config['sfd']['manifest']['allocation']['params']['features'] = None
+    manifest = CompiledSFD(config).manifest()
+    raw = pl.read_parquet(FIXTURE, n_rows=480)
+    timing = normalize_observations(raw, interval_seconds=3600)
+    columns = ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns')
+    raw = raw.with_columns(timing.select(columns))
+    params = {key: values[0] for key, values in config['sfd']['params'].items()}
+    data = manifest.prepare_data(raw, params)
+    model = manifest.run_model(data, params)['_model']
+    assert not set(columns) & set(model.feature_names)
+    assert len(model.predict({'allocation_batch': data['_allocation_batches']['test']})['_preds']) == data['_trade_inputs'].signals.height
+
+
+def test_rule_oof_rejects_terminal_lookahead():
+    manifest, raw, params, _ = _prepared()
+    from limen.indicators import window_return
+    manifest.add_indicator(window_return, period=-1)
+    data = manifest.prepare_data(raw, params)
+    with pytest.raises(ValueError, match='observations after their decision'):
+        training_opportunities(data['_allocation_context'], folds=3, validation_fraction=0.2, include_primary_proba=False)
+
+
+def test_opportunity_exit_keeps_next_open_at_the_flat_clock():
+    from limen.experiment._allocation_folds import _opportunity
+    from limen.experiment._prepare_trade_context import normalize_observations
+    _, raw, _, data = _prepared()
+    prices = normalize_observations(raw.head(8), interval_seconds=3600)
+    assert prices['close'][1] != prices['open'][2]
+    context = data['_allocation_context']
+    policy = replace(context.policy, take_profit_bps_column=None, stop_loss_bps_column=None, barrier_spec=None, max_holding_seconds=None)
+    context = replace(context, policy=policy, barriers=None)
+    row, available = _opportunity(context, prices, raw.head(2), np.array([1.0, 0.0]), 0, 1, int(prices['available_at_ns'][-1]))
+    assert available
+    assert row['closed_at_ns'] == prices['start_ns'][2]
+    assert row['net_return_on_entry_notional'] == pytest.approx(prices['open'][2] / prices['open'][1] - 1)
+
+
+def test_opportunity_funding_is_charged_and_source_bound():
+    from limen.experiment._resolve_trade_policy import FundingConfig
+    manifest, raw, params, _ = _prepared()
+    manifest.backtest_config.product.kind = 'linear_perpetual'
+    manifest.backtest_config.funding = FundingConfig(preset='binance_btcusdt', params={'rate': 0.001})
+    context = manifest.prepare_data(raw, params)['_allocation_context']
+    funded = training_opportunities(context, folds=3, validation_fraction=0.2, include_primary_proba=False)
+    plain = replace(context, policy=replace(context.policy, funding=None), train_inputs=replace(context.train_inputs, funding_events=None))
+    unfunded = training_opportunities(plain, folds=3, validation_fraction=0.2, include_primary_proba=False)
+    rows = funded.rows.filter(pl.col('available'))
+    others = unfunded.rows.filter(pl.col('available'))
+    assert rows['opportunity_id'].equals(others['opportunity_id'])
+    assert rows['net_pnl'].le(others['net_pnl']).all()
+    assert rows['net_pnl'].lt(others['net_pnl']).any()
+
+
+def test_explicit_empty_component_params_select_factory_defaults():
+    from unittest.mock import patch
+    from sklearn.linear_model import LogisticRegression, Ridge
+    manifest, _, params, data = _prepared()
+    allocation = manifest.allocation_config
+    allocation.params.update(probability_params={}, sizing_params={})
+    with patch('limen.sfd.reference_architecture.direction_sizing.LogisticRegression', wraps=LogisticRegression) as probability, patch('limen.sfd.reference_architecture.direction_sizing.Ridge', wraps=Ridge) as sizing:
+        manifest.run_model(data, params)
+    assert probability.call_args.kwargs == {'random_state': 42}
+    assert sizing.call_args.kwargs == {'random_state': 42}

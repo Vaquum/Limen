@@ -51,15 +51,19 @@ def fit_primary(manifest: object, data: Mapping[str, object], params: Mapping[st
 
 
 def _rule_features(manifest: RuleBasedManifest, raw: pl.DataFrame, params: Mapping[str, object]) -> pl.DataFrame:
-    _, bars = process_bars(manifest, raw, dict(params))
+    _, bars = process_bars(manifest, _model_source(raw), dict(params))
     frame = apply_feature_transforms(manifest, bars.lazy(), dict(params)).collect().fill_nan(None).drop_nulls()
     data = finalize_rule_based_data(manifest, [frame, frame.clear(), frame.clear()], frame['datetime'].to_list(), dict(params))
     return cast(pl.DataFrame, data['train']).with_columns(frame['datetime'])
 
 
 def _inference(manifest: MLManifest, history: pl.DataFrame, fitted: Mapping[str, object], params: Mapping[str, object]) -> pl.DataFrame:
-    features, _ = manifest.sensor_input_prep(history, dict(fitted), dict(params))
+    features, _ = manifest.sensor_input_prep(_model_source(history), dict(fitted), dict(params))
     return features.drop([name for name in ('__trade_available_at_ns__', manifest.target_column) if name is not None and name in features.columns]).fill_nan(None).drop_nulls()
+
+
+def _model_source(raw: pl.DataFrame) -> pl.DataFrame:
+    return raw.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in raw.columns])
 
 
 def training_opportunities(context: AllocationContext, *, folds: int, validation_fraction: float, include_primary_proba: bool) -> OpportunityLabels:
@@ -89,7 +93,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             clone.backtest_config = None
             clone.split_dates = None
             clone.split_config = (max(1, int(prefix.height * (1 - validation_fraction))), max(1, int(prefix.height * validation_fraction)), 0)
-            prepared = clone.prepare_data(prefix, dict(params))
+            prepared = clone.prepare_data(_model_source(prefix), dict(params))
             if not len(cast(pl.DataFrame, prepared['x_train'])) or not len(cast(pl.DataFrame, prepared['x_val'])):
                 raise StrictModeError(f'OOF block {block_id}: insufficient prefix primary fit rows')
             primary = fit_primary(clone, prepared, params)
@@ -117,7 +121,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
                 prefix_manifest.backtest_config = None
                 prefix_manifest.split_dates = None
                 prefix_manifest.split_config = (max(1, start - 2), 1, 1)
-                prefix_data = prefix_manifest.prepare_data(raw.head(start), dict(params))
+                prefix_data = prefix_manifest.prepare_data(_model_source(raw.head(start)), dict(params))
                 primary = fit_primary(prefix_manifest, prefix_data, params)
             prediction = primary.predict({'test': frame, 'strategy': strategy})
             excluded = {condition['id'] for condition in manifest.strategy.conditions}
@@ -174,12 +178,17 @@ def _opportunity(context: AllocationContext, prices: pl.DataFrame, frame: pl.Dat
     exposure = decisions[local:local + count] * min(1.0, policy.max_exposure)
     signals = signal_rows.drop('datetime').with_columns(pl.Series('target', exposure))
     start_ns = int(times[0])
-    observations = prices.filter((pl.col('start_ns') >= start_ns) & (pl.col('available_at_ns') <= support_end))
+    observations = prices.filter((pl.col('start_ns') >= start_ns) & (pl.col('start_ns') <= support_end))
     funding = context.train_inputs.funding_events
     if funding is not None:
-        funding = funding.filter((pl.col('end_ns') >= start_ns) & (pl.col('start_ns') <= support_end)).with_columns(pl.col('start_ns').clip(lower_bound=start_ns), pl.col('end_ns').clip(upper_bound=support_end), pl.col('time_ns').clip(lower_bound=start_ns, upper_bound=support_end))
+        accrual = pl.col('kind') == 'accrual'
+        funding = funding.filter((accrual & (pl.col('start_ns') < support_end) & (pl.col('end_ns') > start_ns)) | (~accrual & pl.col('time_ns').is_between(start_ns, support_end)))
+        if policy.funding is not None and policy.funding.params.get('history_interpretation') == 'integrated' and funding.filter(accrual & ((pl.col('start_ns') < start_ns) | (pl.col('end_ns') > support_end))).height:
+            raise ValueError('Allocation integrated funding extends beyond causal opportunity support')
+        funding = funding.with_columns(*[pl.when(accrual).then(pl.col(name).clip(start_ns, support_end)).otherwise(pl.col(name)).alias(name) for name in ('start_ns', 'end_ns', 'time_ns')])
     source = source_binding(observations, f'primary-opportunity:{start_ns}', start_ns, support_end, 1, 'recorded_primary_opportunity_prices')
-    partition = TradeInputs(context.initial_equity, start_ns, support_end, signals, observations, funding, (source,))
+    sources = (source,) if funding is None else (source, source_binding(funding, f'primary-opportunity:{start_ns}:funding', start_ns, support_end, 1, 'causal_funding_support'))
+    partition = TradeInputs(context.initial_equity, start_ns, support_end, signals, observations, funding, sources)
     ledger = trade_execution(partition, policy)
     opening = signal_rows.row(0, named=True)
     row: dict[str, object] = {'opportunity_id': f'opportunity:{start_ns}', 'opening_block': block_id,
