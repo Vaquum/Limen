@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator, Mapping
+from collections.abc import Iterator
 from contextlib import contextmanager
 import inspect
 from hashlib import sha256
@@ -8,7 +8,6 @@ import marshal
 import random
 import sys
 from types import CodeType, FrameType
-from typing import cast
 
 import numpy as np
 import polars as pl
@@ -84,16 +83,15 @@ def _probe_output(sensor: Sensor) -> object:
     if not isinstance(raw, pl.DataFrame) or raw.is_empty():
         raise ValueError('Holdout requires recorded Trainer inference geometry')
     manifest = sensor._get_manifest()
-    data, _ = manifest.sensor_input_prep(raw, vars(sensor)['_fitted_params'], vars(sensor)['_round_params'])
-    feature_cols = [name for name in data.columns if name not in ('datetime', '__trade_available_at_ns__')]
-    x = np.asarray(data.select(feature_cols).tail(1), dtype=float)
-    predict = cast(Callable[[dict[str, object]], Mapping[str, object]], getattr(vars(sensor)['_model'], 'predict'))
-    result = predict({'x_test': x})
-    predictions = np.asarray(result['_preds'])
-    probabilities = np.asarray(result['_probs']) if result.get('_probs') is not None else None
-    if predictions.size != 1 or predictions.dtype.kind == 'b' or not np.isin(predictions, [0, 1]).all():
-        raise ValueError('Holdout requires fitted binary inference')
-    if probabilities is not None and (probabilities.size != 1 or not np.isfinite(probabilities).all() or not ((0 <= probabilities) & (probabilities <= 1)).all()):
+    guarded = manifest.test_predict_guard
+    manifest.test_predict_guard = False
+    try:
+        result = sensor.predict(raw)
+    finally:
+        manifest.test_predict_guard = guarded
+    if result.reason is not None or isinstance(result.prediction, bool) or result.prediction not in (0, 1):
+        raise ValueError(f'Holdout requires fitted binary inference: {result.reason}')
+    if result.probability is not None and (not np.isfinite(result.probability) or not 0 <= result.probability <= 1):
         raise ValueError('Holdout requires finite fitted probabilities')
     return result
 

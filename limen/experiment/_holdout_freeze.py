@@ -7,6 +7,7 @@ from datetime import date
 from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
 import math
+import marshal
 import numbers
 import platform
 from pathlib import Path
@@ -117,7 +118,9 @@ def state_digest(selection: Sensor | Cohort) -> str:
 
 def prediction_dependencies(selection: Sensor | Cohort) -> str:
     values: list[object] = [Sensor.predict, Sensor._get_manifest, Sensor._last_bar_inside_training_window]
-    active: set[str] = set()
+    if type(selection) is Cohort:
+        values.extend((Cohort._aggregate_bar_predictions, Cohort._validate_probability_range, Cohort._fallback_vote_threshold))
+    active = {sha256(marshal.dumps(value.__code__)).hexdigest() for value in values if callable(value)}
     for member in members(selection):
         values.extend(_member_state(member)[:4])
         active.update(cast(tuple[str, ...], vars(member)['_fitted_params']['_holdout_inference_calls']))
