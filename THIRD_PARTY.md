@@ -19,3 +19,11 @@ Dependency license review is required before release when dependencies are added
 ## Research reader typography
 
 The owned reader self-hosts unmodified Archivo Variable and IBM Plex Mono font binaries from `@fontsource-variable/archivo` 5.3.0 and `@fontsource/ibm-plex-mono` 5.3.0. Their SIL Open Font License texts are copied with the fonts into the candidate build. The original font names and license notices are retained. Limen’s reader implementation is authored in this repository; the local mikkokotila-com and Eightchord readers informed its reading, code and navigation behavior and are not build dependencies.
+
+## Recorded execution-cost evidence
+
+`tests/fixtures/observed_costs/` contains modified data from Chainticks/perp-data, revision `54b07b4bebc5574a065d3fbf4432634cf9148f50`, under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+
+Chainticks Perp Data, derived from public chain/archive state. https://chainticks.com
+
+Modified: normalized/hashed, selected recorded populations and separately labelled diagnostics. Deterministic hashes normalize account identity; they do not anonymize public addresses. The full publisher notice, source pins, attribution and reproduction instructions are retained in the fixture's `license.json`, `provenance.json` and `reproduce.py`. This data license is separate from the package MIT license.
