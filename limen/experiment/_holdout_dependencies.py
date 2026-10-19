@@ -115,6 +115,8 @@ def fitted_witness(value: object) -> bytes:
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
         elif isinstance(item, partial):
             result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
+        elif isinstance(item, bytearray):
+            result = (kind, bytes(memoryview(item)), node(_attributes(item)))
         elif isinstance(item, (str, int, float, bytes)):
             payload = str.__str__(item) if isinstance(item, str) else int.__int__(item) if isinstance(item, int) else float.__float__(item) if isinstance(item, float) else bytes.__repr__(item)
             result = (kind, payload, node(_attributes(item)))
@@ -169,6 +171,9 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             visit(value.args)
             visit(value.keywords)
             visit(vars(value))
+            if type(value) is not partial:
+                objects.append(value)
+                methods(value)
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(function_witness(value))
@@ -239,6 +244,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 objects.append(value)
                 methods(value)
         elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray and not _booster(value):
+            if isinstance(value, type) and type(value) is not type:
+                visit(type(value))
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
                 objects.append(value)
                 methods(value)

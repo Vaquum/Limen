@@ -797,6 +797,20 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class BytePolicy(bytearray):
+        def adjust(self, values):
+            return np.clip(values + np.frombuffer(self, dtype=np.float64)[0], 0, 1)
+    class NonpreservingBytes(BytePolicy):
+        def __deepcopy__(self, memo):
+            return type(self)((np.frombuffer(self, dtype=np.float64) + 0.1).tobytes())
+    learned_bytes = np.float64(expected_offset).tobytes()
+    mapped._model.policy = BytePolicy(learned_bytes)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingBytes(learned_bytes)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
     class BranchImports(LogRegBinary):
         def predict(self, data):
             if not np.array_equal(np.asarray(data['x_test']), self.research_x):
@@ -847,6 +861,28 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.policy.adjust(result['_probs'])
             return result
+    class PartialPolicy(partial):
+        def __call__(self, values):
+            return later_probabilities(super().__call__(values))
+    class ProbabilityMeta(type):
+        def __call__(cls, values):
+            return later_probabilities(values)
+    class ClassPolicy(metaclass=ProbabilityMeta):
+        selected = True
+    class CallablePolicy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy(result['_probs'])
+            return result
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy):
+        callable_selection = copy.deepcopy(assessment_case[2][0][0])
+        callable_selection._model.__class__ = CallablePolicy
+        callable_selection._model.policy = provider
+        callable_handle = _freeze(callable_selection)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(callable_handle, assessment_case)
+            assert loader.call_count == 0
     for implementation in (BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
