@@ -42,6 +42,8 @@ def identity(root, base, path):
 
 
 def acquire(root, output):
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text('{"status":"running"}\n')
     base = base_revision(root)
     files, responses = [], {}
     for path in source_paths(root):
@@ -53,7 +55,6 @@ def acquire(root, output):
             pull = merged_pull(commit, responses[commit])
         files.append({'path': path, 'commit': commit, 'status': status, 'merged_pr': pull, 'sha256': hashlib.sha256((root / path).read_bytes()).hexdigest()})
     record = {'schema_version': 1, 'base': base, 'files': files, 'responses': responses}
-    output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(record, indent=2) + '\n')
     return record
 

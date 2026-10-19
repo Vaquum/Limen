@@ -78,6 +78,8 @@ jobs:
 
       - name: Prove the reading experience
         working-directory: docs-site
+        env:
+          LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run check:reader
 
       - name: Retain research and browser evidence

@@ -150,6 +150,9 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         if (display['path'], display['sha256']) != (binding['path'], binding['sha256']) or display['environment_sha256'] != digest(json.dumps(retained['environment'], sort_keys=True).encode()):
             raise ValueError('Observed output identity differs')
         current = next(item for item in record['validation']['scenarios'] if item['interface'] == binding['interface'] and item['id'] == binding['scenario'])
+        source = next(item for item in record['sources'] if f"/{binding['interface']}-research/" in item['path'] and item['region'] == 'experiment')
+        if display['source_sha256'] != source['sha256'] or display['retained_commit'] != retained['revision']['tested_commit']:
+            raise ValueError('Retained source or run identity differs')
         compare_output(json.loads((root / current['output_path']).read_text()), json.loads((root / display['path']).read_text()), display['metrics'])
     if record['revision']['head'] != head or record['revision']['tree'] != tree:
         raise ValueError('Wrong execution revision')
@@ -203,3 +206,14 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             changed = subprocess.run(['git', 'diff', '--quiet', base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
             if changed and source['status'] != 'candidate':
                 raise ValueError('Unmerged source presented as merged')
+
+
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser(description='Verify execution, source, input and retained-output identities.')
+    for name in ('evidence', 'head', 'tree', 'version'):
+        parser.add_argument('--' + name, required=True)
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[2]
+    validate_evidence(json.loads(Path(args.evidence).read_text()), root, head=args.head, tree=args.tree, version=args.version)
+    print('Research evidence matches source, package, inputs and retained observations.')

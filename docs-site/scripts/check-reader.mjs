@@ -1,10 +1,17 @@
-import {spawnSync} from 'node:child_process';
+import {spawnSync,execFileSync} from 'node:child_process';
 import fs from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import path from 'node:path';
+import {hash} from '../reader/render.mjs';
 const root=path.resolve(process.cwd(),'..');
 const evidence=JSON.parse(await fs.readFile(path.join(root,'.docs-evidence/current.json'),'utf8'));
 if(evidence.validation?.status!=='passed')throw Error('Current successful research execution is required before reader checks');
+const built=JSON.parse(await fs.readFile('reader-build/build.json','utf8'));
+const head=process.env.LIMEN_EXPECTED_HEAD||execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+const tested=execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+const tree=execFileSync('git',['rev-parse','HEAD^{tree}'],{cwd:root,encoding:'utf8'}).trim();
+if(built.head!==head||built.tested_commit!==tested||built.tree!==tree||built.evidence_sha256!==hash(await fs.readFile(path.join(root,'.docs-evidence/current.json'))))throw Error('Reader build does not match the current tested revision');
+for(const [name,expected] of Object.entries(built.files))if(hash(await fs.readFile(path.join('reader-build',name)))!==expected)throw Error('Built reader member changed: '+name);
 let js=0,css=0;for(const name of await fs.readdir('reader-build/assets')){if(name.endsWith('.mjs'))js+=gzipSync(await fs.readFile(path.join('reader-build/assets',name))).length;if(name.endsWith('.css'))css+=gzipSync(await fs.readFile(path.join('reader-build/assets',name))).length;}
 if(js>60*1024||css>24*1024)throw Error(`Reader asset budget exceeded: JS ${js}, CSS ${css}`);
 const started=performance.now();const result=spawnSync(process.execPath,['node_modules/@playwright/test/cli.js','test'],{stdio:'inherit',timeout:180000});
