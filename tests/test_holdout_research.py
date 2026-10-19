@@ -18,7 +18,7 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import admit_frame
 from limen.experiment.holdout import release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
-from limen.log import Log
+from limen.log.log import Log
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
 from tests.test_trainer import _E2E_LOGREG_YAML

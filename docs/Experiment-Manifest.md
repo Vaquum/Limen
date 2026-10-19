@@ -1392,5 +1392,4 @@ This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the or
 
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
 
-
 See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.

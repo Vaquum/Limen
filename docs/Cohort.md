@@ -458,5 +458,4 @@ source/bar compatibility and every member's guards still apply.
 - [Trainer](Trainer.md) for reconstruction and promotion flows
 - [Reference Architecture](Reference-Architecture.md) for model output conventions
 
-
 See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.
