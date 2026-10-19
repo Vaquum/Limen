@@ -27,8 +27,7 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> npt.NDArray[np.float6
         np.ndarray: Weight vector [w_n, ..., w_1, w_0], where w_0 = 1.0 is the last element
 
     Raises:
-        ValueError: If d is non-finite or negative, threshold is non-finite or
-            nonpositive, or a recurrence weight is non-finite.
+        ValueError: For invalid parameters or a non-finite recurrence weight.
     '''
 
     if not np.isfinite(d) or d < 0:
