@@ -3,7 +3,7 @@ from typing import cast
 
 import polars as pl
 
-from limen.backtest.trade_contract import ExecutionEvent, NANOSECONDS, TradeInputs, TradePolicy, finite_number, source_binding
+from limen.backtest.trade_contract import BPS, ExecutionEvent, NANOSECONDS, TradeInputs, TradePolicy, finite_number, source_binding
 
 OBSERVATION_COLUMNS: tuple[str, ...] = ('row_id', 'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns', 'open', 'high', 'low', 'close')
 SIGNAL_COLUMNS: tuple[str, ...] = ('row_id', 'available_at_ns', 'target')
@@ -72,7 +72,7 @@ def validate_signal_barriers(inputs: TradeInputs, policy: TradePolicy) -> None:
             if not usable:
                 if value is not None:
                     raise ValueError('Barrier warmup values must be null')
-            elif value is None or not 0 < finite_number(value, name) < 10000:
+            elif value is None or not 0 < finite_number(value, name) < BPS:
                 raise ValueError(f'Malformed ready barrier distance: {name}')
 
 

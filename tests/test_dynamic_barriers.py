@@ -15,7 +15,7 @@ FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
 
 def test_formula_warmup_and_split_boundary_invariance():
     raw = pl.read_parquet(FIXTURE, n_rows=96)
-    configured = dict(span=6, regime_span=24, min_periods=3, minimum_bps=1, maximum_bps=1000)
+    configured = {'span': 6, 'regime_span': 24, 'min_periods': 3, 'minimum_bps': 1, 'maximum_bps': 1000}
     actual = volatility_barriers(raw, **configured)
     prior = pd.Series(raw['close'].to_list()).pct_change(fill_method=None).shift(1)
     fast = prior.ewm(span=6, adjust=True, min_periods=3).std(bias=False)
@@ -98,7 +98,7 @@ def test_entry_decision_distances_survive_lag_and_resize():
         trade_execution(warmup, policy)
     for value in (None, float('inf'), -1.0):
         broken = signals.with_columns(pl.when(pl.int_range(pl.len()) == 4).then(value).otherwise(pl.col('entry_tp')).alias('entry_tp'))
-        with pytest.raises(ValueError, match='barrier|entry_tp|finite'):
+        with pytest.raises(ValueError, match=r'barrier|entry_tp|finite'):
             trade_execution(replace(inputs, signals=broken), policy)
 
 
@@ -117,7 +117,7 @@ def test_native_yaml_and_outcome_contract_parity(tmp_path):
     for mapping, partition in zip(data['_trade_context'].model_rows, data['_trade_context'].partitions, strict=True):
         distances = mapping.select('datetime').join(expected, on='datetime', maintain_order='left')
         assert partition.signals['volatility_stop_loss_bps'].equals(distances['volatility_stop_loss_bps'])
-    assert not any('volatility_' in name or '__barrier_ready__' == name for name in data['train'].columns)
+    assert not any('volatility_' in name or name == '__barrier_ready__' for name in data['train'].columns)
     result = manifest.run_model(data, {'risk_span': 6})
     assert result['backtest_completed_trades'] >= 1
     path = tmp_path / 'barriers.yaml'
@@ -173,9 +173,8 @@ def test_research_promotion_and_factorize_reject(tmp_path):
     config = _yaml()
     (tmp_path / 'metadata.json').write_text(json.dumps({'yaml_reference': config}))
     before = (tmp_path / 'metadata.json').read_bytes()
-    with patch.object(Trainer, '_load_round_data', side_effect=AssertionError('late rejection')):
-        with pytest.raises(ValueError, match='research-only dynamic barriers/allocation cannot be promoted'):
-            Trainer(tmp_path)
+    with patch.object(Trainer, '_load_round_data', side_effect=AssertionError('late rejection')), pytest.raises(ValueError, match='research-only dynamic barriers/allocation cannot be promoted'):
+        Trainer(tmp_path)
     assert (tmp_path / 'metadata.json').read_bytes() == before
     with pytest.raises(ValueError, match='research-only dynamic barriers/allocation cannot be promoted'):
         Sensor(config, RuleBasedStrategy(), {}, {'risk_span': 6})
@@ -184,5 +183,5 @@ def test_research_promotion_and_factorize_reject(tmp_path):
         host = SimpleNamespace(manifest=manifest, _experiment_dir=tmp_path)
         with pytest.raises(ValueError, match='fresh serial'):
             begin_run(host, workers, True, resume, False, False, None, (None, None, None))
-    with pytest.raises(ValueError, match='event|snapshot'):
+    with pytest.raises(ValueError, match=r'event|snapshot'):
         _check_manifest(manifest, {'risk_span': [6]}, frozenset())

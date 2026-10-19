@@ -38,8 +38,6 @@ class Sensor:
                  trade_contract: Mapping[str, JsonValue] | None = None) -> None:
 
 
-        super().__init__()
-
         self._yaml_reference = copy.deepcopy(yaml_reference)
         self._model = model
         self._fitted_params = dict(fitted_params)

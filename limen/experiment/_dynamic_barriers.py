@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, cast
 
 import polars as pl
 
-from limen.backtest.trade_contract import JsonValue, TradePolicy, finite_number
+from limen.backtest.trade_contract import TradePolicy, finite_number
 
 if TYPE_CHECKING:
     from limen.experiment._resolve_trade_policy import BacktestConfig
@@ -53,7 +53,7 @@ def barrier_policy(config: BacktestConfig, params: Mapping[str, object]) -> dict
     interval = config.source_interval_seconds
     if interval is not None and (isinstance(interval, str) or finite_number(interval, 'source interval') <= 0):
         raise ValueError('source_interval_seconds must be positive literal metadata')
-    return dict(take_profit_bps_column=columns[0], stop_loss_bps_column=columns[1], barrier_spec=spec, source_interval_seconds=interval)
+    return {'take_profit_bps_column': columns[0], 'stop_loss_bps_column': columns[1], 'barrier_spec': spec, 'source_interval_seconds': interval}
 
 
 def prepare_barriers(config: BacktestConfig, policy: TradePolicy, raw: pl.DataFrame) -> pl.DataFrame | None:
@@ -72,7 +72,7 @@ def prepare_barriers(config: BacktestConfig, policy: TradePolicy, raw: pl.DataFr
     if not isinstance(produced, pl.DataFrame) or not produced['datetime'].equals(source['datetime']):
         raise ValueError('Barrier producer changed original source membership')
     columns = [name for name in (policy.take_profit_bps_column, policy.stop_loss_bps_column) if name is not None]
-    if set(['__barrier_ready__', *columns]) - set(produced.columns):
+    if {'__barrier_ready__', *columns} - set(produced.columns):
         raise ValueError('Barrier producer omitted declared distances/readiness')
     selected = produced.select('datetime', '__barrier_ready__', *columns)
     validation = selected.with_row_index('row_id').with_columns(pl.lit(0, dtype=pl.Int64).alias('available_at_ns'))
