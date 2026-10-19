@@ -155,7 +155,8 @@ def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
         def prep(frame, params):
             return {'train': frame.head(3), 'evaluation': frame.tail(5), 'scale': params['scale']}
 
-        def model(data, params):
+        def model(data, params, inputs=inputs, policy=policy, hour=hour,
+                  conditions=conditions, benchmark=benchmark, loaded=loaded):
             fitted = _CallerModel().fit(data['train'])
             predictions = fitted.predict(data['evaluation'], mode, params['scale'])
             original_bytes = predictions.to_numpy().tobytes()
@@ -172,7 +173,7 @@ def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
             return {'original_return': result.ledger('caller', 'original').metrics['total_return'],
                     'calibrated_return': result.ledger('caller', 'calibrated').metrics['total_return']}
 
-        sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+        sfd = SimpleNamespace(params=lambda space=space: space, prep=prep, model=model)
         loop = UniversalExperimentLoop(data=recorded, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)))
         loop.run(str(tmp_path / f'python-experiment-{hour}'), n_permutations=1,
                  workers=1, post_processing=False, progress_bar=False)
