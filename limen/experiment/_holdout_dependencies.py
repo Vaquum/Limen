@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from hashlib import sha256
 import inspect
+import dis
 import marshal
 import pickle
 from types import ModuleType
@@ -13,7 +14,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-__all__ = ['children', 'dependency_digest', 'fitted_witness', 'restore_iterations']
+__all__ = ['children', 'dependency_digest', 'fitted_witness', 'restore_iterations', 'inference_functions']
 
 
 def _booster(value: object) -> bool:
@@ -89,40 +90,65 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     visit(source)
 
 
-def dependency_digest(values: Sequence[object]) -> str:
-    functions: set[int] = set()
-    objects: set[int] = set()
+def inference_functions(values: Sequence[object]) -> tuple[list[object], list[object]]:
+    seen: set[int] = set()
     evidence: list[object] = []
-
-    def function(value: object) -> None:
-        if inspect.ismethod(value):
-            value = value.__func__
-        if isinstance(value, (staticmethod, classmethod)):
-            value = value.__func__
-        if not inspect.isfunction(value) or id(value) in functions:
-            return
-        functions.add(id(value))
-        evidence.append(fitted_witness(value))
-        for name in value.__code__.co_names:
-            if name not in value.__globals__:
-                continue
-            item = cast(object, value.__globals__[name])
-            if inspect.isfunction(item):
-                function(item)
-            elif isinstance(item, (Mapping, list, tuple, set, np.ndarray)) or item is None or type(item) in (str, bool, int, float):
-                evidence.append((value.__module__, value.__qualname__, name, fitted_witness(item)))
+    functions: list[object] = []
 
     def visit(value: object) -> None:
-        if id(value) in objects:
+        if id(value) in seen:
             return
-        objects.add(id(value))
-        function(value)
-        if not isinstance(value, (type, ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
-            for name in ('predict', 'predict_proba', 'transform'):
-                function(inspect.getattr_static(type(value), name, None))
-        for part in children(value):
-            visit(part)
+        seen.add(id(value))
+        module = getattr(value, '__module__', type(value).__module__)
+        if module.startswith(('numpy.random', 'random')):
+            functions.append(value)
+        if inspect.ismethod(value):
+            visit(value.__func__)
+            visit(value.__self__)
+        elif isinstance(value, partial):
+            visit(value.func)
+            visit(value.args)
+            visit(value.keywords)
+        elif inspect.isfunction(value):
+            functions.append(value)
+            evidence.append(fitted_witness(value))
+            if value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
+                return
+            visit(value.__defaults__)
+            visit(value.__kwdefaults__)
+            for cell in value.__closure__ or ():
+                visit(cell.cell_contents)
+            instructions = list(dis.get_instructions(value))
+            for index, instruction in enumerate(instructions):
+                if instruction.opname != 'LOAD_GLOBAL' or instruction.argval not in value.__globals__:
+                    continue
+                item = cast(object, value.__globals__[instruction.argval])
+                for attribute in instructions[index + 1:]:
+                    if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD'):
+                        break
+                    if not hasattr(item, str(attribute.argval)):
+                        break
+                    item = getattr(item, str(attribute.argval))
+                if not isinstance(item, ModuleType):
+                    evidence.append((value.__module__, value.__qualname__, instruction.argval, fitted_witness(item)))
+                    visit(item)
+        elif not isinstance(value, (ModuleType, type, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
+            for name in ('predict', 'predict_proba', 'transform', '__call__'):
+                method = inspect.getattr_static(type(value), name, None)
+                if inspect.isfunction(method):
+                    visit(method)
+                    for attribute in method.__code__.co_names:
+                        part = inspect.getattr_static(type(value), attribute, None)
+                        if part is not None and not isinstance(part, (property, type)):
+                            evidence.append((type(value).__module__, type(value).__qualname__, attribute, fitted_witness(part)))
+                            visit(part)
+            for part in children(value):
+                visit(part)
 
     for value in values:
         visit(value)
-    return sha256(pickle.dumps(evidence, protocol=5)).hexdigest()
+    return functions, evidence
+
+
+def dependency_digest(values: Sequence[object]) -> str:
+    return sha256(pickle.dumps(inference_functions(values)[1], protocol=5)).hexdigest()

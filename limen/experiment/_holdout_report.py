@@ -4,6 +4,8 @@ from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 import json
 import inspect
+from functools import partial
+from limen.experiment._holdout_dependencies import fitted_witness
 import numbers
 from dataclasses import fields, is_dataclass
 from datetime import date, datetime
@@ -41,17 +43,9 @@ def normalized(value: object) -> object:
         result = {str(key): normalized(item) for key, item in items.items()}
     elif isinstance(value, (list, tuple)):
         result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
-    elif inspect.ismethod(value):
-        result = normalized(value.__func__)
-    elif inspect.isfunction(value) or isinstance(value, type):
-        if not value.__module__.startswith(('limen.', 'sklearn.')):
-            raise ValueError('Holdout specification refuses custom callables')
-        name = f'{value.__module__}.{value.__qualname__}'
-        if inspect.isfunction(value) and value.__closure__:
-            result = {'callable': name, 'defaults': normalized(value.__defaults__),
-                    'closure': {key: normalized(cell.cell_contents) for key, cell in zip(value.__code__.co_freevars, value.__closure__, strict=True)}}
-        else:
-            result = name
+    elif inspect.ismethod(value) or inspect.isfunction(value) or isinstance(value, (type, partial)):
+        result = {'callable': f'{getattr(value, "__module__", type(value).__module__)}.{getattr(value, "__qualname__", type(value).__qualname__)}',
+                  'implementation': sha256(fitted_witness(value)).hexdigest()}
     elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
         result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
     else:

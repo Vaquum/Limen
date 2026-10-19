@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Mapping
 import copy
 from dataclasses import fields
 from datetime import date
@@ -14,11 +14,11 @@ from threading import Lock
 from typing import cast
 
 import numpy as np
-import numpy.typing as npt
 import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.decomposition import PCA
 from sklearn.frozen import FrozenEstimator
+from sklearn.base import BaseEstimator
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils import validation as _validation
 
@@ -28,6 +28,7 @@ from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
 from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness, restore_iterations
+from limen.experiment._holdout_prediction import validate_prediction
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
@@ -56,9 +57,13 @@ _IMPLEMENTATIONS.update({cls: {name: getattr(cls, name) for name in ('transform'
 
 
 def unchanged(value: object) -> None:
-    for name, original in _IMPLEMENTATIONS.get(type(value), {}).items():
-        if name in vars(value) or getattr(type(value), name) is not original:
+    for name in ('predict', 'predict_proba', 'transform'):
+        if name in vars(value) and hasattr(type(value), name):
             raise ValueError(f'Holdout refuses replaced {type(value).__name__}.{name}')
+    for cls in type(value).__mro__:
+        for name, original in _IMPLEMENTATIONS.get(cls, {}).items():
+            if name in vars(value) or getattr(cls, name) is not original:
+                raise ValueError(f'Holdout refuses replaced {cls.__name__}.{name}')
 
 
 def scenario_declarations(values: list[Mapping[str, object]]) -> list[dict[str, object]]:
@@ -147,66 +152,41 @@ def provenance(sensor: Sensor) -> dict[str, object]:
 
 
 def _fitted_value(value: object) -> None:
-    if type(value) in _FITTED_TYPES:
-        unchanged(value)
-        _fitted_value(vars(value))
-    elif isinstance(value, Mapping):
+    if isinstance(value, Mapping):
         for item in cast(Mapping[str, object], value).values():
             _fitted_value(item)
     elif isinstance(value, (list, tuple)):
         for item in cast(list[object] | tuple[object, ...], value):
             _fitted_value(item)
-    elif isinstance(value, np.ndarray):
-        if cast(npt.NDArray[np.generic], value).dtype.kind not in ('b', 'i', 'u', 'f', 'U', 'S'):
-            raise ValueError('Unsupported holdout fitted array')
-    elif type(value) not in (pl.DataFrame, pl.Series):
-        if callable(value):
-            raise ValueError('Holdout refuses fitted callbacks')
-        _ = normalized(value)
+    elif hasattr(value, '__dict__') and not isinstance(value, type):
+        unchanged(value)
+        if isinstance(value, BaseEstimator) and callable(getattr(value, 'fit', None)):
+            check_is_fitted(value)
+    _ = fitted_witness(value)
 
 
 def validate_member(sensor: Sensor) -> dict[str, object]:
     if type(sensor) is not Sensor or sensor.trade_contract is not None:
         raise ValueError('Holdout accepts ordinary exact binary Sensors only')
     unchanged(sensor)
-    wrapper = cast(LogRegBinary | LightGBMBinary, vars(sensor)['_model'])
-    if type(wrapper) not in (LogRegBinary, LightGBMBinary):
-        raise ValueError('Holdout supports fitted LogRegBinary/LightGBMBinary only')
-    if set(vars(wrapper)) - {'model', 'prediction_calibration_config', '_fitted_calibrator', '_calibration_threshold', '_val_score'}:
-        raise ValueError('Holdout refuses undeclared model-wrapper state')
+    wrapper = vars(sensor)['_model']
+    if not callable(getattr(wrapper, 'predict', None)):
+        raise ValueError('Holdout requires fitted binary prediction')
     unchanged(wrapper)
     model = getattr(wrapper, 'model', None)
-    if type(wrapper) is LogRegBinary:
-        if type(model) is not LogisticRegression:
-            raise ValueError('Holdout requires exact sklearn LogisticRegression')
-        unchanged(model)
-    else:
-        from lightgbm import LGBMClassifier
-        if type(model) is not LGBMClassifier or any(name in vars(model) for name in ('predict', 'predict_proba')):
-            raise ValueError('Holdout requires exact LGBMClassifier')
-        if any(getattr(LGBMClassifier, name).__module__ != 'lightgbm.sklearn' or getattr(LGBMClassifier, name).__qualname__ != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
-            raise ValueError('Holdout refuses replaced LightGBM prediction methods')
-    check_is_fitted(model)
-    if list(cast(Iterable[int], getattr(model, 'classes_', []))) != [0, 1]:
-        raise ValueError('Holdout estimator classes must be [0,1]')
-    config = wrapper.prediction_calibration_config
+    if model is not None:
+        _fitted_value(model)
+        classes = getattr(model, 'classes_', None)
+        if classes is not None and list(classes) != [0, 1]:
+            raise ValueError('Holdout estimator classes must be [0,1]')
+    config = getattr(wrapper, 'prediction_calibration_config', None)
     calibrator = vars(wrapper).get('_fitted_calibrator')
     if config is not None:
-        if calibrator is None:
+        if calibrator is None or not callable(getattr(calibrator, 'predict_proba', None)):
             raise ValueError('Holdout refuses configured but unfitted calibration')
-        if config.calibration_func is None:
-            if calibrator is not model:
-                raise ValueError('Holdout threshold-only calibrator must be the fitted estimator')
-        elif type(calibrator) is CalibratedClassifierCV:
-            unchanged(calibrator)
-            check_is_fitted(calibrator)
-            estimator = vars(calibrator).get('estimator')
-            calibrated = cast(list[object], vars(calibrator).get('calibrated_classifiers_', []))
-            if type(estimator) is not FrozenEstimator or vars(estimator).get('estimator') is not model or not calibrated or any(vars(item).get('estimator') is not estimator for item in calibrated):
-                raise ValueError('Holdout calibration must wrap the selected frozen estimator')
-            unchanged(estimator)
-        else:
-            raise ValueError('Holdout supports fitted sklearn calibration only')
+        _fitted_value(calibrator)
+        if isinstance(calibrator, CalibratedClassifierCV) and not calibrator.calibrated_classifiers_:
+            raise ValueError('Holdout refuses unfitted calibration')
         threshold = vars(wrapper).get('_calibration_threshold')
         if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not math.isfinite(float(threshold)):
             raise ValueError('Holdout requires a finite fitted threshold')
@@ -217,7 +197,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     effective = fresh if manifest is None else manifest
     unchanged(effective)
     fitted = cast(dict[str, object], vars(sensor)['_fitted_params'])
-    names = {'_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
+    names = {'_holdout_probe', '_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
     if effective.scaler is not None:
         names.update(entry[0] for entry in effective.scaler[0])
     if set(fitted) - names:
@@ -327,6 +307,8 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
             versions[package] = version(package)
         except PackageNotFoundError:
             versions[package] = None
+    for member in members(selection):
+        validate_prediction(member)
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,

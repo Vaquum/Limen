@@ -37,27 +37,100 @@ class _SourceCache:
         raise AssertionError('Source/log caches must not be traversed before allocation')
 
 
+class ExternalRobust:
+    def __init__(self, frame):
+        from limen.scalers import RobustScaler
+        self.fitted = RobustScaler(frame)
+    def transform(self, frame):
+        return self.fitted.transform(frame)
+
+
+class FittedPlatt:
+    def __init__(self, estimator, x, y):
+        from sklearn.linear_model import LogisticRegression
+        self.estimator = estimator
+        self.correction = LogisticRegression(random_state=42).fit(estimator.predict_proba(x)[:, 1].reshape(-1, 1), np.asarray(y))
+    def predict_proba(self, x):
+        return self.correction.predict_proba(self.estimator.predict_proba(x)[:, 1].reshape(-1, 1))
+
+
+def external_calibrator(estimator, x, y, kind='native', **params):
+    from sklearn.calibration import CalibratedClassifierCV
+    from sklearn.frozen import FrozenEstimator
+    from limen.calibration import sklearn_probability_calibrator
+    if kind == 'passthrough':
+        return estimator
+    if kind == 'detached':
+        return CalibratedClassifierCV(FrozenEstimator(copy.deepcopy(estimator)), method='sigmoid').fit(x, y)
+    if kind == 'custom':
+        return FittedPlatt(estimator, x, y)
+    return sklearn_probability_calibrator(estimator, x, y, **params)
+
+
+def mixed_architecture(data, C=1.0, prediction_calibration_config=None):
+    from limen.sfd.reference_architecture.logreg_binary import logreg_binary
+    from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
+    if prediction_calibration_config is not None and prediction_calibration_config.threshold_func is not None:
+        return logreg_binary(data, C=C, prediction_calibration_config=prediction_calibration_config)
+    return lightgbm_binary(data, n_estimators=5, num_leaves=3, n_jobs=1, early_stopping_rounds=2,
+                           prediction_calibration_config=prediction_calibration_config)
+
+
+def tree_architecture(data, prediction_calibration_config=None):
+    from sklearn.tree import DecisionTreeClassifier
+    from limen.sfd.reference_architecture.base import ReferenceModel
+    from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+    class FittedTree(ReferenceModel):
+        predict = LogRegBinary.predict
+        evaluate = LogRegBinary.evaluate
+        def train(self, data, **params):
+            return self
+    model = FittedTree()
+    model.model = DecisionTreeClassifier(max_depth=2, random_state=42).fit(np.asarray(data['x_train']), np.asarray(data['y_train']))
+    model.prediction_calibration_config = prediction_calibration_config
+    model._fitted_calibrator, model._calibration_threshold, model._val_score = None, 0.5, None
+    model.research_label = 'selected fitted tree'
+    result = model.evaluate(data)
+    result['_model'] = model
+    return result
+
+
 @pytest.fixture(scope='module')
 def assessment_case(tmp_path_factory):
     root = _project(tmp_path_factory.mktemp('holdout') / 'project')
     config = _configuration(root)
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
+    import limen.calibration as calibration
+    import limen.scalers as scalers
+    import limen.sfd.reference_architecture as architectures
+    aliases = ExitStack()
+    aliases.enter_context(patch.object(calibration, 'f17_calibrator', external_calibrator, create=True))
+    aliases.enter_context(patch.object(scalers, 'f17_scaler', ExternalRobust, create=True))
+    aliases.enter_context(patch.object(architectures, 'f17_mixed', mixed_architecture, create=True))
+    aliases.enter_context(patch.object(architectures, 'f17_tree', tree_architecture, create=True))
     trained, sources = [], []
     for architecture in ('logreg', 'lightgbm', 'warmup', 'earlier_test'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer'}}
+            current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.f17_mixed'
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer'}}
             current['sfd']['params']['C'] = [1.0]
             current['sfd']['params']['use_calibration'] = [True, False]
             current['sfd']['params']['use_threshold'] = [True, False]
             current['uel']['n_permutations'] = 4
         elif architecture == 'warmup':
+            current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.f17_tree'
+            current['sfd']['manifest']['scaler'] = {'class': 'limen.scalers.f17_scaler'}
+            current['sfd']['params'] = {}
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'custom'}}}
             current['sfd']['manifest']['indicators'][0]['params']['period'] = 30
             current['sfd']['manifest']['target']['fit_params']['source_column'] = 'roc_30'
         elif architecture == 'earlier_test':
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'passthrough'}}}
             current['sfd']['manifest']['split_dates'] = dict(zip(('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'), ('2024-01-01', '2024-01-02', '2024-01-02', '2024-01-03', '2024-01-03', '2024-01-04'), strict=True))
         else:
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary'
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'detached'}}}
             current['sfd']['params'] = {'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
         directory = root / architecture
         loop = UniversalExperimentLoop(sfd=CompiledSFD(current, project_root=root), project_root=root, experiment_dir=directory,
@@ -71,7 +144,11 @@ def assessment_case(tmp_path_factory):
     selected = [trained[0][0], trained[0][-1]]
     cohort = Cohort(experiment_log_path=str(sources[0]), permutation_ids=[sensor.permutation_id for sensor in selected])
     cohort.set_members(selected)
-    return root, reservation, trained, cohort
+    cohort.aggregation_mode = 'probability_weighted'
+    try:
+        yield root, reservation, trained, cohort
+    finally:
+        aliases.close()
 
 
 def _freeze(selection, *, context='2024-01-04', target=True, scenarios=None):

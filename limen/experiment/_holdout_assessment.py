@@ -19,6 +19,7 @@ from limen.experiment import _holdout_attempts as attempts
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_report as reports
 from limen.experiment._holdout_freeze import FrozenHoldoutSelection, digest, members, owned_copy, provenance, state_digest, unchanged, frozen_parts
+from limen.experiment._holdout_prediction import readonly_prediction
 from limen.experiment._holdout_source import SourceEvidence, load_admitted_source, source_spec
 from limen.experiment.manifest_core import MLManifest
 from limen.inference.sensor import BarPrediction, Sensor
@@ -174,7 +175,12 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 binding = history.ProjectBinding(root, cast(str, declaration['project_id']), cast(int, declaration['revision']), None, interval)
                 raw, source = load_admitted_source(cast(MLManifest, vars(members(selection)[0])['_manifest']), binding, lower_ns=planned['context_start_ns'], upper_ns=planned['end_ns'], complete=True)
                 stage = 'predict'
-                tape = _tape(selection, raw, planned['start_ns'], failures)
+                before = state_digest(selection)
+                dependencies = prediction_dependencies(selection)
+                with readonly_prediction(members(selection)):
+                    tape = _tape(selection, raw, planned['start_ns'], failures)
+                if state_digest(selection) != before or prediction_dependencies(selection) != dependencies:
+                    raise ValueError('Holdout inference changed fitted state/dependencies')
                 failures.member_id, failures.bar_ns = None, None
                 final = raw.filter(pl.col('datetime').dt.epoch('ns') >= planned['start_ns'])
                 stage = 'labels'
