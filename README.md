@@ -213,7 +213,7 @@ schema_version: "1.0"
 
 metadata:
   name: "logreg-first"
-  limen_version: "5.42.0"
+  limen_version: "5.43.0"
   mode: development
   description: Logistic regression binary classifier with calibration and feature perturbation
 

@@ -1775,3 +1775,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.42.0] - 2026-10-19
 
 - Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.
+
+## [5.43.0] - 2026-10-19
+
+- Add explicit recorded-fold Cohort selection, artifact-bound membership and compatible ordinary/fold binary aggregation with campaign guards.

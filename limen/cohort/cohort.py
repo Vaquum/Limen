@@ -13,6 +13,7 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS, Selector
 from limen.cohort._round_sources import RoundSources
+from limen.cohort._fold_sources import FoldSources, select_sources
 from limen.inference._fold_sensor import reject_legacy_members
 from limen.inference.sensor import BarPrediction, PredictionReason, Sensor
 from limen.cohort._python_cohort import Aggregate, CohortMap, CohortPrepare, HistoryT, PythonCohortBase, cohort_fields
@@ -37,7 +38,7 @@ class Cohort:
     }
 
     _logger = logging.getLogger(__name__)
-    member_ids: list[tuple[str | None, str]]
+    member_ids: list[tuple[str | None, str] | tuple[str, str, int, str]]
     architecture_id: str
 
     @staticmethod
@@ -52,18 +53,18 @@ class Cohort:
                  permutation_ids: list[str] | None = None,
                  selector: str | Selector | None = None,
                  selector_params: Any = None,
-                 rounds: list[tuple[str | Path, str]] | None = None) -> None:
+                 rounds: list[tuple[str | Path, str] | tuple[str | Path, str, int]] | None = None) -> None:
         '''Select named rounds across sources, or use the existing single-source selectors.'''
 
         super().__init__()
 
-        self._round_sources: RoundSources[Cohort] | None = None
+        self._round_sources: RoundSources[Cohort] | FoldSources | None = None
         if rounds is not None:
             if any(arg is not None for arg in (experiment_id, experiment_log_path, permutation_ids, selector, selector_params)):
                 raise ValueError('Cohort rounds conflicts with single-source or selector arguments.')
-            selected: RoundSources[Cohort] = RoundSources(
-                rounds, lambda path, ids: type(self)(experiment_log_path=str(path), permutation_ids=ids),
-                self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id)
+            selected = select_sources(rounds, self, lambda plain: RoundSources(
+                plain, lambda path, ids: type(self)(experiment_log_path=str(path), permutation_ids=ids),
+                self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id))
             source = next(iter(selected.sources.values()))
             single = len(selected.sources) == 1
             self.experiment_dir = source.experiment_dir if single else None
@@ -75,7 +76,7 @@ class Cohort:
             self.architecture_id = selected.architecture_id
             self.supports_probabilities = source.supports_probabilities
             self.aggregation_mode = source.aggregation_mode
-            self.member_ids = [(mid, pid) for mid, pid in selected.member_ids]
+            self.member_ids = list(selected.member_ids)
             self.source_metadata = selected.source_metadata
             self.cohort_id = None
             self._members = []
@@ -190,10 +191,11 @@ class Cohort:
 
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
-        reject_legacy_members(members)
+        reject_legacy_members(members, qualified_folds=getattr(self._round_sources, 'qualified_folds', False) is True)
 
         if self._round_sources is not None:
             bound = self._round_sources.bind(members)
+            assert self.aggregation_mode is not None
             payload = json.dumps(self._round_sources.identity(self.aggregation_mode), sort_keys=True)
             self._members = bound
             self.cohort_id = f'{SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
@@ -390,7 +392,7 @@ class Cohort:
     def _fallback_vote_threshold(self) -> float:
 
         arch = self.architecture_id.strip().lower()
-        if 'regressor' in arch:
+        if 'regressor' in arch and not getattr(self._round_sources, 'qualified_folds', False):
             return 0.0
         return Cohort._VOTE_THRESHOLD
 
