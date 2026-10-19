@@ -7,7 +7,6 @@ from datetime import date
 from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
 import math
-import inspect
 import numbers
 import platform
 from pathlib import Path
@@ -26,7 +25,7 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
-from limen.experiment._holdout_dependencies import code_digest, dependency_digest, fitted_witness, restore_iterations
+from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness, restore_iterations
 from limen.experiment._holdout_prediction import validate_prediction
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
@@ -122,14 +121,12 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
     values: list[object] = [Sensor.predict, Sensor._get_manifest, Sensor._last_bar_inside_training_window]
     if type(selection) is Cohort:
         values.extend((Cohort._aggregate_bar_predictions, Cohort._validate_probability_range, Cohort._fallback_vote_threshold))
-    active = {code_digest(value.__code__) for value in values if inspect.isfunction(value)}
     for member in members(selection):
         values.extend(_member_state(member)[:4])
-        active.update(cast(tuple[str, ...], vars(member)['_fitted_params']['_holdout_inference_calls']))
         manifest = cast(MLManifest, vars(member)['_manifest'])
         values.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
         values.extend(getattr(manifest, field.name) for field in fields(manifest) if field.name not in ('data_source_config', 'test_data_source_config'))
-    return dependency_digest(values, active)
+    return dependency_digest(values)
 
 
 def manifest_projection(manifest: MLManifest) -> object:
@@ -204,7 +201,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     effective = fresh if manifest is None else manifest
     unchanged(effective)
     fitted = cast(dict[str, object], vars(sensor)['_fitted_params'])
-    names = {'_holdout_inference_calls', '_holdout_probe', '_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
+    names = {'_holdout_probe', '_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
     if effective.scaler is not None:
         names.update(entry[0] for entry in effective.scaler[0])
     if set(fitted) - names:

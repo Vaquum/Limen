@@ -5,16 +5,16 @@ from contextlib import contextmanager
 import inspect
 import random
 import sys
-from types import CodeType, FrameType
+from types import FrameType
 
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import children, code_digest, fitted_witness, inference_functions
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, inference_functions
 from limen.inference.sensor import Sensor
 
 __all__ = ['readonly_prediction', 'validate_prediction']
-_EFFECTS = {'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'}
+_EFFECTS = FITTING_METHODS
 
 
 def _roots(sensor: Sensor) -> list[object]:
@@ -22,7 +22,7 @@ def _roots(sensor: Sensor) -> list[object]:
 
 
 @contextmanager
-def readonly_prediction(sensors: list[Sensor], calls: set[CodeType] | None = None) -> Iterator[None]:
+def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     forbidden: set[object] = set()
     seen: set[int] = set()
 
@@ -58,8 +58,6 @@ def readonly_prediction(sensors: list[Sensor], calls: set[CodeType] | None = Non
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
-        if calls is not None and event == 'call':
-            calls.add(frame.f_code)
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y'), [0, 1])
         if event == 'call' and not fixed_labels and (frame.f_code in forbidden or frame.f_code.co_name in _EFFECTS):
             violation = True
@@ -98,7 +96,8 @@ def _probe_output(sensor: Sensor) -> object:
 
 def validate_prediction(sensor: Sensor) -> None:
     roots = _roots(sensor)
-    functions, _ = inference_functions(roots)
+    config = getattr(vars(sensor)['_model'], 'prediction_calibration_config', None)
+    functions, _ = inference_functions(roots, exclude=() if config is None else (config,))
     for function in functions:
         if getattr(function, '__module__', type(function).__module__).startswith(('numpy.random', 'random')):
             raise ValueError('Holdout inference has an unowned random dependency')
@@ -107,13 +106,11 @@ def validate_prediction(sensor: Sensor) -> None:
         if any(name in function.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
             raise ValueError('Holdout inference has an unowned random dependency')
     state = fitted_witness(roots)
-    calls: set[CodeType] = set()
-    with readonly_prediction([sensor], calls):
+    with readonly_prediction([sensor]):
         first = fitted_witness(_probe_output(sensor))
-    with readonly_prediction([sensor], calls):
+    with readonly_prediction([sensor]):
         second = fitted_witness(_probe_output(sensor))
     if fitted_witness(roots) != state:
         raise ValueError('Holdout inference mutated fitted state')
     if first != second:
         raise ValueError('Holdout requires fixed fitted binary inference')
-    vars(sensor)['_fitted_params']['_holdout_inference_calls'] = tuple(sorted(code_digest(code) for code in calls))

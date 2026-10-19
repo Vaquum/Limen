@@ -33,6 +33,20 @@ _SCENARIO = {'fee_bps': 5.0, 'slip_bps': 2.0, 'notional_rate': 0.25, 'execution_
 _REPEAT_KEYS = ('spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_schema', 'source_column_map', 'planned', 'classification', 'scenarios', 'rows_sha256')
 
 
+_LATE_RULES = {'offset': 0.0}
+
+
+def later_probabilities(values):
+    return np.clip(values + _LATE_RULES['offset'], 0, 1)
+
+
+class InferenceOffset:
+    def __init__(self):
+        self.offset = _LATE_RULES['offset']
+    def adjust(self, values):
+        return np.clip(values + self.offset, 0, 1)
+
+
 class _SourceCache:
     def __deepcopy__(self, memo):
         raise AssertionError('Source/log caches must not be traversed before allocation')
@@ -611,6 +625,27 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             assert json.loads(record['error_json'])['stage'] == 'predict'
         with pytest.raises(ValueError, match='not completed'):
             read_holdout_report(assessment_case[0], record['id'])
+    class Branch(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
+            return result
+    for helper_class in (False, True):
+        branched = copy.deepcopy(assessment_case[2][0][0])
+        branched._model.__class__ = Branch
+        branched._model.research_x = late._model.research_x.copy()
+        branched._model.helper_class = helper_class
+        branch_handle = _freeze(branched)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(branch_handle, assessment_case)
+            assert loader.call_count == 0
+        if helper_class:
+            with patch.object(InferenceOffset, '__init__', lambda self: setattr(self, 'offset', 0.2)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(branch_handle, assessment_case)
+                assert loader.call_count == 0
     changed = copy.deepcopy(assessment_case[2][0][0])
     changed._model.model = LogisticRegression()
     with pytest.raises(ValueError, match='not fitted'):

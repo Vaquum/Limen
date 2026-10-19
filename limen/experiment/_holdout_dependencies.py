@@ -17,8 +17,10 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-__all__ = ['children', 'code_digest', 'dependency_digest', 'fitted_witness', 'inference_functions', 'restore_iterations']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'inference_functions', 'restore_iterations']
 
+
+FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
 
 @lru_cache(maxsize=2048)
 def code_digest(code: CodeType) -> str:
@@ -132,15 +134,19 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     visit(source)
 
 
-def inference_functions(values: Sequence[object], active: set[str] | None = None) -> tuple[list[object], list[object]]:
+def inference_functions(values: Sequence[object], *, exclude: Sequence[object] = ()) -> tuple[list[object], list[object]]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
     functions: list[object] = []
+    omitted = {id(value) for value in exclude}
+    attributes: set[str] = set()
+    objects: list[object] = []
+    processed: dict[int, set[str]] = {}
 
     def visit(value: object) -> None:
         if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)):
             return
-        if id(value) in seen:
+        if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
         module = getattr(value, '__module__', type(value).__module__)
@@ -156,8 +162,9 @@ def inference_functions(values: Sequence[object], active: set[str] | None = None
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(fitted_witness(value))
-            if active is not None and code_digest(value.__code__) not in active:
+            if value.__name__ in FITTING_METHODS:
                 return
+            attributes.update(value.__code__.co_names)
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
                 return
             visit(value.__defaults__)
@@ -194,34 +201,47 @@ def inference_functions(values: Sequence[object], active: set[str] | None = None
                     visit(item)
         elif inspect.isroutine(value):
             evidence.append(fitted_witness(value))
-        elif not isinstance(value, (ModuleType, type, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
-            pending = ['predict', 'predict_proba', 'transform', '__call__']
-            if active is not None:
-                pending.extend(name for cls in type(value).__mro__ for name, method in cls.__dict__.items() if inspect.isfunction(method) and code_digest(method.__code__) in active)
-            methods: set[str] = set()
-            while pending:
-                name = pending.pop()
-                if name in methods:
-                    continue
-                methods.add(name)
-                method = inspect.getattr_static(type(value), name, None)
-                if isinstance(method, property):
-                    method = method.fget
-                if isinstance(method, (staticmethod, classmethod)):
-                    method = method.__func__
-                if inspect.isfunction(method):
-                    visit(method)
+        elif not isinstance(value, (ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
+            objects.append(value)
+            methods(value)
+            if not isinstance(value, type):
+                for part in children(value):
+                    visit(part)
+
+    def methods(value: object) -> None:
+        cls = value if isinstance(value, type) else type(value)
+        pending = ['predict', 'predict_proba', 'transform', '__call__', '__getattr__', '__getattribute__']
+        if isinstance(value, type):
+            pending.extend(('__new__', '__init__'))
+        pending.extend(name for parent in cls.__mro__ for name in parent.__dict__ if name in attributes)
+        done = processed.setdefault(id(value), set())
+        while pending:
+            name = pending.pop()
+            if name in done:
+                continue
+            done.add(name)
+            method = inspect.getattr_static(cls, name, None)
+            if isinstance(method, property):
+                method = method.fget
+            if isinstance(method, (staticmethod, classmethod)):
+                method = method.__func__
+            if inspect.isfunction(method):
+                visit(method)
+                if method.__name__ not in FITTING_METHODS:
                     pending.extend(method.__code__.co_names)
-                elif method is not None and not inspect.isdatadescriptor(method) and not isinstance(method, type):
-                    evidence.append((type(value).__module__, type(value).__qualname__, name, fitted_witness(method)))
-                    visit(method)
-            for part in children(value):
-                visit(part)
+            elif method is not None and not inspect.isdatadescriptor(method):
+                evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
+                visit(method)
 
     for value in values:
         visit(value)
+    previous = (-1, -1)
+    while previous != (len(attributes), len(objects)):
+        previous = (len(attributes), len(objects))
+        for value in tuple(objects):
+            methods(value)
     return functions, evidence
 
 
-def dependency_digest(values: Sequence[object], active: set[str] | None = None) -> str:
-    return sha256(pickle.dumps(inference_functions(values, active)[1], protocol=5)).hexdigest()
+def dependency_digest(values: Sequence[object]) -> str:
+    return sha256(pickle.dumps(inference_functions(values)[1], protocol=5)).hexdigest()
