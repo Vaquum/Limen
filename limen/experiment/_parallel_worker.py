@@ -191,10 +191,10 @@ def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
     if manifest.architecture_function is lightgbm_binary:
         _ = import_module('lightgbm')
     _ = _native_pools()
-    _worker_yaml = yaml_reference
-    _worker_sources = FrozenRoundSources(sources.learning.read(),
+    restored = FrozenRoundSources(sources.learning.read(),
                                         sources.execution.read() if sources.execution is not None else None,
                                         sources.funding.read() if sources.funding is not None else None)
+    _worker_yaml, _worker_sources = yaml_reference, restored
     _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion = record_execution, record_model_outputs, fold_promotion
 
 

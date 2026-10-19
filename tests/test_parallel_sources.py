@@ -29,13 +29,12 @@ def test_recorded_sources_round_trip_with_small_startup_reference(tmp_path):
 
 def test_snapshot_rejects_changed_payload_and_cleans_after_failure(tmp_path):
     path = None
-    with pytest.raises(ValueError, match='snapshot changed'):
-        with snapshot_sources(recorded_source(), None, None, tmp_path) as snapshot:
-            assert snapshot.execution is snapshot.funding is None
-            path = Path(snapshot.learning.path)
-            path.chmod(0o600)
-            _ = path.write_bytes(path.read_bytes()[:-1])
-            snapshot.learning.read()
+    with pytest.raises(ValueError, match='snapshot changed'), snapshot_sources(recorded_source(), None, None, tmp_path) as snapshot:
+        assert snapshot.execution is snapshot.funding is None
+        path = Path(snapshot.learning.path)
+        path.chmod(0o600)
+        _ = path.write_bytes(path.read_bytes()[:-1])
+        snapshot.learning.read()
     assert path is not None and not path.parent.exists()
 
 
