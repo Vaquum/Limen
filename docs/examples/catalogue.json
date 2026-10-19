@@ -2060,7 +2060,7 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: first 1,440 rows",
+      "recorded_window": "hourly: first 1,440 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds."
     },
@@ -2075,7 +2075,7 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: January 1\u201322 2025",
+      "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three."
     },
@@ -2090,9 +2090,9 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: first 1,440 rows",
+      "recorded_window": "hourly: first 1,440 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Two completed rounds become four unique occurrence indices after resume; arbitrary fitted state is not restored."
+      "assertions": "Two completed rounds become four unique occurrence indices and equal uninterrupted native results after resume; arbitrary fitted state is not restored."
     },
     "compiled/recovery": {
       "interface": "compiled",
@@ -2105,7 +2105,7 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: January 1\u201322 2025",
+      "recorded_window": "hourly: January 1\u201322 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer."
     },
@@ -2120,7 +2120,7 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: first 384 rows; two anchored and two rolling folds",
+      "recorded_window": "hourly: first 384 rows; two anchored and two rolling folds",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Exact fold geometry and disjoint chronological clocks; finite caller-owned fitted predictions."
     },
@@ -2135,7 +2135,7 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: first 384 rows; two recorded folds",
+      "recorded_window": "hourly: first 384 rows; two recorded folds",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff."
     },

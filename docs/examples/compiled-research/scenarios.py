@@ -12,6 +12,8 @@ import polars as pl
 from ruamel.yaml import YAML
 
 from limen import Cohort, Trainer, UniversalExperimentLoop
+from limen.backtest import TradeInputs, TradePolicy
+from limen.backtest.trade_contract import export_trade_contract
 from limen.experiment.holdout import final_holdout_report, freeze_holdout_selection, read_holdout_report, reserve_holdout
 from limen.targets import NextBarUpTarget
 from limen.yaml import CompiledSFD, build_search_strategy, validate
@@ -130,7 +132,10 @@ def recovery(data_dir, output):
         records = [json.loads(line) for line in stream]
     selected = research_project.completed_log(resumed)['id'][0]
     sensors = Trainer(output / 'experiment').train([selected])
-    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors)}
+    full = execute(config, output / 'uninterrupted')
+    if not research_project.completed_log(resumed).drop('execution_time').equals(research_project.completed_log(full).drop('execution_time')):
+        raise ValueError('Resumed Compiled results differ from uninterrupted research')
+    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors), 'uninterrupted_equivalence': True}
 # endregion recovery
 
 
@@ -154,7 +159,11 @@ def walk_forward(data_dir, output):
     cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
     cohort.set_members(sensors)
     metadata = [fold_metadata(sensor) for sensor in sensors]
-    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_pnl_per_bar_bps').to_dicts(), 'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_pnl_per_bar_bps', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
+            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0], 'records': records,
+            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
 # endregion walk_forward
 
 
@@ -194,6 +203,21 @@ def calibration(data_dir, output):
 
 
 # region execution
+def execution_contexts(config, loop):
+    manifest = CompiledSFD(config).manifest()
+    if not isinstance(loop.data, pl.DataFrame):
+        raise TypeError('Execution must retain its original recorded source')
+    contexts = []
+    for row in research_project.completed_log(loop).iter_rows(named=True):
+        prepared = manifest.prepare_data(loop.data, {key: row[key] for key in config['sfd']['params']})
+        inputs, policy = prepared['_trade_inputs'], prepared['_trade_policy']
+        if not isinstance(inputs, TradeInputs) or not isinstance(policy, TradePolicy):
+            raise TypeError('Execution requires native bound inputs and policy')
+        contexts.append({'observations': inputs.observations.to_dicts(), 'partition': [inputs.partition_start_ns, inputs.partition_end_ns],
+                         'contract': export_trade_contract(policy, inputs)})
+    return contexts
+
+
 def execution(data_dir, output):
     config = configuration('execution', data_dir)
     loop = execute(config, output / 'experiment')
@@ -207,8 +231,8 @@ def execution(data_dir, output):
     funded_loop = execute(funded_config, output / 'funded')
     with gzip.open(output / 'funded/round_data.jsonl.gz', 'rt') as stream:
         funded_records = [json.loads(line) for line in stream]
-    funded = {'metrics': research_project.completed_log(funded_loop).select('risk_span', 'backtest_funding_pnl').to_dicts(), 'ledgers': [row['trade_ledger'] for row in funded_records], 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}
-    return {'rounds': research_project.completed_log(loop).height, 'metrics': research_project.completed_log(loop).select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records], 'funded': funded}
+    funded = {'metrics': research_project.completed_log(funded_loop).select('risk_span', 'backtest_funding_pnl').to_dicts(), 'ledgers': [row['trade_ledger'] for row in funded_records], 'contexts': execution_contexts(funded_config, funded_loop), 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}
+    return {'rounds': research_project.completed_log(loop).height, 'metrics': research_project.completed_log(loop).select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records], 'contexts': execution_contexts(config, loop), 'funded': funded}
 # endregion execution
 
 

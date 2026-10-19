@@ -8,14 +8,14 @@ sfd:
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
-        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
     split_dates:
-      train_start: '2025-01-01'
-      train_end: '2025-01-15'
-      val_start: '2025-01-15'
-      val_end: '2025-01-18'
-      test_start: '2025-01-18'
-      test_end: '2025-01-22'
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
     indicators:
     - func: limen.indicators.window_return
       params:

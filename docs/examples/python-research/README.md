@@ -27,6 +27,8 @@ The execution scenario compares cash spot with a linear perpetual using the reco
 
 Search also runs a separate resource-controlled grid. `BudgetReducer(max_permutations=3)` reduces a four-candidate budget to three completed rounds through the shared feedback controller. Its audit and checkpoint retain the intervention and remaining queue state. This changes the amount of research performed; it is not evidence that the reduced search selects a better model.
 
+Search and recovery use the first 1,440 recorded hourly observations. Recovery compares the completed resumed run with a separate uninterrupted run. Walk-forward uses the first 384 hourly observations; its inference callback declares their one-hour availability interval. Selection, ordinary final assessment and classifier calibration retain their quarter-hour population.
+
 The observed-cost scenario creates one immutable calibration from the recorded Chainticks population and pins its digest separately. Four caller-owned fits compare original and calibrated ledgers across two hours and both binary and signed exposure. Prices are recorded midpoints encoded as points; capital and strategy exposure are software scenarios. The calibration archive postdates evaluation, historical delivery is unknown and sell support is concentrated. These are retrospective stress results. The bundle retains the source attribution, CC BY 4.0 license and reproduction files. The [Backtest reference](../../Backtest.md#frozen-candidates-in-custom-python-research) uses the exact same model source.
 
 | Scenario | Decision and output |

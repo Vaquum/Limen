@@ -8,7 +8,7 @@ sfd:
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
-        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
     indicators:
     - func: limen.indicators.roc
       params:
@@ -26,6 +26,14 @@ sfd:
       fee_bps: 7.0
       slip_bps: 3.0
       notional_rate: 0.5
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-09
+        min_notional: 0
+      source_interval_seconds: 3600
     scaler:
       from_params: scaler_type
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
@@ -35,6 +43,17 @@ sfd:
       purge_bars: 4
       embargo_bars: 3
       anchored: true
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: sigmoid
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params: {}
+    objective:
+      metric: backtest_total_return
+      direction: maximize
   params:
     scaler_type: [logreg]
     C:

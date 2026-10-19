@@ -50,5 +50,6 @@ def trade_profile(data_dir, output):
         raise ValueError('The recorded trade source did not produce a dataframe')
     profile = conserved_flux_renormalization(trades, kline_interval='30s', base_window_s=5, levels=3)
     profile.write_parquet(output / 'trade-profile.parquet')
-    return {'trade_rows': trades.height, 'bars': profile.to_dicts(), 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
+    rows = [{**row, 'datetime': row['datetime'].isoformat()} for row in profile.to_dicts()]
+    return {'trade_rows': trades.height, 'bars': rows, 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
 # endregion trade_profile

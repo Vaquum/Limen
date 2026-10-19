@@ -3,6 +3,7 @@ import hashlib
 import json
 import math
 import subprocess
+import gzip
 
 import numpy as np
 import polars as pl
@@ -21,12 +22,50 @@ def ridge_score(bars, window, alpha):
     return float(np.mean(positions*(close[973:1440]/opening[973:1440]-1)-abs(positions)*.0002))
 
 
+def fold_ridge(bars, fold, alpha):
+    test_start = 288 + fold['fold'] * 48
+    training = bars[(0 if fold['anchored'] else fold['fold']*48):test_start-4]
+    fitting = int(training.height * .8)
+    close, opening = training['close'].to_numpy(), training['open'].to_numpy()
+    x = close[12:fitting-1]/close[8:fitting-5]-1
+    y = close[13:fitting]/opening[13:fitting]-1
+    z = (x-x.mean())/x.std()
+    coefficient = np.dot(z, y-y.mean())/(np.dot(z, z)+alpha)
+    vc, vo = close[fitting:], opening[fitting:]
+    forecasts = ((vc[12:-1]/vc[8:-5]-1)-x.mean())/x.std()*coefficient+y.mean()
+    validation = float(np.mean(np.sign(forecasts)*(vc[13:]/vo[13:]-1)-abs(np.sign(forecasts))*.0002))
+    prices = bars['close'].to_numpy()
+    inference = ((prices[test_start:test_start+48]/prices[test_start-4:test_start+44]-1)-x.mean())/x.std()*coefficient+y.mean()
+    return validation, inference
+
+
+def execution_clocks(context, ledger, raw):
+    source = dict(zip(raw['datetime'].dt.epoch('ns').to_list(), raw.to_dicts(), strict=True))
+    observations = {row['row_id']: row for row in context['observations']}
+    for row in observations.values():
+        assert row['end_ns'] == row['start_ns'] + 3_600_000_000_000
+        assert row['available_at_ns'] == row['end_ns'] and row['open_available_at_ns'] == row['start_ns']
+        assert all(row[name] == source[row['start_ns']][name] for name in ('open', 'high', 'low', 'close'))
+    intents = {row['intent_id']: row for row in ledger['intents']}
+    for fill in ledger['fills']:
+        row, intent = observations[fill['evidence_row_id']], intents[fill['intent_id']]
+        assert context['partition'][0] <= fill['time_ns'] <= context['partition'][1]
+        assert fill['time_ns'] >= intent['requested_at_ns']
+        assert fill['time_ns'] in (row['start_ns'], row['end_ns'])
+        if fill['time_ns'] == row['start_ns']:
+            assert fill['reference_price'] == row['open']
+        elif intent['reason'] in ('stop_loss', 'take_profit'):
+            assert row['low'] <= fill['reference_price'] <= row['high']
+        else:
+            assert fill['reference_price'] == row['close']
+
+
 def verify(interface, name, result, output, inputs):
     if name == 'search':
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
         assert set(result['runs']) == expected
         identities = []
-        bars = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet', n_rows=1440)
+        bars = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
         for strategy, rows in result['runs'].items():
             assert len(rows) == 4
             if interface == 'python':
@@ -82,24 +121,42 @@ def verify(interface, name, result, output, inputs):
         assert result['round_indices'] == [0, 1, 2, 3]
         assert len(set(result['round_ids'])) == 4
         assert (output / 'experiment/checkpoint.json').is_file()
+        assert result['uninterrupted_equivalence'] is True
+        resumed = pl.read_csv(output / 'experiment/results.csv').drop('execution_time')
+        uninterrupted = pl.read_csv(output / 'uninterrupted/results.csv').drop('execution_time')
+        assert resumed.equals(uninterrupted)
+        def records(directory):
+            with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
+                return [json.loads(line) for line in stream]
+        assert records(output / 'experiment') == records(output / 'uninterrupted')
         if interface == 'python':
             assert result['fitted_state_restored'] is False
         else:
             assert result['reconstructed_sensors'] == 1
     elif name == 'walk_forward':
         if interface == 'python':
+            bars = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=384)
             assert len(result['folds']) == 4
             assert [(f['anchored'], f['fold'], f['train_rows']) for f in result['folds']] == [(True, 0, 284), (True, 1, 332), (False, 0, 284), (False, 1, 284)]
             for fold in result['folds']:
                 assert fold['test_rows'] == len(fold['predictions']) == 48
                 assert datetime.fromisoformat(fold['train_end']) < datetime.fromisoformat(fold['test_start'])
                 assert all(math.isfinite(value) for value in fold['predictions'])
+                candidates = [(fold_ridge(bars, fold, alpha)[0], alpha) for alpha in (.1, 1.)]
+                score, alpha = sorted(candidates, key=lambda item: (-item[0], item[1]))[0]
+                assert fold['alpha'] == alpha and fold['validation_net_return'] == pytest.approx(score, rel=1e-10, abs=1e-12)
+                np.testing.assert_allclose(fold['predictions'], fold_ridge(bars, fold, alpha)[1], rtol=1e-10, atol=1e-12)
+                test = bars[288+fold['fold']*48:336+fold['fold']*48]
+                assert fold['test_open'] == test['open'].to_list() and fold['test_close'] == test['close'].to_list()
+                assert fold['available_at_ns'] == (test['datetime'].dt.epoch('ns')+3_600_000_000_000).to_list()
         else:
             assert result['rounds'] == 1 and len(result['folds']) == 2
             assert result['member_folds'] == [0, 1]
             assert len(result['member_ids']) == 2 and all(len(item) == 4 for item in result['member_ids'])
             assert len(set(result['selection_cutoffs'])) == 1
             assert all(datetime.fromisoformat(fitting) < datetime.fromisoformat(result['selection_cutoffs'][0]) for fitting in result['fitting_cutoffs'])
+            assert result['objective'] == pytest.approx(np.mean([row['val_backtest_total_return'] for row in result['folds']]))
+            assert all(row['val_score'] == row['val_backtest_total_return'] for row in result['folds'])
     elif name == 'holdout':
         if interface == 'python':
             rows = pl.read_parquet(output / 'assessment.parquet')
@@ -143,6 +200,9 @@ def verify(interface, name, result, output, inputs):
             for row in result['modes']:
                 assert (row['val_score'] is None) == (not row['use_threshold'])
     elif name == 'execution':
+        hourly = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=168)
+        times = hourly['datetime'].dt.epoch('ns')
+        bounds = [times[0], times[-1]+3_600_000_000_000] if interface == 'python' else [times[96], times[120]]
         if interface == 'python':
             metrics = result['metrics']
             assert len(result['contract_digest']) == 64 and result['fills']
@@ -150,21 +210,32 @@ def verify(interface, name, result, output, inputs):
             assert metrics['net_pnl'] == pytest.approx(metrics['gross_pnl']-metrics['fees']-metrics['slippage']+metrics['funding_pnl'])
             fills = pl.read_parquet(output / 'fills.parquet')
             assert fills.height == len(result['fills']) and metrics['fees'] > 0
+            execution_clocks(result['context'], {'fills': result['fills'], 'intents': pl.read_parquet(output / 'intents.parquet').to_dicts()}, hourly)
         else:
             assert result['rounds'] == 2 and len(set(result['contracts'])) == 2
             assert len(result['ledgers']) == 2
             assert {row['risk_span'] for row in result['metrics']} == {6, 12}
             assert all(row['backtest_completed_trades'] > 0 for row in result['metrics'])
+            for context, ledger in zip(result['contexts'], result['ledgers'], strict=True):
+                execution_clocks(context, ledger, hourly)
         funded = result['funded']
         raw = json.loads((inputs / 'btcusdt_funding_20240101_20240108.json').read_text())['records']
         assert funded['recorded_events'] == len(raw) == 22
         assert funded['input_sha256'] == hashlib.sha256((inputs / 'btcusdt_funding_20240101_20240108.json').read_bytes()).hexdigest()
         observed_rates = {row['fundingTime'] * 1_000_000: (float(row['fundingRate']), float(row['markPrice'])) for row in raw}
-        ledgers = [{'funding': funded['payments']}] if interface == 'python' else funded['ledgers']
-        for ledger in ledgers:
+        ledgers = [{'funding': funded['payments'], 'fills': funded['fills'], 'intents': pl.read_parquet(output / 'funded-intents.parquet').to_dicts()}] if interface == 'python' else funded['ledgers']
+        contexts = [funded['context']] if interface == 'python' else funded['contexts']
+        for context, ledger in zip(contexts, ledgers, strict=True):
+            assert context['partition'] == bounds
+            execution_clocks(context, ledger, hourly)
             assert ledger['funding']
+            expected = sorted(time for time in observed_rates if bounds[0] <= time <= bounds[1])
+            assert [row['end_ns'] for row in ledger['funding']] == expected
+            assert any(payment['recognized_delta'] != 0 for payment in ledger['funding'])
             for payment in ledger['funding']:
                 rate, mark = observed_rates[payment['end_ns']]
+                quantity = sum(fill['quantity_delta'] for fill in ledger['fills'] if fill['time_ns'] < payment['end_ns'])
+                assert payment['quantity'] == pytest.approx(quantity, rel=1e-12, abs=1e-12)
                 assert payment['rate_decimal'] == rate and payment['valuation_price'] == mark
                 assert payment['recognized_delta'] == pytest.approx(-payment['quantity'] * rate * mark, rel=1e-12, abs=1e-12)
         if interface == 'python':
@@ -182,6 +253,19 @@ def verify(interface, name, result, output, inputs):
                 assert 0 < row['rows'] < row['source_rows_in_complete_bars'] <= 384
                 assert row['volume'] == pytest.approx(retained['volume'].sum(), rel=1e-12)
                 assert row['first_open'] == retained['open'][0] and row['last_close'] == retained['close'][-1]
+                actual = pl.read_parquet(output / (row['kind'] + '.parquet'))
+                column = {'volume': 'volume', 'trade': 'no_of_trades', 'liquidity': 'liquidity_sum'}[row['kind']]
+                cursor = 0
+                for bar in actual.iter_rows(named=True):
+                    part = raw.slice(cursor, bar['bar_count'])
+                    assert sum(part[column]) >= row['threshold'] and sum(part[column].to_list()[:-1]) < row['threshold']
+                    assert bar['datetime'] == part['datetime'][0] and bar['base_interval'] == 3600
+                    assert bar['open'] == part['open'][0] and bar['close'] == part['close'][-1]
+                    assert bar['high'] == part['high'].max() and bar['low'] == part['low'].min()
+                    for field in ('volume', 'no_of_trades', 'liquidity_sum'):
+                        assert bar[field] == pytest.approx(part[field].sum(), rel=1e-12)
+                    cursor += bar['bar_count']
+                assert cursor == row['source_rows_in_complete_bars'] and sum(raw.slice(cursor)[column]) < row['threshold']
         else:
             assert result['rounds'] == 3 and {row['bar_type'] for row in result['modes']} == {'volume', 'trade', 'liquidity'}
         profile = result['trade_profile']
@@ -191,6 +275,19 @@ def verify(interface, name, result, output, inputs):
         trades = historical.data
         assert isinstance(trades, pl.DataFrame) and profile['trade_rows'] == trades.height
         assert len(profile['bars']) == 3
+        native = pl.read_parquet(output / 'trade-profile.parquet')
+        buckets = sorted(set((trades['datetime'].dt.epoch('ns')//30_000_000_000*30_000_000_000).to_list()))
+        assert native['datetime'].dt.epoch('ns').to_list() == buckets
+        count = 0
+        for start, row, retained in zip(buckets, native.to_dicts(), profile['bars'], strict=True):
+            part = trades.filter(pl.col('datetime').dt.epoch('ns').is_between(start, start+30_000_000_000, closed='left'))
+            count += part.height
+            assert part.height > 0 and row['datetime'] == datetime.fromisoformat(retained['datetime'])
+            assert row['open'] == part['price'][0] and row['close'] == part['price'][-1]
+            assert row['high'] == part['price'].max() and row['low'] == part['price'].min()
+            assert row['volume'] == pytest.approx(part['quantity'].sum(), rel=1e-12)
+            assert row['value_sum'] == pytest.approx((part['price']*part['quantity']).sum(), rel=1e-12)
+        assert count == profile['trade_rows']
         assert sum(row['volume'] for row in profile['bars']) == pytest.approx(trades['quantity'].sum())
         assert sum(row['value_sum'] for row in profile['bars']) == pytest.approx((trades['price']*trades['quantity']).sum())
         for row in profile['bars']:

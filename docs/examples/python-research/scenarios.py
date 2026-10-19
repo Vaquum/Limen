@@ -46,6 +46,17 @@ def quarter_hour(data_dir):
     return recorded(data_dir, 'spot_15m_20250101_20250531.parquet', 1920)
 
 
+# region hourly_source
+def hourly(data_dir, rows):
+    return recorded(data_dir, 'spot_1h_20240101_20241231.parquet', rows)
+
+
+def prepare_hourly_live(history, params):
+    return project.features(history, params['window']).with_columns(
+        (pl.col('datetime').dt.epoch('ns') + 3_600_000_000_000).alias('available_at_ns'))
+# endregion hourly_source
+
+
 def recordable_prep(raw, round_params):
     data = project.prep(raw, round_params)
     validation = data['validation']
@@ -55,7 +66,7 @@ def recordable_prep(raw, round_params):
 
 # region search
 def search(data_dir, output):
-    bars = quarter_hour(data_dir)[:1440]
+    bars = hourly(data_dir, 1440)
     space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
     runs = {}
     for name in ('grid', 'random', 'sobol', 'shuffled'):
@@ -83,7 +94,7 @@ def adaptive_search(data_dir, output):
         return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
 
     sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
-    loop = UniversalExperimentLoop(data=quarter_hour(data_dir)[:1440], sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
                                    experiment_dir=output, checkpoint_interval=1, feedback_interval=1,
                                    pruning_strategies=[BudgetReducer(max_permutations=3)])
     loop.run('python-adaptive-search', n_permutations=4, workers=1, progress_bar=False)
@@ -96,7 +107,7 @@ def adaptive_search(data_dir, output):
 
 # region recovery
 def recovery(data_dir, output):
-    bars = quarter_hour(data_dir)[:1440]
+    bars = hourly(data_dir, 1440)
     space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
 
     def model(data, round_params):
@@ -110,8 +121,8 @@ def recovery(data_dir, output):
         if log.height == 2:
             signal.raise_signal(signal.SIGINT)
 
-    def loop(callback=None):
-        return UniversalExperimentLoop(data=bars, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output / 'experiment', checkpoint_interval=1, feedback_interval=1, intra_callback=callback)
+    def loop(callback=None, directory='experiment'):
+        return UniversalExperimentLoop(data=bars, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output / directory, checkpoint_interval=1, feedback_interval=1, intra_callback=callback)
 
     recording: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     interrupted = loop(stop_after_two)
@@ -121,13 +132,17 @@ def recovery(data_dir, output):
     resumed.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording, resume=True)
     with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
         records = [json.loads(line) for line in stream]
-    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False}
+    full = loop(directory='uninterrupted')
+    full.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
+    if not project.completed_log(resumed).drop('execution_time').equals(project.completed_log(full).drop('execution_time')):
+        raise ValueError('Resumed Python results differ from uninterrupted research')
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
 # endregion recovery
 
 
 # region walk_forward
 def walk_forward(data_dir, output):
-    bars = quarter_hour(data_dir).head(384)
+    bars = hourly(data_dir, 384)
     results = []
     for anchored in (True, False):
         for index, (train, test) in enumerate(split_walk_forward(bars, n_folds=2, test_bars=48, purge_bars=4, embargo_bars=3, anchored=anchored)):
@@ -140,10 +155,10 @@ def walk_forward(data_dir, output):
                 score = project.backtest(validation, fitted.predict(validation.select('momentum')))
                 candidates.append((score, alpha, fitted))
             score, alpha, fitted = sorted(candidates, key=lambda item: (-item[0], item[1]))[0]
-            sensor = Sensor.from_model(fitted, prepare=project.prepare_live, params={'window': 4, 'alpha': alpha}, fitting_cutoff=train['datetime'][fitting], selection_cutoff=test['datetime'][0], output_id='next_bar_return')
+            sensor = Sensor.from_model(fitted, prepare=prepare_hourly_live, params={'window': 4, 'alpha': alpha}, fitting_cutoff=train['datetime'][fitting], selection_cutoff=test['datetime'][0], output_id='next_bar_return')
             history = bars.filter(pl.col('datetime') <= test['datetime'][-1])
             predictions = [point for point in sensor.predict_all(history) if point.datetime >= test['datetime'][0]]
-            results.append({'anchored': anchored, 'fold': index, 'train_rows': train.height, 'test_rows': test.height, 'train_end': train['datetime'][-1].isoformat(), 'test_start': test['datetime'][0].isoformat(), 'alpha': alpha, 'validation_net_return': score, 'predictions': [point.prediction for point in predictions], 'test_open': test['open'].to_list(), 'test_close': test['close'].to_list()})
+            results.append({'anchored': anchored, 'fold': index, 'train_rows': train.height, 'test_rows': test.height, 'train_end': train['datetime'][-1].isoformat(), 'test_start': test['datetime'][0].isoformat(), 'alpha': alpha, 'validation_net_return': score, 'predictions': [point.prediction for point in predictions], 'available_at_ns': [point.available_at_ns for point in predictions], 'test_open': test['open'].to_list(), 'test_close': test['close'].to_list()})
     return {'folds': results, 'ownership': 'caller-owned folds and selection; no recorded compiled fold promotion'}
 # endregion walk_forward
 
@@ -220,8 +235,10 @@ def execution(data_dir, output):
     funded_inputs = replace(inputs, funding_events=events, sources=(*inputs.sources, binding))
     funded_policy = replace(policy, product=ProductSpec('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), funding=funding)
     funded = trade_execution(funded_inputs, funded_policy)
-    funded.funding.write_parquet(output / 'funding-payments.parquet')
-    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'payments': funded.funding.to_dicts(), 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
+    for name in ('states', 'intents', 'fills', 'episodes', 'funding'):
+        getattr(funded, name).write_parquet(output / ('funded-' + name + '.parquet'))
+    context = {'observations': observations.to_dicts(), 'partition': [start, end]}
+    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'context': context, 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'payments': funded.funding.to_dicts(), 'fills': funded.fills.to_dicts(), 'context': context, 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
 # endregion execution
 
 

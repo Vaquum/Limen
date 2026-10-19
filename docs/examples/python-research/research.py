@@ -121,7 +121,7 @@ def main():
         reports = {name: scenarios.run(name, args.data_dir.resolve(), args.output_dir.resolve() / name) for name in chosen}
         report = {"interface": "python", "scenario": args.scenario, "scenarios": reports}
         args.output_dir.mkdir(parents=True, exist_ok=True)
-        (args.output_dir / "summary.json").write_text(json.dumps(report, indent=2, allow_nan=False, default=str) + "\n")
+        (args.output_dir / "summary.json").write_text(json.dumps(report, indent=2, allow_nan=False) + "\n")
         print(json.dumps({"interface": report["interface"], "scenario": args.scenario, "executed": list(reports), "summary": str((args.output_dir / "summary.json").resolve())}, indent=2))
         return
     source = args.data_dir / "spot_15m_20250101_20250531.parquet"
