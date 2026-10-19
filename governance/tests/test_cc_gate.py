@@ -63,7 +63,7 @@ def test_attribution_hit_passes_clean_messages() -> None:
 
 def test_find_closing_references_deduplicates_in_order() -> None:
     cc = _load_cc_gate()
-    assert cc.find_closing_references('Closes #9\nFixes #12\nCloses #9') == [9, 12]
+    assert cc.find_closing_references('Closes #9\nFixes: #12\nResolves:#9') == [9, 12]
 
 
 def test_list_commits_fails_closed_on_unparseable_log_line(monkeypatch) -> None:
@@ -104,3 +104,60 @@ def test_gate_checks_every_reference_and_exempts_only_prds(monkeypatch) -> None:
     assert any('#9' in failure for failure in failures)
     assert any('#15' in failure for failure in failures)
     assert not any('#12' in failure for failure in failures)
+
+
+@pytest.mark.parametrize('closing', [
+    'Closes #12', 'Closes: #12', 'Fixes:#12',
+    'Resolves: Vaquum/Limen#12',
+    'Fixes: https://github.com/Vaquum/Limen/issues/12',
+])
+def test_commit_closures_are_declared_in_pr(monkeypatch, closing):
+    cc = _load_cc_gate()
+    monkeypatch.setattr(cc, 'fetch_issue', lambda *_: {'title': 'fix: example', 'labels': []})
+    monkeypatch.setattr(cc, 'list_commits', lambda *_: [])
+    monkeypatch.setattr(cc, 'list_commit_messages', lambda *_: [('a' * 40, 'fix: example\n\n' + closing)])
+    failures = cc.gate('fix: example', 'Closes #9', 'base', 'head', 'Vaquum/Limen')
+    assert len(failures) == 1
+    assert 'add `Closes #12` to the PR body' in failures[0]
+    assert cc.gate('fix: example', 'Closes #9\nCloses: #12', 'base', 'head', 'Vaquum/Limen') == []
+
+
+@pytest.mark.parametrize('closing', [
+    'Fixes: Other/Repository#12',
+    'Fixes https://github.com/Other/Repository/issues/12',
+    'Fixes https://another-host.example/Vaquum/Limen/issues/12',
+])
+def test_cross_repository_commit_closures_fail_even_when_number_matches(monkeypatch, closing):
+    cc = _load_cc_gate()
+    monkeypatch.setattr(cc, 'fetch_issue', lambda *_: {'title': 'fix: example', 'labels': []})
+    monkeypatch.setattr(cc, 'list_commits', lambda *_: [])
+    monkeypatch.setattr(cc, 'list_commit_messages', lambda *_: [('a' * 40, 'fix: example\n\n' + closing)])
+    failures = cc.gate('fix: example', 'Closes #12', 'base', 'head', 'Vaquum/Limen')
+    assert len(failures) == 1
+    assert 'cross-repository commit closure' in failures[0]
+
+
+def test_merge_commit_closures_are_checked_without_attribution_regression(monkeypatch):
+    cc = _load_cc_gate()
+    monkeypatch.setattr(cc, 'fetch_issue', lambda *_: {'title': 'fix: example', 'labels': []})
+    monkeypatch.setattr(cc, 'list_commits', lambda *_: [
+        {'sha': 'merge', 'subject': "Merge branch 'codex/example'", 'is_merge': True}])
+    monkeypatch.setattr(cc, 'list_commit_messages', lambda *_: [
+        ('merge', "Merge branch 'codex/example'\n\nCloses: #12")])
+    failures = cc.gate('fix: example', 'Closes #9', 'base', 'head', 'Vaquum/Limen')
+    assert len(failures) == 1
+    assert 'add `Closes #12`' in failures[0]
+    assert cc.gate('fix: example', 'Closes #9\nCloses #12', 'base', 'head', 'Vaquum/Limen') == []
+
+
+def test_list_commit_messages_keeps_merge_messages(monkeypatch):
+    cc = _load_cc_gate()
+    calls = []
+
+    def git(args):
+        calls.append(args)
+        return 'merge\x1fMerge branch\n\nCloses: #12\n\x1e'
+
+    monkeypatch.setattr(cc, 'run_git', git)
+    assert cc.list_commit_messages('base', 'head') == [('merge', 'Merge branch\n\nCloses: #12')]
+    assert '--no-merges' not in calls[0]
