@@ -159,8 +159,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             return
         seen[id(value)] = value
         module = getattr(value, '__module__', type(value).__module__)
-        if callable(value) and (module or type(value).__module__).startswith(('numpy.random', 'random')):
-            functions.append(value)
+        if callable(value) and ((module or type(value).__module__).startswith(('numpy.random', 'random')) or type(getattr(value, '__self__', None)).__module__.startswith(('numpy.random', 'random'))):
+            raise ValueError('Holdout inference has an unowned random dependency')
         if inspect.ismethod(value):
             visit(value.__func__)
             visit(value.__self__)
@@ -178,6 +178,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             visit(vars(value))
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
                 return
+            if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
+                raise ValueError('Holdout inference has an unowned random dependency')
             visit(value.__defaults__)
             visit(value.__kwdefaults__)
             for cell in value.__closure__ or ():
@@ -223,9 +225,9 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                             aliases.append(item)
                     if not isinstance(item, ModuleType):
                         try:
+                            visit(item)
                             witness = function_witness(item) if inspect.isfunction(item) else fitted_witness(item)
                             evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
-                            visit(item)
                         except (ValueError, TypeError, pickle.PickleError) as exc:
                             raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':

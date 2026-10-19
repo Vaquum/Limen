@@ -126,14 +126,7 @@ def _probe_output(sensor: Sensor) -> object:
 def validate_inference_dependencies(sensor: Sensor) -> None:
     roots = _roots(sensor)
     config = getattr(vars(sensor)['_model'], 'prediction_calibration_config', None)
-    functions, _ = inference_functions(roots, exclude=() if config is None else (config,))
-    for function in functions:
-        if getattr(function, '__module__', type(function).__module__).startswith(('numpy.random', 'random')):
-            raise ValueError('Holdout inference has an unowned random dependency')
-        if not inspect.isfunction(function) or function.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
-            continue
-        if any(name in function.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
-            raise ValueError('Holdout inference has an unowned random dependency')
+    inference_functions(roots, exclude=() if config is None else (config,))
 
 
 def validate_prediction(sensor: Sensor) -> None:
