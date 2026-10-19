@@ -18,7 +18,7 @@ def validate_partition(value: object, limit: int, *, raw_rows: bool) -> None:
     if not isinstance(value, dict):
         raise ValueError('fold witness partition must be an object')
     item = cast(dict[str, object], value)
-    if set(item) != {'rows', 'segments', 'row_digest', 'schema'} or type(item['rows']) is not int or cast(int, item['rows']) < 0 or not isinstance(item['segments'], list):
+    if set(item) != {'rows', 'segments', 'row_digest', 'schema'} or type(item['rows']) is not int or item['rows'] < 0 or not isinstance(item['segments'], list):
         raise ValueError('fold witness partition fields are invalid')
     validate_schema(item['schema'])
     validate_digest(item['row_digest'])
@@ -35,7 +35,7 @@ def validate_partition(value: object, limit: int, *, raw_rows: bool) -> None:
             raise ValueError('fold witness partition segments overlap or escape source rows')
         positions.extend(range(first, last))
         previous = last
-    if (not positions) != (item['rows'] == 0) or cast(int, item['rows']) > len(positions):
+    if (not positions) != (item['rows'] == 0) or item['rows'] > len(positions):
         raise ValueError('fold witness partition row count is inconsistent')
     if raw_rows and (item['rows'] != len(positions) or item['row_digest'] != membership([[index] for index in positions])):
         raise ValueError('fold witness raw membership digest/count disagrees with segments')

@@ -84,9 +84,11 @@ def model_witness(model: object) -> dict[str, object]:
     if model is None or not callable(getattr(model, 'predict', None)):
         raise FoldEvidenceError('inference_model', 'The architecture did not return a fitted native prediction model; rerun with a reconstructable inference contract')
     supplied: object = getattr(type(model), 'inference_output', None)
+    if supplied is not None and not isinstance(supplied, tuple):
+        raise FoldEvidenceError('inference_model', 'inference_output must be an immutable tuple')
     declaration = cast(tuple[object, ...] | None, supplied)
     output: dict[str, object] | None
-    if declaration is not None and (not isinstance(declaration, tuple) or len(declaration) != _OUTPUT_FIELDS or declaration[0] not in ('binary', 'continuous', 'target_exposure') or type(declaration[1]) is not bool):
+    if declaration is not None and (len(declaration) != _OUTPUT_FIELDS or declaration[0] not in ('binary', 'continuous', 'target_exposure') or type(declaration[1]) is not bool):
         raise FoldEvidenceError('inference_model', 'inference_output must be an immutable (kind, bool_probabilities) class declaration')
     output = None if declaration is None else {'kind': declaration[0], 'probabilities': declaration[1]}
     mode = getattr(model, 'prediction_mode', None)

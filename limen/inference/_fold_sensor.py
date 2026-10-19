@@ -102,7 +102,8 @@ def recover(sensor: object, manifest: object, error: Exception, fallback: int) -
 
 
 class FoldView:
-    _fold_context: dict[str, object]
+    def __init__(self, context: dict[str, object]) -> None:
+        self._fold_context = copy.deepcopy(context)
 
     @property
     def fold(self) -> int:

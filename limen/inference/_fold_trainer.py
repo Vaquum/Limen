@@ -131,5 +131,5 @@ class _FoldSensor(_guard.FoldView, Sensor):
     def __init__(self, context: dict[str, object], *, yaml_reference: dict[str, object], model: ReferenceModel,
                  fitted_params: dict[str, object], round_params: dict[str, object], permutation_id: str,
                  manifest_id: str | None, trade_contract: Mapping[str, JsonValue] | None) -> None:
-        self._fold_context = copy.deepcopy(context)
-        super().__init__(yaml_reference, model, fitted_params, round_params, permutation_id, manifest_id, trade_contract=trade_contract)
+        _guard.FoldView.__init__(self, context)
+        Sensor.__init__(self, yaml_reference, model, fitted_params, round_params, permutation_id, manifest_id, trade_contract=trade_contract)
