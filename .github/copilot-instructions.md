@@ -40,6 +40,17 @@ Treat the diff as the starting point for a search, not as the territory.
 - **Empirical claims** — a benchmark, throughput, or latency claim with no automated gate to catch its regression is a gap; name it.
 - **Docs examples** — verify them against the implementation, never against other docs.
 
+### Research interface delivery
+
+Apply the [canonical Interface Contract](../CLAUDE.md#research-interface-contract) to the actual entry points and behavior, not merely the declaration's labels.
+
+- For Python Research, verify that the claimed capability composes with caller-owned ordinary-Python components; a built-in-model whitelist or merely importing a compiled helper does not establish Python support. Manifest execution remains Compiled Research when called from Python. UEL/MSQ and reusable helpers are shared machinery.
+- For Compiled Research, inspect the applicable combinations admitted by the Manifest/CLI contract. An unsupported implementation cannot become a methodological exclusion by being documented or rejected. Necessary data/evidence prerequisites and mathematically inapplicable combinations are legitimate boundaries.
+- Verify the delivery role against actual public exposure. Prerequisites must not expose unfinished behavior; maintenance must not enlarge the public contract. A neutral declaration is honest when no research behavior changes. Do not infer a research change from a source path alone or require unrelated legacy limitations to be repaired.
+- Inspect the cited proof and its execution evidence: collected tests must actually pass without runtime skips or expected failures, assert the promised behavior and cover the claimed scope. Static reference validation and a green unrelated check are insufficient. Parameterized cases may share one test function.
+- Compare the PR with its slice and authoritative native parent. A complete single-interface child may leave a dual-interface parent open. Parent closure needs the complete parent outcome and all its proof; no open children is not proof of completion. Check the stated remaining work when a last child closes alone.
+- Review the current head and reconciled contract content together. Material PR/issue declaration edits require renewed semantic sign-off even without a push; GitHub does not automatically dismiss approval for body edits.
+
 ## 4. Discipline before you post
 
 - **Threshold test.** Would a user or a future engineer hit this without warning? If not, do not post it. A comment that is true but not blocking costs the author time and dilutes the ones that matter.
@@ -88,4 +99,4 @@ Vague, unusable findings — do not write these: "error handling is weak" (where
 
 ## 8. Re-review
 
-When the author says they addressed your feedback, check only whether your previous comments were resolved — do not hunt for new issues on a re-review. If every prior comment is resolved, approve. Otherwise, reply on the unresolved threads stating what is still wrong, and request changes.
+Recheck the prior findings and changes since the previous review, including changed contract scope, exclusions and proof. Review new behavior introduced by those changes; do not restart a hunt through unchanged scope. If the findings are resolved and the changed behavior satisfies its contract, approve subject to the authority rule above. Otherwise, reply on the unresolved threads with what remains wrong and request changes.
