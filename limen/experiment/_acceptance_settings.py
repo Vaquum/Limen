@@ -47,7 +47,7 @@ def _yaml_acceptance(reference: Mapping[str, object]) -> Mapping[str, object]:
     for key in ('sfd', 'manifest', 'acceptance'):
         if not isinstance(value, Mapping):
             raise ValueError('PBO count requires valid YAML acceptance provenance')
-        value = cast(Mapping[str, object], value).get(key, {})
+        value = value.get(key, {})
     if not isinstance(value, Mapping):
         raise ValueError('PBO count requires valid YAML acceptance provenance')
     return cast(Mapping[str, object], value)
