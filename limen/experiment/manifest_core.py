@@ -666,6 +666,7 @@ class Manifest:
             )
         else:
             test_split = split_sequential(raw_data, self.split_config)[2]
+        _holdout.capture_geometry(self, raw_data, {'test': test_split})
         _, test_bar_data = _process_bars(self, test_split, round_params)
 
         return test_bar_data

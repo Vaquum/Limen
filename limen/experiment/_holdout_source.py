@@ -171,3 +171,32 @@ def frame_evidence(frame: pl.DataFrame, binding: ProjectBinding) -> tuple[pl.Dat
     buf = admitted.write_ipc(None, compression='uncompressed')
     return admitted, {'kind': 'caller_frame', 'method': 'caller.data', 'identity': {}, 'interval_seconds': binding.interval_seconds,
         'native_witness': 'caller-declared', 'materialized': bounds(raw, binding.interval_seconds), 'admitted': bounds(admitted, binding.interval_seconds), 'admitted_sha256': sha256(buf.getvalue()).hexdigest(), 'physical_scan': 'unknown'}
+
+
+def replay_witness(alignment: object, index: int, actual: SourceEvidence, *, unchanged: bool) -> Mapping[str, object]:
+    if not isinstance(alignment, list):
+        raise ValueError('Holdout replay requires retained preparation evidence')
+    row = cast(list[object], alignment)[index]
+    if not isinstance(row, Mapping):
+        raise ValueError('Holdout replay requires retained preparation evidence')
+    recorded = cast(Mapping[str, object], row).get('holdout')
+    if not isinstance(recorded, Mapping):
+        raise ValueError('Holdout replay lacks a protected source witness')
+    witness = cast(Mapping[str, object], recorded)
+    source = witness.get('source')
+    if not unchanged or not isinstance(source, Mapping) or cast(Mapping[str, object], source).get('admitted_sha256') != actual['admitted_sha256']:
+        raise ValueError('Holdout replay admitted source changed; use the retained research input')
+    return witness
+
+
+def record_geometry(provenance: dict[str, object], witness: Mapping[str, object] | None,
+                    raw: pl.DataFrame, splits: Mapping[str, pl.DataFrame], interval: int) -> None:
+    selected_bounds = bounds(raw, interval)
+    measured = {name: bounds(frame, interval) for name, frame in splits.items()}
+    if witness is not None:
+        expected = witness.get('splits')
+        if (selected_bounds != witness.get('selected') or not isinstance(expected, Mapping)
+                or any(cast(Mapping[str, object], expected).get(name) != value for name, value in measured.items())):
+            raise ValueError('Holdout replay selection/split geometry changed; use the retained preparation')
+    provenance['selected'] = selected_bounds
+    cast(dict[str, Bounds], provenance['splits']).update(measured)

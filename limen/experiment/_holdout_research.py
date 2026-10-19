@@ -15,7 +15,7 @@ import sys
 import polars as pl
 
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
-from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, bounds, frame_evidence, load_admitted_source, source_spec
+from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec
 
 class ResearchManifest(SourceManifest, Protocol):
     @property
@@ -47,6 +47,7 @@ class _Operation:
     record_id: str
     role: str
     parent_id: str | None
+    replay_witness: Mapping[str, object] | None = None
     provenance: dict[str, object] = field(default_factory=dict[str, object])
 
 
@@ -125,6 +126,8 @@ def operation(manifest: object, role: str) -> Iterator[_Operation | None]:
         if role == 'trainer':
             parent_id = cast(str | None, getattr(manifest, '_holdout_experiment_record', None))
         op = _Operation(manifest, binding, start_research(binding, role), role, parent_id)
+        if parent is not None and parent.manifest is manifest:
+            op.replay_witness = parent.replay_witness
         op.provenance = _base(op)
         token = _CURRENT.set(op)
         try:
@@ -182,8 +185,8 @@ def selected(manifest: object, raw: pl.DataFrame, splits: list[pl.DataFrame], pa
     if selector is not None:
         func, config = cast(tuple[Callable[..., object], Mapping[str, object]], selector)
         declaration = {'method': f'{func.__module__}.{func.__qualname__}', 'params': dict(resolved or {}), 'seed': params.get('seed', config.get('seed'))}
-    op.provenance.update(selector=declaration, selected=bounds(raw, op.binding.interval_seconds),
-                         splits={name: bounds(frame, op.binding.interval_seconds) for name, frame in zip(('train', 'validation', 'test'), splits, strict=True)})
+    op.provenance['selector'] = declaration
+    capture_geometry(manifest, raw, dict(zip(('train', 'validation', 'test'), splits, strict=True)))
 
 
 def capture_schema(manifest: object, frame: pl.DataFrame, stage: str) -> None:
@@ -341,15 +344,21 @@ def replay_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenat
         manifest = getattr(host, 'manifest', None)
         if manifest is None:
             return func(host, *args, **kwargs)
-        with operation(manifest, 'replay'):
+        with operation(manifest, 'replay') as op:
             attrs = cast(dict[str, object], vars(host))
             raw = attrs.get('data')
             if isinstance(raw, pl.DataFrame):
                 admitted = admit(manifest, raw)
-                if not admitted.equals(raw):
-                    raise ValueError('Holdout replay data geometry changed; do not shorten retained returns')
+                if op is not None:
+                    index = cast(int, inspect.signature(func).bind(host, *args, **kwargs).arguments['round_id'])
+                    op.replay_witness = replay_witness(attrs.get('_alignment'), index, cast(SourceEvidence, op.provenance['source']), unchanged=admitted.equals(raw))
             return func(host, *args, **kwargs)
     return guarded
+
+
+def capture_geometry(manifest: object, raw: pl.DataFrame, splits: Mapping[str, pl.DataFrame]) -> None:
+    if (op := _CURRENT.get()) is not None and op.manifest is manifest and op.binding.interval_seconds is not None:
+        record_geometry(op.provenance, op.replay_witness, raw, splits, op.binding.interval_seconds)
 
 
 def bind_round(manifest: object, provenance: Mapping[str, object], round_id: str) -> dict[str, object]:

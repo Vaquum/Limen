@@ -151,6 +151,17 @@ def test_holdout_research_provenance(tmp_path):
     assert fitted['model_schema'] == provenance['model_schema']
     replay = Log(uel_object=loop)
     assert replay._get_test_data_with_all_cols(0).height > 0
+    retained = replay.data
+    for changed in (retained.slice(1), pl.read_parquet(_FIXTURE).head(168)):
+        replay.data = changed
+        with pytest.raises(ValueError, match='replay admitted source changed'):
+            replay._get_test_data_with_all_cols(0)
+    replay.data = retained
+    manifest = compiled.manifest()
+    manifest.set_pre_split_data_selector(lambda frame: frame.slice(1))
+    with pytest.raises(ValueError, match='replay selection/split geometry changed'):
+        replay._get_test_data_with_all_cols(0)
+    manifest.pre_split_data_selector = None
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
         assert {'experiment', 'trainer', 'replay'} <= {row[0] for row in db.execute('SELECT DISTINCT role FROM research')}
     # The same real source supports an ordinary rule-based experiment.
