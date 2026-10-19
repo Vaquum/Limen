@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from collections.abc import Mapping
 from decimal import Decimal, InvalidOperation
 from typing import cast
 
+from limen.backtest import _cost_identity as identity
 from limen.backtest.trade_contract import JsonValue, json_value
 
 METHOD = 'minute_midpoint_1s_v1'
 MAX_AGE_NS = 1_000_000_000
 SHA256_HEX_LENGTH = 64
 _WINDOW_BOUNDS = 2
+CALIBRATION_KEYS = frozenset(('history', 'method', 'cutoff_ns', 'available_at_ns', 'created_at_ns', 'report'))
 _HISTORY = frozenset(('version', 'source', 'fills', 'source_window_summary', 'source_diagnostics'))
 _SOURCE = frozenset(('identity', 'assets', 'venue', 'environment', 'product', 'captured_at_ns',
                      'reference_id', 'reference_convention', 'windows', 'supersedes'))
@@ -175,6 +180,31 @@ def validate(value: object) -> dict[str, JsonValue]:
         raise ValueError('Selected fill count differs from the declared normalized population')
     _ = mapping(history['source_diagnostics'])
     return history
+
+
+def read_calibration(path: str | Path, expected_digest: str) -> dict[str, JsonValue]:
+    envelope = mapping(identity.read_json(path), frozenset(('format', 'version', 'digest', 'payload')))
+    expected = digest_id(expected_digest)
+    if envelope['format'] != 'limen.execution_cost.calibration' or type(envelope['version']) is not int or envelope['version'] != 1:
+        raise ValueError('Unsupported calibration artifact format/version')
+    payload = mapping(envelope['payload'], CALIBRATION_KEYS)
+    if payload['method'] != METHOD:
+        raise ValueError('Unsupported execution-cost method')
+    for name in ('cutoff_ns', 'created_at_ns', 'available_at_ns'):
+        if name != 'available_at_ns' or payload[name] is not None:
+            _ = integer(payload[name], name)
+    _ = validate(payload['history'])
+    report = mapping(payload['report'], frozenset(('method', 'source', 'clocks', 'estimates', 'support', 'sensitivity', 'exclusions', 'limitations')))
+    clocks = mapping(report['clocks'])
+    if report['method'] != payload['method'] or any(clocks.get(name) != payload[name] for name in ('available_at_ns', 'cutoff_ns', 'created_at_ns')):
+        raise ValueError('Calibration artifact clocks/method contradict its report')
+    content = {'format': envelope['format'], 'version': envelope['version'], 'payload': payload}
+    if envelope['digest'] != expected or identity.digest(content) != expected:
+        raise ValueError('Calibration content differs from the externally pinned digest')
+    encoded = json.dumps(envelope, sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
+    if Path(path).read_bytes() != encoded:
+        raise ValueError('Calibration artifact bytes are not canonical JSON')
+    return payload
 
 
 __all__: list[str] = []
