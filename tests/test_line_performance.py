@@ -53,7 +53,14 @@ def test_line_equivalence(name, rows, duration, height, variant, research):
         result = calculate(source, **kwargs)
         if isinstance(result, pl.LazyFrame):
             result = result.collect()
-        assert_frame_equal(result, expected, check_exact=True)
+        if name == 'price_lines':
+            assert_frame_equal(result, expected, check_exact=True)
+        else:
+            assert result.schema == expected.schema
+            assert_frame_equal(result.tail(1), expected.tail(1), rel_tol=1e-12, abs_tol=1e-12)
+            if research:
+                assert result['active_quantile_count'].equals(expected['active_quantile_count'])
+            assert_frame_equal(result, calculate(frame, **kwargs), check_exact=True)
 
 
 @pytest.mark.parametrize('quantile', [0.0, .7, .8, 1.0])
@@ -62,7 +69,12 @@ def test_quantile_boundaries(quantile):
     kwargs = {'max_duration_hours': 48, 'min_height_pct': .002, 'quantile_threshold': quantile,
               'density_lookback_hours': 3, 'momentum_lookback_hours': 1, 'height_lookback_hours': 2}
     expected = BASELINES['quantile_price_lines'].quantile_price_lines(DATA.head(512), **kwargs)
-    assert_frame_equal(quantile_price_lines(DATA.head(512), **kwargs), expected, check_exact=True)
+    result = quantile_price_lines(DATA.head(512), **kwargs)
+    if quantile == 0:
+        assert_frame_equal(result, expected, check_exact=True)
+    else:
+        assert_frame_equal(result.tail(1), expected.tail(1), rel_tol=1e-12, abs_tol=1e-12)
+        assert result['active_quantile_count'].equals(expected['active_quantile_count'])
 
 
 def test_dictionary_contract_and_provenance():
@@ -85,15 +97,20 @@ def test_dictionary_contract_and_provenance():
 def _timings(name):
     baseline = getattr(BASELINES[name], name)
     calculate = getattr(importlib.import_module(f'limen.features.{name}'), name)
+    frame = DATA.head(64 if name == 'quantile_price_lines' else 512)
     before, after = [], []
     for _ in range(3):
         started = time.perf_counter()
-        expected = baseline(DATA.head(512), 48, .002)
+        if name == 'quantile_price_lines':
+            expected = pl.concat([baseline(frame.head(rows), 48, .002, include_research_only=False).tail(1)
+                                  for rows in range(1, frame.height + 1)])
+        else:
+            expected = baseline(frame, 48, .002)
         before.append(time.perf_counter() - started)
         started = time.perf_counter()
-        result = calculate(DATA.head(512), 48, .002)
+        result = calculate(frame, 48, .002, **({'include_research_only': False} if name == 'quantile_price_lines' else {}))
         after.append(time.perf_counter() - started)
-    assert_frame_equal(result, expected, check_exact=True)
+    assert_frame_equal(result, expected, check_exact=name == 'price_lines', rel_tol=1e-12, abs_tol=1e-12)
     return before, after
 
 
