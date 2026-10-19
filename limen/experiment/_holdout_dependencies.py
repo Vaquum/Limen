@@ -25,7 +25,7 @@ FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fi
 def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
             or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
-            or (module.startswith(('limen.scalers.', 'limen.targets.')) and name.endswith('.__init__')))
+            or (module.startswith(('limen.scalers.', 'limen.targets.')) and name.rsplit('.', 1)[-1] == '__init__'))
 
 
 @lru_cache(maxsize=2048)
