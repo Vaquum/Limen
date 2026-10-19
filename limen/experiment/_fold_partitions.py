@@ -150,19 +150,19 @@ def capture_clock(manifest: object, frame: pl.DataFrame) -> None:
 
 
 class DecisionMaker(Protocol):
-    def __call__(self, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame: ...
+    def __call__(self, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None, timestamp_role: str = 'start') -> pl.DataFrame: ...
 
 
-def decisions(manifest: object, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object, native: DecisionMaker) -> pl.DataFrame:
+def decisions(manifest: object, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object, native: DecisionMaker, timestamp_role: str = 'start') -> pl.DataFrame:
     step = cast(int | None, getattr(manifest, '_fold_native_interval', None))
     if step is not None:
         timing = {'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'}
         if timing & set(raw.columns) and not timing <= set(raw.columns):
             raise ValueError('Fold Sensor input has incomplete explicit native timing')
         if not timing <= set(raw.columns):
-            start = raw['datetime'].dt.epoch('ns')
+            start = raw['datetime'].dt.epoch('ns') - (step if timestamp_role == 'end' else 0)
             raw = raw.with_columns(start.alias('start_ns'), (start + step).alias('end_ns'),
                                    start.alias('open_available_at_ns'), (start + step).alias('available_at_ns'))
         if not getattr(manifest, '_fold_formed', False):
             bars = bars.drop('bar_count', strict=False)
-    return native(raw, bars, interval_seconds=interval_seconds)
+    return native(raw, bars, interval_seconds=interval_seconds, timestamp_role=timestamp_role)

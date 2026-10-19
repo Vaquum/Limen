@@ -358,6 +358,10 @@ def test_end_stamped_gapped_source_preserves_prices_and_decision_clocks(ml):
     assert model.context.policy.source_timestamp_role == 'end'
     metadata = sensor_decisions(encoded, encoded, interval_seconds=3600, timestamp_role='end')
     assert metadata['__trade_available_at_ns__'].to_list() == encoded['datetime'].dt.epoch('ns').to_list()
+    from types import SimpleNamespace
+    from limen.experiment._fold_partitions import decisions
+    folded = decisions(SimpleNamespace(_fold_native_interval=3600000000000), encoded, encoded, interval_seconds=3600, native=sensor_decisions, timestamp_role='end')
+    assert folded.equals(metadata)
 
 
 def test_hour_end_configuration_rejects_missing_or_incoherent_metadata():
