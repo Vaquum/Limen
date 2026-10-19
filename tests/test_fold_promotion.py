@@ -96,7 +96,12 @@ def test_witness_validation_stages(fold_campaigns, mutation):
             Trainer(campaign.path, data=campaign.bars)
         return
     before_fit = mutation in ('lean', 'witness', 'version', 'source', 'ratio', 'raw', 'count', 'competing')
-    guard = patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early')) if before_fit else patch.object(trainer, '_validate_metrics', side_effect=AssertionError('aggregate used'))
+    if before_fit:
+        guard = patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early'))
+    elif mutation == 'retained':
+        guard = patch('limen.experiment.manifest_core.MLManifest.run_model', side_effect=AssertionError('model fitted before retained validation'))
+    else:
+        guard = patch.object(trainer, '_validate_metrics', side_effect=AssertionError('aggregate used'))
     with guard, pytest.raises(ReconstructionError, match=f'Permutation {pid}, fold {campaign.fold}'):
         trainer.train([pid], fold=campaign.fold)
 
@@ -119,10 +124,14 @@ def test_fold_fingerprint_codec():
     frame = pl.read_parquet(FIXTURE, n_rows=2)
     assert fingerprint(frame) == '4d17b350e56611cd6cde9fb7059098f64a665df3b99098b45ca625ea993ae5bf'
     assert membership([[0], [1]]) == '0144ca736aaf96da235bb3482b5990551e7a9a00863470a0073324fe4a0ff45f'
-    assert fingerprint(frame) == fingerprint(frame.with_columns(pl.col('datetime').dt.cast_time_unit('ns')))
+    for unit in ('ms', 'us', 'ns'):
+        assert fingerprint(frame) == fingerprint(frame.with_columns(pl.col('datetime').dt.cast_time_unit(unit)))
     # Protocol controls are scalar encodings, not fabricated market observations.
     controls = pl.DataFrame({'signed': pl.Series([-1, 0], dtype=pl.Int8), 'float': [None, -0.0], 'bool': [True, False], 'text': ['ä', ''], 'date': [date(2020, 1, 1), date(2020, 1, 2)]})
     assert fingerprint(controls) != fingerprint(controls.with_columns(pl.lit(0.0).alias('float')))
+    assert fingerprint(controls) != fingerprint(controls.with_columns(pl.Series('float', [None, 0.0])))
+    nonfinite = [fingerprint(controls.with_columns(pl.lit(value).alias('float'))) for value in (math.nan, math.inf, -math.inf)]
+    assert len(set(nonfinite)) == 3
     for left, right, expected in [(None, None, True), (None, 0, False), (math.nan, math.nan, True), (math.inf, -math.inf, False), (True, 1, False), (1.0, 1.00001, False)]:
         assert scalar_matches(left, right, True) is expected
 
