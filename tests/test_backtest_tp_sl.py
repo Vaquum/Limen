@@ -17,6 +17,7 @@ from limen.backtest.backtest_snapshot import BACKTEST_SNAPSHOT_COLUMNS, backtest
 from limen.backtest.long_flat_strategy import long_flat_strategy
 from limen.cli.commands.run import run_experiment
 from limen.data import HistoricalData
+from limen.experiment.manifest_core import DataSourceResolver
 from limen.experiment import MLManifest, RuleBasedManifest, UniversalExperimentLoop
 from limen.experiment._backtest_provenance import SOURCE_ROW, replay_prices, restore_source_rows, source_splits, validate_witness
 from limen.experiment.param_domain import ParamDomain
@@ -80,7 +81,8 @@ def _ml_manifest():
             .with_target_label('close', IdentityTarget).with_reference_architecture(ridge_regressor))
 
 
-def _fixture_source(**_kwargs):
+def _fixture_source(config):
+    assert config.method is HistoricalData.get_spot_klines
     return pl.read_parquet(FIXTURE)
 
 
@@ -543,7 +545,7 @@ def test_tp_sl_real_fixture_trainer_reconstruction(market, tmp_path, monkeypatch
     yaml_path = tmp_path/'tp-sl.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_fixture_source))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_fixture_source))
     assert run_experiment(yaml_path, progress_bar=False)
     path = tmp_path/'experiment'
     record = json.loads(_storage.text(_storage.round_path(path)).splitlines()[0])

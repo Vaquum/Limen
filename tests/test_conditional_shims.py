@@ -59,13 +59,13 @@ class VolumeExcludedOutcome(TradeOutcomeTarget):
 
 
 @pytest.mark.parametrize('entry', ['native', 'yaml'])
-def test_inner_folds_preserve_target_source_exclusions(entry):
+def test_inner_folds_preserve_target_source_exclusions(entry, monkeypatch):
     params = {**PARAMS, 'holding': 1800, 'funding_rate': 0.0001, 'order': 'auto', 'auto_pca': True, 'pca_k': 2}
     if entry == 'yaml':
         config = _config()
         config['sfd']['manifest']['pca_compression'] = {}
-        with patch('limen.targets.TradeOutcomeTarget', VolumeExcludedOutcome):
-            manifest = CompiledSFD(config).manifest()
+        monkeypatch.setattr(TradeOutcomeTarget, 'source_columns', VolumeExcludedOutcome.source_columns, raising=False)
+        manifest = CompiledSFD(config).manifest()
     else:
         manifest = _manifest().with_target_label('outcome', VolumeExcludedOutcome).set_pca_compression()
     raw = recorded_source(limit=288)

@@ -13,6 +13,7 @@ from sklearn.linear_model import Ridge
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.cli.commands.run import run_experiment
 from limen.data import HistoricalData
+from limen.experiment.manifest_core import DataSourceResolver
 from limen.experiment import MLManifest
 from limen.inference import Trainer
 from limen.sfd import foundational_sfd, reference_architecture
@@ -22,6 +23,11 @@ from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
 
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / 'limen/yaml/templates/ridge_regressor.yaml'
+
+
+def _recorded_data_source(config):
+    assert config.method is HistoricalData.get_spot_klines
+    return _load_market_bars(**config.params)
 
 
 def _load_market_bars(**kwargs):
@@ -174,7 +180,7 @@ def test_ridge_yaml_experiment_reconstructs(tmp_path, monkeypatch, market_bars):
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
 
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_load_market_bars))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_data_source))
     assert run_experiment(yaml_path, progress_bar=False)
     entries = [json.loads(line) for line in _storage.text(_storage.round_path(experiment_dir)).splitlines()]
     assert len(entries) == 2

@@ -4,12 +4,11 @@ import json
 from pathlib import Path
 import shutil
 import time
+from unittest.mock import patch
 
 import polars as pl
 import pytest
 from threadpoolctl import threadpool_limits
-import limen.data as _data_namespace
-import limen.sfd.reference_architecture as _architecture_namespace
 
 from limen.experiment import UniversalExperimentLoop, _round_storage
 from limen.inference import Trainer
@@ -34,9 +33,21 @@ def sorted_source(frame: pl.DataFrame) -> pl.DataFrame:
     return frame.sort('datetime').unique('datetime', keep='first', maintain_order=True)
 
 
-# Install real caller components in the namespaces admitted by Compiled Research.
-vars(_architecture_namespace)['_fold_test_binary'] = caller_binary
-vars(_data_namespace)['_fold_test_sorted_source'] = sorted_source
+@pytest.fixture(scope='session')
+def caller_components():
+    original = CompiledSFD.manifest
+
+    def manifest(sfd):
+        compiled = original(sfd)
+        kind = sfd._yaml['metadata']['name']
+        if kind == 'fold_custom':
+            compiled.with_reference_architecture(caller_binary)
+        if kind in ('fold_reordered', 'fold_duplicates'):
+            compiled.set_pre_split_data_selector(sorted_source)
+        return compiled
+
+    with patch.object(CompiledSFD, 'manifest', manifest):
+        yield
 
 
 @dataclass
@@ -72,10 +83,6 @@ def config(kind: str, source: Path) -> dict:
     if kind in ('anchored', 'rolling'):
         manifest['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}},
                                    'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer', 'params': {'metric': 'limen.metrics.balanced_metric.balanced_metric', 'threshold_min': 0.5, 'threshold_max': 0.5, 'threshold_step': 0.1}}}
-    if kind == 'custom':
-        manifest['reference_architecture'] = 'limen.sfd.reference_architecture._fold_test_binary'
-    if kind in ('reordered', 'duplicates'):
-        manifest['pre_split_data_selector'] = {'func': 'limen.data._fold_test_sorted_source'}
     if kind == 'formed':
         manifest['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': 100000}}
         parameters['bar_type'] = ['trade']
@@ -89,13 +96,14 @@ def config(kind: str, source: Path) -> dict:
         manifest['split_walk_forward'] = {'n_folds': 2, 'test_bars': 48, 'purge_bars': 4, 'embargo_bars': 3, 'anchored': True}
         parameters = reference['sfd']['params']
         parameters.update(holding=[3600], folds=[2])
+    reference['metadata']['name'] = 'fold_' + kind
     reference['sfd']['params'] = parameters
     reference['uel'].update(n_permutations=1, search_strategy={'type': 'grid'}, prep_each_round=True)
     return reference
 
 
 @pytest.fixture(scope='session')
-def fold_campaigns(tmp_path_factory):
+def fold_campaigns(tmp_path_factory, caller_components):
     result = {}
     root = tmp_path_factory.mktemp('fold-campaigns')
     original = pl.read_parquet(FIXTURE)
