@@ -50,7 +50,7 @@ def _write(directory, records, *, compact=True):
 
 def _writer_record(loop, path, record):
     if 'folds' in record:
-        alignment = {'folds': record['folds']}
+        alignment = {key: record[key] for key in ('folds', 'fold_promotion') if key in record}
     else:
         alignment = dict(record['alignment'])
         alignment['missing_datetimes'] = [datetime.fromisoformat(value) for value in alignment['missing_datetimes']]

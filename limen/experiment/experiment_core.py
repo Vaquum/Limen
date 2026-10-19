@@ -18,6 +18,7 @@ import polars as pl
 from tqdm import tqdm
 
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
+from limen.experiment._fold_evidence import add_metadata as add_fold_metadata
 from limen.experiment._fixed_trade_sources import fixed_trade_sources
 from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment._acceptance_settings import pbo_blocks
@@ -217,7 +218,7 @@ class UniversalExperimentLoop:
                 raise ValueError('split_walk_forward requires a Manifest')
             self._walk_forward = WalkForwardRun(
                 self.manifest, self.data,
-                self._experiment_dir or Path(experiment_name).parent,
+                self._experiment_dir or Path(experiment_name).parent, promotion=bool(self._recording and self._recording['fold_details']),
             )
             if not resume and self._walk_forward.writer.path.exists():
                 raise FileExistsError('split_walk_forward return track already exists; resume or choose a fresh output directory')
@@ -1012,6 +1013,7 @@ class UniversalExperimentLoop:
         add_grid_metadata(self._search_strategy, metadata)
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
+            add_fold_metadata(metadata, self._walk_forward, self._workers)
             metadata.update(split_walk_forward=self._walk_forward.config.as_dict(), walk_forward_validation_ratio=list(self._walk_forward.manifest.split_config[:2]), pbo_blocks=pbo_blocks(self._walk_forward.manifest.acceptance))
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
@@ -1075,7 +1077,7 @@ class UniversalExperimentLoop:
         if self._walk_forward is not None:
             _storage.append_record(round_data_path, project_record(
                 {'round_id': round_id, '_round_index': round_index,
-                 'round_params': round_params, 'folds': alignment['folds']}, self._recording))
+                 'round_params': round_params, 'folds': alignment['folds'], **({'fold_promotion': alignment['fold_promotion']} if 'fold_promotion' in alignment else {})}, self._recording))
             return
 
         entry = {

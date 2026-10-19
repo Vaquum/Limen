@@ -12,6 +12,7 @@ import polars as pl
 
 from limen.inference.errors import ReconstructionError
 from limen.inference.sensor import Sensor
+import limen.inference._fold_trainer as _fold_replay
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
@@ -104,7 +105,7 @@ class Trainer:
         reject_promotion(self._manifest)
         self._param_keys = frozenset(params.keys())
         self._round_data = self._load_round_data()
-        self._original_log = self._load_original_log()
+        self._original_log = None if self._metadata.get('split_walk_forward') is not None else self._load_original_log()
 
         self._data = _holdout.initialize_trainer(self, data, project_root=project_root)
 
@@ -177,8 +178,12 @@ class Trainer:
 
 
     @_holdout.train_guard
-    def train(self, permutation_ids: list[str]) -> list[Sensor]:
+    def train(self, permutation_ids: list[str], *, fold: int | None = None) -> list[Sensor]:
 
+
+        fold_sensors = _fold_replay.train(self, permutation_ids, fold)
+        if fold_sensors is not None:
+            return fold_sensors
 
         missing = [
             pid for pid in permutation_ids

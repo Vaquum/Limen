@@ -62,7 +62,7 @@ class LogRegBinary(ReferenceModel):
     random_state, so reconstruction validation must use relative tolerance.
     '''
 
-    deterministic = False
+    deterministic, inference_output = False, ('binary', True)
 
     def __init__(self, prediction_calibration_config: 'CalibrationConfig | None' = None) -> None:
 

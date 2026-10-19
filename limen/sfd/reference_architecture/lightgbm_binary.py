@@ -36,7 +36,7 @@ class LightGBMBinary(ReferenceModel):
 
     '''LightGBM binary classifier with train/evaluate interface.'''
 
-    deterministic = True
+    deterministic, inference_output = True, ('binary', True)
 
     def __init__(self, prediction_calibration_config: 'CalibrationConfig | None' = None) -> None:
 

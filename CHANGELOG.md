@@ -1771,3 +1771,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.41.0] - 2026-10-19
 
 - Add research-only causal per-entry TP/SL distance columns, private volatility preparation and first-fill episode binding.
+
+## [5.42.0] - 2026-10-19
+
+- Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.

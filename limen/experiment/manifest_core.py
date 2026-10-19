@@ -1,3 +1,4 @@
+import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
@@ -1191,7 +1192,7 @@ class MLManifest(Manifest):
         if self.resolve_trade_policy(round_params) is not None:
             interval = (self.backtest_config.source_interval_seconds if self.backtest_config else None) or _source_interval(self.data_source_config)
             interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
-            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
+            decisions = _partitions.decisions(self, raw_klines, data, interval_seconds=interval, native=sensor_decisions)
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
 
         lazy = data.lazy()
@@ -1414,7 +1415,7 @@ def _process_bars(
         if required_col not in available_cols:
             raise AssertionError(f"Required bar column '{required_col}' not found after bar formation")
 
-    return all_datetimes, bar_data
+    return _partitions.bars(manifest, data, bar_data, all_datetimes)
 
 
 def _should_include_transform(entry: TransformEntry, round_params: dict[str, Any]) -> bool:
@@ -1902,6 +1903,7 @@ def _run_prepare_setup(
 
     raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
     _holdout.selected(manifest, raw_data, raw_splits, round_params, resolved)
+    _partitions.raw(manifest, raw_data, raw_splits)
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in raw_splits]
 
@@ -2016,7 +2018,7 @@ def _finalize_to_data_dict(
             fitted_params=fitted_params
         )
 
-    return data_dict
+    return _partitions.retained(manifest, split_data, data_dict)
 
 
 def _finalize_rule_based_data(

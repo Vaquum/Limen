@@ -63,6 +63,8 @@ def cohort_fields(sensors: object, aggregate: object, prepare: object, map_outpu
     objects: set[int] = set()
     identities: set[tuple[str, ...]] = set()
     for member in members:
+        if getattr(member, 'fold', None) is not None:
+            raise ValueError('Python Cohort requires fold-qualified member composition; compiled folds are unavailable here')
         if id(member) in objects:
             raise ValueError('Python Cohort repeats a Sensor object')
         objects.add(id(member))

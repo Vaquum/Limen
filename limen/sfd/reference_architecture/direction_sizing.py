@@ -93,6 +93,7 @@ def _predict(estimator: ComponentEstimator, x: Array, *, direction: bool = False
 
 
 class DirectionSizingModel(ReferenceModel):
+    inference_output = ('target_exposure', False)
     prediction_mode: ClassVar[Literal['binary', 'target_exposure']] = 'target_exposure'
     direction_model: ComponentEstimator
     sizing_model: ComponentEstimator

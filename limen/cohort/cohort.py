@@ -13,6 +13,7 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS, Selector
 from limen.cohort._round_sources import RoundSources
+from limen.inference._fold_sensor import reject_legacy_members
 from limen.inference.sensor import BarPrediction, PredictionReason, Sensor
 from limen.cohort._python_cohort import Aggregate, CohortMap, CohortPrepare, HistoryT, PythonCohortBase, cohort_fields
 from limen.yaml.config import is_mapping
@@ -189,8 +190,7 @@ class Cohort:
 
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
-        if any(getattr(member, 'origin', None) == 'python' for member in members):
-            raise ValueError('Cohort cannot bind Python-origin Sensors; use Cohort.from_python.')
+        reject_legacy_members(members)
 
         if self._round_sources is not None:
             bound = self._round_sources.bind(members)
