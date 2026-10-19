@@ -9,7 +9,7 @@
 ## What this package owns
 
 Owns the reconstruction-and-inference path: replaying a selected permutation from a completed experiment, validating it against the original log, and wrapping it as a live `Sensor`.
-Also owns explicit `Sensor.from_python` construction without a Manifest. Caller callbacks own preparation, prediction and aggregation; their declarations are distinct from compiled evidence.
+Also owns convenient `Sensor.from_model` and advanced `Sensor.from_python` construction without a Manifest. Defaults handle ordinary fitted prediction; optional functions retain custom preparation, prediction and output control. Caller declarations are distinct from compiled evidence.
 Does **not** own experiment search execution (owned by `limen.experiment`) or the reference model implementations it reuses (owned by `limen.sfd.reference_architecture`).
 
 ## Key entry points
@@ -17,7 +17,7 @@ Does **not** own experiment search execution (owned by `limen.experiment`) or th
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
 | `Trainer` | Replay selected permutations from a completed YAML experiment | Re-runs `prepare_data()`/`run_model()` with the original split and compares metrics to the log |
-| `Sensor` | Native inference over compiled or live Python fitted state | `from_python` accepts arbitrary caller state and history through explicit inference/output callbacks |
+| `Sensor` | Native inference over compiled or live Python fitted state | `from_model` wraps fitted models in one line; `from_python` accepts arbitrary state/history/callbacks |
 | `BarPrediction` | Result of a single-bar prediction | Carries `prediction`, `probability`, and a `reason` |
 | `ReconstructionError` | Raised when metric validation deviates beyond tolerance | Signals a permutation could not be faithfully rebuilt |
 
@@ -34,6 +34,7 @@ inference/
 ├── trainer.py   # Trainer: reconstruct and validate a permutation
 ├── sensor.py    # Sensor entry points and BarPrediction re-export
 ├── _python_sensor.py  # Python construction contract and shared result
+├── _sensor_from_model.py  # Fitted-model defaults and optional hooks
 └── errors.py    # ReconstructionError
 ```
 
@@ -42,7 +43,7 @@ inference/
 - `Trainer` validates by re-running the manifest and comparing metrics to the original log; a deviation past tolerance raises `ReconstructionError` rather than returning a mismatched model.
 - Metric comparison uses a float tolerance (with a wider tolerance for stochastic models), and a fixed set of bookkeeping columns (`id`, `execution_time`, …) is skipped during comparison.
 - `BarPrediction.reason` explains a `None` prediction (`'warm-up'`, `'inside-training-window'`, `'null-features'`, `'sensor-error'`) — a null prediction is expected during warm-up, not an error.
-- Python callback/adapter failures raise; invalid aligned values become `sensor-error`. Native Cohort rejects Python-origin members. See the [Python contract](../../docs/Trainer.md#python-construction) and [recorded workflow](../../docs/Universal-Experiment-Loop.md#direct-python-run).
+- Python callback/adapter failures raise; invalid aligned values become `sensor-error`. Use `Cohort.from_python(selected_sensors)` for live composition; compiled `set_members` rejects Python-origin members. See the [Python contract](../../docs/Trainer.md#python-construction) and [recorded workflow](../../docs/Universal-Experiment-Loop.md#direct-python-run).
 
 ## Read next
 

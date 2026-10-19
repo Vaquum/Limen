@@ -1755,3 +1755,9 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 - Permit finished slices to leave incomplete parents open with explicit remaining work; validate parent contracts and proof before PR-driven closure.
 - Validate candidate-head proof references as data, recheck child PRs after parent edits, and run gate regressions in required CI.
 - Require commit-message closing references in the validated PR body and recognize optional-colon issue closures.
+
+## [5.40.0] - 2026-10-19
+
+- Add `Sensor.from_model` with fitted-model defaults and optional preparation, prediction and mapping hooks.
+- Add `Cohort.from_python` for live selected Sensors with mean, binary vote or custom aggregation, explicit output compatibility and preserved guards/availability.
+- Reuse evaluated fitted models in the recorded Python workflow without refitting.

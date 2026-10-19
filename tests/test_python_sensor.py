@@ -10,8 +10,9 @@ from unittest.mock import patch
 import numpy as np
 import polars as pl
 import pytest
+from sklearn.pipeline import Pipeline
 
-from limen import Sensor
+from limen import Cohort, Sensor
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
 
@@ -44,8 +45,16 @@ def example(recorded, tmp_path_factory):
     script.write_text(source)
     api = runpy.run_path(str(script))
     stem = directory / 'research'
-    sensor, uel, selected, members = api['run_research'](recorded, str(stem))
-    return api, sensor, uel, selected, members, stem
+    fitted_objects = []
+    original_fit = Pipeline.fit
+
+    def counted_fit(model, *args, **kwargs):
+        fitted_objects.append(model)
+        return original_fit(model, *args, **kwargs)
+
+    with patch.object(Pipeline, 'fit', new=counted_fit):
+        cohort, uel, selected, retained = api['run_research'](recorded, str(stem))
+    return api, cohort, uel, selected, retained, stem, fitted_objects
 
 
 def _metadata(recorded):
@@ -78,13 +87,22 @@ def _assert_predictions(actual, expected):
 
 
 def test_recorded_public_handoff_reproduces_selection_metric(example, recorded):
-    api, sensor, uel, selected, members, stem = example
-    assert isinstance(sensor, Sensor)
+    api, cohort, uel, selected, retained, stem, fitted_objects = example
+    assert isinstance(cohort, Cohort)
+    assert cohort.origin == 'python'
+    assert len(fitted_objects) == len(retained) == 4
+    assert {id(model) for model in fitted_objects} == {id(model) for model in retained.values()}
+    members = [(sensor.round_params, sensor.fitted_state) for sensor in cohort.members]
     assert uel.data.equals(recorded[:1440])
     assert uel.experiment_log.height == 4
     assert uel.models == []
     assert len(selected) == len(members) == 2
     assert [p['window'] for p in selected] == [4, 12]
+    for sensor in cohort.members:
+        assert isinstance(sensor, Sensor)
+        assert sensor.fitted_state is retained[(sensor.round_params['window'], sensor.round_params['alpha'])]
+        assert list(sensor.fitted_state.feature_names_in_) == ['momentum']
+        assert sensor.output_id == 'next_bar_return'
     assert stem.with_suffix('.csv').is_file()
     assert set(stem.parent.iterdir()) == {stem.parent / 'research.py', stem.with_suffix('.csv')}
     close, opening = recorded['close'].to_numpy(), recorded['open'].to_numpy()
@@ -101,7 +119,7 @@ def test_recorded_public_handoff_reproduces_selection_metric(example, recorded):
                 rtol=1e-12, atol=1e-12,
             )
         # Independent source-row oracle: decisions 972..1438 trade rows 973..1439.
-        inputs = (close[972:1439] / close[972 - window:1439 - window] - 1).reshape(-1, 1)
+        inputs = pl.DataFrame({'momentum': close[972:1439] / close[972 - window:1439 - window] - 1})
         forecasts = fitted.predict(inputs)
         positions = np.sign(forecasts)
         next_bar_returns = close[973:1440] / opening[973:1440] - 1
@@ -110,19 +128,22 @@ def test_recorded_public_handoff_reproduces_selection_metric(example, recorded):
             (pl.col('window') == window) & (pl.col('alpha') == params['alpha'])
         )
         logged = rows['validation_net_return'][0]
-        refit = api['backtest'](prepared['validation'], forecasts)
+        evaluated = api['backtest'](prepared['validation'], forecasts)
         assert logged == pytest.approx(oracle, rel=1e-12, abs=1e-12)
-        assert refit == pytest.approx(oracle, rel=1e-12, abs=1e-12)
+        assert evaluated == pytest.approx(oracle, rel=1e-12, abs=1e-12)
         ranked = uel.experiment_log.filter(pl.col('window') == window).sort(
             ['validation_net_return', 'alpha'], descending=[True, False]
         )
         assert params['alpha'] == ranked['alpha'][0]
-        heldout_input = (close[1440:1920] / close[1440 - window:1920 - window] - 1).reshape(-1, 1)
-        member_scores.append(fitted.predict(heldout_input) * 10000)
+        heldout_input = pl.DataFrame({'momentum': close[1440:1920] / close[1440 - window:1920 - window] - 1})
+        member_scores.append(fitted.predict(heldout_input))
 
-    combined = sensor.predict_all(recorded[1428:1920])[12:]
+    combined = cohort.predict_all(recorded[1428:1920])[12:]
     assert len(combined) == 480
     assert all(p.reason is None and p.probability is None for p in combined)
+    assert [p.available_at_ns for p in combined] == (
+        recorded[1440:1920]['datetime'].dt.epoch('ns') + 900_000_000_000
+    ).to_list()
     expected = np.mean(member_scores, axis=0)
     np.testing.assert_allclose([p.prediction for p in combined], expected, rtol=1e-12, atol=1e-12)
     assert any(abs(member_scores[0] - member_scores[1]) > 1e-12)
@@ -133,15 +154,16 @@ def test_recorded_public_handoff_reproduces_selection_metric(example, recorded):
     short_history = recorded[1432:1441]
     first_params, first_model = members[0]
     first_x = close[1440] / close[1440 - first_params['window']] - 1
-    assert np.isfinite(first_model.predict([[first_x]])[0])
-    blocked = sensor.predict(short_history)
+    assert np.isfinite(first_model.predict(pl.DataFrame({'momentum': [first_x]}))[0])
+    blocked = cohort.predict(short_history)
     assert blocked.datetime == SELECTION_CUTOFF
     assert blocked.reason == 'warm-up'
     assert blocked.prediction is blocked.probability is None
 
 
 def test_recorded_prefixes_and_repeated_calls_never_fit(example, recorded):
-    _, sensor, _, _, members, _ = example
+    _, cohort, _, _, _, _, _ = example
+    members = [(sensor.round_params, sensor.fitted_state) for sensor in cohort.members]
     history = recorded[1428:1920]
     snapshots = []
     with ExitStack() as stack:
@@ -150,12 +172,12 @@ def test_recorded_prefixes_and_repeated_calls_never_fit(example, recorded):
             snapshots.append((scaler.mean_.copy(), scaler.scale_.copy(), ridge.coef_.copy(), ridge.intercept_))
             for component, method in ((fitted, 'fit'), (scaler, 'fit'), (scaler, 'fit_transform'), (ridge, 'fit')):
                 stack.enter_context(patch.object(component, method, side_effect=AssertionError('inference cannot fit')))
-        full = sensor.predict_all(history)
+        full = cohort.predict_all(history)
         for end in range(13, 493):
-            prefix = sensor.predict_all(history[:end])
+            prefix = cohort.predict_all(history[:end])
             _assert_predictions(prefix[12:], full[12:end])
         for end in (13, 253, 492):
-            _assert_predictions([sensor.predict(history[:end])], [full[end - 1]])
+            _assert_predictions([cohort.predict(history[:end])], [full[end - 1]])
     for (_, fitted), snapshot in zip(members, snapshots, strict=True):
         scaler, ridge = fitted.named_steps['standardscaler'], fitted.named_steps['ridge']
         for actual, expected in zip((scaler.mean_, scaler.scale_, ridge.coef_, ridge.intercept_), snapshot, strict=True):
