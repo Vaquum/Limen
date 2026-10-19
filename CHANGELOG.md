@@ -1,12 +1,6 @@
-# v5.41.0
-
 # Changelog
 
 Note: add all new changelog entries to the bottom of this file.
-
-## [5.41.0] - 2026-10-19
-
-- Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.
 
 ## [0.7.9] - 2025-05-25
 
@@ -1773,3 +1767,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 - Explain Python Research and Compiled Research as the two interfaces to one engine, with distinct ownership and safety guarantees.
 - Show a caller-owned Python experiment through native Sensor construction, concise Cohort composition and an expandable CLI manifest.
 - Describe shared safeguards, ecosystem roles and inspectable package provenance.
+
+## [5.41.0] - 2026-10-19
+
+- Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.
+
