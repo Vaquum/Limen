@@ -1738,4 +1738,4 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.37.0] - 2026-10-19
 
-- Add project final-window reservations and preserve local reservation lifecycle history.
+- Add project final-window reservations, native research exclusion and recorded experiment, refit and replay provenance.

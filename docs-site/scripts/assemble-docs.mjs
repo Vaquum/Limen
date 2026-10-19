@@ -59,6 +59,12 @@ const sectionCategories = [
 
 const docs = [
   {
+    source: 'docs/Final-Holdout.md',
+    dest: 'guides/final-holdout.md',
+    slug: '/guides/final-holdout',
+    sidebarPosition: 21,
+  },
+  {
     source: 'README.md',
     dest: 'index.md',
     slug: '/',

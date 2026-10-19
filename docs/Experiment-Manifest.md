@@ -1391,3 +1391,6 @@ This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the or
 - Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.
 
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+
+
+See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.
