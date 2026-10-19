@@ -26,6 +26,13 @@ The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.
 
 Most existing examples do not yet have execution, output and publication provenance. Browser, accessibility, visual and performance acceptance must become reproducible evidence in the reader delivery. Keep these gaps explicit until the corresponding checks exist and pass. The first complete chapter is a checkpoint; it does not complete the book.
 
+Two deployment defects also remain open in the current source and build:
+
+- `docs-site/src/worker.js` redirects `/robots.txt` to `/limen/robots.txt`, but the build emits no `robots.txt` asset at that destination.
+- The Google Fonts import in `docs-site/src/css/custom.css` conflicts with the Worker's CSP: its style and font directives do not admit the required Google origins.
+
+The reader delivery must self-host the selected fonts and prove that they load under the CSP. The publication delivery must emit and verify the canonical robots resource. Retain both defect records until their rendered-build and deployment checks pass.
+
 ## Ownership
 
 Limen owns the reader implementation, content, examples, semantic tests, evidence format and publication adapters. Implement them in this repository. The design system is a visual reference. The existing `mikkokotila-com` and `eightchord-com/reader` implementations are references for reading, code and navigation behavior; identify the revision and ownership of any source actually reused.
