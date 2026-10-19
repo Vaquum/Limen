@@ -157,6 +157,15 @@ def verify(interface, name, result, output, inputs):
             assert all(datetime.fromisoformat(fitting) < datetime.fromisoformat(result['selection_cutoffs'][0]) for fitting in result['fitting_cutoffs'])
             assert result['objective'] == pytest.approx(np.mean([row['val_backtest_total_return'] for row in result['folds']]))
             assert all(row['val_score'] == row['val_backtest_total_return'] for row in result['folds'])
+            record_file = output / result['round_records']['path']
+            assert hashlib.sha256(record_file.read_bytes()).hexdigest() == result['round_records']['sha256']
+            with gzip.open(record_file, 'rt') as stream:
+                records = [json.loads(line) for line in stream]
+            assert len(records) == 1 and len(records[0]['folds']) == 2
+            for recorded, observed in zip(records[0]['folds'], result['folds'], strict=True):
+                for metric in ('backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold'):
+                    assert np.isfinite(observed[metric])
+                    assert recorded['results'][metric] == observed[metric]
     elif name == 'holdout':
         if interface == 'python':
             rows = pl.read_parquet(output / 'assessment.parquet')
