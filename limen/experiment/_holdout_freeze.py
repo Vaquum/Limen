@@ -26,7 +26,7 @@ from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
 from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness, restore_iterations
-from limen.experiment._holdout_prediction import validate_prediction
+from limen.experiment._holdout_prediction import validate_inference_dependencies, validate_prediction
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
@@ -321,6 +321,8 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
         except PackageNotFoundError:
             versions[package] = None
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
+    for member in members(snapshot[0]):
+        validate_inference_dependencies(member)
     dependencies = prediction_dependencies(snapshot[0])
     for member in members(snapshot[0]):
         validate_prediction(member)

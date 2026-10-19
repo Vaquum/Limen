@@ -16,7 +16,7 @@ from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fi
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
-__all__ = ['readonly_prediction', 'validate_prediction']
+__all__ = ['readonly_prediction', 'validate_inference_dependencies', 'validate_prediction']
 _EFFECTS = FITTING_METHODS
 
 
@@ -105,7 +105,7 @@ def _probe_output(sensor: Sensor) -> object:
     return result
 
 
-def validate_prediction(sensor: Sensor) -> None:
+def validate_inference_dependencies(sensor: Sensor) -> None:
     roots = _roots(sensor)
     config = getattr(vars(sensor)['_model'], 'prediction_calibration_config', None)
     functions, _ = inference_functions(roots, exclude=() if config is None else (config,))
@@ -116,6 +116,10 @@ def validate_prediction(sensor: Sensor) -> None:
             continue
         if any(name in function.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
             raise ValueError('Holdout inference has an unowned random dependency')
+
+
+def validate_prediction(sensor: Sensor) -> None:
+    roots = _roots(sensor)
     state = fitted_witness(roots)
     with readonly_prediction([sensor]):
         first = fitted_witness(_probe_output(sensor))
