@@ -16,7 +16,7 @@ from limen.sfd.reference_architecture import LightGBMBinary, LogRegBinary, TabPF
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 
-from tests.utils.yaml_config import yaml_config
+from tests.utils.yaml_config import parse_cached
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,7 +31,8 @@ def recorded_source(**kwargs):
 
 
 def _config(kind='logreg', *, calibrated=False):
-    config = yaml_config((ROOT / 'limen/yaml/templates/ridge_regressor.yaml').read_text())
+    config, errors = parse_cached((ROOT / 'limen/yaml/templates/ridge_regressor.yaml').read_text())
+    assert not errors
     manifest = config['sfd']['manifest']
     manifest['split_dates'] = {
         'train_start': '2024-01-01', 'train_end': '2024-01-23',

@@ -72,10 +72,12 @@ def test_cached_yaml_setup_preserves_content_and_nested_isolation(monkeypatch: p
         text = (ROOT / 'limen/yaml/templates' / (template + '.yaml')).read_text()
         expected, errors = parse(text)
         assert not errors
-        first = helper.yaml_config(text)
+        first, errors = helper.parse_cached(text)
+        assert not errors
         assert first == expected
         first['sfd']['manifest']['backtest']['fee_bps'] = -999
-        second = helper.yaml_config(text)
+        second, errors = helper.parse_cached(text)
+        assert not errors
         assert second == expected
         assert second['sfd'] is not first['sfd']
     assert len(calls) == len(set(calls)) == 2

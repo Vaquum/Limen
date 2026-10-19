@@ -22,7 +22,7 @@ from limen.experiment.reducer import BudgetReducer
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 from tests.test_experiment_objective import objective_config
-from tests.utils.yaml_config import yaml_config
+from tests.utils.yaml_config import parse_cached
 
 _FIXTURES = Path(__file__).parent / 'fixtures'
 _GEOMETRY = {'n_folds': 2, 'test_bars': 48, 'purge_bars': 4,
@@ -83,7 +83,9 @@ uel:
 
 
 def _config():
-    return yaml_config(_MANIFEST_YAML)
+    config, errors = parse_cached(_MANIFEST_YAML)
+    assert not errors
+    return config
 
 
 def _bars():

@@ -5,7 +5,7 @@ import pytest
 
 from limen.experiment.manifest_core import MLManifest
 from limen.yaml.compiler import build_manifest, build_pruning_strategies
-from tests.utils.yaml_config import yaml_config
+from tests.utils.yaml_config import parse_cached
 from limen.yaml.validator import validate
 
 _TEMPLATES = Path(__file__).resolve().parents[1] / 'limen/yaml/templates'
@@ -13,7 +13,9 @@ _COLUMN = 'val_backtest_total_return'
 
 
 def _configuration(template='logreg_binary'):
-    return yaml_config((_TEMPLATES / f'{template}.yaml').read_text())
+    yaml_dict, errors = parse_cached((_TEMPLATES / f'{template}.yaml').read_text())
+    assert not errors
+    return yaml_dict
 
 
 def _objective_configuration(direction='maximize'):
