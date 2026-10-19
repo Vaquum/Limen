@@ -45,7 +45,7 @@ def _booster(value: object) -> bool:
 
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        return tuple(cast(Mapping[object, object], value).values())
+        return tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair)
     if isinstance(value, (tuple, list)):
         return tuple(cast(Sequence[object], value))
     if isinstance(value, (type, ModuleType, np.ndarray, pl.DataFrame, pl.Series)) or inspect.isroutine(value) or _booster(value):
@@ -207,7 +207,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     binding = getattr(imported, name)
                     if chained_import and isinstance(binding, ModuleType):
                         imported = binding
-                elif instruction.opname == 'STORE_FAST' and binding is not None:
+                elif instruction.opname in ('STORE_FAST', 'STORE_DEREF') and binding is not None:
                     references[name], binding = binding, None
                 if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_DEREF', 'LOAD_FAST') or name not in references:
                     continue
@@ -215,12 +215,16 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 if name not in available:
                     continue
                 item = cast(object, available[name])
-                for attribute in instructions[index + 1:]:
+                following = index + 1
+                for attribute in instructions[following:]:
                     if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD'):
                         break
                     if not hasattr(item, str(attribute.argval)):
                         break
                     item = getattr(item, str(attribute.argval))
+                    following += 1
+                if following < len(instructions) and instructions[following].opname in ('STORE_FAST', 'STORE_DEREF'):
+                    references[str(instructions[following].argval)] = item
                 if not isinstance(item, ModuleType):
                     try:
                         witness = fitted_witness(item)
@@ -250,6 +254,9 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 continue
             done.add(name)
             method = inspect.getattr_static(cls, name, None)
+            if method is None:
+                continue
+            evidence.append((cls.__module__, cls.__qualname__, name, type(method).__module__, type(method).__qualname__))
             if isinstance(method, property):
                 method = method.fget
             if isinstance(method, (staticmethod, classmethod)):

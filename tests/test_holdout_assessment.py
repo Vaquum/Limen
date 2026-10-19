@@ -663,6 +663,12 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(branch_handle, assessment_case)
                 assert loader.call_count == 0
+            with patch.object(InferenceOffset, 'offset', 0.2, create=True):
+                descriptor_handle = _freeze(branched)
+                with patch.object(InferenceOffset, 'adjust', classmethod(InferenceOffset.adjust)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(descriptor_handle, assessment_case)
+                    assert loader.call_count == 0
     class Imported(LogRegBinary):
         def predict(self, data):
             import limen.calibration
@@ -671,7 +677,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             return result
     class Aliased(LogRegBinary):
         def predict(self, data):
-            import limen.calibration as helpers
+            import limen.calibration as imported
+            helpers = imported
             result = super().predict(data)
             result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
             return result
@@ -684,6 +691,19 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(imported_handle, assessment_case)
                 assert loader.call_count == 0
+    class Keyed(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = next(iter(self.adjustments))(result['_probs'])
+            return result
+    keyed = copy.deepcopy(assessment_case[2][0][0])
+    keyed._model.__class__ = Keyed
+    keyed._model.adjustments = {later_probabilities: True}
+    keyed_handle = _freeze(keyed)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(keyed_handle, assessment_case)
+        assert loader.call_count == 0
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
