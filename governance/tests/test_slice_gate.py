@@ -39,10 +39,9 @@ def _pr(body: str, contract: str | None = None) -> str:
 @pytest.fixture(autouse=True)
 def _candidate_evidence(monkeypatch):
     class Evidence:
-        required_checks = {'pr_checks_slice'}
-
         def __init__(self, repo, head_sha):
             assert head_sha == HEAD_SHA
+            self.required_checks = {'pr_checks_slice'}
 
         def __call__(self, path):
             if path != 'tests/test_contract_examples.py':
