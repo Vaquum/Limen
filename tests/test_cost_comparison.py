@@ -103,6 +103,8 @@ def test_frozen_event_scenarios(tmp_path, monkeypatch, mode, funded, barrier, la
         assert scenario['disposition'] == 'retrospective_low_effective_support'
     artifact = tmp_path / 'comparison.json'
     assert comparison.write(artifact) == comparison.write(artifact) == comparison.digest
+    if mode == 'binary' and not funded and barrier is None and lag == 0.0:
+        _assert_refusals(calibration, monkeypatch, calls)
     # Caller aliases are discarded; public projections cannot mutate snapshots.
     inputs.signals.replace_column(inputs.signals.get_column_index('target'), pl.Series('target', [0.0] * inputs.signals.height))
     conditions['venue'] = 'metadata-fault'
@@ -187,3 +189,114 @@ def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
     first_result, later_result = [value.report()['candidates']['caller'] for value in comparisons]
     assert first_result['input_digest'] != later_result['input_digest']
     assert first_result['application_digest'] != later_result['application_digest']
+
+
+def _assert_refusals(calibration, monkeypatch, calls):
+    inputs, policy, conditions, benchmark = _recorded_candidate('binary')
+
+    def candidate(data=inputs, economics=policy, declared=conditions, prices=benchmark):
+        return CostCandidate(data, economics, 'software-controls:refusal-proof', declared, prices)
+
+    shared = candidate()
+    tied = calibration.compare({'a': shared, 'b': shared}).report()
+    assert tied['ranks'] == {'original': {'a': 1, 'b': 1}, 'calibrated': {'a': 1, 'b': 1}, 'delta': {'a': 0, 'b': 0}}
+    mixed = calibration.compare({'good': shared, 'wrong_venue': candidate(declared={**conditions, 'venue': 'metadata-fault'})}).report()
+    assert mixed['ranks']['original'] == {'good': 1, 'wrong_venue': 1}
+    assert mixed['ranks']['calibrated'] is mixed['ranks']['delta'] is None
+    assert mixed['unavailable']['wrong_venue']['calibrated'] == ['incompatible_condition:venue']
+    heterogeneous = calibration.compare({'a': shared, 'b': candidate(economics=replace(policy, fee_bps=7.0))}).report()
+    assert heterogeneous['ranks'] == {'original': None, 'calibrated': None, 'delta': None}
+    deleted = benchmark.filter(pl.col('row_id') != inputs.observations['row_id'][1])
+    unavailable = calibration.compare({'missing_phase': candidate(prices=deleted)})
+    assert unavailable.report()['candidates']['missing_phase']['scenarios']['calibrated']['ledger'] is None
+    with pytest.raises(ValueError, match='no executed ledger'):
+        unavailable.ledger('missing_phase', 'calibrated')
+    flat = replace(inputs, signals=inputs.signals.with_columns(pl.lit(0.0).alias('target')))
+    no_fills = calibration.compare({'flat': candidate(data=flat)}).report()
+    assert no_fills['unavailable']['flat']['calibrated'] == ['no_executed_fills']
+    assert no_fills['candidates']['flat']['scenarios']['calibrated']['metrics']['total_return'] == 0.0
+
+    # Exact recorded point values; only the later open clock is falsified.
+    points = benchmark.head(6)
+    observations = points.select('row_id', pl.col('time_ns').alias('start_ns'), pl.col('time_ns').alias('end_ns'),
+        pl.col('time_ns').alias('open_available_at_ns'), pl.col('time_ns').alias('available_at_ns'),
+        *(pl.col('price').alias(name) for name in ('open', 'high', 'low', 'close')))
+    start, end = points['time_ns'][0], points['time_ns'][-1]
+    observations = observations.with_columns(
+        pl.when(pl.col('end_ns') > start).then(pl.col('end_ns') - 30_000_000_000).otherwise(pl.col('end_ns')).alias('start_ns')
+    ).with_columns(pl.col('start_ns').alias('open_available_at_ns'))
+    signals = pl.DataFrame({'row_id': ['fault:signal0', 'fault:signal1'],
+        'available_at_ns': [start + 30_000_000_000, start + 150_000_000_000], 'target': [1.0, 0.0]})
+    bound = source_binding(observations, 'early_open_metadata_fault', start, end, 1, 'unchanged_midpoints_wrong_open_clock')
+    early = TradeInputs(10_000.0, start, end, signals, observations, None, (bound,))
+    clock_fault = calibration.compare({'early': candidate(data=early)}).report()
+    assert any('unproved_observation_phase' in reason and reason.endswith(':open')
+               for reason in clock_fault['unavailable']['early']['calibrated'])
+
+    # Software endpoint-bar encoding uses two recorded points, never real extrema.
+    selected = benchmark.filter(pl.col('time_ns').is_between(inputs.partition_start_ns, inputs.partition_end_ns)).to_dicts()
+    bars, phases = [], []
+    for index, (left, right) in enumerate(zip(selected, selected[1:], strict=False)):
+        name = f'endpoint-bar:{index}'
+        bars.append({'row_id': name, 'start_ns': left['time_ns'], 'end_ns': right['time_ns'],
+            'open_available_at_ns': left['time_ns'], 'available_at_ns': right['time_ns'],
+            'open': left['price'], 'close': right['price'], 'high': max(left['price'], right['price']), 'low': min(left['price'], right['price'])})
+        phases.extend({**row, 'row_id': name, 'phase': phase} for row, phase in [(left, 'open'), (right, 'close')])
+    observations = pl.DataFrame(bars, schema=inputs.observations.schema)
+    bound = source_binding(observations, 'software_endpoint_bars', inputs.partition_start_ns, inputs.partition_end_ns, 1, 'endpoint_encoding_not_independent_extrema')
+    bar_inputs = replace(inputs, observations=observations, sources=(bound,))
+    phase_frame = pl.DataFrame(phases, schema=benchmark.schema)
+    positive = calibration.compare({'bars': candidate(data=bar_inputs, prices=phase_frame)}).report()
+    assert positive['candidates']['bars']['scenarios']['calibrated']['disposition'] == 'retrospective_low_effective_support'
+    rejected = calibration.compare({'barrier': candidate(data=bar_inputs, prices=phase_frame, economics=replace(policy, take_profit_bps=1.0))}).report()
+    assert 'barrier_extrema_evidence_unavailable' in rejected['unavailable']['barrier']['calibrated']
+
+    # Hypothetical fee stress on unchanged recorded prices; validate the whole family first.
+    expensive = replace(policy, fee_bps=20_000.0)
+    invalid = replace(inputs, signals=inputs.signals.with_columns(pl.Series('target', [1.0, 0.0, 2.0, 0.0, 0.0])))
+    before = len(calls)
+    with pytest.raises(ValueError, match='exposure mode/bounds'):
+        calibration.compare({'good': shared, 'malformed_tail': candidate(data=invalid, economics=expensive)})
+    assert len(calls) == before
+    valid = replace(invalid, signals=invalid.signals.with_columns(pl.Series('target', [1.0, 0.0, 0.0, 0.0, 0.0])))
+    failed = calibration.compare({'economic': candidate(data=valid, economics=expensive)}).report()
+    for scenario in ('original', 'calibrated'):
+        result = failed['candidates']['economic']['scenarios'][scenario]
+        assert result['disposition'] == 'economic_failure' and result['metrics'] is None
+        assert result['support']['failure_time_ns'] is None
+        assert failed['failures']['economic'][scenario]
+
+    funding = FundingPolicy('limen.backtest.funding_adapter.funding_adapter', ADAPTER_VERSION,
+        {'rate': 0.001, 'rate_unit': 'decimal', 'settlement_interval_seconds': 60.0},
+        None, None, 'discrete', 3600.0, 'execution_proxy', 'USDC', 'scenario')
+    events = prepare_funding(funding, None, inputs.partition_start_ns, inputs.partition_end_ns).with_columns(
+        pl.when(pl.col('time_ns') == inputs.partition_end_ns).then(0.0).otherwise(pl.col('rate_basis_seconds')).alias('rate_basis_seconds'))
+    bound = source_binding(events, 'software_funding_basis_fault', inputs.partition_start_ns, inputs.partition_end_ns, 1, 'invalid_normalized_basis')
+    funded = replace(valid, funding_events=events, sources=(*valid.sources, bound))
+    before = len(calls)
+    with pytest.raises(ValueError, match='Funding basis must be positive'):
+        calibration.compare({'bad_funding_tail': candidate(data=funded, economics=replace(expensive, funding=funding))})
+    distances = valid.signals.with_columns(pl.Series('tp_distance', [1.0, 1.0, 1.0, 1.0, 0.0]), pl.lit(True).alias('__barrier_ready__'))
+    with pytest.raises(ValueError, match='Malformed ready barrier distance'):
+        calibration.compare({'bad_barrier_tail': candidate(data=replace(valid, signals=distances), economics=replace(expensive, take_profit_bps_column='tp_distance'))})
+    assert len(calls) == before
+
+    signed, signed_policy, declared, prices = _recorded_candidate('target_exposure')
+    signed = replace(signed, signals=signed.signals.with_columns(pl.Series('target', [-1.0, 0.0, 0.0, 0.0, 0.0])))
+    recovery = calibration.compare({name: CostCandidate(signed, economics, 'software-controls:short', declared, prices)
+        for name, economics in [('wide', replace(signed_policy, slip_bps=9999.0)), ('normal', signed_policy)]}).report()
+    assert recovery['candidates']['wide']['scenarios']['original']['disposition'] == 'economic_failure'
+    assert recovery['ranks']['original'] is recovery['ranks']['delta'] is None
+    assert recovery['ranks']['calibrated'] == {'wide': 1, 'normal': 1}
+
+    def unexpected(*args, **kwargs):
+        raise ValueError('unexpected kernel defect')
+
+    with monkeypatch.context() as context:
+        context.setattr(_cost_comparison, 'trade_execution', unexpected)
+        with pytest.raises(ValueError, match='unexpected kernel defect'):
+            calibration.compare({'valid': shared})
+    with pytest.raises(TypeError, match='mapping'):
+        calibration.compare([])
+    with pytest.raises(ValueError, match='at least one'):
+        calibration.compare({})
