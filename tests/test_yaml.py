@@ -12,6 +12,7 @@ import pytest
 
 from limen import indicators
 from limen.data import HistoricalData
+from limen.data import historical_data
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment.manifest_core import AblationConfig
@@ -221,8 +222,14 @@ def test_resolve_returns_correct_object_types() -> None:
     'limen.data.historical_data.os',
     'limen.data.historical_data.os.system',
     'limen.data.historical_data.urlparse',
+    'limen.data.historical_data.os.path.join',
+    'limen.data.historical_data.os._limen_reentry',
+    'limen.backtest.funding_adapter.importlib.import_module',
+    'limen.features.price_lines.cached_price_line_arrays',
 ))
-def test_resolve_rejects_external_namespace_traversal(path: str) -> None:
+def test_resolve_rejects_external_namespace_traversal(path: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    if path.endswith('._limen_reentry'):
+        monkeypatch.setattr(historical_data.os, '_limen_reentry', indicators.roc, raising=False)
     with pytest.raises(ResolutionError) as exc:
         resolve(path)
     assert exc.value.path == path

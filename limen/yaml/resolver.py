@@ -45,7 +45,7 @@ def resolve(path: str) -> Any:
                 raise ResolutionError(path, ALLOWED_NAMESPACES)
             for attr in attrs:
                 obj = getattr(obj, attr)
-                namespace = obj.__name__ if isinstance(obj, ModuleType) else getattr(obj, '__module__', '')
+                namespace = obj.__name__ if isinstance(obj, ModuleType) else (getattr(obj, '__module__', '') or '')
                 if not _allowed_namespace(namespace):
                     raise ResolutionError(path, ALLOWED_NAMESPACES)
             return obj
