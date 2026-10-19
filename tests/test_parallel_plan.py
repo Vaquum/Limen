@@ -147,7 +147,7 @@ def _assert_plan_identity(plan):
         assert source_digest((changed, None, None)) != expected
     original = codec.module_identity
     for module, changes in (('limen.scalers.robust_scaler', True), ('limen.indicators._atr', True), ('limen.indicators.obv', False)):
-        def identity(name):
+        def identity(name, module=module):
             result = original(name)
             return [result[0], 'changed-source', result[2]] if name == module else result
         with pytest.MonkeyPatch.context() as patch:
@@ -179,7 +179,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     disabled = copy.deepcopy(plan.manifest).add_feature(_caller_feature, include_if='optional', window='{unused_window}')
     without_calibration = {key: value for key, value in params.items() if not key.startswith(('cal_', 'threshold_'))}
     validate_resources(freeze_manifest(disabled, None), without_calibration | {'use_calibration': False, 'use_threshold': False})
-    with pytest.raises(ValueError, match='feature_transforms.*unresolved parameter unused_window'):
+    with pytest.raises(ValueError, match=r'feature_transforms.*unresolved parameter unused_window'):
         validate_resources(freeze_manifest(disabled, None), params | {'optional': True})
     from limen.indicators.obv import obv
     from limen.features.log_returns import log_returns
@@ -309,7 +309,7 @@ def _assert_recovery_faults(configuration, directory, temporary):
             metadata['parallel_plan']['resource_digest'] = 'changed-control'
         path.write_text(json.dumps(metadata))
         before = {str(item.relative_to(rejected)): item.read_bytes() for item in rejected.rglob('*') if item.is_file()}
-        with pytest.raises(ValueError, match='identity|version|policy'):
+        with pytest.raises(ValueError, match=r'identity|version|policy'):
             run_loop(configuration, rejected, resume=True)
         assert {str(item.relative_to(rejected)): item.read_bytes() for item in rejected.rglob('*') if item.is_file()} == before
 

@@ -117,7 +117,8 @@ def validate_record(record: Mapping[str, object], context: Mapping[str, object],
         raise ValueError('Cannot resume: missing or inconsistent parallel output evidence')
     if not contract.probabilities and any(record.get(key) is not None for key in ('probs', 'optimal_threshold', 'threshold_rule')):
         raise ValueError('Cannot resume parallel run with inapplicable probabilities/threshold')
-    if record.get('best_iteration') is not None and (type(record['best_iteration']) is not int or cast(int, record['best_iteration']) < 0):
+    iteration = record.get('best_iteration')
+    if iteration is not None and (type(iteration) is not int or iteration < 0):
         raise ValueError('Cannot resume parallel run with invalid iteration evidence')
     payload = {key: value for key, value in record.items() if key not in ('parallel_output', 'parallel_parameters')}
     evidence = {key: value for key, value in marker.items() if key != 'digest'}

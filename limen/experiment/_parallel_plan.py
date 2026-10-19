@@ -4,6 +4,7 @@ import copy
 import inspect
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
+from importlib import import_module
 from typing import cast
 
 import polars as pl
@@ -66,7 +67,10 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
             'source_digest': source_digest(frames), 'parameter_encoding': 1}
 
 
-def _normalize(value: object, active: frozenset[int] = frozenset()) -> object:
+_NO_ANCESTORS: frozenset[int] = frozenset()
+
+
+def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
@@ -208,7 +212,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
     target = manifest.target_class_config
     if target is not None:
         result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2)
-        result['target']['transform_params'] = _configured('target.transform', target.target_class.transform, target.transform_params, params, skip=2)
+        result['target']['transform_params'] = _configured('target.transform', getattr(target.target_class, 'transform'), target.transform_params, params, skip=2)
         result.update({'target.fit': result['target'], 'target.transform': result['target']})
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
@@ -227,8 +231,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if manifest.ablation_config is not None:
             seed = params.get(manifest.ablation_config.seed_key)
             result['ablation'] = {'random_state': 0 if seed is None else seed}
-        from limen.experiment import _column_shims
-        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], vars(_column_shims)['_resolved'])
+        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], getattr(import_module('limen.experiment._column_shims'), '_resolved'))
         result.update(pca={'svd_solver': 'full'}, feature_shims={'specs': resolve_shims(manifest.feature_shims, params), 'round_params': dict(params)})
         calibration = manifest.prediction_calibration_config
         if calibration is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):

@@ -150,10 +150,8 @@ def _decode_composite(parts: list[object]) -> object:
     if tag in ('list', 'tuple') and isinstance(value, list):
         items = [decode(item) for item in cast(list[object], value)]
         return tuple(items) if tag == 'tuple' else items
-    if tag == 'map' and isinstance(value, list):
-        return {cast(str, pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
-    if tag == 'keyed_map' and isinstance(value, list):
-        return {decode(pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
+    if tag in ('map', 'keyed_map') and isinstance(value, list):
+        return {cast(str, pair[0]) if tag == 'map' else decode(pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
     if tag == 'partial':
