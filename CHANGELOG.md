@@ -1783,3 +1783,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.43.0] - 2026-10-19
 
 - Add explicit recorded-fold Cohort selection, artifact-bound membership and compatible ordinary/fold binary aggregation with campaign guards.
+
+## [5.43.1] - 2026-10-19
+
+- Share checked frozen source snapshots during spawned-worker startup while preserving independent frames, native thread limits and recovery semantics.
