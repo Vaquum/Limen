@@ -111,7 +111,7 @@ def test_python_cohort_defaults_and_identity(recorded):
         'execution_lag_bars': 1, 'take_profit_bps': None, 'stop_loss_bps': None,
     }]
     for selected in (first, cohort):
-        with patch.object(type(first), 'predict_all', side_effect=AssertionError('must reject before inference')), pytest.raises(ValueError, match='Holdout accepts exact Sensor or Cohort only'):
+        with patch.object(type(selected), 'predict_all', side_effect=AssertionError('must reject before inference')), pytest.raises(ValueError, match='Holdout accepts exact Sensor or Cohort only'):
             freeze_holdout_selection(selected, context_start='2025-01-01', scenarios=scenarios)
 
 
