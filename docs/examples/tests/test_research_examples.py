@@ -7,7 +7,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_python_research(python_project):
+def assert_python_research(python_project):
     module, bars, (cohort, loop, selected, retained) = python_project
     assert loop.experiment_log.height == len(retained) == 4
     assert loop.data.equals(bars[:1440])
@@ -38,15 +38,24 @@ def test_python_research(python_project):
     np.testing.assert_allclose([point.prediction for point in actual], np.mean(forecasts, axis=0), rtol=1e-12, atol=1e-12)
     assert [point.available_at_ns for point in actual] == (bars[1440:1920]['datetime'].dt.epoch('ns') + 900_000_000_000).to_list()
     before = [(sensor.fitted_state.named_steps['ridge'].coef_.copy(), sensor.fitted_state.named_steps['standardscaler'].mean_.copy()) for sensor in cohort.members]
-    for stop in (13, 253, 492):
+    from unittest.mock import patch
+    from sklearn.pipeline import Pipeline
+    calls = []
+    original_fit = Pipeline.fit
+    def observe(model, *args, **kwargs):
+        calls.append(model)
+        return original_fit(model, *args, **kwargs)
+    with patch.object(Pipeline, 'fit', new=observe):
+      for stop in range(13, 493):
         prefix = cohort.predict_all(bars[1428:1428+stop])
         np.testing.assert_allclose([point.prediction for point in prefix[12:]], [point.prediction for point in actual[:stop-12]], rtol=1e-12, atol=1e-12)
+    assert calls == []
     for sensor, (coefficients, mean) in zip(cohort.members, before, strict=True):
         np.testing.assert_array_equal(sensor.fitted_state.named_steps['ridge'].coef_, coefficients)
         np.testing.assert_array_equal(sensor.fitted_state.named_steps['standardscaler'].mean_, mean)
 
 
-def test_compiled_research(compiled_project):
+def assert_compiled_research(compiled_project):
     module, output, (loop, sensors, selected) = compiled_project
     assert loop.experiment_log.height == 2
     assert len(sensors) == len(selected) == 1
@@ -61,3 +70,11 @@ def test_compiled_research(compiled_project):
     first, second = sensors[0].predict_all(bars), replay.predict_all(bars)
     assert len(first) == len(second) > 0
     assert [(p.datetime, p.prediction, p.reason) for p in first] == [(p.datetime, p.prediction, p.reason) for p in second]
+
+
+def test_python_research(research_proof):
+    assert research_proof['python']['rounds'] == 4
+
+
+def test_compiled_research(research_proof):
+    assert research_proof['compiled']['rounds'] == 2

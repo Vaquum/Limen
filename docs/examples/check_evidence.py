@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 
@@ -24,8 +25,9 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
     found = []
     for match in re.finditer(pattern, text, re.S):
         identity, source, name, scenario, interface, excerpt = match.groups()
-        path = (root / source).resolve()
-        if not path.is_relative_to(root.resolve()) or path.is_symlink():
+        requested = root / source
+        path = requested.resolve()
+        if not path.is_relative_to(root.resolve()) or any(part.is_symlink() for part in (requested, *requested.parents)):
             raise ValueError('Example source escapes the repository')
         canonical = region(path, name)
         if canonical != excerpt + '\n':
@@ -84,7 +86,7 @@ def validate_shape(value, schema, at='$') -> None:
     if isinstance(value, str):
         if len(value) < schema.get('minLength', 0) or ('pattern' in schema and not re.fullmatch(schema['pattern'], value)):
             raise ValueError(f'{at}: invalid identity')
-    if type(value) in (int, float) and value < schema.get('minimum', value):
+    if type(value) in (int, float) and (not math.isfinite(value) or value < schema.get('minimum', value)):
         raise ValueError(f'{at}: invalid numeric bound')
 
 

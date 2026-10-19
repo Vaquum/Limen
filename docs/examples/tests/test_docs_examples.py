@@ -9,11 +9,11 @@ from check_evidence import bindings, region, validate_evidence, validate_shape
 ROOT = Path(__file__).resolve().parents[3]
 
 
-def test_exact_bindings_and_coverage(python_project, compiled_project):
+def test_exact_bindings_and_coverage(research_proof):
     found = bindings(ROOT, ROOT / 'docs/Research-Book.md')
     assert {(item['interface'], item['scenario']) for item in found} == {('python', 'selection'), ('compiled', 'selection')}
-    assert len(python_project[2][2]) == 2
-    assert len(compiled_project[2][1]) == 1
+    assert research_proof['python']['rounds'] == 4
+    assert research_proof['compiled']['rounds'] == 2
 
 
 def test_divergent_authored_source_fails(tmp_path):
