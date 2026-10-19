@@ -1727,3 +1727,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.35.1] - 2026-10-19
 
 - Preserve unproven family alternatives, refuse partial DSR and unsupported snapshot PBO, and expose retained evidence and terminal coverage without changing source artifacts.
+
+## [5.35.2] - 2026-10-19
+
+- Reject Cohort sources carrying the persisted walk-forward declaration before ID validation, and include the inner `Cohort` prefix in qualified-source errors.

@@ -130,6 +130,8 @@ class Cohort:
 
         with metadata_path.open('r') as f:
             metadata = json.load(f)
+        if metadata.get('split_walk_forward') is not None:
+            raise ValueError('Cohort walk-forward rounds cannot be promoted.')
 
         round_entries = self._load_round_entries(round_data_path)
         available_ids = set(round_entries.keys())
