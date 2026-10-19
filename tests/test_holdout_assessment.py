@@ -35,12 +35,15 @@ def assessment_case(tmp_path_factory):
     config = _configuration(root)
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
     trained, sources = [], []
-    for architecture in ('logreg', 'lightgbm'):
+    for architecture in ('logreg', 'lightgbm', 'warmup'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
             current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
             current['sfd']['params']['C'] = [1.0, 0.5]
             current['uel']['n_permutations'] = 2
+        elif architecture == 'warmup':
+            current['sfd']['manifest']['indicators'][0]['params']['period'] = 30
+            current['sfd']['manifest']['target']['fit_params']['source_column'] = 'roc_30'
         else:
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary'
             current['sfd']['params'] = {'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
@@ -162,6 +165,14 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
         assert failed['state'] == 'failed'
     with pytest.raises(ValueError, match='not completed'):
         read_holdout_report(root, failed['id'])
+    with pytest.raises(ValueError, match='warm-up'):
+        _report(_freeze(trained[2][0]), assessment_case)
+    with history.connection(root / history._HISTORY) as db:
+        warmup_id = db.execute('SELECT id FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()[0]
+    recovered = _report(_freeze(trained[2][0], context='2024-01-03'), assessment_case)
+    assert warmup_id in [entry['id'] for entry in recovered['prior']['attempts']]
+    narrowed = final_holdout_report(_freeze(trained[2][0]), project_root=root, reservation_id=reservation, start='2024-01-06', end='2024-01-07')
+    assert narrowed['state'] == 'completed' and narrowed['planned']['start_ns'] == history.utc_day('2024-01-06')
     scale = manifest_core._apply_scaler
     def changed_schema(*args):
         frame, fitted = scale(*args)
@@ -186,6 +197,7 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
         ids = []
         for pipe in pipes:
             pipe.send('allocate')
+        for pipe in pipes:
             assert pipe.poll(5)
             ids.append(pipe.recv())
         pipes[1].send('fail')
@@ -197,8 +209,9 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
         with history.connection(root / history._HISTORY) as db:
             entries = [dict(db.execute('SELECT * FROM attempts WHERE id=?', (value,)).fetchone()) for value in ids]
         assert [entry['state'] for entry in entries] == ['started', 'failed']
-        assert entries[1]['assessment_index'] == entries[0]['assessment_index'] + 1
-        assert ids[0] in [entry['id'] for entry in json.loads(entries[1]['prior_json'])['attempts']]
+        ordered = sorted(entries, key=lambda entry: entry['assessment_index'])
+        assert ordered[1]['assessment_index'] == ordered[0]['assessment_index'] + 1
+        assert ordered[0]['id'] in [entry['id'] for entry in json.loads(ordered[1]['prior_json'])['attempts']]
     finally:
         for worker in workers:
             if worker.is_alive():

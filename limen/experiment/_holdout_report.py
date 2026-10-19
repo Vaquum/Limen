@@ -217,7 +217,7 @@ def _metric_schema(populations: list[dict[str, object]]) -> None:
     for population in populations:
         for value in population.values():
             field = cast(dict[str, object], value)
-            if set(field) != {'value', 'reason', 'numerator', 'denominator', 'support_rows'} or type(field['support_rows']) is not int or cast(int, field['support_rows']) < 0:
+            if set(field) != {'value', 'reason', 'numerator', 'denominator', 'support_rows'} or type(field['support_rows']) is not int or field['support_rows'] < 0:
                 raise ValueError('Invalid metric support/schema')
             if (field['value'] is None) != (isinstance(field['reason'], str)) or (field['value'] is not None and type(field['value']) not in (int, float)):
                 raise ValueError('Invalid metric availability/schema')

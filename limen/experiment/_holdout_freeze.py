@@ -240,6 +240,16 @@ class FrozenHoldoutSelection:
             raise TypeError('Use freeze_holdout_selection')
         return super().__new__(cls)
 
+    def __init__(self, token: object, /, *, snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], spec: dict[str, object]) -> None:
+        if token is not _TOKEN:
+            raise TypeError('Use freeze_holdout_selection')
+        super().__init__()
+        self._snapshot = snapshot
+        self._spec = spec
+        self._state_digest = state_digest(snapshot[0])
+        self._spec_digest = digest(spec)
+        self._lock = Lock()
+
 
 def _model_witness(value: object) -> object:
     if isinstance(value, Mapping):
@@ -288,14 +298,13 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
             versions[package] = version(package)
         except PackageNotFoundError:
             versions[package] = None
-    result = FrozenHoldoutSelection(_TOKEN)
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
                     'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions}
-    for key, value in zip(('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock'), (snapshot, spec, state_digest(snapshot[0]), digest(spec), Lock()), strict=True):
-        object.__setattr__(result, key, value)
+    result = FrozenHoldoutSelection.__new__(FrozenHoldoutSelection, _TOKEN)
+    result.__init__(_TOKEN, snapshot=snapshot, spec=spec)
     return result
 
 
