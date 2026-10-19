@@ -34,7 +34,7 @@ def verify(interface, name, result, output, inputs):
                     assert row['validation_net_return'] == pytest.approx(ridge_score(bars, row['window'], row['alpha']), rel=1e-10, abs=1e-12)
             else:
                 if strategy == 'factorized':
-                    assert {(row['C'], row['fee']) for row in rows} == {(c, fee) for c in (.5, 1.) for fee in (7., 9.)}
+                    assert {(row['n_estimators'], row['fee']) for row in rows} == {(trees, fee) for trees in (4, 8) for fee in (7., 9.)}
                 else:
                     assert {row['C'] for row in rows} == {.1, .5, 1., 2.}
                     identities.append({row['C']: row['id'] for row in rows})

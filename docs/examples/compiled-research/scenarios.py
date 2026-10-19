@@ -51,7 +51,7 @@ def search(data_dir, output):
         if kind in ('shuffled', 'factorized'):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
-        results[kind] = loop.experiment_log.select('id', 'C', 'accuracy', *(['fee'] if kind == 'factorized' else [])).to_dicts()
+        results[kind] = loop.experiment_log.select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
     return {'runs': results, 'seed': 42}
 # endregion search
 
