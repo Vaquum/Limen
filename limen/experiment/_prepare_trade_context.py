@@ -32,7 +32,7 @@ class PreparedTradeContext:
 
 def source_settings(config: BacktestConfig, params: Mapping[str, object]) -> tuple[tuple[Callable[..., object], JsonValue] | None, ...]:
     sources = (config.execution_data_source, config.funding.data_source if config.funding is not None else None)
-    return tuple(None if source is None else (source.method, resolve_json(source.params, params)) for source in (*sources, config.barrier_features))
+    return tuple(None if source is None else (source.method, resolve_json(source.params, params)) for source in sources)
 
 
 def load_source(source: SourceConfig, params: Mapping[str, object]) -> pl.DataFrame:

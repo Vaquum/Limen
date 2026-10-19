@@ -389,4 +389,6 @@ Keep the existing product/economics declaration alongside this fragment. Numeric
 
 The latest surviving pending intent owns decision-time distances; the first actual fill freezes distances around its fill price. Adds and reductions retain that anchor and the elapsed deadline. Reversals use the reversing decision's distances for the new episode. Barrier/timeout ordering, adverse gap pricing and forced-exit latching retain their existing rules. This does not add a liquidity partial-fill model.
 
+Hypothetical `TradeOutcomeTarget` candidates inside warmup are unavailable with reason `barrier_warmup`; this does not simulate a primary entry.
+
 A producer declares `__barrier_ready__`: false only for a leading warmup prefix with null distances. An entry in that prefix makes the entire sampled candidate unavailable (`StrictModeError`); later readiness cannot manufacture a new entry. Interior missing, nonfinite or nonpositive distances are errors. Distances must be below 10000 bps. Original distance-bearing context is required for Log replay; file-only omitted context cannot reconstruct it. Trainer/Sensor promotion, resume and native workers >1 reject these research configurations.

@@ -113,6 +113,15 @@ def test_native_yaml_and_outcome_contract_parity(tmp_path):
 
     manifest, raw, data = _native()
     assert validate(_yaml()).valid
+    from limen.experiment._fixed_trade_sources import fixed_trade_sources
+    from limen.experiment.manifest_core import DataSourceConfig
+    from copy import deepcopy
+    fixed = deepcopy(manifest)
+    fixed.backtest_config.execution_data_source = DataSourceConfig(recorded_source, {'kline_size': 3600})
+    with fixed_trade_sources(fixed, ['risk_span']):
+        a = fixed.prepare_data(raw, {'risk_span': 6})
+        b = fixed.prepare_data(raw, {'risk_span': 12})
+    assert a['_trade_policy'].barrier_spec != b['_trade_policy'].barrier_spec
     expected = volatility_barriers(raw, span=6, regime_span=24, min_periods=3)
     for mapping, partition in zip(data['_trade_context'].model_rows, data['_trade_context'].partitions, strict=True):
         distances = mapping.select('datetime').join(expected, on='datetime', maintain_order='left')
@@ -140,6 +149,13 @@ def test_native_yaml_and_outcome_contract_parity(tmp_path):
     scalar = replace(policy, take_profit_bps_column=None, stop_loss_bps_column=None, take_profit_bps=20, stop_loss_bps=10)
     ledger = trade_execution(inputs, scalar)
     assert target.outcomes.rows['long_return'][0] == ledger.episodes['net_pnl'][0] / ledger.episodes['entry_equity'][0]
+    warm = inputs.signals.with_columns((pl.int_range(pl.len()) >= 2).alias('__barrier_ready__'), *[pl.when(pl.int_range(pl.len()) < 2).then(None).otherwise(pl.col(name)).alias(name) for name in ('tp', 'sl')])
+    warm_inputs = replace(inputs, signals=warm)
+    warm_context = replace(context, inputs=warm_inputs, contract_digest=contract_digest(export_trade_contract(policy, warm_inputs)))
+    target.transform(pl.DataFrame({'datetime': times}), trade_context=warm_context)
+    assert target.outcomes.rows['long_available'].head(2).to_list() == [False, False]
+    assert target.outcomes.rows['long_unavailable_reason'].head(2).to_list() == ['barrier_warmup', 'barrier_warmup']
+    assert target.outcomes.rows['long_available'].slice(2).any()
 
 
 def test_recording_and_replay_require_original_distances():
