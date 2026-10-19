@@ -89,9 +89,8 @@ def test_python_cohort_defaults_and_identity(recorded):
         'execution_lag_bars': 1, 'take_profit_bps': None, 'stop_loss_bps': None,
     }]
     for selected in (first, cohort):
-        with patch.object(type(first), 'predict_all', side_effect=AssertionError('must reject before inference')):
-            with pytest.raises(ValueError, match='Holdout accepts exact Sensor or Cohort only'):
-                freeze_holdout_selection(selected, context_start='2025-01-01', scenarios=scenarios)
+        with patch.object(type(first), 'predict_all', side_effect=AssertionError('must reject before inference')), pytest.raises(ValueError, match='Holdout accepts exact Sensor or Cohort only'):
+            freeze_holdout_selection(selected, context_start='2025-01-01', scenarios=scenarios)
 
 
 def test_python_cohort_selection_boundaries(recorded):
@@ -154,7 +153,7 @@ def test_python_cohort_alignment_availability_and_blocking(recorded):
     unknown = _sensor(metadata.drop('available_at_ns'))
     assert all(row.available_at_ns is None for row in Cohort.from_python([first, unknown])(recorded))
     for misaligned in (metadata[1:], metadata.head(0)):
-        with pytest.raises(ValueError, match='member 1.*do not align'):
+        with pytest.raises(ValueError, match=r'member 1.*do not align'):
             Cohort.from_python([first, _sensor(misaligned)])(recorded)
     empty = Cohort.from_python([_sensor(metadata.head(0)), _sensor(metadata.head(0))])
     assert empty(recorded) == []
@@ -188,9 +187,8 @@ def test_python_cohort_alignment_availability_and_blocking(recorded):
         [object()], 'bad batch',
     ]
     for batch in malformed_batches:
-        with patch.object(type(first), 'predict_all', return_value=batch):
-            with pytest.raises(ValueError, match='member 0'):
-                Cohort.from_python([first])(recorded)
+        with patch.object(type(first), 'predict_all', return_value=batch), pytest.raises(ValueError, match='member 0'):
+            Cohort.from_python([first])(recorded)
     for pair in ((True, None), (float('inf'), None), (1.0, 1.1)):
         invalid = replace(baseline[0], prediction=pair[0], probability=pair[1])
         with patch.object(type(first), 'predict_all', return_value=[invalid]):
@@ -246,9 +244,9 @@ def test_python_cohort_custom_callbacks_and_failures(recorded):
     assert all(row.trade_contract_digest is None for row in rows)
     assert member(recorded) == original
     for invalid in ((True, None), (float('nan'), None), (2.0, -0.1), (None, None), 'invalid'):
-        mapped = Cohort.from_python([member], map_output=lambda sensor, bar: invalid, mapped_output_id='mapped')
+        mapped = Cohort.from_python([member], map_output=lambda sensor, bar, invalid=invalid: invalid, mapped_output_id='mapped')
         assert all(row.reason == 'sensor-error' for row in mapped(recorded))
-        aggregated = Cohort.from_python([member], aggregate=lambda bars: invalid)
+        aggregated = Cohort.from_python([member], aggregate=lambda bars, invalid=invalid: invalid)
         assert all(row.reason == 'sensor-error' for row in aggregated(recorded))
 
     def fail(*args):

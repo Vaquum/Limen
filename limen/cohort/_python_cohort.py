@@ -163,6 +163,7 @@ class PythonCohortBase(Generic[HistoryT]):
         return 'python'
 
     def set_members(self, members: object) -> None:
+        del members
         raise TypeError('Python Cohort membership is fixed; construct a new Cohort.from_python instead.')
 
     def __call__(self, raw_klines: HistoryT) -> list[BarPrediction]:

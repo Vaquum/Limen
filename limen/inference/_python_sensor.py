@@ -10,7 +10,7 @@ from typing import Generic, Literal, TypeVar, cast
 
 import polars as pl
 
-__all__ = ['BarPrediction', 'HistoryT', 'Infer', 'MapOutput', 'OutputT', 'PredictionReason', 'PythonSensorBase', 'StateT', 'utc_cutoff', 'decision_rows', 'scalar', 'mapped_values', 'output_rows']
+__all__ = ['BarPrediction', 'HistoryT', 'Infer', 'MapOutput', 'OutputT', 'PredictionReason', 'PythonSensorBase', 'StateT', 'decision_rows', 'mapped_values', 'output_rows', 'scalar', 'utc_cutoff']
 
 PredictionReason = Literal['warm-up', 'inside-training-window', 'null-features', 'sensor-error']
 HistoryT = TypeVar('HistoryT')
