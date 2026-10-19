@@ -1189,7 +1189,7 @@ class MLManifest(Manifest):
         _, data = _process_bars(self, raw_klines, round_params)
         decisions = None
         if self.resolve_trade_policy(round_params) is not None:
-            interval = _source_interval(self.data_source_config)
+            interval = (self.backtest_config.source_interval_seconds if self.backtest_config else None) or _source_interval(self.data_source_config)
             interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
             decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
