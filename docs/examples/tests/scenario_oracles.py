@@ -52,7 +52,8 @@ def verify(interface, name, result, output, inputs):
                 assert len(by_id) == expected_rounds
                 for metric in observed['metrics']:
                     record = by_id[metric['id']]
-                    predictions = np.asarray(record['preds'], dtype=float)
+                    predictions = np.asarray(observed['predictions'][record['round_id']], dtype=float)
+                    assert predictions.size == record['preds_ref']['count']
                     assert metric['id'] == record['round_id'] and predictions.size > 300 and np.isfinite(predictions).all()
                     if family.endswith('_regressor'):
                         alignment = record['alignment']

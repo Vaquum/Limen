@@ -3,6 +3,7 @@ import gzip
 import hashlib
 import json
 from pathlib import Path
+import re
 import signal
 import subprocess
 
@@ -61,6 +62,24 @@ def search(data_dir, output):
 # endregion search
 
 
+def recorded_predictions(directory, record):
+    metadata = json.loads((directory / 'metadata.json').read_text())
+    if metadata['round_storage'] != 'gzip-jsonl-v2':
+        raise ValueError('This project expects its recorded version-2 signal payloads')
+    reference = record['preds_ref']
+    digest = reference['sha256']
+    if not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
+        raise ValueError('Invalid recorded prediction digest')
+    with gzip.open(directory / 'round_signals' / (digest + '.json.gz'), 'rb') as stream:
+        payload = stream.read()
+    if hashlib.sha256(payload).hexdigest() != digest:
+        raise ValueError('Recorded prediction payload differs')
+    values = json.loads(payload)
+    if not isinstance(values, list) or len(values) != reference['count']:
+        raise ValueError('Recorded prediction count differs')
+    return values
+
+
 # region model_comparisons
 def model_comparisons(data_dir, output):
     families = {}
@@ -77,7 +96,8 @@ def model_comparisons(data_dir, output):
         metric = 'direction_accuracy' if family == 'direction_sizing' else 'accuracy' if family == 'random_binary' else 'rmse'
         selected = log['id'].head(1).to_list()
         sensors = [] if family == 'random_binary' else Trainer(directory).train(selected)
-        families[family] = {'metrics': log.select('id', metric).to_dicts(), 'records': records, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
+        predictions = {record['round_id']: recorded_predictions(directory, record) for record in records}
+        families[family] = {'metrics': log.select('id', metric).to_dicts(), 'records': records, 'predictions': predictions, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
     return families
 # endregion model_comparisons
 

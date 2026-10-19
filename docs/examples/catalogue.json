@@ -38,7 +38,8 @@
     ]
   },
   "unproved": {
-    "tabpfn": "https://github.com/Vaquum/Limen/issues/628"
+    "tabpfn": "https://github.com/Vaquum/Limen/issues/628",
+    "continuous_post_processing": "https://github.com/Vaquum/Limen/issues/1079"
   },
   "candidate_pages": [
     "docs/Research-Book.md",
