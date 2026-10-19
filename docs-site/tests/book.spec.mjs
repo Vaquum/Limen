@@ -70,6 +70,22 @@ test('failed reference fetch does not override later reading on reload',async({p
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
 });
 
+test('failed Forward reference fetch returns the URL to the visible chapter',async({page})=>{
+  await open(page);const chapter=page.url();
+  await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
+  await expect(page.locator('[data-reference-dialog]')).toBeVisible();
+  await page.getByRole('button',{name:'Return to chapter',exact:true}).click();
+  await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();
+  await page.route('**/reference/trainer/**',route=>route.fulfill({status:503,contentType:'text/plain',body:'Reference unavailable'}));
+  await page.goForward();await expect(page).toHaveURL(chapter);
+  await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();
+  await expect(page.locator('[data-status]')).toContainText('The reference could not be opened');
+  const errors=failures.get(page);
+  expect(errors.some(message=>message.includes('Reference returned 503'))).toBe(true);
+  expect(errors.filter(message=>!message.includes('Reference returned 503')&&!message.includes('503 (Service Unavailable)'))).toEqual([]);
+  failures.set(page,[]);
+});
+
 test('reference fragments retain the panel and canonical history',async({page})=>{
   await open(page);const chapter=page.url();const opener=page.getByRole('link',{name:'Cohort composition',exact:true});
   await opener.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();

@@ -28,8 +28,11 @@ export function initNavigation(){
       initCode(body);dialog.scrollTop=0;dialog.showModal();referenceDocument=documentURL(referenceURL);
       if(updateHistory)history.pushState({readerReference:true,readerOrigin:origin,readerDepth:1},'',referenceURL);camera.to(0);close.focus({preventScroll:true});revealAnchor();
     }catch(error){
+      if(attempt!==token)return;
       if(updateHistory&&history.state?.readerEntry===attemptOrigin.entry&&!history.state?.readerReference)
         history.replaceState({...history.state,readerPlace:null},'',location.href);
+      if(!updateHistory&&history.state?.readerReference&&history.state.readerOrigin.entry===attemptOrigin.entry)
+        history.go(-history.state.readerDepth);
       announce('The reference could not be opened. Follow its link to retry.');console.error(error);
     }
   }
@@ -59,6 +62,7 @@ export function initNavigation(){
       if(dialog.open&&referenceDocument===documentURL(location.href)){camera.to(0);revealAnchor();return;}
       const link=document.getElementById(event.state.readerOrigin.focus);
       if(link)show(link,{updateHistory:false,originOverride:event.state.readerOrigin,referenceURL:location.href});
+      else location.reload();
     }
     else hide();
   });
