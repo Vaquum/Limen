@@ -37,3 +37,5 @@ Factorized search uses the admitted deterministic LightGBM grid with independent
 The holdout scenario creates a separate Git project, reserves its final window before research, freezes selected fitted state and retains the final report. Local recorded files leave earlier exposure unknown. Preserve its project marker, history and assessment artifacts together.
 
 Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
+
+The JSON summary names the statistics used by each decision. Complete native metrics remain in the experiment CSVs. Some statistics are undefined for short or one-sided populations—for example, tail loss on a short fold—and retain their documented native representation there. Undefined statistics are not substituted with zero.

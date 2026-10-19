@@ -85,7 +85,7 @@ def walk_forward(data_dir, output):
     sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
     cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
     cohort.set_members(sensors)
-    return {'rounds': loop.experiment_log.height, 'folds': loop.fold_results.to_dicts(), 'member_folds': [sensor.fold for sensor in sensors], 'fitting_cutoffs': [sensor.fitting_cutoff.isoformat() for sensor in sensors], 'selection_cutoffs': [sensor.selection_cutoff.isoformat() for sensor in sensors], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+    return {'rounds': loop.experiment_log.height, 'folds': loop.fold_results.select('fold', 'id', 'pnl_per_bar_bps_test').to_dicts(), 'member_folds': [sensor.fold for sensor in sensors], 'fitting_cutoffs': [sensor.fitting_cutoff.isoformat() for sensor in sensors], 'selection_cutoffs': [sensor.selection_cutoff.isoformat() for sensor in sensors], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
 # endregion walk_forward
 
 
@@ -142,7 +142,7 @@ def bars(data_dir, output):
 def allocation(data_dir, output):
     config = configuration('allocation', data_dir)
     loop = execute(config, output / 'experiment')
-    columns = [name for name in loop.experiment_log.columns if name.startswith(('allocation_', 'backtest_')) or name == 'risk_span']
+    columns = ['risk_span', 'allocation_training_completed', 'allocation_training_unavailable', 'backtest_total_return', 'backtest_completed_trades']
     return {'rounds': loop.experiment_log.height, 'results': loop.experiment_log.select(columns).to_dicts(), 'promotion': 'batch research only; no live Sensor promotion or resumed allocation claim'}
 # endregion allocation
 
