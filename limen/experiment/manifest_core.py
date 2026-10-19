@@ -1,15 +1,16 @@
+import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
-from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
+from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
+from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
+from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
-from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
+from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
 from collections.abc import Mapping
-from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
+from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
 import copy
 import inspect
 import importlib
@@ -262,6 +263,7 @@ class Manifest:
     architecture_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     metrics_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     backtest_config: BacktestConfig | None = None
+    allocation_config: _allocation_stage.AllocationConfig | None = None
 
     def _add_transform(self,
                        func: Callable[..., Any],
@@ -753,11 +755,17 @@ class Manifest:
                             execution_lag_seconds: float | str = 0.0, max_price_gap_seconds: float | str | None = None,
                             execution_data_source: DataSourceConfig | None = None, funding: FundingConfig | None = None,
                             take_profit_bps_column: str | None = None, stop_loss_bps_column: str | None = None,
-                            barrier_features: DataSourceConfig | None = None, source_interval_seconds: float | None = None) -> 'Manifest':
+                            barrier_features: DataSourceConfig | None = None, source_interval_seconds: float | None = None, source_timestamp_role: Literal['start', 'end'] = 'start') -> 'Manifest':
         self.backtest_config = BacktestConfig(fee_bps, slip_bps, notional_rate, take_profit_bps, stop_loss_bps,
             prediction_mode, product, initial_equity, max_exposure, signal_change_bps, flat_threshold,
             max_holding_seconds, timer_interval_seconds, timer_phase_utc_seconds, execution_lag_seconds,
-            max_price_gap_seconds, execution_data_source, funding, take_profit_bps_column, stop_loss_bps_column, barrier_features, source_interval_seconds)
+            max_price_gap_seconds, execution_data_source, funding, take_profit_bps_column, stop_loss_bps_column, barrier_features, source_interval_seconds, source_timestamp_role)
+        return self
+
+    def with_allocation(self: _TManifest, method: Callable[..., dict[str, object]], params: Mapping[str, object] | None = None) -> _TManifest:
+        if self.allocation_config is not None:
+            raise ValueError('Allocation is already configured')
+        self.allocation_config = _allocation_stage.AllocationConfig(method, dict(params or {}))
         return self
 
     def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None:
@@ -768,20 +776,9 @@ class Manifest:
         return _resolve_backtest_config(self.backtest_config, round_params)
 
     def _apply_backtest_cost(self, data: dict[str, Any], round_params: dict[str, Any]) -> None:
-        policy = self.resolve_trade_policy(round_params)
-        _validate_cached_context(self.backtest_config, policy, data, round_params)
-        if _configured_barriers(self.backtest_config) and policy is None:
-            data['_backtest_configured'] = True
-        else:
-            data.pop('_backtest_configured', None)
-        data.pop('_trade_ledger', None)
-        _preflight_backtest(data)
-        resolved = self.resolve_backtest_config(round_params)
-        for key in BACKTEST_KEYS:
-            if key in resolved:
-                data[f'backtest_{key}'] = resolved[key]
-            else:
-                data.pop(f'backtest_{key}', None)
+        from limen.experiment._manifest_preparation import apply_backtest_cost
+        apply_backtest_cost(self, data, round_params)
+
 
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
@@ -804,6 +801,9 @@ class Manifest:
         Required parameters (no defaults) must be in round_params.
         '''
 
+        if self.allocation_config is not None:
+            self._apply_backtest_cost(data, round_params)
+            return _allocation_stage.run(self, data, round_params)
         model_kwargs = self.resolve_model_kwargs(round_params)
         self._apply_backtest_cost(data, round_params)
         if self.architecture_function is None:
@@ -1125,12 +1125,15 @@ class MLManifest(Manifest):
             attach_outcomes(data_dict, private_labels, raw_features, split_data[0], dropped=columns_to_drop or (),
                 scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
                 deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
-        return data_dict
+        return _allocation_stage.attach(self, raw_data, round_params, data_dict)
 
     @override
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
 
+        if self.allocation_config is not None:
+            self._apply_backtest_cost(data, round_params)
+            return _allocation_stage.run(self, data, round_params)
         model_kwargs = self.resolve_model_kwargs(round_params)
         if self.architecture_function is None:
             raise ValueError('MLManifest run_model requires a configured architecture_function')
@@ -1190,9 +1193,7 @@ class MLManifest(Manifest):
         _, data = _process_bars(self, raw_klines, round_params)
         decisions = None
         if self.resolve_trade_policy(round_params) is not None:
-            interval = (self.backtest_config.source_interval_seconds if self.backtest_config else None) or _source_interval(self.data_source_config)
-            interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
-            decisions = _partitions.decisions(self, raw_klines, data, interval_seconds=interval, native=sensor_decisions)
+            decisions = _partitions.decisions(self, raw_klines, data, native=sensor_decisions, params=round_params)
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
 
         lazy = data.lazy()
@@ -1290,7 +1291,7 @@ class RuleBasedManifest(Manifest):
         data_dict = _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
-        return data_dict
+        return _allocation_stage.attach(self, raw_data, round_params, data_dict)
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.DataFrame:
@@ -1894,6 +1895,7 @@ def _run_prepare_setup(
         round_params: dict[str, Any],
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
+    _allocation_stage.admit(manifest, round_params)
     raw_data = _holdout.admit(manifest, raw_data)
     resolved = None
     if manifest.pre_split_data_selector:

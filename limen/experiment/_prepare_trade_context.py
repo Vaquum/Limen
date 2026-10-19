@@ -60,7 +60,9 @@ def source_interval(source: SourceConfig | None) -> object:
     return value if value is not None or source is None else source.params.get('klines_size')
 
 
-def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:
+def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = None, timestamp_role: str = 'start') -> pl.DataFrame:
+    if timestamp_role not in ('start', 'end'):
+        raise ValueError('Source timestamp role must be start or end')
     if set(OBSERVATION_COLUMNS) <= set(data.columns):
         return data.select(OBSERVATION_COLUMNS)
     if not {'datetime', 'open', 'high', 'low', 'close'} <= set(data.columns):
@@ -70,14 +72,21 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
     starts = data['datetime'].dt.epoch('ns')
     if set(_METADATA) <= set(data.columns):
         timing = data.select(_METADATA)
-        if not timing['start_ns'].equals(starts.rename('start_ns')):
+        anchor = 'start_ns' if timestamp_role == 'start' else 'end_ns'
+        if not timing[anchor].equals(starts.rename(anchor)):
             raise ValueError('Execution/model source start timestamps disagree')
     else:
         if interval_seconds is None and 'base_interval' in data.columns and data['base_interval'].n_unique() == 1:
             interval_seconds = data['base_interval'][0]
         interval = round(resolve_number(interval_seconds, {}, 'recorded regular source interval') * NANOSECONDS)
-        if interval <= 0 or starts.diff().drop_nulls().ne(interval).any():
+        if interval <= 0:
             raise ValueError('Missing interval metadata or source interval is not verified regular')
+        differences = starts.diff().drop_nulls()
+        invalid = differences.ne(interval) if timestamp_role == 'start' else ((differences < interval) | (differences % interval != 0))
+        if invalid.any():
+            raise ValueError('Missing interval metadata or source interval is not verified regular')
+        if timestamp_role == 'end':
+            starts = starts - interval
         timing = pl.DataFrame({'start_ns': starts, 'end_ns': starts + interval, 'open_available_at_ns': starts, 'available_at_ns': starts + interval})
     return timing.with_columns(pl.Series('row_id', [f'row:{index}' for index in range(data.height)]), *[data[key] for key in ('open', 'high', 'low', 'close')]).select(OBSERVATION_COLUMNS)
 
@@ -103,7 +112,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
     inputs: list[TradeInputs] = []
     model_rows: list[pl.DataFrame] = []
     for index, (raw, model) in enumerate(zip(raw_splits, bars, strict=True)):
-        raw_prices = normalize_observations(raw, interval_seconds=interval_seconds)
+        raw_prices = normalize_observations(raw, interval_seconds=interval_seconds, timestamp_role=config.source_timestamp_role)
         if not raw_prices.height or not model.height:
             raise ValueError('Event execution requires nonempty declared partitions')
         starts = raw['datetime'].dt.epoch('ns').to_list()
@@ -226,8 +235,8 @@ def target_context(context: PreparedTradeContext | None, index: int) -> TradeTar
     return TradeTargetContext(context.policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(context.policy, inputs)))
 
 
-def sensor_decisions(raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:
-    prices = normalize_observations(raw, interval_seconds=interval_seconds)
+def sensor_decisions(raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None, timestamp_role: str = 'start') -> pl.DataFrame:
+    prices = normalize_observations(raw, interval_seconds=interval_seconds, timestamp_role=timestamp_role)
     if (prices['available_at_ns'] < prices['end_ns']).any():
         raise ValueError('Sensor decisions require source availability at or after interval end')
     positions = {int(value): index for index, value in enumerate(raw['datetime'].dt.epoch('ns'))}

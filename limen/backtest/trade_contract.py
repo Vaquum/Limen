@@ -107,6 +107,7 @@ class TradePolicy:
     stop_loss_bps_column: str | None = None
     barrier_spec: Mapping[str, JsonValue] | None = None
     source_interval_seconds: float | None = None
+    source_timestamp_role: Literal['start', 'end'] | None = None
 
     def __post_init__(self) -> None:
         if self.rule_version != RULE_VERSION or self.prediction_mode not in ('binary', 'target_exposure'):
@@ -133,6 +134,8 @@ class TradePolicy:
             raise ValueError('TP and SL distance columns must be distinct')
         if self.source_interval_seconds is not None and finite_number(self.source_interval_seconds, 'source interval') <= 0:
             raise ValueError('Source interval must be positive')
+        if self.source_timestamp_role not in (None, 'start', 'end') or (self.source_timestamp_role == 'end' and self.source_interval_seconds is None):
+            raise ValueError('End-stamped source requires its declared interval')
         _ = finite_number(self.timer_phase_utc_seconds, 'timer phase')
         if self.funding is not None and (self.product.kind != 'linear_perpetual' or self.funding.currency != self.product.quote_currency):
             raise ValueError('Funding requires a linear perpetual in the declared quote currency')
@@ -178,7 +181,7 @@ def json_value(value: object) -> JsonValue:
             raise ValueError('Nonfinite contract value')
         return value
     if is_dataclass(value) and not isinstance(value, type):
-        omitted: set[str] = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds'} if isinstance(value, TradePolicy) else set()
+        omitted: set[str] = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds', 'source_timestamp_role'} if isinstance(value, TradePolicy) else set()
         return {field.name: json_value(getattr(value, field.name)) for field in fields(value) if field.name not in omitted or getattr(value, field.name) is not None}
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)

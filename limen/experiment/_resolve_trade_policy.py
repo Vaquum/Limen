@@ -63,6 +63,7 @@ class BacktestConfig:
     stop_loss_bps_column: str | None = None
     barrier_features: SourceConfig | None = None
     source_interval_seconds: float | None = None
+    source_timestamp_role: Literal['start', 'end'] = 'start'
 
 
 TRADE_NUMBERS = ('max_exposure', 'signal_change_bps', 'flat_threshold', 'max_holding_seconds', 'timer_interval_seconds', 'timer_phase_utc_seconds', 'execution_lag_seconds', 'max_price_gap_seconds')
@@ -93,6 +94,8 @@ def resolve_number(value: object, params: Mapping[str, object], name: str) -> fl
 def resolve_trade_policy(config: BacktestConfig | None, params: Mapping[str, object]) -> TradePolicy | None:
     if config is None:
         return None
+    if config.source_timestamp_role not in ('start', 'end') or (config.source_timestamp_role == 'end' and config.source_interval_seconds is None):
+        raise ValueError('Source timestamp role requires start/end and end requires a declared interval')
     from limen.experiment._dynamic_barriers import barrier_policy, dynamic_barriers
 
     extra = barrier_policy(config, resolve_json(config.barrier_features.params, params) if config.barrier_features is not None else None)
@@ -112,7 +115,7 @@ def resolve_trade_policy(config: BacktestConfig | None, params: Mapping[str, obj
             value = params[value]
         resolved = resolve_json(value, params)
         numbers[name] = None if resolved is None and name in ('max_holding_seconds', 'timer_interval_seconds', 'max_price_gap_seconds') else finite_number(resolved, name)
-    return TradePolicy(spec, prediction_mode=config.prediction_mode, fee_bps=cast(float, costs['fee_bps']), slip_bps=cast(float, costs['slip_bps']), notional_rate=cast(float, costs['notional_rate']), take_profit_bps=costs['take_profit_bps'], stop_loss_bps=costs['stop_loss_bps'], max_exposure=cast(float, numbers['max_exposure']), signal_change_bps=cast(float, numbers['signal_change_bps']), flat_threshold=cast(float, numbers['flat_threshold']), max_holding_seconds=numbers['max_holding_seconds'], timer_interval_seconds=numbers['timer_interval_seconds'], timer_phase_utc_seconds=cast(float, numbers['timer_phase_utc_seconds']), execution_lag_seconds=cast(float, numbers['execution_lag_seconds']), max_price_gap_seconds=numbers['max_price_gap_seconds'], funding=resolve_funding(config.funding, params), **extra)
+    return TradePolicy(spec, prediction_mode=config.prediction_mode, fee_bps=cast(float, costs['fee_bps']), slip_bps=cast(float, costs['slip_bps']), notional_rate=cast(float, costs['notional_rate']), take_profit_bps=costs['take_profit_bps'], stop_loss_bps=costs['stop_loss_bps'], max_exposure=cast(float, numbers['max_exposure']), signal_change_bps=cast(float, numbers['signal_change_bps']), flat_threshold=cast(float, numbers['flat_threshold']), max_holding_seconds=numbers['max_holding_seconds'], timer_interval_seconds=numbers['timer_interval_seconds'], timer_phase_utc_seconds=cast(float, numbers['timer_phase_utc_seconds']), execution_lag_seconds=cast(float, numbers['execution_lag_seconds']), max_price_gap_seconds=numbers['max_price_gap_seconds'], funding=resolve_funding(config.funding, params), source_timestamp_role=None if config.source_timestamp_role == 'start' else 'end', **extra)
 
 
 def resolve_funding(config: FundingConfig | None, params: Mapping[str, object]) -> FundingPolicy | None:

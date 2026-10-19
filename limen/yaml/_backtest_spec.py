@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import re
-from collections.abc import Mapping
-from typing import cast
+from collections.abc import Callable, Mapping
+from typing import TYPE_CHECKING, cast
 
 from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, validate_backtest_value as _validate_backtest_value
 from limen.yaml.errors import YAMLError
 from limen.experiment._resolve_trade_policy import FundingConfig, ProductConfig, TRADE_NUMBERS
 from limen.backtest.trade_contract import BPS, finite_number
+
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import Manifest
 
 _PARAM_REF_RE = re.compile(r'\{(\w+)\}')
 
@@ -14,10 +19,23 @@ def _mapping(value: object) -> Mapping[str, object]:
     return cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
 
 
+def _required_mapping(value: object) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError('Backtest declaration requires nested mappings')
+    return cast(Mapping[str, object], value)
+
+
 def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]) -> None:
     sfd = _mapping(yaml_dict.get('sfd'))
     backtest = _mapping(_mapping(sfd.get('manifest')).get('backtest'))
     params = _mapping(sfd.get('params'))
+    allocation = _mapping(_mapping(sfd.get('manifest')).get('allocation'))
+    role = backtest.get('source_timestamp_role', 'start')
+    if role not in ('start', 'end') or (role == 'end' and backtest.get('source_interval_seconds') is None):
+        errors.append(YAMLError(message='Source timestamp role requires start/end; end requires literal interval metadata', path='sfd.manifest.backtest.source_timestamp_role'))
+    _check_source(_mapping(sfd.get('manifest')).get('allocation'), 'sfd.manifest.allocation', errors)
+    if allocation and (backtest.get('prediction_mode') != 'target_exposure' or backtest.get('product') is None):
+        errors.append(YAMLError(message='Allocation requires explicit event target-exposure economics', path='sfd.manifest.allocation'))
     for key in BACKTEST_KEYS:
         if key in backtest:
             value = backtest[key]
@@ -111,3 +129,30 @@ def _check_value(key: str, value: object, path: str, errors: list[YAMLError]) ->
 
 
 __all__ = ['check_backtest_spec']
+
+
+def apply_backtest(manifest: Manifest, declaration: Mapping[str, object]) -> None:
+    from limen.experiment.manifest_core import DataSourceConfig
+    from limen.experiment._resolve_trade_policy import BACKTEST_FIELDS
+    from limen.yaml.resolver import resolve
+
+    value = declaration.get('backtest')
+    if not value:
+        return
+    backtest = _required_mapping(value)
+    kwargs = {key: backtest[key] for key in BACKTEST_FIELDS if key in backtest}
+    if kwargs.get('product') is not None:
+        kwargs['product'] = cast(Callable[..., object], ProductConfig)(**_required_mapping(kwargs['product']))
+    for key in ('execution_data_source', 'barrier_features'):
+        if kwargs.get(key) is not None:
+            source = _required_mapping(kwargs[key])
+            kwargs[key] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_required_mapping(source.get('params', {}))))
+    if kwargs.get('funding') is not None:
+        funding = dict(_required_mapping(kwargs['funding']))
+        if 'adapter' in funding:
+            funding['adapter'] = resolve(cast(str, funding['adapter']))
+        if funding.get('data_source') is not None:
+            source = _required_mapping(funding['data_source'])
+            funding['data_source'] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_required_mapping(source.get('params', {}))))
+        kwargs['funding'] = cast(Callable[..., object], FundingConfig)(**funding)
+    _ = cast(Callable[..., object], manifest.set_backtest_config)(**kwargs)
