@@ -58,9 +58,9 @@ def encode(value: object, active: frozenset[int] = _EMPTY_IDS) -> list[object]:
         node = ['str', str(value)]
     elif type(value) is bool:
         node = ['bool', value]
-    elif type(value) is int:
+    elif isinstance(value, int):
         node = ['int', str(value)]
-    elif type(value) is float:
+    elif isinstance(value, float):
         if not math.isfinite(value):
             raise ValueError('Parallel encoding rejects nonfinite numbers')
         node = ['float', value.hex()]
