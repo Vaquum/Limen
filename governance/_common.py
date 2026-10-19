@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 """Shared helpers for the governance gates.
 
-One place for the things several gates would otherwise each re-implement:
-the repo root, setup-failure reporting, package-root resolution, the
-significant-line counter, and the Conventional-Commits patterns. This is
-infrastructure shared by the gates, not a gate itself — it has no banner and
-is never a required check. Sharing a constant here (e.g. `CC_RE`) is not the
-same as coupling two gates' logic; the gates remain independently invocable.
+Shared paths, setup failures, line counts and commit patterns keep the
+gates independently invocable. This module is not a required check.
 """
 from __future__ import annotations
 

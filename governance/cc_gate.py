@@ -1,25 +1,17 @@
 #!/usr/bin/env python3
 """Conventional Commits gate -- hard-fail on any deviation.
 
-The linked-issue rule checks every closing-referenced issue, including
-an explicitly completed parent PRD. A single-reference short-circuit
-would skip slice-title validation when both close. Only
-parent PRDs — issues carrying the ``planning`` label — are exempt,
-because the PRD title format is not a Conventional Commits subject.
+The slice gate owns closing-reference counts and issue existence.
 
 This gate enforces the Conventional Commits v1.0.0 specification on:
 
   1. The PR title.
-  2. The title of every issue the PR closes except ``planning``-labelled
-     parent PRDs (resolved by the same Closes/Fixes/Resolves #N rule
-     the slice gate uses; reference-count discipline and unresolvable
-     references are the slice gate's concern, not duplicated here).
-  3. Every non-merge commit message in the PR's commit range
-     (``$BASE..$HEAD``).
+  2. Every closing-referenced issue title except ``planning``-labelled
+     parent PRDs, using the shared Closes/Fixes/Resolves parser.
+  3. Every non-merge commit subject in ``$BASE..$HEAD``.
 
-It additionally fails if the PR title or any non-merge commit message
-names an AI/LLM assistant -- commit metadata in this org never carries
-AI attribution.
+It also rejects AI/LLM attribution in PR titles and non-merge commit
+messages; commit metadata in this org never carries AI attribution.
 Every commit closing reference, including merge messages, must also be
 declared in the PR body so slice/parent admission validates the full set.
 
@@ -29,18 +21,12 @@ Accepted format:
 
     <type>[optional scope][!]: <description>
 
-where ``<type>`` is one of::
-
-    feat | fix | docs | style | refactor | perf | test | build |
-    ci | chore | revert
-
-all lowercase. Optional ``scope`` is parenthesized lowercase
-alphanumeric (hyphens, underscores, slashes, dots allowed). Optional ``!`` before
-the colon marks a breaking change. ``<description>`` must be
-non-empty after the ``:`` plus exactly one space.
+Types are listed in ``CC_TYPES``. Types/scopes are lowercase; scopes allow
+alphanumeric, hyphen, underscore, slash and dot. ``!`` marks breaking changes.
+Require a nonblank description after the colon and exactly one space.
 
 Exit codes:
-  0 -- every checked subject matches CC.
+  0 -- every rule passes.
   1 -- at least one deviation.
   2 -- gate setup failure (bad args, git/gh failure, etc.).
 
