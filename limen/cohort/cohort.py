@@ -40,6 +40,8 @@ class Cohort:
     _logger = logging.getLogger(__name__)
     member_ids: list[tuple[str | None, str] | tuple[str, str, int, str]]
     architecture_id: str
+    supports_probabilities: bool | None
+    aggregation_mode: str | None
 
     @staticmethod
     def from_python(sensors: Sequence[Sensor], *, aggregate: Aggregate = 'mean', prepare: CohortPrepare[HistoryT] | None = None, map_output: CohortMap | None = None, mapped_output_id: str | None = None, state_id: str | None = None, selection_cutoff: datetime | None = None) -> '_PythonCohort[HistoryT]':
@@ -62,7 +64,7 @@ class Cohort:
         if rounds is not None:
             if any(arg is not None for arg in (experiment_id, experiment_log_path, permutation_ids, selector, selector_params)):
                 raise ValueError('Cohort rounds conflicts with single-source or selector arguments.')
-            selected: RoundSources[Cohort] | FoldSources = select_sources(rounds, self, lambda plain: RoundSources(
+            selected: RoundSources[Cohort] | FoldSources = select_sources(rounds, self, lambda plain: RoundSources[Cohort](
                 plain, lambda path, ids: type(self)(experiment_log_path=str(path), permutation_ids=ids),
                 self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id),
                 self._normalize_permutation_id, self._extract_architecture_id, self._load_round_entries)
