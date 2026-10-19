@@ -2,12 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 import copy
-from dataclasses import fields, is_dataclass
-from datetime import date, datetime
+from dataclasses import fields
+from datetime import date
 from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
-import inspect
-import json
 import math
 import numbers
 import pickle
@@ -16,81 +14,51 @@ from pathlib import Path
 from threading import Lock
 from typing import cast
 
+import numpy as np
+import numpy.typing as npt
+import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
+from sklearn.decomposition import PCA
+from sklearn.frozen import FrozenEstimator
 from sklearn.linear_model import LogisticRegression
 from sklearn.utils import validation as _validation
 
 from limen.cohort import Cohort
 from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
+from limen.experiment._holdout_report import digest, normalized
+from limen.experiment._column_shims import FittedColumnShims
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.targets.next_bar_down import NextBarDownTarget
 from limen.targets.next_bar_up import NextBarUpTarget
+import limen.targets as _targets
+from limen.scalers import registry as _scalers
 from limen.yaml.compiler import CompiledSFD
 
 check_is_fitted = cast(Callable[[object], None], vars(_validation)['check_is_fitted'])
 _TOKEN = object()
 _VOTE_THRESHOLD = 0.5
+_FITTED_TYPES = (*cast(dict[str, type[object]], vars(_scalers)['SCALER_REGISTRY']).values(), PCA, FittedColumnShims,
+                 *(value for value in vars(_targets).values() if isinstance(value, type) and value.__module__.startswith('limen.targets.')))
 _IMPLEMENTATIONS: dict[type[object], dict[str, object]] = {cls: {name: getattr(cls, name) for name in names} for cls, names in (
     (Sensor, ('predict', '_get_manifest', '_last_bar_inside_training_window')),
     (Cohort, ('_aggregate_bar_predictions', '_fallback_vote_threshold', '_validate_probability_range')),
     (LogRegBinary, ('predict',)), (LightGBMBinary, ('predict',)),
     (LogisticRegression, ('predict', 'predict_proba')),
     (CalibratedClassifierCV, ('predict_proba',)),
+    (FrozenEstimator, ('__getattr__',)),
     (MLManifest, ('sensor_input_prep', '_prepare_column_shims')),
     (NextBarUpTarget, ('transform',)), (NextBarDownTarget, ('transform',)))}
+_IMPLEMENTATIONS.update({cls: {'transform': getattr(cls, 'transform')} for cls in _FITTED_TYPES if hasattr(cls, 'transform')})
 
 
 def unchanged(value: object) -> None:
     for name, original in _IMPLEMENTATIONS.get(type(value), {}).items():
         if name in vars(value) or getattr(type(value), name) is not original:
             raise ValueError(f'Holdout refuses replaced {type(value).__name__}.{name}')
-
-
-def normalized(value: object) -> object:
-    result: object
-    if value is None or type(value) in (str, bool, int):
-        result = value
-    elif isinstance(value, numbers.Real):
-        result = float(value)
-        if not math.isfinite(result):
-            raise ValueError('Holdout specification must be finite')
-    elif isinstance(value, (date, datetime)):
-        result = value.isoformat()
-    elif isinstance(value, Mapping):
-        items = cast(Mapping[object, object], value)
-        if not all(isinstance(key, str) for key in items):
-            raise ValueError('Holdout specification requires string keys')
-        result = {str(key): normalized(item) for key, item in items.items()}
-    elif isinstance(value, (list, tuple)):
-        result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
-    elif inspect.ismethod(value):
-        result = normalized(value.__func__)
-    elif inspect.isfunction(value) or isinstance(value, type):
-        if not value.__module__.startswith(('limen.', 'sklearn.')):
-            raise ValueError('Holdout specification refuses custom callables')
-        name = f'{value.__module__}.{value.__qualname__}'
-        if inspect.isfunction(value) and value.__closure__:
-            result = {'callable': name, 'defaults': normalized(value.__defaults__),
-                    'closure': {key: normalized(cell.cell_contents) for key, cell in zip(value.__code__.co_freevars, value.__closure__, strict=True)}}
-        else:
-            result = name
-    elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
-        result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
-    else:
-        raise ValueError(f'Unsupported holdout specification value: {type(value).__name__}')
-    return result
-
-
-def encoded(value: object) -> bytes:
-    return json.dumps(normalized(value), sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
-
-
-def digest(value: object) -> str:
-    return sha256(encoded(value)).hexdigest()
 
 
 def scenario_declarations(values: list[Mapping[str, object]]) -> list[dict[str, object]]:
@@ -169,6 +137,25 @@ def provenance(sensor: Sensor) -> dict[str, object]:
     return proof
 
 
+def _fitted_value(value: object) -> None:
+    if type(value) in _FITTED_TYPES:
+        unchanged(value)
+        _fitted_value(vars(value))
+    elif isinstance(value, Mapping):
+        for item in cast(Mapping[str, object], value).values():
+            _fitted_value(item)
+    elif isinstance(value, (list, tuple)):
+        for item in cast(list[object] | tuple[object, ...], value):
+            _fitted_value(item)
+    elif isinstance(value, np.ndarray):
+        if cast(npt.NDArray[np.generic], value).dtype.kind not in ('b', 'i', 'u', 'f', 'U', 'S'):
+            raise ValueError('Unsupported holdout fitted array')
+    elif type(value) not in (pl.DataFrame, pl.Series):
+        if callable(value):
+            raise ValueError('Holdout refuses fitted callbacks')
+        _ = normalized(value)
+
+
 def validate_member(sensor: Sensor) -> dict[str, object]:
     if type(sensor) is not Sensor or sensor.trade_contract is not None:
         raise ValueError('Holdout accepts ordinary exact binary Sensors only')
@@ -186,6 +173,8 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         from lightgbm import LGBMClassifier
         if type(model) is not LGBMClassifier or any(name in vars(model) for name in ('predict', 'predict_proba')):
             raise ValueError('Holdout requires exact LGBMClassifier')
+        if any(getattr(LGBMClassifier, name).__module__ != 'lightgbm.sklearn' or getattr(LGBMClassifier, name).__qualname__ != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
+            raise ValueError('Holdout refuses replaced LightGBM prediction methods')
         if model.booster_.best_iteration > 0:
             raise ValueError('Holdout refuses positive native LightGBM best_iteration')
     check_is_fitted(model)
@@ -202,6 +191,11 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         elif type(calibrator) is CalibratedClassifierCV:
             unchanged(calibrator)
             check_is_fitted(calibrator)
+            estimator = vars(calibrator).get('estimator')
+            calibrated = cast(list[object], vars(calibrator).get('calibrated_classifiers_', []))
+            if type(estimator) is not FrozenEstimator or vars(estimator).get('estimator') is not model or not calibrated or any(vars(item).get('estimator') is not estimator for item in calibrated):
+                raise ValueError('Holdout calibration must wrap the selected frozen estimator')
+            unchanged(estimator)
         else:
             raise ValueError('Holdout supports fitted sklearn calibration only')
         threshold = vars(wrapper).get('_calibration_threshold')
@@ -213,6 +207,13 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         raise ValueError('Holdout cached manifest differs from the declared pipeline')
     effective = fresh if manifest is None else manifest
     unchanged(effective)
+    fitted = cast(dict[str, object], vars(sensor)['_fitted_params'])
+    names = {'_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
+    if effective.scaler is not None:
+        names.update(entry[0] for entry in effective.scaler[0])
+    if set(fitted) - names:
+        raise ValueError('Holdout refuses undeclared fitted state')
+    _fitted_value(fitted)
     if any(name in vars(effective) for name in ('sensor_input_prep', '_prepare_column_shims', '_process_bars')):
         raise ValueError('Holdout refuses replaced manifest methods')
     if effective.decoder_lookback != 1 or effective.bar_formation is not None or effective.split_walk_forward is not None or effective.test_data_source_config is not None or effective.data_dict_extension is not None or effective.split_dates is None or any(type(item) is not date for item in effective.split_dates):

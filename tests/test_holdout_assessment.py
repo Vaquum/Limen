@@ -1,5 +1,5 @@
 import copy
-from contextlib import ExitStack
+from contextlib import ExitStack, contextmanager
 import json
 import logging
 import multiprocessing
@@ -71,6 +71,21 @@ def _report(frozen, case):
     return final_holdout_report(frozen, project_root=case[0], reservation_id=case[1], end='2024-01-06')
 
 
+@contextmanager
+def _mutated_selection(sensor):
+    parameters = dict(sensor._round_params)
+    weights = sensor._model.model.coef_
+    original = weights.copy()
+    sensor._round_params['C'] = 999
+    weights[...] += 1
+    try:
+        yield
+    finally:
+        sensor._round_params.clear()
+        sensor._round_params.update(parameters)
+        weights[...] = original
+
+
 def test_holdout_frozen_causal_assessment(assessment_case):
     root, _, trained, cohort = assessment_case
     frozen = _freeze(cohort)
@@ -82,7 +97,6 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         clone = owned_copy(sensor)
         second = owned_copy(clone)
         assert sensor.predict(probe) == clone.predict(probe) == second.predict(probe)
-    trained[0][0]._round_params['C'] = 999
     calls = []
     predictions = []
     real_tape = assessment._tape
@@ -99,6 +113,7 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         'sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform', 'limen.calibration.grid_threshold_optimizer',
         'limen.sfd.reference_architecture.logreg_binary.fit_calibrator', 'limen.sfd.reference_architecture.lightgbm_binary.fit_calibrator')
     with ExitStack() as stack:
+        stack.enter_context(_mutated_selection(trained[0][0]))
         stack.enter_context(patch.object(assessment, '_tape', side_effect=traced_tape))
         for path in paths:
             stack.enter_context(patch(path, side_effect=lambda *args, **kwargs: calls.append('fit')))
@@ -138,6 +153,14 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     changed = copy.deepcopy(trained[0][1])
     changed._get_manifest().decoder_lookback = 2
     with pytest.raises(ValueError, match='cached manifest'):
+        _freeze(changed)
+    changed = copy.deepcopy(trained[0][1])
+    changed._fitted_params['_undeclared'] = object()
+    with pytest.raises(ValueError, match='undeclared fitted state'):
+        _freeze(changed)
+    changed = copy.deepcopy(trained[0][1])
+    changed._fitted_params['_scaler'].transform = lambda frame: frame
+    with pytest.raises(ValueError, match='replaced'):
         _freeze(changed)
     for key, invalid in (('fee_bps', True), ('slip_bps', -1), ('notional_rate', 0), ('execution_lag_bars', 1.0), ('stop_loss_bps', float('nan'))):
         with pytest.raises(ValueError):

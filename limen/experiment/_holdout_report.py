@@ -3,6 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 import json
+import inspect
+import numbers
+from dataclasses import fields, is_dataclass
+from datetime import date, datetime
 import math
 import os
 from pathlib import Path
@@ -15,10 +19,52 @@ import polars as pl
 from sklearn import metrics as _metrics
 
 from limen.experiment import _holdout_history as history
-from limen.experiment._holdout_freeze import encoded
 
 roc_auc_score = cast(Callable[[Sequence[int], Sequence[float]], float], vars(_metrics)['roc_auc_score'])
 _BINARY_CLASSES = 2
+
+def normalized(value: object) -> object:
+    result: object
+    if value is None or type(value) in (str, bool, int):
+        result = value
+    elif isinstance(value, numbers.Real):
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError('Holdout specification must be finite')
+    elif isinstance(value, (date, datetime)):
+        result = value.isoformat()
+    elif isinstance(value, Mapping):
+        items = cast(Mapping[object, object], value)
+        if not all(isinstance(key, str) for key in items):
+            raise ValueError('Holdout specification requires string keys')
+        result = {str(key): normalized(item) for key, item in items.items()}
+    elif isinstance(value, (list, tuple)):
+        result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
+    elif inspect.ismethod(value):
+        result = normalized(value.__func__)
+    elif inspect.isfunction(value) or isinstance(value, type):
+        if not value.__module__.startswith(('limen.', 'sklearn.')):
+            raise ValueError('Holdout specification refuses custom callables')
+        name = f'{value.__module__}.{value.__qualname__}'
+        if inspect.isfunction(value) and value.__closure__:
+            result = {'callable': name, 'defaults': normalized(value.__defaults__),
+                    'closure': {key: normalized(cell.cell_contents) for key, cell in zip(value.__code__.co_freevars, value.__closure__, strict=True)}}
+        else:
+            result = name
+    elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
+        result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
+    else:
+        raise ValueError(f'Unsupported holdout specification value: {type(value).__name__}')
+    return result
+
+
+def encoded(value: object) -> bytes:
+    return json.dumps(normalized(value), sort_keys=True, separators=(',', ':'), ensure_ascii=False, allow_nan=False).encode('utf-8')
+
+
+def digest(value: object) -> str:
+    return sha256(encoded(value)).hexdigest()
+
 
 class Metric(TypedDict):
     value: float | None
@@ -173,7 +219,6 @@ def read_holdout_report(project_root: str | Path, attempt_id: str) -> dict[str, 
 
 
 def _verify(report: dict[str, object], record: dict[str, object], rows: pl.DataFrame) -> None:
-    from limen.experiment._holdout_freeze import digest
     planned = cast(dict[str, int], report['planned'])
     if planned != {key: record[key] for key in ('context_start_ns', 'start_ns', 'end_ns')} or report['prior'] != json.loads(cast(str, record['prior_json'])):
         raise ValueError('Report/history planned support or prior mismatch')

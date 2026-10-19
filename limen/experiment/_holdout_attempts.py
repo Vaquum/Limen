@@ -9,7 +9,7 @@ from typing import cast
 from uuid import uuid4
 
 from limen.experiment import _holdout_history as history
-from limen.experiment._holdout_freeze import encoded
+from limen.experiment._holdout_report import encoded
 
 _VERSION = 2
 _HISTORY = cast(str, vars(history)['_HISTORY'])
