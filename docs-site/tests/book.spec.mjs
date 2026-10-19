@@ -76,11 +76,10 @@ test('reduced motion and interruption retain readable content',async({page})=>{
 test('saved passages survive reload without overriding deep links',async({page})=>{
   await open(page);await page.locator('#adopt-the-compiled-pipeline').scrollIntoViewIfNeeded();await page.mouse.wheel(0,120);
   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
-  const saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('reader:limen:docs/Research-Book.md')));
   await page.reload();await page.evaluate(()=>document.fonts.ready);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(300);
   await page.goto('/limen/#choose-who-owns-the-experiment');await expect(page.locator('#choose-who-owns-the-experiment')).toBeInViewport();
-  await page.evaluate(()=>localStorage.setItem('reader:limen:docs/Research-Book.md',JSON.stringify({passage:'p-removed-passage',ratio:.5,interface:'python'})));
-  await page.goto('/limen/');await expect(page.locator('[data-status]')).toContainText('no longer in this revision');
+  await page.addInitScript(()=>localStorage.setItem('reader:limen:docs/Research-Book.md',JSON.stringify({passage:'p-removed-passage',ratio:.5,interface:'python'})));
+  await page.goto('/limen/?revision=current');await expect(page.locator('[data-status]')).toContainText('no longer in this revision');
   expect(await page.evaluate(()=>scrollY)).toBeLessThan(100);
 });
 
