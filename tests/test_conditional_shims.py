@@ -1,6 +1,7 @@
 import copy
 import json
 from dataclasses import replace
+from typing import ClassVar
 from unittest.mock import patch
 
 import numpy as np
@@ -14,11 +15,13 @@ from threadpoolctl import threadpool_limits
 from limen import __version__
 from limen.experiment import UniversalExperimentLoop, _round_storage
 from limen.experiment._column_shims import apply_column_shims
+from limen.experiment._fold_preparation import FoldFeatures, PreparedFolds
 from limen.experiment._walk_forward_split import resolve_walk_forward_split
 from limen.indicators import roc
 from limen.inference import Trainer
 from limen.scalers import RobustScaler
 from limen.sfd.reference_architecture.direction_sizing import direction_sizing
+from limen.targets import TradeOutcomeTarget
 from limen.yaml import CompiledSFD, build_search_strategy
 from tests.test_direction_sizing import YAML_SPEC, native_manifest, recorded_source
 from tests.test_column_shims import _ffd_expected
@@ -49,6 +52,68 @@ def _config():
     config['uel']['n_permutations'] = 1
     config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     return config
+
+
+class VolumeExcludedOutcome(TradeOutcomeTarget):
+    source_columns: ClassVar[list[str]] = ['volume']
+
+
+@pytest.mark.parametrize('entry', ['native', 'yaml'])
+def test_inner_folds_preserve_target_source_exclusions(entry):
+    params = {**PARAMS, 'holding': 1800, 'funding_rate': 0.0001, 'order': 'auto', 'auto_pca': True, 'pca_k': 2}
+    if entry == 'yaml':
+        config = _config()
+        config['sfd']['manifest']['target']['class'] = 'tests.test_conditional_shims.VolumeExcludedOutcome'
+        config['sfd']['manifest']['pca_compression'] = {}
+        manifest = CompiledSFD(config).manifest()
+    else:
+        manifest = _manifest().with_target_label('outcome', VolumeExcludedOutcome).set_pca_compression()
+    raw = recorded_source(limit=288)
+    data = manifest.prepare_data(raw, dict(params))
+    preparation = data['_fold_preparation']
+    assert 'volume' not in preparation.raw_features.columns
+    assert 'outcome' not in preparation.raw_features.columns
+    blocks = np.array_split(np.arange(len(preparation.row_ids)), 3)
+    earlier, predicted = [tuple(preparation.row_ids[index] for index in block) for block in blocks[:2]]
+    features = preparation.fit_transform(earlier, predicted)
+    history = preparation.identities.select('datetime').join(raw.drop('volume'), on='datetime', how='left', maintain_order='left')
+    prefix = history.head(len(earlier))
+    _, state = apply_column_shims(prefix, SHIMS, {}, None, training=True, target='outcome')
+    transformed = state.transform(history.head(len(earlier) + len(predicted))).drop_nulls()
+    cutoff = history['datetime'][len(earlier)]
+    train = transformed.filter(pl.col('datetime') < cutoff)
+    predict = transformed.filter(pl.col('datetime') >= cutoff)
+    scaler = RobustScaler(train)
+    compression = PCA(n_components=2, svd_solver='full', whiten=False)
+    expected_train = compression.fit_transform(scaler.transform(train).drop('datetime').to_numpy())
+    expected_predict = compression.transform(scaler.transform(predict).drop('datetime').to_numpy())
+    np.testing.assert_allclose(features.train, expected_train, rtol=1e-9, atol=1e-9)
+    np.testing.assert_allclose(features.predict, expected_predict, rtol=1e-9, atol=1e-9)
+    result = manifest.run_model(data, dict(params))
+    assert np.isfinite(result['_preds']).all()
+
+
+def test_fold_identity_validation_uses_linear_membership():
+    comparisons = 0
+
+    class Identity(str):
+        __hash__ = str.__hash__
+
+        def __eq__(self, other):
+            nonlocal comparisons
+            comparisons += 1
+            return super().__eq__(other)
+
+    raw = recorded_source(limit=512)
+    rows = tuple(Identity(str(value)) for value in raw['datetime'])
+    train = tuple(Identity(row) for row in rows[:384])
+    predict = tuple(Identity(row) for row in rows[384:])
+    expected = FoldFeatures(raw.head(384), raw.tail(128), rows[:384], rows[384:])
+    preparation = PreparedFolds(raw, rows, raw.select('datetime'), True, lambda *_: expected)
+    assert preparation.fit_transform(train, predict) is expected
+    assert comparisons <= 10 * len(rows)
+    with pytest.raises(ValueError, match='ordered original row identities'):
+        preparation.fit_transform((*train, train[-1]), predict)
 
 
 @pytest.fixture(autouse=True)

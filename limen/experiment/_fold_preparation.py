@@ -38,12 +38,14 @@ class PreparedFolds:
 
     def fit_transform(self, train_rows: Sequence[str], predict_rows: Sequence[str]) -> FoldFeatures:
         for requested in (train_rows, predict_rows):
-            if tuple(row for row in self.row_ids if row in requested) != tuple(requested):
+            requested_ids = set(requested)
+            if len(requested_ids) != len(requested) or tuple(row for row in self.row_ids if row in requested_ids) != tuple(requested):
                 raise ValueError('Fold preprocessing requires ordered original row identities')
         features = self.transform(train_rows, predict_rows)
         for frame, rows, requested in ((features.train, features.train_rows, train_rows),
                                        (features.predict, features.predict_rows, predict_rows)):
-            if frame.height != len(rows) or len(set(rows)) != len(rows) or tuple(row for row in requested if row in rows) != rows:
+            returned_ids = set(rows)
+            if frame.height != len(rows) or len(returned_ids) != len(rows) or tuple(row for row in requested if row in returned_ids) != rows:
                 raise ValueError('Fold preprocessing changed causal feature-valid membership')
         return features
 

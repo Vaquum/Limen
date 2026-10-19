@@ -1050,8 +1050,6 @@ class MLManifest(Manifest):
             lazy = _apply_feature_transforms(self, lazy, round_params)
             data = lazy.collect()
 
-            if is_train and outcome_target:
-                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
                     self, data, round_params, all_fitted_params,
@@ -1059,6 +1057,8 @@ class MLManifest(Manifest):
                     trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
                 )
 
+            if is_train and outcome_target:
+                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             data = self._prepare_column_shims(data, round_params, all_fitted_params, is_train)
 
             if self.ablation_config is not None:
