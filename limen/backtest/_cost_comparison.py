@@ -138,7 +138,7 @@ def _wire(ledger: TradeLedger) -> dict[str, JsonValue]:
             'metrics': json_value(ledger.metrics), 'contract_digest': ledger.contract_digest}
 
 
-def _support(snapshot: Mapping[str, object], ledger: TradeLedger, report: Mapping[str, JsonValue], rows: Mapping[tuple[str, str], Mapping[str, object]]) -> dict[str, JsonValue]:
+def _support(ledger: TradeLedger, report: Mapping[str, JsonValue], rows: Mapping[tuple[str, str], Mapping[str, object]]) -> dict[str, JsonValue]:
     source = history.mapping(report['source'])
     estimates = history.mapping(report['estimates'])
     flags: set[str] = set()
@@ -176,7 +176,7 @@ def _run(snapshot: Mapping[str, object], policy: TradePolicy, calibration_digest
             raise
         disposition, reasons = 'economic_failure', [str(error)]
     if ledger is not None:
-        support = _support(snapshot, ledger, report, rows) if calibrated else {'fill_count': ledger.fills.height}
+        support = _support(ledger, report, rows) if calibrated else {'fill_count': ledger.fills.height}
         if calibrated and (not ledger.fills.height or 'unproved_executed_reference' in cast(list[str], support['flags'])):
             disposition, reasons = 'unavailable', ['no_executed_fills' if not ledger.fills.height else 'unproved_executed_reference']
     contract = {'trade_contract': export_trade_contract(policy, inputs), 'execution_cost': {
