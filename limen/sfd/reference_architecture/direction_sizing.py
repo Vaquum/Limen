@@ -58,14 +58,15 @@ def _identity(factory: object) -> dict[str, JsonValue]:
     return {'reference': f'{module_name}.{name}', 'source_sha256': sha256(Path(module.__file__).read_bytes()).hexdigest()}
 
 
-def _labels(data: Mapping[str, object], index: int, scale: float, maximum: float) -> tuple[pl.DataFrame, Array, Array, npt.NDArray[np.bool_]]:
+def _labels(data: Mapping[str, object], index: int, scale: float, maximum: float, *, signals: pl.DataFrame | None = None) -> tuple[pl.DataFrame, Array, Array, npt.NDArray[np.bool_]]:
     labels, context = data.get('_trade_labels'), data.get('_trade_context')
     if not isinstance(labels, OutcomeLabels) or not isinstance(context, PreparedTradeContext):
         raise ValueError('Direction/sizing requires private bound simulated-trade labels')
     binding = contract_digest({'partitions': [contract_digest(export_trade_contract(context.policy, partition)) for partition in context.partitions]})
     if labels.contract_digest != binding:
         raise ValueError('Private trade labels belong to different execution contracts')
-    rows = context.partitions[index].signals.select('row_id', 'available_at_ns').join(labels.rows, on='row_id', how='left', maintain_order='left')
+    source = context.partitions[index].signals if signals is None else signals
+    rows = source.select('row_id', 'available_at_ns').join(labels.rows, on='row_id', how='left', maintain_order='left')
     if rows['long_available'].null_count() or rows['short_available'].null_count():
         raise ValueError('Private label identities do not cover the causal inference rows')
     long = rows['long_return'].to_numpy().astype(np.float64)
@@ -145,7 +146,7 @@ class DirectionSizingModel(ReferenceModel):
         fit_size = valid.copy()
         size_x = train.select(self.sizing_features).to_numpy().astype(np.float64)
         if self.conditional:
-            oof = self._oof(data, rows, direction, valid, direction_factory, direction_params, cast(int, seed), cast(int, folds), cast(int, minimum))
+            oof = self._oof(data, rows, direction_factory, direction_params, cast(int, seed), cast(int, folds), cast(int, minimum))
             fit_size &= np.isfinite(oof)
             size_x = np.column_stack((size_x, oof))
         if fit_size.sum() < cast(int, minimum):
@@ -161,15 +162,19 @@ class DirectionSizingModel(ReferenceModel):
         cast(dict[str, object], alignment)['learning_binding'] = self.learning_binding
         return self
 
-    def _oof(self, data: Mapping[str, object], rows: pl.DataFrame, direction: Array, valid: npt.NDArray[np.bool_], factory: ComponentFactory, params: Mapping[str, JsonValue], seed: int, folds: int, minimum: int) -> Array:
+    def _oof(self, data: Mapping[str, object], outer_rows: pl.DataFrame, factory: ComponentFactory, params: Mapping[str, JsonValue], seed: int, folds: int, minimum: int) -> Array:
         preparation = data.get('_fold_preparation')
-        if not isinstance(preparation, FoldPreparation) or tuple(rows['row_id']) != preparation.row_ids:
+        if not isinstance(preparation, FoldPreparation):
+            raise ValueError('Conditional sizing requires its original chronological fold preparation')
+        rows, direction, _, valid = _labels(data, 0, self.scale, self.maximum, signals=preparation.identities)
+        if tuple(rows['row_id']) != preparation.row_ids or not set(outer_rows['row_id']) <= set(preparation.row_ids):
             raise ValueError('Conditional sizing requires its original chronological fold preparation')
         if folds > rows.height:
             raise ValueError('Fold count exceeds the causal training population')
         oof = np.full(rows.height, np.nan, dtype=np.float64)
         availability = rows['available_at_ns'].to_numpy()
         completion = rows.select(pl.max_horizontal('long_label_available_ns', 'short_label_available_ns').fill_null(0)).to_series().to_numpy()
+        positions = {identity: index for index, identity in enumerate(preparation.row_ids)}
         for fold, block in enumerate(np.array_split(np.arange(rows.height), folds)):
             if fold == 0:
                 continue
@@ -180,14 +185,23 @@ class DirectionSizingModel(ReferenceModel):
                 raise ValueError(f'Chronological fold {fold}: insufficient purged samples/classes')
             train_ids = [preparation.row_ids[int(index)] for index in earlier]
             predict_ids = [preparation.row_ids[int(index)] for index in block]
-            features = preparation.fit_transform(train_ids, predict_ids)
+            try:
+                features = preparation.fit_transform(train_ids, predict_ids)
+            except ValueError as exc:
+                raise ValueError(f'Chronological fold {fold}: {exc}') from exc
+            feature_rows = np.asarray([positions[row] for row in features.train_rows], dtype=np.int64)
+            eligible = valid[feature_rows] & (completion[feature_rows] < start)
+            fit = feature_rows[eligible]
+            if fit.size < minimum or np.unique(direction[fit]).size <= 1:
+                raise ValueError(f'Chronological fold {fold}: insufficient feature-valid purged samples/classes')
+            if not features.predict_rows:
+                continue
             names = _columns(self.direction_features, features.train.columns)
             model = factory(seed=seed, **params)
-            positions = {int(index): local for local, index in enumerate(earlier)}
-            local = [positions[int(index)] for index in fit]
-            _ = model.fit(features.train.select(names).to_numpy().astype(np.float64)[local], direction[fit])
-            oof[block] = _predict(model, features.predict.select(names).to_numpy().astype(np.float64), direction=True)
-        return oof
+            _ = model.fit(features.train.select(names).to_numpy().astype(np.float64)[eligible], direction[fit])
+            predicted = [positions[row] for row in features.predict_rows]
+            oof[predicted] = _predict(model, features.predict.select(names).to_numpy().astype(np.float64), direction=True)
+        return oof[[positions[str(row)] for row in outer_rows['row_id']]]
 
     def _components(self, value: object) -> tuple[Array, Array]:
         if isinstance(value, pl.DataFrame):

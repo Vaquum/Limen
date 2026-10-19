@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.44.0"
+  limen_version: "5.44.1"
   mode: development
 
 sfd:
@@ -459,7 +459,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.44.0"
+  limen_version: "5.44.1"
   mode: development
 sfd:
   manifest:
@@ -516,7 +516,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.44.0"
+  limen_version: "5.44.1"
   mode: development
 sfd:
   manifest:
@@ -1221,7 +1221,7 @@ All ratio/scale denominators use the original frame, even when another shim repl
 
 For `d: auto` (also the default fractional-difference order), fit each selected column on the current training partition using the bounded existing grid from zero through one. Verify the selected order with ADF and raise if none qualifies. Validation, test and Sensor use the frozen training state; walk-forward fits each fold separately. Existing Trainer reconstruction uses the persisted YAML/training partition and passes fitted state to Sensor. No new run artifact is introduced. ADF evidence belongs to its training sample: these methods provide causal transformations, not a universal stationarity or performance guarantee.
 
-Automatic fractional fitting is rejected with conditional direction/sizing, whose inner training folds do not refit shims. Fixed-order and stateless shims remain available. Cumulative indicators require the same history origin for replay; a shim transforms their supplied values and does not reconcile origin resets.
+Conditional direction/sizing refits automatic shims on each earlier chronological prefix before fitting its scaler and PCA. Fold boundaries use original feature-valid source rows; inner warmup exclusions and completed-label supervision are joined by row identity. Rows without an available out-of-fold direction cannot train sizing. Final validation, test and Sensor preparation retain the frozen outer training state. Fixed-order and stateless shims retain their existing transformations. Cumulative indicators require the same history origin for replay; a shim transforms their supplied values and does not reconcile origin resets.
 
 Ordinary sequential preparation remains fresh for each permutation. The current `factorize=True` path rejects this configuration; composing shims with factorized reuse is outside the admitted boundary.
 

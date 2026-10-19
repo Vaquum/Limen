@@ -1792,3 +1792,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add research batch meta allocation trained on causal primary-opportunity outcomes with per-opportunity exposure and declared stop-risk caps.
 - Preserve recorded hour-end bar availability and aligned missing intervals through explicit source timestamp metadata.
+
+## [5.44.1] - 2026-10-19
+
+- Fit automatic fractional shims within each chronological direction/sizing prefix and align feature-valid supervision by source row identity.
