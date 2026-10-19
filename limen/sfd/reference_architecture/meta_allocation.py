@@ -70,11 +70,11 @@ class MetaAllocationModel(ReferenceModel):
         self.batch_outputs = {name: self._compose(batch) for name, batch in context.batches.items()}
         self.learning_binding = {'architecture': component_identity(meta_allocation), 'primary': component_identity(vars(context.manifest)['architecture_function']),
                                  'primary_params': json_value(primary_parameters(context.manifest, context.round_params)), 'training': json_value(labels.binding),
+                                 'primary_strategy': json_value(vars(context.manifest).get('strategy')),
                                  'probability_factory': component_identity(self.probability_factory), 'sizing_factory': component_identity(self.sizing_factory),
                                  'allocation_params': json_value({key: value for key, value in params.items() if key not in ('probability_factory', 'sizing_factory')}),
                                  'features': list(self.feature_names), 'batch_digests': self.batch_digests,
                                  'mapping_version': 'primary_opportunity_signed_net_notional_v1'}
-        self.deterministic = bool(self.primary.deterministic and self.probability_factory.deterministic and self.sizing_factory.deterministic)
         data['_learning_binding'] = self.learning_binding
         alignment = cast(dict[str, object], data['_alignment'])
         alignment['learning_binding'] = self.learning_binding
@@ -101,6 +101,9 @@ class MetaAllocationModel(ReferenceModel):
         x = self.scaler.transform(x)
         self.probability_factory = cast(ComponentFactory, params.get('probability_factory', DIRECTION_FACTORY))
         self.sizing_factory = cast(ComponentFactory, params.get('sizing_factory', SIZING_FACTORY))
+        for factory in (self.probability_factory, self.sizing_factory):
+            if not isinstance(getattr(factory, 'deterministic', None), bool):
+                raise ValueError('Component factories require an explicit determinism declaration')
         self.probability_model = cast(_ProbabilityEstimator, self.probability_factory(seed=seed, **cast(Mapping[str, JsonValue], params.get('probability_params') or {'C': 1, 'max_iter': 1000})))
         self.sizing_model = self.sizing_factory(seed=seed, **cast(Mapping[str, JsonValue], params.get('sizing_params') or {'alpha': 1}))
         _ = self.probability_model.fit(x, y[available])

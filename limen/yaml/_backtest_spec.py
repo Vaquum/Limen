@@ -31,9 +31,8 @@ def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]
     params = _mapping(sfd.get('params'))
     allocation = _mapping(_mapping(sfd.get('manifest')).get('allocation'))
     _check_source(_mapping(sfd.get('manifest')).get('allocation'), 'sfd.manifest.allocation', errors)
-    if allocation:
-        if backtest.get('prediction_mode') != 'target_exposure' or backtest.get('product') is None:
-            errors.append(YAMLError(message='Allocation requires explicit event target-exposure economics', path='sfd.manifest.allocation'))
+    if allocation and (backtest.get('prediction_mode') != 'target_exposure' or backtest.get('product') is None):
+        errors.append(YAMLError(message='Allocation requires explicit event target-exposure economics', path='sfd.manifest.allocation'))
     for key in BACKTEST_KEYS:
         if key in backtest:
             value = backtest[key]
