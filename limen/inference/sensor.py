@@ -97,10 +97,12 @@ class Sensor:
         return self._manifest
 
 
-    @_fold_guard.single_guard
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
         '''Predict the last bar; distinguish unavailable data from flat and report per-bar failures.'''
+
+        if hasattr(self, '_fold_context'):
+            return _fold_guard.last_prediction(self, raw_klines)
 
         manifest = self._get_manifest()
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
@@ -112,16 +114,13 @@ class Sensor:
                 raw_klines, self._fitted_params, self._round_params
             )
 
-            if len(data) == 0:
-                return BarPrediction(datetime=None, prediction=None, probability=None, reason='warm-up')
-
-            dt = data[-1]['datetime'][0] if 'datetime' in data.columns else None
+            dt = data[-1]['datetime'][0] if len(data) and 'datetime' in data.columns else None
 
             if self._last_bar_inside_training_window(dt, manifest):
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='inside-training-window')
 
             valid_rows = len(data) - indicator_lookback
-            if valid_rows < decoder_lookback:
+            if len(data) == 0 or valid_rows < decoder_lookback:
                 return BarPrediction(datetime=dt, prediction=None, probability=None, reason='warm-up')
 
             feature_cols = [c for c in data.columns if c not in ('datetime', '__trade_available_at_ns__')]

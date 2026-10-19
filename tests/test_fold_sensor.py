@@ -65,6 +65,13 @@ def test_incomplete_formed_bar_warms_up(fold_campaigns):
     assert result.reason == 'warm-up' and result.prediction is None
 
 
+@pytest.mark.parametrize('kind', ['ordinary', 'anchored', 'formed'])
+def test_predict_keyword_keeps_public_signature(fold_campaigns, kind):
+    sensor = fold_campaigns[kind].sensor
+    history = pl.read_parquet(FIXTURE, n_rows=600)
+    assert sensor.predict(raw_klines=history) == sensor.predict(history)
+
+
 @pytest.mark.parametrize('shape', ['duplicate', 'unsorted', 'null', 'naive', 'submicrosecond', 'finer', 'interval'])
 def test_fold_sensor_clock(fold_campaigns, shape):
     sensor = fold_campaigns['anchored'].sensor

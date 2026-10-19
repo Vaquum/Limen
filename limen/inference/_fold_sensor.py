@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from calendar import timegm
 import copy
 from datetime import date, datetime, timezone
-from functools import wraps
-from typing import Protocol, TypeVar, cast
+from typing import Protocol, cast
 
 import polars as pl
 
@@ -19,17 +18,9 @@ class LiveSensor(Protocol):
     def predict_all(self, raw_klines: pl.DataFrame) -> list[BarPrediction]: ...
 
 
-_S = TypeVar('_S', bound=LiveSensor)
-
-
-def single_guard(func: Callable[[_S, pl.DataFrame], BarPrediction]) -> Callable[[_S, pl.DataFrame], BarPrediction]:
-    @wraps(func)
-    def predict(sensor: _S, frame: pl.DataFrame) -> BarPrediction:
-        if hasattr(sensor, '_fold_context'):
-            rows = sensor.predict_all(frame)
-            return rows[-1] if rows else BarPrediction(None, None, None, 'warm-up')
-        return func(sensor, frame)
-    return predict
+def last_prediction(sensor: LiveSensor, raw_klines: pl.DataFrame) -> BarPrediction:
+    rows = sensor.predict_all(raw_klines)
+    return rows[-1] if rows else BarPrediction(None, None, None, 'warm-up')
 
 
 def reject_manual(reference: object, sensor: object) -> None:

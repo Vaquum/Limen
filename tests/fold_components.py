@@ -48,7 +48,7 @@ class Campaign:
     record: dict
     sensor: object
     fold: int
-    elapsed: float
+    elapsed: dict[str, float]
 
 
 def config(kind: str, source: Path) -> dict:
@@ -123,14 +123,21 @@ def fold_campaigns(tmp_path_factory):
             loop.run('fold_promotion', n_permutations=reference['uel']['n_permutations'], prep_each_round=True, progress_bar=False,
                      recording=FULL, record_execution=True, record_model_outputs=True,
                      workers=2 if kind == 'parallel' else 1)
+            research_elapsed = time.perf_counter() - started
+            promotion_started = time.perf_counter()
             selected = 3 if kind in ('anchored', 'rolling') else 0
             trainer = Trainer(output, data=bars)
             pid = next(iter(trainer._round_data))
             sensor = trainer.train([pid], **({} if kind == 'ordinary' else {'fold': selected}))[0]
+        promotion_elapsed = time.perf_counter() - promotion_started
         destination = root / kind
         shutil.move(output, destination)
         metadata = json.loads((destination / 'metadata.json').read_text())
         record = json.loads(_round_storage.text(_round_storage.round_path(destination)).splitlines()[0])
-        result[kind] = Campaign(destination, bars, copy.deepcopy(reference), metadata, record, sensor, selected, time.perf_counter() - started)
-    (root / 'timings.json').write_text(json.dumps({key: item.elapsed for key, item in result.items()}, indent=2))
+        result[kind] = Campaign(destination, bars, copy.deepcopy(reference), metadata, record, sensor, selected, {'research': research_elapsed, 'promotion': promotion_elapsed, 'total': time.perf_counter() - started})
+    report = json.dumps({key: item.elapsed for key, item in result.items()}, indent=2)
+    (root / 'timings.json').write_text(report)
+    profile = ROOT / 'build/fold-campaign-profile.json'
+    profile.parent.mkdir(exist_ok=True)
+    profile.write_text(report)
     return result
