@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import copy
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import replace
+from importlib import import_module
 from typing import cast
 
 import polars as pl
@@ -13,7 +14,7 @@ from limen.backtest import _cost_identity as identity
 from limen.backtest.execution_events import source_execution_events, validate_signal_barriers
 from limen.backtest.funding_adapter import FUNDING_KEYS, funding_adapter, resolve_adapter
 from limen.backtest.trade_contract import JsonValue, TradeInputs, TradeLedger, TradePolicy, export_trade_contract, finite_number, json_value
-from limen.backtest.trade_execution import _canonical_signal, trade_execution
+from limen.backtest.trade_execution import trade_execution
 
 _SCHEMA = {'row_id': pl.String, 'phase': pl.String, 'time_ns': pl.Int64,
            'replay_available_at_ns': pl.Int64, 'price': pl.Float64,
@@ -22,11 +23,13 @@ _CONDITIONS = frozenset(('venue', 'environment', 'product_kind', 'instrument', '
                          'quote_currency', 'reference_id', 'reference_convention', 'clock'))
 _ECONOMIC = ('No affordable post-cost target quantity with a positive solution denominator',
              'Fill is unaffordable under collateral/cost rules')
+_canonical_signal = cast(Callable[[object, TradePolicy], float | None],
+                         vars(import_module('limen.backtest.trade_execution'))['_canonical_signal'])
 _SUCCESS = ('original', 'retrospective_cost_scenario', 'retrospective_low_effective_support')
 
 
-def freeze(inputs: TradeInputs, policy: TradePolicy, research_id: str,
-           conditions: object, benchmark: pl.DataFrame) -> dict[str, object]:
+def freeze(inputs: object, policy: object, research_id: str,
+           conditions: object, benchmark: object) -> dict[str, object]:
     if not isinstance(inputs, TradeInputs) or not isinstance(policy, TradePolicy) or not isinstance(benchmark, pl.DataFrame):
         raise TypeError('CostCandidate requires TradeInputs, TradePolicy and a benchmark DataFrame')
     name = history.text(research_id, 'research_id')
@@ -37,7 +40,7 @@ def freeze(inputs: TradeInputs, policy: TradePolicy, research_id: str,
         _ = history.text(value, key)
     if declared['clock'] != 'assumed_exchange_label':
         raise ValueError('Only the explicit retrospective assumed-exchange clock is available')
-    snapshot = copy.deepcopy({'inputs': inputs, 'policy': policy, 'research_id': name,
+    snapshot: dict[str, object] = copy.deepcopy({'inputs': inputs, 'policy': policy, 'research_id': name,
                               'conditions': declared, 'benchmark': benchmark})
     _ = identity.digest(snapshot)
     return snapshot
@@ -133,7 +136,7 @@ def _admission(snapshot: Mapping[str, object], calibration: Mapping[str, JsonVal
     return sorted(set(reasons))
 
 
-def _wire(ledger: TradeLedger) -> dict[str, JsonValue]:
+def wire(ledger: TradeLedger) -> dict[str, JsonValue]:
     return {**{name: json_value(getattr(ledger, name).to_dicts()) for name in ('states', 'intents', 'fills', 'episodes', 'funding')},
             'metrics': json_value(ledger.metrics), 'contract_digest': ledger.contract_digest}
 
@@ -159,7 +162,7 @@ def _support(ledger: TradeLedger, report: Mapping[str, JsonValue], rows: Mapping
             flags.add('unproved_executed_reference')
         if barrier:
             flags.add('software_barrier_stress')
-    return {'fill_count': ledger.fills.height, 'flags': sorted(flags), 'failure_time_ns': None}
+    return history.mapping({'fill_count': ledger.fills.height, 'flags': sorted(flags), 'failure_time_ns': None})
 
 
 def _run(snapshot: Mapping[str, object], policy: TradePolicy, calibration_digest: str,
@@ -181,14 +184,14 @@ def _run(snapshot: Mapping[str, object], policy: TradePolicy, calibration_digest
             disposition, reasons = 'unavailable', ['no_executed_fills' if not ledger.fills.height else 'unproved_executed_reference']
     contract = {'trade_contract': export_trade_contract(policy, inputs), 'execution_cost': {
         'calibration_digest': calibration_digest, 'disposition': disposition, 'clock': 'assumed_exchange_label'}}
-    return {'disposition': disposition, 'reasons': reasons, 'clock': 'assumed_exchange_label',
+    return history.mapping({'disposition': disposition, 'reasons': reasons, 'clock': 'assumed_exchange_label',
             'metrics': json_value(ledger.metrics) if ledger is not None else None,
-            'ledger': _wire(ledger) if ledger is not None else None, 'contract': contract, 'support': support}, ledger
+            'ledger': wire(ledger) if ledger is not None else None, 'contract': contract, 'support': support}), ledger
 
 
 def compare(calibration: Mapping[str, JsonValue], calibration_digest: str,
             candidates: Mapping[str, Mapping[str, object]]) -> tuple[dict[str, JsonValue], dict[tuple[str, str], TradeLedger]]:
-    prepared = {}
+    prepared: dict[str, dict[tuple[str, str], dict[str, object]]] = {}
     for name, snapshot in candidates.items():
         _preflight(snapshot)
         prepared[name] = _benchmark(snapshot)
@@ -205,8 +208,8 @@ def compare(calibration: Mapping[str, JsonValue], calibration_digest: str,
         scenarios: dict[str, JsonValue] = {}
         for scenario in ('original', 'calibrated'):
             if scenario == 'calibrated' and reasons:
-                result, ledger = {'disposition': 'unavailable', 'reasons': reasons, 'clock': 'assumed_exchange_label',
-                    'metrics': None, 'ledger': None, 'contract': None, 'support': {}}, None
+                result, ledger = history.mapping({'disposition': 'unavailable', 'reasons': reasons, 'clock': 'assumed_exchange_label',
+                    'metrics': None, 'ledger': None, 'contract': None, 'support': {}}), None
             else:
                 resolved = replace(policy, slip_bps=float(cast(str, estimates['slip_bps']))) if scenario == 'calibrated' else policy
                 result, ledger = _run(snapshot, resolved, calibration_digest, report, prepared[name], calibrated=scenario == 'calibrated')
@@ -220,7 +223,6 @@ def compare(calibration: Mapping[str, JsonValue], calibration_digest: str,
         for scenario in scenarios.values():
             contract = history.mapping(scenario)['contract']
             if contract is not None:
-                history.mapping(contract)  # Validate before inserting the application binding.
                 cast(dict[str, dict[str, JsonValue]], contract)['execution_cost']['application_digest'] = application
         results[name] = history.mapping({'application_digest': application, **item})
     payload['candidates'] = results
@@ -234,7 +236,8 @@ def compare(calibration: Mapping[str, JsonValue], calibration_digest: str,
 def ranks(candidates: Mapping[str, Mapping[str, object]], results: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
     ranked: dict[str, JsonValue] = {}
     for scenario in ('original', 'calibrated'):
-        values, groups = {}, set()
+        values: dict[str, float] = {}
+        groups: set[tuple[int, int, str, str, float, float, float]] = set()
         for name, snapshot in candidates.items():
             item = history.mapping(results[name])
             result = history.mapping(history.mapping(item['scenarios'])[scenario])
@@ -242,8 +245,8 @@ def ranks(candidates: Mapping[str, Mapping[str, object]], results: Mapping[str, 
                 break
             inputs = cast(TradeInputs, snapshot['inputs'])
             policy = history.mapping(history.mapping(history.mapping(result['contract'])['trade_contract'])['policy'])
-            groups.add((inputs.partition_start_ns, inputs.partition_end_ns, item['benchmark_digest'],
-                        cast(TradePolicy, snapshot['policy']).product.quote_currency, inputs.initial_equity, policy['fee_bps'], policy['slip_bps']))
+            groups.add((inputs.partition_start_ns, inputs.partition_end_ns, cast(str, item['benchmark_digest']),
+                        cast(TradePolicy, snapshot['policy']).product.quote_currency, inputs.initial_equity, finite_number(policy['fee_bps'], 'fee'), finite_number(policy['slip_bps'], 'slip')))
             values[name] = finite_number(history.mapping(result['metrics'])['total_return'], 'total_return')
         distinct = sorted(set(values.values()), reverse=True)
         ranked[scenario] = {name: distinct.index(value) + 1 for name, value in values.items()} if len(values) == len(candidates) and len(groups) == 1 else None

@@ -98,7 +98,7 @@ class CostComparison:
             for key in ('calibration_digest', 'candidates', 'ranks', 'failures', 'unavailable', 'limitations')}})
 
     def ledger(self, candidate: str, scenario: Literal['original', 'calibrated']) -> TradeLedger:
-        if not isinstance(candidate, str) or not isinstance(scenario, str):
+        if not isinstance(cast(object, candidate), str) or not isinstance(cast(object, scenario), str):
             raise TypeError('Ledger names must be strings')
         _ = self.digest
         if (candidate, scenario) not in self._ledgers:
@@ -106,7 +106,7 @@ class CostComparison:
         ledger = self._ledgers[candidate, scenario]
         item = _history.mapping(_history.mapping(self._payload['candidates'])[candidate])
         expected = _history.mapping(_history.mapping(item['scenarios'])[scenario])['ledger']
-        if _identity.digest(_comparison._wire(ledger)) != _identity.digest(expected):
+        if _identity.digest(_comparison.wire(ledger)) != _identity.digest(expected):
             raise ValueError('Frozen comparison ledger changed')
         return copy.deepcopy(ledger)
 
@@ -179,18 +179,19 @@ class CostCalibration:
 
 
     def compare(self, candidates: Mapping[str, CostCandidate]) -> CostComparison:
-        if not isinstance(candidates, Mapping):
+        if not isinstance(cast(object, candidates), Mapping):
             raise TypeError('Candidates must be a mapping of names to CostCandidate')
         if not candidates:
             raise ValueError('Comparison requires at least one candidate')
-        frozen = {}
+        frozen: dict[str, Mapping[str, object]] = {}
         for name, candidate in candidates.items():
             _ = _history.text(name, 'candidate name')
-            if not isinstance(candidate, CostCandidate):
+            if not isinstance(cast(object, candidate), CostCandidate):
                 raise TypeError('Every candidate must be a CostCandidate')
-            if _identity.digest(candidate._snapshot) != candidate._seal:
+            snapshot = cast(dict[str, object], getattr(candidate, '_snapshot'))
+            if _identity.digest(snapshot) != cast(str, getattr(candidate, '_seal')):
                 raise ValueError('Frozen candidate content changed')
-            frozen[name] = candidate._snapshot
+            frozen[name] = snapshot
         payload, ledgers = _comparison.compare(self._payload, self.digest, frozen)
         return CostComparison(payload, ledgers)
 
