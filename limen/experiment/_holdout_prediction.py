@@ -10,7 +10,7 @@ from types import FrameType
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, inference_functions
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_functions
 from limen.inference.sensor import Sensor
 
 __all__ = ['readonly_prediction', 'validate_prediction']
@@ -59,7 +59,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y'), [0, 1])
-        if event == 'call' and not fixed_labels and (frame.f_code in forbidden or frame.f_code.co_name in _EFFECTS):
+        if event == 'call' and not fixed_labels and (frame.f_code in forbidden or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = True
             raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
         if previous is not None:

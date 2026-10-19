@@ -17,10 +17,16 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'inference_functions', 'restore_iterations']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_functions', 'restore_iterations']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
+
+def fitting_call(module: str, name: str) -> bool:
+    return (name.rsplit('.', 1)[-1] in FITTING_METHODS
+            or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
+            or (module.startswith('limen.scalers.') and name.endswith('.__init__')))
+
 
 @lru_cache(maxsize=2048)
 def code_digest(code: CodeType) -> str:
@@ -172,7 +178,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(fitted_witness(value))
-            if value.__name__ in FITTING_METHODS or id(value) in sealed:
+            if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
@@ -246,7 +252,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 method = method.__func__
             if inspect.isfunction(method):
                 visit(method)
-                if method.__name__ not in FITTING_METHODS:
+                if not fitting_call(method.__module__, method.__qualname__):
                     pending.extend(method.__code__.co_names)
             elif method is not None and not inspect.isdatadescriptor(method):
                 evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
