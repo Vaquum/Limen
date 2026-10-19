@@ -239,7 +239,10 @@ class Trainer:
                 trade_contract=cast(Mapping[str, JsonValue] | None, data_dict.get('trade_contract') if frozen_contract is not None else None),
             )
             if '_holdout' in fitted_params and self._manifest.split_dates is not None:
-                sensor._fitted_params['_holdout_probe'] = self._data.filter(pl.col('datetime') < self._manifest.split_dates[-1])
+                admitted = self._data.filter(pl.col('datetime') < self._manifest.split_dates[-1])
+                _, warmup = self._manifest.sensor_input_prep(admitted, fitted_params, round_params)
+                context = max((getattr(value, 'context_rows', 0) for value in fitted_params.values()), default=0)
+                sensor._fitted_params['_holdout_probe'] = admitted.tail(warmup + context + 2)
             sensors.append(sensor)
 
             logger.info('Trained sensor for permutation %s', pid)

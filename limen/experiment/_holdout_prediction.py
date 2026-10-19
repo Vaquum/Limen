@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 import inspect
 import random
@@ -74,6 +74,25 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
         sys.setprofile(previous)
 
 
+def _probe_output(sensor: Sensor) -> object:
+    raw = vars(sensor)['_fitted_params'].get('_holdout_probe')
+    if not isinstance(raw, pl.DataFrame) or raw.is_empty():
+        raise ValueError('Holdout requires recorded Trainer inference geometry')
+    manifest = sensor._get_manifest()
+    data, _ = manifest.sensor_input_prep(raw, vars(sensor)['_fitted_params'], vars(sensor)['_round_params'])
+    feature_cols = [name for name in data.columns if name not in ('datetime', '__trade_available_at_ns__')]
+    x = np.asarray(data.select(feature_cols).tail(1), dtype=float)
+    predict = cast(Callable[[dict[str, object]], Mapping[str, object]], getattr(vars(sensor)['_model'], 'predict'))
+    result = predict({'x_test': x})
+    predictions = np.asarray(result['_preds'])
+    probabilities = np.asarray(result['_probs']) if result.get('_probs') is not None else None
+    if predictions.size != 1 or predictions.dtype.kind == 'b' or not np.isin(predictions, [0, 1]).all():
+        raise ValueError('Holdout requires fitted binary inference')
+    if probabilities is not None and (probabilities.size != 1 or not np.isfinite(probabilities).all() or not ((0 <= probabilities) & (probabilities <= 1)).all()):
+        raise ValueError('Holdout requires finite fitted probabilities')
+    return result
+
+
 def validate_prediction(sensor: Sensor) -> None:
     roots = _roots(sensor)
     functions, _ = inference_functions(roots)
@@ -84,17 +103,12 @@ def validate_prediction(sensor: Sensor) -> None:
             continue
         if any(name in function.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
             raise ValueError('Holdout inference has an unowned random dependency')
-    raw = vars(sensor)['_fitted_params'].get('_holdout_probe')
-    if not isinstance(raw, pl.DataFrame) or raw.is_empty():
-        raise ValueError('Holdout requires recorded Trainer inference geometry')
     state = fitted_witness(roots)
     with readonly_prediction([sensor]):
-        first = sensor.predict(raw)
+        first = fitted_witness(_probe_output(sensor))
     with readonly_prediction([sensor]):
-        second = sensor.predict(raw)
+        second = fitted_witness(_probe_output(sensor))
     if fitted_witness(roots) != state:
         raise ValueError('Holdout inference mutated fitted state')
-    if first != second or first.reason is not None or isinstance(first.prediction, bool) or first.prediction not in (0, 1):
+    if first != second:
         raise ValueError('Holdout requires fixed fitted binary inference')
-    if first.probability is not None and (not np.isfinite(first.probability) or not 0 <= cast(float, first.probability) <= 1):
-        raise ValueError('Holdout requires finite fitted probabilities')

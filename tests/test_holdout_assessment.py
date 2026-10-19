@@ -472,12 +472,12 @@ def test_owned_lightgbm_preserves_effective_iteration(assessment_case, limit, ca
     booster.best_iteration = selected
     if calibrated:
         sensor._model._fitted_calibrator.estimator.estimator.booster_.best_iteration = selected
-    raw = sensor._fitted_params['_holdout_probe']
-    expected = sensor.predict(raw)
+    from limen.experiment._holdout_prediction import _probe_output
+    from limen.experiment._holdout_dependencies import fitted_witness
+    expected = fitted_witness(_probe_output(sensor))
     clone = owned_copy(sensor)
     second = owned_copy(clone)
-    assert expected.reason is None
-    assert expected == clone.predict(raw) == second.predict(raw)
+    assert expected == fitted_witness(_probe_output(clone)) == fitted_witness(_probe_output(second))
     assert clone._model.model.booster_.best_iteration == second._model.model.booster_.best_iteration == selected
     if calibrated:
         assert clone._model._fitted_calibrator.estimator.estimator.booster_.best_iteration == selected
