@@ -88,7 +88,7 @@ def tree_architecture(data, prediction_calibration_config=None):
         def train(self, data, **params):
             return self
     model = FittedTree()
-    model.model = DecisionTreeClassifier(max_depth=2, random_state=42).fit(np.asarray(data['x_train']), np.asarray(data['y_train']))
+    model.model = DecisionTreeClassifier(max_depth=2, random_state=42).fit(np.asarray(data['x_train']), np.where(np.asarray(data['y_train']) == 1, 1, -1))
     model.prediction_calibration_config = prediction_calibration_config
     model._fitted_calibrator, model._calibration_threshold, model._val_score = None, 0.5, None
     model.research_label = 'selected fitted tree'
@@ -462,6 +462,7 @@ def test_compiled_fitted_components_complete_final_assessment(assessment_case):
     root, _, trained, cohort = assessment_case
     assert len({type(sensor._model) for group in trained for sensor in group}) >= 3
     assert len({type(sensor._model.model) for sensor in members(cohort)}) == 2
+    assert set(trained[2][0]._model.model.classes_) == {-1, 1}
     for selected in [sensor for group in trained for sensor in group] + [cohort]:
         frozen = _freeze(selected, context='2024-01-01')
         first = _report(frozen, assessment_case)

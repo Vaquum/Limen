@@ -179,13 +179,14 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     if not callable(getattr(wrapper, 'predict', None)):
         raise ValueError('Holdout requires fitted binary prediction')
     unchanged(wrapper)
+    config = getattr(wrapper, 'prediction_calibration_config', None)
     model = getattr(wrapper, 'model', None)
     if model is not None:
         _fitted_value(model)
         classes = getattr(model, 'classes_', None)
-        if classes is not None and list(classes) != [0, 1]:
+        native = getattr(type(wrapper), 'predict') in (LogRegBinary.predict, LightGBMBinary.predict)
+        if config is None and native and classes is not None and list(classes) != [0, 1]:
             raise ValueError('Holdout estimator classes must be [0,1]')
-    config = getattr(wrapper, 'prediction_calibration_config', None)
     calibrator = getattr(wrapper, '_fitted_calibrator', None)
     if config is not None:
         if calibrator is None or not callable(getattr(calibrator, 'predict_proba', None)):
