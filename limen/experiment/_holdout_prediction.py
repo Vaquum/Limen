@@ -3,9 +3,11 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 import inspect
+from hashlib import sha256
+import marshal
 import random
 import sys
-from types import FrameType
+from types import CodeType, FrameType
 from typing import cast
 
 import numpy as np
@@ -23,7 +25,7 @@ def _roots(sensor: Sensor) -> list[object]:
 
 
 @contextmanager
-def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
+def readonly_prediction(sensors: list[Sensor], calls: set[CodeType] | None = None) -> Iterator[None]:
     forbidden: set[object] = set()
     seen: set[int] = set()
 
@@ -57,6 +59,8 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
+        if calls is not None and event == 'call':
+            calls.add(frame.f_code)
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y'), [0, 1])
         if event == 'call' and not fixed_labels and (frame.f_code in forbidden or frame.f_code.co_name in _EFFECTS):
             violation = True
@@ -105,11 +109,13 @@ def validate_prediction(sensor: Sensor) -> None:
         if any(name in function.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
             raise ValueError('Holdout inference has an unowned random dependency')
     state = fitted_witness(roots)
-    with readonly_prediction([sensor]):
+    calls: set[CodeType] = set()
+    with readonly_prediction([sensor], calls):
         first = fitted_witness(_probe_output(sensor))
-    with readonly_prediction([sensor]):
+    with readonly_prediction([sensor], calls):
         second = fitted_witness(_probe_output(sensor))
     if fitted_witness(roots) != state:
         raise ValueError('Holdout inference mutated fitted state')
     if first != second:
         raise ValueError('Holdout requires fixed fitted binary inference')
+    vars(sensor)['_fitted_params']['_holdout_inference_calls'] = tuple(sorted(sha256(marshal.dumps(code)).hexdigest() for code in calls))

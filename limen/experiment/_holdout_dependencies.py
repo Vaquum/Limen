@@ -8,6 +8,7 @@ import inspect
 from io import IOBase
 import dis
 import marshal
+import logging
 import pickle
 import sys
 from types import ModuleType
@@ -70,6 +71,10 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
         elif inspect.ismethod(item):
             result = ('method', node(item.__func__), node(item.__self__))
+        elif inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item):
+            result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
+        elif isinstance(item, logging.Logger):
+            result = ('logger', item.name)
         elif inspect.isbuiltin(item):
             owner = getattr(item, '__self__', None)
             result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
@@ -113,7 +118,7 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     visit(source)
 
 
-def inference_functions(values: Sequence[object]) -> tuple[list[object], list[object]]:
+def inference_functions(values: Sequence[object], active: set[str] | None = None) -> tuple[list[object], list[object]]:
     seen: set[int] = set()
     evidence: list[object] = []
     functions: list[object] = []
@@ -135,6 +140,8 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(fitted_witness(value))
+            if active is not None and sha256(marshal.dumps(value.__code__)).hexdigest() not in active:
+                return
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
                 return
             visit(value.__defaults__)
@@ -169,6 +176,8 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
                 if not isinstance(item, ModuleType):
                     evidence.append((value.__module__, value.__qualname__, instruction.argval, fitted_witness(item)))
                     visit(item)
+        elif inspect.isroutine(value):
+            evidence.append(fitted_witness(value))
         elif not isinstance(value, (ModuleType, type, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
             pending = ['predict', 'predict_proba', 'transform', '__call__']
             methods: set[str] = set()
@@ -196,5 +205,5 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
     return functions, evidence
 
 
-def dependency_digest(values: Sequence[object]) -> str:
-    return sha256(pickle.dumps(inference_functions(values)[1], protocol=5)).hexdigest()
+def dependency_digest(values: Sequence[object], active: set[str] | None = None) -> str:
+    return sha256(pickle.dumps(inference_functions(values, active)[1], protocol=5)).hexdigest()

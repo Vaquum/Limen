@@ -116,12 +116,15 @@ def state_digest(selection: Sensor | Cohort) -> str:
 
 
 def prediction_dependencies(selection: Sensor | Cohort) -> str:
-    values: list[object] = []
+    values: list[object] = [Sensor.predict, Sensor._get_manifest, Sensor._last_bar_inside_training_window]
+    active: set[str] = set()
     for member in members(selection):
         values.extend(_member_state(member)[:4])
+        active.update(cast(tuple[str, ...], vars(member)['_fitted_params']['_holdout_inference_calls']))
         manifest = cast(MLManifest, vars(member)['_manifest'])
+        values.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
         values.extend(getattr(manifest, field.name) for field in fields(manifest) if field.name not in ('data_source_config', 'test_data_source_config'))
-    return dependency_digest(values)
+    return dependency_digest(values, active)
 
 
 def manifest_projection(manifest: MLManifest) -> object:
@@ -164,7 +167,7 @@ def _fitted_value(value: object) -> None:
 
 
 def validate_member(sensor: Sensor) -> dict[str, object]:
-    if type(sensor) is not Sensor or sensor.trade_contract is not None:
+    if type(sensor) is not Sensor or sensor.trade_contract is not None or '_fold_context' in vars(sensor):
         raise ValueError('Holdout accepts ordinary exact binary Sensors only')
     unchanged(sensor)
     wrapper = vars(sensor)['_model']
@@ -195,7 +198,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     effective = fresh if manifest is None else manifest
     unchanged(effective)
     fitted = cast(dict[str, object], vars(sensor)['_fitted_params'])
-    names = {'_holdout_probe', '_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
+    names = {'_holdout_inference_calls', '_holdout_probe', '_holdout', '_scaler', '_pca', '_pca_input_feature_names', '_pca_feature_names', '_column_shims', f'_target_cls_{effective.target_column}'}
     if effective.scaler is not None:
         names.update(entry[0] for entry in effective.scaler[0])
     if set(fitted) - names:
