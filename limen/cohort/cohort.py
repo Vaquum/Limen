@@ -64,7 +64,8 @@ class Cohort:
                 raise ValueError('Cohort rounds conflicts with single-source or selector arguments.')
             selected = select_sources(rounds, self, lambda plain: RoundSources(
                 plain, lambda path, ids: type(self)(experiment_log_path=str(path), permutation_ids=ids),
-                self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id))
+                self._load_round_entries, self._extract_architecture_id, self._normalize_permutation_id),
+                self._normalize_permutation_id, self._extract_architecture_id, self._load_round_entries)
             source = next(iter(selected.sources.values()))
             single = len(selected.sources) == 1
             self.experiment_dir = source.experiment_dir if single else None

@@ -16,7 +16,7 @@ from limen import Cohort
 from limen.experiment import UniversalExperimentLoop, _round_storage
 from limen.inference import Trainer
 from limen.inference.errors import ReconstructionError
-from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy
 
 pytest_plugins = ['tests.fold_components']
@@ -30,7 +30,7 @@ class Proxy:
         return self.changes[name] if name in self.changes else getattr(self.sensor, name)
 
 
-class VoteOnly(ReferenceModel):
+class VoteOnly(LogRegBinary):
     inference_output = ('binary', False)
 
     def __init__(self, model):
@@ -138,22 +138,18 @@ def test_distinct_fold_members(fold_campaigns, cohort_assets, tmp_path, kind):
 def test_selected_artifact_binding(fold_campaigns, cohort_assets, tmp_path, fault):
     item = fold_campaigns['custom'] if fault == 'conflict' else fold_campaigns['anchored']
     first, second = item.sensor, cohort_assets[0]['custom' if fault == 'conflict' else 'anchored']
-    if fault in ('missing_round', 'metadata_shape'):
-        path = _copy(item, tmp_path / 'invalid-source')
+    if fault in ('missing', 'missing_round', 'metadata_shape'):
+        path = tmp_path / 'absent' if fault == 'missing' else _copy(item, tmp_path / 'invalid-source')
         if fault == 'missing_round':
             _round_storage.round_path(path).unlink()
-        else:
+        elif fault == 'metadata_shape':
             (path / 'metadata.json').write_text('[]')
-        with pytest.raises(FileNotFoundError if fault == 'missing_round' else ReconstructionError):
+        with pytest.raises(ReconstructionError if fault == 'metadata_shape' else FileNotFoundError):
             Cohort(rounds=[_select(item, path=path)])
         return
     if fault in ('continuous', 'signed'):
         with pytest.raises(ValueError, match='Cohort requires declared binary'):
             Cohort(rounds=[_select(fold_campaigns[fault])])
-        return
-    if fault == 'missing':
-        with pytest.raises(FileNotFoundError, match='metadata.json'):
-            Cohort(rounds=[_select(item, path=tmp_path / 'absent')])
         return
     if fault in ('duplicate_selected', 'conflict'):
         path = _copy(item, tmp_path / 'alias') if fault == 'duplicate_selected' else fold_campaigns['companion'].path
@@ -180,24 +176,22 @@ def test_selected_artifact_binding(fold_campaigns, cohort_assets, tmp_path, faul
         if fault == 'json':
             (path / 'metadata.json').write_text('{broken')
         if fault == 'yaml_only':
-            with patch.object(Cohort, '_load_round_entries', side_effect=AssertionError('read entries before unqualified rejection')):
-                with pytest.raises(ValueError, match='walk-forward rounds cannot be promoted.*supply fold'):
-                    Cohort(rounds=[(path, item.record['round_id'])])
+            with patch.object(Cohort, '_load_round_entries', side_effect=AssertionError('read entries before unqualified rejection')), pytest.raises(ValueError, match=r'walk-forward rounds cannot be promoted.*supply fold'):
+                Cohort(rounds=[(path, item.record['round_id'])])
         else:
             expected = ValueError if fault == 'unknown_kind' else ReconstructionError
             with pytest.raises(expected, match='Cohort requires declared binary' if fault == 'unknown_kind' else 'Cohort source'):
                 Cohort(rounds=[_select(item, path=path)])
         return
     if fault in ('unqualified', 'ordinary_fold', 'range_before_id'):
-        with patch.object(Cohort, '_load_round_entries', side_effect=AssertionError('invalid selection read round entries')):
-            with pytest.raises(ValueError, match='Cohort'):
-                if fault == 'ordinary_fold':
-                    ordinary = fold_campaigns['ordinary']
-                    Cohort(rounds=[(ordinary.path, ordinary.record['round_id'], 0)])
-                elif fault == 'range_before_id':
-                    Cohort(rounds=[(item.path, 'unknown', first.n_folds)])
-                else:
-                    Cohort(rounds=[(item.path, item.record['round_id'])])
+        with patch.object(Cohort, '_load_round_entries', side_effect=AssertionError('invalid selection read round entries')), pytest.raises(ValueError, match='Cohort'):
+            if fault == 'ordinary_fold':
+                ordinary = fold_campaigns['ordinary']
+                Cohort(rounds=[(ordinary.path, ordinary.record['round_id'], 0)])
+            elif fault == 'range_before_id':
+                Cohort(rounds=[(item.path, 'unknown', first.n_folds)])
+            else:
+                Cohort(rounds=[(item.path, item.record['round_id'])])
         return
     cohort = Cohort(rounds=[_select(item)] if fault == 'wrong_fold' else [_select(item), _select(item, second.fold)])
     if fault in ('count', 'architecture', 'hidden_fold'):
@@ -279,9 +273,8 @@ def test_fold_compatibility(fold_campaigns, cohort_assets, tmp_path, fault):
     if fault == 'ordinary_output':
         cohort = Cohort(rounds=[_select(item), (ordinary.path, ordinary.record['round_id'])])
         model = copy.deepcopy(ordinary.sensor._model)
-        with patch.object(type(model), 'inference_output', None):
-            with pytest.raises(ValueError, match='Cohort requires declared binary'):
-                cohort.set_members([item.sensor, Proxy(ordinary.sensor, _model=model)])
+        with patch.object(type(model), 'inference_output', None), pytest.raises(ValueError, match='Cohort requires declared binary'):
+            cohort.set_members([item.sensor, Proxy(ordinary.sensor, _model=model)])
         assert cohort.cohort_id is None and cohort.supports_probabilities is None
         return
     if fault == 'campaign':

@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 from typing import Protocol, TypeVar, cast
 
-from limen.cohort._round_sources import RoundSource, RoundSources, _resolve_params as resolve_params
+from limen.cohort._round_sources import RoundSource, RoundSources
+from limen.experiment import manifest_core
 from limen.experiment import _round_storage
 from limen.experiment._fold_evidence import model_witness, read_fold_context
 from limen.experiment.manifest_core import Manifest
@@ -22,6 +23,8 @@ MemberId = tuple[str, str] | tuple[str, str, int, str]
 Selection = tuple[Path, str, int | None]
 Architecture = Callable[[Mapping[str, object], Mapping[str, object]], str]
 Source = TypeVar('Source', bound=RoundSource)
+Load = Callable[[Path], Mapping[str, Mapping[str, object]]]
+resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
 
 
 class Owner(Protocol):
@@ -84,11 +87,11 @@ def _parse(rounds: object, normalize: Callable[[int | str], str]) -> list[Select
 
 
 def select_sources(rounds: object, owner: Owner,
-                   legacy_factory: Callable[[list[tuple[str | Path, str]]], RoundSources[Source]]) -> RoundSources[Source] | FoldSources:
-    normalize = cast(Callable[[int | str], str], getattr(owner, '_normalize_permutation_id'))
+                   legacy_factory: Callable[[list[tuple[str | Path, str]]], RoundSources[Source]],
+                   normalize: Callable[[int | str], str], architecture: Architecture, load: Load) -> RoundSources[Source] | FoldSources:
     selected = _parse(rounds, normalize)
     if any(fold is not None for _, _, fold in selected):
-        return FoldSources(selected, owner)
+        return FoldSources(selected, owner, architecture, load)
     for path in dict.fromkeys(path for path, _, _ in selected):
         if _walk_forward(_metadata(path)):
             raise ValueError(f'Cohort source {path}: walk-forward rounds cannot be promoted; supply fold')
@@ -123,11 +126,10 @@ def _compile(path: Path, metadata: Mapping[str, object]) -> Manifest:
 class FoldSources:
     qualified_folds = True
 
-    def __init__(self, selections: list[Selection], owner: Owner) -> None:
+    def __init__(self, selections: list[Selection], owner: Owner, architecture: Architecture, load: Load) -> None:
         super().__init__()
         self._owner = owner
-        self._architecture = cast(Architecture, getattr(owner, '_extract_architecture_id'))
-        load = cast(Callable[[Path], Mapping[str, Mapping[str, object]]], getattr(owner, '_load_round_entries'))
+        self._architecture = architecture
         self.sources: dict[Path, _Source] = {}
         self.source_metadata: dict[Path, Mapping[str, object]] = {}
         self.member_ids: list[MemberId] = []
@@ -249,7 +251,7 @@ class FoldSources:
                 raise ValueError(f'Cohort requires declared binary output contract for member {key}: {exc}') from exc
             if context is not None:
                 witness = cast(Mapping[str, object], context['fold_witness'])
-                if type(getattr(member, 'n_folds', None)) is not int or getattr(member, 'n_folds') != witness['n_folds'] or getattr(member, 'provenance_digest', None) != context['provenance_digest'] or native != witness['inference_model']:
+                if type(getattr(member, 'n_folds', None)) is not int or getattr(member, 'n_folds', None) != witness['n_folds'] or getattr(member, 'provenance_digest', None) != context['provenance_digest'] or native != witness['inference_model']:
                     raise ValueError(f'Cohort selected evidence mismatch for member {key}')
         self._owner.supports_probabilities = all(probabilities)
         self._owner.aggregation_mode = 'probability_weighted' if all(probabilities) else 'majority_vote'
