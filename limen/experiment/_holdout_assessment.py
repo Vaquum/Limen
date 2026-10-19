@@ -179,8 +179,10 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 before = state_digest(selection)
                 dependencies = prediction_dependencies(selection)
                 tape = _tape(selection, raw, planned['start_ns'], failures)
-                if state_digest(selection) != before or prediction_dependencies(selection) != dependencies:
-                    raise ValueError('Holdout inference changed fitted state/dependencies')
+                if state_digest(selection) != before:
+                    raise ValueError('Holdout inference changed fitted state')
+                if prediction_dependencies(selection) != dependencies:
+                    raise ValueError('Holdout inference changed prediction dependencies')
                 failures.member_id, failures.bar_ns = None, None
                 final = raw.filter(pl.col('datetime').dt.epoch('ns') >= planned['start_ns'])
                 stage = 'labels'

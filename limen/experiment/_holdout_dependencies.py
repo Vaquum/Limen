@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from functools import partial
+from functools import lru_cache, partial
 from hashlib import sha256
 import inspect
 from io import IOBase
@@ -11,13 +11,18 @@ import marshal
 import logging
 import pickle
 import sys
-from types import ModuleType
+from types import CodeType, ModuleType
 from typing import cast
 
 import numpy as np
 import polars as pl
 
-__all__ = ['children', 'dependency_digest', 'fitted_witness', 'inference_functions', 'restore_iterations']
+__all__ = ['children', 'code_digest', 'dependency_digest', 'fitted_witness', 'inference_functions', 'restore_iterations']
+
+
+@lru_cache(maxsize=2048)
+def code_digest(code: CodeType) -> str:
+    return sha256(marshal.dumps(code)).hexdigest()
 
 
 def _booster(value: object) -> bool:
@@ -87,7 +92,7 @@ def fitted_witness(value: object) -> bytes:
             result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
         elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, marshal.dumps(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure))
+            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure))
         elif isinstance(item, partial):
             result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
         elif isinstance(item, Mapping):
@@ -111,6 +116,8 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     seen: set[int] = set()
 
     def visit(value: object) -> None:
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)):
+            return
         if id(value) in seen:
             return
         seen.add(id(value))
@@ -126,14 +133,16 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
 
 
 def inference_functions(values: Sequence[object], active: set[str] | None = None) -> tuple[list[object], list[object]]:
-    seen: set[int] = set()
+    seen: dict[int, object] = {}
     evidence: list[object] = []
     functions: list[object] = []
 
     def visit(value: object) -> None:
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)):
+            return
         if id(value) in seen:
             return
-        seen.add(id(value))
+        seen[id(value)] = value
         module = getattr(value, '__module__', type(value).__module__)
         if callable(value) and (module or type(value).__module__).startswith(('numpy.random', 'random')):
             functions.append(value)
@@ -147,7 +156,7 @@ def inference_functions(values: Sequence[object], active: set[str] | None = None
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(fitted_witness(value))
-            if active is not None and sha256(marshal.dumps(value.__code__)).hexdigest() not in active:
+            if active is not None and code_digest(value.__code__) not in active:
                 return
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
                 return
@@ -188,7 +197,7 @@ def inference_functions(values: Sequence[object], active: set[str] | None = None
         elif not isinstance(value, (ModuleType, type, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
             pending = ['predict', 'predict_proba', 'transform', '__call__']
             if active is not None:
-                pending.extend(name for cls in type(value).__mro__ for name, method in cls.__dict__.items() if inspect.isfunction(method) and sha256(marshal.dumps(method.__code__)).hexdigest() in active)
+                pending.extend(name for cls in type(value).__mro__ for name, method in cls.__dict__.items() if inspect.isfunction(method) and code_digest(method.__code__) in active)
             methods: set[str] = set()
             while pending:
                 name = pending.pop()

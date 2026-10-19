@@ -8,7 +8,6 @@ from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
 import math
 import inspect
-import marshal
 import numbers
 import platform
 from pathlib import Path
@@ -27,7 +26,7 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
-from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness, restore_iterations
+from limen.experiment._holdout_dependencies import code_digest, dependency_digest, fitted_witness, restore_iterations
 from limen.experiment._holdout_prediction import validate_prediction
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
@@ -124,7 +123,7 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
     values: list[object] = [Sensor.predict, Sensor._get_manifest, Sensor._last_bar_inside_training_window]
     if type(selection) is Cohort:
         values.extend((Cohort._aggregate_bar_predictions, Cohort._validate_probability_range, Cohort._fallback_vote_threshold))
-    active = {sha256(marshal.dumps(value.__code__)).hexdigest() for value in values if inspect.isfunction(value)}
+    active = {code_digest(value.__code__) for value in values if inspect.isfunction(value)}
     for member in members(selection):
         values.extend(_member_state(member)[:4])
         active.update(cast(tuple[str, ...], vars(member)['_fitted_params']['_holdout_inference_calls']))

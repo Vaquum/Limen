@@ -3,8 +3,6 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 import inspect
-from hashlib import sha256
-import marshal
 import random
 import sys
 from types import CodeType, FrameType
@@ -12,7 +10,7 @@ from types import CodeType, FrameType
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import children, fitted_witness, inference_functions
+from limen.experiment._holdout_dependencies import children, code_digest, fitted_witness, inference_functions
 from limen.inference.sensor import Sensor
 
 __all__ = ['readonly_prediction', 'validate_prediction']
@@ -29,6 +27,8 @@ def readonly_prediction(sensors: list[Sensor], calls: set[CodeType] | None = Non
     seen: set[int] = set()
 
     def collect(value: object) -> None:
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, np.ndarray, pl.DataFrame, pl.Series)):
+            return
         if id(value) in seen:
             return
         seen.add(id(value))
@@ -116,4 +116,4 @@ def validate_prediction(sensor: Sensor) -> None:
         raise ValueError('Holdout inference mutated fitted state')
     if first != second:
         raise ValueError('Holdout requires fixed fitted binary inference')
-    vars(sensor)['_fitted_params']['_holdout_inference_calls'] = tuple(sorted(sha256(marshal.dumps(code)).hexdigest() for code in calls))
+    vars(sensor)['_fitted_params']['_holdout_inference_calls'] = tuple(sorted(code_digest(code) for code in calls))
