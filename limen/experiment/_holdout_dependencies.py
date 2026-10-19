@@ -146,6 +146,9 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
     def visit(value: object) -> None:
         if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)):
             return
+        if type(value) is logging.Logger:
+            evidence.append(fitted_witness(value))
+            return
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
@@ -197,7 +200,11 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                         break
                     item = getattr(item, str(attribute.argval))
                 if not isinstance(item, ModuleType):
-                    evidence.append((value.__module__, value.__qualname__, instruction.argval, fitted_witness(item)))
+                    try:
+                        witness = fitted_witness(item)
+                    except (ValueError, TypeError, pickle.PickleError) as exc:
+                        raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
+                    evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
                     visit(item)
         elif inspect.isroutine(value):
             evidence.append(fitted_witness(value))
