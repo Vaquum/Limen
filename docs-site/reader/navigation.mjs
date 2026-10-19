@@ -15,11 +15,16 @@ export function initNavigation(){
       const response=await fetch(link.href);if(!response.ok)throw Error(`Reference returned ${response.status}`);
       const parsed=new DOMParser().parseFromString(await response.text(),'text/html');const main=parsed.querySelector('main');
       if(!main)throw Error('Reference has no readable main content');if(attempt!==token)return;
-      body.replaceChildren(...[...main.childNodes].map(node=>document.importNode(node,true)));
+      const fragment=document.createElement('div');fragment.append(...[...main.childNodes].map(node=>document.importNode(node,true)));
+      const names=new Map([...fragment.querySelectorAll('[id]')].map(node=>[node.id,'reference-'+node.id]));
+      for(const node of fragment.querySelectorAll('[id]'))node.id=names.get(node.id);
+      for(const node of fragment.querySelectorAll('[href^="#"]')){const id=node.getAttribute('href').slice(1);if(names.has(id))node.setAttribute('href','#'+names.get(id));}
+      const title=document.createElement('h1');title.textContent=parsed.querySelector('h1')?.textContent||'Reference';
+      body.replaceChildren(title,...fragment.childNodes);
       body.querySelectorAll('[data-reference]').forEach(a=>a.removeAttribute('data-reference'));
       initCode(body);dialog.scrollTop=0;dialog.showModal();
       if(updateHistory)history.pushState({readerReference:true,readerOrigin:origin},'',link.href);camera.to(0);close.focus({preventScroll:true});
-      const anchor=new URL(link.href).hash.slice(1);if(anchor)body.querySelector(`#${CSS.escape(anchor)}`)?.scrollIntoView({block:'start'});
+      const anchor=new URL(link.href).hash.slice(1);if(anchor)body.querySelector(`#reference-${CSS.escape(anchor)}`)?.scrollIntoView({block:'start'});
     }catch(error){announce('The reference could not be opened. Follow its link to retry.');console.error(error);}
   }
   function hide(){++token;if(!dialog.open)return;
