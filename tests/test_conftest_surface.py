@@ -75,7 +75,7 @@ def test_cached_yaml_setup_preserves_content_and_nested_isolation(monkeypatch: p
         first, errors = helper.parse_cached(text)
         assert not errors
         assert first == expected
-        first['sfd']['manifest']['backtest']['fee_bps'] = -999
+        first['sfd']['manifest']['data_source']['params']['kline_size'] = -999
         second, errors = helper.parse_cached(text)
         assert not errors
         assert second == expected
