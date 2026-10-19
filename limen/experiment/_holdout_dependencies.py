@@ -114,7 +114,7 @@ def fitted_witness(value: object) -> bytes:
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
         elif isinstance(item, partial):
-            result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
+            result = (kind, 'partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
         elif isinstance(item, bytearray):
             result = (kind, bytes(memoryview(item)), node(_attributes(item)))
         elif isinstance(item, (str, int, float, bytes)):
@@ -171,9 +171,10 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             visit(value.args)
             visit(value.keywords)
             visit(vars(value))
-            if type(value) is not partial:
-                objects.append(value)
-                methods(value)
+            provider = cast(object, value)
+            if type(provider) is not partial:
+                objects.append(provider)
+                methods(provider)
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(function_witness(value))

@@ -864,6 +864,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     class PartialPolicy(partial):
         def __call__(self, values):
             return later_probabilities(super().__call__(values))
+    class NonpreservingPartial(PartialPolicy):
+        def __deepcopy__(self, memo):
+            return partial(self.func, *self.args, **self.keywords)
     class ProbabilityMeta(type):
         def __call__(cls, values):
             return later_probabilities(values)
@@ -883,6 +886,11 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(callable_handle, assessment_case)
             assert loader.call_count == 0
+    callable_selection._model.policy = NonpreservingPartial(identity_probabilities)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(callable_selection)
+        assert loader.call_count == 0
     for implementation in (BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
