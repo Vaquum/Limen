@@ -1804,6 +1804,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.44.3] - 2026-10-19
 
-### Fixed
+- Make quantile-line end features prefix-causal while preserving retrospective active counts.
+
+## [5.44.4] - 2026-10-19
 
 - Infer allocation opportunity-label types across every row so late censored outcomes retain their nullable fields without aborting a sweep.

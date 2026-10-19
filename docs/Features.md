@@ -212,7 +212,7 @@ The two grouped transforms below are the YAML-facing surface. Each detects lines
 | `price_lines` | `active_lines`, `hours_since_big_move`, `line_momentum_<m>h`, `trending_score`, `reversal_potential` | All-line family: span count, end recency (capped at `big_move_lookback_hours`), and long-minus-short end counts over the trailing `[t-m, t)` window with their balance (`trending_score`, in `[-1, 1]`) and min/max ratio (`reversal_potential`, in `[0, 1]`). |
 | `quantile_price_lines` | `hours_since_quantile_line`, `active_quantile_count`, `quantile_line_density_<d>h`, `quantile_momentum_<m>h`, `avg_quantile_height_<h>h`, `quantile_direction_bias` | Quantile-line family: end recency and span count, end density over `density_lookback_hours`, signed height sum over ends in `[t-m, t]`, and mean height plus height-weighted direction (in `[-1, 1]`) over ends in `[t-h, t]`. |
 
-`active_lines` and `active_quantile_count` count lines that span the current bar before the line's end — the event that defines it — is knowable. That within-line lookahead is inherited from the tradeline research design: treat both columns as research-only, not live-computable. The grouped transforms expose `include_research_only`; set it to `false` to omit the active-span columns. Bundled live-safe templates set `include_research_only: false`. The end-event columns are causal.
+`active_lines` and `active_quantile_count` count lines that span the current bar before the line's end — the event that defines it — is knowable. That within-line lookahead is inherited from the tradeline research design: treat both columns as research-only, not live-computable. The grouped transforms expose `include_research_only`; set it to `false` to omit the active-span columns. Bundled live-safe templates set `include_research_only: false`. The end-event columns are causal. For `quantile_price_lines`, each row uses the per-direction height quantile of lines completed through that row, including ties. `active_quantile_count` retains its retrospective whole-frame selection.
 
 The per-column building blocks below take pre-computed line structures (`list[dict]` with `start_idx`/`end_idx`) and remain available for programmatic composition.
 
@@ -226,16 +226,14 @@ The per-column building blocks below take pre-computed line structures (`list[di
 
 ### Line calculation performance
 
-The composite transforms keep line geometry in arrays; the standalone dictionary helpers retain their existing API. Exact baseline comparisons cover eager/lazy frames, research/live outputs, quantile endpoints, short histories and missing values.
+The composite transforms keep line geometry in arrays; the standalone dictionary helpers retain their existing API. Baseline comparisons cover eager/lazy frames, research/live outputs, quantile endpoints, short histories and missing values. Quantile end features match the frozen implementation on each tested prefix's final row; their latency check compares equivalent as-of work.
 
 | Feature | Rows | Live wall ms, before → after | Live CPU ms, before → after | Peak RSS MiB, before → after |
 |---|---:|---:|---:|---:|
 | `price_lines` | 20,000 | 649.1 → 62.8 | 548.5 → 49.1 | 501 → 309 |
-| `quantile_price_lines` | 20,000 | 2389.3 → 40.2 | 1427.5 → 35.3 | 508 → 307 |
 | `price_lines` | 83,136 | 2692.9 → 236.7 | 2424.9 → 230.0 | 1360 → 498 |
-| `quantile_price_lines` | 83,136 | 20018.9 → 210.2 | 6656.9 → 156.7 | 1387 → 558 |
 
-These are local M1 Max measurements on real BTCUSDT bars, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Values are medians of three warm calls; first-call samples, research-mode results, input digests and exact schemas are in the [raw measurements](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/line_performance_benchmark.json). Peak RSS includes imports and input loading. Desktop contention inflated some wall samples, particularly the quantile baseline; CPU timings provide the corresponding execution cost.
+These are local M1 Max measurements on real BTCUSDT bars, Python 3.12.12, NumPy 2.5.1 and Polars 1.42.1, with numerical-library thread limits set to one. Values are medians of three warm calls; first-call samples, research-mode results, input digests and exact schemas are in the [raw measurements](https://github.com/Vaquum/Limen/blob/main/tests/fixtures/line_performance_benchmark.json). Peak RSS includes imports and input loading. The raw archive also retains historical whole-frame quantile timings; those do not measure the corrected as-of calculation. Desktop contention inflated some wall samples, particularly the quantile baseline; CPU timings provide the corresponding execution cost.
 
 ## Lag helpers and threshold utilities
 
