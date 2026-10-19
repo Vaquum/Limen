@@ -169,7 +169,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
     pending: deque[tuple[dict[str, object], Future[RoundPayload], dict[str, object]]] = deque()
     capacity = max(1, min(workers, n_permutations - start))
     capacity = next((index + 1 for index in range(1, capacity) if barrier(index)), capacity)
-    with startup_limits(), snapshot_sources(sources.learning, sources.execution, sources.funding, directory) as snapshot, tqdm(initial=start, total=n_permutations,
+    with startup_limits(), snapshot_sources(sources.learning, sources.execution, sources.funding, csv_path.parent) as snapshot, tqdm(initial=start, total=n_permutations,
                                 disable=not progress_bar) as progress:
         pool = ProcessPoolExecutor(max_workers=capacity,
                                    mp_context=multiprocessing.get_context('spawn'),

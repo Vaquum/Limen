@@ -42,8 +42,8 @@ def _write(frame: pl.DataFrame, directory: Path, name: str) -> FrameSnapshot:
 
 @contextmanager
 def snapshot_sources(learning: pl.DataFrame, execution: pl.DataFrame | None,
-                     funding: pl.DataFrame | None, directory: Path | None) -> Iterator[SourceSnapshot]:
-    with TemporaryDirectory(prefix='.limen-parallel-', dir=directory or Path.cwd()) as temporary:
+                     funding: pl.DataFrame | None, directory: Path) -> Iterator[SourceSnapshot]:
+    with TemporaryDirectory(prefix='.limen-parallel-', dir=directory) as temporary:
         root = Path(temporary).resolve()
         yield SourceSnapshot(_write(learning, root, 'learning'),
                              _write(execution, root, 'execution') if execution is not None else None,
