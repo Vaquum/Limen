@@ -37,6 +37,8 @@ class _Timeline:
 
 def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float, timeline: _Timeline) -> dict[str, object]:
     available = timeline.signals[index]
+    if (policy.take_profit_bps_column or policy.stop_loss_bps_column) and inputs.signals['__barrier_ready__'][index] is not True:
+        return {'return': None, 'available': False, 'entry_ns': None, 'exit_ns': None, 'label_available_ns': None, 'exit_reason': None, 'unavailable_reason': 'barrier_warmup'}
     end = inputs.partition_end_ns
     if policy.max_holding_seconds is not None:
         entry = bisect_left(timeline.prices, available + round(policy.execution_lag_seconds * NANOSECONDS))
@@ -61,7 +63,8 @@ def _candidate(inputs: TradeInputs, policy: TradePolicy, index: int, side: float
                 return first <= plan.observation_order[str(event.source_row_id)] < last
             return event.kind != 'signal' or plan.signal_order[str(event.source_row_id)] >= index
         account = Account(policy, inputs.initial_equity, plan.binding[:16])
-        execute_event_plan(account, plan, side, start, end, None, selected=selected, stop_at_close=True, keep_states=False)
+        signals = {str(row['row_id']): {**row, 'target': side} for row in inputs.signals.iter_rows(named=True)} if policy.take_profit_bps_column or policy.stop_loss_bps_column else side
+        execute_event_plan(account, plan, signals, start, end, None, selected=selected, stop_at_close=True, keep_states=False)
         episodes = account.episodes
         if not episodes or episodes[0]['closed_at_ns'] is None:
             return {'return': None, 'available': False, 'entry_ns': None if not episodes else episodes[0]['first_fill_ns'], 'exit_ns': None, 'label_available_ns': None, 'exit_reason': None}
@@ -100,7 +103,7 @@ class TradeOutcomeTarget:
             raise ValueError('Candidate exposure must be in (0, 1]')
         if trade_context.policy.product.kind != 'linear_perpetual':
             raise ValueError('Both-side trade outcomes require a product supporting shorts')
-        if trade_context.policy.max_holding_seconds is None and trade_context.policy.take_profit_bps is None and trade_context.policy.stop_loss_bps is None:
+        if trade_context.policy.max_holding_seconds is None and trade_context.policy.take_profit_bps is None and trade_context.policy.stop_loss_bps is None and trade_context.policy.take_profit_bps_column is None and trade_context.policy.stop_loss_bps_column is None:
             raise ValueError('Trade outcomes require a declared trade exit')
         self.target_name = target_name
         self.side = side
@@ -139,6 +142,8 @@ class TradeOutcomeTarget:
             results.append(row)
         schema: dict[str, type[pl.DataType]] = {'row_id': pl.String}
         for side in ('long', 'short'):
+            if policy.take_profit_bps_column or policy.stop_loss_bps_column:
+                schema[f'{side}_unavailable_reason'] = pl.String
             schema.update({f'{side}_return': pl.Float64, f'{side}_available': pl.Boolean, f'{side}_entry_ns': pl.Int64, f'{side}_exit_ns': pl.Int64, f'{side}_label_available_ns': pl.Int64, f'{side}_exit_reason': pl.String})
         rows = pl.DataFrame(results, schema=schema)
         self._outcomes = OutcomeLabels(rows, trade_context.contract_digest)

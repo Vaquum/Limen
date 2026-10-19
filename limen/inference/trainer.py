@@ -100,6 +100,8 @@ class Trainer:
                 "metadata.json key 'yaml_reference' is not a valid YAML SFD reference"
             ) from exc
 
+        from limen.experiment._dynamic_barriers import reject_promotion
+        reject_promotion(self._manifest)
         self._param_keys = frozenset(params.keys())
         self._round_data = self._load_round_data()
         self._original_log = self._load_original_log()

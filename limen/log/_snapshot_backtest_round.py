@@ -52,6 +52,9 @@ def snapshot_backtest_round(
         if digest != alignment.get('trade_contract_digest') or digest != fresh.get('trade_contract_digest'):
             raise ValueError('Trade rules or source identity changed during replay')
         return dict(trade_execution(with_predictions(inputs, log.preds[round_id]), policy).metrics)
+    from limen.experiment._dynamic_barriers import dynamic_barriers
+    if manifest is not None and dynamic_barriers(manifest.backtest_config):
+        raise ValueError('Dynamic Log replay requires original bound distance context')
     resolved = manifest.resolve_backtest_config(log.round_params[round_id]) if manifest is not None else {}
     if manifest is not None and _configured_barriers(manifest.backtest_config):
         alignment = getattr(log, '_alignment', None)
