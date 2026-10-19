@@ -19,6 +19,9 @@ SIZING_FACTORY = cast(ComponentFactory, _components['_SIZING_FACTORY'])
 component_predict = cast(Callable[[ComponentEstimator, Array], Array], _components['_predict'])
 
 
+_MAX_INTERNAL_VALIDATION_FRACTION = 0.5
+
+
 class _Scaler(Protocol):
     def fit(self, x: Array) -> _Scaler: ...
     def transform(self, x: Array) -> Array: ...
@@ -48,9 +51,9 @@ class MetaAllocationModel(ReferenceModel):
         self.risk = None if risk is None else finite_number(risk, 'risk budget fraction')
         fraction = finite_number(params.get('internal_validation_fraction', 0.2), 'internal validation fraction')
         seed, folds, minimum = params.get('seed', 42), params.get('folds', 5), params.get('min_train_samples', 20)
-        if any(isinstance(value, bool) or not isinstance(value, int) for value in (seed, folds, minimum)) or cast(int, folds) < 2 or cast(int, minimum) < 2:
+        if any(isinstance(value, bool) or not isinstance(value, int) for value in (seed, folds, minimum)) or cast(int, folds) <= 1 or cast(int, minimum) <= 1:
             raise ValueError('Seed/folds/minimum require integers; folds/minimum at least two')
-        if not 0 < self.threshold < 1 or self.return_scale <= 0 or not 0 < self.max_size <= 1 or not 0 < fraction < 0.5 or (self.risk is not None and not 0 < self.risk <= 1):
+        if not 0 < self.threshold < 1 or self.return_scale <= 0 or not 0 < self.max_size <= 1 or not 0 < fraction < _MAX_INTERNAL_VALIDATION_FRACTION or (self.risk is not None and not 0 < self.risk <= 1):
             raise ValueError('Invalid meta allocation probability, scale, size, validation or risk range')
         if self.risk is not None and context.policy.stop_loss_bps is None and context.policy.stop_loss_bps_column is None:
             raise ValueError('Risk budget requires a declared stop loss')
@@ -63,7 +66,7 @@ class MetaAllocationModel(ReferenceModel):
         self.primary = fit_primary(context.manifest, data, context.round_params)
         self._fit(labels, params, cast(int, minimum), cast(int, seed))
         self.batch_digests = {name: batch.digest() for name, batch in context.batches.items()}
-        self.learning_binding = {'architecture': component_identity(meta_allocation), 'primary': component_identity(getattr(context.manifest, 'architecture_function')),
+        self.learning_binding = {'architecture': component_identity(meta_allocation), 'primary': component_identity(vars(context.manifest)['architecture_function']),
                                  'primary_params': json_value(context.round_params), 'training': json_value(labels.binding),
                                  'probability_factory': component_identity(self.probability_factory), 'sizing_factory': component_identity(self.sizing_factory),
                                  'allocation_params': json_value({key: value for key, value in params.items() if key not in ('probability_factory', 'sizing_factory')}),
@@ -80,7 +83,7 @@ class MetaAllocationModel(ReferenceModel):
         available = labels.rows['available'].to_numpy()
         returns = labels.rows['net_return_on_entry_notional'].to_numpy().astype(np.float64)
         y = (returns > 0).astype(np.float64)
-        if np.count_nonzero(available) < minimum or np.unique(y[available]).size < 2:
+        if np.count_nonzero(available) < minimum or np.unique(y[available]).size <= 1:
             raise StrictModeError(f'Insufficient completed OOF opportunities/classes: available={np.count_nonzero(available)} required={minimum}')
         selected = cast(Sequence[str] | None, params.get('features'))
         names = list(labels.features.columns if selected is None else selected)

@@ -126,6 +126,11 @@ def test_yaml_cli_allocation_contract(tmp_path):
         result = CliRunner().invoke(cli, command)
         assert result.exit_code == 0, result.output
     manifest, raw, params, _ = _prepared()
+    from types import SimpleNamespace
+    from limen.experiment._allocation_folds import admit
+    manifest._holdout_binding = SimpleNamespace(cutoff_ns=None)
+    admit(manifest, params)
+    manifest._holdout_binding = None
     with pytest.raises(ValueError, match='already configured'):
         manifest.with_allocation(manifest.allocation_config.method)
     for key, value in (('execution_lag_seconds', 1), ('notional_rate', 0.5)):

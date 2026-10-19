@@ -192,7 +192,7 @@ def admit(manifest: Manifest, params: Mapping[str, object]) -> None:
     policy, config = manifest.resolve_trade_policy(params), manifest.backtest_config
     if policy is None or config is None or policy.prediction_mode != 'target_exposure' or policy.notional_rate != 1 or policy.execution_lag_seconds != 0 or config.source_interval_seconds is None or config.execution_data_source is not None:
         raise ValueError('Allocation requires regular co-timed event target exposure, notional_rate=1 and zero lag')
-    if manifest.split_walk_forward is not None or getattr(manifest, '_holdout_binding', None) is not None or manifest.bar_formation is not None or manifest.pre_split_data_selector is not None or manifest.test_data_source_config is not None:
+    if manifest.split_walk_forward is not None or getattr(getattr(manifest, '_holdout_binding', None), 'cutoff_ns', None) is not None or manifest.bar_formation is not None or manifest.pre_split_data_selector is not None or manifest.test_data_source_config is not None:
         raise ValueError('Allocation requires one original chronological source and true outer partitions')
     if any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('Allocation cannot refit replaced preparation/model methods')

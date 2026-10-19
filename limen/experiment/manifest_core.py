@@ -1,4 +1,4 @@
-import limen.experiment._allocation as _allocation
+from limen.experiment import _allocation
 import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
