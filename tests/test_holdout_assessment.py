@@ -45,13 +45,13 @@ class ExternalRobust:
         return self.fitted.transform(frame)
 
 
-class FittedPlatt:
+class FittedProbabilityAdjustment:
     def __init__(self, estimator, x, y):
-        from sklearn.linear_model import LogisticRegression
         self.estimator = estimator
-        self.correction = LogisticRegression(random_state=42).fit(estimator.predict_proba(x)[:, 1].reshape(-1, 1), np.asarray(y))
+        self.offset = float(np.mean(y) - np.mean(estimator.predict_proba(x)[:, 1]))
     def predict_proba(self, x):
-        return self.correction.predict_proba(self.estimator.predict_proba(x)[:, 1].reshape(-1, 1))
+        positive = np.clip(self.estimator.predict_proba(x)[:, 1] + self.offset, 0, 1)
+        return np.column_stack((1 - positive, positive))
 
 
 def external_calibrator(estimator, x, y, kind='native', **params):
@@ -63,7 +63,7 @@ def external_calibrator(estimator, x, y, kind='native', **params):
     if kind == 'detached':
         return CalibratedClassifierCV(FrozenEstimator(copy.deepcopy(estimator)), method='sigmoid').fit(x, y)
     if kind == 'custom':
-        return FittedPlatt(estimator, x, y)
+        return FittedProbabilityAdjustment(estimator, x, y)
     return sklearn_probability_calibrator(estimator, x, y, **params)
 
 
