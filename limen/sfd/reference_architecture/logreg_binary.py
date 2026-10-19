@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import inspect
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -155,7 +156,6 @@ class LogRegBinary(ReferenceModel):
 
         Args:
             data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
 
         Returns:
             dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
@@ -211,7 +211,6 @@ def logreg_binary(data: dict[str, Any],
         intercept_scaling (float): Intercept scaling
         class_weight (float, str, or dict): Class weights. Numeric values keep the
             legacy `{0: value, 1: 1}` shorthand; strings/dicts pass through to sklearn.
-        random_state (int): Random seed
         max_iter (int): Maximum iterations
         multi_class (str): Multiclass handling passthrough
         verbose (int): Verbosity level
@@ -249,3 +248,5 @@ def logreg_binary(data: dict[str, Any],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(logreg_binary, 'sklearn_stage', parameter_keys=('n_jobs', 'random_state'), backend_imports=('sklearn',), prediction_kind='binary', probabilities=True)

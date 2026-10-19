@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -18,3 +19,5 @@ def distance_from_high(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
         ((pl.col('high').rolling_max(window_size=period) - pl.col('close')) / pl.col('close'))
         .alias('distance_from_high')
     ])
+
+_parallel(distance_from_high)

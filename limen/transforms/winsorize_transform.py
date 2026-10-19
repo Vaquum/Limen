@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -40,3 +41,5 @@ def winsorize_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> pl.D
     other_exprs = [pl.col(c) for c in df.columns if c not in num_cols]
 
     return df.select(other_exprs + clipped_exprs)
+
+_parallel(winsorize_transform)

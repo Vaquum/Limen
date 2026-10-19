@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import Any
 
 import numpy as np
@@ -127,3 +128,5 @@ def xgboost_regressor(data: dict[str, Any],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(xgboost_regressor, 'xgboost_stage', parameter_keys=('n_jobs', 'random_state'), backend_imports=('xgboost',), prediction_kind='continuous', probabilities=False)

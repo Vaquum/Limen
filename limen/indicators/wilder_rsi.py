@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.indicators.rsi import rsi_from_values
@@ -36,3 +37,5 @@ def wilder_rsi(data: pl.DataFrame,
             return_dtype=pl.Float64,
         ).alias(out_col)
     )
+
+_parallel(wilder_rsi)

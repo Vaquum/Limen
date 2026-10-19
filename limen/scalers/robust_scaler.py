@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import cast
 
 import polars as pl
@@ -97,3 +98,5 @@ def inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame:
         return df
 
     return df.with_columns(exprs)
+
+_parallel(RobustScaler)

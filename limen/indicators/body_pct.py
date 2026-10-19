@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -16,3 +17,5 @@ def body_pct(data: pl.DataFrame) -> pl.DataFrame:
     '''
 
     return data.with_columns(((pl.col('close') - pl.col('open')) / (pl.col('open') + EPSILON)).alias('body_pct'))
+
+_parallel(body_pct)

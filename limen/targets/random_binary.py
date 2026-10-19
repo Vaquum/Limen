@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -15,7 +16,6 @@ class RandomBinaryTarget:
         Store the target column name; no fitting is performed.
 
         Args:
-            train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
             target_name (str): Name of the target column to create
             random_state (int | None): Seed for the random number generator. When set,
                 labels are reproducible across runs given the same data sizes and call order
@@ -40,3 +40,5 @@ class RandomBinaryTarget:
 
         labels = self._rng.integers(0, 2, size=data.height, dtype=np.uint8)
         return data.with_columns(pl.Series(self.target_name, labels, dtype=pl.UInt8))
+
+_parallel(RandomBinaryTarget, 'seeded_stage')

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import Any
 from typing import Protocol
 
@@ -40,3 +41,5 @@ def sklearn_probability_calibrator(clf: Any,
     '''
 
     return _calibrated_classifier_cv(clf, method).fit(x_val, y_val)
+
+_parallel(sklearn_probability_calibrator, backend_imports=('sklearn',))

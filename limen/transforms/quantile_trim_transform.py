@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -39,3 +40,5 @@ def quantile_trim_transform(df: pl.DataFrame, *, time_col: str = 'datetime') -> 
         mask = cond if mask is None else (mask & cond)
 
     return df.filter(mask) if mask is not None else df
+
+_parallel(quantile_trim_transform)

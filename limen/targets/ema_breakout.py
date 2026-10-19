@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -48,3 +49,5 @@ class EmaBreakoutTarget:
         ).cast(pl.UInt8)
 
         return data.with_columns(label_expr.alias(self.target_name))
+
+_parallel(EmaBreakoutTarget)

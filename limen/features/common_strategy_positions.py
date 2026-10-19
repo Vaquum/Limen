@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.sfd.rule_based.common_strategies import strategy_signals
@@ -36,3 +37,5 @@ def common_strategy_positions(
         slice_pushdown=False,
         streamable=False,
     )
+
+_parallel(common_strategy_positions)

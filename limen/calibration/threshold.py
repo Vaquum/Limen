@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from collections.abc import Callable
 import math
 import numbers
@@ -60,3 +61,5 @@ def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series,
     scores = np.array([metric(y_val, valid_preds[:, i]) for i in range(len(valid_thresholds))])
     best_idx = int(np.argmax(scores))
     return float(valid_thresholds[best_idx]), float(scores[best_idx])
+
+_parallel(grid_threshold_optimizer)

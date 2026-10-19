@@ -1,4 +1,5 @@
 from __future__ import annotations
+from limen._parallel_contract import attach as _parallel
 
 import polars as pl
 
@@ -26,3 +27,7 @@ def fit_order(
     if not adf_test(candidate, significance_level=significance_level).stationary:
         raise ValueError(f'feature_shims no qualifying fractional-difference order for {column!r}')
     return order
+
+_parallel(fit_order)
+
+_parallel(fractional_column)

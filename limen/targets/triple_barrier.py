@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -21,7 +22,6 @@ class TripleBarrierTarget:
         Store barrier settings and validate them; no fitting is performed.
 
         Args:
-            train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
             target_name (str): Name of the target column to create
             upper_multiple (float): Profit-taking barrier width in volatility units
             lower_multiple (float): Stop-loss barrier width in volatility units
@@ -127,3 +127,5 @@ class TripleBarrierTarget:
         horizon_available = np.arange(n) <= (n - 1 - self.max_horizon)
         valid = (volatility > 0.0) & (touched | horizon_available)
         return label, valid
+
+_parallel(TripleBarrierTarget)

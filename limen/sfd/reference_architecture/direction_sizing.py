@@ -1,4 +1,5 @@
 from __future__ import annotations
+from limen._parallel_contract import attach as _parallel
 
 import importlib
 from collections.abc import Callable, Mapping, Sequence
@@ -250,3 +251,7 @@ def direction_sizing(data: dict[str, object], *, direction_factory: ComponentFac
 
 direction_sizing.__dict__['requires_trade_outcomes'] = True
 __all__ = ['ComponentEstimator', 'ComponentFactory', 'DirectionSizingModel', 'FoldFeatures', 'FoldPreparation', 'direction_sizing']
+
+_parallel(direction_sizing, 'composed_stage', parameter_keys=('seed',), backend_imports=('sklearn',), prediction_kind='target_exposure', probabilities=False)
+_parallel(_direction_factory, 'sklearn_stage', backend_imports=('sklearn',))
+_parallel(_sizing_factory, 'sklearn_stage', backend_imports=('sklearn',))

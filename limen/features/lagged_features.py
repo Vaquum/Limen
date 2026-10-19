@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -105,3 +106,7 @@ def lag_column(data: pl.DataFrame,
     result = lag_range_cols(data, [col], lag, lag)
 
     return result.rename({f'{col}_lag_{lag}': alias}) if alias is not None else result
+
+_parallel(lag_range)
+
+_parallel(lag_range_cols)

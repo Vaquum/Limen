@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import logging
 from decimal import Decimal
 
@@ -191,3 +192,5 @@ def find_min_d(data: pl.DataFrame,
                 return d
 
     return d_end
+
+_parallel(fractional_diff)

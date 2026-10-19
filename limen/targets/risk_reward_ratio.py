@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import ClassVar
 
 import polars as pl
@@ -52,3 +53,5 @@ class RiskRewardRatioTarget:
             (pl.col('capturable_breakout') / (pl.col('max_drawdown').abs() + EPSILON))
                 .alias(self.target_name)
         ).drop(['capturable_breakout', 'max_drawdown'])
+
+_parallel(RiskRewardRatioTarget)

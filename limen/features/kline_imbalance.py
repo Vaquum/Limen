@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -28,3 +29,5 @@ def kline_imbalance(data: pl.DataFrame, window: int = 14) -> pl.DataFrame:
         ])
         .drop('imbalance_raw')
     )
+
+_parallel(kline_imbalance)

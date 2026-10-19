@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from collections.abc import Callable
 from typing import Protocol, cast
 
@@ -97,3 +98,5 @@ def ridge_regressor(data: dict[str, object],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(ridge_regressor, 'sklearn_stage', parameter_keys=(), backend_imports=('sklearn',), prediction_kind='continuous', probabilities=False)

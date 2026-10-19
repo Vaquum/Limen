@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import re
 from typing import Any
 
@@ -148,7 +149,6 @@ class DLinearRegressor(ReferenceModel):
 
         Args:
             data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
 
         Returns:
             dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
@@ -195,3 +195,5 @@ def dlinear_regressor(data: dict[str, Any],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(dlinear_regressor, 'deterministic_stage', parameter_keys=(), backend_imports=('sklearn',), prediction_kind='continuous', probabilities=False)

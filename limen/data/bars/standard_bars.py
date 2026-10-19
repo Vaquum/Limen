@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -14,7 +15,6 @@ def _standard_bars(data: pl.DataFrame,
     column value accumulation.
 
     Args:
-        data (pl.DataFrame): Klines data
         threshold (Union[int, float]): Threshold value for bar creation
         column_name (str): Column name to accumulate for threshold detection
 
@@ -104,7 +104,6 @@ def volume_bars(data: pl.DataFrame, volume_threshold: float) -> pl.DataFrame:
     Compute volume bars with fixed volume size sampling.
 
     Args:
-        data (pl.DataFrame): Klines data
         volume_threshold (float): Volume threshold per bar
 
     Returns:
@@ -145,3 +144,9 @@ def liquidity_bars(data: pl.DataFrame,
     '''
 
     return _standard_bars(data, liquidity_threshold, 'liquidity_sum')
+
+_parallel(volume_bars)
+
+_parallel(trade_bars)
+
+_parallel(liquidity_bars)

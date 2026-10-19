@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 from typing import cast
 
@@ -168,3 +169,5 @@ class VolNormalizedReturnTarget:
         if not finite_ratios:
             return None
         return float(cast(float, pl.Series(finite_ratios).median()))
+
+_parallel(VolNormalizedReturnTarget)

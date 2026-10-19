@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.45.0"
+  limen_version: "5.45.1"
   mode: development
 
 sfd:
@@ -459,7 +459,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.45.0"
+  limen_version: "5.45.1"
   mode: development
 sfd:
   manifest:
@@ -516,7 +516,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.45.0"
+  limen_version: "5.45.1"
   mode: development
 sfd:
   manifest:
@@ -1397,3 +1397,5 @@ See [Reserve final observations](Final-Holdout.md) for project research exclusio
 ### Fold promotion evidence
 
 With `uel.recording.fold_details: true`, walk-forward campaigns retain versioned original-source, selected-source and raw/retained partition witnesses for validated native inference. Serial and parallel origins share the same trial/fold evidence. Default lean recording is unchanged. See [Trainer](Trainer.md#recorded-walk-forward-folds) for the reconstruction and clock contract, and [Cohort](Cohort.md#recorded-walk-forward-members) for explicit binary fold composition.
+
+Parallel preparation requires declared independent stages and fixed integer seeds for stochastic preparation. Native resource controls must resolve to one CPU thread; unfrozen external model state remains unavailable. The complete compatible-Manifest parallel interface is not yet exposed.

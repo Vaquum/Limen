@@ -1814,3 +1814,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.45.0] - 2026-10-19
 
 - Add immutable recorded-fill price-cost calibration with explicit evidence limits and preserved account fees.
+
+## [5.45.1] - 2026-10-20
+
+- Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.

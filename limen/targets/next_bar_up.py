@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -36,3 +37,5 @@ class NextBarUpTarget:
                 .cast(pl.UInt8)
                 .alias(self.target_name)
         )
+
+_parallel(NextBarUpTarget)

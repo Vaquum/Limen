@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -18,3 +19,5 @@ def shift_column_transform(data: pl.DataFrame, shift: int, column: str) -> pl.Da
     return data.with_columns(
         pl.col(column).shift(shift).alias(column)
     )
+
+_parallel(shift_column_transform)

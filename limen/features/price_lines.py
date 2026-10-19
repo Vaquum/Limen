@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -172,3 +173,5 @@ def line_active_count(long: LineArrays, short: LineArrays, n_rows: int) -> npt.N
     stops = np.sort(np.concatenate([long[1], short[1]]) + 1)
     return (np.searchsorted(starts, positions, side='right')
             - np.searchsorted(stops, positions, side='right'))
+
+_parallel(price_lines)

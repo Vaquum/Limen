@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.sma import sma
 
@@ -10,7 +11,6 @@ def volume_ratio(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
     Compute volume ratio relative to simple moving average baseline.
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'volume' column
         period (int): Number of periods for SMA calculation
 
     Returns:
@@ -26,3 +26,5 @@ def volume_ratio(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
         (pl.col('volume') / (pl.col(volume_sma_col) + EPSILON))
         .alias('volume_ratio')
     ])
+
+_parallel(volume_ratio)

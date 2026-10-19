@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import Any
 
 import numpy as np
@@ -108,3 +109,5 @@ def random_binary(data: dict[str, Any],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(random_binary, 'seeded_stage', parameter_keys=(), backend_imports=(), prediction_kind='binary', probabilities=False)

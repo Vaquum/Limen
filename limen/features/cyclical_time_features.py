@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -59,3 +60,5 @@ def cyclical_time_features(df: pl.DataFrame) -> pl.DataFrame:
         (((pl.col('datetime').dt.quarter().cast(pl.Float64) - ISO_WEEKDAY_OFFSET) * QUARTER_ANGLE).sin()).alias('quarter_sin'),
         (((pl.col('datetime').dt.quarter().cast(pl.Float64) - ISO_WEEKDAY_OFFSET) * QUARTER_ANGLE).cos()).alias('quarter_cos'),
     ])
+
+_parallel(cyclical_time_features)

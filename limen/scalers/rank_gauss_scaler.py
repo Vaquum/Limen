@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import Any
 
 import numpy as np
@@ -127,3 +128,5 @@ def inverse_transform(df: pl.DataFrame, scaler: RankGaussScaler) -> pl.DataFrame
         return df
 
     return df.with_columns(restored_cols)
+
+_parallel(RankGaussScaler)

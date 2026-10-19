@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -56,3 +57,5 @@ def ema(
     ).alias(out_col)
 
     return frame.with_columns(ema_expr)
+
+_parallel(ema)

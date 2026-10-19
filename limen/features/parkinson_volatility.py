@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -39,3 +40,5 @@ def parkinson_volatility(
         )
         .drop('_parkinson_log_range_sq')
     )
+
+_parallel(parkinson_volatility)

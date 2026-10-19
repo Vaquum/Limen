@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -123,7 +124,6 @@ class TabPFNBinary(ReferenceModel):
         Args:
             data (dict): Data dictionary with x_val, y_val, x_test, y_test,
                          and optionally price_data_for_backtest
-            inline_metrics (bool): Whether to include confusion_* and backtest_* keys
 
         Returns:
             dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
@@ -176,3 +176,5 @@ def tabpfn_binary(data: dict[str, Any],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(tabpfn_binary, 'unfrozen_stage', parameter_keys=(), backend_imports=(), prediction_kind='binary', probabilities=True)

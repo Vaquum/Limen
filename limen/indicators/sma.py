@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -76,3 +77,5 @@ def sma(
             pl.col(out_col).alias(compat_col),
         ]
     )
+
+_parallel(sma)

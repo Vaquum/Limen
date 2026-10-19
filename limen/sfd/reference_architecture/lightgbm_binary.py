@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -198,7 +199,6 @@ def lightgbm_binary(data: dict[str, Any],
         boosting_type (str): Boosting algorithm ('gbdt', 'dart', 'rf')
         num_leaves (int): Maximum tree leaves per booster
         max_depth (int): Maximum tree depth, -1 for no limit
-        learning_rate (float): Boosting learning rate
         n_estimators (int): Number of boosting rounds (upper bound under early stopping)
         subsample_for_bin (int): Number of samples for histogram bin construction
         min_split_gain (float): Minimum loss reduction to split a leaf
@@ -211,7 +211,6 @@ def lightgbm_binary(data: dict[str, Any],
         reg_lambda (float): L2 regularization weight
         class_weight (float, str, or dict): Class weights. Numeric values keep the
             legacy `{0: value, 1: 1}` shorthand; 'balanced'/dicts pass through to LightGBM
-        random_state (int): Random seed
         n_jobs (int | None): Number of parallel threads, None for LightGBM default
         importance_type (str): Feature importance type ('split' or 'gain')
         early_stopping_rounds (int | None): Early-stopping patience against the
@@ -258,3 +257,5 @@ def lightgbm_binary(data: dict[str, Any],
     result = model.evaluate(data, inline_metrics=True)
     result['_model'] = model
     return result
+
+_parallel(lightgbm_binary, 'lightgbm_stage', parameter_keys=('n_jobs', 'random_state'), backend_imports=('lightgbm',), prediction_kind='binary', probabilities=True)

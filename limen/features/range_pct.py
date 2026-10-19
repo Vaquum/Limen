@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -16,3 +17,5 @@ def range_pct(data: pl.DataFrame) -> pl.DataFrame:
     '''
 
     return data.with_columns(((pl.col('high') - pl.col('low')) / (pl.col('close') + EPSILON)).alias('range_pct'))
+
+_parallel(range_pct)

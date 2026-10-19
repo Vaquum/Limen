@@ -1,4 +1,5 @@
 from __future__ import annotations
+from limen._parallel_contract import attach as _parallel
 
 import copy
 import json
@@ -232,3 +233,5 @@ def prepare_column_shims(
             training=training, target=manifest.target_column,
         )
     return data.fill_nan(None)
+
+_parallel(apply_column_shims)

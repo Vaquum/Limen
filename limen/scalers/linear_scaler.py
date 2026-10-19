@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import re
 from typing import cast
 
@@ -198,3 +199,5 @@ def inverse_transform(df: pl.DataFrame, scaler: LinearScaler) -> pl.DataFrame:
             exprs.append(pl.col(col).alias(col))
 
     return df.with_columns(exprs)
+
+_parallel(LinearScaler)

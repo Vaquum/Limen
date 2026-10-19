@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -48,3 +49,5 @@ class QuantileBinaryTarget:
                 .shift(shift)
                 .alias(self.target_name)
         )
+
+_parallel(QuantileBinaryTarget)

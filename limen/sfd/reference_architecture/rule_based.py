@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import Any
 
 import numpy as np
@@ -184,3 +185,5 @@ def rule_based(data: dict[str, Any],
     )
     _ = model.train(data)
     return model.evaluate(data)
+
+_parallel(rule_based, 'deterministic_stage', parameter_keys=(), backend_imports=(), prediction_kind='binary', probabilities=False)

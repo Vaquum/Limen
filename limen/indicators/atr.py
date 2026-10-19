@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.indicators._atr import atr_from_true_range_expr
@@ -45,3 +46,5 @@ def atr(
     return frame.with_columns(
         atr_from_true_range_expr(ATR_TR_COL, period).alias(out_col)
     ).drop(ATR_TR_COL)
+
+_parallel(atr)

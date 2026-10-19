@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from heapq import heappop, heappush
 
 import numpy as np
@@ -33,8 +34,6 @@ def quantile_price_lines(data: pl.DataFrame,
     Other empty windows return zero; active_quantile_count retains retrospective whole-frame spans.
 
     Args:
-        data (pl.DataFrame | pl.LazyFrame): Klines with a close column
-        max_duration_hours (int): Exclusive upper bound on line duration in bars
         min_height_pct (float): Minimum absolute height as a fraction of start price
         quantile_threshold (float): Per-direction height quantile
         density_lookback_hours (int): Density window and recency cap
@@ -244,3 +243,5 @@ def _causal_columns(long: LineArrays, short: LineArrays, n_rows: int, quantile: 
             average[row] = total / np.count_nonzero(height_keep)
             bias[row] = signed[height_keep].sum() / max(total, 1e-12)
     return recency, density, momentum, average, bias
+
+_parallel(quantile_price_lines)

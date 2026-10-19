@@ -1,4 +1,5 @@
 from __future__ import annotations
+from limen._parallel_contract import attach as _parallel
 
 from bisect import bisect_left, bisect_right
 from dataclasses import dataclass, field, replace
@@ -167,3 +168,5 @@ class TradeOutcomeTarget:
 
 
 __all__ = ['OutcomeLabels', 'TradeOutcomeTarget', 'TradeTargetContext']
+
+_parallel(TradeOutcomeTarget)

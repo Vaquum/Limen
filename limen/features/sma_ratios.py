@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.sma import sma
 
@@ -36,3 +37,5 @@ def sma_ratios(data: pl.DataFrame, periods: list[int] | None = None, price_col: 
         ])
 
     return df
+
+_parallel(sma_ratios)

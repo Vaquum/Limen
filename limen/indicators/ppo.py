@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.ma import ma
 
@@ -69,3 +70,5 @@ def ppo(
     )
 
     return frame.with_columns(ppo_expr).drop([fast_col, slow_col])
+
+_parallel(ppo)

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numbers
 
@@ -97,10 +98,8 @@ def dollar_bar_crash_reversal(
     schema = validated_data.collect_schema()
     missing = [column for column in _REQUIRED_COLUMNS if column not in schema]
     if missing:
-        raise ValueError(
-            'dollar_bar_crash_reversal missing required columns: '
-            + ', '.join(missing)
-        )
+        raise ValueError('dollar_bar_crash_reversal missing required columns: '
+                         + ', '.join(missing))
     datetime_dtype = schema['datetime']
     if not isinstance(datetime_dtype, pl.Datetime):
         raise TypeError(
@@ -238,3 +237,5 @@ def dollar_bar_crash_reversal(
     )
 
     return result.collect() if eager else result
+
+_parallel(dollar_bar_crash_reversal)

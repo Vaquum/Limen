@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -18,3 +19,5 @@ def window_return(data: pl.DataFrame,
     col = f"ret_{period}"
 
     return data.with_columns(((pl.col('close') / pl.col('close').shift(period)) - 1.0).alias(col))
+
+_parallel(window_return)

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -119,3 +120,5 @@ class TradelineLongBinaryTarget:
             .cast(pl.UInt8)
             .alias(self.target_name)
         )
+
+_parallel(TradelineLongBinaryTarget)

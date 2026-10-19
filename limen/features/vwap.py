@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -41,3 +42,5 @@ def vwap(data: pl.DataFrame,
         ])
         .drop(['__date', '__cum_pv', '__cum_vol'])
     )
+
+_parallel(vwap)

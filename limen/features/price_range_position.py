@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 # Constants
@@ -22,3 +23,5 @@ def price_range_position(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
           pl.col('low').rolling_min(window_size=period) + EPSILON))
         .alias('price_range_position')
     ])
+
+_parallel(price_range_position)

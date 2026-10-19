@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -20,3 +21,5 @@ def rolling_volatility(data: pl.DataFrame,
         pl.col(column).rolling_std(window_size=window).alias(
             f"{column}_volatility_{window}")
     ])
+
+_parallel(rolling_volatility)

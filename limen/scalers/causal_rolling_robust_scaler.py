@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import cast
 
 import polars as pl
@@ -129,3 +130,5 @@ class CausalRollingRobustScaler:
             return df
 
         return df.with_columns(exprs)
+
+_parallel(CausalRollingRobustScaler)

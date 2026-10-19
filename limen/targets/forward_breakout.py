@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -43,3 +44,5 @@ class ForwardBreakoutTarget:
         return data.with_columns(
             (forward_return >= threshold).cast(pl.UInt8).shift(shift).alias(self.target_name)
         )
+
+_parallel(ForwardBreakoutTarget)

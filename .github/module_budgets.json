@@ -510,5 +510,9 @@
   "limen/backtest/_cost_history.py": 230,
   "limen/backtest/_cost_statistics.py": 220,
   "limen/backtest/_cost_identity.py": 200,
-  "limen/backtest/_cost_comparison.py": 260
+  "limen/backtest/_cost_comparison.py": 260,
+  "limen/_parallel_contract.py": 100,
+  "limen/experiment/_parallel_encoding.py": 220,
+  "limen/experiment/_parallel_plan.py": 320,
+  "limen/experiment/_parallel_resources.py": 300
 }

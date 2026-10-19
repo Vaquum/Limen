@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -46,3 +47,5 @@ def stochastic_oscillator(
         )
         .drop([highest_col, lowest_col])
     )
+
+_parallel(stochastic_oscillator)

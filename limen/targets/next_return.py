@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -11,7 +12,6 @@ class NextReturnTarget:
         Store the target column name; no fitting is performed.
 
         Args:
-            train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
             target_name (str): Name of the target column to create
         '''
 
@@ -40,3 +40,5 @@ class NextReturnTarget:
             (((pl.col('close').shift(-periods) - pl.col('close')) / pl.col('close')) * scale)
                 .alias(self.target_name)
         )
+
+_parallel(NextReturnTarget)

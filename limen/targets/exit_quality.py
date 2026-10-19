@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import ClassVar
 
 import polars as pl
@@ -62,3 +63,5 @@ class ExitQualityTarget:
                 .otherwise(pl.lit(exit_quality_medium))
                 .alias(self.target_name)
         ).drop(['exit_reason', 'exit_net_return'])
+
+_parallel(ExitQualityTarget)

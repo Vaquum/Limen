@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -11,7 +12,6 @@ class IdentityTarget:
         Validate the target column exists; no fitting is performed.
 
         Args:
-            train_data (pl.DataFrame): Training split; used to validate the target column exists
             target_name (str): Name of an existing target column
         '''
 
@@ -40,3 +40,5 @@ class IdentityTarget:
                 f"Target column '{self.target_name}' not found in split data. Available columns: {data.columns}"
             )
         return data
+
+_parallel(IdentityTarget)

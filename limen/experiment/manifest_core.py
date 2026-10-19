@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
@@ -642,7 +643,6 @@ class Manifest:
         NOTE: Used by Log system to reconstruct the same test bar data that was used in training.
 
         Args:
-            raw_data (pl.DataFrame): Raw input dataset
             round_params (Dict[str, Any]): Parameter values for current round
 
         Returns:
@@ -980,7 +980,6 @@ class MLManifest(Manifest):
         Configure data_dict extension function to add custom entries after data preparation.
 
         Args:
-            func (Callable): Extension function with signature (data_dict, split_data, round_params, fitted_params) -> dict
 
         Returns:
             MLManifest: Self for method chaining
@@ -1252,7 +1251,6 @@ class RuleBasedManifest(Manifest):
         Compute final data dictionary from raw data using the rule-based pipeline.
 
         Args:
-            raw_data (pl.DataFrame): Raw input dataset
             round_params (Dict[str, Any]): Parameter values for current round
 
         Returns:
@@ -1300,7 +1298,6 @@ def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.Dat
     Compute transformed data using fitted transform instance.
 
     Args:
-        data (pl.DataFrame): Data to transform
         fitted_transform: Fitted transform instance with .transform() method
 
     Returns:
@@ -2060,3 +2057,9 @@ def _finalize_rule_based_data(
     }
 
     return data_dict
+
+_parallel(_apply_feature_ablation, 'seeded_stage')
+
+_parallel(_pca_transformer, backend_imports=('sklearn',))
+
+_parallel(_apply_fitted_transform)

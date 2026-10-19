@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -32,3 +33,5 @@ def mad_transform(df: pl.DataFrame, *, time_col: str = "datetime"):
     other_exprs = [pl.col(c) for c in df.columns if c not in num_cols]
 
     return df.select(other_exprs + scaled_exprs)
+
+_parallel(mad_transform)

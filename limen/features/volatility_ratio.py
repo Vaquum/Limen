@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -32,7 +33,6 @@ def volatility_ratio(
     Compare short and long rolling means of Parkinson variance.
 
     Args:
-        data (pl.DataFrame): Klines dataset with high and low price columns
         short_window (int): Number of periods in the short variance mean
         long_window (int): Number of periods in the long variance mean
         high_col (str): Column name for high prices
@@ -51,3 +51,5 @@ def volatility_ratio(
             variance.rolling_mean(window_size=long_window),
         ).alias(output_col)
     )
+
+_parallel(volatility_ratio)

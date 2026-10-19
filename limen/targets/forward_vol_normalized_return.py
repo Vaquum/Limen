@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from typing_extensions import override
 
@@ -109,3 +110,5 @@ class ForwardVolNormalizedReturnTarget(VolNormalizedReturnTarget):
             .with_columns((pl.col(temp_cols[0]) / pl.col(temp_cols[3])).alias(self.target_name))
             .drop(temp_cols)
         )
+
+_parallel(ForwardVolNormalizedReturnTarget)
