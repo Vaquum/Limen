@@ -150,19 +150,26 @@ def capture_clock(manifest: object, frame: pl.DataFrame) -> None:
 
 
 class DecisionMaker(Protocol):
-    def __call__(self, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame: ...
+    def __call__(self, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None, timestamp_role: str = 'start') -> pl.DataFrame: ...
 
 
-def decisions(manifest: object, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object, native: DecisionMaker) -> pl.DataFrame:
+def decisions(manifest: object, raw: pl.DataFrame, bars: pl.DataFrame, *, native: DecisionMaker, interval_seconds: object = None, timestamp_role: str | None = None, params: Mapping[str, object] | None = None) -> pl.DataFrame:
+    from limen.experiment._prepare_trade_context import source_interval
+    from limen.experiment._resolve_trade_policy import SourceConfig, resolve_number
+    config = getattr(manifest, 'backtest_config', None)
+    if interval_seconds is None:
+        interval_seconds = getattr(config, 'source_interval_seconds', None) or source_interval(cast(SourceConfig | None, getattr(manifest, 'data_source_config', None)))
+        interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params or {}, 'recorded source interval')
+    role = timestamp_role if timestamp_role is not None else cast(str, getattr(config, 'source_timestamp_role', 'start'))
     step = cast(int | None, getattr(manifest, '_fold_native_interval', None))
     if step is not None:
         timing = {'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'}
         if timing & set(raw.columns) and not timing <= set(raw.columns):
             raise ValueError('Fold Sensor input has incomplete explicit native timing')
         if not timing <= set(raw.columns):
-            start = raw['datetime'].dt.epoch('ns')
+            start = raw['datetime'].dt.epoch('ns') - (step if role == 'end' else 0)
             raw = raw.with_columns(start.alias('start_ns'), (start + step).alias('end_ns'),
                                    start.alias('open_available_at_ns'), (start + step).alias('available_at_ns'))
         if not getattr(manifest, '_fold_formed', False):
             bars = bars.drop('bar_count', strict=False)
-    return native(raw, bars, interval_seconds=interval_seconds)
+    return native(raw, bars, interval_seconds=interval_seconds, timestamp_role=role)

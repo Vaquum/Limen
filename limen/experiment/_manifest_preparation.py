@@ -6,9 +6,9 @@ from typing import Protocol, TypeVar, cast
 import polars as pl
 
 from limen.backtest.trade_contract import TradePolicy
-from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, prepare_trade_context, source_interval
+from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, prepare_trade_context, source_interval, validate_cached_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data
-from limen.experiment._resolve_backtest_config import configured_barriers
+from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, configured_barriers
 from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig
 
 _M = TypeVar('_M')
@@ -20,6 +20,7 @@ class SetupManifest(Protocol):
     @property
     def data_source_config(self) -> SourceConfig | None: ...
     def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None: ...
+    def resolve_backtest_config(self, round_params: Mapping[str, object]) -> dict[str, float | None]: ...
 
 
 def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame],
@@ -76,3 +77,21 @@ def _assessment_schema(manifest: object, frame: pl.DataFrame, stage: str) -> pl.
         record(message)
         raise ValueError(message)
     return frame.select([name for name in frame.columns if name in excluded] + [field['name'] for field in expected])
+
+
+def apply_backtest_cost(manifest: SetupManifest, data: dict[str, object], round_params: Mapping[str, object]) -> None:
+    from limen.experiment._backtest_provenance import preflight_backtest
+    policy = manifest.resolve_trade_policy(round_params)
+    validate_cached_context(manifest.backtest_config, policy, data, round_params)
+    if configured_barriers(manifest.backtest_config) and policy is None:
+        data['_backtest_configured'] = True
+    else:
+        _ = data.pop('_backtest_configured', None)
+    _ = data.pop('_trade_ledger', None)
+    preflight_backtest(data)
+    resolved = manifest.resolve_backtest_config(round_params)
+    for key in BACKTEST_KEYS:
+        if key in resolved:
+            data[f'backtest_{key}'] = resolved[key]
+        else:
+            _ = data.pop(f'backtest_{key}', None)

@@ -433,3 +433,5 @@ Custom targets may keep their own removal or rely on manifest enforcement.
 - [Experiment Manifest](Experiment-Manifest.md) for how targets plug into the split-first pipeline
 - [Scalers](Scalers.md) for train-fitted preprocessing that runs after target construction
 - [Transforms](Transforms.md) for stateless post-model helpers
+
+Meta allocation retains the primary target. Forward QuantileBinaryTarget fitting is rebuilt inside each chronological prefix; prediction-block membership is feature-valid and includes the tail without completed forward targets. Allocator supervision is separate: signed net PnL divided by the first actual entry fill notional, available only after real closure inside the opening training block. Open, unfilled and crossing opportunities remain unavailable; they are not zero-return training examples. See [Backtest](Backtest.md#learned-allocation-around-a-primary).

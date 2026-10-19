@@ -330,3 +330,9 @@ Optional dependencies are checked when the relevant model executes, not when the
 - Continue to [Standard Metrics Library](Standard-Metrics-Library.md) for the low-level metric helpers used inside these model classes.
 
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+
+### Primary-preserving meta allocation
+
+The compiled manifest's `with_allocation(method, params)` adds a research allocator around its original primary. The native method is `limen.sfd.reference_architecture.meta_allocation.meta_allocation`; a second allocation declaration rejects. Factory callables follow `direction_sizing`'s source-bound estimator pattern. See [Backtest](Backtest.md#learned-allocation-around-a-primary) for fitting, cost and exposure semantics.
+
+Prepared data exposes `_allocation_batches['val']` and `['test']`. The fitted model accepts `model.predict({'allocation_batch': batch})` without targets or outcomes. `AllocationBatch` binds full partition bounds, original ordered source IDs and availability, target-free primary inputs, named numeric meta features and decision-time stop/readiness values. Reordered, changed or truncated batches reject. This is not an incremental future-window inference protocol.
