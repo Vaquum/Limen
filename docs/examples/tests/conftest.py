@@ -6,6 +6,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs/examples'))
+sys.path.insert(0, str(ROOT / 'docs/examples/tests'))
 
 
 @pytest.fixture(scope='session')
@@ -59,7 +60,8 @@ def research_proof(python_project, compiled_project, tmp_path_factory, request):
         wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'))
     request.config.stash[PROOF] = wheel
     return {'python': {'rounds': python_project[2][1].experiment_log.height},
-            'compiled': {'rounds': compiled_project[2][0].experiment_log.height}}
+            'compiled': {'rounds': compiled_project[2][0].experiment_log.height},
+            'scenarios': wheel['scenario_reports']}
 
 
 PROOF = pytest.StashKey[dict]()
@@ -106,7 +108,7 @@ def pytest_sessionfinish(session, exitstatus):
         'inputs': [{'path': 'tests/fixtures/' + name, 'sha256': value, 'window': 'full recorded fixture; scenario-specific row selections are in the project'} for name, value in INPUTS.items()],
         'sources': sources, 'displays': [],
         'validation': {'catalogue_sha256': digest((ROOT / 'docs/examples/catalogue.json').read_bytes()), 'status': 'passed', 'scenarios': [
-            {'id': 'selection', 'interface': interface, 'command': wheel['commands'][interface], 'tests': [name for name, _ in REPORTS], 'assertions': ['independent selection/cost/clock and fitted-state oracles', 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': wheel['summaries'][interface]['output_path'], 'output_sha256': wheel['summaries'][interface]['output_sha256'], 'status': 'passed'} for interface in ('python', 'compiled')]},
+            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [name for name, _ in REPORTS], 'assertions': ['independent selection/cost/clock and fitted-state oracles', 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
         'publication': None,
     }
     # Display records are retained separately; before capture, the actual output

@@ -8,7 +8,8 @@ import tarfile
 import venv
 import zipfile
 
-from build_bundle import build
+from build_bundle import INPUTS, build
+from scenario_oracles import verify
 
 
 def run(argv, *, cwd, env=None):
@@ -24,7 +25,9 @@ def unpack(bundle: Path, target: Path):
         names = set(archive.getnames())
         required = {'python-research/research.py', 'compiled-research/research.py',
                     'compiled-research/selection.yaml', 'evidence.schema.json', 'catalogue.json'}
-        if not required <= names or not any(name.startswith('inputs/') for name in names):
+        required |= {'inputs/' + name for name in INPUTS}
+        required |= {'requirements/research-env.txt', 'inputs.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
+        if not required <= names:
             raise ValueError('Candidate archive is incomplete')
         archive.extractall(target, filter='data')
 
@@ -69,7 +72,7 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert Path(info['import_location']).is_relative_to(isolated)
     assert Path(info['distribution_location']).is_relative_to(isolated)
     assert not any(Path(entry or project).resolve() == root.resolve() for entry in info['sys_path'])
-    summaries, commands = {}, {}
+    summaries, commands, scenario_reports = {}, {}, {}
     for interface in ('python', 'compiled'):
         command = [python, f'{interface}-research/research.py', '--scenario', 'selection', '--data-dir', 'inputs', '--output-dir', f'results/{interface}']
         run(command, cwd=project)
@@ -84,8 +87,20 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
         destination.write_text(json.dumps(summary, indent=2) + '\n')
         summaries[interface] = {'summary': summary, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
         commands[interface] = [str(arg) for arg in command]
+        scenario_reports[(interface, 'selection')] = summaries[interface] | {'command': commands[interface]}
+        command = [python, f'{interface}-research/research.py', '--scenario', 'all', '--data-dir', 'inputs', '--output-dir', f'results/{interface}-all']
+        run(command, cwd=project)
+        report = json.loads((project / f'results/{interface}-all/summary.json').read_text())
+        catalogue = json.loads((project / 'catalogue.json').read_text())
+        expected = {name for name, interfaces in catalogue['required_scenarios'].items() if interface in interfaces} - {'selection'}
+        assert set(report['scenarios']) == expected
+        for name, result in report['scenarios'].items():
+            verify(interface, name, result, project / f'results/{interface}-all/{name}', project / 'inputs')
+            destination = output / f'{interface}-{name}.json'
+            destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+            scenario_reports[(interface, name)] = {'summary': result, 'command': [str(arg) for arg in command], 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
     wheel_destination = output / wheel.name
     wheel_destination.write_bytes(wheel.read_bytes())
-    return {'summaries': summaries, 'commands': commands, 'installed': info,
+    return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info,
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},
             'wheel_sha256': hashlib.sha256(wheel.read_bytes()).hexdigest()}
