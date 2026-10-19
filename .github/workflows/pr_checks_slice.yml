@@ -64,9 +64,10 @@ jobs:
           # GitHub hard ceiling of 3000 files).
           gh pr view "$PR_NUMBER" \
             --repo "${{ github.repository }}" \
-            --json title,body,changedFiles > pr_view.json
+            --json title,body,changedFiles,headRefOid > pr_view.json
           jq -r '.title' pr_view.json > pr_title.txt
           jq -r '.body' pr_view.json > pr_body.txt
+          jq -r '.headRefOid' pr_view.json > pr_head.txt
           EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
 
           gh api "repos/${{ github.repository }}/pulls/$PR_NUMBER/files" \
@@ -76,6 +77,12 @@ jobs:
           echo "PR #$PR_NUMBER title:       $(cat pr_title.txt)"
           echo "PR #$PR_NUMBER body bytes:  $(wc -c < pr_body.txt)"
           echo "PR #$PR_NUMBER files:       $ACTUAL_FILES (canonical: $EXPECTED_FILES)"
+
+          LIVE_HEAD=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json headRefOid --jq .headRefOid)
+          if [ "$LIVE_HEAD" != "$(cat pr_head.txt)" ] || [ "$LIVE_HEAD" != "${{ github.event.pull_request.head.sha }}" ]; then
+            echo "::error::PR head changed during capture; the new head's workflow must judge its own evidence"
+            exit 1
+          fi
 
           # Hard-fail if the enumerated set disagrees with the
           # canonical count. If GitHub's 3000-file ceiling is hit or
@@ -97,4 +104,5 @@ jobs:
             --pr-body-file pr_body.txt \
             --pr-files-file pr_files.txt \
             --template .github/ISSUE_TEMPLATE/slice.yml \
-            --repo "${{ github.repository }}"
+            --repo "${{ github.repository }}" \
+            --head-sha "$(cat pr_head.txt)"

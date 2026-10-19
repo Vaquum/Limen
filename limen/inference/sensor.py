@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract
 import logging
@@ -13,9 +13,8 @@ import polars as pl
 
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
-from limen.inference._python_sensor import BarPrediction
-from limen.inference._python_sensor import PredictionReason
-from limen.inference._python_sensor import HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase
+from limen.inference._python_sensor import BarPrediction, PredictionReason, HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase
+from limen.inference._sensor_from_model import Missing, ModelInput, ModelPairs, Prepare, Predict, identity_pairs, model_infer
 
 
 __all__ = ['BarPrediction', 'PredictionReason', 'Sensor']
@@ -63,16 +62,18 @@ class Sensor:
         return copy.deepcopy(self._trade_contract)
 
     @staticmethod
-    def from_python(*, fitted_state: StateT, params: Mapping[str, object],
-                    infer: Infer[HistoryT, StateT, OutputT],
-                    map_output: MapOutput[OutputT], state_id: str,
-                    fitting_cutoff: datetime, selection_cutoff: datetime,
-                    ) -> _PythonSensor[HistoryT, StateT, OutputT]:
-        return _PythonSensor(
-            fitted_state=fitted_state, params=params, infer=infer,
-            map_output=map_output, state_id=state_id,
-            fitting_cutoff=fitting_cutoff, selection_cutoff=selection_cutoff,
-        )
+    def from_python(*, fitted_state: StateT, params: Mapping[str, object], infer: Infer[HistoryT, StateT, OutputT], map_output: MapOutput[OutputT], state_id: str,
+                    fitting_cutoff: datetime, selection_cutoff: datetime, output_id: str | None = None) -> _PythonSensor[HistoryT, StateT, OutputT]:
+        return _PythonSensor(fitted_state, params, infer, map_output, state_id, fitting_cutoff, selection_cutoff, output_id)
+
+    @staticmethod
+    def from_model(model: StateT, *, selection_cutoff: datetime, prepare: Prepare[HistoryT] | None = None,
+                   feature_columns: Sequence[str] | None = None, params: Mapping[str, object] | None = None,
+                   predict: Predict[StateT, OutputT] | None = None, map_output: MapOutput[OutputT] | None = None,
+                   state_id: str | None = None, fitting_cutoff: datetime | None = None, output_id: str | None = None,
+                   missing: Missing = 'block', model_input: ModelInput = 'auto') -> _PythonSensor[HistoryT, StateT, ModelPairs]:
+        infer, identity = model_infer(model, selection_cutoff, prepare, feature_columns, predict, map_output, state_id, missing, model_input)
+        return Sensor.from_python(fitted_state=model, params={} if params is None else params, infer=infer, map_output=identity_pairs, state_id=identity, fitting_cutoff=selection_cutoff if fitting_cutoff is None else fitting_cutoff, selection_cutoff=selection_cutoff, output_id=output_id)
 
     @property
     def prediction_mode(self) -> Literal['binary', 'target_exposure', 'python']:

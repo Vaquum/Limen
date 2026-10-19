@@ -146,7 +146,7 @@ Raises:
 
 ## Sensor
 
-A `Sensor` wraps fitted state for inference. Trainer constructs compiled Sensors from saved YAML experiments; `Sensor.from_python` accepts caller-owned live Python state.
+A `Sensor` wraps fitted state for inference. Trainer constructs compiled Sensors from saved YAML experiments; `Sensor.from_model` wraps conventional fitted models; `Sensor.from_python` accepts arbitrary live Python state.
 
 Each compiled Sensor exposes:
 
@@ -174,7 +174,51 @@ all_preds = sensor(raw_klines)  # list[BarPrediction]
 
 ### Python construction
 
-`Sensor.from_python(*, fitted_state, params, infer, map_output, state_id, fitting_cutoff, selection_cutoff)` returns a native Sensor accepting arbitrary history objects. See the executable [recorded Python workflow](Universal-Experiment-Loop.md#direct-python-run); its fixture requires a repository checkout.
+For a retained fitted model, start with one line:
+
+```python
+sensor = Sensor.from_model(fitted, selection_cutoff=cutoff, output_id='next_bar_return')
+```
+
+Pass a timestamped Polars feature frame to `sensor.predict(history)` or add
+`prepare=features, params=p` to prepare completed raw history. This uses the exact
+fitted object; no fit, split/label preparation or Trainer replay runs. See the
+executable [recorded Python workflow](Universal-Experiment-Loop.md#direct-python-run)
+for search, retained evaluated models and `Cohort.from_python(selected_sensors)`.
+
+| `Sensor.from_model` argument | Default / contract |
+|---|---|
+| `model` | Required fitted object; retained by reference |
+| `selection_cutoff` | Required aware datetime; decisions before it are blocked |
+| `prepare` | Identity; optional `(history, params) -> pl.DataFrame` |
+| `feature_columns` | Recorded `feature_names_in_`, otherwise ordered non-metadata columns; explicit sequence fixes selection/order |
+| `params` | Empty shallow read-only snapshot |
+| `predict` | Fitted `.predict`; optional `(model, selected_frame, params) -> output` |
+| `map_output` | One numeric score per row → `(score, None)`; optional batch adapter returning scalar pairs |
+| `missing` | `'block'`: null/nonfinite features become warm-up/null-features; `'model'` delegates missing values to fitted preprocessing |
+| `model_input` | `'auto'`: named fitted model gets a frame, unnamed model an uncast ndarray; `'frame'`/`'array'` override the default call |
+| `state_id` | Generated UUID; optional nonblank live identifier |
+| `fitting_cutoff` | Selection cutoff as a provenance-only upper bound; never an exact measured endpoint |
+| `output_id` | None (undeclared); supply matching explicit meanings to compose without a mapper |
+
+Preparation must return a frame with the decision metadata below. Feature columns
+retain their dtypes; custom prediction always receives the selected Polars frame.
+The default adapter accepts one-dimensional ndarray, Series or sequence output,
+including Boolean class labels mapped to 0/1. It never flattens dimensions or
+converts target units. For missing-aware fitted pipelines use `missing='model'`.
+Fit with named frames, or supply explicit columns, to keep feature selection
+stable across dependency changes. There is no model-family whitelist.
+
+Metadata validates before prediction. Declared unavailable and pre-selection rows
+are excluded before prediction/mapping; default feature blocking labels leading
+invalid rows warm-up and later ones null-features. Caller reasons take precedence
+over computed feature reasons; the selection guard takes precedence over both.
+Default preparation requires a DataFrame; custom preparation can accept arbitrary
+history. Preparation runs once even when no prediction row is eligible.
+
+#### Arbitrary Python inference
+
+`Sensor.from_python(*, fitted_state, params, infer, map_output, state_id, fitting_cutoff, selection_cutoff, output_id=None)` returns a native Sensor accepting arbitrary history objects. See the executable [recorded Python workflow](Universal-Experiment-Loop.md#direct-python-run); its fixture requires a repository checkout.
 
 The two caller functions have these contracts:
 
@@ -203,7 +247,7 @@ Wrong construction types raise `TypeError`; invalid identities/cutoffs raise `Va
 
 `predict(history)` calls inference once and returns the final `predict_all(history)` result; empty metadata gives `[]` for batch and a warm-up result for single inference. Each call uses the full batch path: O(n) metadata/result work plus caller inference cost. Callers may trim history while retaining required context. The worked example removes warm-up and forward-label boundaries independently for partition metrics; live inference uses preceding completed context instead.
 
-Caller refitting creates a new fit. It provides no Trainer replay/`ReconstructionError` guarantee, compiled training identity or [protected final-holdout evidence](Final-Holdout.md). Native [Cohort](Cohort.md) rejects Python-origin Sensors; aggregate members in caller code with aligned decisions and preserved unavailable results. Python Sensor persistence/reconstruction is unsupported.
+Caller refitting creates a new fit. It provides no Trainer replay/`ReconstructionError` guarantee, compiled training identity or [protected final-holdout evidence](Final-Holdout.md). Use native [Cohort.from_python](Cohort.md#python-cohorts) for aligned composition with preserved unavailable results; compiled `set_members` continues rejecting Python-origin Sensors. Python Sensor persistence/reconstruction is unsupported.
 
 ### `predict(raw_klines) -> BarPrediction`
 

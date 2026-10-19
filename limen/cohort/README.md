@@ -11,7 +11,7 @@
 
 This package owns the cohort-level inference surface:
 
-1. `Cohort` for direct multi-member aggregation from one experiment and selected permutations
+1. `Cohort.from_python(sensors)` for live mean/vote/custom aggregation, and artifact-backed `Cohort` construction for selected experiment permutations
 2. single-file cohort (`sfc`) strategies for choosing those permutations from experiment artifacts
 
 It does **not** own:
@@ -35,7 +35,8 @@ It does **not** own:
 
 ```text
 cohort/
-├── cohort.py                # Cohort constructor + aggregation logic
+├── cohort.py                # Cohort entry points + compiled aggregation
+├── _python_cohort.py         # Live composition and callback boundary
 └── sfc/                     # Single-file cohort strategies
     ├── all.py               # select(context) -> ids
     ├── top_n.py             # select(context, *, column, n) -> ids
@@ -44,6 +45,14 @@ cohort/
 ```
 
 ## Cohort quick behavior
+
+For live fitted Sensors, start with `Cohort.from_python(sensors)`. Matching explicit
+Sensor output IDs permit default mean; optional preparation, output mapping and
+aggregation functions provide custom control. Compiled members require an explicit
+mapper/common meaning/cutoff. See the [Python contract](../../docs/Cohort.md#python-cohorts)
+for alignment, blocking, availability and live provenance.
+
+The artifact-backed constructor follows these rules:
 
 - Construct from exactly one experiment source (`experiment_id` or `experiment_log_path`)
 - Validate explicit or selector-produced `permutation_ids`
