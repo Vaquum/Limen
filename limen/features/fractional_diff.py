@@ -20,20 +20,29 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> npt.NDArray[np.float6
     truncated when |w_k| < threshold.
 
     Args:
-        d (float): Fractional differentiation order
-        threshold (float): Weight truncation threshold
+        d (float): Finite, non-negative fractional differentiation order
+        threshold (float): Finite, positive weight truncation threshold
 
     Returns:
         np.ndarray: Weight vector [w_n, ..., w_1, w_0], where w_0 = 1.0 is the last element
+
+    Raises:
+        ValueError: If d is non-finite or negative, threshold is non-finite or
+            nonpositive, or a recurrence weight is non-finite.
     '''
 
-    if threshold <= 0:
-        raise ValueError(f"fractional_diff threshold must be positive, got {threshold}")
+    if not np.isfinite(d) or d < 0:
+        raise ValueError(f"fractional_diff d must be finite and non-negative, got {d}")
+
+    if not np.isfinite(threshold) or threshold <= 0:
+        raise ValueError(f"fractional_diff threshold must be finite and positive, got {threshold}")
 
     weights = [1.0]
     k = 1
     while True:
         w = -weights[-1] * (d - k + 1) / k
+        if not np.isfinite(w):
+            raise ValueError(f"fractional_diff weight must be finite, got {w} at index {k}")
         if abs(w) < threshold:
             break
         weights.append(w)
@@ -59,26 +68,27 @@ def fractional_diff(data: pl.DataFrame,
 
     Args:
         data (pl.DataFrame): Input data
-        d (float): Fractional differentiation order (0 = identity copy, 1 = standard diff)
+        d (float): Finite, non-negative order (0 = identity copy, 1 = standard diff)
         cols (list[str] | None): Columns to differentiate (required)
-        threshold (float): Weight truncation threshold per AFML standard
+        threshold (float): Finite, positive weight truncation threshold per AFML standard
 
     Returns:
         pl.DataFrame: Data with new '{col}_fracdiff' columns added.
             When d=0, the new columns are copies of the originals.
 
     Raises:
-        ValueError: If cols is None or empty
+        ValueError: If cols is None or empty, d is non-finite or negative,
+            threshold is non-finite or nonpositive, or a recurrence weight is non-finite.
     '''
 
     if not cols:
         raise ValueError('fractional_diff cols must be a non-empty list of column names')
 
-    if d < 0:
-        raise ValueError(f"fractional_diff d must be non-negative, got {d}")
+    if not np.isfinite(d) or d < 0:
+        raise ValueError(f"fractional_diff d must be finite and non-negative, got {d}")
 
-    if threshold <= 0:
-        raise ValueError(f"fractional_diff threshold must be positive, got {threshold}")
+    if not np.isfinite(threshold) or threshold <= 0:
+        raise ValueError(f"fractional_diff threshold must be finite and positive, got {threshold}")
 
     schema_names = data.collect_schema().names()
 
