@@ -50,7 +50,7 @@ class FrozenManifestPlan:
     resource_digest: str
 
 
-_PARALLEL_EVIDENCE_SINCE = (5, 45, 1)
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 2)
 
 
 def legacy_metadata(metadata: Mapping[str, object]) -> bool:
