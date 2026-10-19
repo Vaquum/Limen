@@ -736,7 +736,7 @@ class Manifest:
                 )
 
         if has_var_keyword:
-            for k, v in _allocation_stage.primary_parameters(self, round_params).items():
+            for k, v in round_params.items():
                 if not k.startswith('_') and k not in model_kwargs:
                     model_kwargs[k] = v
 

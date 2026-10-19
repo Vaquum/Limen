@@ -14,14 +14,21 @@ from tests.test_dynamic_barriers import FIXTURE, _yaml
 
 
 def recorded_primary(data, **params):
+    from inspect import signature
     from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
     assert not any(key.startswith(('_trade', '_allocation')) for key in data)
     assert not data['_alignment']
     assert 'price_data_for_backtest' not in data
     assert data['x_test'].equals(data['x_val'])
     assert data['y_test'].equals(data['y_val'])
-    assert 'risk_span' not in params
-    return lightgbm_binary(data, **params)
+    assert params['risk_span'] == 6
+    return lightgbm_binary(data, **{key: value for key, value in params.items() if key in signature(lightgbm_binary).parameters})
+
+
+def seeded_primary(data, **params):
+    assert params['seed'] == 73
+    params['random_state'] = params['seed']
+    return recorded_primary(data, **params)
 
 
 def _config(ml=False):
@@ -307,3 +314,17 @@ def test_explicit_empty_component_params_select_factory_defaults():
         manifest.run_model(data, params)
     assert probability.call_args.kwargs == {'random_state': 42}
     assert sizing.call_args.kwargs == {'random_state': 42}
+
+
+def test_allocation_reference_preserves_shared_primary_kwargs():
+    manifest, raw, params, _ = _prepared(True)
+    manifest.with_reference_architecture(seeded_primary)
+    manifest.allocation_config.params['seed'] = '{seed}'
+    params['seed'] = 73
+    original = deepcopy(manifest)
+    original.allocation_config = None
+    assert original.resolve_model_kwargs(params) == manifest.resolve_model_kwargs(params)
+    data = manifest.prepare_data(raw, params)
+    model = manifest.run_model(data, params)['_model']
+    assert model.primary.model.get_params()['random_state'] == 73
+    assert model.learning_binding['primary_params']['seed'] == 73

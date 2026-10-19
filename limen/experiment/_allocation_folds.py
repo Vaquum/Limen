@@ -11,7 +11,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, TradeInputs, contract_digest, json_value, source_binding
 from limen.backtest.trade_execution import trade_execution
-from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity, parameter_references
+from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity
 from limen.experiment._prepare_trade_context import normalize_observations
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
@@ -272,7 +272,6 @@ def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], 
         ready = tuple(signals['__barrier_ready__'].to_list()) if '__barrier_ready__' in signals.columns else (True,) * signals.height
         batches[name] = AllocationBatch(name, partition.partition_start_ns, partition.partition_end_ns, ids, tuple(signals['available_at_ns'].to_list()), primary, meta, stop, ready)
     clone = deepcopy(manifest)
-    vars(clone)['_allocation_auxiliary_params'] = parameter_references(manifest.allocation_config.params) | parameter_references(manifest.backtest_config.barrier_features.params if manifest.backtest_config.barrier_features else {})
     clone.allocation_config = None
     context = AllocationContext(clone, train, dict(params), trade.policy, batches, barriers, trade.partitions[0].initial_equity, trade.partitions[0])
     data['_allocation_context'], data['_allocation_batches'] = context, batches
