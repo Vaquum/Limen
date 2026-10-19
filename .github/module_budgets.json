@@ -476,5 +476,7 @@
   "limen/utils/_computation_cache.py": 160,
   "limen/utils/_line_arrays.py": 80,
   "limen/experiment/_family_evidence.py": 300,
-  "limen/experiment/family_acceptance_report.py": 140
+  "limen/experiment/family_acceptance_report.py": 140,
+  "limen/experiment/holdout.py": 30,
+  "limen/experiment/_holdout_history.py": 320
 }

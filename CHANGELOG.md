@@ -2,6 +2,10 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
+## [5.36.0] - 2026-10-19
+
+- Add project final-window reservations and preserve local reservation lifecycle history.
+
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
