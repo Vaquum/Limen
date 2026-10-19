@@ -10,7 +10,7 @@ from typing import Generic, Literal, TypeVar, cast
 
 import polars as pl
 
-__all__ = ['BarPrediction', 'HistoryT', 'Infer', 'MapOutput', 'OutputT', 'PredictionReason', 'PythonSensorBase', 'StateT']
+__all__ = ['BarPrediction', 'HistoryT', 'Infer', 'MapOutput', 'OutputT', 'PredictionReason', 'PythonSensorBase', 'StateT', 'utc_cutoff', 'decision_rows', 'scalar', 'mapped_values', 'output_rows']
 
 PredictionReason = Literal['warm-up', 'inside-training-window', 'null-features', 'sensor-error']
 HistoryT = TypeVar('HistoryT')
@@ -34,7 +34,7 @@ class BarPrediction:
     trade_contract_digest: str | None = None
 
 
-def _construction_params(params: object, infer: object, map_output: object, state_id: object) -> Mapping[str, object]:
+def _construction_params(params: object, infer: object, map_output: object, state_id: object, output_id: object) -> Mapping[str, object]:
     if not isinstance(params, Mapping):
         raise TypeError('Python Sensor params must be a string-keyed mapping')
     source = cast(Mapping[object, object], params)
@@ -46,10 +46,15 @@ def _construction_params(params: object, infer: object, map_output: object, stat
         raise TypeError('Python Sensor state_id must be a string')
     if not state_id.strip():
         raise ValueError('Python Sensor state_id must not be empty')
+    if output_id is not None:
+        if not isinstance(output_id, str):
+            raise TypeError('Python Sensor output_id must be a string or None')
+        if not output_id.strip():
+            raise ValueError('Python Sensor output_id must not be empty')
     return MappingProxyType(cast(dict[str, object], dict(source)))
 
 
-def _utc_cutoff(value: object) -> datetime:
+def utc_cutoff(value: object) -> datetime:
     if not isinstance(value, datetime):
         raise TypeError('Python Sensor cutoffs must be datetimes')
     if value.tzinfo is None or value.utcoffset() is None:
@@ -57,7 +62,7 @@ def _utc_cutoff(value: object) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _decision_rows(metadata: object) -> tuple[list[datetime], list[PredictionReason | None], list[int | None]]:
+def decision_rows(metadata: object) -> tuple[list[datetime], list[PredictionReason | None], list[int | None]]:
     if not isinstance(metadata, pl.DataFrame) or 'datetime' not in metadata.columns:
         raise ValueError('Python Sensor metadata requires a datetime column')
     timestamps = metadata['datetime']
@@ -87,7 +92,7 @@ def _decision_rows(metadata: object) -> tuple[list[datetime], list[PredictionRea
     return cast(list[datetime], timestamps.to_list()), reasons, availability
 
 
-def _output_rows(mapped: object, count: int) -> Sequence[object]:
+def output_rows(mapped: object, count: int) -> Sequence[object]:
     if not isinstance(mapped, Sequence) or isinstance(mapped, (str, bytes)):
         raise ValueError('Python Sensor map_output must return a sequence of pairs')
     rows = cast(Sequence[object], mapped)
@@ -96,7 +101,7 @@ def _output_rows(mapped: object, count: int) -> Sequence[object]:
     return rows
 
 
-def _scalar(value: object) -> int | float:
+def scalar(value: object) -> int | float:
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError('Python Sensor mapped values must be real numeric scalars')
     if isinstance(value, Integral):
@@ -107,15 +112,15 @@ def _scalar(value: object) -> int | float:
     return number
 
 
-def _mapped_values(row: object) -> tuple[int | float | None, float | None, PredictionReason | None]:
+def mapped_values(row: object) -> tuple[int | float | None, float | None, PredictionReason | None]:
     if not isinstance(row, Sequence) or isinstance(row, (str, bytes)):
         return None, None, 'sensor-error'
     pair = cast(Sequence[object], row)
     if len(pair) != _PAIR_SIZE:
         return None, None, 'sensor-error'
     try:
-        prediction = _scalar(pair[0])
-        probability = None if pair[1] is None else float(_scalar(pair[1]))
+        prediction = scalar(pair[0])
+        probability = None if pair[1] is None else float(scalar(pair[1]))
         if probability is not None and not 0 <= probability <= 1:
             raise ValueError('Python Sensor probability must lie in [0, 1]')
     except (ValueError, OverflowError):
@@ -133,13 +138,14 @@ class PythonSensorBase(Generic[HistoryT, StateT, OutputT]):
     state_id: str
     fitting_cutoff: datetime
     selection_cutoff: datetime
+    output_id: str | None = None
     permutation_id: str | None = field(default=None, init=False)
     manifest_id: str | None = field(default=None, init=False)
 
     def __post_init__(self) -> None:
-        params = _construction_params(self.params, self.infer, self.map_output, self.state_id)
-        fitting = _utc_cutoff(self.fitting_cutoff)
-        selection = _utc_cutoff(self.selection_cutoff)
+        params = _construction_params(self.params, self.infer, self.map_output, self.state_id, self.output_id)
+        fitting = utc_cutoff(self.fitting_cutoff)
+        selection = utc_cutoff(self.selection_cutoff)
         if fitting > selection:
             raise ValueError('Python Sensor fitting_cutoff must not exceed selection_cutoff')
         object.__setattr__(self, 'params', params)
@@ -171,8 +177,8 @@ class PythonSensorBase(Generic[HistoryT, StateT, OutputT]):
 
     def predict_all(self, raw_klines: HistoryT) -> list[BarPrediction]:
         metadata, output = self.infer(raw_klines, self.fitted_state, self.params)
-        timestamps, reasons, availability = _decision_rows(metadata)
-        rows = _output_rows(self.map_output(output), len(timestamps))
+        timestamps, reasons, availability = decision_rows(metadata)
+        rows = output_rows(self.map_output(output), len(timestamps))
         results: list[BarPrediction] = []
         for stamp, declared_reason, available, row in zip(timestamps, reasons, availability, rows, strict=True):
             if stamp < self.selection_cutoff:
@@ -180,6 +186,6 @@ class PythonSensorBase(Generic[HistoryT, StateT, OutputT]):
             elif declared_reason is not None:
                 prediction, probability, reason = None, None, declared_reason
             else:
-                prediction, probability, reason = _mapped_values(row)
+                prediction, probability, reason = mapped_values(row)
             results.append(BarPrediction(stamp, prediction, probability, reason, available_at_ns=available))
         return results

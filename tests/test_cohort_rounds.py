@@ -5,13 +5,17 @@ import hashlib
 import json
 import shutil
 from dataclasses import dataclass, replace
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from textwrap import dedent
 from unittest.mock import patch
 
+import numpy as np
 import polars as pl
 import pytest
+from sklearn.linear_model import Ridge
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
 
 from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
@@ -125,13 +129,70 @@ def test_cohort_rejects_python_sensor(cohort_campaigns, source_form):
         map_output=lambda output: output, state_id='caller-composition',
         fitting_cutoff=cutoff, selection_cutoff=cutoff,
     )
-    message = 'Cohort cannot bind Python-origin Sensors; aggregate them in caller code.'
+    message = 'Cohort cannot bind Python-origin Sensors; use Cohort.from_python.'
     with pytest.raises(ValueError, match=f'^{message.replace(".", "[.]")}$'):
         cohort.set_members([first.sensors[0], python_sensor])
     assert cohort.cohort_id is None
     for method in (cohort.predict, cohort.predict_all):
         with pytest.raises(RuntimeError, match='no bound members'):
             method(raw)
+
+
+def test_python_cohort_mixes_compiled_binary_sensor(cohort_campaigns):
+    campaigns, recorded = cohort_campaigns
+    native = campaigns[0].sensors[0]
+    identity = (native.manifest_id, native.permutation_id, native.trade_contract)
+
+    def features(history, params):
+        return history.select(
+            'datetime', (pl.col('close') / pl.col('close').shift(4) - 1).alias('momentum'),
+            (pl.col('datetime').dt.epoch('ns') + 900_000_000_000).alias('available_at_ns'),
+        )
+
+    train = recorded.head(200).with_columns(
+        (pl.col('close') / pl.col('close').shift(4) - 1).alias('momentum'),
+        (pl.col('close').shift(-1) / pl.col('open').shift(-1) - 1).alias('next_return'),
+    ).drop_nulls(['momentum', 'next_return'])
+    fitted = make_pipeline(StandardScaler(), Ridge()).fit(train.select('momentum'), train['next_return'])
+    cutoff = datetime(2025, 1, 6, tzinfo=timezone.utc)
+    python = Sensor.from_model(fitted, prepare=features, selection_cutoff=cutoff, output_id='next_bar_return')
+    for options in ({}, {'selection_cutoff': cutoff}, {'map_output': lambda sensor, bar: (bar.prediction, None), 'mapped_output_id': 'target_exposure'}):
+        with pytest.raises(ValueError):
+            Cohort.from_python([native, python], **options)
+
+    def allocation(sensor, bar):
+        # Native class 0/1 means flat/long; a return forecast becomes signed size.
+        value = bar.prediction if sensor is native else np.tanh(bar.prediction * 10000)
+        return float(value), None
+
+    mixed = Cohort.from_python(
+        [native, python], map_output=allocation, mapped_output_id='target_exposure',
+        selection_cutoff=cutoff,
+    )
+    raw = _after_training(recorded)
+    native_rows, python_rows = native.predict_all(raw), python.predict_all(raw)
+    observed = mixed.predict_all(raw)
+    assert len(observed) == len(native_rows) == len(python_rows)
+    valid = 0
+    for result, compiled_row, python_row in zip(observed, native_rows, python_rows, strict=True):
+        assert result.datetime == compiled_row.datetime == python_row.datetime
+        assert result.available_at_ns is None
+        assert result.trade_contract_digest is None
+        if compiled_row.reason is not None or python_row.reason is not None:
+            assert result.reason is not None
+            assert result.prediction is result.probability is None
+        else:
+            expected = (compiled_row.prediction + np.tanh(python_row.prediction * 10000)) / 2
+            assert result.reason is None and result.probability is None
+            assert result.prediction == pytest.approx(expected, rel=1e-12, abs=1e-12)
+            valid += 1
+    assert valid
+    assert mixed.predict(raw) == observed[-1]
+    assert mixed.members == (native, python)
+    assert mixed.origin == mixed.prediction_mode == 'python'
+    assert mixed.manifest_id is mixed.cohort_id is None
+    assert (native.manifest_id, native.permutation_id, native.trade_contract) == identity
+    assert native.predict_all(raw) == native_rows
 
 
 def _bound(selection, members):

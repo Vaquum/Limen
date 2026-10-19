@@ -1,9 +1,92 @@
 # Cohort
 
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-`Cohort` combines trained Sensors reconstructed from completed experiment artifacts. Select rounds from one experiment with the existing constructor/selectors, or explicitly select rounds across directories with `rounds`. Each Sensor retains its own fitted state and inference guards.
+`Cohort.from_python(selected_sensors)` combines live selected Sensors in one line.
+It preserves the fitted member references and supports mean, binary vote or your
+own aggregation. The artifact-backed constructor remains available below.
 
-`set_members` rejects `origin='python'` Sensors before binding in either source form. Their unrestricted numeric outputs require caller-owned aggregation; see [Python Sensor construction](Trainer.md#python-construction).
+## Python cohorts
+
+```python
+cohort = Cohort.from_python(selected_sensors)
+last = cohort.predict(completed_history)
+batch = cohort.predict_all(completed_history)  # cohort(history) is equivalent
+```
+
+Each member must declare the same explicit non-None `output_id`, for example
+`Sensor.from_model(fitted, selection_cutoff=cutoff, output_id='next_bar_return')`.
+An ID declares compatible target/units; it does not verify them or convert scores.
+See the executable [recorded workflow](Universal-Experiment-Loop.md#direct-python-run)
+and [Sensor controls](Trainer.md#python-construction).
+
+| `Cohort.from_python` argument | Default / contract |
+|---|---|
+| `sensors` | Required nonempty sequence of native Sensors; retained in order |
+| `aggregate` | `'mean'`; `'vote'` or `(Sequence[BarPrediction]) -> (prediction, probability)` |
+| `prepare` | Shared history; optional `(history, sensor) -> member_history` |
+| `map_output` | None; optional `(sensor, bar) -> (prediction, probability)` |
+| `mapped_output_id` | Required common mapped input meaning when a mapper is supplied; rejected without one |
+| `state_id` | Generated UUID; optional nonblank live identifier |
+| `selection_cutoff` | Latest Python member cutoff; supply any additional cohort-selection boundary explicitly |
+
+Mean preserves signed/continuous magnitude and averages probability only when all
+probabilities are known. One-member mean preserves its prediction/probability.
+Vote requires exact numeric 0/1, returns 1 only above a 0.5 mean, resolves ties to
+0 and returns probability None. Nonbinary vote inputs produce sensor-error rows.
+Custom aggregation owns its final numeric meaning; the Cohort has no output-ID
+property. No selector framework or binding tuple is required.
+
+Every member must return identical strictly increasing unique UTC decision
+timestamps and cardinality. There is no truncation, sorting or intersection.
+All-empty batches return []; mixed empty/nonempty batches raise ValueError.
+Any unavailable member blocks that row before output mapping or aggregation,
+with both numeric fields None. Reason priority is inside-training-window,
+sensor-error, null-features, warm-up. Selection masking intentionally dominates
+values on excluded decisions. Availability is the maximum member availability
+when all are known, otherwise None, on blocked and actionable rows alike.
+Callbacks receive detached result copies and cannot alter trusted metadata.
+Invalid aligned numeric pairs become sensor-error; callback exceptions propagate.
+
+An explicit cutoff can only add masking, never remove a member's guard. Omission
+for Python-only cohorts declares no later observations were used to select the
+cohort. Compiled members require `map_output`, `mapped_output_id` and an explicit
+selection cutoff because they expose no public selection boundary. Declare the
+latest actual selection observation, including any compiled test interval used
+for selection. The mapper must actually convert compatible units/targets; an ID
+alone cannot relabel raw scores. Signed compiled Sensors retain their original
+trade contracts, while the Python aggregate carries no compiled proof.
+Base-bar members can share the same history directly; resampled/formed members
+need `prepare` to produce matching decision bars. A compiled caught failure with
+no timestamps raises an alignment ValueError naming its position and identity.
+
+Membership is immutable: `set_members` raises TypeError. Duplicate objects,
+Python state IDs or known compiled `(manifest_id, permutation_id)` pairs reject.
+The native Python Cohort exposes `origin='python'`, `prediction_mode='python'`,
+`state_id`, `selection_cutoff` and `members`; `manifest_id`/`cohort_id` are None.
+Compiled-only `member_ids`, `aggregation_mode`, `architecture_id`, `permutation_ids`,
+`available_permutation_ids`, `supports_probabilities`, `metadata`, `experiment_id`,
+`experiment_dir` and `source_metadata` are absent (AttributeError).
+Every result has `trade_contract_digest=None`. Live Python objects have no saved
+reconstruction, Trainer replay or protected final-holdout evidence;
+`freeze_holdout_selection` rejects both Python Sensors and Python Cohorts.
+Each call performs batch alignment/result work plus member/callback cost; retain
+required history context when trimming completed prefixes.
+
+| Behavior | Compiled Cohort | Python Cohort |
+|---|---|---|
+| Numeric aggregation | Probability/majority class threshold | Mean, exact binary vote or custom function |
+| Member sensor-error | Exclude failed members when others remain | Block the row; never drop a member |
+| Availability | None | Maximum when all known, otherwise None |
+| Exceptions | Existing catch-and-degrade policy | Callback errors propagate; unalignable compiled failures raise |
+| Identity | Bound artifact lineage | Caller-owned live state, no compiled identity |
+
+## Compiled cohorts
+
+The remaining construction, selector, binding and aggregation sections describe
+the artifact-backed path. New runs use compressed round artifacts; existing
+JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
+`Cohort` reconstructs no models itself: select rounds and bind Sensors returned
+by Trainer. Compiled `set_members` rejects Python-origin Sensors with advice to
+use `Cohort.from_python`.
 
 ## What this page covers
 

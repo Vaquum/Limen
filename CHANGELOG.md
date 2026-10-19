@@ -1748,3 +1748,9 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.39.0] - 2026-10-19
 
 - Add explicit frozen fitted-selection assessment on reserved final observations with durable exposure attempts, causal member predictions, declared snapshot economics and verified retained evidence.
+
+## [5.40.0] - 2026-10-19
+
+- Add `Sensor.from_model` with fitted-model defaults and optional preparation, prediction and mapping hooks.
+- Add `Cohort.from_python` for live selected Sensors with mean, binary vote or custom aggregation, explicit output compatibility and preserved guards/availability.
+- Reuse evaluated fitted models in the recorded Python workflow without refitting.

@@ -68,7 +68,7 @@ Choose the route that fits how you define the experiment:
 
 Both routes use the Universal Experiment Loop (UEL) to execute rounds and the Mutable Search Queue (MSQ) to control parameter search. CLI saves an experiment directory automatically; Python callers enable persistence with `experiment_dir`. Adaptive feedback is optional in both routes.
 
-Python callers can pass selected fitted state directly to `Sensor.from_python`, without a Manifest. The [recorded Python/MSQ example](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run) covers search, caller selection, refitting and repeated inference; the [Sensor API](https://docs.vaquum.fi/limen/guides/trainer#python-construction) defines its boundary. Python declarations do not carry compiled reconstruction or protected holdout evidence.
+Python callers can wrap retained fitted models with `Sensor.from_model(fitted, selection_cutoff=cutoff, output_id="next_bar_return")` and combine selected Sensors with `Cohort.from_python(sensors)`. Defaults provide prediction and equal-weight aggregation; optional functions customize preparation, prediction, mapping and aggregation. `Sensor.from_python` retains arbitrary Python state/history support. The [recorded Python/MSQ example](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run) covers search, selection of the exact evaluated models and repeated inference without refitting; the [Sensor API](https://docs.vaquum.fi/limen/guides/trainer#python-construction) defines its boundary. Python declarations do not carry compiled reconstruction or protected holdout evidence.
 
 ## First Experiment
 

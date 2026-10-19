@@ -87,16 +87,16 @@ Post-processing retains:
 
 ### Promote caller-owned fitted state
 
-`Sensor.from_python` completes the custom Python route without a Manifest or
-Trainer reconstruction. This example requires a repository checkout: the recorded
+Promote evaluated fitted models with `Sensor.from_model`, then compose them with
+`Cohort.from_python(selected_sensors)`. This example requires a repository checkout: the recorded
 fixture is not included in the wheel. Save the following block as a Python file
 and run it from the checkout root.
 
 The caller defines one-bar trades: a decision at bar `t` enters at the next open
 and exits at that bar's close, with a declared 2 bp total round-trip cost. Search
 sees only the first 1,440 bars. It selects the best validation return per window,
-breaking ties by alpha, then refits those two members on the original training
-partition. The live callback averages their forecasts in basis points.
+breaking ties by alpha, then reuses those exact evaluated models. The native
+Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
 <!-- python-sensor-example -->
 ```python
@@ -110,7 +110,7 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-from limen import Sensor, UniversalExperimentLoop
+from limen import Cohort, Sensor, UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy
 
@@ -138,7 +138,7 @@ def prep(bars, round_params):
 
 def fit(train, round_params):
     return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
-        train.select("momentum").to_numpy(), train["next_return"].to_numpy()
+        train.select("momentum"), train["next_return"].to_numpy()
     )
 
 
@@ -148,48 +148,31 @@ def backtest(validation, forecasts):
     return float(np.mean(net))
 
 
-def model(data, round_params):
-    fitted = fit(data["train"], round_params)
-    forecasts = fitted.predict(data["validation"].select("momentum").to_numpy())
-    return {"validation_net_return": backtest(data["validation"], forecasts)}
-
-
-def infer(history, fitted_members, params):
-    # Each member uses the same decision timestamps; any unavailable member blocks.
-    inputs = [features(history, p["window"])["momentum"].to_numpy()
-              for p, fitted in fitted_members]
-    ready = np.column_stack([np.isfinite(values) for values in inputs]).all(axis=1)
-    warmup = max(p["window"] for p, fitted in fitted_members)
-    reasons = [None if valid else ("warm-up" if i < warmup else "null-features")
-               for i, valid in enumerate(ready)]
-    scores = [None] * len(history)
-    if ready.any():
-        forecasts = np.mean([
-            fitted.predict(values[ready].reshape(-1, 1))
-            for values, (p, fitted) in zip(inputs, fitted_members, strict=True)
-        ], axis=0)
-        for i, forecast in zip(np.flatnonzero(ready), forecasts, strict=True):
-            scores[i] = float(forecast * 10000)
-    metadata = history.select("datetime").with_columns(
-        pl.Series("reason", reasons, dtype=pl.String),
+def prepare_live(history, params):
+    return features(history, params["window"]).with_columns(
         (pl.col("datetime").dt.epoch("ns") + 900_000_000_000).alias("available_at_ns"),
     )
-    return metadata, scores
-
-
-def map_output(scores):
-    return [(score, None) for score in scores]
 
 
 def run_research(bars, experiment_name):
     research = bars[:1440]
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
+    retained = {}
+
+    def model(data, round_params):
+        fitted = fit(data["train"], round_params)
+        forecasts = fitted.predict(data["validation"].select("momentum"))
+        score = backtest(data["validation"], forecasts)
+        retained[(round_params["window"], round_params["alpha"])] = fitted
+        return {"validation_net_return": score}
+
     sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
     uel = UniversalExperimentLoop(
         data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
     )
     # An absolute filename stem writes only this CSV; no persisted round artifacts.
-    uel.run(experiment_name, n_permutations=4, post_processing=False, progress_bar=False)
+    uel.run(experiment_name, n_permutations=4, workers=1,
+            post_processing=False, progress_bar=False)
     selected = (
         uel.experiment_log.sort(
             ["window", "validation_net_return", "alpha"],
@@ -197,13 +180,14 @@ def run_research(bars, experiment_name):
         ).unique(subset="window", keep="first", maintain_order=True)
         .select("window", "alpha").to_dicts()
     )
-    fitted_members = [(p, fit(prep(research, p)["train"], p)) for p in selected]
-    sensor = Sensor.from_python(
-        fitted_state=fitted_members, params={}, infer=infer, map_output=map_output,
-        state_id="recorded-ridge-cohort", fitting_cutoff=bars["datetime"][960],
-        selection_cutoff=bars["datetime"][1440],
-    )
-    return sensor, uel, selected, fitted_members
+    sensors = [
+        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
+                          params=p, fitting_cutoff=bars["datetime"][960],
+                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
+        for p in selected
+    ]
+    cohort = Cohort.from_python(sensors)
+    return cohort, uel, selected, retained
 
 
 if __name__ == "__main__":
@@ -211,11 +195,11 @@ if __name__ == "__main__":
         "tests/fixtures/spot_15m_20250101_20250531.parquet", n_rows=1920
     )
     with TemporaryDirectory() as directory:
-        sensor, uel, selected, fitted_members = run_research(
+        cohort, uel, selected, retained = run_research(
             bars, str(Path(directory) / "python-research")
         )
         # Twelve prior bars supply context for all 480 held-out decisions.
-        predictions = sensor.predict_all(bars[1428:1920])
+        predictions = cohort.predict_all(bars[1428:1920])
         print(predictions[-1])
 ```
 
@@ -224,17 +208,20 @@ Each partition loses twelve warm-up rows and its final forward-label row:
 prior completed context, so its first held-out bar can already be actionable;
 the partition backtest is not the live Sensor's decision population.
 
-The caller owns fitted state by reference and must stop fitting it before use.
-Refitting is a new fit: the recorded test checks its metric parity, without
-Trainer replay, compiled identity or protected final-holdout evidence. The
-callback declares its timestamps, availability and causal preparation. Sensor
-validates their contract; it cannot prove arbitrary Python methodology.
+The model callback keeps its fitted objects in ordinary caller-owned memory;
+UEL retains no models with `post_processing=False`. Selection and inference reuse
+those objects, including fitted preprocessing. No selected model is refitted.
+The model's recorded feature names select `momentum`, while preparation declares
+the known 15-minute bar availability. Output IDs declare compatible units; they
+perform no conversion or methodological proof. This live route adds no Trainer
+replay, compiled identity or protected final-holdout evidence.
 
 `predict(history)` repeats the same computation as `predict_all(history)` and
-returns its final result. Its cost is O(n) in supplied history; pass only the
-completed context your callback needs. See [Sensor](Trainer.md#sensor) for the
-construction, mapping and error contracts. Native Cohort refuses Python-origin
-Sensors; keep custom selection and aggregation in caller code as above.
+returns its final result. Its cost includes O(n) metadata work plus member
+prediction; preserve the completed context your preparation needs. See
+[Sensor](Trainer.md#sensor) for convenience and arbitrary Python construction,
+and [Cohort](Cohort.md) for custom aggregation and member-input/output mapping.
+Compiled artifact binding remains a separate construction path.
 
 ## Constructor contract
 

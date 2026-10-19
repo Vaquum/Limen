@@ -1,7 +1,7 @@
 from limen.experiment import _round_storage as _storage
 from pathlib import Path
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from typing import ClassVar
 from unittest.mock import patch
@@ -276,15 +276,22 @@ def yaml_experiment(tmp_path_factory):
     return next(tmp_path.rglob('metadata.json')).parent
 
 
-def test_trainer_sensor_preserve_signed_exposure(yaml_experiment):
+@pytest.fixture(scope='module')
+def trained_signed_sensors(yaml_experiment):
+    from limen.inference import Trainer
+
+    trainer = Trainer(yaml_experiment, data=recorded_source(limit=200))
+    ids = pl.read_csv(yaml_experiment / 'results.csv')['id'].to_list()
+    return trainer, ids, trainer.train(ids)
+
+
+def test_trainer_sensor_preserve_signed_exposure(yaml_experiment, trained_signed_sensors):
     from limen.inference import Trainer, ReconstructionError
     from limen.cohort import Cohort
 
     directory = yaml_experiment
-    trainer = Trainer(directory, data=recorded_source(limit=200))
-    ids = list(trainer._round_data)
+    trainer, ids, sensors = trained_signed_sensors
     assert len(ids) == 2
-    sensors = trainer.train(ids)
     for sensor, identity in zip(sensors, ids, strict=True):
         stored = trainer._round_data[identity]
         assert sensor.prediction_mode == 'target_exposure'
@@ -322,6 +329,67 @@ def test_trainer_sensor_preserve_signed_exposure(yaml_experiment):
         changed.train([ids[0]])
     code = 'from pathlib import Path; from limen.inference import Trainer; from tests.test_direction_sizing import recorded_source; t=Trainer(Path(__import__("sys").argv[1]),data=recorded_source(limit=200)); assert t.train([next(iter(t._round_data))])[0].prediction_mode == "target_exposure"'
     subprocess.run([sys.executable, '-c', code, str(directory)], check=True)
+
+
+def test_python_cohort_mixes_signed_sensor(trained_signed_sensors):
+    from sklearn.linear_model import Ridge
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    from limen import Cohort, Sensor
+
+    _, _, sensors = trained_signed_sensors
+    native = sensors[0]
+    identity = (native.manifest_id, native.permutation_id, native.trade_contract)
+    source = recorded_source(limit=384)
+    train = source.head(200).with_columns(
+        (pl.col('close') / pl.col('close').shift(4) - 1).alias('momentum'),
+        (pl.col('close').shift(-1) / pl.col('open').shift(-1) - 1).alias('next_return'),
+    ).drop_nulls(['momentum', 'next_return'])
+    fitted = make_pipeline(StandardScaler(), Ridge()).fit(train.select('momentum'), train['next_return'])
+
+    def prepare(history, params):
+        return history.select(
+            'datetime', (pl.col('close') / pl.col('close').shift(4) - 1).alias('momentum'),
+            (pl.col('datetime').dt.epoch('ns') + 900_000_000_000).alias('available_at_ns'),
+        )
+
+    cutoff = datetime(2025, 1, 4, tzinfo=timezone.utc)
+    python = Sensor.from_model(fitted, prepare=prepare, selection_cutoff=cutoff, output_id='next_bar_return')
+
+    def exposure(sensor, bar):
+        value = bar.prediction if sensor is native else np.tanh(bar.prediction * 10000)
+        return float(value), None
+
+    cohort = Cohort.from_python(
+        [native, python], map_output=exposure, mapped_output_id='target_exposure',
+        selection_cutoff=cutoff,
+    )
+    native_rows, python_rows = native.predict_all(source), python.predict_all(source)
+    rows = cohort.predict_all(source)
+    valid = []
+    for result, compiled_row, python_row in zip(rows, native_rows, python_rows, strict=True):
+        assert result.datetime == compiled_row.datetime == python_row.datetime
+        assert result.trade_contract_digest is None
+        if result.datetime < cutoff:
+            assert result.reason == 'inside-training-window'
+            assert result.prediction is result.probability is None
+        elif compiled_row.reason is not None or python_row.reason is not None:
+            assert result.reason is not None
+            assert result.prediction is result.probability is None
+        else:
+            expected = (compiled_row.prediction + np.tanh(python_row.prediction * 10000)) / 2
+            assert result.prediction == pytest.approx(expected, rel=1e-12, abs=1e-12)
+            assert result.reason is None and result.probability is None
+            assert compiled_row.trade_contract_digest is not None
+            assert result.available_at_ns == compiled_row.available_at_ns == python_row.available_at_ns
+            valid.append(result)
+    assert valid and any(row.prediction not in (0, 1) for row in valid)
+    assert cohort.predict(source) == rows[-1]
+    assert cohort.members == (native, python)
+    assert cohort.origin == 'python' and cohort.prediction_mode == 'python'
+    assert cohort.manifest_id is cohort.cohort_id is None
+    assert (native.manifest_id, native.permutation_id, native.trade_contract) == identity
+    assert native.predict_all(source) == native_rows
 
 
 def test_inline_log_and_exported_contract_agree(yaml_experiment):

@@ -2,21 +2,19 @@ import limen.experiment._round_storage as _storage
 import hashlib
 import json
 import logging
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from datetime import datetime
 from pathlib import Path
-from typing import Any
-from typing import ClassVar
-from typing import cast
+from typing import Any, ClassVar, cast
 
 import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.cohort.sfc import BUILTIN_SELECTORS
-from limen.cohort.sfc import Selector
+from limen.cohort.sfc import BUILTIN_SELECTORS, Selector
 from limen.cohort._round_sources import RoundSources
-from limen.inference.sensor import BarPrediction
-from limen.inference.sensor import PredictionReason
+from limen.inference.sensor import BarPrediction, PredictionReason, Sensor
+from limen.cohort._python_cohort import Aggregate, CohortMap, CohortPrepare, HistoryT, PythonCohortBase, cohort_fields
 from limen.yaml.config import is_mapping
 from limen.yaml.store import SHA256_PREFIX
 
@@ -27,21 +25,9 @@ class Cohort:
     Combine explicitly selected, reconstructed sensors for inference.
     '''
 
-    _PROBABILITY_CAPABLE_HINTS = (
-        'logreg',
-        'tabpfn',
-        'random_binary',
-        'random forest',
-        'random_forest',
-        'lightgbm',
-        'lgbm',
-        'ridge',
-        'svm',
-        'hmm',
-        'garch',
-        'lstm',
-        'cnn',
-    )
+    _PROBABILITY_CAPABLE_HINTS = ('logreg', 'tabpfn', 'random_binary', 'random forest', 'random_forest', 'lightgbm',
+                                'lgbm', 'ridge', 'svm', 'hmm', 'garch', 'lstm', 'cnn',
+                                )
     _VOTE_THRESHOLD = 0.5
     _REASON_PRIORITY: ClassVar[dict[PredictionReason, int]] = {
         'inside-training-window': 2,
@@ -52,6 +38,11 @@ class Cohort:
     _logger = logging.getLogger(__name__)
     member_ids: list[tuple[str | None, str]]
     architecture_id: str
+
+    @staticmethod
+    def from_python(sensors: Sequence[Sensor], *, aggregate: Aggregate = 'mean', prepare: CohortPrepare[HistoryT] | None = None, map_output: CohortMap | None = None, mapped_output_id: str | None = None, state_id: str | None = None, selection_cutoff: datetime | None = None) -> '_PythonCohort[HistoryT]':
+        members, identity, cutoff = cohort_fields(sensors, aggregate, prepare, map_output, mapped_output_id, state_id, selection_cutoff)
+        return _PythonCohort(members, identity, cutoff, aggregate, prepare, map_output)
 
     def __init__(self,
                  *,
@@ -199,7 +190,7 @@ class Cohort:
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
         if any(getattr(member, 'origin', None) == 'python' for member in members):
-            raise ValueError('Cohort cannot bind Python-origin Sensors; aggregate them in caller code.')
+            raise ValueError('Cohort cannot bind Python-origin Sensors; use Cohort.from_python.')
 
         if self._round_sources is not None:
             bound = self._round_sources.bind(members)
@@ -606,3 +597,7 @@ class Cohort:
             )
 
         return unique_matches[0]
+
+
+class _PythonCohort(PythonCohortBase[HistoryT], Cohort):
+    '''Native Cohort over caller-owned live Sensors.'''
