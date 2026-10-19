@@ -44,5 +44,50 @@
     "docs/Research-Book.md",
     "docs/examples/python-research/README.md",
     "docs/examples/compiled-research/README.md"
-  ]
+  ],
+  "model_families": {
+    "logreg_binary": {
+      "interface": "compiled",
+      "scenario": "selection",
+      "configuration": "docs/examples/compiled-research/selection.yaml"
+    },
+    "lightgbm_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/factorized.yaml"
+    },
+    "rule_based": {
+      "interface": "compiled",
+      "scenario": "execution",
+      "configuration": "docs/examples/compiled-research/execution.yaml"
+    },
+    "ridge_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_ridge_regressor.yaml"
+    },
+    "dlinear_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_dlinear_regressor.yaml"
+    },
+    "xgboost_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_xgboost_regressor.yaml"
+    },
+    "random_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_random_binary.yaml"
+    },
+    "direction_sizing": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_direction_sizing.yaml"
+    },
+    "tabpfn_binary": {
+      "unproved": "https://github.com/Vaquum/Limen/issues/628"
+    }
+  }
 }

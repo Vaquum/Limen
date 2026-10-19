@@ -6,6 +6,7 @@ from pathlib import Path
 import signal
 import subprocess
 
+import numpy as np
 import polars as pl
 from ruamel.yaml import YAML
 
@@ -55,8 +56,29 @@ def search(data_dir, output):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
         results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'seed': 42}
+    return {'runs': results, 'seed': 42, 'families': model_comparisons(data_dir, output / 'families')}
 # endregion search
+
+
+# region model_comparisons
+def model_comparisons(data_dir, output):
+    families = {}
+    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'):
+        config = configuration('family_' + family, data_dir)
+        # This diagnostic baseline uses NumPy's caller-owned process RNG.
+        if family == 'random_binary':
+            np.random.seed(42)
+        directory = output / family
+        loop = execute(config, directory)
+        log = research_project.completed_log(loop)
+        with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
+            records = [json.loads(line) for line in stream]
+        metric = 'direction_accuracy' if family == 'direction_sizing' else 'accuracy' if family == 'random_binary' else 'rmse'
+        selected = log['id'].head(1).to_list()
+        sensors = [] if family == 'random_binary' else Trainer(directory).train(selected)
+        families[family] = {'metrics': log.select('id', metric).to_dicts(), 'records': records, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
+    return families
+# endregion model_comparisons
 
 
 # region recovery

@@ -1,0 +1,68 @@
+schema_version: '1.0'
+metadata:
+  name: book_direction_sizing
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: outcome
+      class: limen.targets.TradeOutcomeTarget
+    backtest:
+      prediction_mode: target_exposure
+      product:
+        kind: linear_perpetual
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-09
+        min_notional: 0
+      source_interval_seconds: 900
+      fee_bps: 1
+      slip_bps: 0
+      max_holding_seconds: 1800
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.direction_sizing
+  params:
+    direction_params:
+    - max_iter: 1000
+      C: 0.5
+    sizing_params:
+    - alpha: 1.0
+    conditional_size:
+    - false
+    - true
+    folds:
+    - 3
+    min_train_samples:
+    - 2
+    seed:
+    - 42
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true

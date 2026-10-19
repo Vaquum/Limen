@@ -40,6 +40,31 @@ def verify(interface, name, result, output, inputs):
                     identities.append({row['C']: row['id'] for row in rows})
         if identities:
             assert all(identity == identities[0] for identity in identities)
+        if interface == 'compiled':
+            assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'}
+            raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')
+            labels = raw.with_columns(((pl.col('close').shift(-1)/pl.col('close')-1)*100).alias('next_return'))
+            for family, observed in result['families'].items():
+                expected_rounds = 2 if family == 'direction_sizing' else 1
+                assert len(observed['records']) == len(observed['metrics']) == expected_rounds
+                assert observed['reconstructed_sensors'] == (0 if family == 'random_binary' else 1)
+                by_id = {record['round_id']: record for record in observed['records']}
+                assert len(by_id) == expected_rounds
+                for metric in observed['metrics']:
+                    record = by_id[metric['id']]
+                    predictions = np.asarray(record['preds'], dtype=float)
+                    assert metric['id'] == record['round_id'] and predictions.size > 300 and np.isfinite(predictions).all()
+                    if family.endswith('_regressor'):
+                        alignment = record['alignment']
+                        rows = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))
+                        assert rows.height == predictions.size
+                        expected_rmse = float(np.sqrt(np.mean((predictions-rows['next_return'].to_numpy())**2)))
+                        assert metric['rmse'] == pytest.approx(expected_rmse, rel=1e-10, abs=1e-10)
+                    elif family == 'random_binary':
+                        assert set(predictions) == {0, 1} and 0 <= metric['accuracy'] <= 1
+                    else:
+                        assert np.abs(predictions).max() <= 1 and 0 <= metric['direction_accuracy'] <= 1
+                        assert len(record['trade_contract_digest']) == 64 and record['learning_binding']
     elif name == 'recovery':
         assert result['interrupted_rounds'] == 2 and result['rounds'] == 4
         assert result['round_indices'] == [0, 1, 2, 3]

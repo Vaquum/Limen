@@ -34,6 +34,8 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 
 Factorized search uses the admitted deterministic LightGBM grid with independent fee and tree-count axes. The ordinary search modes use logistic regression; these are different declared comparisons. The walk-forward scenario reconstructs qualified folds and binds their complete identities into a Cohort. `allocation` adds batch meta-allocation with completed-opportunity training; it makes no live-promotion or recovery claim.
 
+Search also runs Ridge, DLinear and XGBoost on next-close returns, a random binary diagnostic baseline, and direction/sizing with both independent and conditional sizing. Each has a separate `family_*.yaml` definition. The regressors share recorded rows and the current return and five past returns; their RMSE is checked against the retained predictions and independently calculated labels. This is an execution comparison, not evidence of trading performance. Direction/sizing uses completed trade outcomes and signed exposure under its declared execution contract; Trainer reconstructs the selected round. The random baseline uses the driver's visible NumPy seed and makes no Trainer replay claim.
+
 The holdout scenario creates a separate Git project, reserves its final window before research, freezes selected fitted state and retains the final report. Local recorded files leave earlier exposure unknown. Preserve its project marker, history and assessment artifacts together.
 
 Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).

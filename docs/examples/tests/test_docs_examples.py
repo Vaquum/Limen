@@ -54,6 +54,20 @@ def test_missing_catalogue_scenario_fails():
         validate_scenarios(records, catalogue)
 
 
+def test_public_model_catalogue_requires_every_export():
+    from check_evidence import validate_model_catalogue
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    validate_model_catalogue(ROOT, catalogue)
+    changed = copy.deepcopy(catalogue)
+    del changed['model_families']['ridge_regressor']
+    with pytest.raises(ValueError, match='catalogue is incomplete'):
+        validate_model_catalogue(ROOT, changed)
+    changed = copy.deepcopy(catalogue)
+    changed['model_families']['ridge_regressor']['configuration'] = 'docs/examples/compiled-research/selection.yaml'
+    with pytest.raises(ValueError, match='definition differs'):
+        validate_model_catalogue(ROOT, changed)
+
+
 def test_observed_outputs_and_tolerances_are_explicit(tmp_path):
     from check_evidence import compare_output, output_bindings
     assert {item['interface'] for item in output_bindings(ROOT, ROOT / 'docs/Research-Book.md')} == {'python', 'compiled'}

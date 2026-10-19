@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import math
@@ -147,13 +148,34 @@ def validate_scenarios(records, catalogue) -> None:
         raise ValueError('Research scenario lacks successful semantic proof')
 
 
+def validate_model_catalogue(root, catalogue) -> None:
+    module = ast.parse((root / 'limen/sfd/reference_architecture/__init__.py').read_text())
+    exports = next(ast.literal_eval(node.value) for node in module.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == '__all__' for target in node.targets))
+    if set(catalogue['model_families']) != {name for name in exports if name[0].islower()}:
+        raise ValueError('Public model catalogue is incomplete')
+    for family, entry in catalogue['model_families'].items():
+        if 'unproved' in entry:
+            if entry['unproved'] not in catalogue['unproved'].values():
+                raise ValueError('Unproved model has no tracked execution boundary')
+            continue
+        if entry['interface'] not in catalogue['required_scenarios'][entry['scenario']]:
+            raise ValueError('Model has no required interface scenario')
+        source = root / entry['configuration']
+        if not source.resolve().is_relative_to((root / 'docs/examples/compiled-research').resolve()) or not source.is_file():
+            raise ValueError('Missing canonical model definition')
+        if 'limen.sfd.reference_architecture.' + family not in source.read_text():
+            raise ValueError('Model definition differs from the public catalogue')
+
+
 def validate_evidence(record, root: Path, *, head: str, tree: str, version: str) -> None:
     schema = json.loads((root / 'docs/examples/evidence.schema.json').read_text())
     validate_shape(record, schema)
     catalogue = root / 'docs/examples/catalogue.json'
     if record['validation']['catalogue_sha256'] != digest(catalogue.read_bytes()):
         raise ValueError('Wrong research catalogue identity')
-    validate_scenarios(record['validation']['scenarios'], json.loads(catalogue.read_text()))
+    catalogue_data = json.loads(catalogue.read_text())
+    validate_scenarios(record['validation']['scenarios'], catalogue_data)
+    validate_model_catalogue(root, catalogue_data)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:
