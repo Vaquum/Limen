@@ -139,7 +139,7 @@ class MetaAllocationModel(ReferenceModel):
         if self.include_primary_proba:
             import polars as pl
             probability = np.asarray(primary.get('_probs'), dtype=np.float64)
-            if probability.shape != decisions.shape or not np.isfinite(probability).all():
+            if probability.shape != decisions.shape or not np.isfinite(probability).all() or ((probability < 0) | (probability > 1)).any():
                 raise ValueError('Original primary probabilities are unavailable or malformed')
             features = features.with_columns(pl.Series('primary_probability', probability))
         x = features.select(self.feature_names).to_numpy().astype(np.float64)
@@ -147,7 +147,7 @@ class MetaAllocationModel(ReferenceModel):
             raise ValueError('Meta inference features must be finite')
         x = self.scaler.transform(x)
         probabilities = np.asarray(self.probability_model.predict_proba(x), dtype=np.float64)
-        if probabilities.shape != (len(decisions), 2) or not np.isfinite(probabilities).all() or not np.allclose(probabilities.sum(axis=1), 1):
+        if probabilities.shape != (len(decisions), 2) or not np.isfinite(probabilities).all() or ((probabilities < 0) | (probabilities > 1)).any() or not np.allclose(probabilities.sum(axis=1), 1):
             raise ValueError('Malformed take probabilities')
         gains = component_predict(self.sizing_model, x)
         exposure = np.zeros(len(decisions), dtype=np.float64)

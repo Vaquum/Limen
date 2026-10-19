@@ -221,3 +221,16 @@ def test_primary_fitting_excludes_later_batch_evidence():
     expected = model.predict({'allocation_batch': batch})['_preds']
     with patch.object(model.primary, 'predict', side_effect=AssertionError('Bound batch must not reevaluate a mutable primary')):
         np.testing.assert_array_equal(model.predict({'allocation_batch': batch})['_preds'], expected)
+
+
+def test_component_probabilities_reject_invalid_nonentry_values():
+    from unittest.mock import patch
+    manifest, _, params, data = _prepared()
+    model = manifest.run_model(data, params)['_model']
+    batch = data['_allocation_batches']['test']
+    primary = model.primary.predict(dict(batch.primary_inputs))['_preds']
+    flat = np.flatnonzero(primary == 0)[0]
+    probabilities = np.full((len(primary), 2), 0.5)
+    probabilities[flat] = [-0.1, 1.1]
+    with patch.object(model.probability_model, 'predict_proba', return_value=probabilities), pytest.raises(ValueError, match='Malformed take probabilities'):
+        model._compose(batch)

@@ -130,7 +130,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             raise ValueError('OOF primary must emit aligned binary decisions')
         if include_primary_proba:
             probabilities = np.asarray(prediction.get('_probs'), dtype=np.float64)
-            if probabilities.shape != decisions.shape or not np.isfinite(probabilities).all():
+            if probabilities.shape != decisions.shape or not np.isfinite(probabilities).all() or ((probabilities < 0) | (probabilities > 1)).any():
                 raise ValueError('OOF primary probabilities must be finite and aligned')
             meta = meta.with_columns(pl.Series('primary_probability', probabilities))
         membership = frame['datetime'].dt.epoch('ns').to_list()
