@@ -16,7 +16,7 @@ def base_revision(root):
 
 
 def latest_change(root, base, path):
-    commit = git(root, 'log', '--first-parent', '--diff-merges=first-parent', '-1', '--format=%H', base, '--', path)
+    commit = git(root, 'log', '--first-parent', '--diff-merges=first-parent', '--no-patch', '-1', '--format=%H', base, '--', path)
     if not commit:
         raise ValueError('No first-parent source change: ' + path)
     return commit

@@ -57,3 +57,8 @@ uel:
   output_format: csv
   checkpoint_interval: 1
   prep_each_round: true
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
