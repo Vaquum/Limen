@@ -1,5 +1,27 @@
 {
-  "include": ["*.py", "python-research", "compiled-research", "tests"],
+  "include": [
+    "*.py",
+    "python-research",
+    "compiled-research",
+    "tests"
+  ],
   "typeCheckingMode": "basic",
-  "pythonVersion": "3.10"
+  "pythonVersion": "3.10",
+  "executionEnvironments": [
+    {
+      "root": "python-research"
+    },
+    {
+      "root": "compiled-research"
+    },
+    {
+      "root": "tests",
+      "extraPaths": [
+        "."
+      ]
+    },
+    {
+      "root": "."
+    }
+  ]
 }

@@ -87,7 +87,6 @@ def pytest_runtest_logreport(report):
 def pytest_sessionfinish(session, exitstatus):
     if exitstatus != 0 or PROOF not in session.config.stash or not REPORTS or any(outcome != 'passed' for _, outcome in REPORTS):
         return
-    import hashlib
     import json
     import os
     import platform

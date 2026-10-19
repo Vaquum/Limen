@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from check_evidence import bindings, region, validate_evidence, validate_shape
+from check_evidence import bindings, validate_shape
 
 ROOT = Path(__file__).resolve().parents[3]
 
