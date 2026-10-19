@@ -1,6 +1,6 @@
 # `limen.inference`
 
-> Replay selected experiment rounds into validated models and run them bar-by-bar at inference time.
+> Reconstruct compiled experiment rounds or wrap caller-owned Python fitted state for inference.
 
 ## Canonical docs
 
@@ -9,6 +9,7 @@
 ## What this package owns
 
 Owns the reconstruction-and-inference path: replaying a selected permutation from a completed experiment, validating it against the original log, and wrapping it as a live `Sensor`.
+Also owns explicit `Sensor.from_python` construction without a Manifest. Caller callbacks own preparation, prediction and aggregation; their declarations are distinct from compiled evidence.
 Does **not** own experiment search execution (owned by `limen.experiment`) or the reference model implementations it reuses (owned by `limen.sfd.reference_architecture`).
 
 ## Key entry points
@@ -16,14 +17,14 @@ Does **not** own experiment search execution (owned by `limen.experiment`) or th
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
 | `Trainer` | Replay selected permutations from a completed YAML experiment | Re-runs `prepare_data()`/`run_model()` with the original split and compares metrics to the log |
-| `Sensor` | Inference wrapper around a trained YAML model | Predicts one bar at a time for live use |
+| `Sensor` | Native inference over compiled or live Python fitted state | `from_python` accepts arbitrary caller state and history through explicit inference/output callbacks |
 | `BarPrediction` | Result of a single-bar prediction | Carries `prediction`, `probability`, and a `reason` |
 | `ReconstructionError` | Raised when metric validation deviates beyond tolerance | Signals a permutation could not be faithfully rebuilt |
 
 ## Adjacent modules
 
 - `limen.experiment` produces the experiment logs and artifacts `Trainer` reconstructs. It does not re-export inference names; import them from `limen.inference` or top-level `limen`.
-- `limen.sfd.reference_architecture.ReferenceModel` is the model type a `Sensor` wraps.
+- `limen.sfd.reference_architecture.ReferenceModel` is the compiled Sensor model contract; Python construction does not require inheritance.
 - `limen.yaml.compiler.CompiledSFD` supplies the compiled manifest used during reconstruction.
 
 ## Quick orientation
@@ -31,7 +32,8 @@ Does **not** own experiment search execution (owned by `limen.experiment`) or th
 ```text
 inference/
 ├── trainer.py   # Trainer: reconstruct and validate a permutation
-├── sensor.py    # Sensor + BarPrediction: live bar-by-bar prediction
+├── sensor.py    # Sensor entry points and BarPrediction re-export
+├── _python_sensor.py  # Python construction contract and shared result
 └── errors.py    # ReconstructionError
 ```
 
@@ -40,6 +42,7 @@ inference/
 - `Trainer` validates by re-running the manifest and comparing metrics to the original log; a deviation past tolerance raises `ReconstructionError` rather than returning a mismatched model.
 - Metric comparison uses a float tolerance (with a wider tolerance for stochastic models), and a fixed set of bookkeeping columns (`id`, `execution_time`, …) is skipped during comparison.
 - `BarPrediction.reason` explains a `None` prediction (`'warm-up'`, `'inside-training-window'`, `'null-features'`, `'sensor-error'`) — a null prediction is expected during warm-up, not an error.
+- Python callback/adapter failures raise; invalid aligned values become `sensor-error`. Native Cohort rejects Python-origin members. See the [Python contract](../../docs/Trainer.md#python-construction) and [recorded workflow](../../docs/Universal-Experiment-Loop.md#direct-python-run).
 
 ## Read next
 

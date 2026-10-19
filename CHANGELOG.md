@@ -1739,3 +1739,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.37.0] - 2026-10-19
 
 - Add project final-window reservations, native research exclusion and recorded experiment, refit and replay provenance.
+
+## [5.38.0] - 2026-10-19
+
+- Add explicit Python fitted-state Sensor construction with caller inference and output mapping, temporal guards and recorded-data proof.
+- Reject Python-origin Sensors at native Cohort admission; retain caller-owned aggregation and compiled reconstruction guarantees.
