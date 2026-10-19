@@ -24,7 +24,7 @@ class SetupManifest(Protocol):
 
 def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame],
                          pairs: list[tuple[list[datetime] | list[int], pl.DataFrame]],
-                         round_params: dict[str, object]) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
+                         round_params: dict[str, object], *, raw_history: pl.DataFrame | None = None) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
     all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in pairs for dt in datetimes])
     splits = [frame for _, frame in pairs]
     policy = manifest.resolve_trade_policy(round_params)
@@ -33,8 +33,11 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
         frozen = frozen(manifest.backtest_config, round_params)
     trade = None
     if policy is not None and manifest.backtest_config is not None:
-        interval = source_interval(manifest.data_source_config)
-        trade = prepare_trade_context(manifest.backtest_config, policy, raw_splits, splits, round_params, interval_seconds=interval, frozen_sources=frozen)
+        from limen.experiment._dynamic_barriers import prepare_barriers
+        interval = manifest.backtest_config.source_interval_seconds or source_interval(manifest.data_source_config)
+        history = pl.concat(raw_splits) if raw_history is None else raw_history.filter(pl.col('datetime') <= raw_splits[-1]['datetime'][-1])
+        barriers = prepare_barriers(manifest.backtest_config, policy, history)
+        trade = prepare_trade_context(manifest.backtest_config, policy, raw_splits, splits, round_params, interval_seconds=interval, frozen_sources=frozen, barriers=barriers)
         splits = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in splits]
     prepared = prepare_backtest_data(splits, all_datetimes, configured=policy is None and configured_barriers(manifest.backtest_config))
     return (*prepared, trade)

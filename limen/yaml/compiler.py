@@ -142,9 +142,10 @@ def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
     kwargs = {key: backtest[key] for key in BACKTEST_FIELDS if key in backtest}
     if 'product' in kwargs and kwargs['product'] is not None:
         kwargs['product'] = ProductConfig(**kwargs['product'])
-    if kwargs.get('execution_data_source') is not None:
-        source = kwargs['execution_data_source']
-        kwargs['execution_data_source'] = DataSourceConfig(resolve(source['method']), source.get('params', {}))
+    for key in ('execution_data_source', 'barrier_features'):
+        if kwargs.get(key) is not None:
+            source = kwargs[key]
+            kwargs[key] = DataSourceConfig(resolve(source['method']), source.get('params', {}))
     if kwargs.get('funding') is not None:
         funding = dict(kwargs['funding'])
         if 'adapter' in funding:

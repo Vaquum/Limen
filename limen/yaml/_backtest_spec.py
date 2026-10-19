@@ -42,7 +42,7 @@ def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]
                 unknown = set(_mapping(cast(object, value))) - set(cast(Mapping[str, object], config.__dataclass_fields__))
                 if unknown:
                     errors.append(YAMLError(message=f'Unknown {name} keys: {sorted(unknown)}', path=f'sfd.manifest.backtest.{name}'))
-    for key in ('execution_data_source',):
+    for key in ('execution_data_source', 'barrier_features'):
         _check_source(backtest.get(key), f'sfd.manifest.backtest.{key}', errors)
     funding = _mapping(backtest.get('funding'))
     _check_source(funding.get('data_source'), 'sfd.manifest.backtest.funding.data_source', errors)
@@ -65,6 +65,22 @@ def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]
                         _check_trade_number(name, candidate, errors)
         else:
             _check_trade_number(name, value, errors)
+    columns = [backtest.get(f'{side}_bps_column') for side in ('take_profit', 'stop_loss')]
+    dynamic = any(value is not None for value in columns) or backtest.get('barrier_features') is not None
+    if dynamic:
+        if not any(columns) or backtest.get('barrier_features') is None or not product:
+            errors.append(YAMLError(message='Dynamic barriers require distance columns, barrier_features and explicit product', path='sfd.manifest.backtest'))
+        for side, column in zip(('take_profit', 'stop_loss'), columns, strict=True):
+            if column is not None and (not isinstance(column, str) or not column.isidentifier() or column.startswith('__') or backtest.get(f'{side}_bps') is not None):
+                errors.append(YAMLError(message=f'{side} requires a literal column or scalar, never both', path='sfd.manifest.backtest'))
+        if columns[0] is not None and columns[0] == columns[1]:
+            errors.append(YAMLError(message='Barrier distance columns must be distinct', path='sfd.manifest.backtest'))
+    if backtest.get('source_interval_seconds') is not None:
+        value = backtest['source_interval_seconds']
+        if isinstance(value, str):
+            errors.append(YAMLError(message='source_interval_seconds must be literal metadata', path='sfd.manifest.backtest.source_interval_seconds'))
+        else:
+            _check_trade_number('source_interval_seconds', value, errors)
     if backtest.get('prediction_mode', 'binary') not in ('binary', 'target_exposure'):
         errors.append(YAMLError(message='Unknown prediction mode', path='sfd.manifest.backtest.prediction_mode'))
 
@@ -79,7 +95,7 @@ def _check_trade_number(name: str, value: object, errors: list[YAMLError]) -> No
         return
     try:
         number = finite_number(value, name)
-        positive = {'initial_equity', 'quantity_step', 'max_holding_seconds', 'timer_interval_seconds', 'max_price_gap_seconds'}
+        positive = {'initial_equity', 'quantity_step', 'max_holding_seconds', 'timer_interval_seconds', 'max_price_gap_seconds', 'source_interval_seconds'}
         fractions = {'max_exposure', 'initial_margin_fraction'}
         if (name in positive and number <= 0) or (name in fractions and not 0 < number <= 1) or (name not in positive | fractions | {'timer_phase_utc_seconds'} and number < 0) or (name in ('flat_threshold', 'maintenance_margin_fraction') and number >= 1) or (name == 'signal_change_bps' and number >= BPS):
             raise ValueError(f'Invalid {name} range')

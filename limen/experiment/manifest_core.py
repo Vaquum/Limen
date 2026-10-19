@@ -750,11 +750,13 @@ class Manifest:
                             flat_threshold: float | str = 0.0, max_holding_seconds: float | str | None = None,
                             timer_interval_seconds: float | str | None = None, timer_phase_utc_seconds: float | str = 0.0,
                             execution_lag_seconds: float | str = 0.0, max_price_gap_seconds: float | str | None = None,
-                            execution_data_source: DataSourceConfig | None = None, funding: FundingConfig | None = None) -> 'Manifest':
+                            execution_data_source: DataSourceConfig | None = None, funding: FundingConfig | None = None,
+                            take_profit_bps_column: str | None = None, stop_loss_bps_column: str | None = None,
+                            barrier_features: DataSourceConfig | None = None, source_interval_seconds: float | None = None) -> 'Manifest':
         self.backtest_config = BacktestConfig(fee_bps, slip_bps, notional_rate, take_profit_bps, stop_loss_bps,
             prediction_mode, product, initial_equity, max_exposure, signal_change_bps, flat_threshold,
             max_holding_seconds, timer_interval_seconds, timer_phase_utc_seconds, execution_lag_seconds,
-            max_price_gap_seconds, execution_data_source, funding)
+            max_price_gap_seconds, execution_data_source, funding, take_profit_bps_column, stop_loss_bps_column, barrier_features, source_interval_seconds)
         return self
 
     def resolve_trade_policy(self, round_params: Mapping[str, object]) -> TradePolicy | None:
@@ -1904,7 +1906,7 @@ def _run_prepare_setup(
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in raw_splits]
 
     from limen.experiment._manifest_preparation import finish_prepare_setup
-    return finish_prepare_setup(manifest, raw_splits, datetime_bar_pairs, round_params)
+    return finish_prepare_setup(manifest, raw_splits, datetime_bar_pairs, round_params, raw_history=raw_data)
 
 
 def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:

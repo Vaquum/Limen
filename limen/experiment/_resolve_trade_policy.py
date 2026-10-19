@@ -59,6 +59,10 @@ class BacktestConfig:
     max_price_gap_seconds: float | str | None = None
     execution_data_source: SourceConfig | None = None
     funding: FundingConfig | None = None
+    take_profit_bps_column: str | None = None
+    stop_loss_bps_column: str | None = None
+    barrier_features: SourceConfig | None = None
+    source_interval_seconds: float | None = None
 
 
 TRADE_NUMBERS = ('max_exposure', 'signal_change_bps', 'flat_threshold', 'max_holding_seconds', 'timer_interval_seconds', 'timer_phase_utc_seconds', 'execution_lag_seconds', 'max_price_gap_seconds')
@@ -89,7 +93,10 @@ def resolve_number(value: object, params: Mapping[str, object], name: str) -> fl
 def resolve_trade_policy(config: BacktestConfig | None, params: Mapping[str, object]) -> TradePolicy | None:
     if config is None:
         return None
-    enabled = config.prediction_mode != 'binary' or config.product is not None or any(value is not None for value in (config.max_holding_seconds, config.timer_interval_seconds, config.execution_data_source, config.funding, config.max_price_gap_seconds)) or any(getattr(config, name) != default for name, default in (('initial_equity', 10000.0), ('max_exposure', 1.0), ('signal_change_bps', 0.0), ('flat_threshold', 0.0), ('timer_phase_utc_seconds', 0.0), ('execution_lag_seconds', 0.0)))
+    from limen.experiment._dynamic_barriers import barrier_policy, dynamic_barriers
+
+    extra = barrier_policy(config, params)
+    enabled = dynamic_barriers(config) or config.source_interval_seconds is not None or config.prediction_mode != 'binary' or config.product is not None or any(value is not None for value in (config.max_holding_seconds, config.timer_interval_seconds, config.execution_data_source, config.funding, config.max_price_gap_seconds)) or any(getattr(config, name) != default for name, default in (('initial_equity', 10000.0), ('max_exposure', 1.0), ('signal_change_bps', 0.0), ('flat_threshold', 0.0), ('timer_phase_utc_seconds', 0.0), ('execution_lag_seconds', 0.0)))
     if not enabled:
         return None
     product = config.product
@@ -105,7 +112,7 @@ def resolve_trade_policy(config: BacktestConfig | None, params: Mapping[str, obj
             value = params[value]
         resolved = resolve_json(value, params)
         numbers[name] = None if resolved is None and name in ('max_holding_seconds', 'timer_interval_seconds', 'max_price_gap_seconds') else finite_number(resolved, name)
-    return TradePolicy(spec, prediction_mode=config.prediction_mode, fee_bps=cast(float, costs['fee_bps']), slip_bps=cast(float, costs['slip_bps']), notional_rate=cast(float, costs['notional_rate']), take_profit_bps=costs['take_profit_bps'], stop_loss_bps=costs['stop_loss_bps'], max_exposure=cast(float, numbers['max_exposure']), signal_change_bps=cast(float, numbers['signal_change_bps']), flat_threshold=cast(float, numbers['flat_threshold']), max_holding_seconds=numbers['max_holding_seconds'], timer_interval_seconds=numbers['timer_interval_seconds'], timer_phase_utc_seconds=cast(float, numbers['timer_phase_utc_seconds']), execution_lag_seconds=cast(float, numbers['execution_lag_seconds']), max_price_gap_seconds=numbers['max_price_gap_seconds'], funding=resolve_funding(config.funding, params))
+    return TradePolicy(spec, prediction_mode=config.prediction_mode, fee_bps=cast(float, costs['fee_bps']), slip_bps=cast(float, costs['slip_bps']), notional_rate=cast(float, costs['notional_rate']), take_profit_bps=costs['take_profit_bps'], stop_loss_bps=costs['stop_loss_bps'], max_exposure=cast(float, numbers['max_exposure']), signal_change_bps=cast(float, numbers['signal_change_bps']), flat_threshold=cast(float, numbers['flat_threshold']), max_holding_seconds=numbers['max_holding_seconds'], timer_interval_seconds=numbers['timer_interval_seconds'], timer_phase_utc_seconds=cast(float, numbers['timer_phase_utc_seconds']), execution_lag_seconds=cast(float, numbers['execution_lag_seconds']), max_price_gap_seconds=numbers['max_price_gap_seconds'], funding=resolve_funding(config.funding, params), **extra)
 
 
 def resolve_funding(config: FundingConfig | None, params: Mapping[str, object]) -> FundingPolicy | None:

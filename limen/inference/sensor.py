@@ -50,6 +50,8 @@ class Sensor:
         self.manifest_id = manifest_id
         self._trade_contract = copy.deepcopy(dict(trade_contract)) if trade_contract is not None else None
         self._trade_digest = contract_digest(self._trade_contract) if self._trade_contract is not None else None
+        from limen.experiment._dynamic_barriers import reject_yaml_promotion
+        reject_yaml_promotion(self._yaml_reference)
         if self._model.prediction_mode == 'target_exposure' and self._trade_contract is None:
             raise ValueError('Signed Sensor construction requires its frozen trade contract')
         if self._trade_contract is not None:

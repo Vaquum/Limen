@@ -60,6 +60,8 @@ def evaluate_prices(
                 mean = finite_number((completed['net_pnl'] / completed['entry_equity']).mean(), 'completed episode return') * 10000 if completed.height else float('nan')
                 return {**ledger.metrics, 'pnl_per_trade_bps': mean, 'num_executed_trades': float(completed.height)}, None
         raise ValueError('Event evaluation does not match a bound split')
+    if any(options.get(key) is not None for key in ('take_profit_bps_column', 'stop_loss_bps_column', 'barrier_features')):
+        raise ValueError('Dynamic barriers require original bound event context')
     kwargs = execution_options(options)
     enabled = kwargs['take_profit_bps'] is not None or kwargs['stop_loss_bps'] is not None
     if prices is None or 'open' not in prices.columns or 'close' not in prices.columns:
