@@ -1802,3 +1802,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.44.1] - 2026-10-19
 
 - Fit automatic fractional shims within each chronological direction/sizing prefix and align feature-valid supervision by source row identity.
+
+## [5.44.2] - 2026-10-19
+
+- Define Limen's executable research book contract: two comprehensive tested projects, exact source/output bindings, merged-source and current-validation evidence, the owned reader, and complete reference/developer coverage.
+- Align the documentation task router with Python Research and Compiled Research while retaining the current production renderer and its recorded deployment defects.
