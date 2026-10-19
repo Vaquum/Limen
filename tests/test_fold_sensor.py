@@ -38,11 +38,23 @@ def test_guard_failure_precedence(fold_campaigns, kind, failure):
             elif failure != 'none':
                 assert row.reason == 'sensor-error'
         assert any(row.datetime >= sensor.selection_cutoff for row in rows)
+        if failure == 'none':
+            assert any(row.datetime >= sensor.selection_cutoff and row.reason is None and row.prediction is not None for row in rows)
         if kind == 'formed':
             assert len(rows) < len(history)
     # Original, pre-source and omitted native rows remain guarded, independent of flags.
     first = source.head(40)
     assert all(row.reason == 'inside-training-window' for row in sensor.predict_all(first))
+
+
+@pytest.mark.parametrize('kind', ['anchored', 'signed'])
+def test_native_missing_bars_retain_recorded_clock(fold_campaigns, kind):
+    sensor = fold_campaigns[kind].sensor
+    history = pl.read_parquet(FIXTURE, n_rows=600)
+    history = pl.concat([history[:500], history[501:]])
+    rows = sensor.predict_all(history)
+    assert len(rows) == len(history)
+    assert rows[-1].reason is None and rows[-1].prediction is not None
 
 
 def test_incomplete_formed_bar_warms_up(fold_campaigns):

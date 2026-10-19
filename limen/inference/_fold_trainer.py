@@ -12,8 +12,8 @@ from limen.backtest.trade_contract import JsonValue
 import limen.experiment._fold_evidence as evidence
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.experiment.manifest_core import Manifest
-import limen.inference._fold_metrics as _fold_metrics
-import limen.inference._fold_sensor as _fold_sensor
+import limen.inference._fold_metrics as _metrics
+import limen.inference._fold_sensor as _guard
 from limen.inference.errors import ReconstructionError
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.base import ReferenceModel
@@ -115,9 +115,9 @@ def _one(host: Source, pid: str, fold: int) -> Sensor:
         model = cast(ReferenceModel, model)
         selected = cast(Mapping[str, object], cast(list[object], expected['folds'])[fold])
         policy = cast(Mapping[str, bool], host.metadata['recording'])
-        _fold_metrics.bindings(selected, data, witness, model, policy)
-        _fold_metrics.validate(cast(Mapping[str, object], selected['results']), result, model.deterministic)
-        _fold_metrics.stable_model(model, data)
+        _metrics.bindings(selected, data, witness, model, policy)
+        _metrics.validate(cast(Mapping[str, object], selected['results']), result, model.deterministic)
+        _metrics.stable_model(model, data)
         context['results'] = copy.deepcopy(selected['results'])
         return _FoldSensor(context, yaml_reference=host.yaml_reference, model=model,
                                     fitted_params=cast(dict[str, object], data.get('_fitted_params', {})),
@@ -127,7 +127,7 @@ def _one(host: Source, pid: str, fold: int) -> Sensor:
         raise ReconstructionError(f'Permutation {pid}, fold {fold}: {exc}') from exc
 
 
-class _FoldSensor(_fold_sensor.FoldView, Sensor):
+class _FoldSensor(_guard.FoldView, Sensor):
     def __init__(self, context: dict[str, object], *, yaml_reference: dict[str, object], model: ReferenceModel,
                  fitted_params: dict[str, object], round_params: dict[str, object], permutation_id: str,
                  manifest_id: str | None, trade_contract: Mapping[str, JsonValue] | None) -> None:

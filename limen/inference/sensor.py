@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-import limen.inference._fold_sensor as _fold_sensor
+import limen.inference._fold_sensor as _fold_guard
 from collections.abc import Mapping, Sequence
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract
@@ -41,7 +41,7 @@ class Sensor:
 
         super().__init__()
 
-        _fold_sensor.reject_manual(yaml_reference, self)
+        _fold_guard.reject_manual(yaml_reference, self)
         self._yaml_reference = copy.deepcopy(yaml_reference)
         self._model = model
         self._fitted_params = dict(fitted_params)
@@ -97,7 +97,7 @@ class Sensor:
         return self._manifest
 
 
-    @_fold_sensor.single_guard
+    @_fold_guard.single_guard
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
         '''Predict the last bar; distinguish unavailable data from flat and report per-bar failures.'''
@@ -174,7 +174,7 @@ class Sensor:
         if decoder_lookback > 1:
             raise NotImplementedError('Sensor predict_all does not yet support decoder_lookback > 1')
 
-        _fold_sensor.begin(self, manifest, raw_klines)
+        _fold_guard.begin(self, manifest, raw_klines)
         n_fallback = len(raw_klines)
         try:
             data, indicator_lookback = manifest.sensor_input_prep(
@@ -246,14 +246,14 @@ class Sensor:
         # failure degrades to sensor-error results.
         except Exception as e:  # noqa: BLE001
             logger.warning('Sensor predict_all failed (permutation_id=%s): %s', self.permutation_id, e, exc_info=True)
-            return _fold_sensor.recover(self, manifest, e, n_fallback)
+            return _fold_guard.recover(self, manifest, e, n_fallback)
 
 
     def _last_bar_inside_training_window(self, dt: object, manifest: object) -> bool:
-        return _fold_sensor.last_inside(self, dt, manifest)
+        return _fold_guard.last_inside(self, dt, manifest)
 
     def _inside_training_window_mask(self, data: pl.DataFrame, manifest: object) -> list[bool]:
-        return _fold_sensor.inside_mask(self, data, manifest)
+        return _fold_guard.inside_mask(self, data, manifest)
 
 
 class _PythonSensor(PythonSensorBase[HistoryT, StateT, OutputT], Sensor):

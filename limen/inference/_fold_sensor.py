@@ -84,6 +84,7 @@ def begin(sensor: object, manifest: object, frame: pl.DataFrame) -> None:
     trial = cast(Mapping[str, object], context['trial'])
     prep = cast(Mapping[str, object], trial['preparation'])
     formed = prep['formation'] is not None and prep['bar_type'] != 'base'
+    vars(manifest).update(_fold_native_interval=step, _fold_formed=formed)
     vars(sensor)['_fold_clock'] = None if formed else times
     def capture(prepared: pl.DataFrame) -> None:
         stamps, _, _ = decision_rows(prepared)

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TypeVar, cast
+from typing import Protocol, TypeVar, cast
 
 import polars as pl
 
@@ -124,3 +124,22 @@ def capture_clock(manifest: object, frame: pl.DataFrame) -> None:
     callback = getattr(manifest, '_fold_decision_clock', None)
     if callback is not None:
         callback(frame)
+
+
+class DecisionMaker(Protocol):
+    def __call__(self, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame: ...
+
+
+def decisions(manifest: object, raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object, native: DecisionMaker) -> pl.DataFrame:
+    step = cast(int | None, getattr(manifest, '_fold_native_interval', None))
+    if step is not None:
+        timing = {'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'}
+        if timing & set(raw.columns) and not timing <= set(raw.columns):
+            raise ValueError('Fold Sensor input has incomplete explicit native timing')
+        if not timing <= set(raw.columns):
+            start = raw['datetime'].dt.epoch('ns')
+            raw = raw.with_columns(start.alias('start_ns'), (start + step).alias('end_ns'),
+                                   start.alias('open_available_at_ns'), (start + step).alias('available_at_ns'))
+        if not getattr(manifest, '_fold_formed', False):
+            bars = bars.drop('bar_count', strict=False)
+    return native(raw, bars, interval_seconds=interval_seconds)

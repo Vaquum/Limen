@@ -12,7 +12,7 @@ import polars as pl
 
 from limen.inference.errors import ReconstructionError
 from limen.inference.sensor import Sensor
-import limen.inference._fold_trainer as _fold_trainer
+import limen.inference._fold_trainer as _fold_replay
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
@@ -179,7 +179,7 @@ class Trainer:
     def train(self, permutation_ids: list[str], *, fold: int | None = None) -> list[Sensor]:
 
 
-        fold_sensors = _fold_trainer.train(self, permutation_ids, fold)
+        fold_sensors = _fold_replay.train(self, permutation_ids, fold)
         if fold_sensors is not None:
             return fold_sensors
 

@@ -84,7 +84,7 @@ def config(kind: str, source: Path) -> dict:
         assert not errors
         manifest = reference['sfd']['manifest']
         manifest.pop('split_dates')
-        manifest['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(source)}}
+        manifest['data_source'] = {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {'kline_size': 3600}}
         manifest['split_walk_forward'] = {'n_folds': 2, 'test_bars': 48, 'purge_bars': 4, 'embargo_bars': 3, 'anchored': True}
         parameters = reference['sfd']['params']
         parameters.update(holding=[3600], folds=[2])
@@ -103,8 +103,6 @@ def fold_campaigns(tmp_path_factory):
         source = root / 'source.parquet'
         count = 432 if kind in ('anchored', 'rolling') else 384
         bars = original.slice(432 if kind == 'companion' else 0, count)
-        if kind == 'signed':
-            bars = bars.with_columns(pl.lit(3600).alias('base_interval'))
         if kind == 'reordered':
             bars = pl.concat([bars[:300], bars[301:384], bars[300:301]])
         if kind == 'duplicates':
