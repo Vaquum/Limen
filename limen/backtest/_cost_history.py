@@ -102,6 +102,8 @@ def _source(value: object) -> dict[str, JsonValue]:
         _ = integer(asset['receipt_bound_ns'], 'receipt bound')
         if asset['receipt_basis'] not in ('publisher_commit', 'collector_capture', 'caller_receipt') or asset['kind'] not in ('fills', 'benchmark'):
             raise ValueError('Unknown source receipt basis or asset kind')
+    if {asset['kind'] for asset in assets} != {'fills', 'benchmark'}:
+        raise ValueError('History requires pinned fills and benchmark assets')
     windows = source['windows']
     if not isinstance(windows, list) or not windows:
         raise ValueError('History requires explicit source windows')

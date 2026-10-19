@@ -135,13 +135,17 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
         fault['fills'][0][receipt] = 0
         with pytest.raises(ValueError, match='cannot precede'):
             CostCalibration.from_history(_write_fault(tmp_path / f'fault-early-{receipt}.json', fault), cutoff_ns=0)
-    for label in ('benchmark_only', 'one_wrong_kind'):
+    for label in ('benchmark_only', 'one_wrong_kind', 'no_benchmark', 'all_fills'):
         fault = copy.deepcopy(facts)
         fill_sha = fault['fills'][0]['source_asset_sha256']
         for asset in fault['source']['assets']:
-            if label == 'benchmark_only' or asset['sha256'] == fill_sha:
+            if label == 'benchmark_only' or (label == 'one_wrong_kind' and asset['sha256'] == fill_sha):
                 asset['kind'] = 'benchmark'
-        with pytest.raises(ValueError, match='fills-kind source asset'):
+            elif label == 'all_fills':
+                asset['kind'] = 'fills'
+        if label == 'no_benchmark':
+            fault['source']['assets'] = [asset for asset in fault['source']['assets'] if asset['kind'] != 'benchmark']
+        with pytest.raises(ValueError, match='pinned fills and benchmark|fills-kind source asset'):
             CostCalibration.from_history(_write_fault(tmp_path / f'fault-{label}.json', fault), cutoff_ns=CUTOFF)
     late = CostCalibration.from_history(path, cutoff_ns=CUTOFF - 1).report()
     assert late['support']['disposition'] == 'unavailable'
