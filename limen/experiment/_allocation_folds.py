@@ -91,8 +91,8 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             if rule_features is None or not isinstance(manifest, RuleBasedManifest) or manifest.strategy is None:
                 raise ValueError('Missing original causal rule preparation')
             prefix_features = _rule_features(manifest, raw.head(end), params)
-            earlier = rule_features.filter(pl.col('datetime') < raw['datetime'][end - 1])
-            if not prefix_features.filter(pl.col('datetime') < raw['datetime'][end - 1]).equals(earlier):
+            earlier = rule_features.filter(pl.col('datetime') <= raw['datetime'][end - 1])
+            if not prefix_features.filter(pl.col('datetime') <= raw['datetime'][end - 1]).equals(earlier):
                 raise ValueError('Primary rule features depend on observations after their decision')
             frame = prefix_features.filter(pl.col('datetime').is_between(raw['datetime'][start], raw['datetime'][end - 1]))
             prediction = RuleBasedStrategy().predict({'test': frame, 'strategy': {'conditions': manifest.strategy.conditions, 'entry': manifest.strategy.entry}})
