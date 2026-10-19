@@ -3,6 +3,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import cast
 
+from limen.experiment._acceptance_settings import prepare_pbo_settings
+
 __all__: list[str] = []
 
 _DEFAULTS: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), False)
@@ -33,13 +35,13 @@ def _configured(reference: Mapping[str, object] | None) -> dict[str, bool] | Non
 
 def validate_pbo_recording(policy: Mapping[str, bool] | None,
                            acceptance: Mapping[str, object] | None) -> None:
-    if acceptance is not None and 'max_pbo' in acceptance and policy is not None and (not policy['alignment'] or not policy['fold_details']):
-        raise ValueError('PBO requires recording.alignment and recording.fold_details; omit max_pbo or retain its evidence')
+    if acceptance is not None and bool({'max_pbo', 'pbo_blocks'} & acceptance.keys()) and policy is not None and (not policy['alignment'] or not policy['fold_details']):
+        raise ValueError('PBO requires recording.alignment and recording.fold_details; omit explicit PBO settings or retain their evidence')
 
 
 def validate_recorded_pbo(directory: Path, acceptance: Mapping[str, object]) -> None:
     metadata_path = directory / 'metadata.json'
-    if 'max_pbo' not in acceptance or not metadata_path.exists():
+    if not {'max_pbo', 'pbo_blocks'} & acceptance.keys() or not metadata_path.exists():
         return
     metadata: object = json.loads(metadata_path.read_text())
     if not isinstance(metadata, Mapping):
@@ -53,6 +55,7 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
                       compiled_reference: Mapping[str, object] | None,
                       directory: Path | None, has_search: bool,
                       resume: bool, acceptance: Mapping[str, object] | None = None) -> dict[str, bool] | None:
+    acceptance = prepare_pbo_settings(acceptance, reference=reference, compiled_reference=compiled_reference, directory=directory, has_search=has_search, resume=resume)
     if compiled_reference is not None and reference is not None and (_configured(compiled_reference) or _DEFAULTS) != (_configured(reference) or _DEFAULTS):
         raise ValueError('Conflicting compiled YAML and yaml_reference recording declarations')
     reference = compiled_reference if compiled_reference is not None else reference

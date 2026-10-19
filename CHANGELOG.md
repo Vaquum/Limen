@@ -1727,3 +1727,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.35.1] - 2026-10-19
 
 - Preserve unproven family alternatives, refuse partial DSR and unsupported snapshot PBO, and expose retained evidence and terminal coverage without changing source artifacts.
+
+## [5.36.0] - 2026-10-19
+
+- Add bounded acceptance PBO block configuration with persisted counts, conflict checks and nominal partition resolution.

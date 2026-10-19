@@ -1,9 +1,7 @@
 import limen.experiment._round_storage as _storage
 import json
-import math
 from collections.abc import Mapping
 from datetime import datetime
-from numbers import Real
 from pathlib import Path
 from typing import cast
 
@@ -13,32 +11,11 @@ import polars as pl
 
 from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfitting
 from limen.experiment._recording import validate_recorded_pbo
+from limen.experiment._acceptance_settings import read_acceptance as read_acceptance, report_settings, partition_geometry, require_partition
 
 __all__ = ['acceptance_report', 'read_acceptance']
 
-_THRESHOLDS = {'min_deflated_sharpe_probability', 'max_pbo'}
-_BLOCKS = 2
 _MINIMUM_DSR_BARS = 4
-
-
-def read_acceptance(value: object) -> dict[str, float]:
-    if not isinstance(value, Mapping):
-        raise ValueError('acceptance must be a mapping of probability thresholds')
-    declaration = cast(Mapping[object, object], value)
-    if not declaration or any(key not in _THRESHOLDS for key in declaration):
-        raise ValueError('acceptance allows only min_deflated_sharpe_probability and max_pbo')
-    result: dict[str, float] = {}
-    for key, threshold in declaration.items():
-        if isinstance(threshold, bool) or not isinstance(threshold, Real):
-            raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]')
-        try:
-            probability = float(threshold)
-        except OverflowError as exc:
-            raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]') from exc
-        if not math.isfinite(probability) or not 0 <= probability <= 1:
-            raise ValueError(f'acceptance.{key} must be a finite literal probability in [0, 1]')
-        result[str(key)] = probability
-    return result
 
 
 def _matrix(frame: pl.DataFrame, trials: list[str]) -> npt.NDArray[np.float64]:
@@ -106,7 +83,7 @@ def _require_synchronous(directory: Path, values: npt.NDArray[np.float64], trial
         reference = identities
 
 
-def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], report: dict[str, object], errors: dict[str, str]) -> None:
+def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], count: int, report: dict[str, object], errors: dict[str, str]) -> None:
     try:
         if values.shape[1] < _MINIMUM_DSR_BARS:
             raise ValueError('DSR requires at least four recorded returns per trial')
@@ -125,7 +102,8 @@ def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], 
         errors['deflated_sharpe_probability'] = str(exc)
     try:
         _require_synchronous(directory, values, trials)
-        report['pbo'] = probability_of_backtest_overfitting(values, n_blocks=_BLOCKS)
+        require_partition(values.shape[1], count)
+        report['pbo'] = probability_of_backtest_overfitting(values, n_blocks=count)
     except (ValueError, FloatingPointError) as exc:
         _storage.propagate(exc)
         errors['pbo'] = str(exc)
@@ -134,22 +112,23 @@ def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], 
 def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None = None) -> dict[str, object] | None:
     if not (path := directory / 'trial_returns.parquet').exists():
         return None
-    thresholds = read_acceptance(acceptance) if acceptance is not None else {}
-    validate_recorded_pbo(directory, thresholds)
+    settings, count = report_settings(directory, acceptance)
+    validate_recorded_pbo(directory, settings)
+    thresholds = {key: value for key, value in settings.items() if key != 'pbo_blocks'}
     if (frame := pl.read_parquet(path)).schema != {'trial': pl.String, 'bar': pl.Int64, 'net_return': pl.Float64}:
         raise ValueError('Acceptance requires the recorded trial_returns.parquet schema')
     trials = cast(list[str], frame['trial'].unique(maintain_order=True).to_list())
     errors: dict[str, str] = {}
     report: dict[str, object] = {
-        'n_trials': len(trials), 'n_bars': None, 'n_blocks': _BLOCKS,
+        'n_trials': len(trials), 'n_bars': None, 'n_blocks': count, **partition_geometry(None, count),
         'winner_trial': None, 'winner_sharpe': None, 'trial_sharpe_variance': None,
         'deflated_sharpe_probability': None, 'pbo': None,
         'thresholds': thresholds, 'verdicts': {}, 'errors': errors,
     }
     try:
         values = _matrix(frame, trials)
-        report['n_bars'] = values.shape[1]
-        _score(directory, values, trials, report, errors)
+        report.update(n_bars=values.shape[1], **partition_geometry(values.shape[1], count))
+        _score(directory, values, trials, count, report, errors)
     except ValueError as exc:
         _storage.propagate(exc)
         errors['returns'] = str(exc)
@@ -161,12 +140,15 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
     report['verdicts'] = verdicts
     _ = (directory / 'acceptance_report.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     lines = ['# Walk-forward acceptance report', '',
-             f'Recorded successful trials: {len(trials)}. CSCV blocks: {_BLOCKS}.', '',
+             f'Recorded successful trials: {len(trials)}. CSCV blocks: {count}.', '',
              'Per-bar Sharpe; the reported winner has the largest Sharpe. Exact ties keep recorded trial order.',
-             'These statistics describe the recorded sweep; they do not establish independence or future performance.', '']
+             'These statistics describe the recorded sweep; they do not establish independence or future performance.',
+             'Nominal partitions reuse the same n_bars/2 observations per half; blocks can cross folds with no additional purge/embargo.',
+             'Finer partitions can make sparse half samples unavailable; few trials limit rank resolution. Null is not pass.', '']
     lines.extend(f'- {label}: {report[key]}' for key, label in (
         ('winner_trial', 'Winner trial'), ('winner_sharpe', 'Per-bar Sharpe'),
         ('deflated_sharpe_probability', 'Deflated Sharpe probability'), ('pbo', 'PBO'),
+        ('pbo_block_bars', 'Retained bars/block'), ('pbo_combinations', 'Nominal combinations'), ('pbo_resolution', 'Nominal counting step'),
     ))
     lines.extend(f'- {key} ({thresholds[key]}): {"unavailable" if passed is None else "pass" if passed else "fail"}' for key, passed in verdicts.items())
     lines.extend(f'- {key} unavailable: {reason}' for key, reason in errors.items())

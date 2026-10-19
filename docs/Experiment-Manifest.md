@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.35.1"
+  limen_version: "5.36.0"
   mode: development
 
 sfd:
@@ -439,13 +439,19 @@ The native equivalent, after `set_split_walk_forward(...)`, is:
 )
 ```
 
-Either threshold may be omitted; the block must contain at least one. Values must be finite literal numbers in `[0, 1]`, with no booleans, parameter references or extra fields. An acceptance declaration requires `split_walk_forward`.
+Each key is optional, but the block must contain a probability threshold or `pbo_blocks`. Thresholds must be finite literal numbers in `[0, 1]`. The optional partition count must be a literal integer in `{2, 4, 6, 8}`; booleans, floats, strings, parameter references and larger counts reject. Omission defaults to two; there is no automatic choice or fallback. An acceptance declaration requires `split_walk_forward`.
 
-Selecting `max_pbo` also requires `recording.fold_details` and `recording.alignment` to be explicitly `true`; a conflicting policy raises before artifacts are created. Without `max_pbo`, either group may be omitted: return tracks and DSR remain available, while PBO is `null` with an explanation. Direct `acceptance_report(..., acceptance={"max_pbo": ...})` rejects an incompatible saved policy before writing reports. Explicit full recording retains existing behavior; see the [recording policy](Universal-Experiment-Loop.md#recording-policy).
+For example, `acceptance: {pbo_blocks: 8}` selects eight without adding a threshold. The native equivalent is `.set_acceptance(pbo_blocks=8)`. An explicit count (including two) requires both `search_strategy` and `experiment_dir`, with `recording.alignment` and `recording.fold_details` enabled, before run artifacts. Count-only reporting needs only those two payloads; resumable runs still require all four recording groups. Omitted-count and existing nonpersisted threshold-only runs retain their behavior.
 
-The report selects the highest per-bar Sharpe among successfully recorded trial tracks; exact ties prefer the first persisted trial. DSR uses that successful trial count and the sample variance (`ddof=1`) of their Sharpes. PBO uses two contiguous equal blocks, with no discarded tail. There must be at least two trials, an even track length and at least two bars per block. This minimal CSCV report evaluates only two balanced combinations, so its PBO resolution is limited.
+Selecting `max_pbo` or an explicit `pbo_blocks` also requires `recording.fold_details` and `recording.alignment` to be explicitly `true`; a conflicting policy raises before artifacts are created. With neither setting explicit, either group may be omitted: return tracks and DSR remain available, while PBO is `null` with an explanation. Direct `acceptance_report(..., acceptance={"max_pbo": ...})` or an explicit count rejects an incompatible saved policy before writing reports. Explicit full recording retains existing behavior; see the [recording policy](Universal-Experiment-Loop.md#recording-policy).
 
-The JSON fields are `n_trials`, `n_bars`, `n_blocks`, `winner_trial`, `winner_sharpe`, `trial_sharpe_variance`, `deflated_sharpe_probability`, `pbo`, `thresholds`, `verdicts` and `errors`. A DSR verdict passes at or above its minimum; a PBO verdict passes at or below its maximum. Without an acceptance block, `verdicts` is empty and the statistics are still reported. A failed verdict is `false` and never aborts the run. An unavailable statistic is `null` with an explanation in `errors`; its declared verdict is also `null`, rather than a pass. See [Benchmark](Benchmark.md#walk-forward-selection-report) for the metric definitions, direct-function input errors and interpretation limits.
+The report selects the highest per-bar Sharpe among successfully recorded trial tracks; exact ties prefer the first persisted trial. DSR uses that successful trial count and the sample variance (`ddof=1`) of their Sharpes. PBO uses the declared count of contiguous equal blocks over the actual retained track, with no discarded tail. There must be at least two trials, exact divisibility and at least two bars per block. Blocks need not coincide with folds; there is no extra block-boundary purge/embargo. Every half still contains `n_bars / 2` observations. The default two evaluates only two balanced combinations. Eight uses 70 combinations and a nominal counting step of `1/70`; more combinations create no new observations or independence.
+
+The JSON fields are `n_trials`, `n_bars`, `n_blocks`, `pbo_combinations`, `pbo_block_bars`, `pbo_resolution`, `winner_trial`, `winner_sharpe`, `trial_sharpe_variance`, `deflated_sharpe_probability`, `pbo`, `thresholds`, `verdicts` and `errors`. A DSR verdict passes at or above its minimum; a PBO verdict passes at or below its maximum. Without an acceptance block, `verdicts` is empty and the statistics are still reported. A failed verdict is `false` and never aborts the run. An unavailable statistic is `null` with an explanation in `errors`; its declared verdict is also `null`, rather than a pass. See [Benchmark](Benchmark.md#walk-forward-selection-report) for the metric definitions, direct-function input errors and interpretation limits.
+
+New walk-forward metadata saves effective `pbo_blocks`; the report calls that value `n_blocks`. Live manifest, compiled YAML and a supplied `yaml_reference` must agree on the count before writes (omission means two). Compiled-only runs retain their YAML. Resume rejects a changed count; present saved metadata and YAML counts must be valid and agree. Missing metadata or a missing count means legacy two. Direct regeneration inherits saved S when acceptance is omitted or contains thresholds only; an explicit different count raises before changing any artifact. The partition is frozen; thresholds remain caller-supplied on regeneration, as today. Omitting acceptance drops verdicts. Invalid saved counts raise rather than becoming unavailable PBO.
+
+`pbo_combinations` and `pbo_resolution` describe nominal enumeration, even when evidence makes PBO unavailable. Block size is null only for unknown or invalid retained geometry. Sparse trials can have supported DSR but zero variance in a finer half sample; PBO and its verdict then remain null, with no count fallback. Null is not pass.
 
 Save this example as `walk-forward.yaml` in a repository checkout. It uses the recorded hourly BTCUSDT fixture and runs two logistic-regression trials across three one-week test windows:
 
@@ -453,7 +459,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.35.1"
+  limen_version: "5.36.0"
   mode: development
 sfd:
   manifest:
@@ -510,7 +516,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.35.1"
+  limen_version: "5.36.0"
   mode: development
 sfd:
   manifest:
