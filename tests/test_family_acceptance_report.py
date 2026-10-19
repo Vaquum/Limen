@@ -228,7 +228,7 @@ def test_family_rejects_corruption_and_explains_metric_limits(family_runs, signe
         family_acceptance_report([damaged], project_root=project)
     missing = tmp_path / 'missing_returns'
     missing.mkdir()
-    with pytest.raises(FileNotFoundError, match='metadata.json'):
+    with pytest.raises(FileNotFoundError, match=r'metadata\.json'):
         family_acceptance_report([missing], project_root=project)
     shutil.copy2(paths[0] / 'metadata.json', missing / 'metadata.json')
     report = family_acceptance_report([missing], project_root=project)
