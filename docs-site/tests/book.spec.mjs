@@ -32,6 +32,10 @@ test('reference returns to the same passage and focus',async({page})=>{
   expect(Math.abs((await link.boundingBox()).y-before.top)).toBeLessThan(3);
   await page.goForward();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
   await page.goBack();await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
+  await page.locator('#adopt-the-compiled-pipeline').scrollIntoViewIfNeeded();await page.mouse.wheel(0,120);
+  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
+  const continued=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
 });
 
 test('copy preserves canonical source without gutters',async({page,context})=>{
@@ -43,7 +47,10 @@ test('copy preserves canonical source without gutters',async({page,context})=>{
 });
 
 test('search and keyboard reach the same reference',async({page})=>{
+  let release;const loaded=new Promise(resolve=>{release=resolve;});
+  await page.route('**/search.json',async route=>{await loaded;await route.continue();});
   await open(page);await page.keyboard.press('Control+k');await expect(page.getByRole('dialog',{name:'Search Limen'})).toBeVisible();
+  await expect(page.getByRole('searchbox')).toBeDisabled();release();
   await page.getByRole('searchbox').fill('Sensor');await expect(page.locator('[data-search-dialog] ol a').first()).toBeVisible();
   await page.keyboard.press('Escape');await expect(page.getByRole('dialog',{name:'Search Limen'})).not.toBeVisible();
   const link=page.getByRole('link',{name:'Python Sensor construction',exact:true});await link.focus();await page.keyboard.press('Enter');
