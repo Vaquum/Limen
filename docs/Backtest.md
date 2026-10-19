@@ -62,7 +62,7 @@ import polars as pl
 
 from limen.backtest.observed_costs import CostCalibration, CostCandidate, CostConditions
 from limen.backtest.trade_contract import (
-    ProductSpec, TradeInputs, TradePolicy, source_binding,
+    PredictionMode, ProductSpec, TradeInputs, TradePolicy, source_binding,
 )
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
@@ -83,7 +83,7 @@ class CallerModel:
 
 
 def run_cost_experiment(calibration_path, specification_path, benchmark_path,
-                        output, *, mode="binary", hour=1):
+                        output, *, mode: PredictionMode="binary", hour=1):
     expected = json.loads(Path(specification_path).read_text())["calibration_digest"]
     calibration = CostCalibration.read(calibration_path, expected_digest=expected)
     benchmark = pl.DataFrame(json.loads(Path(benchmark_path).read_text()), schema={
