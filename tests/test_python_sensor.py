@@ -341,7 +341,7 @@ def test_inference_and_adapter_failures(recorded, stage):
     changes = {'infer' if stage == 'infer' else 'map_output': fail}
     sensor = _sensor(metadata, **changes)
     for method in (sensor.predict, sensor.predict_all):
-        with pytest.raises(RuntimeError, match='^caller failure$'):
+        with pytest.raises(RuntimeError, match=r'^caller failure$'):
             method(recorded)
 
 

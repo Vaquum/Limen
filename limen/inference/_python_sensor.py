@@ -71,7 +71,7 @@ def _decision_rows(metadata: object) -> tuple[list[datetime], list[PredictionRea
         raise ValueError('Python Sensor datetime cannot lose nanosecond precision')
     reasons: list[PredictionReason | None] = [None] * metadata.height
     if 'reason' in metadata.columns:
-        if metadata['reason'].dtype not in (pl.String, pl.Null):
+        if metadata['reason'].dtype not in (pl.String(), pl.Null()):
             raise ValueError('Python Sensor reason must use String or Null metadata')
         raw_reasons = cast(list[object], metadata['reason'].to_list())
         if any(reason not in (None, 'warm-up', 'null-features') for reason in raw_reasons):
@@ -79,7 +79,7 @@ def _decision_rows(metadata: object) -> tuple[list[datetime], list[PredictionRea
         reasons = cast(list[PredictionReason | None], raw_reasons)
     availability: list[int | None] = [None] * metadata.height
     if 'available_at_ns' in metadata.columns:
-        if metadata['available_at_ns'].dtype not in (pl.Int64, pl.Null):
+        if metadata['available_at_ns'].dtype not in (pl.Int64(), pl.Null()):
             raise ValueError('Python Sensor availability must use Int64 or Null metadata')
         availability = cast(list[int | None], metadata['available_at_ns'].to_list())
         if any(value is not None and value < stamp for value, stamp in zip(availability, epoch_ns, strict=True)):
@@ -174,11 +174,11 @@ class PythonSensorBase(Generic[HistoryT, StateT, OutputT]):
         timestamps, reasons, availability = _decision_rows(metadata)
         rows = _output_rows(self.map_output(output), len(timestamps))
         results: list[BarPrediction] = []
-        for stamp, reason, available, row in zip(timestamps, reasons, availability, rows, strict=True):
+        for stamp, declared_reason, available, row in zip(timestamps, reasons, availability, rows, strict=True):
             if stamp < self.selection_cutoff:
                 prediction, probability, reason = None, None, 'inside-training-window'
-            elif reason is not None:
-                prediction, probability = None, None
+            elif declared_reason is not None:
+                prediction, probability, reason = None, None, declared_reason
             else:
                 prediction, probability, reason = _mapped_values(row)
             results.append(BarPrediction(stamp, prediction, probability, reason, available_at_ns=available))

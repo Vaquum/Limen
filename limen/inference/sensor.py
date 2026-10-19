@@ -13,10 +13,12 @@ import polars as pl
 
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
-from limen.inference._python_sensor import BarPrediction as BarPrediction
-from limen.inference._python_sensor import PredictionReason as PredictionReason
+from limen.inference._python_sensor import BarPrediction
+from limen.inference._python_sensor import PredictionReason
 from limen.inference._python_sensor import HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase
 
+
+__all__ = ['BarPrediction', 'PredictionReason', 'Sensor']
 
 logger = logging.getLogger(__name__)
 
