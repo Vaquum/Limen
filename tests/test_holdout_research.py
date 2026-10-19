@@ -287,7 +287,7 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
         db.execute('PRAGMA journal_mode=DELETE')
     for filename, label in (('holdout.sqlite3', 'history'), ('holdout-lease.sqlite3', 'lease')):
         with history.connection(root / 'manifests' / filename) as db:
-            db.execute('PRAGMA user_version=2')
+            db.execute(f'PRAGMA user_version={3 if label == "history" else 2}')
         with pytest.raises(ValueError, match=f'Unsupported holdout {label}'):
             history.bind(root)
         with history.connection(root / 'manifests' / filename) as db:

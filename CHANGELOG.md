@@ -1739,3 +1739,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.37.0] - 2026-10-19
 
 - Add project final-window reservations, native research exclusion and recorded experiment, refit and replay provenance.
+
+## [5.38.0] - 2026-10-19
+
+- Add explicit frozen fitted-selection assessment on reserved final observations with durable exposure attempts, causal member predictions, declared snapshot economics and verified retained evidence.

@@ -44,9 +44,26 @@ def finish_sensor_input(manifest: _M, data: pl.DataFrame, lookback: int,
                         params: dict[str, object], fitted: dict[str, object], decisions: pl.DataFrame | None, *,
                         scale: Callable[[_M, pl.DataFrame, dict[str, object], dict[str, object], bool], tuple[pl.DataFrame, dict[str, object]]],
                         compress: Callable[[_M, pl.DataFrame, dict[str, object], dict[str, object]], pl.DataFrame]) -> tuple[pl.DataFrame, int]:
+    data = _assessment_schema(manifest, data, 'input')
     data, _ = scale(manifest, data, params, fitted, False)
     data = data.fill_nan(None)
     data = compress(manifest, data, params, fitted)
+    data = _assessment_schema(manifest, data, 'model')
     if decisions is not None:
         data = data.join(decisions, on='datetime', how='left', maintain_order='left')
     return data, lookback
+
+
+def _assessment_schema(manifest: object, frame: pl.DataFrame, stage: str) -> pl.DataFrame:
+    schemas = cast(dict[str, list[dict[str, str]]] | None, getattr(manifest, '_holdout_assessment_schemas', None))
+    if schemas is None:
+        return frame
+    expected = schemas[stage]
+    excluded = {'datetime', getattr(manifest, 'target_column', None), '__trade_available_at_ns__'}
+    actual = {name: str(dtype) for name, dtype in frame.schema.items() if name not in excluded}
+    if actual != {field['name']: field['dtype'] for field in expected}:
+        message = f'Holdout {stage} schema mismatch: expected {expected}, received {actual}'
+        record = cast(Callable[[str], None], getattr(manifest, '_holdout_assessment_failure'))
+        record(message)
+        raise ValueError(message)
+    return frame.select([name for name in frame.columns if name in excluded] + [field['name'] for field in expected])
