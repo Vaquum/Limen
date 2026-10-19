@@ -4,7 +4,7 @@ This page routes Limen docs by task.
 
 ## Limen in one page
 
-Limen is a Bitcoin alpha research engine for turning market data into experiments, logged analytics, backtests, and decoder cohorts. Run experiments through the CLI with YAML, or through the Python API with an SFD and a search strategy. Both routes use UEL with MSQ; the CLI is the default first-run path.
+Limen is a research engine for Bitcoin traders. Python Research gives you control of data, preparation, models, backtesting and selection in ordinary Python. Compiled Research adopts the Manifest contract through the CLI or Python, with the configured pipeline checks and recorded evidence. Both use Universal Experiment Loop (UEL) with Mutable Search Queue (MSQ). Choose the interface by who should own the research methodology.
 
 Limen does not perform downstream trade decisioning or execution. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
 
@@ -12,28 +12,28 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 
 ### New to Limen
 
-1. Read the [product home page](../README.md)
-2. Run the [End-to-End Workflow](End-to-End-Workflow.md)
-3. Learn the manifest contract in [Experiment Manifest](Experiment-Manifest.md)
-4. Learn how data enters Limen in [Historical Data](Historical-Data.md)
-5. Review outcomes in [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md)
-6. Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) for Python/MSQ execution and the engine shared with CLI
-7. Use [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), and [Glossary](Glossary.md) for Python extension work
+1. Read the [product home page](../README.md) and choose Python Research or Compiled Research.
+2. For Python Research, start with the [worked Python workflow](Universal-Experiment-Loop.md#direct-python-run) and [custom SFDs](Single-File-Decoder.md#custom-sfds).
+3. For Compiled Research, run the [End-to-End Workflow](End-to-End-Workflow.md) and inspect the [Manifest contract](Experiment-Manifest.md).
+4. Learn how data enters Limen in [Historical Data](Historical-Data.md).
+5. Review outcomes in [Log](Log.md), [Benchmark](Benchmark.md) and [Backtest](Backtest.md).
+6. Continue to [Trainer and Sensors](Trainer.md) and [Cohort](Cohort.md) for the selected interface's inference handoff.
+7. Use the [Glossary](Glossary.md) and component references for detail.
 
-### Run experiments from Python
+### Python Research
 
 1. Start with the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run) using a built-in search strategy.
-2. Supply a [built-in SFD](Built-In-SFDs.md) or define a [custom SFD](Single-File-Decoder.md); custom preparation and models do not require a YAML manifest.
+2. Define a [custom SFD](Single-File-Decoder.md#custom-sfds) with ordinary `params`, `prep` and `model` functions; your preparation, models and backtesting require no Manifest or new research language.
 3. Choose grid or random search in [Advanced Search](Advanced-Search.md), and enable persistence when you need checkpoints or saved round artifacts.
 4. Add [Reducers And Feedback](Reducers-And-Feedback.md) only when the experiment calls for adaptive search.
 5. Inspect the live run through [Log](Log.md), or read the saved result artifacts.
 
-### Author experiments
+### Compiled Research
 
 1. Start with [Experiment Manifest](Experiment-Manifest.md)
 2. Run manifests through [End-to-End Workflow](End-to-End-Workflow.md) and [Command-Line Interface](Command-Line-Interface.md)
 3. Review the shipped decoder patterns in [Built-In SFDs](Built-In-SFDs.md)
-4. Use [Single-File Decoder](Single-File-Decoder.md) for custom Python experiment modules
+4. Read [Single-File Decoder](Single-File-Decoder.md) for the compiled SFD boundary; invoking a Manifest from Python remains Compiled Research
 5. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
 6. Strengthen the research surface with [Perturbation Strategies](Perturbation-Strategies.md) for robustness, [Fractional Differentiation](Fractional-Differentiation.md) for stationary features, and [Triple-Barrier Method](Triple-Barrier-Method.md) for path-dependent labels
 7. Choose search in [Advanced Search](Advanced-Search.md); adaptive controls are optional in [Reducers And Feedback](Reducers-And-Feedback.md)
@@ -45,7 +45,7 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 2. Compare model behavior in [Benchmark](Benchmark.md)
 3. Evaluate trading behavior in [Backtest](Backtest.md)
 4. Review helper metrics in [Standard Metrics Library](Standard-Metrics-Library.md) and [Reference Architecture](Reference-Architecture.md)
-5. Continue to [Trainer](Trainer.md) and [Cohort](Cohort.md) for downstream promotion
+5. Reuse selected Python fitted state through [Sensors](Trainer.md#python-construction), or reconstruct recorded Compiled rounds through [Trainer](Trainer.md); continue to [Cohort](Cohort.md) for composition
 
 ### Extend Limen
 
@@ -70,11 +70,11 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 1. Data enters through [Historical Data](Historical-Data.md) or compatible external OHLC data.
 2. Data can be reshaped with [Data Bars](Data-Bars.md) when threshold bars are the right research surface.
 3. Indicators, features, transforms, and scalers define the research surface. Targets define supervised labels; calibration adjusts probabilities and thresholds after model output.
-4. Define an experiment as YAML for the [CLI](Command-Line-Interface.md), or as an [SFD](Single-File-Decoder.md) for the [Python/MSQ route](Universal-Experiment-Loop.md#direct-python-run).
+4. Define Python Research with caller-owned [SFD functions](Single-File-Decoder.md#custom-sfds), or adopt the [Manifest contract](Experiment-Manifest.md) for Compiled Research through the CLI or Python.
 5. Both routes use [Universal Experiment Loop](Universal-Experiment-Loop.md) with MSQ. [Advanced Search](Advanced-Search.md) controls candidate generation; [Reducers And Feedback](Reducers-And-Feedback.md) provides optional adaptive control.
 6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
-7. [Trainer](Trainer.md) turns selected rounds into reusable sensors.
-8. [Cohort](Cohort.md) defines selector-driven ensemble inference for multi-member decoder aggregation.
+7. Python Research wraps selected evaluated fitted state in a [Sensor](Trainer.md#python-construction). Compiled Research uses [Trainer](Trainer.md) to reconstruct selected recorded rounds or qualified folds.
+8. [Cohort](Cohort.md) combines selected Sensors through caller-owned Python composition or compatible recorded-member binding.
 9. Those outputs then move downstream into Nexus and the rest of the Vaquum stack.
 
 ## Docs map
@@ -84,6 +84,8 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 - `Reference`: [Glossary](Glossary.md), [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
 - `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Packaging](Developer/Packaging.md), [Release Policy](Developer/Release-Policy.md), [Security Assurance Case](Developer/Security-Assurance-Case.md), [Semantic Versioning](Semantic-Versioning.md), and [Technical Debt](TechnicalDebt.md)
 - `Packages`: package `README`s under `/limen` for `data`, `experiment`, `inference`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`, plus their nested package references
+
+The documentation is being developed as a book around two complete executable research projects. Reference and Developer remain available for drill-down and direct lookup. The sections above route the current published pages; the [documentation system contract](Developer/Documentation-System.md) defines the book and the evidence required for its examples.
 
 ## Product boundary
 
