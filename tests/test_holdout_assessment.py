@@ -46,10 +46,11 @@ def assessment_case(tmp_path_factory):
     for architecture in ('logreg', 'lightgbm', 'warmup', 'earlier_test'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
-            current['sfd']['params']['C'] = [1.0, 0.5]
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer'}}
+            current['sfd']['params']['C'] = [1.0]
             current['sfd']['params']['use_calibration'] = [True, False]
-            current['uel']['n_permutations'] = 2
+            current['sfd']['params']['use_threshold'] = [True, False]
+            current['uel']['n_permutations'] = 4
         elif architecture == 'warmup':
             current['sfd']['manifest']['indicators'][0]['params']['period'] = 30
             current['sfd']['manifest']['target']['fit_params']['source_column'] = 'roc_30'
@@ -67,8 +68,9 @@ def assessment_case(tmp_path_factory):
             ids = [json.loads(line)['round_id'] for line in stream if line.strip()]
         trained.append(Trainer(directory, project_root=root).train(ids))
         sources.append(directory)
-    cohort = Cohort(experiment_log_path=str(sources[0]), permutation_ids=[sensor.permutation_id for sensor in trained[0]])
-    cohort.set_members(trained[0])
+    selected = [trained[0][0], trained[0][-1]]
+    cohort = Cohort(experiment_log_path=str(sources[0]), permutation_ids=[sensor.permutation_id for sensor in selected])
+    cohort.set_members(selected)
     return root, reservation, trained, cohort
 
 
@@ -111,8 +113,9 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         map_output=unavailable_python_callback, state_id='caller-owned', fitting_cutoff=probe['datetime'][24], selection_cutoff=probe['datetime'][48])
     with pytest.raises(ValueError, match='exact Sensor'):
         _freeze(python_sensor)
-    for sensor in (trained[0][0], trained[1][0]):
+    for sensor in (*trained[0], trained[1][0]):
         assert sensor.predict(probe).reason is None
+        _freeze(sensor)
         clone = owned_copy(sensor)
         second = owned_copy(clone)
         assert sensor.predict(probe) == clone.predict(probe) == second.predict(probe)
@@ -344,8 +347,20 @@ def test_holdout_report_accounting(assessment_case):
     assert report['scenarios'][0]['metrics']['pnl_per_bar_bps']['value'] == pytest.approx(net.mean() * 10000)
     absent = _report(_freeze(trained[0][1], target=False), assessment_case)
     assert all(value['value'] is None and value['reason'] == 'no-labels' for value in absent['classification'].values())
-    assert reports.classification([0, 0, None], [0, 0, 1], [None, None, None])['precision']['reason'] == 'zero-denominator'
-    assert reports.classification([1, 1], [1, 1], [0.8, 0.9])['auc']['reason'] == 'one-class'
+    positive = rows.filter(pl.col('label') == 1)
+    assert positive.height > 0
+    degenerate = reports.classification(positive['label'].to_list(), positive['aggregate_prediction'].to_list(), positive['aggregate_probability'].to_list())
+    assert degenerate['fpr']['reason'] == 'zero-denominator' and degenerate['auc']['reason'] == 'one-class'
+    retained = pl.read_parquet(root / report['rows_path'])
+    raw = retained.select([pl.col(column).alias(original) for original, column in report['source_column_map'].items()])
+    raw = raw.with_columns(pl.col('no_of_trades').alias('row_sha256'), pl.col('maker_ratio').alias('source_row_sha256'))
+    tape = [{'members': row['members'], 'prediction': row['aggregate_prediction'], 'probability': row['aggregate_probability'], 'reason': row['aggregate_reason']} for row in rows.iter_rows(named=True)]
+    escaped, mapping = reports.retained_rows(raw, 3600 * 1_000_000_000, report['planned']['start_ns'], tape, rows['label'].to_list(), True, rows['scenarios'].to_list())
+    assert len(set(mapping.values())) == len(raw.columns)
+    assert mapping['row_sha256'] != 'source_row_sha256'
+    assert escaped['source_row_sha256'].dtype == pl.String and all(len(value) == 64 for value in escaped['source_row_sha256'])
+    assert escaped[mapping['row_sha256']].equals(raw['row_sha256'])
+    assert escaped[mapping['source_row_sha256']].equals(raw['source_row_sha256'])
     path = root / report['rows_path']
     original = path.read_bytes()
     path.write_bytes(b'corrupt')

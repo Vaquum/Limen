@@ -119,7 +119,14 @@ def retained_rows(raw: pl.DataFrame, step: int, start: int, tape: list[dict[str,
     times = raw['datetime'].dt.epoch('ns').to_list()
     offset = sum(value < start for value in times)
     rows: list[dict[str, object]] = []
-    mapping = {name: name if name in ('open', 'high', 'low', 'close', 'volume') else f'source_{name}' for name in raw.columns}
+    mapping: dict[str, str] = {}
+    used = set(_COLUMNS)
+    for name in raw.columns:
+        retained = name if name in ('open', 'high', 'low', 'close', 'volume') else f'source_{name}'
+        while retained in used:
+            retained = f'source_{retained}'
+        mapping[name] = retained
+        used.add(retained)
     for index, timestamp in enumerate(times):
         final = index >= offset
         point = tape[index - offset] if final else {}
