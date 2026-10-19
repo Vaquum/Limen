@@ -184,7 +184,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     if model is not None:
         _fitted_value(model)
         classes = getattr(model, 'classes_', None)
-        native = getattr(type(wrapper), 'predict') in (LogRegBinary.predict, LightGBMBinary.predict)
+        native = getattr(type(wrapper), 'predict', None) in (LogRegBinary.predict, LightGBMBinary.predict)
         if config is None and native and classes is not None and list(classes) != [0, 1]:
             raise ValueError('Holdout estimator classes must be [0,1]')
     calibrator = getattr(wrapper, '_fitted_calibrator', None)
