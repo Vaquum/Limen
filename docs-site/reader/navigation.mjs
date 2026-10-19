@@ -28,7 +28,7 @@ export function initNavigation(){
     }catch(error){announce('The reference could not be opened. Follow its link to retry.');console.error(error);}
   }
   function hide(){++token;if(!dialog.open)return;
-    camera.to(innerWidth,()=>{dialog.close();if(origin){restore(origin.place);opener?.focus({preventScroll:true});}});
+    camera.to(innerWidth,()=>{dialog.close();if(origin){restore(origin.place);history.replaceState({...history.state,readerPlace:null},'',location.href);opener?.focus({preventScroll:true});}});
   }
   document.addEventListener('click',event=>{
     const link=event.target.closest('a[data-reference]');

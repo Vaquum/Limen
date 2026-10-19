@@ -32,6 +32,8 @@ export function initPlace(){
     if(!moved||!storageAvailable)return;
     try{localStorage.setItem(key,JSON.stringify(value));}catch(error){storageAvailable=false;announce('Browser storage could not be written. Reading position is not being saved.');console.error(error);}
   }
-  addEventListener('scroll',()=>{moved=true;if(!frame)frame=requestAnimationFrame(save);},{passive:true});
+  for(const name of ['wheel','touchmove'])addEventListener(name,()=>{moved=true;},{passive:true});
+  addEventListener('keydown',event=>{if(!event.target.closest('input,textarea,select,[contenteditable]')&&['PageDown','PageUp','ArrowDown','ArrowUp','Home','End',' '].includes(event.key))moved=true;});
+  addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(save);},{passive:true});
   addEventListener('pagehide',()=>{if(moved)save();});save();
 }

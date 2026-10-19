@@ -3,8 +3,8 @@ export function initSearch(){
   const button=document.querySelector('[data-search-open]');const dialog=document.querySelector('[data-search-dialog]');
   const input=dialog.querySelector('input');const results=dialog.querySelector('ol');let index=null,opener=null;
   async function open(){opener=document.activeElement;dialog.showModal();input.focus();
-    if(!index){try{const response=await fetch(document.body.dataset.search);if(!response.ok)throw Error(`Search index returned ${response.status}`);index=await response.json();}
-      catch(error){announce('Search is unavailable. Use the chapter and reference links.');console.error(error);}}
+    if(!index){input.disabled=true;dialog.querySelector('[data-search-count]').textContent='Loading search…';try{const response=await fetch(document.body.dataset.search);if(!response.ok)throw Error(`Search index returned ${response.status}`);index=await response.json();input.disabled=false;input.focus();dialog.querySelector('[data-search-count]').textContent='Type at least two letters.';}
+      catch(error){dialog.querySelector('[data-search-count]').textContent='Search is unavailable. Use the chapter and reference links.';announce('Search is unavailable.');console.error(error);}}
   }
   button.hidden=false;button.addEventListener('click',open);
   dialog.querySelector('[data-search-close]').addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>opener?.focus());

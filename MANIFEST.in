@@ -55,3 +55,5 @@ recursive-include docs/examples *.py *.json
 recursive-include docs-site/reader *.mjs *.css *.json
 recursive-include docs-site/tests *.mjs *.json
 include docs-site/playwright.config.mjs
+
+recursive-exclude docs-site/reader/reference *.jpg
