@@ -19,6 +19,8 @@ def _cdlmatchinglow_impl(
     Compute Matching Low candlestick pattern.
 
     Args:
+        data (pl.DataFrame): Dataset with OHLC columns
+        open_col (str): Column name for open prices
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
@@ -66,8 +68,7 @@ def _cdlmatchinglow_impl(
 
         equal_period_total += (
             (high_values[i - 1] - low_values[i - 1])
-            - (high_values[equal_trailing_idx - 1] - low_values[equal_trailing_idx - 1])
-        )
+            - (high_values[equal_trailing_idx - 1] - low_values[equal_trailing_idx - 1]))
         i += 1
         equal_trailing_idx += 1
 
@@ -94,7 +95,6 @@ def cdlmatchinglow(
                 close_col=close_col,
             ).get_column(out_col),
             return_dtype=pl.Int32,
-        ).alias(out_col)
-    )
+        ).alias(out_col))
 
 _parallel(cdlmatchinglow, backend_imports=('numpy', 'polars'))

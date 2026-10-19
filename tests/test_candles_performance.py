@@ -105,6 +105,24 @@ def test_calculation_latency(name, timing_worker):
 
 
 class _AllowedRewrites(ast.NodeTransformer):
+    def visit_Module(self, node):
+        functions = {entry.name for entry in node.body if isinstance(entry, ast.FunctionDef)}
+        body = []
+        for entry in node.body:
+            if isinstance(entry, ast.ImportFrom) and entry.module == 'limen._parallel_contract':
+                assert entry.level == 0
+                assert [(alias.name, alias.asname) for alias in entry.names] == [('attach', '_parallel')]
+            elif (isinstance(entry, ast.Expr) and isinstance(call := entry.value, ast.Call)
+                  and isinstance(call.func, ast.Name) and call.func.id == '_parallel'):
+                assert len(call.args) == 1 and isinstance(call.args[0], ast.Name) and call.args[0].id in functions
+                assert len(call.keywords) == 1 and call.keywords[0].arg == 'backend_imports'
+                imports = ast.literal_eval(call.keywords[0].value)
+                assert isinstance(imports, tuple) and all(isinstance(name, str) for name in imports)
+            else:
+                body.append(entry)
+        node.body = body
+        return self.generic_visit(node)
+
     def visit_Call(self, node):
         node = self.generic_visit(node)
         if isinstance(node.func, ast.Attribute):

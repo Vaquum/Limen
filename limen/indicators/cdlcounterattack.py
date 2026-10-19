@@ -20,6 +20,8 @@ def _cdlcounterattack_impl(
     Compute Counterattack candlestick pattern.
 
     Args:
+        data (pl.DataFrame): Dataset with OHLC columns
+        open_col (str): Column name for open prices
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
@@ -88,8 +90,7 @@ def _cdlcounterattack_impl(
         for tot_idx in range(1, -1, -1):
             body_long_period_total[tot_idx] += (
                 abs(close_values[i - tot_idx] - open_values[i - tot_idx])
-                - abs(close_values[body_long_trailing_idx - tot_idx] - open_values[body_long_trailing_idx - tot_idx])
-            )
+                - abs(close_values[body_long_trailing_idx - tot_idx] - open_values[body_long_trailing_idx - tot_idx]))
 
         i += 1
         equal_trailing_idx += 1
@@ -118,7 +119,6 @@ def cdlcounterattack(
                 close_col=close_col,
             ).get_column(out_col),
             return_dtype=pl.Int32,
-        ).alias(out_col)
-    )
+        ).alias(out_col))
 
 _parallel(cdlcounterattack, backend_imports=('numpy', 'polars'))

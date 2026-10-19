@@ -21,6 +21,7 @@ def _cdlhighwave_impl(
     Compute High-Wave Candle pattern.
 
     Args:
+        data (pl.DataFrame): Dataset with OHLC columns
         open_col (str): Column name for open prices
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
@@ -116,7 +117,6 @@ def cdlhighwave(
                 close_col=close_col,
             ).get_column(out_col),
             return_dtype=pl.Int32,
-        ).alias(out_col)
-    )
+        ).alias(out_col))
 
 _parallel(cdlhighwave, backend_imports=('numpy', 'polars'))
