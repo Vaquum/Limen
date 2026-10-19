@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from copy import deepcopy
 from hashlib import sha256
 from importlib import import_module
 from inspect import getsourcefile
@@ -120,3 +121,8 @@ def _column_name(value: object) -> str | None:
     if not isinstance(value, str) or not value.isidentifier() or value.startswith('__'):
         raise ValueError('Barrier column names must be literal public identifiers')
     return value
+
+
+def research_reference(reference: Mapping[str, object]) -> dict[str, object]:
+    reject_yaml_promotion(reference)
+    return deepcopy(dict(reference))

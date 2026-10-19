@@ -4,6 +4,7 @@ import copy
 from collections.abc import Mapping, Sequence
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract
+from limen.experiment._dynamic_barriers import research_reference
 import logging
 from datetime import datetime
 from typing import Any, Literal
@@ -38,7 +39,8 @@ class Sensor:
                  trade_contract: Mapping[str, JsonValue] | None = None) -> None:
 
 
-        self._yaml_reference = copy.deepcopy(yaml_reference)
+        super().__init__()
+        self._yaml_reference = research_reference(yaml_reference)
         self._model = model
         self._fitted_params = dict(fitted_params)
         self._round_params = dict(round_params)
@@ -47,8 +49,6 @@ class Sensor:
         self.manifest_id = manifest_id
         self._trade_contract = copy.deepcopy(dict(trade_contract)) if trade_contract is not None else None
         self._trade_digest = contract_digest(self._trade_contract) if self._trade_contract is not None else None
-        from limen.experiment._dynamic_barriers import reject_yaml_promotion
-        reject_yaml_promotion(self._yaml_reference)
         if self._model.prediction_mode == 'target_exposure' and self._trade_contract is None:
             raise ValueError('Signed Sensor construction requires its frozen trade contract')
         if self._trade_contract is not None:
