@@ -61,9 +61,11 @@ def test_recorded_resume_refuses_changed_source_and_geometry(python_scenarios, c
     with pytest.raises(ValueError, match='split_walk_forward'):
         compiled_scenarios.execute(changed, directory, bars=bars, resume=True)
     assert files(directory) == before
-    with pytest.raises(ValueError):
-        compiled_scenarios.execute(config, directory, bars=bars.head(383), resume=True)
-    assert files(directory) == before
+    shifted = pl.read_parquet(FIXTURES / 'spot_1h_20240101_20241231.parquet', n_rows=385).slice(1)
+    for changed_source in (bars.head(383), shifted):
+        with pytest.raises(ValueError, match='changed recorded source rows'):
+            compiled_scenarios.execute(config, directory, bars=changed_source, resume=True)
+        assert files(directory) == before
 
 
 def test_guarded_holdout_excludes_research_and_never_refits(compiled_scenarios, tmp_path, monkeypatch):

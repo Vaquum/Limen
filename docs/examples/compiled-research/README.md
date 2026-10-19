@@ -39,6 +39,8 @@ Factorized search uses the admitted deterministic LightGBM grid with independent
 
 Traversal and recovery use the recorded January 2024 hourly source. Recovery compares resumed and uninterrupted native results and round records. Walk-forward uses its first 384 hourly observations, with a separate fitted classifier and probability calibration in each fold; validation return supplies the declared objective. The model-family diagnostics keep their quarter-hour population.
 
+The project records its source digest and any supplied row selection in `project-input.json` before execution. It refuses a changed source or selection before resuming. This project check supplements Limen's native checkpoint and fold-declaration validation; it does not assert that the native checkpoint validates an arbitrary replacement DataFrame.
+
 Allocation compares an unchanged rule primary and an unchanged logistic primary with their composed exposures. A separate prefix fit checks the learned primary's recorded out-of-fold identity. Training rows retain completion times, unavailable outcomes and exact source bindings. Each opportunity keeps its opening allocation until primary flat; the risk cap includes the declared stop and round-trip fee/slippage allowance. Paired January 1–8 cases isolate recorded funding on the same opportunity identities. These are batch research results; the allowance does not bound loss through a price gap.
 
 `adaptive.yaml` adds a separate grid with a three-round resource limit declared through the budget reducer. The driver compiles its pruning configuration. The audit records the queue intervention, and the checkpoint retains the completed and remaining counts. The four-candidate traversal comparisons retain their original budgets.

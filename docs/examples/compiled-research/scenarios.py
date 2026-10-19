@@ -43,6 +43,16 @@ def execute(config, output, *, bars=None, callback=None, resume=False, project_r
     report = validate(config)
     if not report.valid:
         raise ValueError(str(report.errors))
+    source = Path(config['sfd']['manifest']['data_source']['params']['file_path_or_url'])
+    binding = {'source_sha256': hashlib.sha256(source.read_bytes()).hexdigest(), 'selection': None if bars is None else {
+        'rows': bars.height, 'sha256': hashlib.sha256(str(bars.schema).encode() + bars.hash_rows(seed=0).to_numpy().tobytes()).hexdigest()}}
+    input_record = output / 'project-input.json'
+    if resume:
+        if json.loads(input_record.read_text()) != binding:
+            raise ValueError('Cannot resume this project with changed recorded source rows')
+    else:
+        output.mkdir(parents=True, exist_ok=True)
+        input_record.write_text(json.dumps(binding, sort_keys=True) + '\n')
     loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=project_root), data=bars, search_strategy=build_search_strategy(config), pruning_strategies=build_pruning_strategies(config), experiment_dir=output, yaml_reference=config, checkpoint_interval=1, feedback_interval=1, intra_callback=callback, project_root=project_root)
     loop.run(config['metadata']['name'], n_permutations=config['uel']['n_permutations'], workers=1, prep_each_round=True, progress_bar=False, post_processing=post_processing, resume=resume, factorize=factorize)
     if 'strict_mode_error' in research_project.completed_log(loop).columns and research_project.completed_log(loop)['strict_mode_error'].drop_nulls().len():
