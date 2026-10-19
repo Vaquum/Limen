@@ -5,6 +5,7 @@ from pathlib import Path
 import sqlite3
 from types import SimpleNamespace
 from uuid import uuid4
+from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -79,7 +80,8 @@ def test_holdout_reservation_and_research_exclusion(tmp_path):
     seen = []
     manifest = compiled.manifest()
     manifest.set_pre_split_data_selector(lambda frame: seen.append(frame.height) or frame.slice(1))
-    prepared = manifest.prepare_data(raw, {key: values[0] for key, values in compiled.params().items()})
+    with patch.object(history.time, 'time_ns', return_value=0):
+        prepared = manifest.prepare_data(raw, {key: values[0] for key, values in compiled.params().items()})
     assert seen == [96]
     assert prepared['holdout']['selected']['rows'] == 95
     assert prepared['holdout']['source']['admitted']['rows'] == 96
@@ -244,6 +246,12 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
     other = _project(tmp_path / 'other')
     with pytest.raises(ValueError, match='root hints disagree'):
         UniversalExperimentLoop(sfd=CompiledSFD(_configuration(other), project_root=other), project_root=root)
+    with history.connection(root / 'manifests/holdout-lease.sqlite3') as db:
+        db.execute('PRAGMA journal_mode=WAL')
+    with pytest.raises(ValueError, match='rollback-journal'):
+        history.bind(root)
+    with history.connection(root / 'manifests/holdout-lease.sqlite3') as db:
+        db.execute('PRAGMA journal_mode=DELETE')
     marker = root / 'manifests/holdout-project.json'
     assert marker.exists()
     (root / 'manifests/holdout.sqlite3').unlink()

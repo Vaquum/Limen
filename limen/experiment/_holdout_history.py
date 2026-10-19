@@ -22,7 +22,7 @@ _MARKER = 'manifests/holdout-project.json'
 _LEASE = 'manifests/holdout-lease.sqlite3'
 _SCHEMA = (
     'CREATE TABLE project (id TEXT PRIMARY KEY, revision INTEGER NOT NULL CHECK(revision>=1))',
-    "CREATE TABLE reservations (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES project(id), start_ns INTEGER NOT NULL, end_ns INTEGER NOT NULL CHECK(end_ns>start_ns), interval_seconds INTEGER NOT NULL CHECK(interval_seconds>0 AND 86400%interval_seconds=0), state TEXT NOT NULL CHECK(state IN ('active','withdrawn','released')), created_ns INTEGER NOT NULL, changed_ns INTEGER NOT NULL)",
+    "CREATE TABLE reservations (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES project(id), start_ns INTEGER NOT NULL, end_ns INTEGER NOT NULL CHECK(end_ns>start_ns), interval_seconds INTEGER NOT NULL CHECK(interval_seconds>0 AND 86400%interval_seconds=0), state TEXT NOT NULL CHECK(state IN ('active','withdrawn','released')), created_ns INTEGER NOT NULL, changed_ns INTEGER NOT NULL, created_revision INTEGER NOT NULL CHECK(created_revision>=1))",
     'CREATE INDEX reservation_bounds ON reservations(project_id,start_ns,end_ns)',
     "CREATE TABLE research (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES project(id), revision INTEGER NOT NULL, role TEXT NOT NULL CHECK(role IN ('experiment','trainer','replay')), state TEXT NOT NULL CHECK(state IN ('started','completed','failed')), manifest_id TEXT, round_id TEXT, provenance_json TEXT NOT NULL, created_ns INTEGER NOT NULL, finished_ns INTEGER, error TEXT)",
     'CREATE INDEX research_revision ON research(project_id,revision)',
@@ -98,6 +98,8 @@ def connection(path: Path, *, create: bool = False) -> Iterator[sqlite3.Connecti
 
 
 def _initialize_lease(db: sqlite3.Connection) -> None:
+    if db.execute('PRAGMA journal_mode').fetchone()[0] != 'delete':
+        raise ValueError('Holdout admission requires rollback-journal storage')
     version = db.execute('PRAGMA user_version').fetchone()[0]
     if version == 0:
         _ = db.execute('BEGIN IMMEDIATE')
@@ -141,6 +143,8 @@ def _write_marker(root: Path, project_id: str) -> None:
 
 
 def _identity(root: Path, db: sqlite3.Connection) -> tuple[str, int]:
+    if db.execute('PRAGMA journal_mode').fetchone()[0] != 'delete':
+        raise ValueError('Holdout history requires rollback-journal storage')
     if db.execute('PRAGMA user_version').fetchone()[0] != 1:
         raise ValueError('Unsupported holdout history schema; do not downgrade history')
     rows = db.execute('SELECT id,revision FROM project').fetchall()
@@ -212,13 +216,13 @@ def reserve_holdout(project_root: str | Path, start: str, end: str, *, interval_
                 db.commit()
         with connection(path) as db:
             _ = db.execute('BEGIN IMMEDIATE')
-            project_id, _ = _identity(root, db)
+            project_id, revision = _identity(root, db)
             if db.execute("SELECT 1 FROM reservations WHERE state!='withdrawn' AND start_ns<? AND end_ns>?", (last, first)).fetchone():
                 raise ValueError('Holdout intersects an active or released reservation')
             if db.execute("SELECT 1 FROM reservations WHERE state='active' AND interval_seconds!=?", (interval_seconds,)).fetchone():
                 raise ValueError('Active holdouts must share one native interval')
             value, now = str(uuid4()), time.time_ns()
-            _ = db.execute("INSERT INTO reservations VALUES (?,?,?,?,?, 'active',?,?)", (value, project_id, first, last, interval_seconds, now, now))
+            _ = db.execute("INSERT INTO reservations VALUES (?,?,?,?,?, 'active',?,?,?)", (value, project_id, first, last, interval_seconds, now, now, revision + 1))
             _ = db.execute('UPDATE project SET revision=revision+1')
             db.commit()
             return value
@@ -233,10 +237,10 @@ def _retire(root_value: str | Path, reservation_id: str, state: str) -> None:
         with connection(root / _HISTORY) as db:
             _ = db.execute('BEGIN IMMEDIATE')
             _ = _identity(root, db)
-            row = db.execute('SELECT state,created_ns FROM reservations WHERE id=?', (reservation_id,)).fetchone()
+            row = db.execute('SELECT state,created_revision FROM reservations WHERE id=?', (reservation_id,)).fetchone()
             if row is None or row['state'] != 'active':
                 raise ValueError('Holdout is unknown or no longer active')
-            if state == 'withdrawn' and db.execute('SELECT 1 FROM research WHERE created_ns>=?', (row['created_ns'],)).fetchone():
+            if state == 'withdrawn' and db.execute('SELECT 1 FROM research WHERE revision>=?', (row['created_revision'],)).fetchone():
                 raise ValueError('A used holdout cannot be withdrawn; release it explicitly')
             _ = db.execute('UPDATE reservations SET state=?,changed_ns=? WHERE id=?', (state, time.time_ns(), reservation_id))
             _ = db.execute('UPDATE project SET revision=revision+1')
