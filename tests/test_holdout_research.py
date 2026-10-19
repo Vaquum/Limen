@@ -42,7 +42,6 @@ def _configuration(path):
     manifest['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(_FIXTURE.resolve())}}
     manifest['split_dates'] = dict(zip(('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'),
         ('2024-01-01', '2024-01-03', '2024-01-03', '2024-01-04', '2024-01-04', '2024-01-05'), strict=True))
-    config['metadata']['limen_version'] = '5.37.0'
     config['uel']['n_permutations'] = 1
     config['sfd']['params']['C'] = [1.0]
     (path / 'research.yaml').write_text(json.dumps(config))
@@ -269,6 +268,13 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
         history.bind(root)
     with history.connection(root / 'manifests/holdout-lease.sqlite3') as db:
         db.execute('PRAGMA journal_mode=DELETE')
+    for filename, label in (('holdout.sqlite3', 'history'), ('holdout-lease.sqlite3', 'lease')):
+        with history.connection(root / 'manifests' / filename) as db:
+            db.execute('PRAGMA user_version=2')
+        with pytest.raises(ValueError, match=f'Unsupported holdout {label}'):
+            history.bind(root)
+        with history.connection(root / 'manifests' / filename) as db:
+            db.execute('PRAGMA user_version=1')
     marker = root / 'manifests/holdout-project.json'
     assert marker.exists()
     (root / 'manifests/holdout.sqlite3').unlink()
