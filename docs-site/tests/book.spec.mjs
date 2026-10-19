@@ -89,7 +89,9 @@ test('chapter navigation fits the viewport and offers usable targets',async({pag
     await menu.locator('summary').focus();await page.keyboard.press('Enter');await expect(menu.locator('nav').first()).toBeVisible();
     await menu.getByRole('link',{name:'Python Research project',exact:true}).click();await expect(page).toHaveURL(/book\/python-research\/$/);
     await expect(page.locator('.mobile-nav')).not.toHaveAttribute('open','');
-    await page.setViewportSize({width:320,height:700});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.setViewportSize({width:320,height:700});
+    const geometry=await page.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth,header:document.querySelector('.header-inner').getBoundingClientRect().width}));
+    expect(geometry.scroll,JSON.stringify(geometry)).toBeLessThanOrEqual(geometry.width);
   }else{await expect(menu).not.toBeVisible();await expect(page.locator('.chapter-nav')).toBeVisible();}
 });
 
