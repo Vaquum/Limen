@@ -78,14 +78,24 @@ def test_candidate_does_not_rebuild_or_materialize_suffix_ledgers():
     assert target.outcomes.rows['short_available'].sum() > 0
 
 
-@pytest.mark.parametrize('mechanism', ['discrete', 'continuous'])
+@pytest.mark.parametrize('mechanism', ['discrete', 'continuous', 'recorded'])
 @pytest.mark.parametrize('case', ['closed', 'open_tail', 'never_filled', 'barriers'])
 def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
     from tests.test_funding_adapter import _funded
-    from tests.test_event_execution_reuse import ADAPTER_CALLS, recorded_adapter
+    from tests.test_event_execution_reuse import ADAPTER_CALLS, recorded_adapter, recorded_funded_inputs
 
-    inputs, policy = recorded_inputs()
-    inputs, policy = _funded(inputs, replace(policy, max_holding_seconds=1800), mechanism=mechanism)
+    if mechanism == 'recorded':
+        inputs, policy = recorded_funded_inputs()
+        observations = inputs.observations.head(12)
+        end = int(observations['available_at_ns'][-1])
+        funding = inputs.funding_events.filter(pl.col('time_ns') <= end)
+        times = pl.from_epoch(observations['start_ns'], time_unit='ns').alias('datetime')
+        sources = (*inputs.sources, source_binding(observations, 'recorded first twelve hours', inputs.partition_start_ns, end, 1, 'recorded OHLC'), source_binding(funding, 'recorded funding', inputs.partition_start_ns, end, 1, 'recorded realized settlement'))
+        inputs = replace(inputs, partition_end_ns=end, observations=observations, signals=inputs.signals.head(12).with_columns(times), funding_events=funding, sources=sources)
+        policy = replace(policy, max_holding_seconds=1800)
+    else:
+        inputs, policy = recorded_inputs()
+        inputs, policy = _funded(inputs, replace(policy, max_holding_seconds=1800), mechanism=mechanism)
     policy = replace(policy, prediction_mode='target_exposure', notional_rate=1.0, funding=replace(policy.funding, adapter_ref=f'{recorded_adapter.__module__}.recorded_adapter', adapter_version='recorded-wrapper-v1'))
     if case == 'open_tail':
         policy = replace(policy, max_holding_seconds=1e9)
@@ -117,7 +127,11 @@ def test_funded_candidate_plan_reuse_preserves_full_ledger(mechanism, case):
         ADAPTER_CALLS.clear()
         original_execute(account, plan, signals, start, end, adapter, **kwargs)
         assert ADAPTER_CALLS == expected_calls
-        assert [{key: value for key, value in row.items() if key != 'episode_id'} for row in account.episodes] == [{key: value for key, value in row.items() if key != 'episode_id'} for row in ledger.episodes.to_dicts()]
+        for actual, expected_episode in zip(account.episodes, ledger.episodes.to_dicts(), strict=True):
+            # Open episodes have no outcome label; only the full ledger marks
+            # their unused PnL to the final state in its aggregate metrics.
+            omitted = {'episode_id'} if expected_episode['closed_at_ns'] is not None else {'episode_id', 'net_pnl'}
+            assert {key: value for key, value in actual.items() if key not in omitted} == {key: value for key, value in expected_episode.items() if key not in omitted}
 
     plan = event_plan(inputs, policy)
     timeline = _Timeline(sorted({event.time_ns for event in plan.events if event.kind == 'observation'}), inputs.signals['available_at_ns'].to_list(), inputs.observations['start_ns'].to_list(), inputs.observations['available_at_ns'].to_list(), plan)
