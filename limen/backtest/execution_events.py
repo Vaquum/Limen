@@ -57,6 +57,25 @@ def timer_clock(policy: TradePolicy) -> tuple[int, int]:
     return round(policy.timer_interval_seconds * NANOSECONDS), round(policy.timer_phase_utc_seconds * NANOSECONDS)
 
 
+def validate_signal_barriers(inputs: TradeInputs, policy: TradePolicy) -> None:
+    columns = [name for name in (policy.take_profit_bps_column, policy.stop_loss_bps_column) if name is not None]
+    if not columns:
+        return
+    required = ['__barrier_ready__', *columns]
+    if set(required) - set(inputs.signals.columns):
+        raise ValueError('Dynamic barriers require original distance/readiness signal context')
+    ready = inputs.signals['__barrier_ready__']
+    if ready.dtype != pl.Boolean or ready.null_count() or not ready.is_sorted():
+        raise ValueError('Barrier readiness must be a declared contiguous leading warmup')
+    for name in columns:
+        for value, usable in zip(inputs.signals[name], ready, strict=True):
+            if not usable:
+                if value is not None:
+                    raise ValueError('Barrier warmup values must be null')
+            elif value is None or not 0 < finite_number(value, name) < 10000:
+                raise ValueError(f'Malformed ready barrier distance: {name}')
+
+
 def source_execution_events(inputs: TradeInputs, policy: TradePolicy, *, include_timers: bool) -> tuple[ExecutionEvent, ...]:
     validate_observations(inputs, policy)
     if set(SIGNAL_COLUMNS) - set(inputs.signals.columns) or inputs.signals['row_id'].is_duplicated().any():

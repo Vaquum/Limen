@@ -1748,3 +1748,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.39.0] - 2026-10-19
 
 - Add explicit frozen fitted-selection assessment on reserved final observations with durable exposure attempts, causal member predictions, declared snapshot economics and verified retained evidence.
+
+## [5.40.0] - 2026-10-19
+
+- Add research-only causal per-entry TP/SL distance columns, private volatility preparation and first-fill episode binding.

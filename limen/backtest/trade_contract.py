@@ -103,6 +103,10 @@ class TradePolicy:
     execution_lag_seconds: float = 0.0
     max_price_gap_seconds: float | None = None
     funding: FundingPolicy | None = None
+    take_profit_bps_column: str | None = None
+    stop_loss_bps_column: str | None = None
+    barrier_spec: Mapping[str, JsonValue] | None = None
+    source_interval_seconds: float | None = None
 
     def __post_init__(self) -> None:
         if self.rule_version != RULE_VERSION or self.prediction_mode not in ('binary', 'target_exposure'):
@@ -121,6 +125,14 @@ class TradePolicy:
                 raise ValueError(f'{name} must be positive or disabled')
         if any(value is not None and value >= BPS for value in (self.take_profit_bps, self.stop_loss_bps)):
             raise ValueError('Signed price barriers must be below 10000 bps')
+        for name in ('take_profit_bps', 'stop_loss_bps'):
+            column = getattr(self, f'{name}_column')
+            if column is not None and (not isinstance(column, str) or not column.isidentifier() or column.startswith('__') or getattr(self, name) is not None):
+                raise ValueError(f'{name} requires either a scalar or literal distance-column name')
+        if self.take_profit_bps_column is not None and self.take_profit_bps_column == self.stop_loss_bps_column:
+            raise ValueError('TP and SL distance columns must be distinct')
+        if self.source_interval_seconds is not None and finite_number(self.source_interval_seconds, 'source interval') <= 0:
+            raise ValueError('Source interval must be positive')
         _ = finite_number(self.timer_phase_utc_seconds, 'timer phase')
         if self.funding is not None and (self.product.kind != 'linear_perpetual' or self.funding.currency != self.product.quote_currency):
             raise ValueError('Funding requires a linear perpetual in the declared quote currency')
@@ -166,7 +178,8 @@ def json_value(value: object) -> JsonValue:
             raise ValueError('Nonfinite contract value')
         return value
     if is_dataclass(value) and not isinstance(value, type):
-        return {field.name: json_value(getattr(value, field.name)) for field in fields(value)}
+        omitted = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds'} if isinstance(value, TradePolicy) else set()
+        return {field.name: json_value(getattr(value, field.name)) for field in fields(value) if field.name not in omitted or getattr(value, field.name) is not None}
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
         if any(not isinstance(key, str) for key in mapping):
@@ -187,13 +200,15 @@ def source_binding(frame: pl.DataFrame, identity: str, start_ns: int, end_ns: in
 
 
 def export_trade_contract(policy: TradePolicy, inputs: TradeInputs) -> dict[str, JsonValue]:
-    return {
+    columns = [name for name in (policy.take_profit_bps_column, policy.stop_loss_bps_column) if name is not None]
+    selected = ['row_id', 'available_at_ns', *(['__barrier_ready__', *columns] if columns else [])]
+    result: dict[str, JsonValue] = {
         'rule_version': RULE_VERSION,
         'policy': json_value(policy),
         'calibration': json_value(policy.funding.calibration) if policy.funding is not None else None,
         'initial_conditions': {'equity': inputs.initial_equity, 'quantity': 0.0, 'currency': policy.product.quote_currency},
         'sources': json_value(inputs.sources),
-        'signal_rows': json_value(inputs.signals.select('row_id', 'available_at_ns').to_dicts()),
+        'signal_rows': json_value(inputs.signals.select(selected).to_dicts()),
         'partition': [inputs.partition_start_ns, inputs.partition_end_ns],
         'rules': {
             'sizing': 'signal_change_post_cost_equity',
@@ -206,6 +221,10 @@ def export_trade_contract(policy: TradePolicy, inputs: TradeInputs) -> dict[str,
             'ohlc': 'adverse_gap_sl_first_interval_uncertainty',
         },
     }
+
+    if columns:
+        result['barrier_distances'] = json_value(source_binding(inputs.signals.select(selected), 'entry_barrier_distances', inputs.partition_start_ns, inputs.partition_end_ns, 1, 'decision_time_bps_and_declared_readiness'))
+    return result
 
 
 __all__ = ['BPS', 'NANOSECONDS', 'RULE_VERSION', 'ExecutionEvent', 'FundingPolicy', 'JsonScalar', 'JsonValue', 'PredictionMode', 'ProductSpec', 'SourceBinding', 'TradeInputs', 'TradeLedger', 'TradePolicy', 'contract_digest', 'export_trade_contract', 'finite_number', 'json_value', 'source_binding']
