@@ -16,6 +16,7 @@ from typing import Protocol, cast
 
 import polars as pl
 
+from limen.experiment._parallel_sources import SourceSnapshot
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest, MLManifest
@@ -174,7 +175,7 @@ def _native_pools() -> list[dict[str, object]]:
     return pools
 
 
-def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
+def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
                 record_execution: bool, record_model_outputs: bool, fold_promotion: dict[str, object] | None = None) -> None:
     from limen.yaml.compiler import build_manifest
 
@@ -190,7 +191,10 @@ def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
     if manifest.architecture_function is lightgbm_binary:
         _ = import_module('lightgbm')
     _ = _native_pools()
-    _worker_yaml, _worker_sources = yaml_reference, sources
+    _worker_yaml = yaml_reference
+    _worker_sources = FrozenRoundSources(sources.learning.read(),
+                                        sources.execution.read() if sources.execution is not None else None,
+                                        sources.funding.read() if sources.funding is not None else None)
     _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion = record_execution, record_model_outputs, fold_promotion
 
 

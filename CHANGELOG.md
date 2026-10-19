@@ -1779,3 +1779,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.42.1] - 2026-10-19
 
 - Reuse each funded outcome candidate plan for its paired long/short labels and avoid unused ledger state frames and aggregate metrics while preserving complete funding execution.
+
+## [5.42.2] - 2026-10-19
+
+- Share checked frozen source snapshots during spawned-worker startup while preserving independent frames, native thread limits and recovery semantics.
