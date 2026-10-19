@@ -98,7 +98,12 @@ def pytest_sessionfinish(session, exitstatus):
     git = lambda *args: subprocess.check_output(['git', *args], cwd=ROOT, text=True).strip()
     tested, tree = git('rev-parse', 'HEAD'), git('rev-parse', 'HEAD^{tree}')
     head = os.environ.get('LIMEN_EXPECTED_HEAD', tested)
-    sources = [{key: item[key] for key in ('path', 'region', 'sha256')} | {'commit': git('log', '-1', '--format=%H', '--', item['path']), 'status': 'candidate', 'merged_pr': None} for item in bindings(ROOT, ROOT / 'docs/Research-Book.md')]
+    from provenance import validate_provenance
+    provenance = json.loads((ROOT / '.docs-evidence/source-provenance.json').read_text())
+    validate_provenance(ROOT, provenance)
+    files = {item['path']: item for item in provenance['files']}
+    sources = [item | {'region': '__file__'} for item in provenance['files']]
+    sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in bindings(ROOT, ROOT / 'docs/Research-Book.md')]
     record = {
         'schema_version': 1, 'mode': 'candidate',
         'revision': {'head': head, 'tested_commit': tested, 'tree': tree, 'dirty': bool(git('status', '--porcelain', '--untracked-files=normal'))},

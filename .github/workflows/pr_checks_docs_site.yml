@@ -33,6 +33,11 @@ jobs:
           python -m pip install --require-hashes -r requirements/ci/research-env.txt
           python -m pip install --no-deps -e .
 
+      - name: Acquire merged source identities
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
+
       - name: Prove the candidate wheel and research projects
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}

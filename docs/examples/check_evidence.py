@@ -159,6 +159,16 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         raise ValueError('Missing released-package proof')
     if record['mode'] == 'candidate' and (record['publication'] is not None or any(source['status'] == 'merged' and not source['merged_pr'] for source in record['sources'])):
         raise ValueError('Candidate cannot manufacture merged/released proof')
+    from provenance import validate_provenance
+    provenance = json.loads((root / '.docs-evidence/source-provenance.json').read_text())
+    validate_provenance(root, provenance)
+    files = {item['path']: item for item in provenance['files']}
+    for source in record['sources']:
+        expected = files[source['path']]
+        if any(source[key] != expected[key] for key in ('commit', 'status', 'merged_pr')):
+            raise ValueError('Source provenance was substituted')
+        if source['region'] == '__file__' and source['sha256'] != expected['sha256']:
+            raise ValueError('Source file identity differs')
     for binding in bindings(root, root / 'docs/Research-Book.md'):
         source = next((item for item in record['sources'] if item['path'] == binding['path'] and item['region'] == binding['region']), None)
         if source is None or source['sha256'] != binding['sha256']:
