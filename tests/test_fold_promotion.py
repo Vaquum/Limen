@@ -50,7 +50,7 @@ def test_selected_fold_reconstruction(fold_campaigns, kind):
         assert other.sensor.provenance_digest != sensor.provenance_digest
 
 
-@pytest.mark.parametrize('mutation', ['lean', 'witness', 'version', 'source', 'ratio', 'raw', 'retained', 'threshold', 'metric', 'binding', 'model', 'count', 'competing', 'csv', 'other_unavailable', 'selected_unavailable', 'identity'])
+@pytest.mark.parametrize('mutation', ['lean', 'witness', 'version', 'source', 'ratio', 'raw', 'retained', 'threshold', 'metric', 'binding', 'model', 'count', 'competing', 'csv', 'other_unavailable', 'selected_unavailable', 'identity', 'empty_metrics'])
 def test_witness_validation_stages(fold_campaigns, mutation):
     campaign = fold_campaigns['anchored']
     trainer = Trainer(campaign.path, data=campaign.bars)
@@ -77,6 +77,8 @@ def test_witness_validation_stages(fold_campaigns, mutation):
         witness['fitted_threshold'] += 1e-3
     if mutation == 'metric':
         entry['folds'][campaign.fold]['results']['missing_replay_metric'] = 1
+    if mutation == 'empty_metrics':
+        entry['folds'][campaign.fold]['results'] = {}
     if mutation == 'binding':
         entry['folds'][campaign.fold]['learning_binding'] = {'changed': True}
     if mutation == 'model':
@@ -96,7 +98,7 @@ def test_witness_validation_stages(fold_campaigns, mutation):
         with patch('limen.inference.trainer.load_original_log', side_effect=AssertionError('must not read aggregate')):
             Trainer(campaign.path, data=campaign.bars)
         return
-    before_fit = mutation in ('lean', 'witness', 'version', 'source', 'ratio', 'raw', 'count', 'competing', 'identity')
+    before_fit = mutation in ('lean', 'witness', 'version', 'source', 'ratio', 'raw', 'count', 'competing', 'identity', 'empty_metrics')
     if before_fit:
         guard = patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early'))
     elif mutation == 'retained':

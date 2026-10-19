@@ -197,6 +197,8 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
         if 'unavailable_reason' not in witness and (type(witness.get('fold')) is not int or type(witness.get('n_folds')) is not int or witness.get('fold') != index or witness.get('n_folds') != n_folds):
             raise ValueError('fold witness identity/count mismatch; rerun')
     entry = entries[fold]
+    if not isinstance(entry.get('results'), dict) or not entry['results']:
+        raise ValueError('Selected fold results are missing or empty; rerun with recorded metrics')
     witness = checked(entry['fold_promotion'])
     if set(witness) != {'version', 'fold', 'n_folds', 'raw', 'retained', 'fitting_cutoff_ns', 'fitted_threshold', 'inference_model'}:
         raise ValueError('fold witness fitted fields are incomplete; rerun')
