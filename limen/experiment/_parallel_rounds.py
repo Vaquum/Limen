@@ -21,6 +21,7 @@ from tqdm import tqdm
 from limen.experiment._dynamic_barriers import admit_research_run
 from limen.experiment._parallel_commit import ParallelCommit
 from limen.experiment._parallel_resume import restore_parallel
+from limen.experiment._parallel_sources import snapshot_sources
 from limen.experiment._parallel_worker import FrozenRoundSources, RoundPayload, evaluate_round as _evaluate_round, freeze_sources, startup_limits, validate_parallel, worker_init
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
@@ -168,12 +169,12 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
     pending: deque[tuple[dict[str, object], Future[RoundPayload], dict[str, object]]] = deque()
     capacity = max(1, min(workers, n_permutations - start))
     capacity = next((index + 1 for index in range(1, capacity) if barrier(index)), capacity)
-    with startup_limits(), tqdm(initial=start, total=n_permutations,
+    with startup_limits(), snapshot_sources(sources.learning, sources.execution, sources.funding, csv_path.parent) as snapshot, tqdm(initial=start, total=n_permutations,
                                 disable=not progress_bar) as progress:
         pool = ProcessPoolExecutor(max_workers=capacity,
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
-                                   initargs=(reference, sources, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None)))
+                                   initargs=(reference, snapshot, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None)))
         exhausted = False
         try:
             launch = cast(Callable[[], None], getattr(pool, '_launch_processes', None))

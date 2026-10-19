@@ -1786,5 +1786,9 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.43.1] - 2026-10-19
 
+- Share checked frozen source snapshots during spawned-worker startup while preserving independent frames, native thread limits and recovery semantics.
+
+## [5.43.2] - 2026-10-19
+
 - Define Limen's executable research book contract: two comprehensive tested projects, exact source/output bindings, merged-source and current-validation evidence, the owned reader, and complete reference/developer coverage.
 - Align the documentation task router with Python Research and Compiled Research while retaining the current production renderer.
