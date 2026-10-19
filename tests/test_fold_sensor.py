@@ -7,9 +7,9 @@ import pytest
 from limen.cohort import Cohort
 from limen.inference import Sensor
 from limen.inference._python_sensor import decision_rows
-from tests.fold_components import fold_campaigns as _fold_campaigns
+from tests.fold_components import FIXTURE
 
-fold_campaigns = _fold_campaigns
+pytest_plugins = ['tests.fold_components']
 
 
 @pytest.mark.parametrize('kind', ['anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered'])
@@ -18,7 +18,6 @@ def test_guard_failure_precedence(fold_campaigns, kind, failure):
     item = fold_campaigns[kind]
     sensor = copy.deepcopy(item.sensor)
     source = item.bars.sort('datetime')
-    from tests.fold_components import FIXTURE
     history = pl.read_parquet(FIXTURE, n_rows=600)
     manifest = sensor._get_manifest()
     if failure == 'feature':
@@ -44,6 +43,14 @@ def test_guard_failure_precedence(fold_campaigns, kind, failure):
     # Original, pre-source and omitted native rows remain guarded, independent of flags.
     first = source.head(40)
     assert all(row.reason == 'inside-training-window' for row in sensor.predict_all(first))
+
+
+def test_incomplete_formed_bar_warms_up(fold_campaigns):
+    sensor = fold_campaigns['formed'].sensor
+    first = pl.read_parquet(FIXTURE, n_rows=1)
+    assert sensor.predict_all(first) == []
+    result = sensor.predict(first)
+    assert result.reason == 'warm-up' and result.prediction is None
 
 
 @pytest.mark.parametrize('shape', ['duplicate', 'unsorted', 'null', 'naive', 'submicrosecond', 'finer', 'interval'])
@@ -84,6 +91,7 @@ def test_legacy_cohort_rejects_fold_binding(fold_campaigns, route):
         with pytest.raises(ValueError, match='walk-forward rounds cannot be promoted'):
             Cohort(rounds=[(item.path, item.record['round_id'])])
     else:
-        from limen.inference._fold_sensor import reject_legacy_members
+        ordinary = fold_campaigns['ordinary']
+        cohort = Cohort(experiment_log_path=str(ordinary.path), permutation_ids=[ordinary.record['round_id']])
         with pytest.raises(ValueError, match='fold-qualified'):
-            reject_legacy_members([item.sensor])
+            cohort.set_members([item.sensor])

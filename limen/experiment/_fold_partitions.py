@@ -52,6 +52,8 @@ def raw(manifest: object, selected: pl.DataFrame, splits: list[pl.DataFrame]) ->
         return
     try:
         positions = {value: index for index, value in enumerate(clock(selected))}
+        if len(positions) != selected.height or not selected['datetime'].is_sorted():
+            raise FoldEvidenceError('row_membership', 'Selected fold source requires unique, increasing timestamps')
         groups = [[[positions[value]] for value in clock(frame)] if frame.height else [] for frame in splits]
         witnesses = {name: partition(frame, rows) for name, frame, rows in zip(_NAMES, splits, groups, strict=True)}
         context.update(raw=witnesses, positions=positions, bar_groups={}, raw_splits=splits)

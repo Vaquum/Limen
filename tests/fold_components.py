@@ -73,7 +73,7 @@ def config(kind: str, source: Path) -> dict:
                                    'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer', 'params': {'metric': 'limen.metrics.balanced_metric.balanced_metric', 'threshold_min': 0.5, 'threshold_max': 0.5, 'threshold_step': 0.1}}}
     if kind == 'custom':
         manifest['reference_architecture'] = 'limen.sfd.reference_architecture._fold_test_binary'
-    if kind == 'reordered':
+    if kind in ('reordered', 'duplicates'):
         manifest['pre_split_data_selector'] = {'func': 'limen.data._fold_test_sorted_source'}
     if kind == 'formed':
         manifest['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': 100000}}
@@ -98,7 +98,7 @@ def fold_campaigns(tmp_path_factory):
     result = {}
     root = tmp_path_factory.mktemp('fold-campaigns')
     original = pl.read_parquet(FIXTURE)
-    for kind in ('anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered', 'companion'):
+    for kind in ('anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered', 'duplicates', 'companion', 'ordinary'):
         started = time.perf_counter()
         source = root / 'source.parquet'
         count = 432 if kind in ('anchored', 'rolling') else 384
@@ -107,21 +107,28 @@ def fold_campaigns(tmp_path_factory):
             bars = bars.with_columns(pl.lit(3600).alias('base_interval'))
         if kind == 'reordered':
             bars = pl.concat([bars[:300], bars[301:384], bars[300:301]])
+        if kind == 'duplicates':
+            bars = pl.concat([bars, bars[300:301]])
         bars.write_parquet(source)
         reference = config('custom' if kind == 'companion' else kind, source)
+        if kind == 'ordinary':
+            reference['sfd']['manifest'].pop('split_walk_forward')
+        if kind == 'parallel':
+            reference['sfd']['params']['C'] = [0.1, 1.0]
+            reference['uel']['n_permutations'] = 2
         output = root / 'output'
         loop = UniversalExperimentLoop(sfd=CompiledSFD(reference), data=bars, experiment_dir=output,
                                        yaml_reference=reference, search_strategy=build_search_strategy(reference), checkpoint_interval=1)
         if kind in ('anchored', 'rolling'):
             loop.manifest.set_split_config(*(4, 1, 2) if kind == 'anchored' else (3, 2, 2))
         with threadpool_limits(limits=1):
-            loop.run('fold_promotion', n_permutations=1, prep_each_round=True, progress_bar=False,
+            loop.run('fold_promotion', n_permutations=reference['uel']['n_permutations'], prep_each_round=True, progress_bar=False,
                      recording=FULL, record_execution=True, record_model_outputs=True,
                      workers=2 if kind == 'parallel' else 1)
             selected = 3 if kind in ('anchored', 'rolling') else 0
             trainer = Trainer(output, data=bars)
             pid = next(iter(trainer._round_data))
-            sensor = trainer.train([pid], fold=selected)[0]
+            sensor = trainer.train([pid], **({} if kind == 'ordinary' else {'fold': selected}))[0]
         destination = root / kind
         shutil.move(output, destination)
         metadata = json.loads((destination / 'metadata.json').read_text())

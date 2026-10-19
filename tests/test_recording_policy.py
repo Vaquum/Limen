@@ -397,7 +397,10 @@ def test_payload_projection(kind, campaigns, tmp_path):
                 if 'learning_binding' in source:
                     source['learning_binding'] = source['learning_binding']['model']
                 before_write = copy.deepcopy(source)
-                _writer_record(loop, path, source)
+                if 'folds' in source:
+                    loop._append_round_data(path, source['round_id'], source['round_params'], None, source, round_index=source['_round_index'])
+                else:
+                    _writer_record(loop, path, source)
                 assert source == before_write
             assert _records(directory) == [_project(record, policy) for record in original]
     finally:

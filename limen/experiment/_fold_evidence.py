@@ -89,7 +89,10 @@ def model_witness(model: object) -> dict[str, object]:
     if declaration is not None and (not isinstance(declaration, tuple) or len(declaration) != _OUTPUT_FIELDS or declaration[0] not in ('binary', 'continuous', 'target_exposure') or type(declaration[1]) is not bool):
         raise FoldEvidenceError('inference_model', 'inference_output must be an immutable (kind, bool_probabilities) class declaration')
     output = None if declaration is None else {'kind': declaration[0], 'probabilities': declaration[1]}
-    return {'class': qualified(type(model)), 'prediction_mode': getattr(model, 'prediction_mode', None), 'output_contract': output}
+    mode = getattr(model, 'prediction_mode', None)
+    if mode not in ('binary', 'target_exposure') or type(getattr(model, 'deterministic', None)) is not bool:
+        raise FoldEvidenceError('inference_model', 'Fitted model lacks native prediction_mode/deterministic declarations')
+    return {'class': qualified(type(model)), 'prediction_mode': mode, 'output_contract': output}
 
 
 def record(make_record: Record, fold: int, data: Mapping[str, object], result: Mapping[str, object], *, record_execution: bool, record_outputs: bool) -> dict[str, object]:
@@ -107,8 +110,9 @@ def record(make_record: Record, fold: int, data: Mapping[str, object], result: M
                                    'fitting_cutoff_ns': max(selected_times[index] for index in positions) + cast(int, selected['interval_ns']),
                                    'fitted_threshold': getattr(result.get('_model'), '_calibration_threshold', None),
                                    'inference_model': model_witness(result.get('_model'))}
-    except FoldEvidenceError as exc:
-        entry['fold_promotion'] = exc.record()
+    except (FoldEvidenceError, IndexError) as exc:
+        error = exc if isinstance(exc, FoldEvidenceError) else FoldEvidenceError('row_membership', f'Fold support escaped its selected source: {exc}')
+        entry['fold_promotion'] = error.record()
     return entry
 
 
@@ -118,12 +122,24 @@ def add_metadata(metadata: dict[str, object], host: object, workers: int) -> Non
         metadata['fold_promotion'] = {**cast(Mapping[str, object], promotion), 'origin': 'parallel' if workers > 1 else 'sequential'} if 'unavailable_reason' not in promotion else promotion
 
 
-def checked(value: object) -> dict[str, object]:
+def _versioned(value: object) -> dict[str, object]:
     if not isinstance(value, dict):
         raise FoldEvidenceError('row_membership', 'Missing fold witness; rerun with version 1 evidence')
     record = cast(dict[str, object], value)
     if type(record.get('version')) is not int or record.get('version') != 1:
         raise FoldEvidenceError('row_membership', 'Unsupported fold witness; rerun with version 1 evidence')
+    if 'unavailable_reason' in record:
+        reason = record['unavailable_reason']
+        if set(record) != {'version', 'unavailable_reason'} or not isinstance(reason, dict):
+            raise ValueError('Invalid unavailable fold witness; rerun')
+        fields = cast(dict[str, object], reason)
+        if set(fields) != {'code', 'detail'} or fields['code'] not in ('clock', 'dtype', 'row_membership', 'inference_model') or not isinstance(fields['detail'], str) or not fields['detail']:
+            raise ValueError('Invalid unavailable fold witness reason; rerun')
+    return record
+
+
+def checked(value: object) -> dict[str, object]:
+    record = _versioned(value)
     if 'unavailable_reason' in record:
         reason = cast(Mapping[str, object], record['unavailable_reason'])
         raise FoldEvidenceError(str(reason['code']), str(reason['detail']))
@@ -163,8 +179,10 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
         raise ValueError('fold witness validation ratio/preparation mismatch; rerun')
     entries = cast(list[Mapping[str, object]], folds)
     for index, entry in enumerate(entries):
-        witness = checked(entry.get('fold_promotion'))
-        if type(entry.get('fold')) is not int or type(witness.get('fold')) is not int or type(witness.get('n_folds')) is not int or entry.get('fold') != index or witness.get('fold') != index or witness.get('n_folds') != n_folds:
+        witness = _versioned(entry.get('fold_promotion'))
+        if type(entry.get('fold')) is not int or entry.get('fold') != index:
+            raise ValueError('fold witness identity/count mismatch; rerun')
+        if 'unavailable_reason' not in witness and (type(witness.get('fold')) is not int or type(witness.get('n_folds')) is not int or witness.get('fold') != index or witness.get('n_folds') != n_folds):
             raise ValueError('fold witness identity/count mismatch; rerun')
     entry = entries[fold]
     witness = checked(entry['fold_promotion'])

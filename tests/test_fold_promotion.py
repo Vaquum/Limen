@@ -2,6 +2,7 @@ import copy
 from datetime import date
 import math
 from unittest.mock import patch
+from types import SimpleNamespace
 
 import polars as pl
 import pytest
@@ -11,12 +12,12 @@ from limen.experiment._fold_fingerprint import fingerprint, membership
 from limen.inference import Trainer
 from limen.inference._fold_metrics import scalar_matches
 from limen.inference.errors import ReconstructionError
-from tests.fold_components import FIXTURE, fold_campaigns as _fold_campaigns
+from tests.fold_components import FIXTURE
 
-fold_campaigns = _fold_campaigns
+pytest_plugins = ['tests.fold_components']
 
 
-@pytest.mark.parametrize('kind', ['anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered', 'companion'])
+@pytest.mark.parametrize('kind', ['anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered', 'duplicates', 'companion'])
 def test_selected_fold_reconstruction(fold_campaigns, kind):
     campaign = fold_campaigns[kind]
     sensor = campaign.sensor
@@ -50,7 +51,7 @@ def test_selected_fold_reconstruction(fold_campaigns, kind):
         assert other.sensor.provenance_digest != sensor.provenance_digest
 
 
-@pytest.mark.parametrize('mutation', ['lean', 'witness', 'version', 'source', 'ratio', 'raw', 'retained', 'threshold', 'metric', 'binding', 'model', 'count', 'competing', 'csv'])
+@pytest.mark.parametrize('mutation', ['lean', 'witness', 'version', 'source', 'ratio', 'raw', 'retained', 'threshold', 'metric', 'binding', 'model', 'count', 'competing', 'csv', 'other_unavailable', 'selected_unavailable'])
 def test_witness_validation_stages(fold_campaigns, mutation):
     campaign = fold_campaigns['anchored']
     trainer = Trainer(campaign.path, data=campaign.bars)
@@ -84,6 +85,12 @@ def test_witness_validation_stages(fold_campaigns, mutation):
     if mutation == 'competing':
         trainer._round_data['competitor'] = copy.deepcopy(entry)
         trainer._round_data['competitor']['fold_promotion']['campaign_source_digest'] = '0' * 64
+    if mutation in ('other_unavailable', 'selected_unavailable'):
+        target = 0 if mutation == 'other_unavailable' else campaign.fold
+        entry['folds'][target]['fold_promotion'] = {'version': 1, 'unavailable_reason': {'code': 'inference_model', 'detail': 'no retained fitted model'}}
+        if mutation == 'other_unavailable':
+            assert trainer.train([pid], fold=campaign.fold)[0].fold == campaign.fold
+            return
     if mutation == 'csv':
         with patch('limen.inference.trainer.load_original_log', side_effect=AssertionError('must not read aggregate')):
             Trainer(campaign.path, data=campaign.bars)
@@ -92,6 +99,20 @@ def test_witness_validation_stages(fold_campaigns, mutation):
     guard = patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early')) if before_fit else patch.object(trainer, '_validate_metrics', side_effect=AssertionError('aggregate used'))
     with guard, pytest.raises(ReconstructionError, match=f'Permutation {pid}, fold {campaign.fold}'):
         trainer.train([pid], fold=campaign.fold)
+
+
+def test_ambiguous_selected_rows_and_incomplete_model_decline():
+    from limen.experiment._fold_evidence import model_witness
+    from limen.experiment._fold_fingerprint import FoldEvidenceError
+    from limen.experiment._fold_partitions import raw
+
+    rows = pl.read_parquet(FIXTURE, n_rows=4)
+    duplicate = pl.concat([rows, rows.head(1)])
+    state = {'trial': {}}
+    raw(SimpleNamespace(_fold_capture=state), duplicate, [duplicate, rows.clear(), rows])
+    assert state['unavailable']['unavailable_reason']['code'] == 'row_membership'
+    with pytest.raises(FoldEvidenceError, match='native prediction_mode'):
+        model_witness(SimpleNamespace(predict=lambda data: data))
 
 
 def test_fold_fingerprint_codec():
