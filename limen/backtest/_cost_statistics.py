@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import cast
 
 from limen.backtest import _cost_history as history
-from limen.backtest.trade_contract import JsonValue
+from limen.backtest.trade_contract import JsonValue, TradeInputs, TradePolicy, finite_number
 
 _ZERO = Decimal(0)
 _BPS = Decimal(10_000)
@@ -194,6 +194,27 @@ def report(value: Mapping[str, JsonValue], cutoff_ns: int) -> dict[str, JsonValu
                         'no_fee_transfer', 'unknown_whole_order_completeness',
                         'three_day_jackknife_has_no_coverage_guarantee'],
     })
+
+
+def ranks(candidates: Mapping[str, Mapping[str, object]], results: Mapping[str, JsonValue]) -> dict[str, JsonValue]:
+    ranked: dict[str, JsonValue] = {}
+    for scenario in ('original', 'calibrated'):
+        values: dict[str, float] = {}
+        groups: set[tuple[int, int, str, str, float, float, float]] = set()
+        for name, snapshot in candidates.items():
+            item = history.mapping(results[name])
+            result = history.mapping(history.mapping(item['scenarios'])[scenario])
+            if result['disposition'] not in ('original', 'retrospective_cost_scenario', 'retrospective_low_effective_support'):
+                break
+            inputs = cast(TradeInputs, snapshot['inputs'])
+            policy = history.mapping(history.mapping(history.mapping(result['contract'])['trade_contract'])['policy'])
+            groups.add((inputs.partition_start_ns, inputs.partition_end_ns, cast(str, item['benchmark_digest']),
+                        cast(TradePolicy, snapshot['policy']).product.quote_currency, inputs.initial_equity, finite_number(policy['fee_bps'], 'fee'), finite_number(policy['slip_bps'], 'slip')))
+            values[name] = finite_number(history.mapping(result['metrics'])['total_return'], 'total_return')
+        distinct = sorted(set(values.values()), reverse=True)
+        ranked[scenario] = {name: distinct.index(value) + 1 for name, value in values.items()} if len(values) == len(candidates) and len(groups) == 1 else None
+    ranked['delta'] = {name: cast(int, history.mapping(ranked['original'])[name]) - cast(int, history.mapping(ranked['calibrated'])[name]) for name in candidates} if all(ranked.values()) else None
+    return ranked
 
 
 __all__: list[str] = []
