@@ -68,6 +68,8 @@ Choose the route that fits how you define the experiment:
 
 Both routes use the Universal Experiment Loop (UEL) to execute rounds and the Mutable Search Queue (MSQ) to control parameter search. CLI saves an experiment directory automatically; Python callers enable persistence with `experiment_dir`. Adaptive feedback is optional in both routes.
 
+Python callers can pass selected fitted state directly to `Sensor.from_python`, without a Manifest. The [recorded Python/MSQ example](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run) covers search, caller selection, refitting and repeated inference; the [Sensor API](https://docs.vaquum.fi/limen/guides/trainer#python-construction) defines its boundary. Python declarations do not carry compiled reconstruction or protected holdout evidence.
+
 ## First Experiment
 
 The first runnable path is a YAML manifest executed through the `limen` CLI.

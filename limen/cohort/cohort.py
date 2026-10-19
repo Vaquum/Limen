@@ -198,6 +198,8 @@ class Cohort:
 
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
+        if any(getattr(member, 'origin', None) == 'python' for member in members):
+            raise ValueError('Cohort cannot bind Python-origin Sensors; aggregate them in caller code.')
 
         if self._round_sources is not None:
             bound = self._round_sources.bind(members)
@@ -210,9 +212,7 @@ class Cohort:
         assert self.metadata is not None
 
         if len(members) != len(self.permutation_ids):
-            raise ValueError(
-                'Cohort member count must match selected permutation_ids count.'
-            )
+            raise ValueError('Cohort member count must match selected permutation_ids count.')
 
         by_pid: dict[str, Any] = {}
         for member in members:

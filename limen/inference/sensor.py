@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract
 import logging
-from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Literal
 
 import numpy as np
@@ -13,23 +13,12 @@ import polars as pl
 
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
+from limen.inference._python_sensor import BarPrediction
+from limen.inference._python_sensor import PredictionReason
+from limen.inference._python_sensor import HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase
 
 
-PredictionReason = Literal['warm-up', 'inside-training-window', 'null-features', 'sensor-error']
-
-
-@dataclass
-class BarPrediction:
-
-    '''Prediction result for a single bar.'''
-
-    datetime: Any
-    prediction: int | float | None
-    probability: float | None
-    reason: PredictionReason | None
-    available_at_ns: int | None = None
-    trade_contract_digest: str | None = None
-
+__all__ = ['BarPrediction', 'PredictionReason', 'Sensor']
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +60,20 @@ class Sensor:
     def trade_contract(self) -> Mapping[str, JsonValue] | None:
         return copy.deepcopy(self._trade_contract)
 
+    @staticmethod
+    def from_python(*, fitted_state: StateT, params: Mapping[str, object],
+                    infer: Infer[HistoryT, StateT, OutputT],
+                    map_output: MapOutput[OutputT], state_id: str,
+                    fitting_cutoff: datetime, selection_cutoff: datetime,
+                    ) -> _PythonSensor[HistoryT, StateT, OutputT]:
+        return _PythonSensor(
+            fitted_state=fitted_state, params=params, infer=infer,
+            map_output=map_output, state_id=state_id,
+            fitting_cutoff=fitting_cutoff, selection_cutoff=selection_cutoff,
+        )
+
     @property
-    def prediction_mode(self) -> Literal['binary', 'target_exposure']:
+    def prediction_mode(self) -> Literal['binary', 'target_exposure', 'python']:
         return self._model.prediction_mode
 
     @property
@@ -283,6 +284,10 @@ class Sensor:
                 masked = False
             result.append(masked)
         return result
+
+
+class _PythonSensor(PythonSensorBase[HistoryT, StateT, OutputT], Sensor):
+    '''Native Sensor using caller-owned Python state and inference.'''
 
 
 def _extract_scalar(arr: Any) -> int | float | None:
