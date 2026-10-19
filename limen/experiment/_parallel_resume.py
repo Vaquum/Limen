@@ -70,6 +70,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
             raise ValueError(f'Cannot resume with a different {key} setting')
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
+    if legacy and 'parameter_encoding' in checkpoint_manager.load(directory):
+        raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
     if (legacy and 'parameter_encoding' in checkpoint) or (not legacy and checkpoint.get('parameter_encoding') != 1):
         raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')

@@ -263,6 +263,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     checkpoint = CheckpointManager().load(directory)
     assert checkpoint['domain_state']['tuple_tag'] == [(1, 2), (3, 4)]
     _assert_recovery_faults(configuration, directory, tmp_path)
+    _assert_legacy_recovery(configuration, directory, tmp_path)
     _assert_native_output_forms()
 
 
@@ -293,7 +294,7 @@ def _assert_dispatch_refusal(plan, seeded, params):
 
 def _assert_recovery_faults(configuration, directory, temporary):
     from tests.test_parallel_rounds import run_loop
-    for fault in ('missing_plan', 'version', 'marker', 'worker', 'resource'):
+    for fault in ('missing_plan', 'version', 'marker', 'worker', 'resource', 'downgraded'):
         rejected = temporary / fault
         shutil.copytree(directory, rejected)
         path = rejected / 'metadata.json'
@@ -302,6 +303,8 @@ def _assert_recovery_faults(configuration, directory, temporary):
             metadata.pop('parallel_plan')
         elif fault == 'version':
             metadata['limen_version'] = 'unknown'
+        elif fault == 'downgraded':
+            metadata['limen_version'] = '5.45.2'
         elif fault == 'worker':
             metadata['worker_native_threads'] = 2
         elif fault == 'marker':
@@ -313,6 +316,27 @@ def _assert_recovery_faults(configuration, directory, temporary):
         with pytest.raises(ValueError, match=r'identity|version|policy'):
             run_loop(configuration, rejected, resume=True)
         assert {str(item.relative_to(rejected)): item.read_bytes() for item in rejected.rglob('*') if item.is_file()} == before
+
+
+def _assert_legacy_recovery(configuration, directory, temporary):
+    from limen.experiment.checkpoint_manager import CheckpointManager
+    from tests.test_parallel_rounds import records, run_loop
+    legacy = temporary / 'legacy'
+    shutil.copytree(directory, legacy)
+    path = legacy / 'metadata.json'
+    metadata = json.loads(path.read_text())
+    metadata.update(limen_version='5.45.2')
+    metadata.pop('parallel_plan')
+    path.write_text(json.dumps(metadata))
+    checkpoint = CheckpointManager().load(legacy)
+    checkpoint.pop('parameter_encoding')
+    checkpoint['metadata']['content_hash'] = CheckpointManager.compute_content_hash(configuration['sfd']['params'])
+    (legacy / 'checkpoint.json').write_text(json.dumps(checkpoint))
+    converted = [wire_record(record, legacy=True) for record in records(directory)]
+    storage.round_path(legacy).write_bytes(b''.join(gzip.compress((json.dumps(record)+'\n').encode(),mtime=0) for record in converted))
+    resumed = run_loop(configuration, legacy, resume=True)
+    assert resumed.experiment_log.height == 2
+    assert all('parallel_plan' not in record and record['round_params']['tuple_tag'] in [[1,2],[3,4]] for record in records(legacy))
 
 
 def _assert_native_output_forms():

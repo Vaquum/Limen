@@ -63,7 +63,10 @@ def legacy_metadata(metadata: Mapping[str, object]) -> bool:
     version = metadata.get('limen_version')
     if not isinstance(version, str) or len(parts := version.split('.')) != len(_PARALLEL_EVIDENCE_SINCE) or not all(part.isdigit() for part in parts):
         raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
-    return tuple(map(int, parts)) < _PARALLEL_EVIDENCE_SINCE and 'parallel_plan' not in metadata
+    older = tuple(map(int, parts)) < _PARALLEL_EVIDENCE_SINCE
+    if older and 'parallel_plan' in metadata:
+        raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
+    return older
 
 
 def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, ...]) -> dict[str, object]:
@@ -174,13 +177,13 @@ def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[s
             digest((stages, imports, module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})))
 
 
-def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture') -> dict[str, object]:
+def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:
     signature = inspect.signature(cast(Callable[..., object], component))
     owner = component.__self__ if inspect.ismethod(component) else component
     state = vars(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) and hasattr(owner, '__dict__') else {}
-    result = cast(dict[str, object], dict(state)) | dict(params)
+    result = {key: value for key, value in cast(dict[str, object], state).items() if key != '__parallel_round_contract__'} | dict(params)
     for i, (key, value) in enumerate(signature.parameters.items()):
-        if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or (path.startswith('target') and key == 'context'):
+        if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:
             continue
         if key not in result:
             if value.default is inspect.Parameter.empty:
@@ -189,9 +192,9 @@ def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1,
     return result
 
 
-def _configured(path: str, component: object, arguments: Mapping[str, object], params: Mapping[str, object], *, skip: int = 1) -> dict[str, object]:
+def _configured(path: str, component: object, arguments: Mapping[str, object], params: Mapping[str, object], *, skip: int = 1, runtime: tuple[str, ...] = ()) -> dict[str, object]:
     try:
-        return _defaults(component, _resolve_params(arguments, params), skip=skip, path=path)
+        return _defaults(component, _resolve_params(arguments, params), skip=skip, path=path, runtime=runtime)
     except KeyError as exc:
         raise ValueError(f'Parallel stage {path}: unresolved parameter {exc.args[0]}') from exc
 
@@ -215,8 +218,11 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
                    for i, entry in enumerate(manifest.feature_transforms) if included(entry, params)})
     target = manifest.target_class_config
     if target is not None:
-        result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2)
-        result['target']['transform_params'] = _configured('target.transform', cast(_TargetClass, target.target_class).transform, target.transform_params, params, skip=2)
+        runtime = ('trade_context',) if getattr(target.target_class, 'requires_trade_context', False) else ()
+        if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
+            raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
+        result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2, runtime=runtime)
+        result['target']['transform_params'] = _configured('target.transform', cast(_TargetClass, target.target_class).transform, target.transform_params, params, skip=2, runtime=runtime)
         result.update({'target.fit': result['target'], 'target.transform': result['target']})
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
