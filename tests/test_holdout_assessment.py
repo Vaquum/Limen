@@ -1,6 +1,7 @@
 import copy
 from contextlib import ExitStack
 import json
+import logging
 import multiprocessing
 from pathlib import Path
 from unittest.mock import patch
@@ -12,8 +13,10 @@ import pytest
 from limen.cohort import Cohort
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _holdout_attempts as attempts
+from limen.experiment import _holdout_assessment as assessment
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_report as reports
+from limen.experiment import manifest_core
 from limen.experiment._holdout_freeze import owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
@@ -71,7 +74,7 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         FrozenHoldoutSelection(object())
     probe = pl.read_parquet(Path(trained[0][0]._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(120)
     for sensor in (trained[0][0], trained[1][0]):
-        sensor.predict(probe)
+        assert sensor.predict(probe).reason is None
         clone = owned_copy(sensor)
         second = owned_copy(clone)
         assert sensor.predict(probe) == clone.predict(probe) == second.predict(probe)
@@ -98,6 +101,21 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert {key: repeat[key] for key in _REPEAT_KEYS} == {key: report[key] for key in _REPEAT_KEYS}
     assert repeat['exposure']['class'] == 'subsequent'
     assert _report(_freeze(trained[1][0]), assessment_case)['state'] == 'completed'
+    changed = copy.deepcopy(trained[1][0])
+    changed._model.model.booster_.best_iteration = 1
+    with pytest.raises(ValueError, match='best_iteration'):
+        _freeze(changed)
+    changed = copy.deepcopy(trained[0][1])
+    changed._model._fitted_calibrator = None
+    with pytest.raises(ValueError, match='unfitted calibration'):
+        _freeze(changed)
+    changed = copy.deepcopy(trained[0][1])
+    changed._get_manifest().decoder_lookback = 2
+    with pytest.raises(ValueError, match='cached manifest'):
+        _freeze(changed)
+    for key, invalid in (('fee_bps', True), ('slip_bps', -1), ('notional_rate', 0), ('execution_lag_bars', 1.0), ('stop_loss_bps', float('nan'))):
+        with pytest.raises(ValueError):
+            _freeze(trained[0][1], scenarios=[{**_SCENARIO, key: invalid}])
 
 
 def _attempt_worker(root, reservation, pipe):
@@ -144,6 +162,16 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
         assert failed['state'] == 'failed'
     with pytest.raises(ValueError, match='not completed'):
         read_holdout_report(root, failed['id'])
+    scale = manifest_core._apply_scaler
+    def changed_schema(*args):
+        frame, fitted = scale(*args)
+        return frame.with_columns(pl.col(pl.Float64).cast(pl.Float32)), fitted
+    with patch.object(manifest_core, '_apply_scaler', side_effect=changed_schema), pytest.raises(ValueError, match='schema mismatch'):
+        _report(frozen, assessment_case)
+    with history.connection(root / history._HISTORY) as db:
+        error = json.loads(db.execute('SELECT error_json FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()[0])
+        assert error['stage'] == 'predict' and error['member_id'] and error['bar_ns'] == history.utc_day('2024-01-05')
+    assert not any(isinstance(handler, assessment._Failures) for handler in logging.getLogger('limen.inference.sensor').handlers)
     monkeypatch.setattr(history, '_BUSY_TIMEOUT_SECONDS', 0.2)
     context = multiprocessing.get_context('fork')
     pipes, workers = [], []

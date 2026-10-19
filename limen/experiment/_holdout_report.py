@@ -64,7 +64,7 @@ _SCENARIO = pl.List(pl.Struct({'index': pl.Int64, **dict.fromkeys(('raw_position
 _COLUMNS = {'open_ns': pl.Int64, 'close_ns': pl.Int64, 'role': pl.String, 'source_row_sha256': pl.String,
             'members': _MEMBER, 'aggregate_prediction': pl.Int64, 'aggregate_probability': pl.Float64,
             'aggregate_reason': pl.String, 'label': pl.Int64, 'label_reason': pl.String, 'scenarios': _SCENARIO}
-_REPORT_KEYS: set[str] = set(('schema_version', 'attempt_id', 'assessment_index', 'state', 'created_ns', 'finished_ns', 'project_id', 'reservation', 'spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_column_map', 'source_schema', 'planned', 'prior', 'exposure', 'rows_path', 'rows_sha256', 'classification', 'scenarios'))
+_REPORT_KEYS: set[str] = {'schema_version', 'attempt_id', 'assessment_index', 'state', 'created_ns', 'finished_ns', 'project_id', 'reservation', 'spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_column_map', 'source_schema', 'planned', 'prior', 'exposure', 'rows_path', 'rows_sha256', 'classification', 'scenarios'}
 
 
 def retained_rows(raw: pl.DataFrame, step: int, start: int, tape: list[dict[str, object]],
@@ -95,6 +95,8 @@ def exposure(reservation: Mapping[str, object], prior: Mapping[str, object], pro
         classification, reasons = 'post-release', ['reservation-released']
     elif any(int(cast(int, row['context_start_ns'])) < end and start < int(cast(int, row['end_ns'])) for row in attempts):
         classification, reasons = 'subsequent', ['prior-planned-support-intersects-final']
+    elif any(cast(dict[str, object], prior['overlaps'])[key] for key in ('prior_reserved_context_ids', 'current_reserved_context_ids')):
+        classification, reasons = 'subsequent', ['planned-context-overlaps-recorded-reservation']
     elif any(cast(dict[str, object], proof.get('source', {})).get('kind') != 'hosted_native' for proof in provenances):
         classification, reasons = 'unknown', ['non-hosted-or-caller-training-source']
     else:
@@ -164,6 +166,58 @@ def read_holdout_report(project_root: str | Path, attempt_id: str) -> dict[str, 
         mapping = cast(dict[str, str], report['source_column_map'])
         if set(rows.columns) != set(_COLUMNS) | set(mapping.values()) or rows.is_empty() or set(rows['role'].to_list()) != {'context', 'final'}:
             raise ValueError('Invalid retained source/role columns')
+        _verify(report, record, rows)
         return report
     except (OSError, ValueError, KeyError, TypeError, sqlite3.Error, pl.exceptions.PolarsError) as exc:
         raise ValueError(f'Holdout attempt {attempt_id}: {exc}') from exc
+
+
+def _verify(report: dict[str, object], record: dict[str, object], rows: pl.DataFrame) -> None:
+    from limen.experiment._holdout_freeze import digest
+    planned = cast(dict[str, int], report['planned'])
+    if planned != {key: record[key] for key in ('context_start_ns', 'start_ns', 'end_ns')} or report['prior'] != json.loads(cast(str, record['prior_json'])):
+        raise ValueError('Report/history planned support or prior mismatch')
+    support = cast(dict[str, object], json.loads(cast(str, record['support_json'])))
+    if report['source'] != support['actual']:
+        raise ValueError('Report/history source mismatch')
+    spec = cast(dict[str, object], report['spec'])
+    if digest(spec) != report['spec_sha256'] or digest(spec['scenarios']) != report['scenarios_sha256']:
+        raise ValueError('Report specification digest mismatch')
+    reservation = cast(dict[str, object], report['reservation'])
+    if reservation['id'] != record['reservation_id'] or reservation['revision'] != record['revision'] or reservation['state'] != record['reservation_state']:
+        raise ValueError('Report/history reservation mismatch')
+    step = cast(int, reservation['interval_seconds']) * 1_000_000_000
+    opens = rows['open_ns'].to_numpy()
+    if int(opens[0]) != planned['context_start_ns'] or int(opens[-1]) + step != planned['end_ns'] or np.any(np.diff(opens) != step) or not (rows['close_ns'] == rows['open_ns'] + step).all():
+        raise ValueError('Invalid retained observation clock')
+    final = rows.filter(pl.col('open_ns') >= planned['start_ns'])
+    context = rows.filter(pl.col('open_ns') < planned['start_ns'])
+    if set(final['role'].to_list()) != {'final'} or set(context['role'].to_list()) != {'context'} or context['members'].null_count() != context.height or final['members'].null_count():
+        raise ValueError('Invalid retained participation roles')
+    mapping = cast(dict[str, str], report['source_column_map'])
+    source_schema = cast(list[dict[str, str]], report['source_schema'])
+    if set(mapping) != {field['name'] for field in source_schema} or any(str(rows.schema[mapping[field['name']]]) != ('Float64' if field['name'] in ('open', 'high', 'low', 'close', 'volume') else field['dtype']) for field in source_schema):
+        raise ValueError('Invalid retained original source schema')
+    classification_metrics = cast(dict[str, object], report['classification'])
+    if set(classification_metrics) != {'accuracy', 'precision', 'recall', 'fpr', 'auc'}:
+        raise ValueError('Invalid classification metric schema')
+    populations = [classification_metrics]
+    scenarios = cast(list[dict[str, object]], report['scenarios'])
+    declarations = cast(list[dict[str, object]], spec['scenarios'])
+    if len(scenarios) != len(declarations):
+        raise ValueError('Invalid scenario population')
+    for index, (scenario, declaration) in enumerate(zip(scenarios, declarations, strict=True)):
+        if set(scenario) != {'index', 'declaration', 'metrics'} or scenario['index'] != index or scenario['declaration'] != declaration:
+            raise ValueError('Invalid retained scenario identity')
+        populations.append(cast(dict[str, object], scenario['metrics']))
+    _metric_schema(populations)
+
+
+def _metric_schema(populations: list[dict[str, object]]) -> None:
+    for population in populations:
+        for value in population.values():
+            field = cast(dict[str, object], value)
+            if set(field) != {'value', 'reason', 'numerator', 'denominator', 'support_rows'} or type(field['support_rows']) is not int or cast(int, field['support_rows']) < 0:
+                raise ValueError('Invalid metric support/schema')
+            if (field['value'] is None) != (isinstance(field['reason'], str)) or (field['value'] is not None and type(field['value']) not in (int, float)):
+                raise ValueError('Invalid metric availability/schema')
