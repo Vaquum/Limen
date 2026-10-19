@@ -54,6 +54,8 @@ def _same_inputs(actual: object, expected: pl.DataFrame | pl.Series) -> bool:
         return actual.equals(expected)
     try:
         left, right = np.asarray(actual), np.asarray(expected)
+        if isinstance(expected, pl.Series) and left.ndim == _SEGMENT_FIELDS and left.shape[1] == 1:
+            left = left[:, 0]
         numeric = np.issubdtype(left.dtype, np.number) and np.issubdtype(right.dtype, np.number)
         return bool(np.array_equal(left, right, equal_nan=numeric))
     except (TypeError, ValueError, RuntimeError) as exc:
@@ -120,7 +122,9 @@ def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, objec
             if len(cast(Sequence[object], data['x_' + suffix])) != len(rows):
                 raise FoldEvidenceError('row_membership', f'{name} extension changed model rows without recoverable carriers')
             columns = [column for column in frame.columns if column not in ('datetime', '__backtest_source_row__')]
-            if not _same_inputs(data['x_' + suffix], frame.select(columns[:-1])) or not _same_inputs(data['y_' + suffix], frame[columns[-1]]):
+            target = getattr(manifest, 'target_column', None)
+            label = target if isinstance(target, str) and target in columns else columns[-1]
+            if not _same_inputs(data['x_' + suffix], frame.select([column for column in columns if column != label])) or not _same_inputs(data['y_' + suffix], frame[label]):
                 raise FoldEvidenceError('row_membership', f'{name} model rows differ from their retained source carriers')
             allowed = {index for first, last in cast(list[list[int]], raw_witnesses[name]['segments']) for index in range(first, last)}
             if any(index not in allowed for group in rows for index in group):

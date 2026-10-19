@@ -118,6 +118,36 @@ def test_ambiguous_selected_rows_and_incomplete_model_decline(fold_campaigns):
         model_witness(SimpleNamespace(predict=lambda data: data))
 
 
+@pytest.mark.parametrize('extension', ['unchanged', 'numpy', 'uncarried_reverse', 'carried_reverse'])
+def test_extension_rows_require_recoverable_carriers(fold_campaigns, extension):
+    from limen.experiment import _fold_partitions as parts
+
+    selected = fold_campaigns['anchored'].history.head(6).select('datetime', 'open', 'close')
+    frames = [selected[index:index + 2] for index in (0, 2, 4)]
+    manifest = SimpleNamespace(_fold_capture={'trial': {}}, split_walk_forward=SimpleNamespace(n_folds=2), target_column='close')
+    parts.raw(manifest, selected, frames)
+    for frame in frames:
+        parts.bars(manifest, frame, frame, frame['datetime'].to_list())
+    if extension == 'carried_reverse':
+        frames[0] = frames[0].reverse()
+    data = {}
+    for name, frame in zip(('train', 'val', 'test'), frames, strict=True):
+        data['x_' + name], data['y_' + name] = frame.select('open'), frame['close']
+    if extension == 'uncarried_reverse':
+        data['x_train'], data['y_train'] = data['x_train'].reverse(), data['y_train'].reverse()
+    if extension == 'numpy':
+        for name in ('train', 'val', 'test'):
+            data['x_' + name] = data['x_' + name].to_numpy()
+            data['y_' + name] = data['y_' + name].to_numpy().reshape(-1, 1)
+    result = parts.retained(manifest, frames, data)['_fold_partitions']
+    if extension == 'uncarried_reverse':
+        assert result['unavailable_reason']['code'] == 'row_membership'
+    else:
+        assert 'unavailable_reason' not in result
+        if extension == 'carried_reverse':
+            assert result['raw']['fit']['row_digest'] != result['retained']['fit']['row_digest']
+
+
 def test_fold_fingerprint_codec(fold_campaigns):
     frame = fold_campaigns['anchored'].history.head(2)
     assert fingerprint(frame) == '4d17b350e56611cd6cde9fb7059098f64a665df3b99098b45ca625ea993ae5bf'
