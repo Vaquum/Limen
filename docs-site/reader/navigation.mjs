@@ -46,7 +46,7 @@ export function initNavigation(){
   dialog.addEventListener('cancel',event=>{event.preventDefault();returnToChapter();});
   addEventListener('popstate',event=>{
     if(event.state?.readerReference){
-      if(dialog.open&&referenceDocument===documentURL(location.href)){revealAnchor();return;}
+      if(dialog.open&&referenceDocument===documentURL(location.href)){camera.to(0);revealAnchor();return;}
       const link=document.getElementById(event.state.readerOrigin.focus);
       if(link)show(link,{updateHistory:false,originOverride:event.state.readerOrigin,referenceURL:location.href});
     }

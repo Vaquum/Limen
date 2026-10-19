@@ -61,6 +61,17 @@ test('reference fragments retain the panel and canonical history',async({page})=
   await expect(page).toHaveURL(/reference\/cohort\/#recorded-walk-forward-members$/);
 });
 
+test('Forward interrupts a reference return without closing the reopened panel',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page);const chapter=page.url();
+  await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
+  const reference=page.url();const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
+  await page.evaluate(()=>history.back());await expect(page).toHaveURL(chapter);
+  await page.evaluate(()=>history.forward());await expect(page).toHaveURL(reference);
+  // Native pointer input settles the current motion without waiting for its animation.
+  await dialog.dispatchEvent('pointerdown');await expect(dialog).toBeVisible();await expect(page).toHaveURL(reference);
+  await page.keyboard.press('Escape');await expect(page).toHaveURL(chapter);await expect(dialog).not.toBeVisible();
+});
+
 test('search and keyboard reach the same reference',async({page})=>{
   let release;const loaded=new Promise(resolve=>{release=resolve;});
   await page.route('**/search.json',async route=>{await loaded;await route.continue();});
