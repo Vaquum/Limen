@@ -321,13 +321,16 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
         except PackageNotFoundError:
             versions[package] = None
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
+    dependencies = prediction_dependencies(snapshot[0])
     for member in members(snapshot[0]):
         validate_prediction(member)
+    if prediction_dependencies(snapshot[0]) != dependencies:
+        raise ValueError('Holdout inference mutated prediction dependencies')
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
                     'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions,
-                    'prediction_dependencies': prediction_dependencies(snapshot[0])}
+                    'prediction_dependencies': dependencies}
     result = FrozenHoldoutSelection(_TOKEN)
     for key, value in zip(('_snapshot', '_spec', '_state_digest', '_spec_digest'), (snapshot, spec, state_digest(snapshot[0]), digest(spec)), strict=True):
         object.__setattr__(result, key, value)

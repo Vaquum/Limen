@@ -544,6 +544,11 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         def predict(self, data):
             self.counter = getattr(self, 'counter', 0) + 1
             return super().predict(data)
+    external_state = {'calls': 0}
+    class ExternalMutation(LogRegBinary):
+        def predict(self, data):
+            external_state['calls'] += 1
+            return super().predict(data)
     class Nonpreserving(LogRegBinary):
         def __deepcopy__(self, memo):
             result = type(self).__new__(type(self))
@@ -567,6 +572,20 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match=reason):
                 _freeze(changed)
             assert loader.call_count == 0
+    changed = copy.deepcopy(assessment_case[2][0][0])
+    changed._model.__class__ = ExternalMutation
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='mutated prediction dependencies'):
+            _freeze(changed)
+        assert loader.call_count == 0 and external_state['calls'] > 0
+    original_scale = manifest_core._apply_scaler
+    def mutating_scale(*args):
+        external_state['calls'] += 1
+        return original_scale(*args)
+    with patch.object(manifest_core, '_apply_scaler', mutating_scale), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='mutated prediction dependencies'):
+            _freeze(assessment_case[2][0][0])
+        assert loader.call_count == 0
     defaults, closure = {'offset': 0.0}, {'offset': 0.0}
     def correction(values=defaults):
         return values['offset'] + closure['offset']
