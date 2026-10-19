@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Protocol, cast
 
 import polars as pl
 
-from limen.experiment._fold_fingerprint import Unavailable, source
+from limen.experiment._fold_fingerprint import FoldEvidenceError, source
 from limen.experiment._holdout_research import prepare_walk_forward
 from limen.experiment._resolve_trade_policy import resolve_json
 
@@ -16,6 +16,8 @@ if TYPE_CHECKING:
     from limen.experiment.manifest_core import Manifest
 
 __all__: list[str] = []
+_OUTPUT_FIELDS = 2
+_DIGEST_LENGTH = 64
 
 
 class Host(Protocol):
@@ -29,7 +31,7 @@ class Record(Protocol):
 
 
 def qualified(value: object) -> str:
-    return f"{getattr(value, '__module__')}.{getattr(value, '__qualname__')}"
+    return f"{getattr(value, '__module__', None)}.{getattr(value, '__qualname__', None)}"
 
 
 def preparation(manifest: Manifest, params: Mapping[str, object]) -> dict[str, object]:
@@ -50,7 +52,7 @@ def start(manifest: Manifest, raw: pl.DataFrame, enabled: bool) -> dict[str, obj
         seconds = None if config is None else config.params.get('kline_size', config.params.get('klines_size'))
         witness = source(raw, seconds)
         return {'version': 1, 'source': witness, 'selection_cutoff_ns': cast(int, witness['last_ns']) + cast(int, witness['interval_ns'])}
-    except Unavailable as exc:
+    except FoldEvidenceError as exc:
         return exc.record()
 
 
@@ -65,7 +67,7 @@ def prepare(host: Host, raw: pl.DataFrame, params: Mapping[str, object] | None,
             selected = original if host.manifest.pre_split_data_selector is None else source(cast(pl.DataFrame, data['_walk_forward_raw']), cast(int, original['interval_ns']) / 1_000_000_000)
             data['_fold_trial'] = {'version': 1, 'campaign_source_digest': original['digest'], 'selected_source': selected,
                                    'validation_ratio': list(host.manifest.split_config[:2]), 'preparation': preparation(host.manifest, params or {})}
-        except Unavailable as exc:
+        except FoldEvidenceError as exc:
             data['_fold_trial'] = exc.record()
     return data
 
@@ -79,12 +81,12 @@ def configure(manifest: Manifest, data: Mapping[str, object], fold: int) -> None
 
 def model_witness(model: object) -> dict[str, object]:
     if model is None or not callable(getattr(model, 'predict', None)):
-        raise Unavailable('inference_model', 'The architecture did not return a fitted native prediction model; rerun with a reconstructable inference contract')
+        raise FoldEvidenceError('inference_model', 'The architecture did not return a fitted native prediction model; rerun with a reconstructable inference contract')
     declaration = getattr(type(model), 'inference_output', None)
-    if declaration is not None and (not isinstance(declaration, tuple) or len(declaration) != 2 or declaration[0] not in ('binary', 'continuous', 'target_exposure') or type(declaration[1]) is not bool):
-        raise Unavailable('inference_model', 'inference_output must be an immutable (kind, bool_probabilities) class declaration')
+    if declaration is not None and (not isinstance(declaration, tuple) or len(declaration) != _OUTPUT_FIELDS or declaration[0] not in ('binary', 'continuous', 'target_exposure') or type(declaration[1]) is not bool):
+        raise FoldEvidenceError('inference_model', 'inference_output must be an immutable (kind, bool_probabilities) class declaration')
     output = None if declaration is None else {'kind': declaration[0], 'probabilities': declaration[1]}
-    return {'class': qualified(type(model)), 'prediction_mode': getattr(model, 'prediction_mode'), 'output_contract': output}
+    return {'class': qualified(type(model)), 'prediction_mode': getattr(model, 'prediction_mode', None), 'output_contract': output}
 
 
 def record(make_record: Record, fold: int, data: Mapping[str, object], result: Mapping[str, object], *, record_execution: bool, record_outputs: bool) -> dict[str, object]:
@@ -102,7 +104,7 @@ def record(make_record: Record, fold: int, data: Mapping[str, object], result: M
                                    'fitting_cutoff_ns': max(selected_times[index] for index in positions) + cast(int, selected['interval_ns']),
                                    'fitted_threshold': getattr(result.get('_model'), '_calibration_threshold', None),
                                    'inference_model': model_witness(result.get('_model'))}
-    except Unavailable as exc:
+    except FoldEvidenceError as exc:
         entry['fold_promotion'] = exc.record()
     return entry
 
@@ -115,11 +117,11 @@ def add_metadata(metadata: dict[str, object], host: object, workers: int) -> Non
 
 def checked(value: object) -> dict[str, object]:
     if not isinstance(value, dict) or value.get('version') != 1:
-        raise Unavailable('row_membership', 'Missing or unsupported fold witness; rerun with version 1 evidence')
+        raise FoldEvidenceError('row_membership', 'Missing or unsupported fold witness; rerun with version 1 evidence')
     record = cast(dict[str, object], value)
     if 'unavailable_reason' in record:
         reason = cast(Mapping[str, object], record['unavailable_reason'])
-        raise Unavailable(str(reason['code']), str(reason['detail']))
+        raise FoldEvidenceError(str(reason['code']), str(reason['detail']))
     return record
 
 
@@ -130,7 +132,7 @@ def _source(value: object) -> dict[str, object]:
     if set(item) != {'rows', 'schema', 'digest', 'first_ns', 'last_ns', 'interval_ns'} or any(type(item[key]) is not int for key in ('rows', 'first_ns', 'last_ns', 'interval_ns')):
         raise ValueError('fold witness source fields are incomplete; rerun')
     digest = item['digest']
-    if not isinstance(digest, str) or len(digest) != 64 or any(char not in '0123456789abcdef' for char in digest) or cast(int, item['rows']) <= 0 or cast(int, item['interval_ns']) <= 0 or cast(int, item['first_ns']) > cast(int, item['last_ns']):
+    if not isinstance(digest, str) or len(digest) != _DIGEST_LENGTH or any(char not in '0123456789abcdef' for char in digest) or cast(int, item['rows']) <= 0 or cast(int, item['interval_ns']) <= 0 or cast(int, item['first_ns']) > cast(int, item['last_ns']):
         raise ValueError('fold witness source identity is invalid; rerun')
     return item
 

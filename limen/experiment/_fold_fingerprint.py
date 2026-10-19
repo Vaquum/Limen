@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Sequence
 from hashlib import sha256
+from itertools import pairwise
 import math
 import struct
 from typing import cast
@@ -11,7 +12,7 @@ import polars as pl
 __all__: list[str] = []
 
 
-class Unavailable(ValueError):
+class FoldEvidenceError(ValueError):
     def __init__(self, code: str, detail: str) -> None:
         super().__init__(detail)
         self.code = code
@@ -36,7 +37,7 @@ def schema(frame: pl.DataFrame) -> list[list[str]]:
         else:
             tag = _TAGS.get(dtype)
         if tag is None:
-            raise Unavailable('dtype', f'Unsupported fold fingerprint dtype: {name}={dtype}')
+            raise FoldEvidenceError('dtype', f'Unsupported fold fingerprint dtype: {name}={dtype}')
         fields.append([name, tag])
     return fields
 
@@ -79,13 +80,13 @@ def membership(groups: Sequence[Sequence[int]]) -> str:
 
 def clock(frame: pl.DataFrame) -> list[int]:
     if 'datetime' not in frame.columns:
-        raise Unavailable('clock', 'Fold source requires UTC datetime')
+        raise FoldEvidenceError('clock', 'Fold source requires UTC datetime')
     times = frame['datetime']
     if not isinstance(times.dtype, pl.Datetime) or times.dtype.time_zone != 'UTC' or times.null_count():
-        raise Unavailable('clock', 'Fold source requires nonnull UTC datetime')
+        raise FoldEvidenceError('clock', 'Fold source requires nonnull UTC datetime')
     values = cast(list[int], times.dt.epoch('ns').to_list())
     if not values or any(value % 1000 for value in values):
-        raise Unavailable('clock', 'Fold source requires nonempty microsecond-representable timestamps')
+        raise FoldEvidenceError('clock', 'Fold source requires nonempty microsecond-representable timestamps')
     return values
 
 
@@ -94,15 +95,15 @@ def interval(frame: pl.DataFrame, declared_seconds: object = None) -> int:
     seconds_values = ([] if declared_seconds is None else [declared_seconds]) + ([] if 'base_interval' not in frame.columns else frame['base_interval'].unique().to_list())
     for seconds in seconds_values:
         if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not math.isfinite(seconds) or seconds <= 0 or seconds * 1_000_000_000 != int(seconds * 1_000_000_000):
-            raise Unavailable('clock', 'Fold interval must be positive, constant, exact seconds')
+            raise FoldEvidenceError('clock', 'Fold interval must be positive, constant, exact seconds')
         declared.append(int(seconds * 1_000_000_000))
     unique = sorted(set(clock(frame)))
-    gaps = [b - a for a, b in zip(unique, unique[1:])]
+    gaps = [b - a for a, b in pairwise(unique)]
     if declared and len(set(declared)) != 1:
-        raise Unavailable('clock', 'Conflicting native interval declarations')
+        raise FoldEvidenceError('clock', 'Conflicting native interval declarations')
     step = declared[0] if declared else min(gaps, default=0)
     if step <= 0 or any(gap % step for gap in gaps):
-        raise Unavailable('clock', 'Unresolvable native interval')
+        raise FoldEvidenceError('clock', 'Unresolvable native interval')
     return step
 
 

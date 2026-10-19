@@ -12,6 +12,7 @@ from limen.experiment._recording import project_record
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 __all__: list[str] = []
+_ABSOLUTE_TOLERANCE = 1e-6
 
 
 def scalar_matches(expected: object, actual: object, deterministic: bool) -> bool:
@@ -26,7 +27,7 @@ def scalar_matches(expected: object, actual: object, deterministic: bool) -> boo
         if not math.isfinite(left) or not math.isfinite(right):
             return left == right
         difference = abs(left - right)
-        return difference <= 1e-6 or (not deterministic and difference <= 0.01 * max(abs(left), abs(right), 1.0))
+        return difference <= _ABSOLUTE_TOLERANCE or (not deterministic and difference <= 0.01 * max(abs(left), abs(right), 1.0))
     return expected == actual
 
 

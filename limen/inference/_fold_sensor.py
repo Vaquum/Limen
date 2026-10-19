@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 import copy
 from datetime import date, datetime, timezone
-from typing import TYPE_CHECKING, cast
+from functools import wraps
+from typing import TYPE_CHECKING, Protocol, TypeVar, cast
 
 import polars as pl
 
@@ -16,6 +17,23 @@ if TYPE_CHECKING:
     from limen.inference.sensor import Sensor
 
 __all__: list[str] = []
+
+
+class LiveSensor(Protocol):
+    def predict_all(self, raw_klines: pl.DataFrame) -> list[BarPrediction]: ...
+
+
+_S = TypeVar('_S', bound=LiveSensor)
+
+
+def single_guard(func: Callable[[_S, pl.DataFrame], BarPrediction]) -> Callable[[_S, pl.DataFrame], BarPrediction]:
+    @wraps(func)
+    def predict(sensor: _S, frame: pl.DataFrame) -> BarPrediction:
+        if hasattr(sensor, '_fold_context'):
+            rows = sensor.predict_all(frame)
+            return rows[-1] if rows else BarPrediction(None, None, None, 'warm-up')
+        return func(sensor, frame)
+    return predict
 
 
 def reject_manual(reference: Mapping[str, object], sensor: object) -> None:
@@ -42,9 +60,9 @@ def last_inside(sensor: object, dt: object, manifest: object) -> bool:
     train_start, _, val_start, val_end, test_start, test_end = dates
     dt_date = dt.date() if isinstance(dt, datetime) else cast(date, dt)
     masked = train_start <= dt_date < test_end
-    if masked and getattr(manifest, 'val_predict_guard') is False and val_start <= dt_date < val_end:
+    if masked and getattr(manifest, 'val_predict_guard', None) is False and val_start <= dt_date < val_end:
         masked = False
-    if masked and getattr(manifest, 'test_predict_guard') is False and test_start <= dt_date < test_end:
+    if masked and getattr(manifest, 'test_predict_guard', None) is False and test_start <= dt_date < test_end:
         masked = False
     return masked
 

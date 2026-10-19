@@ -191,8 +191,7 @@ def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
         _ = import_module('lightgbm')
     _ = _native_pools()
     _worker_yaml, _worker_sources = yaml_reference, sources
-    _worker_record_execution, _worker_record_model_outputs = record_execution, record_model_outputs
-    _worker_fold_details = fold_details
+    _worker_record_execution, _worker_record_model_outputs, _worker_fold_details = record_execution, record_model_outputs, fold_details
 
 
 def evaluate_round(round_params: dict[str, object]) -> RoundPayload:

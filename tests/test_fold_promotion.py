@@ -1,8 +1,6 @@
 import copy
 from datetime import date
-import json
 import math
-from pathlib import Path
 from unittest.mock import patch
 
 import polars as pl
@@ -13,7 +11,9 @@ from limen.experiment._fold_fingerprint import fingerprint, membership
 from limen.inference import Trainer
 from limen.inference._fold_metrics import scalar_matches
 from limen.inference.errors import ReconstructionError
-from tests.fold_components import FIXTURE, fold_campaigns
+from tests.fold_components import FIXTURE, fold_campaigns as _fold_campaigns
+
+fold_campaigns = _fold_campaigns
 
 
 @pytest.mark.parametrize('kind', ['anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered', 'companion'])
@@ -57,18 +57,30 @@ def test_witness_validation_stages(fold_campaigns, mutation):
     pid = campaign.record['round_id']
     entry = trainer._round_data[pid]
     witness = entry['folds'][campaign.fold]['fold_promotion']
-    if mutation == 'lean': trainer._metadata['recording']['fold_details'] = False
-    if mutation == 'witness': entry.pop('fold_promotion')
-    if mutation == 'version': witness['version'] = 2
-    if mutation == 'source': trainer._data = campaign.bars.slice(1)
-    if mutation == 'ratio': trainer._metadata['walk_forward_validation_ratio'] = [8, 1]
-    if mutation == 'raw': witness['raw']['fit']['segments'][0][1] -= 1
-    if mutation == 'retained': witness['retained']['test']['row_digest'] = '0' * 64
-    if mutation == 'threshold': witness['fitted_threshold'] += 1e-3
-    if mutation == 'metric': entry['folds'][campaign.fold]['results']['missing_replay_metric'] = 1
-    if mutation == 'binding': entry['folds'][campaign.fold]['learning_binding'] = {'changed': True}
-    if mutation == 'model': witness['inference_model']['output_contract']['kind'] = 'continuous'
-    if mutation == 'count': witness['n_folds'] += 1
+    if mutation == 'lean':
+        trainer._metadata['recording']['fold_details'] = False
+    if mutation == 'witness':
+        entry.pop('fold_promotion')
+    if mutation == 'version':
+        witness['version'] = 2
+    if mutation == 'source':
+        trainer._data = campaign.bars.slice(1)
+    if mutation == 'ratio':
+        trainer._metadata['walk_forward_validation_ratio'] = [8, 1]
+    if mutation == 'raw':
+        witness['raw']['fit']['segments'][0][1] -= 1
+    if mutation == 'retained':
+        witness['retained']['test']['row_digest'] = '0' * 64
+    if mutation == 'threshold':
+        witness['fitted_threshold'] += 1e-3
+    if mutation == 'metric':
+        entry['folds'][campaign.fold]['results']['missing_replay_metric'] = 1
+    if mutation == 'binding':
+        entry['folds'][campaign.fold]['learning_binding'] = {'changed': True}
+    if mutation == 'model':
+        witness['inference_model']['output_contract']['kind'] = 'continuous'
+    if mutation == 'count':
+        witness['n_folds'] += 1
     if mutation == 'competing':
         trainer._round_data['competitor'] = copy.deepcopy(entry)
         trainer._round_data['competitor']['fold_promotion']['campaign_source_digest'] = '0' * 64

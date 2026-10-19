@@ -17,6 +17,7 @@ from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 __all__: list[str] = []
+_VALIDATION_RATIO_FIELDS = 2
 
 
 class Host(Protocol):
@@ -65,7 +66,7 @@ def _one(host: Host, pid: str, fold: int) -> Sensor:
                 raise ValueError('competing trial campaign source identity changed')
         manifest = copy.deepcopy(host._manifest)
         ratios = cast(list[int], host._metadata['walk_forward_validation_ratio'])
-        if len(ratios) != 2 or any(type(value) is not int for value in ratios):
+        if len(ratios) != _VALIDATION_RATIO_FIELDS or any(type(value) is not int for value in ratios):
             raise ValueError('invalid saved validation ratio')
         _ = manifest.set_split_config(*ratios, manifest.split_config[2])
         if list(manifest.split_config[:2]) != trial['validation_ratio']:

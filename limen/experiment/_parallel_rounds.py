@@ -7,7 +7,7 @@ import multiprocessing
 import os
 import signal
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError as FutureTimeoutError
 from concurrent.futures.process import BrokenProcessPool
 from multiprocessing.connection import Connection

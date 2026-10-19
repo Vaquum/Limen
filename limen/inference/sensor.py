@@ -97,12 +97,10 @@ class Sensor:
         return self._manifest
 
 
+    @_fold_sensor.single_guard
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
         '''Predict the last bar; distinguish unavailable data from flat and report per-bar failures.'''
-
-        if hasattr(self, '_fold_context'):
-            return self.predict_all(raw_klines)[-1] if len(raw_klines) else BarPrediction(None, None, None, 'warm-up')
 
         manifest = self._get_manifest()
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
