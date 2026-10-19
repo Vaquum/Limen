@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "required_scenarios": {
+    "selection": [
+      "python",
+      "compiled"
+    ],
+    "search": [
+      "python",
+      "compiled"
+    ],
+    "recovery": [
+      "python",
+      "compiled"
+    ],
+    "walk_forward": [
+      "python",
+      "compiled"
+    ],
+    "holdout": [
+      "python",
+      "compiled"
+    ],
+    "calibration": [
+      "python",
+      "compiled"
+    ],
+    "execution": [
+      "python",
+      "compiled"
+    ],
+    "bars": [
+      "python",
+      "compiled"
+    ],
+    "allocation": [
+      "compiled"
+    ]
+  },
+  "unproved": {
+    "tabpfn": "https://github.com/Vaquum/Limen/issues/628"
+  },
+  "candidate_pages": [
+    "docs/Research-Book.md",
+    "docs/examples/python-research/README.md",
+    "docs/examples/compiled-research/README.md"
+  ]
+}
