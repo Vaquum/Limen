@@ -73,7 +73,6 @@ class AllocationContext:
 __all__: list[str] = []
 
 
-
 def _helper(name: str) -> Callable[..., object]:
     return cast(Callable[..., object], getattr(import_module('limen.experiment._allocation_folds'), name))
 

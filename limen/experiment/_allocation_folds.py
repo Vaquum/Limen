@@ -15,16 +15,18 @@ from limen.experiment._allocation import AllocationBatch, AllocationContext, Opp
 from limen.experiment._prepare_trade_context import normalize_observations
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
+from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.sfd.reference_architecture.direction_sizing import Array
+from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+
+
 _core = vars(import_module('limen.experiment.manifest_core'))
 apply_feature_transforms = cast(Callable[..., pl.LazyFrame], _core['_apply_feature_transforms'])
 finalize_rule_based_data = cast(Callable[..., dict[str, object]], _core['_finalize_rule_based_data'])
 process_bars = cast(Callable[..., tuple[object, pl.DataFrame]], _core['_process_bars'])
 resolve_params = cast(Callable[..., dict[str, object]], _core['_resolve_params'])
 resolve_split = cast(Callable[..., list[pl.DataFrame]], _core['_resolve_split'])
-from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.sfd.reference_architecture.direction_sizing import Array
-from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
-from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
 
 
 def fit_primary(manifest: object, data: Mapping[str, object], params: Mapping[str, object]) -> ReferenceModel:
@@ -213,8 +215,6 @@ def admit(manifest: Manifest, params: Mapping[str, object]) -> None:
 
 def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], data: dict[str, object]) -> dict[str, object]:
     from copy import deepcopy
-    from typing import cast
-from importlib import import_module
     from limen.experiment._prepare_trade_context import PreparedTradeContext
     from limen.experiment._dynamic_barriers import prepare_barriers
 
@@ -258,8 +258,6 @@ from importlib import import_module
 
 
 def run(manifest: Manifest, data: dict[str, object], params: Mapping[str, object]) -> dict[str, object]:
-    from typing import cast
-from importlib import import_module
     from limen.experiment._resolve_trade_policy import resolve_json
     from limen.experiment._prepare_trade_context import finish_trade_result
 
