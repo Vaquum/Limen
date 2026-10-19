@@ -183,6 +183,8 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
     folds = round_entry.get('folds')
     if type(n_folds) is not int or not isinstance(folds, list) or len(cast(list[object], folds)) != n_folds:
         raise ValueError('fold witness count disagrees with split_walk_forward; rerun')
+    if type(fold) is not int or not 0 <= fold < n_folds:
+        raise ValueError('fold witness selection requires a literal integer in range')
     if campaign.get('origin') not in ('sequential', 'parallel') or campaign.get('selection_cutoff_ns') != cast(int, original['last_ns']) + cast(int, original['interval_ns']) or trial.get('campaign_source_digest') != original['digest'] or selected['interval_ns'] != original['interval_ns']:
         raise ValueError('fold witness campaign/source/selection cutoff mismatch; rerun')
     if trial.get('validation_ratio') != metadata.get('walk_forward_validation_ratio') or not isinstance(trial.get('preparation'), dict):

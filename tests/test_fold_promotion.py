@@ -199,3 +199,5 @@ def test_fold_argument_errors(fold_campaigns, fold, message):
     item = fold_campaigns['anchored']
     with pytest.raises(ValueError, match=message):
         Trainer(item.path, data=item.bars).train([item.record['round_id']], fold=fold)
+    with pytest.raises(ValueError, match='literal integer in range'):
+        read_fold_context(item.metadata, item.record, fold)
