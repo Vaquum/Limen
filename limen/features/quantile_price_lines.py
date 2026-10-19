@@ -30,7 +30,7 @@ def quantile_price_lines(data: pl.DataFrame,
 
     Select heights at or above each direction's expanding quantile, including
     ties. End windows include both boundaries [t-window, t]. Recency is capped
-    at density_lookback_hours; empty windows return zero. The optional
+    at density_lookback_hours; other empty-window features return zero. The optional
     active_quantile_count retains retrospective whole-frame span selection.
 
     Args:
@@ -121,23 +121,23 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
     momentum_col = f"quantile_momentum_{momentum_lookback_hours}h"
     height_col = f"avg_quantile_height_{height_lookback_hours}h"
 
-    ends, heights, directions = _end_events(long_lines_q, short_lines_q)
-
-    momentum = _windowed_sum(ends, heights * directions, n_rows, momentum_lookback_hours)
-
-    height_sums = _windowed_sum(ends, heights, n_rows, height_lookback_hours)
-    signed_sums = _windowed_sum(ends, heights * directions, n_rows, height_lookback_hours)
-    counts = _windowed_sum(ends, np.ones_like(heights), n_rows, height_lookback_hours)
-
-    avg_height = np.where(counts > 0, height_sums / np.maximum(counts, 1.0), 0.0)
-    direction_bias = np.where(height_sums > 0, signed_sums / np.maximum(height_sums, 1e-12), 0.0)
-
     density_col = f"quantile_line_density_{density_lookback_hours}h"
+    if quantile_threshold == 0:
+        ends, heights, directions = _end_events(long_lines_q, short_lines_q)
 
-    recency = line_recency(ends, n_rows, density_lookback_hours)
-    density = (np.searchsorted(ends, np.arange(n_rows), side='right')
-               - np.searchsorted(ends, np.arange(n_rows) - density_lookback_hours, side='left'))
-    if quantile_threshold > 0:
+        momentum = _windowed_sum(ends, heights * directions, n_rows, momentum_lookback_hours)
+
+        height_sums = _windowed_sum(ends, heights, n_rows, height_lookback_hours)
+        signed_sums = _windowed_sum(ends, heights * directions, n_rows, height_lookback_hours)
+        counts = _windowed_sum(ends, np.ones_like(heights), n_rows, height_lookback_hours)
+
+        avg_height = np.where(counts > 0, height_sums / np.maximum(counts, 1.0), 0.0)
+        direction_bias = np.where(height_sums > 0, signed_sums / np.maximum(height_sums, 1e-12), 0.0)
+
+        recency = line_recency(ends, n_rows, density_lookback_hours)
+        density = (np.searchsorted(ends, np.arange(n_rows), side='right')
+                   - np.searchsorted(ends, np.arange(n_rows) - density_lookback_hours, side='left'))
+    else:
         recency, density, momentum, avg_height, direction_bias = _causal_columns(
             long_lines, short_lines, n_rows, quantile_threshold,
             density_lookback_hours, momentum_lookback_hours, height_lookback_hours)

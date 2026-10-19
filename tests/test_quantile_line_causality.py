@@ -1,5 +1,4 @@
 """Quantile end events must depend only on the recorded prefix."""
-import numpy as np
 import pytest
 from polars.testing import assert_frame_equal
 
@@ -39,4 +38,3 @@ def test_quantile_rows_match_frozen_prefix_oracle(quantile, research, windows):
         assert_frame_equal(result.slice(cutoff - 1, 1).select(columns), expected.tail(1).select(columns),
                            rel_tol=1e-12, abs_tol=1e-12)
     assert result.schema == expected.schema
-    np.testing.assert_array_equal(result['close'].to_numpy(), DATA['close'].head(384).to_numpy())

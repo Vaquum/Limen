@@ -110,7 +110,7 @@ def _timings(name):
         started = time.perf_counter()
         result = calculate(frame, 48, .002, **({'include_research_only': False} if name == 'quantile_price_lines' else {}))
         after.append(time.perf_counter() - started)
-    assert_frame_equal(result, expected, rel_tol=1e-12, abs_tol=1e-12)
+    assert_frame_equal(result, expected, check_exact=name == 'price_lines', rel_tol=1e-12, abs_tol=1e-12)
     return before, after
 
 
