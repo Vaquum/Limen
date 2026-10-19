@@ -30,8 +30,12 @@ jobs:
 
       - name: Install recorded research environment
         run: |
+          python -m pip install --require-hashes -r requirements/ci/dev-env.txt
           python -m pip install --require-hashes -r requirements/ci/research-env.txt
           python -m pip install --no-deps -e .
+
+      - name: Check documentation Python
+        run: python docs/examples/check_sources.py
 
       - name: Acquire merged source identities
         env:

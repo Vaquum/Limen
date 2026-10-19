@@ -78,15 +78,14 @@ def compare_output(current, retained, tolerances, at='') -> None:
 
 def validate_shape(value, schema, at='$') -> None:
     if 'oneOf' in schema:
-        successes = 0
+        failures = []
         for choice in schema['oneOf']:
             try:
                 validate_shape(value, choice, at)
-                successes += 1
-            except ValueError:
-                continue
-        if successes != 1:
-            raise ValueError(f'{at}: expected exactly one schema choice')
+            except ValueError as error:
+                failures.append(str(error))
+        if len(schema['oneOf']) - len(failures) != 1:
+            raise ValueError(f'{at}: expected exactly one schema choice; {failures}')
         return
     if 'const' in schema and (value != schema['const'] or (type(value) is bool) != (type(schema['const']) is bool)):
         raise ValueError(f'{at}: unexpected constant')
