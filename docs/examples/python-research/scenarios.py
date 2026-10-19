@@ -191,7 +191,7 @@ def execution(data_dir, output):
     history = funding_history(data_dir)
     funding = FundingPolicy('limen.backtest.funding_adapter.funding_adapter', 'limen-funding-v1', {}, None, None, 'discrete', 28800.0, 'mark', 'USDT', 'recorded_exact')
     events = prepare_funding(funding, history, start, end)
-    binding = source_binding(history, HASHES[FUNDING], start, end, 1_000_000, 'recorded realized rates and mark prices; explicit eight-hour slots')
+    binding = source_binding(events, HASHES[FUNDING], start, end, 1_000_000, 'recorded realized rates and mark prices; explicit eight-hour slots')
     funded_inputs = replace(inputs, funding_events=events, sources=(*inputs.sources, binding))
     funded_policy = replace(policy, product=ProductSpec('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), funding=funding)
     funded = trade_execution(funded_inputs, funded_policy)
