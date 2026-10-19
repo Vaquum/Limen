@@ -1819,6 +1819,10 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Reject non-finite fractional-difference parameters and recurrence weights while preserving finite calculations.
 
-## [5.45.2] - 2026-10-19
+## [5.45.2] - 2026-10-20
+
+Infer nullable allocation opportunity fields across all observed labels so late censored opportunities retain their text reason after the first 100 rows; preserve strict conversion and causal supervision.
+
+## [5.45.3] - 2026-10-20
 
 - Reject YAML resolver traversal outside allowed namespaces and introspective dunder attributes while preserving supported symbols.
