@@ -171,12 +171,14 @@ def wire_record(record: Mapping[str, object], *, legacy: bool = False, restore: 
         if 'folds' in result:
             result['folds'] = [wire_record(fold, legacy=True) for fold in cast(list[Mapping[str, object]], result['folds'])]
         return result
-    if result.get('parameter_encoding') != VERSION:
+    if type(result.get('parameter_encoding')) is not int or result.get('parameter_encoding') != VERSION:
         raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
     if restore:
         node = result.get('parallel_parameters')
+        if not isinstance(node, list):
+            raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
         native = decode(node)
-        if encode(parameter_projection(encode(native))) != encode(result['round_params']):
+        if encode(parameter_projection(encode(native))) != encode(result.get('round_params')):
             raise ValueError('Cannot resume parallel run with mismatched typed parameter evidence')
         result['round_params'] = native
     else:

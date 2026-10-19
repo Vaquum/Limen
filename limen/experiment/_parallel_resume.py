@@ -108,7 +108,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         with _storage.open_text(round_data_path, limit=len(expected)) as stream:
             for line in stream:
                 entry = _mapping(json.loads(line), 'round data')
-                if legacy and any(key in entry for key in ('parallel_plan', 'parallel_output', 'parameter_encoding')):
+                if legacy and any(key in entry for key in ('parallel_plan', 'parallel_output', 'parameter_encoding', 'parallel_parameters')):
                     raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
                 committed.append(entry if legacy else wire_record(entry, restore=True))
     forward = cast(WalkForwardRun | None, attributes['_walk_forward'])
