@@ -505,5 +505,6 @@
   "limen/inference/_fold_metrics.py": 140,
   "limen/inference/_fold_sensor.py": 240,
   "limen/experiment/_parallel_sources.py": 70,
-  "limen/experiment/_fold_preparation.py": 180
+  "limen/experiment/_fold_preparation.py": 180,
+  "limen/experiment/_holdout_dependencies.py": 260
 }

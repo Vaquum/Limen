@@ -1801,3 +1801,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Define Limen's executable research book contract: two comprehensive tested projects, exact source/output bindings, merged-source and current-validation evidence, the owned reader, and complete reference/developer coverage.
 - Align the documentation task router with Python Research and Compiled Research while retaining the current production renderer and its recorded deployment defects.
+
+## [5.44.3] - 2026-10-19
+
+- Preserve selected LightGBM iteration limits through owned copies and verify frozen prediction dependencies before final access.

@@ -168,8 +168,7 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert _report(_freeze(trained[1][0]), assessment_case)['state'] == 'completed'
     changed = copy.deepcopy(trained[1][0])
     changed._model.model.booster_.best_iteration = 1
-    with pytest.raises(ValueError, match='best_iteration'):
-        _freeze(changed)
+    _freeze(changed)
     changed = copy.deepcopy(trained[0][1])
     changed._model._fitted_calibrator = None
     with pytest.raises(ValueError, match='unfitted calibration'):
@@ -369,3 +368,42 @@ def test_holdout_report_accounting(assessment_case):
     path.write_bytes(original)
     release_holdout(root, reservation)
     assert _report(frozen, assessment_case)['exposure']['class'] == 'post-release'
+
+
+def test_compiled_fitted_components_complete_final_assessment(assessment_case):
+    for sensor in (assessment_case[2][0][0], assessment_case[2][1][0]):
+        frozen = _freeze(sensor)
+        first = _report(frozen, assessment_case)
+        repeat = _report(frozen, assessment_case)
+        assert first['state'] == repeat['state'] == 'completed'
+        assert first['state_sha256'] == repeat['state_sha256']
+        assert first['rows_sha256'] == repeat['rows_sha256']
+        assert first['attempt_id'] != repeat['attempt_id']
+        assert read_holdout_report(assessment_case[0], repeat['attempt_id']) == repeat
+
+
+@pytest.mark.parametrize('limit', ['equal', 'truncated'])
+def test_owned_lightgbm_preserves_effective_iteration(assessment_case, limit):
+    sensor = copy.deepcopy(assessment_case[2][1][0])
+    booster = sensor._model.model.booster_
+    assert booster.current_iteration() > 1
+    selected = booster.current_iteration() if limit == 'equal' else 1
+    booster.best_iteration = selected
+    raw = pl.read_parquet(Path(sensor._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(96)
+    expected = sensor.predict(raw)
+    clone = owned_copy(sensor)
+    second = owned_copy(clone)
+    assert expected.reason is None
+    assert expected == clone.predict(raw) == second.predict(raw)
+    assert clone._model.model.booster_.best_iteration == second._model.model.booster_.best_iteration == selected
+
+
+def test_frozen_dependencies_and_invalid_state(assessment_case):
+    import limen.scalers.logreg_scaler as scaler_module
+
+    frozen = _freeze(assessment_case[2][0][0])
+    with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')):
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(frozen, assessment_case)
+            assert loader.call_count == 0

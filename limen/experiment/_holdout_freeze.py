@@ -8,7 +8,6 @@ from hashlib import sha256
 from importlib.metadata import PackageNotFoundError, version
 import math
 import numbers
-import pickle
 import platform
 from pathlib import Path
 from threading import Lock
@@ -28,6 +27,7 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
+from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness, restore_iterations
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
@@ -109,7 +109,16 @@ def _member_state(sensor: Sensor) -> tuple[object, ...]:
 def state_digest(selection: Sensor | Cohort) -> str:
     state = tuple(_member_state(item) for item in members(selection))
     aggregate = ('sensor',) if type(selection) is Sensor else (cast(Cohort, selection).aggregation_mode, cast(Cohort, selection).member_ids, getattr(selection, '_VOTE_THRESHOLD', None))
-    return sha256(pickle.dumps((state, aggregate), protocol=5)).hexdigest()
+    return sha256(fitted_witness((state, aggregate))).hexdigest()
+
+
+def prediction_dependencies(selection: Sensor | Cohort) -> str:
+    values: list[object] = []
+    for member in members(selection):
+        values.extend(_member_state(member)[:4])
+        manifest = cast(MLManifest, vars(member)['_manifest'])
+        values.extend(getattr(manifest, field.name) for field in fields(manifest) if field.name not in ('data_source_config', 'test_data_source_config'))
+    return dependency_digest(values)
 
 
 def manifest_projection(manifest: MLManifest) -> object:
@@ -177,8 +186,6 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
             raise ValueError('Holdout requires exact LGBMClassifier')
         if any(getattr(LGBMClassifier, name).__module__ != 'lightgbm.sklearn' or getattr(LGBMClassifier, name).__qualname__ != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
             raise ValueError('Holdout refuses replaced LightGBM prediction methods')
-        if model.booster_.best_iteration > 0:
-            raise ValueError('Holdout refuses positive native LightGBM best_iteration')
     check_is_fitted(model)
     if list(cast(Iterable[int], getattr(model, 'classes_', []))) != [0, 1]:
         raise ValueError('Holdout estimator classes must be [0,1]')
@@ -260,22 +267,8 @@ class FrozenHoldoutSelection:
         self._lock = Lock()
 
 
-def _model_witness(value: object) -> object:
-    if isinstance(value, Mapping):
-        return {key: _model_witness(item) for key, item in cast(Mapping[str, object], value).items()}
-    if isinstance(value, (tuple, list)):
-        return tuple(_model_witness(item) for item in cast(tuple[object, ...] | list[object], value))
-    if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
-        from lightgbm import Booster
-        booster = cast(Booster, value)
-        return (booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), max(0, booster.best_iteration))
-    if type(value).__module__.startswith(('sklearn.', 'lightgbm.', 'limen.sfd.reference_architecture.')) and hasattr(value, '__dict__'):
-        return (type(value).__module__, type(value).__qualname__, _model_witness(vars(value)))
-    return value
-
-
 def _copy_witness(selection: Sensor | Cohort) -> bytes:
-    return pickle.dumps(tuple((*_member_state(item)[:3], _model_witness(vars(item)['_model']), vars(item)['_trade_contract']) for item in members(selection)), protocol=5)
+    return fitted_witness(tuple(_member_state(item) for item in members(selection)))
 
 
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
@@ -284,7 +277,10 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
     for original in members(selection):
         member = copy.copy(original)
         vars(member).clear()
-        vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(_member_state(original)), strict=True))
+        memo: dict[int, object] = {}
+        state = _member_state(original)
+        vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(state, memo), strict=True))
+        restore_iterations(state, memo)
         member.permutation_id, member.manifest_id = original.permutation_id, original.manifest_id
         vars(member)['_trade_digest'] = None
         cached = cast(MLManifest | None, vars(original)['_manifest'])
@@ -335,7 +331,8 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
-                    'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions}
+                    'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions,
+                    'prediction_dependencies': prediction_dependencies(snapshot[0])}
     result = FrozenHoldoutSelection(_TOKEN)
     for key, value in zip(('_snapshot', '_spec', '_state_digest', '_spec_digest'), (snapshot, spec, state_digest(snapshot[0]), digest(spec)), strict=True):
         object.__setattr__(result, key, value)
