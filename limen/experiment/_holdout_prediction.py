@@ -91,7 +91,7 @@ def _probe_output(sensor: Sensor) -> object:
     raw = vars(sensor)['_fitted_params'].get('_holdout_probe')
     if not isinstance(raw, pl.DataFrame) or raw.is_empty():
         raise ValueError('Holdout requires recorded Trainer inference geometry')
-    manifest = cast(MLManifest, getattr(sensor, '_get_manifest')())
+    manifest = cast(MLManifest, vars(Sensor)['_get_manifest'](sensor))
     guarded = manifest.test_predict_guard
     manifest.test_predict_guard = False
     try:

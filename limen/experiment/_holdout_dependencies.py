@@ -199,7 +199,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     chained_import = instructions[index - 1].argval is None
-                    imported = sys.modules.get(name.split('.')[0] if chained_import else name)
+                    imported = sys.modules.get(name.split('.', 1)[0] if chained_import else name)
                     if imported is None:
                         raise ValueError(f'Holdout prediction import lacks loaded evidence: {name}')
                     binding = imported

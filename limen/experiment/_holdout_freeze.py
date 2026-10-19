@@ -135,7 +135,7 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
                 excluded.append(config)
                 values.extend((config.calibration_params, config.threshold_params))
     # Owned Sensors already hold the validated Manifest; its construction branch cannot run.
-    return dependency_digest(values, exclude=excluded, resolved=(getattr(Sensor, '_get_manifest'),))
+    return dependency_digest(values, exclude=excluded, resolved=(vars(Sensor)['_get_manifest'],))
 
 
 def manifest_projection(manifest: MLManifest) -> object:

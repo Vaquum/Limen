@@ -665,24 +665,25 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 assert loader.call_count == 0
     class Imported(LogRegBinary):
         def predict(self, data):
-            import tests.test_holdout_assessment
+            import limen.calibration
             result = super().predict(data)
-            result['_probs'] = tests.test_holdout_assessment.later_probabilities(result['_probs'])
+            result['_probs'] = limen.calibration.f17_later_probabilities(result['_probs'])
             return result
     class Aliased(LogRegBinary):
         def predict(self, data):
-            import tests.test_holdout_assessment as helpers
+            import limen.calibration as helpers
             result = super().predict(data)
-            result['_probs'] = helpers.later_probabilities(result['_probs'])
+            result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
             return result
     for implementation in (Imported, Aliased):
         imported = copy.deepcopy(assessment_case[2][0][0])
         imported._model.__class__ = implementation
-        imported_handle = _freeze(imported)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(imported_handle, assessment_case)
-            assert loader.call_count == 0
+        with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True):
+            imported_handle = _freeze(imported)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(imported_handle, assessment_case)
+                assert loader.call_count == 0
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
