@@ -151,6 +151,27 @@ def campaigns(tmp_path_factory):
     return result
 
 
+@pytest.mark.parametrize('profile', ('full', 'lean'))
+@pytest.mark.parametrize('source_form', ('direct', 'rounds'))
+def test_cohort_rejects_walk_forward_sources(profile, source_form, campaigns, monkeypatch):
+    captured = campaigns['walk_forward']
+    saved = captured[profile]
+    path = saved['path']
+    metadata = json.loads((path / 'metadata.json').read_text())
+    assert metadata['split_walk_forward'] == captured['config']['sfd']['manifest']['split_walk_forward']
+    permutation_id = saved['records'][0]['round_id']
+
+    def load_round_entries(*args, **kwargs):
+        raise AssertionError('Walk-forward sources must reject before round loading.')
+
+    monkeypatch.setattr(Cohort, '_load_round_entries', load_round_entries)
+    with pytest.raises(ValueError, match='walk-forward rounds cannot be promoted'):
+        if source_form == 'direct':
+            Cohort(experiment_log_path=str(path), permutation_ids=[permutation_id])
+        else:
+            Cohort(rounds=[(path, permutation_id)])
+
+
 @pytest.mark.parametrize('kind', ('serial', 'factorized', 'walk_forward', 'native'))
 def test_bar_payloads_default_off(kind, tmp_path):
     config = _config(kind)
