@@ -462,6 +462,10 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code != 0
         with pytest.raises(ValueError, match='pbo_blocks'):
             Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=value)
+        snapshot = _artifact_snapshot(pbo_runs['compiled_only'][2])
+        with pytest.raises(ValueError, match='pbo_blocks'):
+            acceptance_report(pbo_runs['compiled_only'][2], acceptance={'pbo_blocks': value})
+        assert _artifact_snapshot(pbo_runs['compiled_only'][2]) == snapshot
     config = copy.deepcopy(pbo_runs['compiled_only'][1])
     for has_search, has_directory in ((False, True), (True, False)):
         path = tmp_path / f'missing_{has_search}_{has_directory}'
@@ -588,6 +592,14 @@ def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
     with pytest.raises(ValueError, match='Saved pbo_blocks conflicts'):
         acceptance_report(path)
     assert _artifact_snapshot(path) == snapshot
+    omitted_count = copy.deepcopy(metadata)
+    omitted_count.pop('pbo_blocks')
+    (path / 'metadata.json').write_text(json.dumps(omitted_count))
+    snapshot = _artifact_snapshot(path)
+    for settings in (None, {'max_pbo': 0.9}):
+        with pytest.raises(ValueError, match='Saved pbo_blocks conflicts'):
+            acceptance_report(path, acceptance=settings)
+        assert _artifact_snapshot(path) == snapshot
     (path / 'metadata.json').write_text(json.dumps(metadata))
     source = acceptance_runs[0][2]
     for file in ('trial_returns.parquet', 'metadata.json'):
