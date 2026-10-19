@@ -36,6 +36,10 @@ For trials evaluated across successive test windows, see [walk-forward sweeps](E
 
 Use Python when the experiment is expressed as an SFD, when preparation or models need custom code, or when you need direct search control. A custom SFD exposes `params()`, `prep()`, and `model()` and receives `data=` explicitly; it does not need a YAML manifest or a built-in model architecture.
 
+For recorded execution-cost stress with a caller model, frozen event inputs and
+the same pinned calibration reused in a later experiment, use the runnable
+[Python cost-comparison workflow](Backtest.md#frozen-candidates-in-custom-python-research).
+
 Pass `search_strategy` explicitly to select MSQ. The constructor still defaults to `None`, which selects the supported [standard execution contract](#legacy-execution-reference).
 
 This example uses a built-in SFD and seeded random search. Replace the SFD with your own module to run custom code under the same loop.
