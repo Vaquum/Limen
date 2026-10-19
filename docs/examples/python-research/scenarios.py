@@ -49,8 +49,8 @@ def search(data_dir, output):
         strategy = (GridStrategy(domain, shuffle=True, seed=42) if name == 'shuffled'
                     else {'grid': GridStrategy, 'random': RandomStrategy, 'sobol': SobolStrategy}[name](domain, **({} if name == 'grid' else {'seed': 42})))
 
-        def model(data, params):
-            fitted = project.fit(data['train'], params)
+        def model(data, round_params):
+            fitted = project.fit(data['train'], round_params)
             return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
 
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
@@ -65,14 +65,14 @@ def recovery(data_dir, output):
     bars = quarter_hour(data_dir)[:1440]
     space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
 
-    def prepare(raw, params):
-        data = project.prep(raw, params)
+    def prepare(raw, round_params):
+        data = project.prep(raw, round_params)
         validation = data['validation']
         data['_alignment'] = {'missing_datetimes': [], 'first_test_datetime': validation['datetime'][0], 'last_test_datetime': validation['datetime'][-1]}
         return data
 
-    def model(data, params):
-        fitted = project.fit(data['train'], params)
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
         forecasts = fitted.predict(data['validation'].select('momentum'))
         return {'validation_net_return': project.backtest(data['validation'], forecasts), '_preds': forecasts}
 
