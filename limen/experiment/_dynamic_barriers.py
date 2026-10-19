@@ -101,8 +101,9 @@ def prepare_barriers(config: _BarrierConfig, policy: TradePolicy, raw: pl.DataFr
     return selected
 
 
-def reject_yaml_promotion(reference: Mapping[str, object]) -> None:
-    sfd = _mapping(reference.get('sfd'))
+def reject_yaml_promotion(reference: object) -> None:
+    mapping = _mapping(reference)
+    sfd = _mapping(mapping.get('sfd')) if mapping is not None else None
     manifest = _mapping(sfd.get('manifest')) if sfd is not None else None
     if manifest is not None:
         config = _mapping(manifest.get('backtest'))
@@ -123,6 +124,6 @@ def _column_name(value: object) -> str | None:
     return value
 
 
-def research_reference(reference: Mapping[str, object]) -> dict[str, object]:
+def research_reference(reference: dict[str, object]) -> dict[str, object]:
     reject_yaml_promotion(reference)
-    return deepcopy(dict(reference))
+    return deepcopy(reference)
