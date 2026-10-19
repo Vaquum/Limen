@@ -1810,3 +1810,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Default the test-only Polars pool to one thread before import while preserving explicit overrides and every existing proof and budget.
 - Cache repeated test YAML setup by exact content with independent deep copies; retain all existing configurations and assertions.
+
+## [5.45.0] - 2026-10-19
+
+- Add immutable recorded-fill price-cost calibration with explicit evidence limits and preserved account fees.
