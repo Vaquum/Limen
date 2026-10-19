@@ -22,6 +22,7 @@ from limen.experiment import manifest_core
 from limen.experiment._holdout_freeze import members, owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
+from limen.inference.sensor import Sensor
 from limen.targets.next_bar_up import NextBarUpTarget
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
@@ -104,6 +105,12 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     with pytest.raises(TypeError):
         FrozenHoldoutSelection(object())
     probe = pl.read_parquet(Path(trained[0][0]._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(120)
+    def unavailable_python_callback(*args):
+        raise AssertionError('Python callbacks must be refused before invocation')
+    python_sensor = Sensor.from_python(fitted_state=trained[0][0]._model, params={}, infer=unavailable_python_callback,
+        map_output=unavailable_python_callback, state_id='caller-owned', fitting_cutoff=probe['datetime'][24], selection_cutoff=probe['datetime'][48])
+    with pytest.raises(ValueError, match='exact Sensor'):
+        _freeze(python_sensor)
     for sensor in (trained[0][0], trained[1][0]):
         assert sensor.predict(probe).reason is None
         clone = owned_copy(sensor)
