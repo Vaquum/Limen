@@ -9,19 +9,36 @@
   "pythonVersion": "3.10",
   "executionEnvironments": [
     {
-      "root": "python-research"
+      "root": "python-research",
+      "extraPaths": [
+        ".",
+        "../..",
+        "../../governance"
+      ]
     },
     {
-      "root": "compiled-research"
+      "root": "compiled-research",
+      "extraPaths": [
+        ".",
+        "../..",
+        "../../governance"
+      ]
     },
     {
       "root": "tests",
       "extraPaths": [
-        "."
+        ".",
+        "../..",
+        "../../governance"
       ]
     },
     {
-      "root": "."
+      "root": ".",
+      "extraPaths": [
+        ".",
+        "../..",
+        "../../governance"
+      ]
     }
   ]
 }

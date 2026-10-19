@@ -187,7 +187,10 @@ def bars(data_dir, output):
     raw = recorded(data_dir, 'spot_1h_20240101_20241231.parquet', 384)
     results = []
     for kind, parameter, column in [('volume', 'volume_threshold', 'volume'), ('trade', 'trade_threshold', 'no_of_trades'), ('liquidity', 'liquidity_threshold', 'liquidity_sum')]:
-        threshold = float(raw[column].median()) * 4
+        median = raw[column].median()
+        if not isinstance(median, (int, float)):
+            raise ValueError('Bar formation requires a numeric recorded threshold source')
+        threshold = float(median) * 4
         if kind == 'trade':
             threshold = int(threshold)
         formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})

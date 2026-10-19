@@ -1,4 +1,4 @@
-import importlib.util
+from importlib.util import module_from_spec, spec_from_file_location
 import sys
 from pathlib import Path
 
@@ -9,12 +9,19 @@ sys.path.insert(0, str(ROOT / 'docs/examples'))
 sys.path.insert(0, str(ROOT / 'docs/examples/tests'))
 
 
+def module_at(name, path):
+    spec = spec_from_file_location(name, path)
+    if spec is None or spec.loader is None:
+        raise ImportError('No executable documentation module: ' + str(path))
+    module = module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 @pytest.fixture(scope='session')
 def python_project(tmp_path_factory):
     path = ROOT / 'docs/examples/python-research/research.py'
-    spec = importlib.util.spec_from_file_location('book_python_research', path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = module_at('book_python_research', path)
     import polars as pl
     bars = pl.read_parquet(ROOT / 'tests/fixtures/spot_15m_20250101_20250531.parquet', n_rows=1920)
     output = tmp_path_factory.mktemp('book_python')
@@ -35,9 +42,7 @@ def python_project(tmp_path_factory):
 @pytest.fixture(scope='session')
 def compiled_project(tmp_path_factory):
     path = ROOT / 'docs/examples/compiled-research/research.py'
-    spec = importlib.util.spec_from_file_location('book_compiled_research', path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = module_at('book_compiled_research', path)
     output = tmp_path_factory.mktemp('book_compiled') / 'experiment'
     result = module.run_research(ROOT / 'tests/fixtures', output)
     return module, output, result
@@ -45,15 +50,10 @@ def compiled_project(tmp_path_factory):
 
 @pytest.fixture(scope='session')
 def research_proof(python_project, compiled_project, tmp_path_factory, request):
-    import importlib
-    spec = importlib.util.spec_from_file_location('book_semantic_oracles', ROOT / 'docs/examples/tests/test_research_examples.py')
-    proof = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(proof)
+    proof = module_at('book_semantic_oracles', ROOT / 'docs/examples/tests/test_research_examples.py')
     proof.assert_python_research(python_project)
     proof.assert_compiled_research(compiled_project)
-    spec = importlib.util.spec_from_file_location('book_wheel_proof', ROOT / 'docs/examples/tests/wheel_proof.py')
-    wheel_proof = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(wheel_proof)
+    wheel_proof = module_at('book_wheel_proof', ROOT / 'docs/examples/tests/wheel_proof.py')
     # A caller's checkout must not replace the installed wheel in project runs.
     with pytest.MonkeyPatch.context() as environment:
         environment.setenv('PYTHONPATH', str(ROOT))

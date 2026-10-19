@@ -20,6 +20,14 @@ def run(argv, *, cwd, env=None):
     subprocess.run([str(arg) for arg in argv], cwd=cwd, env=environment, check=True, timeout=90)
 
 
+def archive_bytes(archive: tarfile.TarFile, name: str) -> bytes:
+    stream = archive.extractfile(name)
+    if stream is None:
+        raise ValueError('Missing regular archive file: ' + name)
+    with stream:
+        return stream.read()
+
+
 def unpack(bundle: Path, target: Path, root: Path):
     with tarfile.open(bundle) as archive:
         names = set(archive.getnames())
@@ -31,11 +39,11 @@ def unpack(bundle: Path, target: Path, root: Path):
             raise ValueError('Candidate archive is incomplete')
         if len(names) != len(archive.getmembers()) or any(not member.isfile() for member in archive.getmembers()):
             raise ValueError('Candidate archive has duplicate or non-file members')
-        manifest = json.load(archive.extractfile('bundle.json'))
+        manifest = json.loads(archive_bytes(archive, 'bundle.json'))
         if manifest['schema_version'] != 1 or set(manifest['files']) | {'bundle.json'} != names:
             raise ValueError('Candidate archive inventory differs')
         for name, expected in manifest['files'].items():
-            if hashlib.sha256(archive.extractfile(name).read()).hexdigest() != expected:
+            if hashlib.sha256(archive_bytes(archive, name)).hexdigest() != expected:
                 raise ValueError('Candidate archive member changed: ' + name)
         archive.extractall(target, filter='data')
     if json.loads((target / 'inputs.json').read_text()) != INPUTS:

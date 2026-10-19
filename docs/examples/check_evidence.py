@@ -120,7 +120,7 @@ def validate_shape(value, schema, at='$') -> None:
     if isinstance(value, str):
         if len(value) < schema.get('minLength', 0) or ('pattern' in schema and not re.fullmatch(schema['pattern'], value)):
             raise ValueError(f'{at}: invalid identity')
-    if type(value) in (int, float) and (not math.isfinite(value) or value < schema.get('minimum', value)):
+    if isinstance(value, (int, float)) and not isinstance(value, bool) and (not math.isfinite(value) or value < schema.get('minimum', value)):
         raise ValueError(f'{at}: invalid numeric bound')
 
 
