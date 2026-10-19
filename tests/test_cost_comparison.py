@@ -96,6 +96,10 @@ def test_frozen_event_scenarios(tmp_path, monkeypatch, mode, funded, barrier, la
             for field in ('states', 'intents', 'fills', 'episodes', 'funding'):
                 assert_frame_equal(getattr(actual, field), getattr(expected, field))
         assert original.metrics != calibrated.metrics
+        assert original.fills['quantity_delta'][0] != calibrated.fills['quantity_delta'][0]
+        if name == 'first' and mode == 'binary' and barrier == 'take_profit_bps' and lag == 0.0 and not funded:
+            assert original.episodes['exit_reason'].to_list() == ['signal']
+            assert calibrated.episodes['exit_reason'].to_list() == ['take_profit']
         scenario = report['candidates'][name]['scenarios']['calibrated']
         assert scenario['contract']['trade_contract']['policy']['fee_bps'] == policy.fee_bps
         assert scenario['contract']['execution_cost']['application_digest'] == report['candidates'][name]['application_digest']
@@ -181,6 +185,8 @@ def _assert_refusals(calibration, monkeypatch, calls):
     assert mixed['ranks']['original'] == {'good': 1, 'wrong_venue': 1}
     assert mixed['ranks']['calibrated'] is mixed['ranks']['delta'] is None
     assert mixed['unavailable']['wrong_venue']['calibrated'] == ['incompatible_condition:venue']
+    different_capital = calibration.compare({'a': shared, 'b': candidate(data=replace(inputs, initial_equity=20_000.0))}).report()
+    assert different_capital['ranks'] == {'original': None, 'calibrated': None, 'delta': None}
     heterogeneous = calibration.compare({'a': shared, 'b': candidate(economics=replace(policy, fee_bps=7.0))}).report()
     assert heterogeneous['ranks'] == {'original': None, 'calibrated': None, 'delta': None}
     deleted = benchmark.filter(pl.col('row_id') != inputs.observations['row_id'][1])
