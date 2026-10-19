@@ -41,6 +41,10 @@ class VoteOnly(LogRegBinary):
         return {'_preds': self.model.predict(data)['_preds']}
 
 
+class Undeclared(VoteOnly):
+    inference_output = None
+
+
 @pytest.fixture(scope='session')
 def cohort_assets(fold_campaigns, tmp_path_factory):
     from tests.fold_components import FULL
@@ -272,9 +276,11 @@ def test_fold_compatibility(fold_campaigns, cohort_assets, tmp_path, fault):
         return
     if fault == 'ordinary_output':
         cohort = Cohort(rounds=[_select(item), (ordinary.path, ordinary.record['round_id'])])
-        model = copy.deepcopy(ordinary.sensor._model)
-        with patch.object(type(model), 'inference_output', None), pytest.raises(ValueError, match='Cohort requires declared binary'):
+        model = Undeclared(copy.deepcopy(ordinary.sensor._model))
+        assert type(item.sensor._model).inference_output == ('binary', True)
+        with pytest.raises(ValueError, match='Cohort requires declared binary') as error:
             cohort.set_members([item.sensor, Proxy(ordinary.sensor, _model=model)])
+        assert str((ordinary.sensor.manifest_id, ordinary.sensor.permutation_id)) in str(error.value)
         assert cohort.cohort_id is None and cohort.supports_probabilities is None
         return
     if fault == 'campaign':
