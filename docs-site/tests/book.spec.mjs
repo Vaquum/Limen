@@ -50,6 +50,22 @@ test('copy preserves canonical source without gutters',async({page,context})=>{
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(expected);
 });
 
+test('failed reference fetch does not override later reading on reload',async({page})=>{
+  await open(page);
+  await page.route('**/reference/trainer/**',route=>route.fulfill({status:503,contentType:'text/plain',body:'Reference unavailable'}));
+  await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
+  await expect(page.locator('[data-status]')).toContainText('The reference could not be opened');
+  const errors=failures.get(page);
+  expect(errors.some(message=>message.includes('Reference returned 503'))).toBe(true);
+  expect(errors.filter(message=>!message.includes('Reference returned 503')&&!message.includes('503 (Service Unavailable)'))).toEqual([]);
+  failures.set(page,[]);
+  expect(await page.evaluate(()=>history.state?.readerPlace)).toBeNull();
+  await page.locator('#inspect-the-result-before-continuing').scrollIntoViewIfNeeded();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  const continued=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
+});
+
 test('reference fragments retain the panel and canonical history',async({page})=>{
   await open(page);const chapter=page.url();const opener=page.getByRole('link',{name:'Cohort composition',exact:true});
   await opener.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();

@@ -12,6 +12,7 @@ export function initNavigation(){
   async function show(link,{updateHistory=true,originOverride=null,referenceURL=link.href}={}){
     const attempt=++token;opener=link;
     origin=originOverride||{url:location.href,entry:crypto.randomUUID(),place:position(),focus:link.id,scroll:scrollY,width:innerWidth};
+    const attemptOrigin=origin;
     if(updateHistory)history.replaceState({...history.state,readerPlace:origin.place,readerEntry:origin.entry},'',location.href);
     try{
       const response=await fetch(referenceURL);if(!response.ok)throw Error(`Reference returned ${response.status}`);
@@ -26,7 +27,11 @@ export function initNavigation(){
       body.querySelectorAll('[data-reference]').forEach(a=>a.removeAttribute('data-reference'));
       initCode(body);dialog.scrollTop=0;dialog.showModal();referenceDocument=documentURL(referenceURL);
       if(updateHistory)history.pushState({readerReference:true,readerOrigin:origin,readerDepth:1},'',referenceURL);camera.to(0);close.focus({preventScroll:true});revealAnchor();
-    }catch(error){announce('The reference could not be opened. Follow its link to retry.');console.error(error);}
+    }catch(error){
+      if(updateHistory&&history.state?.readerEntry===attemptOrigin.entry&&!history.state?.readerReference)
+        history.replaceState({...history.state,readerPlace:null},'',location.href);
+      announce('The reference could not be opened. Follow its link to retry.');console.error(error);
+    }
   }
   function hide(){++token;if(!dialog.open)return;
     camera.to(innerWidth,()=>{dialog.close();if(origin){
