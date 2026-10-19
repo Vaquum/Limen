@@ -81,6 +81,7 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
                           'side': [first['side']], 'is_taker': [first['role'] == 'taker']})
     assert hashlib.sha256(_cost_identity.canonical(frame)).hexdigest() == '470195e5391c6c2b30e16fec67f3ae5487e04c9e0bc7f61af40dce5d7ba482ee'
     assert _cost_identity.digest((first['time_ns'],)) != _cost_identity.digest([first['time_ns']])
+    _assert_canonical_identity(frame)
     artifact = tmp_path / 'calibration.json'
     expected_digest = calibration.digest  # Persist separately from the artifact in the caller specification.
     assert calibration.write(artifact) == calibration.write(artifact) == expected_digest
@@ -177,3 +178,38 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
     assert 'thin_observed_support:sell' in thin['support']['reasons']
     assert 'negative_price_constant:sell' in thin['support']['reasons']
     assert thin['estimates']['slip_bps'] is None
+
+
+def _assert_canonical_identity(recorded):
+    identity = _cost_identity.digest
+    assert identity(recorded) != identity(recorded.select(recorded.columns[::-1]))
+    assert identity(recorded) != identity(recorded.rename({'side': 'declared_side'}))
+    # These are encoding controls, not additional market observations.
+    pairs = pl.concat([recorded, recorded.with_columns(pl.lit(None, dtype=pl.String).alias('side'))])
+    assert identity(pairs) != identity(pairs.reverse())
+    primitive = [pl.Boolean, pl.Int8, pl.Int16, pl.Int32, pl.Int64, pl.UInt8, pl.UInt16, pl.UInt32, pl.UInt64, pl.Float32, pl.Float64]
+    assert len({identity(recorded.select(pl.col('is_taker').cast(dtype))) for dtype in primitive}) == len(primitive)
+    clock = recorded.select(pl.col('time_ns').cast(pl.Datetime('ns')).alias('clock'))
+    types = [pl.Date, pl.Time, *(pl.Datetime(unit, zone) for unit in ('ns', 'us', 'ms') for zone in (None, 'UTC')),
+             *(pl.Duration(unit) for unit in ('ns', 'us', 'ms'))]
+    frames = [clock.select(pl.col('clock').cast(dtype)) if dtype != pl.Time
+              else clock.select(pl.col('clock').dt.time()) for dtype in types if not isinstance(dtype, pl.Duration)]
+    elapsed = recorded.select((pl.col('time_ns') - pl.col('time_ns')).alias('clock'))
+    frames.extend(elapsed.select(pl.col('clock').cast(dtype)) for dtype in types if isinstance(dtype, pl.Duration))
+    assert len({identity(frame) for frame in frames}) == len(types)
+    assert identity({'a': recorded, 'b': (True,)}) == identity({'b': (True,), 'a': recorded.clone()})
+    assert identity(Decimal('1.0')) != identity(1.0) != identity(1) != identity(True)
+    for dtype in (pl.Categorical, pl.List(pl.String), pl.Struct({'side': pl.String})):
+        column = pl.col('side').cast(dtype) if dtype == pl.Categorical else (pl.concat_list('side') if isinstance(dtype, pl.List) else pl.struct('side'))
+        with pytest.raises(ValueError, match='Unsupported canonical frame dtype'):
+            identity(recorded.select(column))
+    for value in (float('nan'), float('inf'), Decimal('NaN'), recorded.select(pl.lit(float('nan')).alias('price'))):
+        with pytest.raises(ValueError, match='Nonfinite'):
+            identity(value)
+    cyclic = []
+    cyclic.append(cyclic)
+    with pytest.raises(ValueError, match='Cyclic'):
+        identity(cyclic)
+    for value in ({1: 'non-string key'}, object()):
+        with pytest.raises(TypeError):
+            identity(value)

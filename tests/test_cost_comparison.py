@@ -6,6 +6,7 @@ import socket
 from types import MappingProxyType, SimpleNamespace
 from dataclasses import replace
 from decimal import Decimal
+from itertools import pairwise
 
 import polars as pl
 import pytest
@@ -236,7 +237,7 @@ def _assert_refusals(calibration, monkeypatch, calls):
     # Software endpoint-bar encoding uses two recorded points, never real extrema.
     selected = benchmark.filter(pl.col('time_ns').is_between(inputs.partition_start_ns, inputs.partition_end_ns)).to_dicts()
     bars, phases = [], []
-    for index, (left, right) in enumerate(zip(selected, selected[1:], strict=False)):
+    for index, (left, right) in enumerate(pairwise(selected)):
         name = f'endpoint-bar:{index}'
         bars.append({'row_id': name, 'start_ns': left['time_ns'], 'end_ns': right['time_ns'],
             'open_available_at_ns': left['time_ns'], 'available_at_ns': right['time_ns'],
@@ -282,7 +283,8 @@ def _assert_refusals(calibration, monkeypatch, calls):
     assert len(calls) == before
 
     signed, signed_policy, declared, prices = _recorded_candidate('target_exposure')
-    signed = replace(signed, signals=signed.signals.with_columns(pl.Series('target', [-1.0, 0.0, 0.0, 0.0, 0.0])))
+    # Larger hypothetical capital avoids the venue minimum masking this cost stress.
+    signed = replace(signed, initial_equity=1_000_000.0, signals=signed.signals.with_columns(pl.Series('target', [-1.0, 0.0, 0.0, 0.0, 0.0])))
     recovery = calibration.compare({name: CostCandidate(signed, economics, 'software-controls:short', declared, prices)
         for name, economics in [('wide', replace(signed_policy, slip_bps=9999.0)), ('normal', signed_policy)]}).report()
     assert recovery['candidates']['wide']['scenarios']['original']['disposition'] == 'economic_failure'
