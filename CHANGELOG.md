@@ -1723,3 +1723,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.35.0] - 2026-10-19
 
 - Add a family acceptance report over comparable recorded walk-forward trials, with provenance, repeat accounting and conditional DSR/PBO assessments.
+
+## [5.35.1] - 2026-10-19
+
+- Preserve unproven family alternatives, refuse partial DSR and unsupported snapshot PBO, and expose retained evidence and terminal coverage without changing source artifacts.
