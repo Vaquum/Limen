@@ -453,6 +453,7 @@
   "limen/experiment/_factorize.py": 250,
   "limen/experiment/_factorized_prep.py": 70,
   "limen/cohort/_round_sources.py": 140,
+  "limen/cohort/_fold_sources.py": 320,
   "limen/experiment/_parallel_worker.py": 250,
   "limen/experiment/_parallel_rounds.py": 250,
   "limen/experiment/_parallel_commit.py": 200,
