@@ -14,7 +14,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-__all__ = ['children', 'dependency_digest', 'fitted_witness', 'restore_iterations', 'inference_functions']
+__all__ = ['children', 'dependency_digest', 'fitted_witness', 'inference_functions', 'restore_iterations']
 
 
 def _booster(value: object) -> bool:
@@ -35,40 +35,48 @@ def children(value: object) -> tuple[object, ...]:
 
 def fitted_witness(value: object) -> bytes:
     seen: dict[int, int] = {}
+    retained: list[object] = []
 
     def node(item: object) -> object:
         if item is None or type(item) in (str, bool, int, float, bytes):
-            return item
-        if isinstance(item, ModuleType):
-            return ('module', item.__name__)
-        if isinstance(item, type):
-            return ('class', item.__module__, item.__qualname__)
-        if id(item) in seen:
-            return ('ref', seen[id(item)])
-        seen[id(item)] = len(seen)
+            result = item
+        elif isinstance(item, ModuleType):
+            result = ('module', item.__name__)
+        elif isinstance(item, type):
+            result = ('class', item.__module__, item.__qualname__)
+        elif id(item) in seen:
+            result = ('ref', seen[id(item)])
+        else:
+            seen[id(item)] = len(seen)
+            retained.append(item)
+            result = structure(item)
+        return result
+
+    def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
         if _booster(item):
             from lightgbm import Booster
             booster = cast(Booster, item)
-            return (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
-        if inspect.ismethod(item):
-            return ('method', node(item.__func__), node(item.__self__))
-        if inspect.isfunction(item):
+            result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
+        elif inspect.ismethod(item):
+            result = ('method', node(item.__func__), node(item.__self__))
+        elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            return ('function', item.__module__, item.__qualname__, marshal.dumps(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure))
-        if isinstance(item, partial):
-            return ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
-        if isinstance(item, Mapping):
+            result = ('function', item.__module__, item.__qualname__, marshal.dumps(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure))
+        elif isinstance(item, partial):
+            result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
+        elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
-            return (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()))
-        if isinstance(item, (tuple, list)):
-            return (kind, tuple(node(part) for part in cast(Sequence[object], item)))
-        if isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
-            return (kind, pickle.dumps(item, protocol=5))
-        if hasattr(item, '__dict__'):
-            return (kind, node(vars(item)))
-        return (kind, pickle.dumps(item, protocol=5))
-
+            result = (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()))
+        elif isinstance(item, (tuple, list)):
+            result = (kind, tuple(node(part) for part in cast(Sequence[object], item)))
+        elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
+            result = (kind, pickle.dumps(item, protocol=5))
+        elif hasattr(item, '__dict__'):
+            result = (kind, node(vars(item)))
+        else:
+            result = (kind, pickle.dumps(item, protocol=5))
+        return result
     return pickle.dumps(node(value), protocol=5)
 
 

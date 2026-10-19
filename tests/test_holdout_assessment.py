@@ -100,8 +100,8 @@ def assessment_case(tmp_path_factory):
     root = _project(tmp_path_factory.mktemp('holdout') / 'project')
     config = _configuration(root)
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
-    import limen.calibration as calibration
-    import limen.scalers as scalers
+    from limen import calibration
+    from limen import scalers
     import limen.sfd.reference_architecture as architectures
     aliases = ExitStack()
     aliases.enter_context(patch.object(calibration, 'f17_calibrator', external_calibrator, create=True))
@@ -131,7 +131,8 @@ def assessment_case(tmp_path_factory):
         else:
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary'
             current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'detached'}}}
-            current['sfd']['params'] = {'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
+            current['uel']['n_permutations'] = 2
+            current['sfd']['params'] = {'use_calibration': [True, False], 'use_threshold': [False], 'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
         directory = root / architecture
         loop = UniversalExperimentLoop(sfd=CompiledSFD(current, project_root=root), project_root=root, experiment_dir=directory,
             search_strategy=build_search_strategy(current), yaml_reference=current)
@@ -448,39 +449,82 @@ def test_holdout_report_accounting(assessment_case):
 
 
 def test_compiled_fitted_components_complete_final_assessment(assessment_case):
-    for sensor in (assessment_case[2][0][0], assessment_case[2][1][0]):
-        frozen = _freeze(sensor)
+    root, _, trained, cohort = assessment_case
+    assert len({type(sensor._model) for group in trained for sensor in group}) >= 3
+    assert len({type(sensor._model.model) for sensor in members(cohort)}) == 2
+    for selected in [sensor for group in trained for sensor in group] + [cohort]:
+        frozen = _freeze(selected, context='2024-01-01')
         first = _report(frozen, assessment_case)
         repeat = _report(frozen, assessment_case)
         assert first['state'] == repeat['state'] == 'completed'
-        assert first['state_sha256'] == repeat['state_sha256']
-        assert first['rows_sha256'] == repeat['rows_sha256']
+        assert all(first[key] == repeat[key] for key in _REPEAT_KEYS)
         assert first['attempt_id'] != repeat['attempt_id']
-        assert read_holdout_report(assessment_case[0], repeat['attempt_id']) == repeat
+        assert read_holdout_report(root, repeat['attempt_id']) == repeat
 
 
 @pytest.mark.parametrize('limit', ['equal', 'truncated'])
-def test_owned_lightgbm_preserves_effective_iteration(assessment_case, limit):
-    sensor = copy.deepcopy(assessment_case[2][1][0])
+@pytest.mark.parametrize('calibrated', [True, False])
+def test_owned_lightgbm_preserves_effective_iteration(assessment_case, limit, calibrated):
+    sensor = copy.deepcopy(assessment_case[2][1][0 if calibrated else 1])
     booster = sensor._model.model.booster_
     assert booster.current_iteration() > 1
     selected = booster.current_iteration() if limit == 'equal' else 1
     booster.best_iteration = selected
-    raw = pl.read_parquet(Path(sensor._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(96)
+    if calibrated:
+        sensor._model._fitted_calibrator.estimator.estimator.booster_.best_iteration = selected
+    raw = sensor._fitted_params['_holdout_probe']
     expected = sensor.predict(raw)
     clone = owned_copy(sensor)
     second = owned_copy(clone)
     assert expected.reason is None
     assert expected == clone.predict(raw) == second.predict(raw)
     assert clone._model.model.booster_.best_iteration == second._model.model.booster_.best_iteration == selected
+    if calibrated:
+        assert clone._model._fitted_calibrator.estimator.estimator.booster_.best_iteration == selected
+        assert clone._model._fitted_calibrator.estimator.estimator is not clone._model.model
+    frozen = _freeze(sensor)
+    first, repeat = _report(frozen, assessment_case), _report(frozen, assessment_case)
+    assert first['rows_sha256'] == repeat['rows_sha256']
+    assert first['state_sha256'] == repeat['state_sha256']
 
 
 def test_frozen_dependencies_and_invalid_state(assessment_case):
     import limen.scalers.logreg_scaler as scaler_module
+    from sklearn.linear_model import LogisticRegression
+    from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 
+    class Lazy(LogRegBinary):
+        def predict(self, data):
+            self.model.fit(data['x_test'], [0])
+            return super().predict(data)
+    class Random(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_preds'] = np.random.choice([0, 1], len(data['x_test']))
+            return result
+    class Mutating(LogRegBinary):
+        def predict(self, data):
+            self.counter = getattr(self, 'counter', 0) + 1
+            return super().predict(data)
+    class Nonpreserving(LogRegBinary):
+        def __deepcopy__(self, memo):
+            result = type(self).__new__(type(self))
+            vars(result).update(copy.deepcopy(vars(self), memo))
+            result.extra = 'changed selected state'
+            return result
     frozen = _freeze(assessment_case[2][0][0])
-    with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')):
+    with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, assessment_case)
+        assert loader.call_count == 0
+    for kind, reason in ((Lazy, 'fixed fitted'), (Random, 'random dependency'), (Mutating, 'mutated fitted state'), (Nonpreserving, 'copy changed')):
+        changed = copy.deepcopy(assessment_case[2][0][0])
+        changed._model.__class__ = kind
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(frozen, assessment_case)
+            with pytest.raises(ValueError, match=reason):
+                _freeze(changed)
             assert loader.call_count == 0
+    changed = copy.deepcopy(assessment_case[2][0][0])
+    changed._model.model = LogisticRegression()
+    with pytest.raises(ValueError, match='not fitted'):
+        _freeze(changed)

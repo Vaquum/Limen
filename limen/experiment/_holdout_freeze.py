@@ -13,8 +13,6 @@ from pathlib import Path
 from threading import Lock
 from typing import cast
 
-import numpy as np
-import polars as pl
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.decomposition import PCA
 from sklearn.frozen import FrozenEstimator
