@@ -112,6 +112,11 @@ def fold_campaigns(tmp_path_factory):
         reference = config('custom' if kind == 'companion' else kind, source)
         if kind == 'ordinary':
             reference['sfd']['manifest'].pop('split_walk_forward')
+            reference['sfd']['manifest']['split_dates'] = {
+                'train_start': '2024-01-01', 'train_end': '2024-01-08',
+                'val_start': '2024-01-08', 'val_end': '2024-01-10',
+                'test_start': '2024-01-10', 'test_end': '2024-01-17',
+            }
         if kind == 'parallel':
             reference['sfd']['params']['C'] = [0.1, 1.0]
             reference['uel']['n_permutations'] = 2

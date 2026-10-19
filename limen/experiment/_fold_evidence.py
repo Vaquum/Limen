@@ -5,6 +5,7 @@ import copy
 from hashlib import sha256
 import json
 import math
+from numbers import Real
 from typing import TYPE_CHECKING, Protocol, cast
 
 import polars as pl
@@ -110,9 +111,12 @@ def record(make_record: Record, fold: int, data: Mapping[str, object], result: M
         positions = [end - 1 for name in ('fit', 'validation') for _, end in cast(list[list[int]], raw[name]['segments'])]
         selected_times = cast(list[int], data['_fold_selected_times'])
         selected = cast(Mapping[str, object], trial['selected_source'])
+        threshold: object = getattr(result.get('_model'), '_calibration_threshold', None)
+        if threshold is not None and (isinstance(threshold, bool) or not isinstance(threshold, Real) or not math.isfinite(float(threshold))):
+            raise FoldEvidenceError('inference_model', 'Fitted calibration threshold is not a finite native scalar')
         entry['fold_promotion'] = {'version': 1, 'fold': fold, 'n_folds': data['_fold_n_folds'], **parts,
                                    'fitting_cutoff_ns': max(selected_times[index] for index in positions) + cast(int, selected['interval_ns']),
-                                   'fitted_threshold': getattr(result.get('_model'), '_calibration_threshold', None),
+                                   'fitted_threshold': None if threshold is None else float(threshold),
                                    'inference_model': model_witness(result.get('_model'))}
     except (FoldEvidenceError, IndexError) as exc:
         error = exc if isinstance(exc, FoldEvidenceError) else FoldEvidenceError('row_membership', f'Fold support escaped its selected source: {exc}')
