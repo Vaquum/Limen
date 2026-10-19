@@ -1188,7 +1188,6 @@ class MLManifest(Manifest):
         '''
 
         _, data = _process_bars(self, raw_klines, round_params)
-        _partitions.capture_clock(self, data)
         decisions = None
         if self.resolve_trade_policy(round_params) is not None:
             interval = (self.backtest_config.source_interval_seconds if self.backtest_config else None) or _source_interval(self.data_source_config)

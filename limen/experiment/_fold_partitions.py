@@ -102,6 +102,7 @@ def bars(manifest: object, before: pl.DataFrame, formed: pl.DataFrame, datetimes
         except (KeyError, FoldEvidenceError) as exc:
             unavailable = exc if isinstance(exc, FoldEvidenceError) else FoldEvidenceError('row_membership', f'Unrecoverable formed source row: {exc}')
             context['unavailable'] = unavailable.record()
+    capture_clock(manifest, formed)
     return datetimes, formed
 
 
