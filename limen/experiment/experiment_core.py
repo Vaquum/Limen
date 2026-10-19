@@ -11,7 +11,7 @@ from collections.abc import Callable, Mapping
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import polars as pl
@@ -81,8 +81,9 @@ class UniversalExperimentLoop:
         self.prep: Callable[..., dict[str, Any]] | None = None
         self.model: Callable[..., dict[str, Any]] | None = None
 
-        self.manifest, self.data, self.prep, self.model = _holdout.initialize_loop(sfd, data, test_mode=test_mode,
+        bound_manifest, self.data, self.prep, self.model = _holdout.initialize_loop(sfd, data, test_mode=test_mode,
                                  project_root=project_root, experiment_dir=experiment_dir)
+        self.manifest = cast(Manifest | None, bound_manifest)
 
         self._manifest_functions = (self.prep, self.model)
         self.extras: list[Any] = []

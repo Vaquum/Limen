@@ -9,7 +9,7 @@ from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, prepare_trade_context, source_interval
 from limen.experiment._prepare_backtest_data import prepare_backtest_data
 from limen.experiment._resolve_backtest_config import configured_barriers
-from limen.experiment._resolve_trade_policy import BacktestConfig, resolve_number
+from limen.experiment._resolve_trade_policy import BacktestConfig
 
 _M = TypeVar('_M')
 
@@ -34,7 +34,6 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
     trade = None
     if policy is not None and manifest.backtest_config is not None:
         interval = source_interval(manifest.data_source_config)
-        interval = None if interval is None else resolve_number(interval, round_params, 'recorded source interval')
         trade = prepare_trade_context(manifest.backtest_config, policy, raw_splits, splits, round_params, interval_seconds=interval, frozen_sources=frozen)
         splits = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in splits]
     prepared = prepare_backtest_data(splits, all_datetimes, configured=policy is None and configured_barriers(manifest.backtest_config))
