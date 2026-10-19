@@ -52,7 +52,7 @@ _IMPLEMENTATIONS: dict[type[object], dict[str, object]] = {cls: {name: getattr(c
     (FrozenEstimator, ('__getattr__',)),
     (MLManifest, ('sensor_input_prep', '_prepare_column_shims')),
     (NextBarUpTarget, ('transform',)), (NextBarDownTarget, ('transform',)))}
-_IMPLEMENTATIONS.update({cls: {'transform': getattr(cls, 'transform')} for cls in _FITTED_TYPES if hasattr(cls, 'transform')})
+_IMPLEMENTATIONS.update({cls: {name: getattr(cls, name) for name in ('transform',) if hasattr(cls, name)} for cls in _FITTED_TYPES})
 
 
 def unchanged(value: object) -> None:
@@ -163,6 +163,8 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     wrapper = cast(LogRegBinary | LightGBMBinary, vars(sensor)['_model'])
     if type(wrapper) not in (LogRegBinary, LightGBMBinary):
         raise ValueError('Holdout supports fitted LogRegBinary/LightGBMBinary only')
+    if set(vars(wrapper)) - {'model', 'prediction_calibration_config', '_fitted_calibrator', '_calibration_threshold', '_val_score'}:
+        raise ValueError('Holdout refuses undeclared model-wrapper state')
     unchanged(wrapper)
     model = getattr(wrapper, 'model', None)
     if type(wrapper) is LogRegBinary:
@@ -278,13 +280,37 @@ def _copy_witness(selection: Sensor | Cohort) -> bytes:
 
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
     before = _copy_witness(selection)
-    result = copy.deepcopy(selection)
+    copied: list[Sensor] = []
+    for original in members(selection):
+        member = copy.copy(original)
+        vars(member).clear()
+        vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(_member_state(original)), strict=True))
+        member.permutation_id, member.manifest_id = original.permutation_id, original.manifest_id
+        vars(member)['_trade_digest'] = None
+        cached = cast(MLManifest | None, vars(original)['_manifest'])
+        if cached is None:
+            manifest = CompiledSFD(cast(dict[str, object], vars(member)['_yaml_reference'])).manifest()
+        else:
+            manifest = copy.copy(cached)
+            values = {field.name: getattr(cached, field.name) for field in fields(cached)}
+            if cached.data_source_config is not None:
+                source = copy.copy(cached.data_source_config)
+                source.method = getattr(source.method, '__func__', source.method)
+                values['data_source_config'] = source
+            vars(manifest).clear()
+            vars(manifest).update(copy.deepcopy(values))
+            if '_holdout_binding' in vars(cached):
+                vars(manifest)['_holdout_binding'] = vars(cached)['_holdout_binding']
+        vars(member)['_manifest'] = manifest
+        _ = validate_member(member)
+        copied.append(member)
+    result: Sensor | Cohort = copied[0]
+    if type(selection) is Cohort:
+        result = copy.copy(selection)
+        vars(result).clear()
+        vars(result).update(_members=copied, member_ids=copy.deepcopy(selection.member_ids), aggregation_mode=selection.aggregation_mode, architecture_id=selection.architecture_id)
     if _copy_witness(result) != before:
         raise ValueError('Holdout fitted-state copy changed selected state')
-    for original, member in zip(members(selection), members(result), strict=True):
-        _ = validate_member(member)
-        if vars(original)['_manifest'] is None:
-            vars(member)['_manifest'] = CompiledSFD(cast(dict[str, object], vars(member)['_yaml_reference'])).manifest()
     return result
 
 

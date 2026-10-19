@@ -54,8 +54,22 @@ def _metadata(selection: Sensor | Cohort, root: Path, declaration: dict[str, obj
         experiment = history.research_record(binding, cast(str, proof['experiment_record_id']))
         if trainer['state'] != 'completed' or trainer['role'] != 'trainer' or experiment['state'] != 'completed' or experiment['role'] != 'experiment' or trainer['round_id'] != proof['round_id'] or experiment['round_id'] != proof['round_id'] or json.loads(cast(str, trainer['provenance_json'])) != proof:
             raise ValueError('Holdout requires matching completed Trainer and source experiment records')
+        parent = cast(dict[str, object], json.loads(cast(str, experiment['provenance_json'])))
+        for retained in (proof, parent):
+            admitted = cast(dict[str, object], cast(dict[str, object], retained['source'])['admitted'])
+            last_close = admitted['last_close_ns']
+            if type(last_close) is not int or last_close > cast(int, declaration['start_ns']):
+                raise ValueError('Holdout fitted research source overlaps final window or lacks recorded coverage')
         manifest = cast(MLManifest, vars(member)['_manifest'])
         source = source_spec(manifest, binding)
+        if source[0] == 'local_file':
+            pinned = cast(list[object], declared['source'])
+            params = cast(dict[str, object], pinned[1])
+            config = manifest.data_source_config
+            if config is None:
+                raise ValueError('Holdout source declaration is missing')
+            config.params['file_path_or_url'] = params['file_path_or_url']
+            source = source_spec(manifest, binding)
         identity = {key: value for key, value in source[1].items() if key not in ('start_date_limit', 'end_date_limit', 'row_count_limit', 'n_rows')}
         recorded = cast(dict[str, object], proof['source'])
         if recorded['interval_seconds'] != binding.interval_seconds or (recorded['kind'] != 'caller_frame' and (recorded['kind'] != source[0] or recorded['identity'] != identity)):
@@ -139,6 +153,7 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
         with history.admission(root):
             declaration = attempts.reservation(root, reservation_id, start, end, cast(str, spec['context_start']))
             proofs = _metadata(selection, root, declaration, spec)
+            coverage = attempts.research_coverage(root, declaration)
             planned = {'context_start_ns': history.utc_day(cast(str, spec['context_start'])), 'start_ns': cast(int, declaration['start_ns']), 'end_ns': cast(int, declaration['end_ns'])}
             declarations = cast(list[dict[str, object]], spec['scenarios'])
             scenarios_sha = digest(declarations)
@@ -170,7 +185,7 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                     'created_ns': attempt['created_ns'], 'finished_ns': finished, 'project_id': attempt['project_id'], 'reservation': {key: value for key, value in declaration.items() if key != 'project_id'},
                     'spec': spec, 'spec_sha256': spec_sha, 'state_sha256': state_sha, 'scenarios_sha256': scenarios_sha,
                     'source': source, 'source_column_map': mapping, 'source_schema': [{'name': name, 'dtype': str(dtype)} for name, dtype in raw.schema.items()], 'planned': planned, 'prior': attempt['prior'],
-                    'exposure': reports.exposure(declaration, cast(dict[str, object], attempt['prior']), proofs, planned['start_ns'], planned['end_ns']),
+                    'exposure': reports.exposure(declaration, cast(dict[str, object], attempt['prior']), proofs, planned['start_ns'], planned['end_ns'], coverage=coverage),
                     'classification': reports.classification(labels, [cast(int, row['prediction']) for row in tape], [cast(float | None, row['probability']) for row in tape]), 'scenarios': summaries}
                 files = reports.artifacts(root, report, rows)
                 stage = 'finalize'

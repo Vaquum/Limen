@@ -22,6 +22,7 @@ from limen.experiment import _holdout_history as history
 
 roc_auc_score = cast(Callable[[Sequence[int], Sequence[float]], float], vars(_metrics)['roc_auc_score'])
 _BINARY_CLASSES = 2
+_ATTEMPT_VERSION = 2
 
 def normalized(value: object) -> object:
     result: object
@@ -135,16 +136,20 @@ def retained_rows(raw: pl.DataFrame, step: int, start: int, tape: list[dict[str,
     return pl.DataFrame(rows, schema=schema), mapping
 
 
-def exposure(reservation: Mapping[str, object], prior: Mapping[str, object], provenances: list[dict[str, object]], start: int, end: int) -> dict[str, object]:
+def exposure(reservation: Mapping[str, object], prior: Mapping[str, object], provenances: list[dict[str, object]], start: int, end: int, *, coverage: dict[str, list[str]]) -> dict[str, object]:
     attempts = cast(list[dict[str, object]], prior['attempts'])
     if reservation['state'] == 'released':
         classification, reasons = 'post-release', ['reservation-released']
     elif any(int(cast(int, row['context_start_ns'])) < end and start < int(cast(int, row['end_ns'])) for row in attempts):
         classification, reasons = 'subsequent', ['prior-planned-support-intersects-final']
+    elif coverage['overlapping_ids']:
+        classification, reasons = 'subsequent', [f'prior-recorded-research:{value}' for value in coverage['overlapping_ids']]
     elif any(cast(dict[str, object], prior['overlaps'])[key] for key in ('prior_reserved_context_ids', 'current_reserved_context_ids')):
         classification, reasons = 'subsequent', ['planned-context-overlaps-recorded-reservation']
     elif any(cast(dict[str, object], proof.get('source', {})).get('kind') != 'hosted_native' for proof in provenances):
         classification, reasons = 'unknown', ['non-hosted-or-caller-training-source']
+    elif coverage['unknown_ids']:
+        classification, reasons = 'unknown', [f'prior-research-coverage-unavailable:{value}' for value in coverage['unknown_ids']]
     else:
         classification, reasons = 'initial-recorded', ['conditional-on-local-completed-research-coverage']
     return {'class': classification, 'reasons': reasons, 'unknown_external_exposure': True}
@@ -191,10 +196,9 @@ def artifacts(root: Path, report: dict[str, object], rows: pl.DataFrame) -> dict
 
 def read_holdout_report(project_root: str | Path, attempt_id: str) -> dict[str, object]:
     """Read completed evidence, verifying hashes and schemas without evaluating."""
-    from limen.experiment._holdout_attempts import completed
     try:
         root = history.resolve_root(project_root)
-        record = completed(root, attempt_id)
+        record = _completed(root, attempt_id)
         report_file = _path(root, record['report_path'], attempt_id, 'report.json')
         rows_file = _path(root, record['rows_path'], attempt_id, 'rows.parquet')
         if sha256(report_file.read_bytes()).hexdigest() != record['report_sha256'] or sha256(rows_file.read_bytes()).hexdigest() != record['rows_sha256']:
@@ -216,6 +220,18 @@ def read_holdout_report(project_root: str | Path, attempt_id: str) -> dict[str, 
         return report
     except (OSError, ValueError, KeyError, TypeError, sqlite3.Error, pl.exceptions.PolarsError) as exc:
         raise ValueError(f'Holdout attempt {attempt_id}: {exc}') from exc
+
+
+def _completed(root: Path, attempt_id: str) -> dict[str, object]:
+    with history.admission(root):
+        binding = history.read_binding(root)
+        with history.connection(root / 'manifests/holdout.sqlite3') as db:
+            if db.execute('PRAGMA user_version').fetchone()[0] != _ATTEMPT_VERSION:
+                raise ValueError(f'Holdout attempt {attempt_id} is unknown')
+            row = db.execute("SELECT * FROM attempts WHERE id=? AND project_id=? AND state='completed'", (history.identifier(attempt_id), binding.project_id)).fetchone()
+            if row is None:
+                raise ValueError(f'Holdout attempt {attempt_id} is unknown or not completed')
+            return cast(dict[str, object], dict(row))
 
 
 def _verify(report: dict[str, object], record: dict[str, object], rows: pl.DataFrame) -> None:

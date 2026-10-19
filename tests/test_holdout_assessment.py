@@ -3,7 +3,9 @@ from contextlib import ExitStack, contextmanager
 import json
 import logging
 import multiprocessing
+from importlib.metadata import version
 from pathlib import Path
+from threading import Thread
 from unittest.mock import patch
 
 import numpy as np
@@ -29,13 +31,18 @@ _SCENARIO = {'fee_bps': 5.0, 'slip_bps': 2.0, 'notional_rate': 0.25, 'execution_
 _REPEAT_KEYS = ('spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_schema', 'source_column_map', 'planned', 'classification', 'scenarios', 'rows_sha256')
 
 
+class _SourceCache:
+    def __deepcopy__(self, memo):
+        raise AssertionError('Source/log caches must not be traversed before allocation')
+
+
 @pytest.fixture(scope='module')
 def assessment_case(tmp_path_factory):
     root = _project(tmp_path_factory.mktemp('holdout') / 'project')
     config = _configuration(root)
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
     trained, sources = [], []
-    for architecture in ('logreg', 'lightgbm', 'warmup'):
+    for architecture in ('logreg', 'lightgbm', 'warmup', 'earlier_test'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
             current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
@@ -45,6 +52,8 @@ def assessment_case(tmp_path_factory):
         elif architecture == 'warmup':
             current['sfd']['manifest']['indicators'][0]['params']['period'] = 30
             current['sfd']['manifest']['target']['fit_params']['source_column'] = 'roc_30'
+        elif architecture == 'earlier_test':
+            current['sfd']['manifest']['split_dates'] = dict(zip(('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'), ('2024-01-01', '2024-01-02', '2024-01-02', '2024-01-03', '2024-01-03', '2024-01-04'), strict=True))
         else:
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary'
             current['sfd']['params'] = {'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
@@ -88,7 +97,10 @@ def _mutated_selection(sensor):
 
 def test_holdout_frozen_causal_assessment(assessment_case):
     root, _, trained, cohort = assessment_case
-    frozen = _freeze(cohort)
+    target = NextBarUpTarget(pl.DataFrame(), 'observed_up')
+    with patch.object(cohort, '_round_sources', _SourceCache()), patch.object(trained[0][0]._get_manifest(), '_unused_source_cache', _SourceCache(), create=True):
+        frozen = freeze_holdout_selection(cohort, context_start='2024-01-04', scenarios=[_SCENARIO], evaluation_target=target)
+    target.target_name = 'caller-mutated'
     with pytest.raises(TypeError):
         FrozenHoldoutSelection(object())
     probe = pl.read_parquet(Path(trained[0][0]._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(120)
@@ -123,6 +135,8 @@ def test_holdout_frozen_causal_assessment(assessment_case):
                     stack.enter_context(patch.object(type(value), '__init__', side_effect=lambda *args, **kwargs: calls.append('fitted-transform')))
         report = _report(frozen, assessment_case)
     assert calls == []
+    assert report['spec']['target']['params']['target_name'] == 'observed_up'
+    assert report['spec']['versions']['vaquum-limen'] == version('vaquum-limen')
     assert len(predictions) == 48
     assert [row[1] for row in predictions] == [size for size in range(25, 49) for _ in range(2)]
     assert len({row[2] for row in predictions}) == 1
@@ -165,6 +179,15 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     for key, invalid in (('fee_bps', True), ('slip_bps', -1), ('notional_rate', 0), ('execution_lag_bars', 1.0), ('stop_loss_bps', float('nan'))):
         with pytest.raises(ValueError):
             _freeze(trained[0][1], scenarios=[{**_SCENARIO, key: invalid}])
+    failures = assessment._Failures()
+    def unrelated_error():
+        failures.emit(logging.LogRecord('limen.inference.sensor', logging.WARNING, __file__, 0, 'unrelated', (), None))
+    thread = Thread(target=unrelated_error)
+    thread.start()
+    thread.join(1)
+    assert not thread.is_alive() and failures.message is None
+    failures.emit(logging.LogRecord('limen.inference.sensor', logging.WARNING, __file__, 0, 'owned', (), None))
+    assert failures.message == 'owned'
 
 
 def _attempt_worker(root, reservation, pipe):
@@ -275,6 +298,25 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
         assert dict(db.execute('SELECT * FROM reservations').fetchone()) == before
         assert db.execute('PRAGMA user_version').fetchone()[0] == 2
     withdraw_holdout(migration, unused)
+    replacement = reserve_holdout(migration, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    with history.admission(migration):
+        declaration = attempts.reservation(migration, replacement, None, None, '2024-01-04')
+        standalone = attempts.allocate(migration, declaration, {'context_start_ns': history.utc_day('2024-01-04'), 'start_ns': history.utc_day('2024-01-05'), 'end_ns': history.utc_day('2024-01-06')}, spec='structural', state='structural', scenarios='structural')
+    with history.connection(migration / history._HISTORY) as db:
+        assert db.execute('SELECT COUNT(*) FROM research').fetchone()[0] == 0
+    with pytest.raises(ValueError, match='used holdout'):
+        withdraw_holdout(migration, replacement)
+    release_holdout(migration, replacement)
+    with history.connection(migration / history._HISTORY) as db:
+        assert db.execute('SELECT state FROM attempts WHERE id=?', (standalone['id'],)).fetchone()[0] == 'started'
+    earlier = reserve_holdout(root, '2024-01-04', '2024-01-05', interval_seconds=3600)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('pre-access rejection')) as loader:
+        with pytest.raises(ValueError, match='research source overlaps final'):
+            final_holdout_report(_freeze(trained[3][0], context='2024-01-03'), project_root=root, reservation_id=earlier)
+        assert loader.call_count == 0
+    coverage = attempts.research_coverage(root, attempts.reservation(root, earlier, None, None, '2024-01-03'))
+    assert coverage['overlapping_ids']
+    withdraw_holdout(root, earlier)
 
 
 def test_holdout_report_accounting(assessment_case):

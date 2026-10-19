@@ -57,6 +57,22 @@ def reservation(root: Path, reservation_id: str, start: str | None, end: str | N
                 'start_ns': first, 'end_ns': last, 'interval_seconds': int(row['interval_seconds'])}
 
 
+def research_coverage(root: Path, declaration: Mapping[str, object]) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {'overlapping_ids': [], 'unknown_ids': []}
+    with history.connection(root / _HISTORY) as db:
+        records = db.execute('SELECT research.* FROM research JOIN reservations ON reservations.id=? AND research.project_id=reservations.project_id WHERE research.revision<reservations.created_revision', (declaration['id'],)).fetchall()
+    for row in records:
+        proof = cast(dict[str, object], json.loads(row['provenance_json']))
+        source = cast(dict[str, object] | None, proof.get('source'))
+        bounds = cast(dict[str, object], source.get('admitted', {})) if source is not None else {}
+        first, last = bounds.get('first_open_ns'), bounds.get('last_close_ns')
+        if type(first) is not int or type(last) is not int:
+            result['unknown_ids'].append(str(row['id']))
+        elif first < cast(int, declaration['end_ns']) and cast(int, declaration['start_ns']) < last:
+            result['overlapping_ids'].append(str(row['id']))
+    return result
+
+
 def _prior(db: sqlite3.Connection, project: str, context: int, start: int, end: int) -> dict[str, object]:
     attempts = [{'id': row['id'], 'index': row['assessment_index'], 'state_at_allocation': row['state'], 'context_start_ns': row['context_start_ns'], 'start_ns': row['start_ns'], 'end_ns': row['end_ns']}
                 for row in db.execute('SELECT * FROM attempts WHERE project_id=? AND context_start_ns<? AND end_ns>? ORDER BY assessment_index', (project, end, context))]
@@ -103,12 +119,3 @@ def finalize(root: Path, attempt_id: str, *, source: object, artifacts: Mapping[
         db.commit()
 
 
-def completed(root: Path, attempt_id: str) -> dict[str, object]:
-    with history.admission(root), history.connection(root / _HISTORY) as db:
-        project, _ = _identity(root, db)
-        if db.execute('PRAGMA user_version').fetchone()[0] != _VERSION:
-            raise ValueError(f'Holdout attempt {attempt_id} is unknown')
-        row = db.execute("SELECT * FROM attempts WHERE id=? AND project_id=? AND state='completed'", (history.identifier(attempt_id), project)).fetchone()
-        if row is None:
-            raise ValueError(f'Holdout attempt {attempt_id} is unknown or not completed')
-        return cast(dict[str, object], dict(row))
