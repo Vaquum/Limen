@@ -1761,3 +1761,9 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 - Add `Sensor.from_model` with fitted-model defaults and optional preparation, prediction and mapping hooks.
 - Add `Cohort.from_python` for live selected Sensors with mean, binary vote or custom aggregation, explicit output compatibility and preserved guards/availability.
 - Reuse evaluated fitted models in the recorded Python workflow without refitting.
+
+## [5.40.1] - 2026-10-19
+
+- Explain Python Research and Compiled Research as the two interfaces to one engine, with distinct ownership and safety guarantees.
+- Show a caller-owned Python experiment through native Sensor construction, concise Cohort composition and an expandable CLI manifest.
+- Describe shared safeguards, ecosystem roles and inspectable package provenance.
