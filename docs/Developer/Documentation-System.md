@@ -166,8 +166,8 @@ Binding tests must request current-run execution evidence themselves. Running on
 
 The existing required `PR Checks Docs Site` context will own the comprehensive example proof and reader checks. Extend its job in this order:
 
-1. Identify the checked-out revision/tree and build the candidate wheel.
-2. Install Python 3.12 and the hashed research dependencies; install the candidate wheel in the isolated execution environment.
+1. Identify the checked-out revision and source tree.
+2. Install Python 3.12 and the hashed research dependencies; build the candidate wheel and install it in the isolated execution environment.
 3. Execute the canonical projects and semantic/binding tests under `docs/examples/tests/`, producing evidence for those exact inputs.
 4. Run Node's source, route, lint, dependency and reader checks against that same-job evidence.
 5. Build and browser-check the site, retaining the execution and browser artifacts.
@@ -257,7 +257,8 @@ The acceptance matrix covers:
 - exact source/display/output bindings and deliberate divergence failures
 - merged-source identity and separate current package/environment/input/test evidence
 - desktop and phone, both OS color preferences, forced colors, keyboard and reduced motion
-- no-JavaScript reading, search, navigation, code copy, reference return and persisted-position safety
+- readable prose, source and navigation without JavaScript
+- local search, exact code copy, reference return and persisted-position safety
 - representative Book, Reference, Developer and package pages against the retained visual reference
 - declared static asset and runtime budgets, measured on the real reader and enforced against regression
 - real publication ordering, anonymous evidence retrieval and retained rollback
