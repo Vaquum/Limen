@@ -269,10 +269,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 method = method.fget
             if isinstance(method, (staticmethod, classmethod)):
                 method = method.__func__
-            if inspect.isfunction(method):
-                evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
-                visit(method)
-            elif method is not None and not inspect.isdatadescriptor(method):
+            if method is not None and not inspect.isdatadescriptor(method):
                 evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
                 visit(method)
 
