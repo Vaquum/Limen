@@ -27,6 +27,12 @@ def code_digest(code: CodeType) -> str:
     return sha256(marshal.dumps(code)).hexdigest()
 
 
+@lru_cache(maxsize=2048)
+def _instructions(code: CodeType) -> tuple[dis.Instruction, ...]:
+    nested = [part for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS]
+    return (*dis.get_instructions(code), *(instruction for part in nested for instruction in _instructions(part)))
+
+
 def _booster(value: object) -> bool:
     return type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster'
 
@@ -134,11 +140,12 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     visit(source)
 
 
-def inference_functions(values: Sequence[object], *, exclude: Sequence[object] = ()) -> tuple[list[object], list[object]]:
+def inference_functions(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> tuple[list[object], list[object]]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
     functions: list[object] = []
     omitted = {id(value) for value in exclude}
+    sealed = {id(value) for value in resolved}
     attributes: set[str] = set()
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
@@ -165,7 +172,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
         elif inspect.isfunction(value):
             functions.append(value)
             evidence.append(fitted_witness(value))
-            if value.__name__ in FITTING_METHODS:
+            if value.__name__ in FITTING_METHODS or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
@@ -174,13 +181,15 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             visit(value.__kwdefaults__)
             for cell in value.__closure__ or ():
                 visit(cell.cell_contents)
-            instructions = list(dis.get_instructions(value))
+            instructions = _instructions(value.__code__)
             references = dict(value.__globals__)
             references.update(zip(value.__code__.co_freevars, (cell.cell_contents for cell in value.__closure__ or ()), strict=True))
             imported: ModuleType | None = None
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
+                if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD'):
+                    attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     imported = sys.modules.get(name)
                     if imported is None:
@@ -192,7 +201,10 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     references[name], binding = binding, None
                 if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_DEREF', 'LOAD_FAST') or name not in references:
                     continue
-                item = cast(object, references[name])
+                available = value.__globals__ if instruction.opname == 'LOAD_GLOBAL' else references
+                if name not in available:
+                    continue
+                item = cast(object, available[name])
                 for attribute in instructions[index + 1:]:
                     if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD'):
                         break
@@ -202,10 +214,10 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 if not isinstance(item, ModuleType):
                     try:
                         witness = fitted_witness(item)
+                        evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
+                        visit(item)
                     except (ValueError, TypeError, pickle.PickleError) as exc:
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
-                    evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
-                    visit(item)
         elif inspect.isroutine(value):
             evidence.append(fitted_witness(value))
         elif not isinstance(value, (ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
@@ -250,5 +262,5 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
     return functions, evidence
 
 
-def dependency_digest(values: Sequence[object]) -> str:
-    return sha256(pickle.dumps(inference_functions(values)[1], protocol=5)).hexdigest()
+def dependency_digest(values: Sequence[object], *, resolved: Sequence[object] = ()) -> str:
+    return sha256(pickle.dumps(inference_functions(values, resolved=resolved)[1], protocol=5)).hexdigest()

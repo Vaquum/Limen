@@ -629,9 +629,17 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         def predict(self, data):
             result = super().predict(data)
             if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
+                if self.helper_class == 'local':
+                    class LocalOffset:
+                        def __init__(self):
+                            self.offset = _LATE_RULES['offset']
+                        def adjust(self, values):
+                            return np.clip(values + self.offset, 0, 1)
+                    result['_probs'] = LocalOffset().adjust(result['_probs'])
+                else:
+                    result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
             return result
-    for helper_class in (False, True):
+    for helper_class in (False, True, 'local'):
         branched = copy.deepcopy(assessment_case[2][0][0])
         branched._model.__class__ = Branch
         branched._model.research_x = late._model.research_x.copy()
@@ -641,7 +649,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(branch_handle, assessment_case)
             assert loader.call_count == 0
-        if helper_class:
+        if helper_class is True:
             with patch.object(InferenceOffset, '__init__', lambda self: setattr(self, 'offset', 0.2)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(branch_handle, assessment_case)

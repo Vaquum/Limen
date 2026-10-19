@@ -126,7 +126,8 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
         manifest = cast(MLManifest, vars(member)['_manifest'])
         values.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
         values.extend(getattr(manifest, field.name) for field in fields(manifest) if field.name not in ('data_source_config', 'test_data_source_config'))
-    return dependency_digest(values)
+    # Owned Sensors already hold the validated Manifest; its construction branch cannot run.
+    return dependency_digest(values, resolved=(Sensor._get_manifest,))
 
 
 def manifest_projection(manifest: MLManifest) -> object:
