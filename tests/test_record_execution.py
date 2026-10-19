@@ -20,7 +20,9 @@ from limen.experiment import UniversalExperimentLoop
 from limen.inference import Trainer
 from limen.sfd.reference_architecture import RidgeRegressor
 from limen.sfd.reference_architecture import _backtest_evaluation
-from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
+from limen.yaml import CompiledSFD, build_search_strategy, validate
+
+from tests.utils.yaml_config import parse_cached
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -35,7 +37,7 @@ def recorded_bars():
 
 
 def _config(kind='ridge', *, notional_rate=0.5, take_profit_bps=None):
-    config, errors = parse((ROOT / 'limen/yaml/templates/ridge_regressor.yaml').read_text())
+    config, errors = parse_cached((ROOT / 'limen/yaml/templates/ridge_regressor.yaml').read_text())
     assert not errors
     manifest = config['sfd']['manifest']
     manifest['split_dates'] = {
