@@ -1,6 +1,5 @@
 import limen.experiment._holdout_research as _holdout
 from limen.inference._trainer_records import load_round_data, load_original_log
-import limen.experiment._round_storage as _storage
 from limen.experiment._recording import project_record
 import json
 from collections.abc import Mapping

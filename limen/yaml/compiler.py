@@ -316,7 +316,7 @@ class CompiledSFD:
         if self._manifest_cache is None:
             self._manifest_cache = build_manifest(self._yaml)
             from limen.experiment._holdout_research import bind_manifest
-            bind_manifest(self._manifest_cache, self._holdout_project_root)
+            _ = bind_manifest(self._manifest_cache, self._holdout_project_root)
         return self._manifest_cache
 
 

@@ -82,7 +82,7 @@ def _exclude(root: Path) -> None:
     if missing:
         target.parent.mkdir(parents=True, exist_ok=True)
         with target.open('a') as stream:
-            stream.write(('\n' if old and not old.endswith('\n') else '') + '\n'.join(missing) + '\n')
+            _ = stream.write(('\n' if old and not old.endswith('\n') else '') + '\n'.join(missing) + '\n')
 
 
 @contextmanager
@@ -124,7 +124,7 @@ def admission(root: Path, *, exclusive: bool = False) -> Iterator[None]:
     with connection(root / _LEASE, create=True) as db:
         _initialize_lease(db)
         _ = db.execute('BEGIN EXCLUSIVE' if exclusive else 'BEGIN')
-        db.execute('SELECT id FROM lease').fetchall()
+        _ = db.execute('SELECT id FROM lease').fetchall()
         token = _LEASES.set((*_LEASES.get(), (root, exclusive)))
         try:
             yield
@@ -136,8 +136,8 @@ def admission(root: Path, *, exclusive: bool = False) -> Iterator[None]:
 def _write_marker(root: Path, project_id: str) -> None:
     target = root / _MARKER
     temp = target.with_name(f'{target.name}.{uuid4()}.tmp')
-    temp.write_text(json.dumps({'schema_version': 1, 'project_id': project_id, 'history': _HISTORY}, sort_keys=True) + '\n')
-    temp.replace(target)
+    _ = temp.write_text(json.dumps({'schema_version': 1, 'project_id': project_id, 'history': _HISTORY}, sort_keys=True) + '\n')
+    _ = temp.replace(target)
 
 
 def _identity(root: Path, db: sqlite3.Connection) -> tuple[str, int]:
@@ -221,7 +221,7 @@ def reserve_holdout(project_root: str | Path, start: str, end: str, *, interval_
 
 def _retire(root_value: str | Path, reservation_id: str, state: str) -> None:
     root = resolve_root(root_value)
-    identifier(reservation_id)
+    _ = identifier(reservation_id)
     with admission(root, exclusive=True):
         if not (root / _HISTORY).exists():
             raise ValueError('Holdout history is missing')
@@ -264,7 +264,7 @@ def start_research(binding: ProjectBinding, role: str, manifest_id: str | None =
 
 
 def finish_research(binding: ProjectBinding, record_id: str, provenance: Mapping[str, object], *, error: str | None = None) -> None:
-    identifier(record_id)
+    _ = identifier(record_id)
     with admission(binding.root), connection(binding.root / _HISTORY) as db:
         check_binding(binding)
         _ = db.execute('BEGIN IMMEDIATE')

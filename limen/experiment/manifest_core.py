@@ -330,7 +330,8 @@ class Manifest:
         if self.data_source_config is None:
             raise ValueError('Manifest No data source configured')
 
-        return _holdout.fetch(self)
+        config = self.data_source_config
+        return _holdout.fetch(self, lambda: DataSourceResolver.resolve(config))
 
     def fetch_test_data(self) -> pl.DataFrame:
 
@@ -1169,10 +1170,45 @@ class MLManifest(Manifest):
             result[self.objective.column] = _score_objective(data, result, scorer)
         return _finish_trade_result(data, result)
 
-    def sensor_input_prep(self, raw_klines: pl.DataFrame, fitted_params: dict[str, Any],
-                          round_params: dict[str, Any]) -> tuple[pl.DataFrame, int]:
-        from limen.experiment._manifest_preparation import sensor_input_prep
-        return sensor_input_prep(self, raw_klines, fitted_params, round_params)
+    def sensor_input_prep(
+            self,
+            raw_klines: pl.DataFrame,
+            fitted_params: dict[str, Any],
+            round_params: dict[str, Any],
+    ) -> tuple[pl.DataFrame, int]:
+
+        '''
+        Prepare live features using fitted target exclusions, scaler and PCA.
+
+        Preserve null rows and return the leading indicator warm-up count.
+        Fitted target metadata takes precedence over static class declarations.
+        '''
+
+        _, data = _process_bars(self, raw_klines, round_params)
+        decisions = None
+        if self.resolve_trade_policy(round_params) is not None:
+            interval = _source_interval(self.data_source_config)
+            interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
+            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
+            data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
+
+        lazy = data.lazy()
+        lazy = _apply_feature_transforms(self, lazy, round_params)
+        data = lazy.collect()
+        if self.target_class_config is not None:
+            target = fitted_params.get(f'_target_cls_{self.target_column}', self.target_class_config.target_class)
+            data = _drop_target_source_columns(data, target, self.target_column)
+
+        data = self._prepare_column_shims(data, round_params, dict(fitted_params), False)
+        if dropped_features := round_params.get('_dropped_features'):
+            data = data.drop([c for c in dropped_features if c in data.columns])
+
+        indicator_lookback = _count_leading_nulls(data)
+
+        all_fitted_params = dict(fitted_params)
+        from limen.experiment._manifest_preparation import finish_sensor_input
+        return finish_sensor_input(self, data, indicator_lookback, round_params, all_fitted_params,
+                                   decisions, scale=_apply_scaler, compress=_apply_sensor_pca)
 
 
 @dataclass
@@ -1856,6 +1892,7 @@ def _run_prepare_setup(
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
     raw_data = _holdout.admit(manifest, raw_data)
+    resolved = None
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
         resolved = _resolve_params(base_params, round_params)
@@ -1863,25 +1900,12 @@ def _run_prepare_setup(
 
     raw_data = _holdout.admit(manifest, raw_data)
     raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
-    _holdout.selected(manifest, raw_data, raw_splits, round_params)
-    split_data = raw_splits
+    _holdout.selected(manifest, raw_data, raw_splits, round_params, resolved)
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
-    all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes])
-    split_data = [bar_data for _, bar_data in datetime_bar_pairs]
 
-    policy = manifest.resolve_trade_policy(round_params)
-    frozen_sources = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
-    if callable(frozen_sources):
-        frozen_sources = frozen_sources(manifest.backtest_config, round_params)
-    trade = None
-    if policy is not None and manifest.backtest_config is not None:
-        interval = _source_interval(manifest.data_source_config)
-        trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval,
-                                       frozen_sources=frozen_sources)
-        split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
-    prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
-    return (*prepared, trade)
+    from limen.experiment._manifest_preparation import finish_prepare_setup
+    return finish_prepare_setup(manifest, raw_splits, datetime_bar_pairs, round_params)
 
 
 def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:

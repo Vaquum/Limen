@@ -9,15 +9,31 @@ from datetime import date, datetime, timezone
 from functools import wraps
 import inspect
 from pathlib import Path
-from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar, cast
+from typing import Concatenate, ParamSpec, Protocol, TypeVar, cast
+import sys
 
 import polars as pl
 
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
-from limen.experiment._holdout_source import SourceEvidence, admit_frame, bounds, frame_evidence, load_admitted_source, source_spec
+from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, bounds, frame_evidence, load_admitted_source, source_spec
 
-if TYPE_CHECKING:
-    from limen.experiment.manifest_core import Manifest
+class ResearchManifest(SourceManifest, Protocol):
+    @property
+    def backtest_config(self) -> object | None: ...
+    @property
+    def split_dates(self) -> tuple[object, ...] | None: ...
+    @property
+    def split_walk_forward(self) -> object | None: ...
+    @property
+    def bar_formation(self) -> object | None: ...
+    @property
+    def test_data_source_config(self) -> object | None: ...
+    @property
+    def architecture_function(self) -> object | None: ...
+    def fetch_data(self) -> pl.DataFrame: ...
+    def fetch_test_data(self) -> pl.DataFrame: ...
+    def prepare_data(self, raw: pl.DataFrame, params: dict[str, object]) -> dict[str, object]: ...
+    def run_model(self, raw: dict[str, object], params: dict[str, object]) -> dict[str, object]: ...
 
 _P = ParamSpec('_P')
 _R = TypeVar('_R')
@@ -31,7 +47,7 @@ class _Operation:
     record_id: str
     role: str
     parent_id: str | None
-    provenance: dict[str, object] = field(default_factory=dict)
+    provenance: dict[str, object] = field(default_factory=dict[str, object])
 
 
 _CURRENT: ContextVar[_Operation | None] = ContextVar('holdout_operation', default=None)
@@ -46,8 +62,8 @@ def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding
     previous = binding_of(manifest)
     if previous is not None and previous != binding:
         raise ValueError('Holdout manifest binding/revision changed; construct a new manifest')
-    vars(manifest)['_holdout_binding'] = binding
-    vars(manifest)['_holdout_discovery_cwd'] = Path.cwd()
+    if binding is not None:
+        vars(manifest)['_holdout_binding'] = binding
     return binding
 
 
@@ -57,10 +73,10 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return
-    from limen.experiment.manifest_core import MLManifest, RuleBasedManifest
-    if type(manifest) not in (MLManifest, RuleBasedManifest):
+    core = vars(sys.modules['limen.experiment.manifest_core'])
+    if type(manifest) not in (core['MLManifest'], core['RuleBasedManifest']):
         raise ValueError('Holdout research requires a built-in manifest')
-    model = cast(Manifest, manifest)
+    model = cast(ResearchManifest, manifest)
     if (workers != 1 or bool(factorize) or bool(resume) or profile or any(value is not None for value in callbacks)
             or model.split_walk_forward is not None or model.bar_formation is not None
             or (test_mode and model.test_data_source_config is not None)
@@ -69,7 +85,7 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
     if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
         raise ValueError('Holdout research refuses replaced manifest methods')
     config = model.backtest_config
-    if config is not None and (config.product is not None or config.prediction_mode != 'binary' or getattr(config, 'execution_data_source', None) is not None or getattr(config, 'funding', None) is not None):
+    if config is not None and (getattr(config, 'product', None) is not None or getattr(config, 'prediction_mode', 'binary') != 'binary' or getattr(config, 'execution_data_source', None) is not None or getattr(config, 'funding', None) is not None):
         raise ValueError('Holdout research does not support event/funding/alternate execution sources')
     if model.split_dates is not None:
         for value in model.split_dates:
@@ -80,11 +96,11 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
                 dt = dt.replace(tzinfo=timezone.utc)
             if int(dt.timestamp()) * 1_000_000_000 > binding.cutoff_ns:
                 raise ValueError('Holdout split_dates extends beyond reserved research cutoff')
-    source_spec(model, binding)
+    _ = source_spec(model, binding)
 
 
 def _base(op: _Operation) -> dict[str, object]:
-    empty = {'first_open_ns': None, 'last_close_ns': None, 'rows': 0, 'gaps': []}
+    empty: Bounds = {'first_open_ns': None, 'last_close_ns': None, 'rows': 0, 'gaps': []}
     return {'schema_version': 1, 'project_id': op.binding.project_id, 'reservation_revision': op.binding.revision,
             'cutoff_ns': op.binding.cutoff_ns, 'interval_seconds': op.binding.interval_seconds,
             'research_record_id': op.record_id, 'role': op.role, 'experiment_record_id': op.parent_id,
@@ -122,18 +138,17 @@ def operation(manifest: object, role: str) -> Iterator[_Operation | None]:
             _CURRENT.reset(token)
 
 
-def fetch(manifest: Manifest) -> pl.DataFrame:
+def fetch(manifest: ResearchManifest, resolve: Callable[[], pl.DataFrame]) -> pl.DataFrame:
     binding = binding_of(manifest)
     if binding is None:
         binding = bind_manifest(manifest)
     if binding is None or binding.cutoff_ns is None:
-        from limen.experiment.manifest_core import DataSourceResolver
         if manifest.data_source_config is None:
             raise ValueError('Manifest No data source configured')
         with admission(binding.root) if binding is not None else nullcontext():
             if binding is not None:
                 check_binding(binding)
-            return DataSourceResolver.resolve(manifest.data_source_config)
+            return resolve()
     with operation(manifest, 'experiment') as op:
         frame, source = load_admitted_source(manifest, binding, lower_ns=None, upper_ns=binding.cutoff_ns, complete=False)
         vars(manifest)['_holdout_source'] = source
@@ -158,7 +173,7 @@ def admit(manifest: object, raw: pl.DataFrame) -> pl.DataFrame:
     return frame
 
 
-def selected(manifest: object, raw: pl.DataFrame, splits: list[pl.DataFrame], params: Mapping[str, object]) -> None:
+def selected(manifest: object, raw: pl.DataFrame, splits: list[pl.DataFrame], params: Mapping[str, object], resolved: Mapping[str, object] | None = None) -> None:
     op = _CURRENT.get()
     if op is None or op.manifest is not manifest or op.binding.interval_seconds is None:
         return
@@ -166,8 +181,7 @@ def selected(manifest: object, raw: pl.DataFrame, splits: list[pl.DataFrame], pa
     declaration = None
     if selector is not None:
         func, config = cast(tuple[Callable[..., object], Mapping[str, object]], selector)
-        from limen.experiment.manifest_core import _resolve_params
-        declaration = {'method': f'{func.__module__}.{func.__qualname__}', 'params': _resolve_params(dict(config), dict(params)), 'seed': params.get('seed', config.get('seed'))}
+        declaration = {'method': f'{func.__module__}.{func.__qualname__}', 'params': dict(resolved or {}), 'seed': params.get('seed', config.get('seed'))}
     op.provenance.update(selector=declaration, selected=bounds(raw, op.binding.interval_seconds),
                          splits={name: bounds(frame, op.binding.interval_seconds) for name, frame in zip(('train', 'validation', 'test'), splits, strict=True)})
 
@@ -184,8 +198,8 @@ def capture_schema(manifest: object, frame: pl.DataFrame, stage: str) -> None:
 def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_T, _P], _R]:
     @wraps(func)
     def guarded(manifest: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        if binding_of(manifest) is None and getattr(manifest, '_holdout_discovery_cwd', None) != Path.cwd():
-            bind_manifest(manifest)
+        if binding_of(manifest) is None:
+            _ = bind_manifest(manifest)
         parent = _CURRENT.get()
         with operation(manifest, parent.role if parent is not None else 'experiment') as op:
             result = func(manifest, *args, **kwargs)
@@ -200,14 +214,14 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
                 fitted = data.get('_fitted_params')
                 if isinstance(fitted, dict):
                     cast(dict[str, object], fitted)['_holdout'] = provenance
-            return result
+            return cast(_R, result)
     return guarded
 
 
 def initialize_loop(sfd: object, data: pl.DataFrame | None, *, test_mode: bool,
-                    project_root: str | Path | None, experiment_dir: str | Path | None) -> tuple[Manifest | None, pl.DataFrame, Callable[..., dict[str, object]] | None, Callable[..., dict[str, object]] | None]:
+                    project_root: str | Path | None, experiment_dir: str | Path | None) -> tuple[ResearchManifest | None, pl.DataFrame, Callable[..., dict[str, object]] | None, Callable[..., dict[str, object]] | None]:
     factory = getattr(sfd, 'manifest', None)
-    manifest = cast(Callable[[], Manifest], factory)() if callable(factory) else None
+    manifest = cast(Callable[[], ResearchManifest], factory)() if callable(factory) else None
     hint = cast(str | Path | None, getattr(sfd, '_holdout_project_root', None))
     binding = bind_manifest(manifest, project_root, experiment_dir, hint) if manifest is not None else bind(project_root, experiment_dir, hint)
     if manifest is None:
@@ -262,7 +276,7 @@ def metadata(manifest: object) -> dict[str, object] | None:
 
 def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root: str | Path | None) -> pl.DataFrame:
     attrs = cast(dict[str, object], vars(host))
-    manifest = cast('Manifest', attrs['_manifest'])
+    manifest = cast(ResearchManifest, attrs['_manifest'])
     binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
     saved = cast(Mapping[str, object], attrs['_metadata']).get('holdout')
     if isinstance(saved, Mapping):
@@ -292,7 +306,7 @@ def trainer_round(manifest: object, expected: Mapping[str, object]) -> None:
 def train_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_T, _P], _R]:
     @wraps(func)
     def guarded(host: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        manifest = getattr(host, '_manifest')
+        manifest = cast(dict[str, object], vars(host))['_manifest']
         with operation(manifest, 'trainer'):
             attrs = cast(dict[str, object], vars(host))
             attrs['_data'] = admit(manifest, cast(pl.DataFrame, attrs['_data']))

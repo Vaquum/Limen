@@ -3,16 +3,31 @@ from __future__ import annotations
 from collections.abc import Mapping
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, TypedDict, cast
+from typing import Literal, Protocol, TypedDict, cast
+from collections.abc import Callable
+from itertools import pairwise
+import limen.data.historical_data as _historical
 
 import numpy as np
 import polars as pl
 
 from limen.data.historical_data import HistoricalData
-from limen.data.historical_data import _DEFAULT_SPOT_DATASET_REPO, _normalize_datetime_column, _normalize_timestamp_column, _read_any_file, _spot_dataset_repo_for_kline_size
 from limen.experiment._holdout_history import ProjectBinding, utc_day
-if TYPE_CHECKING:
-    from limen.experiment.manifest_core import Manifest
+class SourceConfig(Protocol):
+    @property
+    def method(self) -> Callable[..., object]: ...
+    @property
+    def params(self) -> Mapping[str, object]: ...
+
+class SourceManifest(Protocol):
+    @property
+    def data_source_config(self) -> SourceConfig | None: ...
+
+_DEFAULT_SPOT_DATASET_REPO = cast(str, vars(_historical)['_DEFAULT_SPOT_DATASET_REPO'])
+_normalize_datetime_column = cast(Callable[[pl.DataFrame], pl.DataFrame], vars(_historical)['_normalize_datetime_column'])
+_normalize_timestamp_column = cast(Callable[[pl.DataFrame], pl.DataFrame], vars(_historical)['_normalize_timestamp_column'])
+_read_any_file = cast(Callable[..., pl.DataFrame], vars(_historical)['_read_any_file'])
+_spot_dataset_repo_for_kline_size = cast(Callable[[int, str], str], vars(_historical)['_spot_dataset_repo_for_kline_size'])
 
 _NATIVE = frozenset((60, 900, 1800, 3600, 7200, 14400))
 _GET_FILE, _GET_SPOT = HistoricalData.get_any_file, HistoricalData.get_spot_klines
@@ -43,7 +58,7 @@ def bounds(frame: pl.DataFrame, interval: int) -> Bounds:
     return {'first_open_ns': int(times[0]) if times.size else None,
             'last_close_ns': int(times[-1]) + step if times.size else None,
             'rows': frame.height,
-            'gaps': [[int(left) + step, int(right)] for left, right in zip(times[:-1], times[1:], strict=True) if right - left > step]}
+            'gaps': [[int(left) + step, int(right)] for left, right in pairwise(times) if right - left > step]}
 
 
 def _normal(frame: pl.DataFrame) -> pl.DataFrame:
@@ -81,7 +96,7 @@ def admit_frame(frame: pl.DataFrame, *, interval: int, lower_ns: int | None, upp
     return frame
 
 
-def source_spec(manifest: Manifest, binding: ProjectBinding) -> tuple[str, dict[str, object], int]:
+def source_spec(manifest: SourceManifest, binding: ProjectBinding) -> tuple[str, dict[str, object], int]:
     config = manifest.data_source_config
     if config is None or binding.interval_seconds is None:
         raise ValueError('Holdout research requires a declared native source/interval')
@@ -119,7 +134,7 @@ def _date_limit(value: object, name: str) -> int | None:
     return utc_day(value)
 
 
-def load_admitted_source(manifest: Manifest, binding: ProjectBinding, *, lower_ns: int | None,
+def load_admitted_source(manifest: SourceManifest, binding: ProjectBinding, *, lower_ns: int | None,
                          upper_ns: int, complete: bool) -> tuple[pl.DataFrame, SourceEvidence]:
     kind, params, interval = source_spec(manifest, binding)
     identity = {key: value for key, value in params.items() if key not in ('start_date_limit', 'end_date_limit', 'row_count_limit', 'n_rows')}
@@ -142,8 +157,6 @@ def load_admitted_source(manifest: Manifest, binding: ProjectBinding, *, lower_n
     raw = _normal(raw)
     admitted = admit_frame(raw, interval=interval, lower_ns=lower_ns, upper_ns=upper_ns, complete=complete)
     buf = admitted.write_ipc(None, compression='uncompressed')
-    if buf is None:
-        raise ValueError('Holdout cannot retain a source digest')
     evidence: SourceEvidence = {'kind': cast(Literal['hosted_native', 'local_file'], kind), 'method': f'{manifest.data_source_config.method.__module__}.{manifest.data_source_config.method.__qualname__}' if manifest.data_source_config is not None else '',
         'identity': identity, 'interval_seconds': interval, 'native_witness': 'default-hosted-contract' if kind == 'hosted_native' else 'caller-declared',
         'materialized': bounds(raw, interval), 'admitted': bounds(admitted, interval), 'admitted_sha256': sha256(buf.getvalue()).hexdigest(), 'physical_scan': 'unknown'}
@@ -156,7 +169,5 @@ def frame_evidence(frame: pl.DataFrame, binding: ProjectBinding) -> tuple[pl.Dat
     raw = _normal(frame)
     admitted = admit_frame(raw, interval=binding.interval_seconds, lower_ns=None, upper_ns=binding.cutoff_ns)
     buf = admitted.write_ipc(None, compression='uncompressed')
-    if buf is None:
-        raise ValueError('Holdout cannot retain a caller-frame digest')
     return admitted, {'kind': 'caller_frame', 'method': 'caller.data', 'identity': {}, 'interval_seconds': binding.interval_seconds,
         'native_witness': 'caller-declared', 'materialized': bounds(raw, binding.interval_seconds), 'admitted': bounds(admitted, binding.interval_seconds), 'admitted_sha256': sha256(buf.getvalue()).hexdigest(), 'physical_scan': 'unknown'}
