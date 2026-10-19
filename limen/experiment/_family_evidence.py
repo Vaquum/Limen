@@ -1,3 +1,4 @@
+import csv
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -23,6 +24,10 @@ _resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str
 
 class EvidenceUnavailableError(ValueError):
     '''A required part of the recorded comparison evidence is absent.'''
+
+
+class EvidenceIncompatibleError(ValueError):
+    '''Present timestamp evidence cannot support a comparison.'''
 
 
 @dataclass
@@ -90,10 +95,8 @@ def lineage(metadata: Mapping[str, object], project_root: Path) -> list[dict[str
     return list(reversed(chain))
 
 
-def _records(directory: Path, metadata: Mapping[str, object]) -> dict[str, dict[str, object]]:
+def _records(directory: Path) -> dict[str, dict[str, object]]:
     records: dict[str, dict[str, object]] = {}
-    if not metadata:
-        return records
     path = storage.round_path(directory)
     if not path.exists():
         return records
@@ -111,13 +114,16 @@ def _timestamps(value: object) -> list[str]:
     if value is None:
         raise EvidenceUnavailableError('Recorded ordered test timestamps are missing')
     if not isinstance(value, list) or not value or not all(isinstance(item, str) for item in cast(list[object], value)):
-        raise ValueError('Recorded test timestamps must be a nonempty ISO timestamp list')
-    dates = [datetime.fromisoformat(item) for item in cast(list[str], value)]
+        raise EvidenceIncompatibleError('Recorded test timestamps must be a nonempty ISO timestamp list')
+    try:
+        dates = [datetime.fromisoformat(item) for item in cast(list[str], value)]
+    except ValueError as exc:
+        raise EvidenceIncompatibleError('Recorded test timestamps must be ISO timestamps') from exc
     if len({item.tzinfo is None for item in dates}) != 1:
-        raise ValueError('Recorded test timestamps mix zoned and unzoned observations')
+        raise EvidenceIncompatibleError('Recorded test timestamps mix zoned and unzoned observations')
     normalized = [item.astimezone(timezone.utc) if item.tzinfo is not None else item for item in dates]
     if normalized != sorted(set(normalized)):
-        raise ValueError('Recorded test timestamps must be unique and increasing')
+        raise EvidenceIncompatibleError('Recorded test timestamps must be unique and increasing')
     return [item.isoformat() for item in normalized]
 
 
@@ -131,6 +137,8 @@ def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
     contract = fold.get('trade_contract')
     if contract is not None:
         declaration = mapping(contract, 'trade contract')
+        if declaration.get('signal_rows') is None:
+            raise EvidenceUnavailableError('Recorded signal availability is missing; recording.alignment is required')
         if contract_digest(cast(dict[str, JsonValue], declaration)) != fold.get('trade_contract_digest'):
             raise ValueError('Recorded trade contract digest mismatch')
         policy = mapping(declaration.get('policy'), 'trade policy')
@@ -149,7 +157,8 @@ def _sample(fold: Mapping[str, object], count: int) -> dict[str, object]:
             raise ValueError('Recorded signal availability differs in length from fold returns')
         return {'dates': dates, 'semantics': 'signed_execution', 'rule_version': declaration.get('rule_version'),
                 'product': {key: product[key] for key in ('kind', 'instrument', 'base_currency', 'quote_currency')},
-                'partition': declaration.get('partition'), 'signal_rows': declaration.get('signal_rows'), 'sources': execution}
+                'rules': declaration.get('rules'), 'partition': declaration.get('partition'),
+                'signal_rows': declaration.get('signal_rows'), 'sources': execution}
     market = fold.get('market')
     if market is None:
         raise EvidenceUnavailableError('Recorded snapshot market observations are missing')
@@ -175,11 +184,10 @@ def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], valu
         raise EvidenceUnavailableError('Recorded round parameters are missing')
     params = mapping(params, 'round parameters')
     source = manifest.get('data_source')
-    if source is None:
-        raise EvidenceUnavailableError('Recorded data-source declaration is missing')
-    source = mapping(source, 'data source')
-    source_params = source.get('params')
-    source = {**source, 'params': _resolve_params(mapping({} if source_params is None else source_params, 'data-source parameters'), params)}
+    if source is not None:
+        source = mapping(source, 'data source')
+        source_params = source.get('params')
+        source = {**source, 'params': _resolve_params(mapping({} if source_params is None else source_params, 'data-source parameters'), params)}
     folds = record.get('folds')
     if folds is None:
         raise EvidenceUnavailableError('Recorded fold evidence is missing')
@@ -202,20 +210,25 @@ def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], valu
     dates = [stamp for sample in samples for stamp in cast(list[str], sample['dates'])]
     parsed = [datetime.fromisoformat(stamp) for stamp in dates]
     if len({stamp.tzinfo is None for stamp in parsed}) != 1 or parsed != sorted(set(parsed)):
-        raise ValueError('Recorded test folds overlap or differ in timestamp convention')
-    version = metadata.get('limen_version')
-    if not isinstance(version, str) or not version:
-        raise EvidenceUnavailableError('Recorded implementation version is missing')
+        raise EvidenceIncompatibleError('Recorded test folds overlap or differ in timestamp convention')
     candidate = {key: value for key, value in sfd.items() if key != 'params'}
     candidate['manifest'] = {key: value for key, value in manifest.items() if key != 'acceptance'}
-    summary: dict[str, object] = {'source': source, 'folds': [
+    summary: dict[str, object] = {'source': source, 'source_verified': False,
+        'declared_manifest': manifest, 'round_params': params,
+        'split_walk_forward': metadata.get('split_walk_forward'),
+        'walk_forward_validation_ratio': metadata.get('walk_forward_validation_ratio'),
+        'recording': metadata.get('recording'), 'record_execution': metadata.get('record_execution'),
+        'pbo_unavailable': 'Snapshot artifacts do not retain complete open/high/low execution identity' if any(sample['semantics'] == 'snapshot' for sample in samples) else None,
+        'folds': [
         {'n_bars': len(cast(list[str], sample['dates'])),
          'first_test_datetime': cast(list[str], sample['dates'])[0], 'last_test_datetime': cast(list[str], sample['dates'])[-1],
+         'missing_datetimes': mapping(fold.get('alignment'), 'fold alignment').get('missing_datetimes'),
          'timestamps_digest': digest(sample['dates']), 'return_semantics': sample['semantics'],
          'market_evidence_digest': digest({key: value for key, value in sample.items() if key != 'dates'}),
          **{key: sample[key] for key in ('product', 'rule_version', 'partition') if key in sample}}
-        for sample in samples]}
-    return digest({'sfd': candidate, 'params': params, 'limen_version': version}), digest({'source': source, 'folds': samples}), summary
+        for sample, (fold, _) in zip(samples, decoded_folds, strict=True)]}
+    return digest({'sfd': candidate, 'params': params, 'limen_version': metadata.get('limen_version'),
+                   'geometry': metadata.get('split_walk_forward'), 'validation': metadata.get('walk_forward_validation_ratio')}), digest(samples), summary
 
 
 def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -> tuple[dict[str, object], list[Trial]]:
@@ -223,7 +236,18 @@ def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -
     ancestry = lineage(metadata, project_root)
     errors: list[str] = []
     report: dict[str, object] = {'directory': str(directory), 'created_at': None if created is None else created.isoformat(),
-                                 'manifest_id': metadata.get('manifest_id'), 'lineage': ancestry, 'errors': errors}
+                                 'manifest_id': metadata.get('manifest_id'), 'lineage': ancestry, 'errors': errors,
+                                 **{key: metadata.get(key) for key in ('split_walk_forward', 'walk_forward_validation_ratio', 'recording', 'record_execution', 'limen_version')},
+                                 'track_coverage_known': False, 'terminal_trials': None, 'n_failed_trials': None}
+    records = _records(directory)
+    terminal: list[dict[str, object]] | None = None
+    if (csv_path := directory / 'results.csv').exists():
+        with csv_path.open(newline='') as stream:
+            terminal = [{'round_index': index, 'trial': row['id'], 'error': row.get('strict_mode_error') or None}
+                        for index, row in enumerate(csv.DictReader(stream))]
+        report.update(terminal_trials=terminal, n_failed_trials=sum(row['error'] is not None for row in terminal))
+        if records and [(row['round_index'], row['trial']) for row in terminal if row['error'] is None] != [(record.get('_round_index'), trial) for trial, record in records.items()]:
+            raise storage.RoundStorageError('Recorded rounds differ from successful terminal CSV occurrences')
     if created is None:
         errors.append('Recorded run chronology is unavailable')
     if not ancestry or not all(item['available'] for item in ancestry):
@@ -235,16 +259,17 @@ def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -
     frame = pl.read_parquet(path)
     if frame.schema != {'trial': pl.String, 'bar': pl.Int64, 'net_return': pl.Float64}:
         raise ValueError('Family report requires the recorded trial_returns.parquet schema')
-    records = _records(directory, metadata)
     identifiers = cast(list[object], frame['trial'].unique(maintain_order=True).to_list())
     if not all(isinstance(trial, str) for trial in identifiers):
         raise ValueError('Recorded trial identities must be strings')
     identities = cast(list[str], identifiers)
     identity_set = set(identities)
+    if terminal is not None and {row['trial'] for row in terminal if row['error'] is None} != identity_set:
+        raise storage.RoundStorageError('Recorded return tracks differ from successful terminal CSV trials')
+    report['track_coverage_known'] = True
     if records.keys() - identity_set:
         raise ValueError('Recorded trials are absent from trial_returns.parquet')
-    ordered = [trial for trial in records if trial in identity_set]
-    ordered.extend(trial for trial in identities if trial not in records)
+    ordered = [*records, *(trial for trial in identities if trial not in records)]
     trials: list[Trial] = []
     for trial in ordered:
         rows = frame.filter(pl.col('trial') == trial).sort('bar')
@@ -254,7 +279,9 @@ def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -
         if not values.size or not np.isfinite(values).all():
             raise ValueError('Family report requires nonempty finite recorded return tracks')
         identity = {'directory': str(directory), 'trial': trial}
-        entry: dict[str, object] = {**identity, 'candidate': None, 'comparison': None, 'repeat_of': None, 'unavailable': None}
+        entry: dict[str, object] = {**identity, 'candidate': None, 'comparison': None, 'repeat_of': None,
+                                   'evidence_match_of': None, 'repeat_identity': 'unproven', 'unavailable': None,
+                                   'round_index': records.get(trial, {}).get('_round_index'), 'disposition': 'included', 'evidence': None}
         candidate = evaluation = None
         summary: dict[str, object] | None = None
         try:
@@ -262,8 +289,11 @@ def read_run(directory: Path, metadata: dict[str, object], project_root: Path) -
                 raise EvidenceUnavailableError('Recorded trial/fold evidence is missing')
             candidate, evaluation, summary = _evidence(metadata, records[trial], values)
             entry['candidate'] = candidate
-        except EvidenceUnavailableError as exc:
+            entry['evidence'] = summary
+        except (EvidenceUnavailableError, EvidenceIncompatibleError) as exc:
             entry['unavailable'] = str(exc)
+            entry['disposition'] = 'missing_evidence' if isinstance(exc, EvidenceUnavailableError) else 'incompatible_evidence'
+            entry['recording'] = {'recording': metadata.get('recording'), 'record_execution': metadata.get('record_execution')}
         trials.append(Trial(identity, values, candidate, evaluation, summary, entry))
     if not trials:
         errors.append('No successful recorded trial tracks are present')
