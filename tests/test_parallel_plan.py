@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import json
 import pickle
+import multiprocessing
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 import pytest
 
 from limen.experiment._parallel_encoding import decode, digest, encode
-from limen.experiment._parallel_plan import ScalerFactory, freeze_manifest, validate_domain
-from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage
+from limen.experiment._parallel_plan import ScalerFactory, freeze_manifest
+from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
+from limen.experiment._parallel_worker import startup_limits
 from limen.yaml import parse
 from limen.yaml.compiler import build_manifest
 
@@ -19,15 +22,18 @@ def _configuration() -> dict[str, object]:
     return config
 
 
+def _frozen_probe(plan):
+    return plan.pipeline_digest, any(isinstance(stage.component, ScalerFactory) for stage in plan.stages)
+
+
 def test_frozen_manifest_round_plan() -> None:
     config = _configuration()
     original = build_manifest(config)
     plan = freeze_manifest(original, config)
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
     assert len(pickle.dumps(plan)) <= 65536
-    transported = pickle.loads(pickle.dumps(plan))
-    assert transported.pipeline_digest == plan.pipeline_digest
-    assert any(isinstance(stage.component, ScalerFactory) for stage in transported.stages)
+    with startup_limits(), ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as pool:
+        assert pool.submit(_frozen_probe, plan).result(timeout=30) == (plan.pipeline_digest, True)
     original.split_config = (2, 1, 1)
     assert plan.manifest.split_config != original.split_config
     with pytest.raises(ValueError, match='unchanged compiled YAML'):

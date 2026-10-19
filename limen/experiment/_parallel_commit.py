@@ -13,6 +13,8 @@ from limen.experiment._objective_run import objective_frame
 from limen.experiment._objective_run import run_objective
 from limen.experiment._objective_run import validate_objective_header
 from limen.experiment._parallel_worker import RoundPayload
+from limen.experiment._parallel_plan import FrozenManifestPlan
+from limen.experiment._parallel_evidence import mapping, record_context, validate_record
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.experiment.manifest_core import Manifest
 
@@ -105,6 +107,17 @@ class ParallelCommit:
         index, identity = round_params['_round_index'], round_params['_id']
         if not isinstance(index, int) or isinstance(index, bool) or not isinstance(identity, str):
             raise ValueError('Parallel occurrence requires an integer index and string identity')
+        attributes = cast(dict[str, object], vars(self.host))
+        if payload.succeeded:
+            record = mapping(payload.alignment.get('parallel_record'), 'parallel output record')
+            if (record.get('round_id') != identity or record.get('_round_index') != index
+                    or record.get('round_params') != payload.parameters or record.get('parallel_plan') != attributes['_parallel_identity']):
+                raise ValueError('Parallel output does not match its dispatched occurrence, parameters or sources')
+            plan = cast(FrozenManifestPlan, attributes['_parallel_plan'])
+            contract = next(stage.contract for stage in plan.stages if stage.path == 'architecture')
+            event = self.manifest is not None and self.manifest.resolve_trade_policy(payload.parameters) is not None
+            validate_record(record, record_context(record), contract, execution=bool(attributes['_record_execution']),
+                            outputs=bool(attributes['_record_model_outputs']), event=event)
         row = dict(payload.results)
         predictions = row.pop('_preds', [])
         for key in ('models', '_model', 'extras'):

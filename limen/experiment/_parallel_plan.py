@@ -4,15 +4,16 @@ import copy
 import inspect
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
-from itertools import product
-from string import Formatter
 from typing import cast
 
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, attach
-from limen.experiment._parallel_encoding import digest, encode, module_identity, reference
-from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest, _resolve_params
+from limen.experiment._parallel_encoding import digest, encode, module_identity, reference, source_digest
+from limen.experiment.manifest_core import Manifest, MLManifest
+import limen.experiment.manifest_core as _manifest
+
+_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(_manifest)['_resolve_params'])
 from limen.scalers.registry import SCALER_REGISTRY
 
 
@@ -46,6 +47,21 @@ class FrozenManifestPlan:
     stages: tuple[FrozenStage, ...]
     pipeline_digest: str
     resource_digest: str
+
+
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 1)
+
+
+def legacy_metadata(metadata: Mapping[str, object]) -> bool:
+    version = metadata.get('limen_version')
+    if not isinstance(version, str) or len(parts := version.split('.')) != len(_PARALLEL_EVIDENCE_SINCE) or not all(part.isdigit() for part in parts):
+        raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
+    return tuple(map(int, parts)) < _PARALLEL_EVIDENCE_SINCE and 'parallel_plan' not in metadata
+
+
+def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, ...]) -> dict[str, object]:
+    return {'version': 1, 'pipeline_digest': plan.pipeline_digest, 'resource_digest': plan.resource_digest,
+            'source_digest': source_digest(frames), 'parameter_encoding': 1}
 
 
 def _normalize(value: object) -> object:
@@ -97,12 +113,11 @@ def components(manifest: Manifest) -> list[tuple[str, object]]:
                     result.extend((f'scaler.class.{i}.{j}', cls) for j, cls in enumerate(classes))
         if manifest.data_dict_extension is not None:
             result.append(('data_dict_extension', manifest.data_dict_extension))
-        from limen.experiment.manifest_core import _apply_feature_ablation, _pca_transformer
         from limen.experiment._column_shims import apply_column_shims
         if manifest.ablation_config is not None:
-            result.append(('ablation', _apply_feature_ablation))
+            result.append(('ablation', vars(_manifest)['_apply_feature_ablation']))
         if manifest.pca_compression_config is not None:
-            result.append(('pca', _pca_transformer))
+            result.append(('pca', vars(_manifest)['_pca_transformer']))
         if manifest.feature_shims:
             result.append(('feature_shims', apply_column_shims))
         calibration = manifest.prediction_calibration_config
@@ -182,35 +197,3 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
     return result
 
 
-def _static_source(value: object, domain: Mapping[str, list[object]]) -> None:
-    if callable(value):
-        raise ValueError('Parallel rounds require static source parameters')
-    if isinstance(value, str):
-        if value in domain or any(field is not None for _, field, _, _ in Formatter().parse(value)):
-            raise ValueError('Parallel rounds reject parameter-dependent source declarations')
-    elif isinstance(value, Mapping):
-        for item in cast(Mapping[object, object], value).values():
-            _static_source(item, domain)
-    elif isinstance(value, (tuple, list)):
-        for item in cast(tuple[object, ...] | list[object], value):
-            _static_source(item, domain)
-
-
-def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> None:
-    from limen.experiment._parallel_resources import validate_resources
-
-    effective = dict(domain) | {key: [value] for key, value in (context or {}).items()}
-    if any(not values for values in effective.values()):
-        raise ValueError('Parallel rounds require nonempty parameter domains')
-    _ = encode(effective)
-    config = plan.manifest.backtest_config
-    sources = [plan.manifest.data_source_config, plan.manifest.test_data_source_config]
-    if config is not None:
-        sources.extend((config.execution_data_source, config.funding.data_source if config.funding is not None else None))
-    for source in sources:
-        if source is not None:
-            if not isinstance(source, DataSourceConfig):
-                raise ValueError('Parallel rounds require reconstructable declared sources')
-            _static_source(source.params, effective)
-    for candidate in product(*effective.values()):
-        validate_resources(plan, dict(zip(effective, candidate, strict=True)))

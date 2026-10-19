@@ -11,13 +11,13 @@ from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
+from limen.experiment._parallel_encoding import checkpoint_payload
 
 logger = logging.getLogger(__name__)
 
 
 class CheckpointManager:
 
-    '''Manage experiment checkpoints — save, load, and validate state.'''
 
     def __init__(self, *, checkpoint_interval: int = 1000) -> None:
 
@@ -102,7 +102,8 @@ class CheckpointManager:
              content_hash: str,
              feedback_controller: FeedbackController | None = None,
              pruning_strategies: list[PruningStrategy] | None = None,
-             failed_round_params: list[dict[str, object]] | None = None) -> None:
+             failed_round_params: list[dict[str, object]] | None = None,
+             parameter_encoding: int | None = None) -> None:
 
         '''
         NOTE: All state is written atomically to a single file via a
@@ -110,7 +111,6 @@ class CheckpointManager:
         until the new one is fully written.
 
         Args:
-            checkpoint_dir (Path): Directory to write checkpoint file
             msq (MSQ): MSQ instance to checkpoint
             domain (ParamDomain): ParamDomain instance to checkpoint
             current_round (int): Round number at checkpoint time
@@ -148,7 +148,7 @@ class CheckpointManager:
         if failed_round_params is not None:
             checkpoint['failed_round_params'] = failed_round_params
 
-        self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
+        self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint_payload(checkpoint, parameter_encoding))
 
         logger.info('Checkpoint saved at round %d → %s', current_round, checkpoint_dir)
 
@@ -156,10 +156,8 @@ class CheckpointManager:
     def load(self, checkpoint_dir: Path) -> dict[str, Any]:
 
         '''
-        Load checkpoint from checkpoint_dir.
 
         Args:
-            checkpoint_dir (Path): Directory containing checkpoint file
 
         Returns:
             dict: Keys 'metadata', 'msq_state', 'domain_state', and
@@ -186,7 +184,7 @@ class CheckpointManager:
                 f"Corrupt checkpoint in '{checkpoint_dir}': expected object, got {type(data).__name__}."
             )
 
-        return cast(dict[str, Any], data)
+        return checkpoint_payload(data, data.get('parameter_encoding'), restore=True)
 
 
     def validate(self,
@@ -199,7 +197,6 @@ class CheckpointManager:
         Validate a checkpoint's structure, content hash, and strategy type against the current configuration.
 
         Args:
-            checkpoint_dir (Path): Directory containing checkpoint file
             content_hash (str): Expected SHA-256 digest
             strategy_type (str): Expected strategy class name
 

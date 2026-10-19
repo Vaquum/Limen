@@ -819,7 +819,7 @@ class UniversalExperimentLoop:
             'msq': msq,
             'feedback_controller': feedback_controller,
             'checkpoint_manager': checkpoint_manager,
-            'content_hash': CheckpointManager.compute_content_hash(self.params),
+            'content_hash': _parallel.content_hash(self, self.params),
             'strategy_type': type(self._search_strategy).__name__,
             'csv_path': csv_path,
             'round_data_path': round_data_path,
@@ -997,7 +997,7 @@ class UniversalExperimentLoop:
                 'UniversalExperimentLoop Cannot write metadata: SFD module has no __name__ attribute. Trainer requires a reimportable SFD module.'
             )
 
-        metadata: dict[str, object] = _parallel.worker_metadata(self._workers, {
+        metadata: dict[str, object] = _parallel.worker_metadata(self, {
             'sfd_module': self._sfd_module_name,
             'limen_version': self._get_limen_version(),
             'created_at': datetime.now(timezone.utc).isoformat(), 'round_storage': _storage.FORMAT,
@@ -1060,6 +1060,7 @@ class UniversalExperimentLoop:
             feedback_controller=feedback_controller,
             pruning_strategies=pruning_strategies,
             failed_round_params=failed_round_params,
+            parameter_encoding=_parallel.checkpoint_encoding(self),
         )
 
 
@@ -1073,6 +1074,11 @@ class UniversalExperimentLoop:
                            round_index: int) -> None:
 
         '''Append one round's data to the JSONL file.'''
+
+        if self._workers > 1:
+            from limen.experiment._parallel_evidence import wire_record
+            _storage.append_record(round_data_path, project_record(wire_record(cast(Mapping[str, object], alignment['parallel_record']), legacy=_parallel.checkpoint_encoding(self) is None), self._recording))
+            return
 
         if self._walk_forward is not None:
             _storage.append_record(round_data_path, project_record(
@@ -1132,6 +1138,9 @@ class UniversalExperimentLoop:
         with _storage.open_text(round_data_path, limit=limit) as f:
             for raw_line in f:
                 entry = json.loads(raw_line)
+                if 'parameter_encoding' in entry:
+                    from limen.experiment._parallel_evidence import wire_record
+                    entry = wire_record(entry, restore=True)
                 if up_to_round is not None and entry.get('_round_index', 0) >= up_to_round:
                     break
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import cast
 
 from limen.experiment._acceptance_settings import prepare_pbo_settings
+from limen.experiment._parallel_evidence import project_record as project_record
 
 __all__: list[str] = []
 
@@ -91,17 +92,3 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
     return policy if has_search and directory is not None else None
 
 
-def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | None) -> dict[str, object]:
-    if policy is None or all(policy.values()):
-        return dict(record)
-    excluded = {field for setting, field in (
-        ('predictions', 'preds'), ('trade_ledger', 'trade_ledger'), ('fold_details', 'folds'), ('fold_details', 'fold_promotion'),
-    ) if not policy[setting]}
-    projected = {key: value for key, value in record.items() if key not in excluded}
-    for name, fields in (('alignment', ('missing_datetimes', 'test_datetimes')), ('trade_contract', ('signal_rows',))):
-        if not policy['alignment'] and name in projected:
-            projected[name] = {key: value for key, value in cast(Mapping[str, object], projected[name]).items() if key not in fields}
-    if 'folds' in projected:
-        projected['folds'] = [project_record(fold, policy)
-                              for fold in cast(list[Mapping[str, object]], projected['folds'])]
-    return projected

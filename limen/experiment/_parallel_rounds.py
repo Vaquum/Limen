@@ -22,6 +22,9 @@ from limen.experiment._dynamic_barriers import admit_research_run
 from limen.experiment._parallel_commit import ParallelCommit
 from limen.experiment._parallel_resume import restore_parallel
 from limen.experiment._parallel_sources import snapshot_sources
+from limen.experiment._parallel_plan import FrozenManifestPlan, legacy_metadata, plan_identity
+from limen.experiment._parallel_encoding import digest
+from limen.experiment._parallel_resources import validate_resources
 from limen.experiment._parallel_worker import FrozenRoundSources, RoundPayload, evaluate_round as _evaluate_round, freeze_sources, startup_limits, validate_parallel, worker_init
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.feedback_controller import FeedbackController
@@ -59,9 +62,11 @@ def admit_parallel(host: object, workers: int, prep_each_round: bool,
         raise ValueError('Parallel rounds require compiled YAML and an MSQ search strategy')
     if post_processing or factorize or (attributes['prep'], attributes['model']) != attributes['_manifest_functions']:
         raise ValueError('Parallel rounds reject post_processing, factorize and overridden prep/model')
-    validate_parallel(manifest, cast(dict[str, object], reference), strategy.domain.params, context_params)
+    plan = validate_parallel(manifest, cast(dict[str, object], reference), strategy.domain.params, context_params)
     if attributes['_parallel_sources'] is None:
         attributes['_parallel_sources'] = freeze_sources(manifest, cast(pl.DataFrame, attributes['data']))
+    sources = cast(FrozenRoundSources, attributes['_parallel_sources'])
+    attributes.update(_parallel_plan=plan, _parallel_identity=plan_identity(plan, (sources.learning, sources.execution, sources.funding)))
     attributes['_yaml_reference'] = copy.deepcopy(reference)
 
 
@@ -83,14 +88,27 @@ def begin_run(host: object, workers: int | None, prep_each_round: bool, resume: 
     admit_research_run(attributes['manifest'], effective, resume)
     admit_parallel(host, effective, prep_each_round, post_processing=post_processing,
                    factorize=factorize, context_params=context_params)
+    attributes['_parallel_legacy'] = bool(resume and effective > 1 and legacy_metadata(metadata))
     attributes.update(_workers=effective, _shutdown_requested=False)
     return cast(_RoundFunction | None, attributes['prep']), cast(_RoundFunction | None, attributes['model'])
 
 
-def worker_metadata(workers: int, metadata: dict[str, object], *, context_parameter_keys: list[str] | None = None) -> dict[str, object]:
+def worker_metadata(host: object, metadata: dict[str, object], *, context_parameter_keys: list[str] | None = None) -> dict[str, object]:
+    attributes = cast(dict[str, object], vars(host))
+    workers = cast(int, attributes['_workers'])
     if workers > 1:
         metadata.update(workers=workers, worker_native_threads=1, context_parameter_keys=context_parameter_keys or [])
+        metadata['parallel_plan'] = attributes['_parallel_identity']
     return metadata
+
+
+def checkpoint_encoding(host: object) -> int | None:
+    attributes = cast(dict[str, object], vars(host))
+    return 1 if cast(int, attributes['_workers']) > 1 and not attributes.get('_parallel_legacy') else None
+
+
+def content_hash(host: object, params: dict[str, object]) -> str:
+    return digest(params) if checkpoint_encoding(host) == 1 else CheckpointManager.compute_content_hash(params)
 
 
 def dispatch(host: object, components: dict[str, object], n_permutations: int,
@@ -126,13 +144,13 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                  progress_bar: bool) -> None:
     attributes = cast(dict[str, object], vars(host))
     sources = cast(FrozenRoundSources | None, attributes['_parallel_sources'])
-    reference = cast(dict[str, object] | None, attributes['_compiled_yaml'])
+    plan = cast(FrozenManifestPlan | None, attributes.get('_parallel_plan'))
     strategy = cast(SearchStrategy | None, attributes['_search_strategy'])
     directory = cast(Path | None, attributes['_experiment_dir'])
     workers = cast(int, attributes['_workers'])
     checkpoint_call = cast(Callable[..., None], getattr(host, '_checkpoint', None))
     feedback_call = cast(Callable[[MSQ, SearchStrategy, FeedbackController, int], list[dict[str, object]]], getattr(host, '_trigger_feedback', None))
-    if sources is None or reference is None or strategy is None:
+    if sources is None or plan is None or strategy is None:
         raise ValueError('Parallel rounds require admitted frozen inputs and compiled YAML')
     cast(Callable[[], None], getattr(host, '_register_shutdown_handler', None))()
     start = 0
@@ -174,7 +192,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         pool = ProcessPoolExecutor(max_workers=capacity,
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
-                                   initargs=(reference, snapshot, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None)))
+                                   initargs=(plan, snapshot, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None)))
         exhausted = False
         try:
             launch = cast(Callable[[], None], getattr(pool, '_launch_processes', None))
@@ -188,6 +206,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
                         exhausted = True
                         break
                     task = parameters | (context_params or {})
+                    validate_resources(plan, {key: value for key, value in task.items() if not key.startswith('_')})
                     if not vars(pool)['_processes']:
                         if os.name == 'posix':
                             previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, (signal.SIGINT, signal.SIGTERM))

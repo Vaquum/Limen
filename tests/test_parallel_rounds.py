@@ -30,6 +30,9 @@ from limen.backtest.trade_execution import trade_execution
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment.errors import StrictModeError
 from limen.experiment._parallel_worker import freeze_sources, startup_limits
+from limen.experiment._parallel_evidence import wire_record
+from limen.experiment._parallel_encoding import checkpoint_payload
+from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.manifest_core import MLManifest
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
@@ -124,7 +127,8 @@ def run_loop(config, directory, *, workers=None, resume=False, callback=None, co
 def records(directory, name='round_data.jsonl'):
     path = _storage.round_path(directory) if name == 'round_data.jsonl' else directory / name
     text = _storage.text(path) if name == 'round_data.jsonl' and path.exists() else path.read_text() if path.exists() else ''
-    return [json.loads(line) for line in text.splitlines()]
+    values = [json.loads(line) for line in text.splitlines()]
+    return [wire_record(value, restore=True) if 'parameter_encoding' in value else value for value in values]
 
 
 def _assert_same(actual, expected):
@@ -182,7 +186,16 @@ def assert_runs_equal(actual, expected):
     columns = [name for name in right.columns if name not in _TRANSIENT]
     assert_frame_equal(left.select(columns), right.select(columns), check_exact=False,
                        rel_tol=1e-10, abs_tol=1e-12)
-    _assert_same(records(actual), records(expected))
+    left_records, right_records = records(actual), records(expected)
+    for entry in [*left_records, *right_records]:
+        for key in ('parallel_plan', 'parallel_output', 'parameter_encoding'):
+            entry.pop(key, None)
+        if 'folds' in entry:
+            for fold in entry['folds']:
+                fold.pop('parallel_output', None)
+        else:
+            entry['alignment'].pop('test_datetimes', None)
+    _assert_same(left_records, right_records)
 
 
 def _controlled_round(function, params, marker_directory, mode):
@@ -517,7 +530,7 @@ def test_parallel_sigterm_restores_matching_prefix(tmp_path, parallel_campaigns,
             if process.poll() is None:
                 os.killpg(process.pid, signal.SIGKILL)
                 process.wait(timeout=10)
-    checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+    checkpoint = CheckpointManager().load(directory)
     prefix = checkpoint['metadata']['experiment_round'] + 1
     assert prefix == (3 if phase == 'final' else 0)
     assert assert_artifacts(directory).height == prefix
@@ -580,7 +593,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
                      record_execution=True, record_model_outputs=True, context_params=context_params,
                      recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     frame = assert_artifacts(directory)
-    checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+    checkpoint = CheckpointManager().load(directory)
     assert checkpoint['metadata']['experiment_round'] + 1 == frame.height
     if mode in ('fatal', 'dead'):
         assert frame.height in (0, 1)
@@ -603,7 +616,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         for name in ('missing_failures', 'missing_failure', 'changed_failure_id', 'changed_failure_params', 'missing_failure_params', 'missing_one_context', 'missing_one_context_without_argument', 'missing_all_context', 'missing_all_context_without_argument'):
             rejected = tmp_path / name
             shutil.copytree(directory, rejected)
-            saved = json.loads((rejected / 'checkpoint.json').read_text())
+            saved = CheckpointManager().load(rejected)
             if name == 'missing_failures':
                 saved.pop('failed_round_params')
             elif name == 'missing_failure':
@@ -619,7 +632,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
                     entry['round_params'].pop('context_tag')
             else:
                 saved['failed_round_params'][0]['round_params'].pop('C')
-            (rejected / 'checkpoint.json').write_text(json.dumps(saved))
+            (rejected / 'checkpoint.json').write_text(json.dumps(checkpoint_payload(saved, saved.get('parameter_encoding'))))
             before = {path.name: path.read_bytes() for path in rejected.iterdir() if path.is_file()}
             with pytest.raises(ValueError, match=r'failed|parameter|occurrence|record'):
                 run_loop(config, rejected, resume=True, context_params=None if name.endswith('_without_argument') else context_params)
@@ -660,7 +673,7 @@ def test_parallel_failure_prefix_and_recovery(tmp_path, mode):
         with (directory / 'results.csv').open(newline='') as stream:
             assert [row['context_tag'] for row in csv.DictReader(stream)] == ['002'] * 6
         assert [row['_round_index'] for row in records(directory)] == [3, 5]
-        checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+        checkpoint = CheckpointManager().load(directory)
         assert checkpoint['metadata']['experiment_round'] == 5
         assert [entry['_round_index'] for entry in checkpoint['failed_round_params']] == [0, 1, 2, 4]
         assert [entry['round_params']['A_tag'] for entry in checkpoint['failed_round_params']] == ['', None, '', '']

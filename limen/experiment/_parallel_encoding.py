@@ -10,7 +10,7 @@ from dataclasses import fields, is_dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
 from functools import cache, partial
-from importlib import import_module, metadata
+from importlib import import_module, metadata, util
 from io import BytesIO
 from pathlib import Path
 from typing import cast
@@ -21,16 +21,16 @@ VERSION = 1
 
 
 @cache
-def _distributions() -> dict[str, list[str]]:
+def _distributions() -> Mapping[str, list[str]]:
     return metadata.packages_distributions()
 
 
 def module_identity(name: str) -> list[object]:
-    spec = inspect.getmodule(import_module(name))
-    path = None if spec is None else spec.__file__
+    spec = util.find_spec(name)
+    path = None if spec is None else spec.origin
     if path is None:
         raise ValueError(f'Parallel import has no source file: {name}')
-    top = name.split('.')[0]
+    top = name.split('.', 1)[0]
     distributions = _distributions().get(top, []) if top not in ('limen', 'tests') else []
     return [name, hashlib.sha256(Path(path).read_bytes()).hexdigest(),
             [[name, metadata.version(name)] for name in sorted(distributions)]]
@@ -48,23 +48,32 @@ def reference(value: object) -> list[object]:
     return [module_identity(module), name]
 
 
-def encode(value: object, active: frozenset[int] = frozenset()) -> list[object]:
+_EMPTY_IDS: frozenset[int] = frozenset()
+
+
+def encode(value: object, active: frozenset[int] = _EMPTY_IDS) -> list[object]:
     if value is None:
-        return ['null']
-    if isinstance(value, str):
-        return ['str', str(value)]
-    if type(value) is bool:
-        return ['bool', value]
-    if type(value) is int:
-        return ['int', str(value)]
-    if type(value) is float:
-        if not math.isfinite(cast(float, value)):
+        node: list[object] = ['null']
+    elif isinstance(value, str):
+        node = ['str', str(value)]
+    elif type(value) is bool:
+        node = ['bool', value]
+    elif type(value) is int:
+        node = ['int', str(value)]
+    elif type(value) is float:
+        if not math.isfinite(value):
             raise ValueError('Parallel encoding rejects nonfinite numbers')
-        return ['float', cast(float, value).hex()]
-    if isinstance(value, (date, datetime)):
-        return [type(value).__name__, value.isoformat()]
-    if isinstance(value, Path):
-        return ['path', str(value)]
+        node = ['float', value.hex()]
+    elif isinstance(value, (date, datetime)):
+        node = [type(value).__name__, value.isoformat()]
+    elif isinstance(value, Path):
+        node = ['path', str(value)]
+    else:
+        node = _encode_composite(value, active)
+    return node
+
+
+def _encode_composite(value: object, active: frozenset[int]) -> list[object]:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
@@ -76,6 +85,10 @@ def encode(value: object, active: frozenset[int] = frozenset()) -> list[object]:
     if isinstance(value, (list, tuple)):
         return ['tuple' if isinstance(value, tuple) else 'list',
                 [encode(item, active) for item in cast(list[object] | tuple[object, ...], value)]]
+    return _encode_component(value, active)
+
+
+def _encode_component(value: object, active: frozenset[int]) -> list[object]:
     if isinstance(value, partial):
         return ['partial', encode(value.func, active), encode(value.args, active), encode(value.keywords, active)]
     if inspect.ismethod(value):
@@ -83,6 +96,9 @@ def encode(value: object, active: frozenset[int] = frozenset()) -> list[object]:
     if inspect.isfunction(value) or isinstance(value, type):
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, type):
+        names = {field.name for field in fields(value)}
+        if hasattr(value, '__dict__') and set(vars(value)) - names:
+            raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
                 [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)]]
     if callable(value) and hasattr(value, '__dict__'):
@@ -101,46 +117,57 @@ def _import(node: object) -> object:
     return value
 
 
+_ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
+          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'import': 2, 'partial': 4,
+          'method': 3, 'dataclass': 3, 'instance': 3}
+
+
 def decode(node: object) -> object:
     if not isinstance(node, list) or not node or not isinstance(node[0], str):
         raise ValueError('Invalid version1 parallel parameter encoding')
     parts = cast(list[object], node)
-    tag = parts[0]
-    if tag == 'null' and len(parts) == 1:
-        return None
-    if len(parts) < 2:
+    tag = cast(str, parts[0])
+    if tag not in _ARITY or len(parts) != _ARITY[tag]:
         raise ValueError('Invalid version1 parallel parameter payload')
-    value = parts[1]
-    if tag in ('str', 'bool') and type(value) is (str if tag == 'str' else bool):
-        return value
-    if tag in ('int', 'float') and isinstance(value, str):
+    if tag == 'null':
+        result: object = None
+    elif tag in ('str', 'bool') and type(parts[1]) is (str if tag == 'str' else bool):
+        result = parts[1]
+    elif tag in ('int', 'float') and isinstance(value := parts[1], str):
         result = int(value) if tag == 'int' else float.fromhex(value)
-        if encode(result) != parts:
-            raise ValueError('Noncanonical parallel number')
-        return result
-    if tag in ('date', 'datetime', 'path') and isinstance(value, str):
-        return date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
+    elif tag in ('date', 'datetime', 'path') and isinstance(value := parts[1], str):
+        result = date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
+    else:
+        result = _decode_composite(parts)
+    if encode(result) != parts:
+        raise ValueError('Noncanonical parallel parameter encoding')
+    return result
+
+
+def _decode_composite(parts: list[object]) -> object:
+    tag, value = parts[:2]
     if tag in ('list', 'tuple') and isinstance(value, list):
-        result = [decode(item) for item in cast(list[object], value)]
-        return tuple(result) if tag == 'tuple' else result
+        items = [decode(item) for item in cast(list[object], value)]
+        return tuple(items) if tag == 'tuple' else items
     if tag == 'map' and isinstance(value, list):
-        pairs = cast(list[list[object]], value)
-        result = {cast(str, pair[0]): decode(pair[1]) for pair in pairs}
-        if encode(result) != parts:
-            raise ValueError('Noncanonical parallel mapping')
-        return result
+        return {cast(str, pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
-    if tag == 'partial' and len(parts) == 4:
+    if tag == 'partial':
         return partial(cast(type, decode(value)), *cast(tuple[object, ...], decode(parts[2])),
                        **cast(dict[str, object], decode(parts[3])))
-    if tag == 'method' and len(parts) == 3:
+    if tag == 'method':
         return getattr(decode(value), cast(str, parts[2]))
-    if tag == 'dataclass' and len(parts) == 3:
-        return cast(type, _import(value))(**{cast(str, key): decode(item) for key, item in cast(list[list[object]], parts[2])})
-    if tag == 'instance' and len(parts) == 3:
-        instance = object.__new__(cast(type, _import(value)))
-        vars(instance).update(cast(dict[str, object], decode(parts[2])))
+    return _decode_instance(parts)
+
+
+def _decode_instance(parts: list[object]) -> object:
+    tag, value, state = parts
+    if tag == 'dataclass':
+        return cast(type, _import(value))(**{cast(str, key): decode(item) for key, item in cast(list[list[object]], state)})
+    if tag == 'instance':
+        instance: object = object.__new__(cast(type, _import(value)))
+        vars(instance).update(cast(dict[str, object], decode(state)))
         return instance
     raise ValueError('Invalid or unsupported version1 parallel parameter tag')
 
@@ -185,7 +212,7 @@ def parameter_matches(cell: str | None, value: object) -> bool:
         if type(value) is float:
             return float(cell) == value
         if isinstance(value, (list, tuple, dict)):
-            return encode(literal_eval(cell)) == encode(value)
+            return encode(literal_eval(cell)) == encode(cast(object, value))
     except (ValueError, SyntaxError, InvalidOperation) as exc:
         raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
     return cell == str(value)

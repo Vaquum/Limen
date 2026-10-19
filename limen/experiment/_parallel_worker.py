@@ -1,22 +1,25 @@
 from __future__ import annotations
 
 import os
+import copy
 import signal
 import time
 import traceback
 import warnings
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass, is_dataclass
+from dataclasses import dataclass
 from importlib import import_module
-from inspect import isfunction
 from pathlib import Path
-from string import Formatter
 from typing import Protocol, cast
 
 import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
+from limen.experiment._parallel_plan import FrozenManifestPlan, freeze_manifest, plan_identity
+from limen.experiment._parallel_encoding import digest
+from limen.experiment._parallel_evidence import round_record
+from limen.experiment._parallel_resources import backend_imports, validate_resources, validate_domain
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest, MLManifest
@@ -29,8 +32,6 @@ __all__ = ['FrozenRoundSources', 'RoundPayload', 'evaluate_round', 'freeze_sourc
 
 _THREAD_ENV = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'NUMEXPR_NUM_THREADS', 'POLARS_MAX_THREADS')
-_SCALER_FACTORIES = ('make_fitted_scaler.<locals>._factory',
-                     'MLManifest.set_scaler_from_params.<locals>._scaler_factory')
 
 
 @dataclass(frozen=True)
@@ -60,74 +61,17 @@ class _ThreadLimits(Protocol):
     def __exit__(self, exc_type: object, exc_value: object, traceback: object) -> object: ...
 
 
-def _shape(value: object) -> object:
-    if isfunction(value):
-        function = value
-        if function.__module__ == 'limen.experiment.manifest_core' and function.__qualname__ in _SCALER_FACTORIES:
-            return (function.__code__, _shape(function.__defaults__),
-                    _shape(tuple(cell.cell_contents for cell in function.__closure__ or ())))
-    if callable(value):
-        module, name = getattr(value, '__module__', ''), getattr(value, '__qualname__', '')
-        if not isinstance(module, str) or not module.startswith('limen.') or not isinstance(name, str) or '<' in name:
-            raise ValueError('Parallel rounds require reconstructable built-in pipeline callables')
-        resolved: object = import_module(module)
-        for part in name.split('.'):
-            resolved = getattr(resolved, part)
-        if resolved is not value:
-            raise ValueError('Parallel rounds require unchanged importable pipeline callables')
-        return value
-    if isinstance(value, Mapping):
-        return {key: _shape(item) for key, item in cast(Mapping[object, object], value).items()}
-    if isinstance(value, (tuple, list)):
-        return tuple(_shape(item) for item in cast(tuple[object, ...] | list[object], value))
-    if is_dataclass(value) and not isinstance(value, type):
-        return _shape(vars(value))
-    return value
-
-
-def _static_source(value: object, domain: Mapping[str, list[object]]) -> None:
-    if callable(value):
-        raise ValueError('Parallel rounds require static source parameters')
-    if isinstance(value, str):
-        if value in domain or any(field is not None for _, field, _, _ in Formatter().parse(value)):
-            raise ValueError('Parallel rounds reject parameter-dependent source declarations')
-    elif isinstance(value, Mapping):
-        for item in cast(Mapping[object, object], value).values():
-            _static_source(item, domain)
-    elif isinstance(value, (tuple, list)):
-        for item in cast(tuple[object, ...] | list[object], value):
-            _static_source(item, domain)
-
-
 def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
-                      domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> None:
-    from limen.yaml.compiler import build_manifest
-
+                      domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> FrozenManifestPlan:
     if type(manifest) is not MLManifest or manifest.architecture_function not in (logreg_binary, lightgbm_binary):
         raise ValueError('Parallel rounds require compiled CPU logreg_binary or lightgbm_binary')
-    rebuilt = build_manifest(dict(yaml_reference))
-    if _shape(vars(manifest)) != _shape(vars(rebuilt)):
-        raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
-    effective = {key: list(values) for key, values in domain.items()}
-    effective.update({key: [value] for key, value in (context or {}).items()})
-    if any(not values for values in effective.values()):
-        raise ValueError('Parallel rounds require nonempty parameter domains')
-    _ = _shape(effective)
-    jobs = effective.get('n_jobs', [manifest.resolve_model_kwargs({})['n_jobs']])
-    if any(type(value) is not int or value != 1 for value in jobs):
-        raise ValueError('Parallel rounds require effective n_jobs=1 for every admitted round')
+    effective = dict(domain) | {key: [value] for key, value in (context or {}).items()}
     devices = effective.get('device_type', effective.get('device', ['cpu']))
     if any(value != 'cpu' for value in devices):
         raise ValueError('Parallel rounds require the CPU backend')
-    sources: list[object] = [manifest.data_source_config]
-    config = manifest.backtest_config
-    if config is not None:
-        sources.extend((config.execution_data_source, config.funding.data_source if config.funding is not None else None))
-    for source in sources:
-        if source is not None:
-            if not isinstance(source, DataSourceConfig):
-                raise ValueError('Parallel rounds require reconstructable declared sources')
-            _static_source(source.params, effective)
+    plan = freeze_manifest(manifest, yaml_reference)
+    validate_domain(plan, domain, context)
+    return plan
 
 
 def freeze_sources(manifest: Manifest, learning: pl.DataFrame) -> FrozenRoundSources:
@@ -160,11 +104,12 @@ def startup_limits() -> Iterator[None]:
                 os.environ[key] = value
 
 
-_worker_yaml: dict[str, object] | None = None
+_worker_plan: FrozenManifestPlan | None = None
 _worker_sources: FrozenRoundSources | None = None
 _worker_record_execution = False
 _worker_record_model_outputs = False
 _worker_fold_promotion: dict[str, object] | None = None
+_worker_identity: dict[str, object] = {}
 
 
 def _native_pools() -> list[dict[str, object]]:
@@ -175,11 +120,9 @@ def _native_pools() -> list[dict[str, object]]:
     return pools
 
 
-def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
+def worker_init(plan: FrozenManifestPlan, sources: SourceSnapshot,
                 record_execution: bool, record_model_outputs: bool, fold_promotion: dict[str, object] | None = None) -> None:
-    from limen.yaml.compiler import build_manifest
-
-    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion
+    global _worker_plan, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion, _worker_identity
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
     _ = signal.signal(signal.SIGTERM, signal.SIG_DFL)
     if os.name == 'posix':
@@ -187,21 +130,23 @@ def worker_init(yaml_reference: dict[str, object], sources: SourceSnapshot,
         _ = signal.pthread_sigmask(signal.SIG_UNBLOCK, (signal.SIGINT, signal.SIGTERM))
     if any(os.environ.get(key) != '1' for key in _THREAD_ENV):
         raise ValueError('Parallel worker startup limits were not applied before imports')
-    manifest = build_manifest(yaml_reference)
-    if manifest.architecture_function is lightgbm_binary:
-        _ = import_module('lightgbm')
-    _ = _native_pools()
+    if digest(plan.manifest) != plan.pipeline_digest:
+        raise ValueError('Parallel worker pipeline import identity changed')
+    for name in backend_imports(plan):
+        _ = import_module(name)
+    limit = cast(Callable[..., _ThreadLimits], vars(import_module('threadpoolctl'))['threadpool_limits'])
+    with limit(limits=1):
+        _ = _native_pools()
     restored = FrozenRoundSources(sources.learning.read(),
                                         sources.execution.read() if sources.execution is not None else None,
                                         sources.funding.read() if sources.funding is not None else None)
-    _worker_yaml, _worker_sources = yaml_reference, restored
+    _worker_plan, _worker_sources = plan, restored
+    _worker_identity = plan_identity(plan, (restored.learning, restored.execution, restored.funding))
     _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion = record_execution, record_model_outputs, fold_promotion
 
 
 def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
-    from limen.yaml.compiler import build_manifest
-
-    if _worker_yaml is None or _worker_sources is None:
+    if _worker_plan is None or _worker_sources is None:
         raise RuntimeError('Parallel worker initializer has not completed')
     started = time.perf_counter_ns()
     params = {key: value for key, value in round_params.items() if not key.startswith('_')}
@@ -213,10 +158,9 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
     try:
         with limit(limits=1), warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
-            manifest = build_manifest(_worker_yaml)
-            jobs = manifest.resolve_model_kwargs(params)['n_jobs']
-            if type(jobs) is not int or jobs != 1:
-                raise ValueError('Parallel round requires effective n_jobs=1')
+            manifest = copy.deepcopy(_worker_plan.manifest)
+            validate_resources(_worker_plan, params)
+            _ = _native_pools()
             vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
             folds = None
             if manifest.split_walk_forward is None:
@@ -226,6 +170,13 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
                 data = folds.prepare(_worker_sources.learning, params)
             data['_record_execution'] = _worker_record_execution
             data['_record_model_outputs'] = _worker_record_model_outputs
+            count = 0
+            if folds is None:
+                test = data['test']
+                if not isinstance(test, pl.DataFrame):
+                    raise ValueError('Parallel round requires independently prepared test rows')
+                count = test.height
+                cast(dict[str, object], data['_alignment'])['test_datetimes'] = test['datetime'].to_list()
             if folds is None:
                 results = cast(dict[str, object], manifest.run_model(data, params))
             else:
@@ -235,6 +186,9 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
                 raise ValueError('Parallel round requires recorded alignment evidence')
             alignment = {key: value for key, value in cast(dict[str, object], raw_alignment).items()
                          if not key.startswith('_')}
+            contract = next(stage.contract for stage in _worker_plan.stages if stage.path == 'architecture')
+            alignment['parallel_record'] = round_record(round_params, params, results, alignment, _worker_identity, contract,
+                count=count, execution=_worker_record_execution, outputs=_worker_record_model_outputs)
             for key in ('_model', 'models', 'extras'):
                 _ = results.pop(key, None)
             pools = _native_pools()

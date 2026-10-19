@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Literal, cast
+from typing import Literal, Protocol, cast
 
 
 @dataclass(frozen=True)
@@ -15,10 +15,14 @@ class ParallelRoundContract:
     probabilities: bool = False
 
 
+class _Declared(Protocol):
+    __parallel_round_contract__: ParallelRoundContract
+
+
 def declare_parallel(component: object, contract: ParallelRoundContract) -> None:
-    if not callable(component) or not isinstance(contract, ParallelRoundContract):
+    if not callable(component):
         raise TypeError('Parallel declarations require a callable and ParallelRoundContract')
-    setattr(component, '__parallel_round_contract__', contract)
+    cast(_Declared, component).__parallel_round_contract__ = contract
 
 
 def _validate(name: str, params: Mapping[str, object]) -> None:
