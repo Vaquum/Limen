@@ -1,6 +1,7 @@
 import copy
 from datetime import date
 import math
+import numpy as np
 from unittest.mock import patch
 from types import SimpleNamespace
 
@@ -156,6 +157,23 @@ def test_parallel_reuses_frozen_campaign_fingerprint(fold_campaigns):
     with patch.object(evidence, 'source', side_effect=AssertionError('original source rehashed in worker')):
         copied = evidence.start(item.sensor._get_manifest(), item.bars, campaign)
     assert copied == campaign and copied is not campaign
+
+
+def test_fitted_float32_predictions_keep_numeric_row_parity(fold_campaigns):
+    from limen.inference._fold_metrics import stable_model
+
+    item = fold_campaigns['continuous']
+    sensor = item.sensor
+    prepared, _ = sensor._get_manifest().sensor_input_prep(item.history.head(600), sensor._fitted_params, sensor.round_params)
+    inputs = prepared.drop('datetime').drop_nulls().to_numpy()
+    weights = sensor._model.model.coef_.astype(np.float32)
+    bias = np.float32(sensor._model.model.intercept_)
+
+    class Float32Model(type(sensor._model)):
+        def predict(self, data):
+            return {'_preds': np.asarray(data['x_test'], dtype=np.float32) @ weights + bias}
+
+    stable_model(Float32Model(), {'x_train': inputs[:200], 'x_val': inputs[200:300], 'x_test': inputs[300:]})
 
 
 def test_fold_fingerprint_codec(fold_campaigns):

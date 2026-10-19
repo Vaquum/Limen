@@ -55,6 +55,7 @@ def stable_model(model: ReferenceModel, data: Mapping[str, object]) -> None:
     if not len(inputs):
         raise ValueError('No retained inputs for native inference stability validation')
     batch = model.predict({'x_test': inputs})
+    repeated = model.predict({'x_test': inputs})
     preds = np.asarray(batch.get('_preds'), dtype=float).reshape(-1)
     if len(preds) != len(inputs) or not np.isfinite(preds).all():
         raise ValueError('Native inference requires one finite scalar prediction per retained input')
@@ -68,12 +69,12 @@ def stable_model(model: ReferenceModel, data: Mapping[str, object]) -> None:
                 raise ValueError('Declared inference probability is absent or outside [0, 1]')
     indices = sorted({0, len(inputs) // 2, len(inputs) - 1})
     sample = inputs[indices]
-    first, repeated = model.predict({'x_test': sample}), model.predict({'x_test': sample})
+    first = model.predict({'x_test': sample})
     rows = [model.predict({'x_test': row.reshape(1, -1)}) for row in sample]
     for key in ('_preds', '_probs'):
-        if first.get(key) is None and repeated.get(key) is None and all(row.get(key) is None for row in rows):
+        if batch.get(key) is None and first.get(key) is None and repeated.get(key) is None and all(row.get(key) is None for row in rows):
             continue
         values = np.asarray(first.get(key), dtype=float).reshape(-1)
         singles = np.concatenate([np.asarray(row.get(key), dtype=float).reshape(-1) for row in rows])
-        if not np.array_equal(values, np.asarray(repeated.get(key)).reshape(-1), equal_nan=True) or not np.allclose(values, singles, rtol=0, atol=1e-12) or not np.allclose(values, np.asarray(batch[key])[indices], rtol=0, atol=1e-12):
+        if not np.array_equal(np.asarray(batch.get(key)).reshape(-1), np.asarray(repeated.get(key)).reshape(-1), equal_nan=True) or not np.allclose(values, singles, rtol=_ABSOLUTE_TOLERANCE, atol=_ABSOLUTE_TOLERANCE) or not np.allclose(values, np.asarray(batch[key])[indices], rtol=_ABSOLUTE_TOLERANCE, atol=_ABSOLUTE_TOLERANCE):
             raise ValueError('Native inference is not stable across repeated, row and batch predictions')
