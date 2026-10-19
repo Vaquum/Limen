@@ -834,6 +834,15 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    from array import array
+    class OpaqueNativePolicy(array):
+        def adjust(self, values):
+            return np.clip(values + self[0], 0, 1)
+    mapped._model.policy = OpaqueNativePolicy('d', [expected_offset])
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='opaque native prediction state'):
+            _freeze(mapped)
+        assert loader.call_count == 0
     class ModuleLookup(LogRegBinary):
         def predict(self, data):
             import limen.calibration as helpers

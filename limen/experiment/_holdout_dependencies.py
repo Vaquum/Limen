@@ -105,7 +105,7 @@ def fitted_witness(value: object) -> bytes:
             result = ('method', node(item.__func__), node(item.__self__))
         elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
-        elif isinstance(item, logging.Logger):
+        elif type(item) is logging.Logger:
             result = ('logger', item.name)
         elif inspect.isbuiltin(item):
             owner = getattr(item, '__self__', None)
@@ -134,6 +134,8 @@ def fitted_witness(value: object) -> bytes:
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
         elif hasattr(item, '__dict__') or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
+            if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in type(item).__mro__):
+                raise ValueError('Holdout refuses opaque native prediction state')
             result = (kind, node(_attributes(item)))
         else:
             result = (kind, pickle.dumps(item, protocol=5))
@@ -171,7 +173,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 visit(part)
             if type(provider) is not partial:
                 objects.append(provider)
-                methods(provider)
         elif inspect.isfunction(value):
             evidence.append(function_witness(value))
             if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
@@ -241,13 +242,11 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(_attributes(value))
             if type(value) is not np.ndarray:
                 objects.append(value)
-                methods(value)
         elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray and not _booster(value):
             if isinstance(value, type) and type(value) is not type:
                 visit(type(value))
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
                 objects.append(value)
-                methods(value)
             if not isinstance(value, type):
                 for part in children(value):
                     visit(part)
