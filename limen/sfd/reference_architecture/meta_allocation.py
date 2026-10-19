@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from copy import deepcopy
 from typing import ClassVar, Literal, Protocol, cast
 from importlib import import_module
 
@@ -66,6 +67,7 @@ class MetaAllocationModel(ReferenceModel):
         self.primary = fit_primary(context.manifest, data, context.round_params)
         self._fit(labels, params, cast(int, minimum), cast(int, seed))
         self.batch_digests = {name: batch.digest() for name, batch in context.batches.items()}
+        self.batch_outputs = {name: self._compose(batch) for name, batch in context.batches.items()}
         self.learning_binding = {'architecture': component_identity(meta_allocation), 'primary': component_identity(vars(context.manifest)['architecture_function']),
                                  'primary_params': json_value(primary_parameters(context.manifest, context.round_params)), 'training': json_value(labels.binding),
                                  'probability_factory': component_identity(self.probability_factory), 'sizing_factory': component_identity(self.sizing_factory),
@@ -123,6 +125,9 @@ class MetaAllocationModel(ReferenceModel):
         batch = data.get('allocation_batch')
         if not isinstance(batch, AllocationBatch) or self.batch_digests.get(batch.batch_id) != batch.digest():
             raise ValueError('Allocation prediction requires its complete original bound batch')
+        return deepcopy(self.batch_outputs[batch.batch_id])
+
+    def _compose(self, batch: AllocationBatch) -> dict[str, object]:
         primary = self.primary.predict(dict(batch.primary_inputs))
         decisions = np.asarray(primary['_preds'], dtype=np.float64)
         if decisions.shape != (len(batch.row_ids),) or not np.isin(decisions, [0, 1]).all():

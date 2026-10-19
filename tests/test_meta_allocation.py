@@ -13,6 +13,17 @@ from limen.yaml import CompiledSFD, validate
 from tests.test_dynamic_barriers import FIXTURE, _yaml
 
 
+def recorded_primary(data, **params):
+    from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
+    assert not any(key.startswith(('_trade', '_allocation')) for key in data)
+    assert not data['_alignment']
+    assert 'price_data_for_backtest' not in data
+    assert data['x_test'].equals(data['x_val'])
+    assert data['y_test'].equals(data['y_val'])
+    assert 'risk_span' not in params
+    return lightgbm_binary(data, **params)
+
+
 def _config(ml=False):
     config = _yaml()
     declared = config['sfd']['manifest']
@@ -122,6 +133,10 @@ def test_yaml_cli_allocation_contract(tmp_path):
 
     config = _config()
     assert validate(config).valid
+    for malformed in (123, [], 'invalid'):
+        invalid = deepcopy(config)
+        invalid['sfd']['manifest']['allocation'] = malformed
+        assert not validate(invalid).valid
     path = tmp_path / 'allocation.yaml'
     with path.open('w') as stream:
         YAML().dump(config, stream)
@@ -194,3 +209,15 @@ def test_crash_reversal_declared_clock_preserves_nonterminal_prefixes():
         assert prefix[column].equals(configured[column].head(end))
     with pytest.raises(ValueError, match='verified regular'):
         dollar_bar_crash_reversal(raw, -575, -0.5, 60, bar_interval_seconds=900)
+
+
+def test_primary_fitting_excludes_later_batch_evidence():
+    from unittest.mock import patch
+    manifest, raw, params, _ = _prepared(True)
+    manifest.with_reference_architecture(recorded_primary)
+    data = manifest.prepare_data(raw, params)
+    model = manifest.run_model(data, params)['_model']
+    batch = data['_allocation_batches']['test']
+    expected = model.predict({'allocation_batch': batch})['_preds']
+    with patch.object(model.primary, 'predict', side_effect=AssertionError('Bound batch must not reevaluate a mutable primary')):
+        np.testing.assert_array_equal(model.predict({'allocation_batch': batch})['_preds'], expected)

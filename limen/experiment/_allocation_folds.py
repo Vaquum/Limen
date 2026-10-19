@@ -35,8 +35,10 @@ def fit_primary(manifest: object, data: Mapping[str, object], params: Mapping[st
     primary = deepcopy(manifest)
     primary.allocation_config = None
     primary.backtest_config = None
-    fitted_data = {key: value for key, value in data.items() if not key.startswith('_trade') and key not in ('trade_contract', 'trade_contract_digest', 'price_data_for_backtest')}
-    fitted_data.update(_record_execution=False, _record_model_outputs=False)
+    keys = ('x_train', 'y_train', 'x_val', 'y_val') if isinstance(manifest, MLManifest) else ('train', 'val', 'strategy')
+    fitted_data = {key: data[key] for key in keys}
+    fitted_data.update(cast(Mapping[str, object], data.get('_fitted_params', {})))
+    fitted_data.update(_alignment={}, _record_execution=False, _record_model_outputs=False)
     if isinstance(manifest, MLManifest):
         fitted_data.update(x_test=data['x_val'], y_test=data['y_val'])
     else:
@@ -134,7 +136,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
         membership = frame['datetime'].dt.epoch('ns').to_list()
         bindings.append({'block': block_id, 'start_ns': block_start, 'end_ns': block_end,
                          'fit_prefix_rows': start - 1 if isinstance(manifest, MLManifest) else 0,
-                         'target': target_binding, 'member_count': len(membership), 'membership_digest': contract_digest({'members': membership}),
+                         'target': json_value(target_binding), 'member_count': len(membership), 'membership_digest': contract_digest({'members': membership}),
                          'primary_digest': contract_digest({'predictions': decisions.tolist()}),
                          'features': source_binding(meta, f'fold:{block_id}', block_start, block_end, 1, 'causal_oof_primary_features').checksum})
         for local, decision in enumerate(decisions):
