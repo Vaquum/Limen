@@ -4,6 +4,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from statistics import mean
+from sys import float_info
 from typing import Generic, Literal, cast
 from uuid import uuid4
 
@@ -18,6 +19,8 @@ Pair = tuple[int | float | None, float | None]
 Aggregate = Literal['mean', 'vote'] | Callable[[Sequence[BarPrediction]], Pair]
 CohortMap = Callable[[Sensor, BarPrediction], Pair]
 CohortPrepare = Callable[[HistoryT, Sensor], object]
+_MEAN_PAIR_SIZE = 2
+_HALF_FLOAT_MAX = float_info.max / 2
 _PRIORITY: dict[PredictionReason, int] = {'warm-up': 0, 'null-features': 1, 'sensor-error': 2, 'inside-training-window': 3}
 
 
@@ -130,6 +133,15 @@ def _member_predictions(member: Sensor, prepared: object, label: str) -> tuple[B
     return _snapshot(member.predict_all(prepared), label)
 
 
+def _mean(values: Sequence[int | float]) -> int | float:
+    if len(values) == _MEAN_PAIR_SIZE:
+        a, b = values
+        if type(a) is float and type(b) is float and abs(a) <= _HALF_FLOAT_MAX and abs(b) <= _HALF_FLOAT_MAX:
+            total = a + b
+            return total / 2 if total else 0.0
+    return mean(values)
+
+
 def _builtin(aggregate: Literal['mean', 'vote'], bars: Sequence[BarPrediction]) -> Pair:
     predictions = [cast(int | float, bar.prediction) for bar in bars]
     if aggregate == 'vote':
@@ -138,8 +150,8 @@ def _builtin(aggregate: Literal['mean', 'vote'], bars: Sequence[BarPrediction]) 
         return int(sum(predictions) > len(predictions) / 2), None
     if len(bars) == 1:
         return bars[0].prediction, bars[0].probability
-    probability = mean([cast(float, bar.probability) for bar in bars]) if all(bar.probability is not None for bar in bars) else None
-    return mean(predictions), probability
+    probability = float(_mean([cast(float, bar.probability) for bar in bars])) if all(bar.probability is not None for bar in bars) else None
+    return _mean(predictions), probability
 
 
 @dataclass(frozen=True, eq=False)

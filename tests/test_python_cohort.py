@@ -1,6 +1,9 @@
 from dataclasses import FrozenInstanceError, replace
 from datetime import datetime, timedelta, timezone
+from math import ulp
 from pathlib import Path
+from statistics import mean
+from sys import float_info
 from unittest.mock import patch
 from uuid import UUID, uuid4
 
@@ -66,6 +69,25 @@ def test_python_cohort_defaults_and_identity(recorded):
     assert cohort.predict_all(recorded) == rows
     single = Cohort.from_python([first])
     assert single(recorded) == first(recorded)
+    tiny = ulp(0.0)
+    for values in (
+        (0.1, 0.2), (-0.0, -0.0), (tiny, -tiny), (-tiny, 0.0),
+        (3 * tiny, 0.0), (float_info.max / 2, float_info.max / 2),
+        (-float_info.max / 2, -float_info.max / 2),
+        (float_info.max, float_info.max), (float_info.max, -float_info.max),
+        (10**400, 10**400), (2**60, 2**60 + 2), (2**60, 1.0),
+        (1.0, 1.0, 1.000000000000001),
+    ):
+        members = [_sensor(metadata.head(1), [(value, None)]) for value in values]
+        prediction = Cohort.from_python(members).predict(recorded).prediction
+        expected = mean(values)
+        assert type(prediction) is type(expected) and prediction == expected
+        if isinstance(expected, float):
+            assert prediction.hex() == expected.hex()
+    for probabilities in ((0.1, 0.2), (-0.0, -0.0), (tiny, 0.0)):
+        members = [_sensor(metadata.head(1), [(1.0, value)]) for value in probabilities]
+        probability = Cohort.from_python(members).predict(recorded).probability
+        assert probability.hex() == mean(probabilities).hex()
     for name in ('members', 'state_id', 'selection_cutoff', 'manifest_id', 'cohort_id'):
         with pytest.raises(FrozenInstanceError):
             setattr(cohort, name, None)
