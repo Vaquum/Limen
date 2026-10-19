@@ -2,6 +2,10 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
+## [5.41.0] - 2026-10-19
+
+- Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.
+
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds

@@ -163,6 +163,7 @@ _worker_yaml: dict[str, object] | None = None
 _worker_sources: FrozenRoundSources | None = None
 _worker_record_execution = False
 _worker_record_model_outputs = False
+_worker_fold_details = False
 
 
 def _native_pools() -> list[dict[str, object]]:
@@ -174,10 +175,10 @@ def _native_pools() -> list[dict[str, object]]:
 
 
 def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
-                record_execution: bool, record_model_outputs: bool) -> None:
+                record_execution: bool, record_model_outputs: bool, fold_details: bool = False) -> None:
     from limen.yaml.compiler import build_manifest
 
-    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs
+    global _worker_yaml, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_details
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
     _ = signal.signal(signal.SIGTERM, signal.SIG_DFL)
     if os.name == 'posix':
@@ -191,6 +192,7 @@ def worker_init(yaml_reference: dict[str, object], sources: FrozenRoundSources,
     _ = _native_pools()
     _worker_yaml, _worker_sources = yaml_reference, sources
     _worker_record_execution, _worker_record_model_outputs = record_execution, record_model_outputs
+    _worker_fold_details = fold_details
 
 
 def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
@@ -217,7 +219,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
             if manifest.split_walk_forward is None:
                 data = cast(dict[str, object], manifest.prepare_data(_worker_sources.learning, params))
             else:
-                folds = WalkForwardRun(manifest, _worker_sources.learning, Path('.'))
+                folds = WalkForwardRun(manifest, _worker_sources.learning, Path('.'), promotion=_worker_fold_details)
                 data = folds.prepare(_worker_sources.learning, params)
             data['_record_execution'] = _worker_record_execution
             data['_record_model_outputs'] = _worker_record_model_outputs

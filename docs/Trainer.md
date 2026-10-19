@@ -312,3 +312,11 @@ The operating model is:
 - Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run layer that produces result directories.
 
 See [Reserve and assess final observations](Final-Holdout.md) for project research exclusion, frozen fitted-selection assessment, retained scenario evidence and the limits of local exposure history.
+
+## Recorded walk-forward folds
+
+Use `Trainer(directory, data=recorded_source).train([permutation_id], fold=3)` to refit and validate an explicitly selected zero-based fold. The same fold applies to every requested ID. The campaign must have retained `uel.recording.fold_details: true` and version 1 promotion witnesses. Historical lean records cannot be backfilled. Pin hosted source bounds or supply the original data; reconstruction rejects changed source values, selector output, split geometry, validation ratios, retained membership, exact bindings and selected fold metrics. It never validates against aggregate results.csv.
+
+This is a validated refit, not restoration of saved weights. Optional recorded prediction vectors are observations, not a promise of identical historical stochastic weights. Native prediction must be stable across repeated and row/batch calls. Model output meaning comes from the optional immutable class declaration `inference_output = ('binary', True)`, `('continuous', False)` or `('target_exposure', False)`; unknown meaning still permits stable scalar Sensor inference. Necessary missing model, clock or row-membership evidence fails visibly.
+
+The returned Sensor exposes read-only `fold`, `n_folds`, `provenance_digest`, `fitting_cutoff`, `selection_cutoff` and a deep-copied `fold_provenance`. The selection cutoff is the maximum timestamp in the original campaign source plus its native interval, covering competitors and selector information. Every earlier timestamp is guarded, including gaps and warm-up rows. Native input requires ordered unique nonnull UTC timestamps on the recorded grid; whole missing bars are allowed. Invalid clocks fail before inference recovery. Formed-bar failures preserve the actual formed decision clock once established. Ordinary and Python inference retain their contracts. Fold composition remains unavailable through legacy Cohort and Cohort.from_python; qualified compiled composition is a separate slice.

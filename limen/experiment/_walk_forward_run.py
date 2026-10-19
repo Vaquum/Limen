@@ -1,5 +1,5 @@
-from limen.experiment._holdout_research import prepare_walk_forward
 import limen.experiment._round_storage as _storage
+import limen.experiment._fold_evidence as _promotion
 import copy
 import json
 import math
@@ -122,11 +122,12 @@ def _average(records: list[dict[str, object]]) -> dict[str, object]:
 
 
 class WalkForwardRun:
-    def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path) -> None:
+    def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path, *, promotion: bool = False) -> None:
         super().__init__()
         if not isinstance(manifest.split_walk_forward, WalkForwardConfig):
             raise ValueError('split_walk_forward requires its manifest configuration')
         self.manifest, self.raw, self.config = manifest, raw, manifest.split_walk_forward
+        self.promotion = _promotion.start(manifest, raw, promotion)
         if manifest.pre_split_data_selector is None:
             self._preflight(raw, require_validation=isinstance(manifest, MLManifest) and manifest.objective is not None)
         self.writer = TrialReturnsWriter(directory)
@@ -143,7 +144,7 @@ class WalkForwardRun:
         return pl.DataFrame(self.rows, infer_schema_length=None) if self.rows else pl.DataFrame()
 
     def prepare(self, raw: pl.DataFrame, round_params: Mapping[str, object] | None = None) -> dict[str, object]:
-        return prepare_walk_forward(self, raw, round_params, _resolve_params, _requires_fold_validation)
+        return _promotion.prepare(self, raw, round_params, _resolve_params, _requires_fold_validation)
 
     def evaluate(self, data: dict[str, object], round_params: dict[str, object]) -> dict[str, object]:
         raw = data.get('_walk_forward_raw')
@@ -154,14 +155,15 @@ class WalkForwardRun:
             manifest = copy.deepcopy(self.manifest)
             vars(manifest)['_walk_forward_fold'] = fold
             manifest.pre_split_data_selector = None
+            _promotion.configure(manifest, data, fold)
             prepared = manifest.prepare_data(raw, dict(round_params))
             prepared['_record_execution'] = True
             prepared['_record_model_outputs'] = bool(data.get('_record_model_outputs'))
             result = manifest.run_model(prepared, dict(round_params))
-            records.append(_fold_record(fold, prepared, result,
+            records.append(_promotion.record(_fold_record, fold, prepared, result,
                                        record_execution=bool(data.get('_record_execution')),
                                        record_outputs=bool(data.get('_record_model_outputs'))))
-        data['_alignment'] = {'folds': records}
+        data['_alignment'] = {'folds': records, **({'fold_promotion': data['_fold_trial']} if '_fold_trial' in data else {})}
         return _average(records)
 
     def accept(self, trial: object, data: Mapping[str, object]) -> None:

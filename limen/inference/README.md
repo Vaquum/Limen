@@ -49,3 +49,5 @@ inference/
 
 - [Trainer](../../docs/Trainer.md)
 - [Single-File Decoder](../../docs/Single-File-Decoder.md)
+
+Recorded walk-forward promotion uses `Trainer(directory).train(ids, fold=k)`. It requires original source and versioned opt-in fold evidence, performs a validated refit, and guards the entire campaign history. See the canonical [Trainer contract](../../docs/Trainer.md#recorded-walk-forward-folds).

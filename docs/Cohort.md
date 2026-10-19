@@ -544,3 +544,5 @@ source/bar compatibility and every member's guards still apply.
 - [Reference Architecture](Reference-Architecture.md) for model output conventions
 
 See [Reserve and assess final observations](Final-Holdout.md) for project research exclusion, frozen fitted-selection assessment, retained scenario evidence and the limits of local exposure history.
+
+Fold-bearing compiled Sensors require qualified fold selection. Legacy `set_members`, ordinary round binding and `Cohort.from_python` reject them so a two-part trial identity cannot discard fold provenance or its campaign cutoff. See [Trainer](Trainer.md#recorded-walk-forward-folds).

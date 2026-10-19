@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from limen.inference import _fold_sensor
 from collections.abc import Mapping, Sequence
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract
@@ -40,6 +41,7 @@ class Sensor:
 
         super().__init__()
 
+        _fold_sensor.reject_manual(yaml_reference, self)
         self._yaml_reference = copy.deepcopy(yaml_reference)
         self._model = model
         self._fitted_params = dict(fitted_params)
@@ -98,6 +100,9 @@ class Sensor:
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
         '''Predict the last bar; distinguish unavailable data from flat and report per-bar failures.'''
+
+        if hasattr(self, '_fold_context'):
+            return self.predict_all(raw_klines)[-1] if len(raw_klines) else BarPrediction(None, None, None, 'warm-up')
 
         manifest = self._get_manifest()
         decoder_lookback = getattr(manifest, 'decoder_lookback', 1)
@@ -171,6 +176,7 @@ class Sensor:
         if decoder_lookback > 1:
             raise NotImplementedError('Sensor predict_all does not yet support decoder_lookback > 1')
 
+        _fold_sensor.begin(self, manifest, raw_klines)
         n_fallback = len(raw_klines)
         try:
             data, indicator_lookback = manifest.sensor_input_prep(
@@ -242,49 +248,14 @@ class Sensor:
         # failure degrades to sensor-error results.
         except Exception as e:  # noqa: BLE001
             logger.warning('Sensor predict_all failed (permutation_id=%s): %s', self.permutation_id, e, exc_info=True)
-            return [
-                BarPrediction(datetime=None, prediction=None, probability=None, reason='sensor-error')
-                for _ in range(n_fallback)
-            ]
+            return _fold_sensor.recover(self, manifest, e, n_fallback)
 
 
-    def _last_bar_inside_training_window(self,
-                                         dt: Any,
-                                         manifest: Any) -> bool:
+    def _last_bar_inside_training_window(self, dt: object, manifest: object) -> bool:
+        return _fold_sensor.last_inside(self, dt, manifest)
 
-        if manifest.split_dates is None or dt is None:
-            return False
-        train_start, _, val_start, val_end, test_start, test_end = manifest.split_dates
-        dt_date = dt.date() if hasattr(dt, 'date') else dt
-        masked = train_start <= dt_date < test_end
-        if masked and manifest.val_predict_guard is False and val_start <= dt_date < val_end:
-            masked = False
-        if masked and manifest.test_predict_guard is False and test_start <= dt_date < test_end:
-            masked = False
-        return masked
-
-
-    def _inside_training_window_mask(self,
-                                     data: pl.DataFrame,
-                                     manifest: Any) -> list[bool]:
-
-        if manifest.split_dates is None or 'datetime' not in data.columns:
-            return [False] * len(data)
-        train_start, _, val_start, val_end, test_start, test_end = manifest.split_dates
-        result: list[bool] = []
-        for dt in data['datetime'].to_list():
-            if dt is None:
-                result.append(False)
-                continue
-            # normalise to date for comparison — split_dates stores date objects
-            dt_date = dt.date() if hasattr(dt, 'date') else dt
-            masked = train_start <= dt_date < test_end
-            if masked and manifest.val_predict_guard is False and val_start <= dt_date < val_end:
-                masked = False
-            if masked and manifest.test_predict_guard is False and test_start <= dt_date < test_end:
-                masked = False
-            result.append(masked)
-        return result
+    def _inside_training_window_mask(self, data: pl.DataFrame, manifest: object) -> list[bool]:
+        return _fold_sensor.inside_mask(self, data, manifest)
 
 
 class _PythonSensor(PythonSensorBase[HistoryT, StateT, OutputT], Sensor):

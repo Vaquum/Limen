@@ -665,3 +665,5 @@ isolated from cache storage. Entries are released when the invocation exits.
 
 This reuse preserves the existing preparation, prediction, recording and search
 contracts. Parallel processes retain their existing execution behavior.
+
+Opt-in walk-forward `recording.fold_details` also retains versioned promotion witnesses. Missing clock, supported dtype, membership or fitted-model evidence records a visible unavailability reason without changing research admission. See [Trainer](Trainer.md#recorded-walk-forward-folds).
