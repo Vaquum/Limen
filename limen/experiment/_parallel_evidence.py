@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from datetime import date, datetime
-from typing import cast
+from typing import Protocol, cast
 
 from limen._parallel_contract import ParallelRoundContract
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
 from limen.experiment._parallel_encoding import VERSION, decode, digest, encode, parameter_projection
+
+
+class _ArrayValues(Protocol):
+    def tolist(self) -> object: ...
 
 def mapping(value: object, name: str) -> dict[str, object]:
     if not isinstance(value, dict):
@@ -89,7 +93,7 @@ def _wire(value: object) -> object:
     if isinstance(value, (list, tuple)):
         return [_wire(item) for item in cast(list[object] | tuple[object, ...], value)]
     if hasattr(value, 'tolist'):
-        return _wire(cast(Callable[[], object], getattr(value, 'tolist'))())
+        return _wire(cast(_ArrayValues, value).tolist())
     return json_value(value)
 
 
@@ -177,7 +181,7 @@ def wire_record(record: Mapping[str, object], *, legacy: bool = False, restore: 
         node = result.get('parallel_parameters')
         if not isinstance(node, list):
             raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
-        native = decode(node)
+        native = decode(cast(list[object], node))
         if encode(parameter_projection(encode(native))) != encode(result.get('round_params')):
             raise ValueError('Cannot resume parallel run with mismatched typed parameter evidence')
         result['round_params'] = native

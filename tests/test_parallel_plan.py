@@ -158,7 +158,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
             row['round_params']['C'] *= 2
         else:
             row.pop('preds')
-        with pytest.raises(ValueError, match='output|digest|evidence'):
+        with pytest.raises(ValueError, match=r'output|digest|evidence'):
             validate_record(row, record_context(row), contract, execution=True, outputs=True)
     rejected = tmp_path / 'corrupt'
     shutil.copytree(directory, rejected)
