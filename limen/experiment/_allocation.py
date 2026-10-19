@@ -7,8 +7,11 @@ from typing import cast
 
 import polars as pl
 
-from limen.backtest.trade_contract import TradeInputs, TradePolicy, contract_digest, json_value, source_binding
-from limen.sfd.reference_architecture.direction_sizing import _identity as component_identity
+from limen.backtest.trade_contract import JsonValue, TradeInputs, TradePolicy, contract_digest, json_value, source_binding
+
+def component_identity(value: object) -> dict[str, JsonValue]:
+    identity = cast(Callable[[object], dict[str, JsonValue]], vars(import_module('limen.sfd.reference_architecture.direction_sizing'))['_identity'])
+    return identity(value)
 
 
 @dataclass(frozen=True)
@@ -75,9 +78,13 @@ def _helper(name: str) -> Callable[..., object]:
     return cast(Callable[..., object], getattr(import_module('limen.experiment._allocation_folds'), name))
 
 def admit(manifest: object, params: Mapping[str, object]) -> None:
+    if getattr(manifest, 'allocation_config', None) is None:
+        return
     _ = _helper('admit')(manifest, params)
 
 def attach(manifest: object, raw: pl.DataFrame, params: Mapping[str, object], data: dict[str, object]) -> dict[str, object]:
+    if getattr(manifest, 'allocation_config', None) is None:
+        return data
     return cast(dict[str, object], _helper('attach')(manifest, raw, params, data))
 
 def run(manifest: object, data: dict[str, object], params: Mapping[str, object]) -> dict[str, object]:

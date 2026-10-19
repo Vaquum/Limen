@@ -1,18 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import ClassVar, Literal, Protocol, cast
+from importlib import import_module
 
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from typing_extensions import override
 
 from limen.backtest.trade_contract import JsonValue, finite_number, json_value
-from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels
+from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity
 from limen.experiment.errors import StrictModeError
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.direction_sizing import Array, ComponentEstimator, ComponentFactory
-from limen.sfd.reference_architecture.direction_sizing import _DIRECTION_FACTORY as DIRECTION_FACTORY, _SIZING_FACTORY as SIZING_FACTORY, _identity as component_identity, _predict as component_predict
+_components = vars(import_module('limen.sfd.reference_architecture.direction_sizing'))
+DIRECTION_FACTORY = cast(ComponentFactory, _components['_DIRECTION_FACTORY'])
+SIZING_FACTORY = cast(ComponentFactory, _components['_SIZING_FACTORY'])
+component_predict = cast(Callable[[ComponentEstimator, Array], Array], _components['_predict'])
 
 
 class _Scaler(Protocol):
