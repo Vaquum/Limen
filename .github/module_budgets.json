@@ -482,5 +482,6 @@
   "limen/experiment/_holdout_history.py": 320,
   "limen/experiment/_holdout_source.py": 240,
   "limen/experiment/_holdout_research.py": 360,
-  "limen/experiment/_manifest_preparation.py": 240
+  "limen/experiment/_manifest_preparation.py": 240,
+  "limen/inference/_trainer_records.py": 130
 }

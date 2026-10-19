@@ -9,13 +9,13 @@ import json
 from pathlib import Path
 import re
 import sqlite3
-import subprocess
 import time
 from typing import cast
 from uuid import UUID, uuid4
 
 
 _BUSY_TIMEOUT_SECONDS = 5.0
+_UUID_VERSION = 4
 _LEASES: ContextVar[tuple[tuple[Path, bool], ...]] = ContextVar('holdout_leases', default=())
 _HISTORY = 'manifests/holdout.sqlite3'
 _MARKER = 'manifests/holdout-project.json'
@@ -39,7 +39,7 @@ class ProjectBinding:
 
 
 def utc_day(value: str) -> int:
-    if not isinstance(value, str) or re.fullmatch(r'\d{4}-\d{2}-\d{2}', value) is None:
+    if re.fullmatch(r'\d{4}-\d{2}-\d{2}', value) is None:
         raise ValueError('Holdout date must be YYYY-MM-DD')
     day = date.fromisoformat(value)
     return int(datetime(day.year, day.month, day.day, tzinfo=timezone.utc).timestamp()) * 1_000_000_000
@@ -47,13 +47,16 @@ def utc_day(value: str) -> int:
 
 def identifier(value: str) -> str:
     parsed = UUID(value)
-    if parsed.version != 4 or str(parsed) != value:
+    if parsed.version != _UUID_VERSION or str(parsed) != value:
         raise ValueError('Holdout identifier must be a canonical UUID4')
     return value
 
 
 def _git(root: Path, *args: str) -> str:
-    return subprocess.run(['git', '-C', str(root), *args], check=True, capture_output=True, text=True).stdout.strip()
+    from limen.cli.git_utils import run_git
+    result = run_git(list(args), cwd=root)
+    result.check_returncode()
+    return result.stdout.strip()
 
 
 def resolve_root(value: str | Path) -> Path:
@@ -61,7 +64,7 @@ def resolve_root(value: str | Path) -> Path:
     root = find_project_root(Path(value))
     if root is None:
         raise ValueError('Holdout requires a project containing limen.toml')
-    _git(root, 'rev-parse', '--is-inside-work-tree')
+    _ = _git(root, 'rev-parse', '--is-inside-work-tree')
     return root
 
 
@@ -83,11 +86,12 @@ def _exclude(root: Path) -> None:
 
 
 @contextmanager
-def connection(path: Path) -> Iterator[sqlite3.Connection]:
-    db = sqlite3.connect(path, timeout=_BUSY_TIMEOUT_SECONDS, isolation_level=None)
+def connection(path: Path, *, create: bool = False) -> Iterator[sqlite3.Connection]:
+    target = str(path) if create else path.resolve().as_uri() + '?mode=rw'
+    db = sqlite3.connect(target, uri=not create, timeout=_BUSY_TIMEOUT_SECONDS, isolation_level=None)
     db.row_factory = sqlite3.Row
     try:
-        db.execute('PRAGMA foreign_keys=ON')
+        _ = db.execute('PRAGMA foreign_keys=ON')
         yield db
     finally:
         db.close()
@@ -96,11 +100,11 @@ def connection(path: Path) -> Iterator[sqlite3.Connection]:
 def _initialize_lease(db: sqlite3.Connection) -> None:
     version = db.execute('PRAGMA user_version').fetchone()[0]
     if version == 0:
-        db.execute('BEGIN IMMEDIATE')
+        _ = db.execute('BEGIN IMMEDIATE')
         if db.execute('PRAGMA user_version').fetchone()[0] == 0:
-            db.execute('CREATE TABLE IF NOT EXISTS lease (id INTEGER PRIMARY KEY CHECK(id=1))')
-            db.execute('INSERT OR IGNORE INTO lease VALUES (1)')
-            db.execute('PRAGMA user_version=1')
+            _ = db.execute('CREATE TABLE IF NOT EXISTS lease (id INTEGER PRIMARY KEY CHECK(id=1))')
+            _ = db.execute('INSERT OR IGNORE INTO lease VALUES (1)')
+            _ = db.execute('PRAGMA user_version=1')
         db.commit()
     elif version != 1:
         raise ValueError('Unsupported holdout lease schema')
@@ -117,9 +121,9 @@ def admission(root: Path, *, exclusive: bool = False) -> Iterator[None]:
         return
     _exclude(root)
     (root / 'manifests').mkdir(exist_ok=True)
-    with connection(root / _LEASE) as db:
+    with connection(root / _LEASE, create=True) as db:
         _initialize_lease(db)
-        db.execute('BEGIN EXCLUSIVE' if exclusive else 'BEGIN')
+        _ = db.execute('BEGIN EXCLUSIVE' if exclusive else 'BEGIN')
         db.execute('SELECT id FROM lease').fetchall()
         token = _LEASES.set((*_LEASES.get(), (root, exclusive)))
         try:
@@ -143,7 +147,7 @@ def _identity(root: Path, db: sqlite3.Connection) -> tuple[str, int]:
     if len(rows) != 1:
         raise ValueError('Holdout history requires exactly one project identity')
     project_id, revision = str(rows[0]['id']), int(rows[0]['revision'])
-    identifier(project_id)
+    _ = identifier(project_id)
     marker = root / _MARKER
     if marker.exists():
         value = json.loads(marker.read_text())
@@ -173,7 +177,7 @@ def bind(*hints: str | Path | None) -> ProjectBinding | None:
     if not roots:
         return None
     root = roots.pop()
-    _git(root, 'rev-parse', '--is-inside-work-tree')
+    _ = _git(root, 'rev-parse', '--is-inside-work-tree')
     with admission(root):
         return read_binding(root)
 
@@ -184,6 +188,7 @@ def check_binding(binding: ProjectBinding) -> None:
 
 
 def reserve_holdout(project_root: str | Path, start: str, end: str, *, interval_seconds: int) -> str:
+    """Exclude the continuous suffix from the earliest active reservation onward."""
     root = resolve_root(project_root)
     first, last = utc_day(start), utc_day(end)
     if first >= last or type(interval_seconds) is not int or interval_seconds <= 0 or 86400 % interval_seconds:
@@ -193,23 +198,23 @@ def reserve_holdout(project_root: str | Path, start: str, end: str, *, interval_
         if not path.exists():
             if (root / _MARKER).exists():
                 raise ValueError('Holdout history is missing; restore it before reserving')
-            with connection(path) as db:
-                db.execute('BEGIN IMMEDIATE')
+            with connection(path, create=True) as db:
+                _ = db.execute('BEGIN IMMEDIATE')
                 for statement in _SCHEMA:
-                    db.execute(statement)
-                db.execute('INSERT INTO project VALUES (?,1)', (str(uuid4()),))
-                db.execute('PRAGMA user_version=1')
+                    _ = db.execute(statement)
+                _ = db.execute('INSERT INTO project VALUES (?,1)', (str(uuid4()),))
+                _ = db.execute('PRAGMA user_version=1')
                 db.commit()
         with connection(path) as db:
-            db.execute('BEGIN IMMEDIATE')
+            _ = db.execute('BEGIN IMMEDIATE')
             project_id, _ = _identity(root, db)
             if db.execute("SELECT 1 FROM reservations WHERE state!='withdrawn' AND start_ns<? AND end_ns>?", (last, first)).fetchone():
                 raise ValueError('Holdout intersects an active or released reservation')
             if db.execute("SELECT 1 FROM reservations WHERE state='active' AND interval_seconds!=?", (interval_seconds,)).fetchone():
                 raise ValueError('Active holdouts must share one native interval')
             value, now = str(uuid4()), time.time_ns()
-            db.execute("INSERT INTO reservations VALUES (?,?,?,?,?, 'active',?,?)", (value, project_id, first, last, interval_seconds, now, now))
-            db.execute('UPDATE project SET revision=revision+1')
+            _ = db.execute("INSERT INTO reservations VALUES (?,?,?,?,?, 'active',?,?)", (value, project_id, first, last, interval_seconds, now, now))
+            _ = db.execute('UPDATE project SET revision=revision+1')
             db.commit()
             return value
 
@@ -221,46 +226,57 @@ def _retire(root_value: str | Path, reservation_id: str, state: str) -> None:
         if not (root / _HISTORY).exists():
             raise ValueError('Holdout history is missing')
         with connection(root / _HISTORY) as db:
-            db.execute('BEGIN IMMEDIATE')
-            _identity(root, db)
+            _ = db.execute('BEGIN IMMEDIATE')
+            _ = _identity(root, db)
             row = db.execute('SELECT state,created_ns FROM reservations WHERE id=?', (reservation_id,)).fetchone()
             if row is None or row['state'] != 'active':
                 raise ValueError('Holdout is unknown or no longer active')
             if state == 'withdrawn' and db.execute('SELECT 1 FROM research WHERE created_ns>=?', (row['created_ns'],)).fetchone():
                 raise ValueError('A used holdout cannot be withdrawn; release it explicitly')
-            db.execute('UPDATE reservations SET state=?,changed_ns=? WHERE id=?', (state, time.time_ns(), reservation_id))
-            db.execute('UPDATE project SET revision=revision+1')
+            _ = db.execute('UPDATE reservations SET state=?,changed_ns=? WHERE id=?', (state, time.time_ns(), reservation_id))
+            _ = db.execute('UPDATE project SET revision=revision+1')
             db.commit()
 
 
 def withdraw_holdout(project_root: str | Path, reservation_id: str) -> None:
+    """Retire an unused reservation without deleting its identity or history."""
     _retire(project_root, reservation_id, 'withdrawn')
 
 
 def release_holdout(project_root: str | Path, reservation_id: str) -> None:
+    """Lift research exclusion while preserving the post-release exposure record."""
     _retire(project_root, reservation_id, 'released')
 
 
 def start_research(binding: ProjectBinding, role: str, manifest_id: str | None = None) -> str:
-    check_binding(binding)
-    value = str(uuid4())
-    with connection(binding.root / _HISTORY) as db:
-        db.execute('BEGIN IMMEDIATE')
-        db.execute("INSERT INTO research VALUES (?,?,?,?, 'started',?,NULL,'{}',?,NULL,NULL)", (value, binding.project_id, binding.revision, role, manifest_id, time.time_ns()))
-        db.commit()
-    return value
+    if role not in ('experiment', 'trainer', 'replay'):
+        raise ValueError('Unknown holdout research role')
+    with admission(binding.root):
+        check_binding(binding)
+        if binding.project_id is None or binding.cutoff_ns is None:
+            raise ValueError('Protected research requires active reservation history')
+        value = str(uuid4())
+        with connection(binding.root / _HISTORY) as db:
+            _ = db.execute('BEGIN IMMEDIATE')
+            _ = db.execute("INSERT INTO research VALUES (?,?,?,?, 'started',?,NULL,'{}',?,NULL,NULL)", (value, binding.project_id, binding.revision, role, manifest_id, time.time_ns()))
+            db.commit()
+        return value
 
 
 def finish_research(binding: ProjectBinding, record_id: str, provenance: Mapping[str, object], *, error: str | None = None) -> None:
-    with connection(binding.root / _HISTORY) as db:
-        db.execute('BEGIN IMMEDIATE')
-        db.execute('UPDATE research SET state=?,provenance_json=?,finished_ns=?,error=? WHERE id=?', ('failed' if error is not None else 'completed', json.dumps(dict(provenance), sort_keys=True, allow_nan=False), time.time_ns(), error, record_id))
+    identifier(record_id)
+    with admission(binding.root), connection(binding.root / _HISTORY) as db:
+        check_binding(binding)
+        _ = db.execute('BEGIN IMMEDIATE')
+        result = db.execute("UPDATE research SET state=?,provenance_json=?,finished_ns=?,error=? WHERE id=? AND project_id=? AND revision=? AND state='started'", ('failed' if error is not None else 'completed', json.dumps(dict(provenance), sort_keys=True, allow_nan=False), time.time_ns(), error, record_id, binding.project_id, binding.revision))
+        if result.rowcount != 1:
+            raise ValueError('Holdout research record is unknown, stale or already finalized')
         db.commit()
 
 
 def research_record(binding: ProjectBinding, record_id: str) -> Mapping[str, object]:
-    with connection(binding.root / _HISTORY) as db:
-        row = db.execute('SELECT * FROM research WHERE id=?', (identifier(record_id),)).fetchone()
+    with admission(binding.root), connection(binding.root / _HISTORY) as db:
+        row = db.execute('SELECT * FROM research WHERE id=? AND project_id=?', (identifier(record_id), binding.project_id)).fetchone()
         if row is None:
             raise ValueError('Unknown holdout research record')
         return cast(Mapping[str, object], dict(row))

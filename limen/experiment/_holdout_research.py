@@ -47,6 +47,7 @@ def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding
     if previous is not None and previous != binding:
         raise ValueError('Holdout manifest binding/revision changed; construct a new manifest')
     vars(manifest)['_holdout_binding'] = binding
+    vars(manifest)['_holdout_discovery_cwd'] = Path.cwd()
     return binding
 
 
@@ -65,8 +66,10 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
             or (test_mode and model.test_data_source_config is not None)
             or getattr(model, 'data_dict_extension', None) is not None):
         raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
+    if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
+        raise ValueError('Holdout research refuses replaced manifest methods')
     config = model.backtest_config
-    if config is not None and (getattr(config, 'trade_policy', None) is not None or getattr(config, 'execution_data_source', None) is not None or getattr(config, 'funding', None) is not None):
+    if config is not None and (config.product is not None or config.prediction_mode != 'binary' or getattr(config, 'execution_data_source', None) is not None or getattr(config, 'funding', None) is not None):
         raise ValueError('Holdout research does not support event/funding/alternate execution sources')
     if model.split_dates is not None:
         for value in model.split_dates:
@@ -173,7 +176,7 @@ def capture_schema(manifest: object, frame: pl.DataFrame, stage: str) -> None:
     op = _CURRENT.get()
     if op is None or op.manifest is not manifest:
         return
-    excluded = {'datetime', getattr(manifest, 'target_column', None), '__trade_available_at_ns__', '__source_row__'}
+    excluded = {'datetime', getattr(manifest, 'target_column', None), '__trade_available_at_ns__', '__backtest_source_row__'}
     op.provenance[f'{stage}_schema'] = [{'name': name, 'dtype': str(dtype)} for name, dtype in frame.schema.items() if name not in excluded]
     op.provenance['schema_reason'] = None
 
@@ -181,7 +184,7 @@ def capture_schema(manifest: object, frame: pl.DataFrame, stage: str) -> None:
 def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_T, _P], _R]:
     @wraps(func)
     def guarded(manifest: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
-        if binding_of(manifest) is None:
+        if binding_of(manifest) is None and getattr(manifest, '_holdout_discovery_cwd', None) != Path.cwd():
             bind_manifest(manifest)
         parent = _CURRENT.get()
         with operation(manifest, parent.role if parent is not None else 'experiment') as op:
@@ -232,7 +235,7 @@ def run_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_
     @wraps(func)
     def guarded(host: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         manifest = getattr(host, 'manifest', None)
-        if manifest is None:
+        if manifest is None or binding_of(manifest) is None:
             return func(host, *args, **kwargs)
         values = inspect.signature(func).bind(host, *args, **kwargs)
         values.apply_defaults()
@@ -255,3 +258,60 @@ def metadata(manifest: object) -> dict[str, object] | None:
     if op is None or op.manifest is not manifest:
         return None
     return {key: op.provenance[key] for key in ('schema_version', 'project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds', 'research_record_id')}
+
+
+def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root: str | Path | None) -> pl.DataFrame:
+    attrs = cast(dict[str, object], vars(host))
+    manifest = cast('Manifest', attrs['_manifest'])
+    binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
+    saved = cast(Mapping[str, object], attrs['_metadata']).get('holdout')
+    if isinstance(saved, Mapping):
+        saved = cast(Mapping[str, object], saved)
+        if binding is None or any(saved.get(key) != value for key, value in (
+            ('project_id', binding.project_id), ('reservation_revision', binding.revision),
+            ('cutoff_ns', binding.cutoff_ns), ('interval_seconds', binding.interval_seconds))):
+            raise ValueError('Holdout Trainer metadata binding/revision changed')
+    with operation(manifest, 'trainer'):
+        return admit(manifest, data if data is not None else manifest.fetch_data())
+
+
+def trainer_round(manifest: object, expected: Mapping[str, object]) -> None:
+    binding = binding_of(manifest)
+    if binding is None or binding.cutoff_ns is None:
+        return
+    recorded = expected.get('holdout')
+    if isinstance(recorded, Mapping):
+        recorded = cast(Mapping[str, object], recorded)
+        if recorded.get('project_id') != binding.project_id or recorded.get('reservation_revision') != binding.revision:
+            raise ValueError('Holdout Trainer round binding/revision changed')
+        vars(manifest)['_holdout_experiment_record'] = recorded.get('research_record_id')
+    else:
+        vars(manifest)['_holdout_experiment_record'] = None
+
+
+def train_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_T, _P], _R]:
+    @wraps(func)
+    def guarded(host: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        manifest = getattr(host, '_manifest')
+        with operation(manifest, 'trainer'):
+            attrs = cast(dict[str, object], vars(host))
+            attrs['_data'] = admit(manifest, cast(pl.DataFrame, attrs['_data']))
+            return func(host, *args, **kwargs)
+    return guarded
+
+
+def replay_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_T, _P], _R]:
+    @wraps(func)
+    def guarded(host: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
+        manifest = getattr(host, 'manifest', None)
+        if manifest is None:
+            return func(host, *args, **kwargs)
+        with operation(manifest, 'replay'):
+            attrs = cast(dict[str, object], vars(host))
+            raw = attrs.get('data')
+            if isinstance(raw, pl.DataFrame):
+                admitted = admit(manifest, raw)
+                if not admitted.equals(raw):
+                    raise ValueError('Holdout replay data geometry changed; do not shorten retained returns')
+            return func(host, *args, **kwargs)
+    return guarded

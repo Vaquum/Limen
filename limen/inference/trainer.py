@@ -1,3 +1,5 @@
+import limen.experiment._holdout_research as _holdout
+from limen.inference._trainer_records import load_round_data, load_original_log
 import limen.experiment._round_storage as _storage
 from limen.experiment._recording import project_record
 import json
@@ -37,7 +39,8 @@ class Trainer:
 
     def __init__(self,
                  experiment_dir: str | Path,
-                 data: pl.DataFrame | None = None) -> None:
+                 data: pl.DataFrame | None = None, *,
+                 project_root: str | Path | None = None) -> None:
 
         '''
         Create a Trainer from a completed YAML experiment directory.
@@ -79,7 +82,7 @@ class Trainer:
         self._manifest_id: str | None = self._metadata.get('manifest_id')
 
         try:
-            sfd = CompiledSFD(yaml_reference)
+            sfd = CompiledSFD(yaml_reference, project_root=project_root or self._experiment_dir)
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(
                 "metadata.json key 'yaml_reference' is not a valid YAML SFD reference"
@@ -102,83 +105,13 @@ class Trainer:
         self._round_data = self._load_round_data()
         self._original_log = self._load_original_log()
 
-        if data is not None:
-            self._data = data
-        else:
-            self._data = self._manifest.fetch_data()
-
+        self._data = _holdout.initialize_trainer(self, data, project_root=project_root)
 
     def _load_round_data(self) -> dict[str, dict[str, Any]]:
-
-        '''
-        Load round_data.jsonl into a dict keyed by round_id.
-
-        Returns:
-            dict[str, dict[str, Any]]: Mapping of round_id to round entry
-
-        '''
-
-        round_data_path = _storage.round_path(self._experiment_dir)
-
-        result: dict[str, dict[str, Any]] = {}
-        if not round_data_path.exists():
-            raise FileNotFoundError(
-                f"round_data.jsonl not found in {self._experiment_dir}. Cannot load permutation parameters."
-            )
-
-        with _storage.open_text(round_data_path) as f:
-            for line_number, raw_line in enumerate(f, start=1):
-                stripped = raw_line.strip()
-                if not stripped:
-                    continue
-                try:
-                    entry = json.loads(stripped)
-                except json.JSONDecodeError as exc:
-                    raise ValueError(
-                        f"Malformed JSON in round_data.jsonl line {line_number}"
-                    ) from exc
-                if not is_mapping(entry):
-                    raise ValueError(
-                        f"Invalid round_data.jsonl line {line_number}: expected object"
-                    )
-                if 'round_id' not in entry or 'round_params' not in entry:
-                    raise ValueError(
-                        f"Invalid round_data.jsonl line {line_number}: requires round_id and round_params"
-                    )
-                if not isinstance(entry['round_params'], dict):
-                    raise ValueError(
-                        f"Invalid round_data.jsonl line {line_number}: round_params must be an object"
-                    )
-                result[str(entry['round_id'])] = entry
-
-        return result
-
+        return load_round_data(self._experiment_dir)
 
     def _load_original_log(self) -> dict[str, dict[str, Any]] | None:
-
-        '''
-        Load results.csv into a dict keyed by permutation id.
-
-        Returns:
-            dict[str, dict[str, Any]] | None: Mapping of id to row, or None if not found
-
-        '''
-
-        csv_path = self._experiment_dir / 'results.csv'
-        try:
-            df = pl.read_csv(csv_path)
-        except FileNotFoundError:
-            logger.warning(
-                'results.csv not found in %s — skipping validation',
-                self._experiment_dir,
-            )
-            return None
-
-        result: dict[str, dict[str, Any]] = {}
-        for row in df.iter_rows(named=True):
-            result[str(row['id'])] = row
-        return result
-
+        return load_original_log(self._experiment_dir)
 
     def _validate_metrics(self,
                           permutation_id: str,
@@ -242,6 +175,7 @@ class Trainer:
         return mismatches
 
 
+    @_holdout.train_guard
     def train(self, permutation_ids: list[str]) -> list[Sensor]:
 
 
@@ -259,8 +193,9 @@ class Trainer:
         for pid in permutation_ids:
             round_params = dict(self._round_data[pid]['round_params'])
 
-            data_dict = self._manifest.prepare_data(self._data, round_params)
             expected = self._round_data[pid]
+            _holdout.trainer_round(self._manifest, expected)
+            data_dict = self._manifest.prepare_data(self._data, round_params)
             policy, frozen_contract = self._metadata.get('recording'), expected.get('trade_contract')
             if frozen_contract is not None and (project_record(expected, policy).get('trade_contract') != project_record(data_dict, policy).get('trade_contract') or expected.get('trade_contract_digest') != data_dict.get('trade_contract_digest')):
                 raise ReconstructionError(f'Permutation {pid}: exact trade rules/source/output identity changed')

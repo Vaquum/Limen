@@ -1861,6 +1861,7 @@ def _run_prepare_setup(
         resolved = _resolve_params(base_params, round_params)
         raw_data = func(raw_data, **resolved)
 
+    raw_data = _holdout.admit(manifest, raw_data)
     raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
     _holdout.selected(manifest, raw_data, raw_splits, round_params)
     split_data = raw_splits
