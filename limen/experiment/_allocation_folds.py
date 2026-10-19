@@ -97,7 +97,11 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             if not len(cast(pl.DataFrame, prepared['x_train'])) or not len(cast(pl.DataFrame, prepared['x_val'])):
                 raise StrictModeError(f'OOF block {block_id}: insufficient prefix primary fit rows')
             primary = fit_primary(clone, prepared, params)
-            frame = _inference(clone, raw.head(end), cast(Mapping[str, object], prepared['_fitted_params']), params)
+            fitted = cast(Mapping[str, object], prepared['_fitted_params'])
+            frame = _inference(clone, raw.head(end), fitted, params)
+            probe = _inference(clone, raw.head(end - 1), fitted, params)
+            if not probe.equals(frame.filter(pl.col('datetime') <= raw['datetime'][end - 2])):
+                raise ValueError('Primary ML features depend on observations after their decision')
             frame = frame.filter(pl.col('datetime').is_between(raw['datetime'][start], raw['datetime'][end - 1]))
             names = cast(pl.DataFrame, prepared['x_train']).columns
             prediction = primary.predict({'x_test': frame.select(names)})

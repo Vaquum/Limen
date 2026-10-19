@@ -265,8 +265,9 @@ def test_recorded_availability_columns_never_become_meta_features(ml):
 
 
 @pytest.mark.parametrize('folds', [2, 3])
-def test_rule_oof_rejects_terminal_lookahead(folds):
-    manifest, raw, params, _ = _prepared()
+@pytest.mark.parametrize('ml', [False, True])
+def test_oof_rejects_terminal_lookahead(folds, ml):
+    manifest, raw, params, _ = _prepared(ml)
     from limen.indicators import window_return
     manifest.add_indicator(window_return, period=-1)
     data = manifest.prepare_data(raw, params)
