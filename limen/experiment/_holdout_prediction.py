@@ -126,7 +126,7 @@ def _probe_output(sensor: Sensor) -> object:
 def validate_inference_dependencies(sensor: Sensor) -> None:
     roots = _roots(sensor)
     config = getattr(vars(sensor)['_model'], 'prediction_calibration_config', None)
-    inference_functions(roots, exclude=() if config is None else (config,))
+    _ = inference_functions(roots, exclude=() if config is None else (config,))
 
 
 def validate_prediction(sensor: Sensor) -> None:
