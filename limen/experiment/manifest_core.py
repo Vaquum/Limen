@@ -1,3 +1,4 @@
+from limen.experiment._column_shims import FittedColumnShims
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
@@ -1050,6 +1051,8 @@ class MLManifest(Manifest):
             lazy = _apply_feature_transforms(self, lazy, round_params)
             data = lazy.collect()
 
+            if is_train and outcome_target:
+                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             if self.target_class_config is not None:
                 data, all_fitted_params = _apply_class_based_target(
                     self, data, round_params, all_fitted_params,
@@ -1072,8 +1075,6 @@ class MLManifest(Manifest):
 
             _check_unexpected_nulls(self, data, i, 'A')
 
-            if is_train and outcome_target:
-                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             if is_train:
                 _holdout.capture_schema(self, data, 'input')
             data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
@@ -1124,7 +1125,8 @@ class MLManifest(Manifest):
         if outcome_target:
             attach_outcomes(data_dict, private_labels, raw_features, split_data[0],
                 scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
-                deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
+                deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms),
+                shims=cast(FittedColumnShims | None, all_fitted_params.get('_column_shims')), dropped=columns_to_drop or ())
         return data_dict
 
     @override

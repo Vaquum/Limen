@@ -499,5 +499,6 @@
   "limen/experiment/_fold_evidence.py": 240,
   "limen/inference/_fold_trainer.py": 240,
   "limen/inference/_fold_metrics.py": 140,
-  "limen/inference/_fold_sensor.py": 240
+  "limen/inference/_fold_sensor.py": 240,
+  "limen/experiment/_fold_preparation.py": 180
 }

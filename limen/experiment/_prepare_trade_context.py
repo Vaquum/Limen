@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from importlib import import_module
 from inspect import isfunction, signature
-from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
+from typing import TYPE_CHECKING, cast
 
 import polars as pl
 
@@ -12,9 +12,11 @@ from limen.backtest._event_plan import event_plan
 from limen.backtest.execution_events import OBSERVATION_COLUMNS
 from limen.backtest.funding_adapter import prepare_funding, resolve_adapter
 from limen.backtest.trade_contract import NANOSECONDS, RULE_VERSION, JsonValue, TradeInputs, TradeLedger, TradePolicy, contract_digest, export_trade_contract, json_value, source_binding
+from limen.experiment._fold_preparation import FoldCompression, FoldFeatures, FoldPreparation, FoldScaler, PreparedFolds
 from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig, resolve_json, resolve_number
 
 if TYPE_CHECKING:
+    from limen.experiment._column_shims import FittedColumnShims
     from limen.targets.trade_outcome import TradeTargetContext, OutcomeLabels
 
 
@@ -224,34 +226,6 @@ def target_context(context: PreparedTradeContext | None, index: int) -> TradeTar
     return TradeTargetContext(context.policy, inputs, inputs.partition_start_ns, inputs.partition_end_ns, contract_digest(export_trade_contract(context.policy, inputs)))
 
 
-@dataclass(frozen=True)
-class FoldFeatures:
-    train: pl.DataFrame
-    predict: pl.DataFrame
-
-
-@runtime_checkable
-class FoldPreparation(Protocol):
-    raw_features: pl.DataFrame
-    row_ids: tuple[str, ...]
-    deterministic: bool
-    def fit_transform(self, train_rows: Sequence[str], predict_rows: Sequence[str]) -> FoldFeatures: ...
-
-
-@dataclass(frozen=True)
-class PreparedFolds:
-    raw_features: pl.DataFrame
-    row_ids: tuple[str, ...]
-    deterministic: bool
-    transform: Callable[[Sequence[str], Sequence[str]], tuple[pl.DataFrame, pl.DataFrame]]
-
-    def fit_transform(self, train_rows: Sequence[str], predict_rows: Sequence[str]) -> FoldFeatures:
-        train, predict = self.transform(train_rows, predict_rows)
-        if train.height != len(train_rows) or predict.height != len(predict_rows):
-            raise ValueError('Fold preprocessing changed causal feature-valid membership')
-        return FoldFeatures(train, predict)
-
-
 def sensor_decisions(raw: pl.DataFrame, bars: pl.DataFrame, *, interval_seconds: object = None) -> pl.DataFrame:
     prices = normalize_observations(raw, interval_seconds=interval_seconds)
     if (prices['available_at_ns'] < prices['end_ns']).any():
@@ -297,41 +271,10 @@ def validate_inference_contract(policy: TradePolicy | None, mode: str, contract:
         raise ValueError('Sensor model does not belong to the frozen trade contract')
 
 
-__all__ = ['PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows', 'source_interval']
+__all__ = ['FoldCompression', 'FoldFeatures', 'FoldPreparation', 'FoldScaler', 'PreparedFolds', 'PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows', 'source_interval']
 
-class FoldScaler(Protocol):
-    def __call__(self, data: pl.DataFrame, *, all_fitted_params: dict[str, object], is_training: bool) -> tuple[pl.DataFrame, dict[str, object]]: ...
-
-
-class FoldCompression(Protocol):
-    def __call__(self, split_data: list[pl.DataFrame], *, all_fitted_params: dict[str, object]) -> tuple[list[pl.DataFrame], dict[str, object]]: ...
-
-
-def prepare_folds(raw: pl.DataFrame, retained: pl.DataFrame, identities: pl.DataFrame, *, scale: FoldScaler, compress: FoldCompression, deterministic: bool) -> PreparedFolds:
-    selected = retained.select('datetime').join(raw, on='datetime', how='left', maintain_order='left')
-    mapping = retained.select('datetime').join(identities, on='datetime', how='left', maintain_order='left')
-    row_ids = tuple(str(value) for value in mapping['row_id'])
-    positions = {identity: index for index, identity in enumerate(row_ids)}
-
-    def transform(train_rows: Sequence[str], predict_rows: Sequence[str]) -> tuple[pl.DataFrame, pl.DataFrame]:
-        train = selected[[positions[row] for row in train_rows]]
-        predict = selected[[positions[row] for row in predict_rows]]
-        fitted: dict[str, object] = {}
-        train, fitted = scale(train, all_fitted_params=fitted, is_training=True)
-        context_rows = max((int(getattr(value, 'context_rows', 0)) for value in fitted.values()), default=0)
-        prefix = selected[[positions[row] for row in train_rows]].tail(context_rows)
-        predict, fitted = scale(pl.concat([prefix, predict]), all_fitted_params=fitted, is_training=False)
-        predict = predict.slice(prefix.height)
-        transformed, _ = compress([train, predict, predict], all_fitted_params=fitted)
-        features = [name for name in transformed[0].columns if name != 'datetime']
-        if any(transformed[index].select(features).null_count().sum_horizontal()[0] for index in (0, 1)):
-            raise ValueError('Fold preprocessing has unavailable features; provide sufficient causal context')
-        return transformed[0].select(features), transformed[1].select(features)
-
-    return PreparedFolds(selected.drop('datetime'), row_ids, deterministic, transform)
-
-
-def attach_outcomes(data: dict[str, object], labels: Sequence[OutcomeLabels], raw: pl.DataFrame | None, retained: pl.DataFrame, *, scale: FoldScaler, compress: FoldCompression, deterministic: bool) -> None:
+def attach_outcomes(data: dict[str, object], labels: Sequence[OutcomeLabels], raw: pl.DataFrame | None, retained: pl.DataFrame, *, scale: FoldScaler, compress: FoldCompression, deterministic: bool, shims: FittedColumnShims | None = None, dropped: Sequence[str] = ()) -> None:
+    from limen.experiment._fold_preparation import prepare_folds
     from limen.targets.trade_outcome import OutcomeLabels
 
     context = data.get('_trade_context')
@@ -341,4 +284,4 @@ def attach_outcomes(data: dict[str, object], labels: Sequence[OutcomeLabels], ra
     data['_trade_labels'] = OutcomeLabels(pl.concat([label.rows for label in labels]), binding)
     fitted = cast(Mapping[str, object], data['_fitted_params'])
     data['_fitted_params'] = {key: value for key, value in fitted.items() if not key.startswith('_target_cls_')}
-    data['_fold_preparation'] = prepare_folds(raw, retained, context.model_rows[0], scale=scale, compress=compress, deterministic=deterministic)
+    data['_fold_preparation'] = prepare_folds(raw, retained, context.model_rows[0], scale=scale, compress=compress, deterministic=deterministic, shims=shims, dropped=dropped)
