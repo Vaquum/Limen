@@ -206,3 +206,27 @@ def test_research_promotion_and_factorize_reject(tmp_path):
             begin_run(host, workers, True, resume, False, False, None, (None, None, None))
     with pytest.raises(ValueError, match=r'event|snapshot'):
         _check_manifest(manifest, {'risk_span': [6]}, frozenset())
+
+
+def test_generic_interval_metadata_survives_promotion():
+    from limen.inference import Sensor
+    from limen.sfd.reference_architecture.random_binary import RandomBinary
+    from limen.yaml import CompiledSFD
+
+    config = _yaml()
+    declared = config['sfd']['manifest']
+    declared['type'] = 'ml'
+    declared.pop('strategy')
+    declared['indicators'] = [{'func': 'limen.indicators.window_return', 'params': {'period': 1}}]
+    declared['target'] = {'name': 'up', 'class': 'limen.targets.QuantileBinaryTarget', 'fit_params': {'source_column': 'ret_1', 'quantile': 0.5}, 'transform_params': {'shift': -1}}
+    declared['reference_architecture'] = 'limen.sfd.reference_architecture.random_binary.random_binary'
+    for key in ('take_profit_bps_column', 'stop_loss_bps_column', 'barrier_features'):
+        declared['backtest'].pop(key)
+    manifest = CompiledSFD(config).manifest()
+    raw = recorded_source()
+    data = manifest.prepare_data(raw, {})
+    model = RandomBinary().train(data)
+    sensor = Sensor(config, model, data['_fitted_params'], {})
+    predicted = sensor.predict_all(raw)
+    assert predicted[-1].reason is None
+    assert predicted[-1].available_at_ns == int(raw['datetime'].dt.epoch('ns')[-1]) + 3600_000_000_000
