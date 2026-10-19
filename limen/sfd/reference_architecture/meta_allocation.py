@@ -9,7 +9,7 @@ from sklearn.preprocessing import StandardScaler
 from typing_extensions import override
 
 from limen.backtest.trade_contract import JsonValue, finite_number, json_value
-from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity
+from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity, primary_parameters
 from limen.experiment.errors import StrictModeError
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.direction_sizing import Array, ComponentEstimator, ComponentFactory
@@ -67,7 +67,7 @@ class MetaAllocationModel(ReferenceModel):
         self._fit(labels, params, cast(int, minimum), cast(int, seed))
         self.batch_digests = {name: batch.digest() for name, batch in context.batches.items()}
         self.learning_binding = {'architecture': component_identity(meta_allocation), 'primary': component_identity(vars(context.manifest)['architecture_function']),
-                                 'primary_params': json_value(context.round_params), 'training': json_value(labels.binding),
+                                 'primary_params': json_value(primary_parameters(context.manifest, context.round_params)), 'training': json_value(labels.binding),
                                  'probability_factory': component_identity(self.probability_factory), 'sizing_factory': component_identity(self.sizing_factory),
                                  'allocation_params': json_value({key: value for key, value in params.items() if key not in ('probability_factory', 'sizing_factory')}),
                                  'features': list(self.feature_names), 'batch_digests': self.batch_digests,
@@ -130,7 +130,7 @@ class MetaAllocationModel(ReferenceModel):
         features = batch.meta_features
         if self.include_primary_proba:
             import polars as pl
-            probability = np.asarray(primary['_probs'], dtype=np.float64)
+            probability = np.asarray(primary.get('_probs'), dtype=np.float64)
             if probability.shape != decisions.shape or not np.isfinite(probability).all():
                 raise ValueError('Original primary probabilities are unavailable or malformed')
             features = features.with_columns(pl.Series('primary_probability', probability))

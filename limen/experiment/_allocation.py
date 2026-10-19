@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
+from inspect import signature
 from typing import Protocol, cast
 
 import polars as pl
@@ -12,6 +13,23 @@ from limen.backtest.trade_contract import JsonValue, TradeInputs, TradePolicy, c
 def component_identity(value: object) -> dict[str, JsonValue]:
     identity = cast(Callable[[object], dict[str, JsonValue]], vars(import_module('limen.sfd.reference_architecture.direction_sizing'))['_identity'])
     return identity(value)
+
+
+def parameter_references(value: object) -> set[str]:
+    if isinstance(value, str) and value.startswith('{') and value.endswith('}'):
+        return {value[1:-1]}
+    children = cast(Mapping[str, object], value).values() if isinstance(value, Mapping) else cast(tuple[object, ...] | list[object], value) if isinstance(value, (tuple, list)) else ()
+    return {name for child in children for name in parameter_references(child)}
+
+
+def primary_parameters(manifest: object, params: Mapping[str, object]) -> dict[str, object]:
+    method = cast(Callable[..., object], vars(manifest)['architecture_function'])
+    explicit = set(signature(method).parameters)
+    auxiliary = cast(set[str], vars(manifest).get('_allocation_auxiliary_params', set()))
+    config = getattr(manifest, 'allocation_config', None)
+    barriers = getattr(getattr(manifest, 'backtest_config', None), 'barrier_features', None)
+    auxiliary = auxiliary | parameter_references(getattr(config, 'params', {})) | parameter_references(getattr(barriers, 'params', {}))
+    return {key: value for key, value in params.items() if key not in auxiliary or key in explicit}
 
 
 @dataclass(frozen=True)

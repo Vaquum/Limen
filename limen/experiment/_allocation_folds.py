@@ -11,14 +11,13 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, TradeInputs, contract_digest, json_value, source_binding
 from limen.backtest.trade_execution import trade_execution
-from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity
+from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels, component_identity, parameter_references
 from limen.experiment._prepare_trade_context import normalize_observations
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.direction_sizing import Array
-from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
-from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy, rule_based
 
 
 _core = vars(import_module('limen.experiment.manifest_core'))
@@ -31,10 +30,22 @@ resolve_split = cast(Callable[..., list[pl.DataFrame]], _core['_resolve_split'])
 
 def fit_primary(manifest: object, data: Mapping[str, object], params: Mapping[str, object]) -> ReferenceModel:
     manifest = cast(Manifest, manifest)
-    kwargs = manifest.resolve_model_kwargs(dict(params))
-    if isinstance(manifest, RuleBasedManifest):
-        return RuleBasedStrategy(**kwargs).train(dict(data))
-    return LightGBMBinary().train(dict(data), **kwargs)
+    if isinstance(manifest, RuleBasedManifest) and manifest.architecture_function is rule_based:
+        return RuleBasedStrategy(**manifest.resolve_model_kwargs(dict(params))).train(dict(data))
+    primary = deepcopy(manifest)
+    primary.allocation_config = None
+    primary.backtest_config = None
+    fitted_data = {key: value for key, value in data.items() if not key.startswith('_trade') and key not in ('trade_contract', 'trade_contract_digest', 'price_data_for_backtest')}
+    fitted_data.update(_record_execution=False, _record_model_outputs=False)
+    if isinstance(manifest, MLManifest):
+        fitted_data.update(x_test=data['x_val'], y_test=data['y_val'])
+    else:
+        fitted_data['test'] = data['val']
+    result = primary.run_model(fitted_data, dict(params))
+    model = result.get('_model')
+    if not isinstance(model, ReferenceModel) or model.prediction_mode != 'binary':
+        raise ValueError('Allocation requires the original fitted binary ReferenceModel inference artifact')
+    return model
 
 
 def _rule_features(manifest: RuleBasedManifest, raw: pl.DataFrame, params: Mapping[str, object]) -> pl.DataFrame:
@@ -53,7 +64,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
     raw, manifest, params = context.raw_train, cast(Manifest, context.manifest), context.round_params
     if folds > raw.height:
         raise StrictModeError('Allocation fold count exceeds original raw training rows')
-    if include_primary_proba and not isinstance(manifest, MLManifest):
+    if include_primary_proba and manifest.architecture_function is rule_based:
         raise ValueError('Rule primary supplies no learned probability')
     prices = normalize_observations(raw, interval_seconds=manifest.backtest_config.source_interval_seconds if manifest.backtest_config else None)
     prices = prices.with_columns(pl.Series('row_id', [f'source:{value}' for value in prices['start_ns']]))
@@ -86,7 +97,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             prediction = primary.predict({'x_test': frame.select(names)})
             meta = frame.select(names)
             target = clone.target_class_config
-            target_binding = None if target is None else {'method': f'{target.target_class.__module__}.{target.target_class.__qualname__}', 'fit': json_value(target.fit_params), 'transform': json_value(target.transform_params)}
+            target_binding = None if target is None else {'method': component_identity(target.target_class), 'fit': json_value(resolve_params(target.fit_params, dict(params))), 'transform': json_value(resolve_params(target.transform_params, dict(params)))}
         else:
             if rule_features is None or not isinstance(manifest, RuleBasedManifest) or manifest.strategy is None:
                 raise ValueError('Missing original causal rule preparation')
@@ -95,7 +106,18 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
             if not prefix_features.filter(pl.col('datetime') <= raw['datetime'][end - 1]).equals(earlier):
                 raise ValueError('Primary rule features depend on observations after their decision')
             frame = prefix_features.filter(pl.col('datetime').is_between(raw['datetime'][start], raw['datetime'][end - 1]))
-            prediction = RuleBasedStrategy().predict({'test': frame, 'strategy': {'conditions': manifest.strategy.conditions, 'entry': manifest.strategy.entry}})
+            strategy = {'conditions': manifest.strategy.conditions, 'entry': manifest.strategy.entry}
+            if manifest.architecture_function is rule_based:
+                primary = RuleBasedStrategy()
+            else:
+                prefix_manifest = deepcopy(manifest)
+                prefix_manifest.allocation_config = None
+                prefix_manifest.backtest_config = None
+                prefix_manifest.split_dates = None
+                prefix_manifest.split_config = (max(1, start - 2), 1, 1)
+                prefix_data = prefix_manifest.prepare_data(raw.head(start), dict(params))
+                primary = fit_primary(prefix_manifest, prefix_data, params)
+            prediction = primary.predict({'test': frame, 'strategy': strategy})
             excluded = {condition['id'] for condition in manifest.strategy.conditions}
             meta = frame.select([name for name, dtype in frame.schema.items() if dtype.is_numeric() and name not in excluded])
             target_binding = None
@@ -105,7 +127,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
         if decisions.shape != (frame.height,) or not np.isin(decisions, [0, 1]).all():
             raise ValueError('OOF primary must emit aligned binary decisions')
         if include_primary_proba:
-            probabilities = np.asarray(prediction['_probs'], dtype=np.float64)
+            probabilities = np.asarray(prediction.get('_probs'), dtype=np.float64)
             if probabilities.shape != decisions.shape or not np.isfinite(probabilities).all():
                 raise ValueError('OOF primary probabilities must be finite and aligned')
             meta = meta.with_columns(pl.Series('primary_probability', probabilities))
@@ -170,11 +192,11 @@ def _opportunity(context: AllocationContext, prices: pl.DataFrame, frame: pl.Dat
         entry = ledger.fills.filter(pl.col('episode_id') == episode['episode_id']).row(0, named=True)
         notional = abs(float(entry['quantity_delta'])) * float(entry['fill_price'])
         closed = episode['closed_at_ns']
-        available = closed is not None and int(closed) <= block_end
+        available = closed is not None and int(closed) < block_end
         row.update(first_fill_ns=episode['first_fill_ns'], closed_at_ns=closed, label_available_ns=closed if available else None,
                    net_pnl=episode['net_pnl'], entry_equity=episode['entry_equity'], entry_notional=notional,
                    net_return_on_entry_notional=float(episode['net_pnl']) / notional if available else None,
-                   unavailable_reason=None if available else 'open_at_opening_block_end', exit_reason=episode['exit_reason'])
+                   unavailable_reason=None if available else 'open_at_opening_block_end' if closed is None else 'closed_at_opening_block_boundary', exit_reason=episode['exit_reason'])
         return row, available
     return row, False
 
@@ -182,11 +204,6 @@ def _opportunity(context: AllocationContext, prices: pl.DataFrame, frame: pl.Dat
 __all__: list[str] = []
 
 def admit(manifest: Manifest, params: Mapping[str, object]) -> None:
-    from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
-    from limen.sfd.reference_architecture.rule_based import rule_based
-    from limen.targets.quantile_binary import QuantileBinaryTarget
-    from limen.indicators.window_return import window_return
-
     if manifest.allocation_config is None:
         return
     policy, config = manifest.resolve_trade_policy(params), manifest.backtest_config
@@ -197,19 +214,12 @@ def admit(manifest: Manifest, params: Mapping[str, object]) -> None:
     if any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('Allocation cannot refit replaced preparation/model methods')
     if isinstance(manifest, MLManifest):
-        if any(getattr(manifest, key) is not None for key in ('scaler', 'pca_compression_config', 'ablation_config', 'prediction_calibration_config', 'objective', 'data_dict_extension')) or manifest.feature_shims:
-            raise ValueError('Allocation prefix fitting lacks causal state for configured fitted preprocessing or selection')
+        if manifest.objective is not None or manifest.data_dict_extension is not None:
+            raise ValueError('Allocation needs original prefix evidence for custom extensions or economic selection')
         target = manifest.target_class_config
-        if manifest.architecture_params or manifest.architecture_function is not lightgbm_binary or target is None or target.target_class is not QuantileBinaryTarget:
-            raise ValueError('Allocation needs an original binary primary with refittable forward target support')
-        fitting = resolve_params(target.fit_params, dict(params))
-        transform = resolve_params(target.transform_params, dict(params))
-        shift = transform.get('shift')
-        if isinstance(shift, bool) or not isinstance(shift, int) or shift >= 0 or fitting.get('source_column') != f'ret_{-shift}':
-            raise ValueError('Allocation target must declare a negative forward horizon and matching return source')
-        if not any(entry.func is window_return and resolve_params(entry.params, dict(params)).get('period', 24) == -shift for entry in manifest.feature_transforms):
-            raise ValueError('Allocation forward target requires its original causal window_return source')
-    elif not isinstance(manifest, RuleBasedManifest) or manifest.architecture_function is not rule_based or manifest.target_class_config is not None:
+        if target is not None and getattr(target.target_class, 'requires_trade_context', False):
+            raise ValueError('Primary target requires original private prefix trade evidence')
+    elif not isinstance(manifest, RuleBasedManifest) or manifest.target_class_config is not None:
         raise ValueError('Allocation requires an unchanged binary rule or refittable ML primary')
 
 
@@ -251,6 +261,7 @@ def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], 
         ready = tuple(signals['__barrier_ready__'].to_list()) if '__barrier_ready__' in signals.columns else (True,) * signals.height
         batches[name] = AllocationBatch(name, partition.partition_start_ns, partition.partition_end_ns, ids, tuple(signals['available_at_ns'].to_list()), primary, meta, stop, ready)
     clone = deepcopy(manifest)
+    vars(clone)['_allocation_auxiliary_params'] = parameter_references(manifest.allocation_config.params) | parameter_references(manifest.backtest_config.barrier_features.params if manifest.backtest_config.barrier_features else {})
     clone.allocation_config = None
     context = AllocationContext(clone, train, dict(params), trade.policy, batches, barriers, trade.partitions[0].initial_equity, trade.partitions[0])
     data['_allocation_context'], data['_allocation_batches'] = context, batches

@@ -26,6 +26,9 @@ def _config(ml=False):
         declared['target'] = {'name': 'forward', 'class': 'limen.targets.QuantileBinaryTarget', 'fit_params': {'source_column': 'ret_1', 'quantile': 0.5}, 'transform_params': {'shift': -1}}
         declared['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary.lightgbm_binary'
         config['sfd']['params'].update(n_estimators=[5], min_child_samples=[3], num_leaves=[3], early_stopping_rounds=[2], n_jobs=[1])
+        if ml == 'logreg':
+            declared['reference_architecture'] = 'limen.sfd.reference_architecture.logreg_binary.logreg_binary'
+            declared['scaler'] = {'class': 'limen.scalers.RobustScaler'}
     return config
 
 
@@ -37,7 +40,7 @@ def _prepared(ml=False):
     return manifest, raw, params, manifest.prepare_data(raw, params)
 
 
-@pytest.mark.parametrize('ml', [False, True])
+@pytest.mark.parametrize('ml', [False, True, 'logreg'])
 def test_rule_and_ml_primary_identity_is_preserved(ml):
     manifest, raw, params, data = _prepared(ml)
     original = deepcopy(manifest)
@@ -66,7 +69,7 @@ def test_prefix_refits_and_completed_outcome_purging():
     assert completed.height >= 2
     for block in labels.binding['folds']:
         opened = completed.filter(pl.col('opening_block') == block['block'])
-        assert opened['label_available_ns'].le(block['end_ns']).all()
+        assert opened['label_available_ns'].lt(block['end_ns']).all()
         assert block['fit_prefix_rows'] < context.raw_train.height
     from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
     indices = np.array_split(np.arange(context.raw_train.height), 3)[1]
