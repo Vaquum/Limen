@@ -193,13 +193,17 @@ class PythonCohortBase(Generic[HistoryT]):
             reason = 'inside-training-window'
         if reason is not None:
             return BarPrediction(stamp, None, None, reason, available)
-        mapped: list[BarPrediction] = []
-        for member, bar in zip(self.members, bars, strict=True):
-            pair = (bar.prediction, bar.probability) if self._map_output is None else self._map_output(member, replace(bar))
-            prediction, probability, invalid = mapped_values(pair)
-            if invalid is not None:
-                return BarPrediction(stamp, None, None, invalid, available)
-            mapped.append(BarPrediction(stamp, prediction, probability, None, bar.available_at_ns))
+        mapped: Sequence[BarPrediction] = bars
+        if self._map_output is not None:
+            adapted: list[BarPrediction] = []
+            for member, bar in zip(self.members, bars, strict=True):
+                prediction, probability, invalid = mapped_values(self._map_output(member, replace(bar)))
+                if invalid is not None:
+                    return BarPrediction(stamp, None, None, invalid, available)
+                adapted.append(BarPrediction(stamp, prediction, probability, None, bar.available_at_ns))
+            mapped = adapted
+        elif callable(self._aggregate):
+            mapped = [replace(bar) for bar in bars]
         pair = self._aggregate(mapped) if callable(self._aggregate) else _builtin(self._aggregate, mapped)
         prediction, probability, reason = mapped_values(pair)
         return BarPrediction(stamp, prediction, probability, reason, available)

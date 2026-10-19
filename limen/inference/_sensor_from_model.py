@@ -9,7 +9,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.inference._python_sensor import HistoryT, Infer, MapOutput, OutputT, PredictionReason, StateT, decision_rows, mapped_values, output_rows, utc_cutoff
+from limen.inference._python_sensor import HistoryT, Infer, MapOutput, OutputT, PredictionReason, StateT, decision_rows, output_rows, utc_cutoff
 
 __all__ = ['Missing', 'ModelInput', 'ModelPairs', 'Predict', 'Prepare', 'identity_pairs', 'model_infer']
 
@@ -52,16 +52,11 @@ def _features(value: object) -> tuple[str, ...]:
     return columns
 
 
-def _default_pairs(output: object, count: int) -> ModelPairs:
+def _default_pairs(output: object, count: int) -> Sequence[object]:
     values = _vector(output)
     if len(values) != count:
         raise ValueError('Python Sensor prediction count must match eligible feature rows')
-    pairs: list[tuple[int | float | None, float | None]] = []
-    for value in values:
-        normalized = (1 if value else 0) if isinstance(value, (bool, np.bool_)) else value
-        prediction, probability, _reason = mapped_values((normalized, None))
-        pairs.append((prediction, probability))
-    return pairs
+    return [((1 if value else 0) if isinstance(value, (bool, np.bool_)) else value, None) for value in values]
 
 
 def _feature_reasons(frame: pl.DataFrame, missing: Missing) -> list[PredictionReason | None]:
@@ -115,7 +110,7 @@ def model_infer(model: StateT, selection_cutoff: datetime, prepare: Prepare[Hist
         reasons = [declared or feature for declared, feature in zip(declared_reasons, feature_reasons, strict=True)]
         metadata = prepared.select([name for name in _METADATA if name in prepared.columns]).with_columns(pl.Series('reason', reasons, dtype=pl.String))
         indices = [i for i, (stamp, reason) in enumerate(zip(timestamps, reasons, strict=True)) if stamp >= cutoff and reason is None]
-        pairs: list[tuple[int | float | None, float | None]] = [(None, None)] * prepared.height
+        pairs: list[object] = [(None, None)] * prepared.height
         if indices:
             eligible = features[indices]
             if predict is not None:
@@ -125,8 +120,7 @@ def model_infer(model: StateT, selection_cutoff: datetime, prepare: Prepare[Hist
                 output = default_predict(eligible if model_frame else eligible.to_numpy())
             mapped = _default_pairs(output, len(indices)) if map_output is None else output_rows(map_output(cast(OutputT, output)), len(indices))
             for index, pair in zip(indices, mapped, strict=True):
-                prediction, probability, _reason = mapped_values(pair)
-                pairs[index] = (prediction, probability)
-        return metadata, pairs
+                pairs[index] = pair
+        return metadata, cast(ModelPairs, pairs)
 
     return infer, str(uuid4()) if state_id is None else state_id
