@@ -1057,6 +1057,8 @@ class MLManifest(Manifest):
                     trade_context=target_context(trade, i) if outcome_target else None, labels=private_labels
                 )
 
+            if is_train and outcome_target:
+                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             data = self._prepare_column_shims(data, round_params, all_fitted_params, is_train)
 
             if self.ablation_config is not None:
@@ -1072,8 +1074,6 @@ class MLManifest(Manifest):
 
             _check_unexpected_nulls(self, data, i, 'A')
 
-            if is_train and outcome_target:
-                raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
             if is_train:
                 _holdout.capture_schema(self, data, 'input')
             data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
@@ -1122,7 +1122,7 @@ class MLManifest(Manifest):
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
         if outcome_target:
-            attach_outcomes(data_dict, private_labels, raw_features, split_data[0],
+            attach_outcomes(data_dict, private_labels, raw_features, split_data[0], dropped=columns_to_drop or (),
                 scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
                 deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
         return _allocation_stage.attach(self, raw_data, round_params, data_dict)

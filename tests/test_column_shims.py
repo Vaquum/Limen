@@ -213,7 +213,7 @@ def test_fractional_shim_matches_causal_fixed_width_definition(recorded_shim_bar
         assert actual[column].equals(recorded_shim_bars[column])
 
 
-def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_shim_bars, monkeypatch):
+def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_shim_bars):
     import limen.experiment._column_shims as shims_module
 
     shims = [{'columns': ['close'], 'method': 'fractional_diff', 'd': 'auto', 'threshold': 0.01}]
@@ -247,13 +247,8 @@ def test_auto_fractional_shim_fits_train_only_and_keeps_past_outputs(recorded_sh
 
     conditional = _native(shims).with_reference_architecture(direction_sizing)
 
-    def forbidden_auto_fit(*args, **kwargs):
-        raise AssertionError('conditional preparation must reject before fitting an order')
-
-    with monkeypatch.context() as scoped:
-        scoped.setattr(shims_module, 'fit_order', forbidden_auto_fit)
-        with pytest.raises(ValueError, match='conditional direction/sizing'):
-            conditional.prepare_data(recorded_shim_bars, {'conditional_size': True})
+    admitted = conditional.prepare_data(recorded_shim_bars, {'conditional_size': True})
+    assert admitted['x_train'].equals(first['x_train'])
 
     for spec in ({'columns': ['close'], 'method': 'fractional_diff', 'd': 1.0},
                  {'columns': ['volume'], 'method': 'log1p'}):

@@ -21,12 +21,7 @@ class _ShimManifest(Protocol):
     feature_shims: list[dict[str, object]]
 
     @property
-    def architecture_function(self) -> object: ...
-
-    @property
     def target_column(self) -> str | None: ...
-
-    def resolve_model_kwargs(self, round_params: dict[str, object]) -> Mapping[str, object]: ...
 
 
 _TManifest = TypeVar('_TManifest', bound=_ShimManifest)
@@ -232,14 +227,6 @@ def prepare_column_shims(
     fitted_params: dict[str, object], training: bool,
 ) -> pl.DataFrame:
     if manifest.feature_shims:
-        automatic = any(spec['method'] == 'fractional_diff' and spec.get('d') == 'auto'
-                        for spec in _resolved(manifest.feature_shims, round_params))
-        if automatic:
-            from limen.sfd.reference_architecture.direction_sizing import direction_sizing
-
-            if (manifest.architecture_function is direction_sizing
-                    and manifest.resolve_model_kwargs(dict(round_params)).get('conditional_size') is True):
-                raise ValueError('feature_shims auto fractional_diff is unsupported with conditional direction/sizing')
         data, fitted_params['_column_shims'] = apply_column_shims(
             data, manifest.feature_shims, round_params, fitted_params.get('_column_shims'),
             training=training, target=manifest.target_column,
