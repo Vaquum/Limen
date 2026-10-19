@@ -12,7 +12,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_functions, object_array
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_evidence, object_array
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -126,7 +126,7 @@ def _probe_output(sensor: Sensor) -> object:
 def validate_inference_dependencies(sensor: Sensor) -> None:
     roots = _roots(sensor)
     config = getattr(vars(sensor)['_model'], 'prediction_calibration_config', None)
-    _ = inference_functions(roots, exclude=() if config is None else (config,))
+    _ = inference_evidence(roots, exclude=() if config is None else (config,))
 
 
 def validate_prediction(sensor: Sensor) -> None:

@@ -19,7 +19,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_functions', 'object_array']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -141,10 +141,9 @@ def fitted_witness(value: object) -> bytes:
     return pickle.dumps(node(value), protocol=5)
 
 
-def inference_functions(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> tuple[list[object], list[object]]:
+def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> list[object]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
-    functions: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
     function_witness = lru_cache(maxsize=None)(fitted_witness)
     attributes: set[str] = set()
@@ -176,7 +175,6 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                 objects.append(provider)
                 methods(provider)
         elif inspect.isfunction(value):
-            functions.append(value)
             evidence.append(function_witness(value))
             if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
                 return
@@ -283,8 +281,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
         previous = (len(attributes), len(objects))
         for value in tuple(objects):
             methods(value)
-    return functions, evidence
+    return evidence
 
 
 def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> str:
-    return sha256(pickle.dumps(inference_functions(values, exclude=exclude, resolved=resolved)[1], protocol=5)).hexdigest()
+    return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved), protocol=5)).hexdigest()
