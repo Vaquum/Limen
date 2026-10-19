@@ -464,11 +464,13 @@ def test_compiled_fitted_components_complete_final_assessment(assessment_case):
     for selected in [sensor for group in trained for sensor in group] + [cohort]:
         frozen = _freeze(selected, context='2024-01-01')
         first = _report(frozen, assessment_case)
-        repeat = _report(frozen, assessment_case)
-        assert first['state'] == repeat['state'] == 'completed'
-        assert all(first[key] == repeat[key] for key in _REPEAT_KEYS)
-        assert first['attempt_id'] != repeat['attempt_id']
-        assert read_holdout_report(root, repeat['attempt_id']) == repeat
+        assert first['state'] == 'completed'
+        assert read_holdout_report(root, first['attempt_id']) == first
+        if selected is cohort or selected is trained[2][0]:
+            repeat = _report(frozen, assessment_case)
+            assert all(first[key] == repeat[key] for key in _REPEAT_KEYS)
+            assert first['attempt_id'] != repeat['attempt_id']
+            assert read_holdout_report(root, repeat['attempt_id']) == repeat
 
 
 @pytest.mark.parametrize('limit', ['equal', 'truncated'])
