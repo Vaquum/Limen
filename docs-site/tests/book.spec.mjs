@@ -46,6 +46,21 @@ test('copy preserves canonical source without gutters',async({page,context})=>{
   await expect.poll(()=>page.evaluate(()=>navigator.clipboard.readText())).toBe(expected);
 });
 
+test('reference fragments retain the panel and canonical history',async({page})=>{
+  await open(page);const chapter=page.url();const opener=page.getByRole('link',{name:'Cohort composition',exact:true});
+  await opener.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
+  const initial=page.url();const fragment=page.locator('[data-reference-body] a[data-reference-fragment="recorded-walk-forward-members"]').first();
+  await fragment.click();await expect(page).toHaveURL(/reference\/cohort\/#recorded-walk-forward-members$/);
+  await expect(page.locator('[data-reference-dialog]')).toBeVisible();
+  await page.goBack();await expect(page).toHaveURL(initial);await expect(page.locator('[data-reference-dialog]')).toBeVisible();
+  await page.goForward();await expect(page).toHaveURL(/#recorded-walk-forward-members$/);await expect(page.locator('[data-reference-dialog]')).toBeVisible();
+  await page.getByRole('button',{name:'Return to chapter',exact:true}).click();await expect(page).toHaveURL(chapter);
+  await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(opener).toBeFocused();
+  await page.goForward();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
+  await fragment.click();await page.reload();await expect(page.getByRole('heading',{level:1})).toHaveText('Cohort');
+  await expect(page).toHaveURL(/reference\/cohort\/#recorded-walk-forward-members$/);
+});
+
 test('search and keyboard reach the same reference',async({page})=>{
   let release;const loaded=new Promise(resolve=>{release=resolve;});
   await page.route('**/search.json',async route=>{await loaded;await route.continue();});
@@ -62,6 +77,20 @@ test('color preferences preserve the fixed composition',async({page})=>{
   await page.emulateMedia({colorScheme:'dark'});expect(await page.locator('.hero').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(first);expect(first).toBe('rgb(20, 32, 56)');
   await page.emulateMedia({forcedColors:'active'});await page.getByRole('button',{name:'Search',exact:true}).focus();
   const outline=await page.getByRole('button',{name:'Search',exact:true}).evaluate(el=>({width:getComputedStyle(el).outlineWidth,style:getComputedStyle(el).outlineStyle}));expect(parseFloat(outline.width)).toBeGreaterThanOrEqual(2);expect(outline.style).not.toBe('none');
+});
+
+test('chapter navigation fits the viewport and offers usable targets',async({page})=>{
+  await open(page);
+  for(const link of await page.locator('.part-nav a,.part-nav button').all())expect((await link.boundingBox()).height).toBeGreaterThanOrEqual(24);
+  const menu=page.locator('.mobile-nav');
+  if(test.info().project.name==='phone'){
+    await expect(menu).toBeVisible();await expect(page.locator('.chapter-nav')).not.toBeVisible();
+    await expect(menu.locator('nav').first()).not.toBeVisible();
+    await menu.locator('summary').focus();await page.keyboard.press('Enter');await expect(menu.locator('nav').first()).toBeVisible();
+    await menu.getByRole('link',{name:'Python Research project',exact:true}).click();await expect(page).toHaveURL(/book\/python-research\/$/);
+    await expect(page.locator('.mobile-nav')).not.toHaveAttribute('open','');
+    await page.setViewportSize({width:320,height:700});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  }else{await expect(menu).not.toBeVisible();await expect(page.locator('.chapter-nav')).toBeVisible();}
 });
 
 test('reduced motion and interruption retain readable content',async({page})=>{
@@ -93,6 +122,7 @@ test('without JavaScript both interfaces and proof links remain readable',async(
   const context=await browser.newContext({javaScriptEnabled:false,viewport:test.info().project.name==='phone'?{width:390,height:844}:{width:1440,height:1000}});
   const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
   await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
+  if(test.info().project.name==='phone'){await page.locator('.mobile-nav summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Trainer');await context.close();
 });
 
