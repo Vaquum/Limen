@@ -57,6 +57,9 @@ class CallerRolling:
     def transform(self, data):
         return _caller_feature(data, self.window)
 
+    def __call__(self, data):
+        return self.transform(data)
+
 
 class CallerTarget(RandomBinaryTarget):
     '''Importable caller target using the native seeded noise benchmark.'''
@@ -116,13 +119,19 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3)):
             declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
+            assert digest(decode(encode(frozen))) == digest(frozen)
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
+        component = CallerRolling(3)
+        declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
+        vars(component)['cached_result'] = []
+        with pytest.raises(ValueError, match='undeclared runtime state'):
+            freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
         from tests.test_parallel_rounds import parallel_config
         declare_parallel(CallerTarget, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
         target = build_manifest(parallel_config()).with_target_label('noise', CallerTarget, fit_params={'random_state': '{target_seed}'})

@@ -98,12 +98,12 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, type):
         names = {field.name for field in fields(value)}
-        if hasattr(value, '__dict__') and set(vars(value)) - names:
+        if hasattr(value, '__dict__') and set(vars(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
                 [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)]]
     if callable(value) and hasattr(value, '__dict__'):
-        return ['instance', reference(type(value)), encode(vars(value), active)]
+        return ['instance', reference(type(value)), encode({key: item for key, item in vars(value).items() if key != '__parallel_round_contract__'}, active)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
 
 
