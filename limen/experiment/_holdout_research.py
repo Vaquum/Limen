@@ -220,7 +220,8 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
 
 def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, test_mode: bool,
                     project_root: str | Path | None, experiment_dir: str | Path | None) -> tuple[ResearchManifest | None, pl.DataFrame, Callable[..., dict[str, object]] | None, Callable[..., dict[str, object]] | None]:
-    manifest = cast(Callable[[], ResearchManifest], sfd.manifest)() if hasattr(sfd, 'manifest') else None
+    factory = getattr(sfd, 'manifest', None)
+    manifest = cast(Callable[[], ResearchManifest], factory)() if hasattr(sfd, 'manifest') else None
     if hasattr(sfd, 'manifest') and manifest is None:
         raise ValueError('SFD manifest factory returned no manifest')
     hint = cast(str | Path | None, getattr(sfd, '_holdout_project_root', None))

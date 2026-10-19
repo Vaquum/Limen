@@ -186,7 +186,7 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
     custom = UniversalExperimentLoop(data=old.data, sfd=SimpleNamespace(__name__='custom', params=lambda: {'choice': [1]}, prep=lambda *_: {}, model=lambda *_: {}), project_root=root)
     for invalid in (None, lambda: None):
         with pytest.raises((TypeError, ValueError)):
-            UniversalExperimentLoop(data=old.data, sfd=SimpleNamespace(manifest=invalid), project_root=root)
+            UniversalExperimentLoop(data=old.data, sfd=SimpleNamespace(manifest=invalid, params=lambda: {}), project_root=root)
     empty = history.bind(root)
     with pytest.raises(ValueError, match='active reservation'):
         history.start_research(empty, 'experiment')
