@@ -145,7 +145,7 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
                 asset['kind'] = 'fills'
         if label == 'no_benchmark':
             fault['source']['assets'] = [asset for asset in fault['source']['assets'] if asset['kind'] != 'benchmark']
-        with pytest.raises(ValueError, match='pinned fills and benchmark|fills-kind source asset'):
+        with pytest.raises(ValueError, match=r'pinned fills and benchmark|fills-kind source asset'):
             CostCalibration.from_history(_write_fault(tmp_path / f'fault-{label}.json', fault), cutoff_ns=CUTOFF)
     late = CostCalibration.from_history(path, cutoff_ns=CUTOFF - 1).report()
     assert late['support']['disposition'] == 'unavailable'
