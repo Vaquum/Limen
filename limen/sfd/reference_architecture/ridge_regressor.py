@@ -25,12 +25,14 @@ def _ridge(params: dict[str, object]) -> _RidgeEstimator:
 
 
 class RidgeRegressor(ReferenceModel):
+
     """Sklearn ridge regression with Limen's train/predict/evaluate contract.
 
     Each train call fits a fresh estimator on the training split only.
     Solver behavior, validation, and warnings belong to sklearn. The
     deterministic flag is conservative because stochastic solvers are allowed.
     """
+    inference_output = ('continuous', False)
 
     deterministic = False
 

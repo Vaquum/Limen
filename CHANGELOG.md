@@ -1774,5 +1774,9 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.42.0] - 2026-10-19
 
+- Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.
+
+## [5.43.0] - 2026-10-19
+
 - Add research batch meta allocation trained on causal primary-opportunity outcomes with per-opportunity exposure and declared stop-risk caps.
 - Preserve recorded hour-end bar availability and aligned missing intervals through explicit source timestamp metadata.

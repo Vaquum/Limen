@@ -17,6 +17,7 @@ SINGULAR_VALUE_FLOOR = 1e-12
 
 class DLinearRegressor(ReferenceModel):
 
+
     '''DLinear regression model with train/evaluate interface.
 
     Implements canonical DLinear semantics (Zeng et al. 2023): the lookback
@@ -31,6 +32,7 @@ class DLinearRegressor(ReferenceModel):
     window in time order (oldest bar first). All other feature columns are
     ignored.
     '''
+    inference_output = ('continuous', False)
 
     deterministic = True
 

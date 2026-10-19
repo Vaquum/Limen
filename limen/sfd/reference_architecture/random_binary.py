@@ -9,7 +9,9 @@ from limen.sfd.reference_architecture.base import ReferenceModel
 
 class RandomBinary(ReferenceModel):
 
+
     '''Random binary classifier with train/evaluate interface.'''
+    inference_output = ('binary', True)
 
     deterministic = False
 

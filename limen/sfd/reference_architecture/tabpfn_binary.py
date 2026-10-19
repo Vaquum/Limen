@@ -18,7 +18,9 @@ TABPFN_MODEL_PATH = 'tabpfn-v2-classifier-v2_default.ckpt'
 
 class TabPFNBinary(ReferenceModel):
 
+
     '''TabPFN binary classifier with train/evaluate interface.'''
+    inference_output = ('binary', True)
 
     deterministic = False
 

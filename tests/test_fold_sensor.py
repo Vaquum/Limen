@@ -1,0 +1,114 @@
+import copy
+from unittest.mock import patch
+
+import polars as pl
+import pytest
+
+from limen.cohort import Cohort
+from limen.inference import Sensor
+from limen.inference._python_sensor import decision_rows
+pytest_plugins = ['tests.fold_components']
+
+
+@pytest.mark.parametrize('kind', ['anchored', 'rolling', 'continuous', 'custom', 'formed', 'parallel', 'signed', 'reordered'])
+@pytest.mark.parametrize('failure', ['none', 'feature', 'model'])
+def test_guard_failure_precedence(fold_campaigns, kind, failure):
+    item = fold_campaigns[kind]
+    sensor = copy.deepcopy(item.sensor)
+    source = item.bars.sort('datetime')
+    history = item.history.head(600)
+    manifest = sensor._get_manifest()
+    if failure == 'feature':
+        context = patch.object(manifest, '_prepare_column_shims', side_effect=ValueError('feature failure'))
+    elif failure == 'model':
+        context = patch.object(sensor._model, 'predict', side_effect=ValueError('model failure'))
+    else:
+        context = patch.object(manifest, 'val_predict_guard', False)
+    with context:
+        rows = sensor.predict_all(history)
+        assert rows
+        assert sensor.predict(history) == rows[-1]
+        for row in rows:
+            assert row.datetime is not None
+            if row.datetime < sensor.selection_cutoff:
+                assert row.reason == 'inside-training-window'
+                assert row.prediction is None and row.probability is None
+            elif failure != 'none':
+                assert row.reason == 'sensor-error'
+        assert any(row.datetime >= sensor.selection_cutoff for row in rows)
+        if failure == 'none':
+            assert any(row.datetime >= sensor.selection_cutoff and row.reason is None and row.prediction is not None for row in rows)
+        if kind == 'formed':
+            assert len(rows) < len(history)
+    # Original, pre-source and omitted native rows remain guarded, independent of flags.
+    first = source.head(40)
+    assert all(row.reason == 'inside-training-window' for row in sensor.predict_all(first))
+
+
+@pytest.mark.parametrize('kind', ['anchored', 'signed'])
+def test_native_missing_bars_retain_recorded_clock(fold_campaigns, kind):
+    sensor = fold_campaigns[kind].sensor
+    history = fold_campaigns[kind].history.head(600)
+    history = pl.concat([history[:500], history[501:]])
+    rows = sensor.predict_all(history)
+    assert len(rows) == len(history)
+    assert rows[-1].reason is None and rows[-1].prediction is not None
+
+
+def test_incomplete_formed_bar_warms_up(fold_campaigns):
+    sensor = fold_campaigns['formed'].sensor
+    first = fold_campaigns['formed'].history.head(1)
+    assert sensor.predict_all(first) == []
+    result = sensor.predict(first)
+    assert result.reason == 'warm-up' and result.prediction is None
+
+
+@pytest.mark.parametrize('kind', ['ordinary', 'anchored', 'formed'])
+def test_predict_keyword_keeps_public_signature(fold_campaigns, kind):
+    sensor = fold_campaigns[kind].sensor
+    history = fold_campaigns[kind].history.head(600)
+    assert sensor.predict(raw_klines=history) == sensor.predict(history)
+
+
+@pytest.mark.parametrize('shape', ['duplicate', 'unsorted', 'null', 'naive', 'submicrosecond', 'finer', 'interval'])
+def test_fold_sensor_clock(fold_campaigns, shape):
+    sensor = fold_campaigns['anchored'].sensor
+    frame = fold_campaigns['anchored'].bars.head(4)
+    if shape == 'duplicate':
+        frame = pl.concat([frame, frame.tail(1)])
+    if shape == 'unsorted':
+        frame = frame.reverse()
+    if shape == 'null':
+        frame = frame.with_columns(pl.lit(None, dtype=pl.Datetime('us', 'UTC')).alias('datetime'))
+    if shape == 'naive':
+        frame = frame.with_columns(pl.col('datetime').dt.replace_time_zone(None))
+    if shape == 'submicrosecond':
+        frame = frame.with_columns((pl.col('datetime').dt.epoch('ns') + 1).cast(pl.Datetime('ns', 'UTC')))
+    if shape == 'finer':
+        frame = frame.with_columns(pl.col('datetime') + pl.duration(minutes=30))
+    if shape == 'interval':
+        frame = frame.with_columns(pl.lit(1800).alias('base_interval'))
+    with pytest.raises(ValueError):
+        sensor.predict_all(frame)
+    if shape not in ('finer', 'interval'):
+        with pytest.raises(ValueError):
+            decision_rows(frame)
+
+
+@pytest.mark.parametrize('route', ['members', 'rounds', 'python', 'manual'])
+def test_legacy_cohort_rejects_fold_binding(fold_campaigns, route):
+    item = fold_campaigns['anchored']
+    if route == 'manual':
+        with pytest.raises(ValueError, match='validated Trainer'):
+            Sensor(item.config, item.sensor._model, item.sensor._fitted_params, item.sensor.round_params)
+    elif route == 'python':
+        with pytest.raises(ValueError, match='fold-qualified'):
+            Cohort.from_python([item.sensor], map_output=lambda value: value, mapped_output_id='binary', selection_cutoff=item.sensor.selection_cutoff)
+    elif route == 'rounds':
+        with pytest.raises(ValueError, match='walk-forward rounds cannot be promoted'):
+            Cohort(rounds=[(item.path, item.record['round_id'])])
+    else:
+        ordinary = fold_campaigns['ordinary']
+        cohort = Cohort(experiment_log_path=str(ordinary.path), permutation_ids=[ordinary.record['round_id']])
+        with pytest.raises(ValueError, match='fold-qualified'):
+            cohort.set_members([item.sensor])

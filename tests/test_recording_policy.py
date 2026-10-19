@@ -124,6 +124,8 @@ def _project(record, policy):
             del expected['folds']
         else:
             expected['folds'] = [_project(fold, policy) for fold in expected['folds']]
+    if not policy['fold_details']:
+        expected.pop('fold_promotion', None)
     if not policy['predictions']:
         expected.pop('preds', None)
     if not policy['trade_ledger']:
@@ -365,7 +367,7 @@ def test_payload_projection(kind, campaigns, tmp_path):
             np.testing.assert_array_equal(left, right)
         assert len(full['loop']._alignment) == len(lean['loop']._alignment)
         for left, right in zip(full['loop']._alignment, lean['loop']._alignment, strict=True):
-            assert set(left) == set(right)
+            assert set(left) - {'fold_promotion'} == set(right)
             if kind != 'walk_forward':
                 assert right['missing_datetimes'] == left['missing_datetimes']
             if kind == 'serial':

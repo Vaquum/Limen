@@ -496,5 +496,11 @@
   "limen/experiment/_dynamic_barriers.py": 200,
   "limen/experiment/_allocation.py": 240,
   "limen/experiment/_allocation_folds.py": 300,
-  "limen/sfd/reference_architecture/meta_allocation.py": 240
+  "limen/sfd/reference_architecture/meta_allocation.py": 240,
+  "limen/experiment/_fold_fingerprint.py": 180,
+  "limen/experiment/_fold_partitions.py": 180,
+  "limen/experiment/_fold_evidence.py": 240,
+  "limen/inference/_fold_trainer.py": 240,
+  "limen/inference/_fold_metrics.py": 140,
+  "limen/inference/_fold_sensor.py": 240
 }

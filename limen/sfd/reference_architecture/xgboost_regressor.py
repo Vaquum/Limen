@@ -12,7 +12,9 @@ __all__ = ['XGBoostRegressor', 'xgboost_regressor']
 
 class XGBoostRegressor(ReferenceModel):
 
+
     '''XGBoost regression model with train/evaluate interface.'''
+    inference_output = ('continuous', False)
 
     deterministic = True
 

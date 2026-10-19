@@ -1393,3 +1393,7 @@ This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the or
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
 
 See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.
+
+### Fold promotion evidence
+
+With `uel.recording.fold_details: true`, walk-forward campaigns retain versioned original-source, selected-source and raw/retained partition witnesses for validated native inference. Serial and parallel origins share the same trial/fold evidence. Default lean recording is unchanged. See [Trainer](Trainer.md#recorded-walk-forward-folds) for the reconstruction and clock contract.
