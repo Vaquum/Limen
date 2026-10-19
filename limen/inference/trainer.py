@@ -12,7 +12,7 @@ import polars as pl
 
 from limen.inference.errors import ReconstructionError
 from limen.inference.sensor import Sensor
-from limen.inference import _fold_trainer
+import limen.inference._fold_trainer as _fold_trainer
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError

@@ -24,7 +24,7 @@ class FoldEvidenceError(ValueError):
 _FORMATS = {'i8': 'b', 'i16': 'h', 'i32': 'i', 'i64': 'q',
             'u8': 'B', 'u16': 'H', 'u32': 'I', 'u64': 'Q',
             'f32': 'f', 'f64': 'd', 'date': 'i', 'datetime_utc_ns': 'q', 'bool': '?'}
-_TAGS = {pl.Boolean: 'bool', pl.Int8: 'i8', pl.Int16: 'i16', pl.Int32: 'i32', pl.Int64: 'i64',
+_TAGS: dict[object, str] = {pl.Boolean: 'bool', pl.Int8: 'i8', pl.Int16: 'i16', pl.Int32: 'i32', pl.Int64: 'i64',
          pl.UInt8: 'u8', pl.UInt16: 'u16', pl.UInt32: 'u32', pl.UInt64: 'u64',
          pl.Float32: 'f32', pl.Float64: 'f64', pl.String: 'utf8', pl.Date: 'date'}
 

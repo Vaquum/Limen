@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import copy
-from limen.inference import _fold_sensor
+import limen.inference._fold_sensor as _fold_sensor
 from collections.abc import Mapping, Sequence
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment._prepare_trade_context import validate_inference_contract

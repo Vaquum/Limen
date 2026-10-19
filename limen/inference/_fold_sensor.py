@@ -4,17 +4,12 @@ from collections.abc import Callable, Mapping, Sequence
 import copy
 from datetime import date, datetime, timezone
 from functools import wraps
-from typing import TYPE_CHECKING, Protocol, TypeVar, cast
+from typing import Protocol, TypeVar, cast
 
 import polars as pl
 
 from limen.experiment._fold_fingerprint import interval
-from limen.backtest.trade_contract import JsonValue
 from limen.inference._python_sensor import BarPrediction, decision_rows
-from limen.sfd.reference_architecture.base import ReferenceModel
-
-if TYPE_CHECKING:
-    from limen.inference.sensor import Sensor
 
 __all__: list[str] = []
 
@@ -53,7 +48,7 @@ def reject_legacy_members(members: Sequence[object], *, qualified_folds: bool = 
 def last_inside(sensor: object, dt: object, manifest: object) -> bool:
     context = cast(Mapping[str, object] | None, getattr(sensor, '_fold_context', None))
     if context is not None:
-        return isinstance(dt, datetime) and int(dt.timestamp() * 1_000_000) * 1000 < cast(int, cast(Mapping[str, object], context['campaign'])['selection_cutoff_ns'])
+        return isinstance(dt, datetime) and (int(dt.timestamp()) * 1_000_000 + dt.microsecond) * 1000 < cast(int, cast(Mapping[str, object], context['campaign'])['selection_cutoff_ns'])
     dates = cast(tuple[date, date, date, date, date, date] | None, getattr(manifest, 'split_dates', None))
     if dates is None or dt is None:
         return False
@@ -102,40 +97,31 @@ def recover(sensor: object, manifest: object, error: Exception, fallback: int) -
     return [BarPrediction(dt, None, None, 'inside-training-window' if last_inside(sensor, dt, manifest) else 'sensor-error') for dt in times]
 
 
-def promote(context: dict[str, object], *, yaml_reference: dict[str, object], model: ReferenceModel,
-            fitted_params: dict[str, object], round_params: dict[str, object], permutation_id: str,
-            manifest_id: str | None, trade_contract: Mapping[str, JsonValue] | None) -> Sensor:
-    from limen.inference.sensor import Sensor
+class FoldView:
+    _fold_context: dict[str, object]
 
-    class FoldSensor(Sensor):
-        def __init__(self) -> None:
-            self._fold_context = copy.deepcopy(context)
-            super().__init__(yaml_reference, model, fitted_params, round_params, permutation_id, manifest_id, trade_contract=trade_contract)
+    @property
+    def fold(self) -> int:
+        return cast(int, self._fold_context['fold'])
 
-        @property
-        def fold(self) -> int:
-            return cast(int, self._fold_context['fold'])
+    @property
+    def n_folds(self) -> int:
+        return cast(int, cast(Mapping[str, object], self._fold_context['fold_witness'])['n_folds'])
 
-        @property
-        def n_folds(self) -> int:
-            return cast(int, cast(Mapping[str, object], self._fold_context['fold_witness'])['n_folds'])
+    @property
+    def provenance_digest(self) -> str:
+        return cast(str, self._fold_context['provenance_digest'])
 
-        @property
-        def provenance_digest(self) -> str:
-            return cast(str, self._fold_context['provenance_digest'])
+    @property
+    def fold_provenance(self) -> dict[str, object]:
+        return copy.deepcopy(self._fold_context)
 
-        @property
-        def fold_provenance(self) -> dict[str, object]:
-            return copy.deepcopy(self._fold_context)
+    @property
+    def fitting_cutoff(self) -> datetime:
+        value = cast(int, cast(Mapping[str, object], self._fold_context['fold_witness'])['fitting_cutoff_ns'])
+        return datetime.fromtimestamp(value // 1_000_000_000, timezone.utc).replace(microsecond=(value // 1000) % 1_000_000)
 
-        @property
-        def fitting_cutoff(self) -> datetime:
-            value = cast(int, cast(Mapping[str, object], self._fold_context['fold_witness'])['fitting_cutoff_ns'])
-            return datetime.fromtimestamp(value / 1_000_000_000, timezone.utc)
-
-        @property
-        def selection_cutoff(self) -> datetime:
-            value = cast(int, cast(Mapping[str, object], self._fold_context['campaign'])['selection_cutoff_ns'])
-            return datetime.fromtimestamp(value / 1_000_000_000, timezone.utc)
-
-    return FoldSensor()
+    @property
+    def selection_cutoff(self) -> datetime:
+        value = cast(int, cast(Mapping[str, object], self._fold_context['campaign'])['selection_cutoff_ns'])
+        return datetime.fromtimestamp(value // 1_000_000_000, timezone.utc).replace(microsecond=(value // 1000) % 1_000_000)

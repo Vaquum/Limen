@@ -23,7 +23,6 @@ _DIGEST_LENGTH = 64
 class Host(Protocol):
     manifest: Manifest
     promotion: dict[str, object] | None
-    config: object
 
 
 class Record(Protocol):
@@ -41,7 +40,7 @@ def preparation(manifest: Manifest, params: Mapping[str, object]) -> dict[str, o
             'data_source': None if data_source is None else {'method': qualified(data_source.method), 'params': resolve_json(data_source.params, params)},
             'bar_type': params.get('bar_type', 'base'),
             'formation': None if formation is None else {'function': qualified(formation[0]), 'params': resolve_json(formation[1], params)},
-            'decoder_lookback': manifest.decoder_lookback}
+            'decoder_lookback': getattr(manifest, 'decoder_lookback', 1)}
 
 
 def start(manifest: Manifest, raw: pl.DataFrame, enabled: bool) -> dict[str, object] | None:
@@ -82,7 +81,9 @@ def configure(manifest: Manifest, data: Mapping[str, object], fold: int) -> None
 def model_witness(model: object) -> dict[str, object]:
     if model is None or not callable(getattr(model, 'predict', None)):
         raise FoldEvidenceError('inference_model', 'The architecture did not return a fitted native prediction model; rerun with a reconstructable inference contract')
-    declaration = getattr(type(model), 'inference_output', None)
+    supplied: object = getattr(type(model), 'inference_output', None)
+    declaration = cast(tuple[object, ...] | None, supplied)
+    output: dict[str, object] | None
     if declaration is not None and (not isinstance(declaration, tuple) or len(declaration) != _OUTPUT_FIELDS or declaration[0] not in ('binary', 'continuous', 'target_exposure') or type(declaration[1]) is not bool):
         raise FoldEvidenceError('inference_model', 'inference_output must be an immutable (kind, bool_probabilities) class declaration')
     output = None if declaration is None else {'kind': declaration[0], 'probabilities': declaration[1]}
@@ -116,9 +117,11 @@ def add_metadata(metadata: dict[str, object], host: object, workers: int) -> Non
 
 
 def checked(value: object) -> dict[str, object]:
-    if not isinstance(value, dict) or value.get('version') != 1:
-        raise FoldEvidenceError('row_membership', 'Missing or unsupported fold witness; rerun with version 1 evidence')
+    if not isinstance(value, dict):
+        raise FoldEvidenceError('row_membership', 'Missing fold witness; rerun with version 1 evidence')
     record = cast(dict[str, object], value)
+    if record.get('version') != 1:
+        raise FoldEvidenceError('row_membership', 'Unsupported fold witness; rerun with version 1 evidence')
     if 'unavailable_reason' in record:
         reason = cast(Mapping[str, object], record['unavailable_reason'])
         raise FoldEvidenceError(str(reason['code']), str(reason['detail']))
@@ -139,7 +142,7 @@ def _source(value: object) -> dict[str, object]:
 
 def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, object], fold: int) -> dict[str, object]:
     recording = metadata.get('recording')
-    if not isinstance(recording, Mapping) or recording.get('fold_details') is not True:
+    if not isinstance(recording, Mapping) or cast(Mapping[str, object], recording).get('fold_details') is not True:
         raise ValueError('Fold promotion requires uel.recording.fold_details: true; rerun')
     policy = cast(Mapping[str, object], recording)
     campaign, trial = checked(metadata.get('fold_promotion')), checked(round_entry.get('fold_promotion'))
@@ -147,7 +150,7 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
     config = cast(Mapping[str, object], metadata['split_walk_forward'])
     n_folds = config['n_folds']
     folds = round_entry.get('folds')
-    if type(n_folds) is not int or not isinstance(folds, list) or len(folds) != n_folds:
+    if type(n_folds) is not int or not isinstance(folds, list) or len(cast(list[object], folds)) != n_folds:
         raise ValueError('fold witness count disagrees with split_walk_forward; rerun')
     if campaign.get('origin') not in ('sequential', 'parallel') or campaign.get('selection_cutoff_ns') != cast(int, original['last_ns']) + cast(int, original['interval_ns']) or trial.get('campaign_source_digest') != original['digest'] or selected['interval_ns'] != original['interval_ns']:
         raise ValueError('fold witness campaign/source/selection cutoff mismatch; rerun')
@@ -164,7 +167,7 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
         raise ValueError('fold witness fitted inference context is incomplete; rerun')
     for key in ('raw', 'retained'):
         groups = witness.get(key)
-        if not isinstance(groups, dict) or set(groups) != {'fit', 'validation', 'test'}:
+        if not isinstance(groups, dict) or set(cast(dict[str, object], groups)) != {'fit', 'validation', 'test'}:
             raise ValueError('fold witness partition context is incomplete; rerun')
     payload = {'version': 1, 'manifest_id': metadata['manifest_id'], 'permutation_id': round_entry['round_id'],
                'fold': fold, 'campaign': campaign, 'trial': trial, 'fold_witness': witness,

@@ -5,6 +5,7 @@ from typing import TypeVar, cast
 
 import polars as pl
 
+from limen.experiment._walk_forward_split import WalkForwardConfig
 from limen.experiment._fold_fingerprint import FoldEvidenceError, clock, membership, schema, segments
 
 __all__: list[str] = []
@@ -45,7 +46,7 @@ def bars(manifest: object, before: pl.DataFrame, formed: pl.DataFrame, datetimes
             groups = cast(dict[int, list[int]], context['bar_groups'])
             if context.get('formed') and 'bar_count' not in formed.columns:
                 raise FoldEvidenceError('row_membership', 'Formed rows require their actual constituent count carrier')
-            counts = formed['bar_count'].to_list() if 'bar_count' in formed.columns else [1] * formed.height
+            counts = formed['bar_count'].to_list() if context.get('formed') else [1] * formed.height
             for instant, count in zip(clock(formed) if formed.height else [], counts, strict=True):
                 start = offsets[instant]
                 if type(count) is not int or count <= 0 or start + count > len(native):
@@ -61,7 +62,7 @@ def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, objec
     context = cast(dict[str, object] | None, getattr(manifest, '_fold_capture', None))
     if context is None:
         return data
-    data.update(_fold_trial=context['trial'], _fold_n_folds=getattr(manifest, 'split_walk_forward', None).n_folds,
+    data.update(_fold_trial=context['trial'], _fold_n_folds=cast(WalkForwardConfig, getattr(manifest, 'split_walk_forward', None)).n_folds,
                 _fold_selected_times=list(cast(dict[int, int], context.get('positions', {}))))
     if 'unavailable' in context:
         data['_fold_partitions'] = context['unavailable']
