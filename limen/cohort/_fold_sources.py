@@ -70,9 +70,11 @@ def _parse(rounds: object, normalize: Callable[[int | str], str]) -> list[Select
         raise ValueError('Cohort rounds must be a non-empty list')
     selected: list[Selection] = []
     for raw in cast(list[object], rounds):
-        if not isinstance(raw, (tuple, list)) or len(raw) not in (_PAIR, _TRIPLE):
+        if not isinstance(raw, (tuple, list)):
             raise ValueError(f'Cohort invalid member selection {raw!r}')
         parts = cast(Sequence[object], raw)
+        if len(parts) not in (_PAIR, _TRIPLE):
+            raise ValueError(f'Cohort invalid member selection {raw!r}')
         directory = parts[0]
         if not isinstance(directory, (str, Path)):
             raise TypeError('Cohort member directory must be str or Path')
@@ -80,7 +82,7 @@ def _parse(rounds: object, normalize: Callable[[int | str], str]) -> list[Select
         if not pid:
             raise ValueError('Cohort member permutation_id must not be blank')
         fold = parts[_PAIR] if len(parts) == _TRIPLE else None
-        if len(parts) == _TRIPLE and (type(fold) is not int or cast(int, fold) < 0):
+        if len(parts) == _TRIPLE and (type(fold) is not int or fold < 0):
             raise ValueError(f'Cohort member {pid}: fold must be a nonnegative literal integer')
         selected.append((directory.expanduser().resolve() if isinstance(directory, Path) else Path(directory).expanduser().resolve(), pid, cast(int | None, fold)))
     return selected
@@ -99,7 +101,7 @@ def select_sources(rounds: object, owner: Owner,
 
 
 def _binary(value: object) -> bool:
-    native = cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
+    native: Mapping[str, object] = cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
     output = native.get('output_contract')
     if native.get('prediction_mode') != 'binary' or not isinstance(output, Mapping) or cast(Mapping[str, object], output).get('kind') != 'binary' or type(cast(Mapping[str, object], output).get('probabilities')) is not bool:
         raise ValueError('Cohort requires declared binary output contract')
@@ -173,9 +175,9 @@ class FoldSources:
                     raise ReconstructionError(f'Cohort source {path}: {exc}') from exc
                 key = (mid, pid) if fold is None else (mid, pid, fold)
                 self._add(key, context, source)
-                architecture = self._architecture(entry, metadata)
-                architectures.add(architecture)
-                source.architecture_id = architecture
+                architecture_id = self._architecture(entry, metadata)
+                architectures.add(architecture_id)
+                source.architecture_id = architecture_id
                 signature = self._signature(manifest, params)
                 if signatures and signature != signatures[0]:
                     raise ValueError(f'Cohort member {key}: incompatible data source, architecture or effective bar formation')
@@ -208,7 +210,7 @@ class FoldSources:
             native = cast(Mapping[str, object], witness['inference_model'])
             if set(native) != {'class', 'prediction_mode', 'output_contract'} or not isinstance(native.get('class'), str) or not cast(str, native['class']).strip():
                 raise ReconstructionError(f'Cohort source {source.experiment_dir}: invalid inference model witness')
-            _binary(native)
+            _ = _binary(native)
         self._selected[key], self._member_sources[key] = context, source
 
     @staticmethod
@@ -232,7 +234,7 @@ class FoldSources:
             mid, pid, fold = getattr(member, 'manifest_id', None), getattr(member, 'permutation_id', None), getattr(member, 'fold', None)
             if not isinstance(mid, str) or not isinstance(pid, str) or (fold is not None and type(fold) is not int):
                 raise ValueError('Cohort unknown or wrong-fold member identity')
-            key = (mid, pid.strip()) if fold is None else (mid, pid.strip(), cast(int, fold))
+            key = (mid, pid.strip()) if fold is None else (mid, pid.strip(), fold)
             if key not in self._selected:
                 raise ValueError(f'Cohort unknown or wrong-fold member {key}')
             if key in bound:
