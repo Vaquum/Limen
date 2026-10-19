@@ -1805,3 +1805,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.44.3] - 2026-10-19
 
 - Make quantile-line end features prefix-causal while preserving retrospective active counts.
+
+## [5.44.4] - 2026-10-19
+
+- Default the test-only Polars pool to one thread before import while preserving explicit overrides and every existing proof and budget.
