@@ -36,7 +36,7 @@ def run_profile(yaml_path: Path) -> bool:
         return False
 
     try:
-        sfd = CompiledSFD(yaml_dict)
+        sfd = CompiledSFD(yaml_dict, project_root=yaml_path.parent)
         prof = profile(sfd)
     except Exception as exc:  # noqa: BLE001
         click.secho(f'  ✗ Profile failed: {exc}', fg='red')

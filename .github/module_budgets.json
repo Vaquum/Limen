@@ -478,5 +478,8 @@
   "limen/experiment/_family_evidence.py": 300,
   "limen/experiment/family_acceptance_report.py": 140,
   "limen/experiment/holdout.py": 30,
-  "limen/experiment/_holdout_history.py": 320
+  "limen/experiment/_holdout_history.py": 320,
+  "limen/experiment/_holdout_source.py": 240,
+  "limen/experiment/_holdout_research.py": 360,
+  "limen/experiment/_manifest_preparation.py": 240
 }

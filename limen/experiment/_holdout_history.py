@@ -14,7 +14,6 @@ import time
 from typing import cast
 from uuid import UUID, uuid4
 
-from limen.yaml.config import find_project_root
 
 _BUSY_TIMEOUT_SECONDS = 5.0
 _LEASES: ContextVar[tuple[tuple[Path, bool], ...]] = ContextVar('holdout_leases', default=())
@@ -58,6 +57,7 @@ def _git(root: Path, *args: str) -> str:
 
 
 def resolve_root(value: str | Path) -> Path:
+    from limen.yaml.config import find_project_root
     root = find_project_root(Path(value))
     if root is None:
         raise ValueError('Holdout requires a project containing limen.toml')
@@ -166,6 +166,7 @@ def read_binding(root: Path) -> ProjectBinding:
 
 
 def bind(*hints: str | Path | None) -> ProjectBinding | None:
+    from limen.yaml.config import find_project_root
     roots = {root for hint in (*hints, Path.cwd()) if hint is not None and (root := find_project_root(Path(hint))) is not None}
     if len(roots) > 1:
         raise ValueError('Holdout project root hints disagree')

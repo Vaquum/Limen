@@ -2,10 +2,6 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
-## [5.36.0] - 2026-10-19
-
-- Add project final-window reservations and preserve local reservation lifecycle history.
-
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -1735,3 +1731,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.35.2] - 2026-10-19
 
 - Reject Cohort sources carrying the persisted walk-forward declaration before ID validation, and include the inner `Cohort` prefix in qualified-source errors.
+
+## [5.36.0] - 2026-10-19
+
+- Add project final-window reservations and preserve local reservation lifecycle history.
+

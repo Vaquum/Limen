@@ -1,4 +1,5 @@
 import inspect
+from pathlib import Path
 from datetime import date
 from typing import Any, cast
 
@@ -293,10 +294,11 @@ class CompiledSFD:
 
     '''SFD-compatible object built from a validated YAML experiment dict.'''
 
-    def __init__(self, yaml_dict: dict[str, Any]) -> None:
+    def __init__(self, yaml_dict: dict[str, Any], *, project_root: str | Path | None = None) -> None:
 
         super().__init__()
 
+        self._holdout_project_root = project_root
         self._yaml = yaml_dict
         self._manifest_cache: Manifest | None = None
         self.__name__ = f"yaml:{yaml_dict['metadata']['name']}"
@@ -313,6 +315,8 @@ class CompiledSFD:
 
         if self._manifest_cache is None:
             self._manifest_cache = build_manifest(self._yaml)
+            from limen.experiment._holdout_research import bind_manifest
+            bind_manifest(self._manifest_cache, self._holdout_project_root)
         return self._manifest_cache
 
 

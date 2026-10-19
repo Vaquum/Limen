@@ -150,6 +150,8 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     )
 
     manifest = compiled_sfd.manifest()
+    from limen.experiment._holdout_research import reject_modes
+    reject_modes(manifest, profile=True)
 
     try:
         raw_data = manifest.fetch_data()

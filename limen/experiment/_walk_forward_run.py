@@ -139,6 +139,8 @@ class WalkForwardRun:
         return pl.DataFrame(self.rows, infer_schema_length=None) if self.rows else pl.DataFrame()
 
     def prepare(self, raw: pl.DataFrame, round_params: Mapping[str, object] | None = None) -> dict[str, object]:
+        from limen.experiment._holdout_research import reject_modes
+        reject_modes(self.manifest)
         params = dict(round_params or {})
         if self.manifest.pre_split_data_selector is not None:
             func, base_params = self.manifest.pre_split_data_selector

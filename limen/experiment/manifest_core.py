@@ -1,3 +1,4 @@
+import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
@@ -329,7 +330,7 @@ class Manifest:
         if self.data_source_config is None:
             raise ValueError('Manifest No data source configured')
 
-        return DataSourceResolver.resolve(self.data_source_config)
+        return _holdout.fetch(self)
 
     def fetch_test_data(self) -> pl.DataFrame:
 
@@ -629,6 +630,7 @@ class Manifest:
 
         return new_manifest
 
+    @_holdout.preparation
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: dict[str, Any]) -> pl.DataFrame:
 
         '''
@@ -644,6 +646,7 @@ class Manifest:
             pl.DataFrame: Bar-formed test split data
         '''
 
+        raw_data = _holdout.admit(self, raw_data)
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
             resolved = _resolve_params(base_params, round_params)
@@ -1002,6 +1005,7 @@ class MLManifest(Manifest):
 
         return self._prepare_data_with_fitted(raw_data, round_params, {})
 
+    @_holdout.preparation
     def _prepare_data_with_fitted(
         self, raw_data: pl.DataFrame, round_params: dict[str, object],
         fitted_params: Mapping[str, object],
@@ -1066,6 +1070,8 @@ class MLManifest(Manifest):
 
             if is_train and outcome_target:
                 raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
+            if is_train:
+                _holdout.capture_schema(self, data, 'input')
             data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
 
             if n_cco_feature_rows > 0:
@@ -1107,6 +1113,7 @@ class MLManifest(Manifest):
 
         if self.split_walk_forward is not None:
             _validate_fold_splits(split_data, require_validation=_requires_fold_validation(self, round_params))
+        _holdout.capture_schema(self, split_data[0], 'model')
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
@@ -1162,50 +1169,10 @@ class MLManifest(Manifest):
             result[self.objective.column] = _score_objective(data, result, scorer)
         return _finish_trade_result(data, result)
 
-    def sensor_input_prep(
-            self,
-            raw_klines: pl.DataFrame,
-            fitted_params: dict[str, Any],
-            round_params: dict[str, Any],
-    ) -> tuple[pl.DataFrame, int]:
-
-        '''
-        Prepare live features using fitted target exclusions, scaler and PCA.
-
-        Preserve null rows and return the leading indicator warm-up count.
-        Fitted target metadata takes precedence over static class declarations.
-        '''
-
-        _, data = _process_bars(self, raw_klines, round_params)
-        decisions = None
-        if self.resolve_trade_policy(round_params) is not None:
-            interval = _source_interval(self.data_source_config)
-            interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
-            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
-            data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
-
-        lazy = data.lazy()
-        lazy = _apply_feature_transforms(self, lazy, round_params)
-        data = lazy.collect()
-        if self.target_class_config is not None:
-            target = fitted_params.get(f'_target_cls_{self.target_column}', self.target_class_config.target_class)
-            data = _drop_target_source_columns(data, target, self.target_column)
-
-        data = self._prepare_column_shims(data, round_params, dict(fitted_params), False)
-        if dropped_features := round_params.get('_dropped_features'):
-            data = data.drop([c for c in dropped_features if c in data.columns])
-
-        indicator_lookback = _count_leading_nulls(data)
-
-        all_fitted_params = dict(fitted_params)
-        data, _ = _apply_scaler(self, data, round_params, all_fitted_params, is_training=False)
-        data = data.fill_nan(None)
-
-        data = _apply_sensor_pca(self, data, round_params, all_fitted_params)
-
-        if decisions is not None:
-            data = data.join(decisions, on='datetime', how='left', maintain_order='left')
-        return data, indicator_lookback
+    def sensor_input_prep(self, raw_klines: pl.DataFrame, fitted_params: dict[str, Any],
+                          round_params: dict[str, Any]) -> tuple[pl.DataFrame, int]:
+        from limen.experiment._manifest_preparation import sensor_input_prep
+        return sensor_input_prep(self, raw_klines, fitted_params, round_params)
 
 
 @dataclass
@@ -1234,6 +1201,7 @@ class RuleBasedManifest(Manifest):
         return self
 
     @override
+    @_holdout.preparation
     def prepare_data(
         self,
         raw_data: pl.DataFrame,
@@ -1887,12 +1855,14 @@ def _run_prepare_setup(
         round_params: dict[str, Any],
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
+    raw_data = _holdout.admit(manifest, raw_data)
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
         resolved = _resolve_params(base_params, round_params)
         raw_data = func(raw_data, **resolved)
 
     raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
+    _holdout.selected(manifest, raw_data, raw_splits, round_params)
     split_data = raw_splits
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
