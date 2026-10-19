@@ -131,6 +131,8 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, item.shape, item.dtype.descr, node(item.tolist()), state)
         elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
+        elif kind == ('numpy', '_ArrayFunctionDispatcher'):
+            result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
         elif hasattr(item, '__dict__') or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
@@ -179,7 +181,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 return
             attributes.update(value.__code__.co_names)
             visit(vars(value))
-            if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
+            if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
                 return
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
