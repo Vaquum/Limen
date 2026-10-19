@@ -44,7 +44,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     seen: set[int] = set()
 
     def collect(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, np.ndarray, pl.DataFrame, pl.Series)):
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (isinstance(value, np.ndarray) and not value.dtype.hasobject):
             return
         if id(value) in seen:
             return

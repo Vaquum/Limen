@@ -40,6 +40,10 @@ def later_probabilities(values):
     return np.clip(values + _LATE_RULES['offset'], 0, 1)
 
 
+def identity_probabilities(values):
+    return values
+
+
 class InferenceOffset:
     def __init__(self):
         self.offset = _LATE_RULES['offset']
@@ -704,6 +708,63 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(keyed_handle, assessment_case)
         assert loader.call_count == 0
+    for container in (set, frozenset, lambda values: np.asarray(values, dtype=object)):
+        keyed._model.adjustments = container([later_probabilities])
+        container_handle = _freeze(keyed)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(container_handle, assessment_case)
+            assert loader.call_count == 0
+    class CallbackState(Keyed):
+        def predict(self, data):
+            result = super().predict(data)
+            callback = next(iter(self.adjustments))
+            result['_probs'] = np.clip(result['_probs'] + callback.offset, 0, 1)
+            return result
+    keyed._model.__class__ = CallbackState
+    keyed._model.adjustments = {identity_probabilities: True}
+    with patch.object(identity_probabilities, 'offset', 0.0, create=True):
+        callback_handle = _freeze(keyed)
+        with patch.object(identity_probabilities, 'offset', 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(callback_handle, assessment_case)
+            assert loader.call_count == 0
+    class MappingPolicy(dict):
+        def __init__(self, offset):
+            super().__init__()
+            self.offset = offset
+        def adjust(self, values):
+            return np.clip(values + self.offset, 0, 1)
+    mapped = copy.deepcopy(assessment_case[2][0][0])
+    mapped._model.__class__ = Adjusted
+    mapped._model.policy = MappingPolicy(mapped._model._calibration_threshold)
+    mapping_copy = owned_copy(mapped)
+    _freeze(mapping_copy)
+    expected_offset = mapping_copy._model.policy.offset
+    mapped._model.policy.offset += 0.1
+    assert mapping_copy._model.policy.offset == expected_offset
+    class NonpreservingMapping(MappingPolicy):
+        def __deepcopy__(self, memo):
+            return type(self)(self.offset + 0.1)
+    mapped._model.policy = NonpreservingMapping(expected_offset)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class Relative(LogRegBinary):
+        def predict(self, data):
+            from . import test_holdout_research as helpers
+            result = super().predict(data)
+            result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
+            return result
+    relative = copy.deepcopy(assessment_case[2][0][0])
+    relative._model.__class__ = Relative
+    with patch('tests.test_holdout_research.f17_later_probabilities', later_probabilities, create=True):
+        relative_handle = _freeze(relative)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(relative_handle, assessment_case)
+            assert loader.call_count == 0
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)

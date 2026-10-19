@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from functools import lru_cache, partial
 from hashlib import sha256
 import inspect
+from importlib.util import resolve_name
 from io import IOBase
 import dis
 import marshal
@@ -45,9 +46,11 @@ def _booster(value: object) -> bool:
 
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        return tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair)
-    if isinstance(value, (tuple, list)):
-        return tuple(cast(Sequence[object], value))
+        return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(value).values())
+    if isinstance(value, (tuple, list, set, frozenset)):
+        return (*cast(Collection[object], value), *_attributes(value).values())
+    if isinstance(value, np.ndarray) and value.dtype.hasobject:
+        return (value.tolist(), *_attributes(value).values())
     if isinstance(value, (type, ModuleType, np.ndarray, pl.DataFrame, pl.Series)) or inspect.isroutine(value) or _booster(value):
         return ()
     if isinstance(value, partial):
@@ -91,6 +94,8 @@ def fitted_witness(value: object) -> bytes:
 
     def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
+        attributes = _attributes(item) if isinstance(item, (Mapping, tuple, list, set, frozenset, np.ndarray)) else {}
+        state = node(attributes) if attributes else None
         if _booster(item):
             from lightgbm import Booster
             booster = cast(Booster, item)
@@ -106,16 +111,20 @@ def fitted_witness(value: object) -> bytes:
             result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
         elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure))
+            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
         elif isinstance(item, partial):
             result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
         elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
-            result = (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()))
+            result = (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()), state)
         elif isinstance(item, (tuple, list)):
-            result = (kind, tuple(node(part) for part in cast(Sequence[object], item)))
+            result = (kind, tuple(node(part) for part in cast(Sequence[object], item)), state)
+        elif isinstance(item, (set, frozenset)):
+            result = (kind, tuple(sorted((node(part) for part in cast(Collection[object], item)), key=pickle.dumps)), state)
+        elif isinstance(item, np.ndarray) and item.dtype.hasobject:
+            result = (kind, item.shape, item.dtype.descr, node(item.tolist()), state)
         elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
-            result = (kind, pickle.dumps(item, protocol=5))
+            result = (kind, pickle.dumps(item, protocol=5), state)
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
         elif hasattr(item, '__dict__') or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
@@ -181,6 +190,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
+            visit(vars(value))
             if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.startswith(('numpy.', 'polars.', 'sklearn.', 'lightgbm.', 'scipy.')):
                 return
             visit(value.__defaults__)
@@ -199,7 +209,9 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     chained_import = instructions[index - 1].argval is None
-                    imported = sys.modules.get(name.split('.', 1)[0] if chained_import else name)
+                    level = int(instructions[index - 2].argval)
+                    module_name = resolve_name('.' * level + name, value.__globals__.get('__package__', '')) if level else name
+                    imported = sys.modules.get(module_name.split('.', 1)[0] if chained_import else module_name)
                     if imported is None:
                         raise ValueError(f'Holdout prediction import lacks loaded evidence: {name}')
                     binding = imported
@@ -234,6 +246,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value):
             evidence.append(fitted_witness(value))
+        elif isinstance(value, np.ndarray) and value.dtype.hasobject:
+            visit(value.tolist())
         elif not isinstance(value, (ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
             objects.append(value)
             methods(value)
