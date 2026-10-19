@@ -4,8 +4,8 @@ import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
-from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
-from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
+from limen.experiment._prepare_trade_context import attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
+from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_trade_policy as _resolve_trade_policy
 from limen.experiment._prepare_trade_context import PreparedTradeContext, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, validate_witness as _validate_witness
@@ -1193,9 +1193,7 @@ class MLManifest(Manifest):
         _, data = _process_bars(self, raw_klines, round_params)
         decisions = None
         if self.resolve_trade_policy(round_params) is not None:
-            interval = (self.backtest_config.source_interval_seconds if self.backtest_config else None) or _source_interval(self.data_source_config)
-            interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
-            decisions = _partitions.decisions(self, raw_klines, data, interval_seconds=interval, native=sensor_decisions, timestamp_role=self.backtest_config.source_timestamp_role if self.backtest_config else 'start')
+            decisions = _partitions.decisions(self, raw_klines, data, native=sensor_decisions, params=round_params)
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
 
         lazy = data.lazy()

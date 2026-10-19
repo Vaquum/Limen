@@ -264,13 +264,14 @@ def test_recorded_availability_columns_never_become_meta_features(ml):
     assert len(model.predict({'allocation_batch': data['_allocation_batches']['test']})['_preds']) == data['_trade_inputs'].signals.height
 
 
-def test_rule_oof_rejects_terminal_lookahead():
+@pytest.mark.parametrize('folds', [2, 3])
+def test_rule_oof_rejects_terminal_lookahead(folds):
     manifest, raw, params, _ = _prepared()
     from limen.indicators import window_return
     manifest.add_indicator(window_return, period=-1)
     data = manifest.prepare_data(raw, params)
     with pytest.raises(ValueError, match='observations after their decision'):
-        training_opportunities(data['_allocation_context'], folds=3, validation_fraction=0.2, include_primary_proba=False)
+        training_opportunities(data['_allocation_context'], folds=folds, validation_fraction=0.2, include_primary_proba=False)
 
 
 def test_opportunity_exit_keeps_next_open_at_the_flat_clock():
