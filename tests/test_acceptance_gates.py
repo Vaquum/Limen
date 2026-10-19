@@ -444,7 +444,7 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         config['sfd']['manifest']['acceptance'] = {'pbo_blocks': count}
         assert validate(config).valid
         yaml_path = tmp_path / 'valid.yaml'
-        yaml_path.write_text(yaml.safe_dump(config))
+        yaml_path.write_text(yaml.safe_dump(json.loads(json.dumps(config))))
         assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code == 0
         assert Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=count).acceptance == {'pbo_blocks': count}
         assert type(read_acceptance({'pbo_blocks': count})['pbo_blocks']) is int
@@ -458,7 +458,7 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         assert not validation.valid
         assert any(error.path == 'sfd.manifest.acceptance' for error in validation.errors)
         yaml_path = tmp_path / 'invalid.yaml'
-        yaml_path.write_text(yaml.safe_dump(config))
+        yaml_path.write_text(yaml.safe_dump(json.loads(json.dumps(config))))
         assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code != 0
         with pytest.raises(ValueError, match='pbo_blocks'):
             Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=value)
