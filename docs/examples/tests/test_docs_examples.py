@@ -36,3 +36,19 @@ def test_unknown_evidence_identity_fails():
     schema = json.loads((ROOT / 'docs/examples/evidence.schema.json').read_text())
     with pytest.raises(ValueError, match='missing required'):
         validate_shape({'schema_version': 1}, schema)
+
+
+def test_missing_catalogue_scenario_fails():
+    from check_evidence import validate_scenarios
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation'}
+    assert catalogue['required_scenarios']['allocation'] == ['compiled']
+    records = [{'interface': interface, 'id': scenario, 'status': 'passed', 'tests': ['semantic oracle'], 'assertions': ['result']} for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces]
+    assert len(records) == 17
+    validate_scenarios(records, catalogue)
+    for changed in (records[:-1], records + [records[0]]):
+        with pytest.raises(ValueError, match='incomplete or duplicated'):
+            validate_scenarios(changed, catalogue)
+    records[0]['status'] = 'skipped'
+    with pytest.raises(ValueError, match='successful semantic proof'):
+        validate_scenarios(records, catalogue)

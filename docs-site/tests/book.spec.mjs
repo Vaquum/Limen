@@ -96,3 +96,14 @@ test('without JavaScript both interfaces and proof links remain readable',async(
   await expect(page.locator('figure.code')).toHaveCount(2);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Trainer');await context.close();
 });
+
+test('a place within code survives reload and non-wheel scrolling',async({page})=>{
+  await open(page);
+  const block=page.locator('figure.code').first();await block.scrollIntoViewIfNeeded();
+  // ScrollTo exercises the same scroll event used by the native scrollbar,
+  // without any wheel/touch/key intent event that could mask the old defect.
+  await page.evaluate(()=>scrollTo(0,scrollY+160));
+  await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
+  const before=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-before)).toBeLessThan(3);
+});

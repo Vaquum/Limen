@@ -91,9 +91,22 @@ def validate_shape(value, schema, at='$') -> None:
         raise ValueError(f'{at}: invalid numeric bound')
 
 
+def validate_scenarios(records, catalogue) -> None:
+    expected = {(interface, scenario) for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces}
+    actual = [(item['interface'], item['id']) for item in records]
+    if len(set(actual)) != len(actual) or set(actual) != expected:
+        raise ValueError('Research scenario catalogue is incomplete or duplicated')
+    if any(item['status'] != 'passed' or not item['tests'] or not item['assertions'] for item in records):
+        raise ValueError('Research scenario lacks successful semantic proof')
+
+
 def validate_evidence(record, root: Path, *, head: str, tree: str, version: str) -> None:
     schema = json.loads((root / 'docs/examples/evidence.schema.json').read_text())
     validate_shape(record, schema)
+    catalogue = root / 'docs/examples/catalogue.json'
+    if record['validation']['catalogue_sha256'] != digest(catalogue.read_bytes()):
+        raise ValueError('Wrong research catalogue identity')
+    validate_scenarios(record['validation']['scenarios'], json.loads(catalogue.read_text()))
     if record['revision']['head'] != head or record['revision']['tree'] != tree:
         raise ValueError('Wrong execution revision')
     if record['revision']['dirty'] or record['package']['version'] != version:

@@ -28,16 +28,15 @@ export function initPlace(){
   const resumed=history.state?.readerPlace;
   if(resumed&&!location.hash)restore(resumed);
   else if(!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
-  let frame=0, moved=false;
+  let frame=0, ready=false;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ready=true;}));
   const progress=document.querySelector('.reading-progress');
   function save(){frame=0;if(document.querySelector('dialog[open]'))return;
     const value=position();const maximum=document.documentElement.scrollHeight-innerHeight;
     if(progress)progress.style.setProperty('--progress',`${maximum>0?Math.max(0,Math.min(100,scrollY/maximum*100)):100}%`);
-    if(!moved||!storageAvailable)return;
+    if(!ready||!storageAvailable)return;
     try{localStorage.setItem(key,JSON.stringify(value));}catch(error){storageAvailable=false;announce('Browser storage could not be written. Reading position is not being saved.');console.error(error);}
   }
-  for(const name of ['wheel','touchmove'])addEventListener(name,()=>{moved=true;},{passive:true});
-  addEventListener('keydown',event=>{if(!event.target.closest('input,textarea,select,[contenteditable]')&&['PageDown','PageUp','ArrowDown','ArrowUp','Home','End',' '].includes(event.key))moved=true;});
   addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(save);},{passive:true});
-  addEventListener('pagehide',()=>{if(moved)save();});save();
+  addEventListener('pagehide',save);save();
 }
