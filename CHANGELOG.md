@@ -1804,4 +1804,11 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.44.3] - 2026-10-19
 
-- Preserve selected LightGBM iteration limits through owned copies and verify frozen prediction dependencies before final access.
+## [5.44.3] - 2026-10-19
+
+- Keep quantile-line end features prefix-causal and avoid repeated rank reductions.
+
+## [5.44.4] - 2026-10-19
+
+- Preserve owned fitted binary prediction, native iteration limits and preparation/calibration dependencies through final holdout assessment.
+

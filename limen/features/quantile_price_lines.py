@@ -1,3 +1,5 @@
+from heapq import heappop, heappush
+
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -12,6 +14,7 @@ DEFAULT_DENSITY_LOOKBACK_HOURS = 48
 DEFAULT_MOMENTUM_LOOKBACK_HOURS = 6
 DEFAULT_HEIGHT_LOOKBACK_HOURS = 24
 STRUCT_COL = '_quantile_price_lines'
+INTERPOLATION_MIDPOINT = 0.5
 
 
 def quantile_price_lines(data: pl.DataFrame,
@@ -24,45 +27,26 @@ def quantile_price_lines(data: pl.DataFrame,
                          include_research_only: object = True) -> pl.DataFrame:
 
     '''
-    Compute quantile-line context features from internally detected price lines.
-
-    Detects lines on the frame it receives (per split under the manifest
-    pipeline), keeps lines at or above the height quantile per direction, and
-    adds six columns: 'hours_since_quantile_line' (bars since the most recent
-    quantile-line end, capped at density_lookback_hours),
-    'active_quantile_count' (count of quantile lines spanning the bar),
-    'quantile_line_density_<d>h' (quantile-line ends in the trailing window),
-    'quantile_momentum_<m>h' (signed sum of line heights over ends in
-    [t-m, t]), 'avg_quantile_height_<h>h' (mean absolute height over ends in
-    [t-h, t]), and 'quantile_direction_bias' (height-weighted direction in
-    [-1, 1] over the same window).
+    Compute quantile-line end features from lines completed through each row.
+    Select heights at or above each direction's expanding quantile, with ties.
+    End windows include both boundaries [t-window, t]; recency caps at density_lookback_hours.
+    Other empty windows return zero; active_quantile_count retains retrospective whole-frame spans.
 
     Args:
-        data (pl.DataFrame | pl.LazyFrame): Klines dataset with a 'close' column
+        data (pl.DataFrame | pl.LazyFrame): Klines with a close column
         max_duration_hours (int): Exclusive upper bound on line duration in bars
-        min_height_pct (float): Minimum absolute line height as a fraction of start price
-        quantile_threshold (float): Height quantile below which lines are dropped
-        density_lookback_hours (int): Window for density and the recency cap
-        momentum_lookback_hours (int): Window for the signed momentum column
-        height_lookback_hours (int): Window for the height and direction-bias columns
-        include_research_only (bool): Include the non-live-computable
-            'active_quantile_count' span-count column. Set False for live-safe
-            feature surfaces.
+        min_height_pct (float): Minimum absolute height as a fraction of start price
+        quantile_threshold (float): Per-direction height quantile
+        density_lookback_hours (int): Density window and recency cap
+        momentum_lookback_hours (int): Signed-height window
+        height_lookback_hours (int): Mean-height and direction-bias window
+        include_research_only (bool): Add the retrospective active_quantile_count
 
     Returns:
-        pl.DataFrame | pl.LazyFrame: The input data, matching the input frame
-            type, with six new quantile-line columns
+        pl.DataFrame | pl.LazyFrame: Input type with five end columns and optional span count
 
     Raises:
-        ValueError: If a lookback is below 1
-
-    NOTE: Column access is expression-based so the feature runs on both eager
-    DataFrames and the LazyFrames piped by the manifest feature pipeline.
-
-    NOTE: 'active_quantile_count' counts lines that span the bar before the
-    line's end is knowable, a within-line lookahead inherited from the research
-    design. It is research-only and not computable live; the end-event columns
-    are causal.
+        ValueError: If a lookback is below 1 or include_research_only is not bool
     '''
 
     if density_lookback_hours < 1:
@@ -126,23 +110,6 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
                            include_research_only: bool, *,
                            _cache: ComputationCache | None = None) -> pl.Series:
 
-    '''
-    Compute the five or six quantile-line columns as a struct series.
-
-    Args:
-        close (np.ndarray): Close prices for the frame
-        max_duration_hours (int): Exclusive upper bound on line duration in bars
-        min_height_pct (float): Minimum absolute line height as a fraction of start price
-        quantile_threshold (float): Height quantile below which lines are dropped
-        density_lookback_hours (int): Window for density and the recency cap
-        momentum_lookback_hours (int): Window for the signed momentum column
-        height_lookback_hours (int): Window for the height and direction-bias columns
-        include_research_only (bool): Include the research-only span-count column
-
-    Returns:
-        pl.Series: Struct series with the quantile-line fields
-    '''
-
     long_lines, short_lines = cached_price_line_arrays(close, max_duration_hours, min_height_pct, _cache)
 
     long_lines_q = _filter_quantile(long_lines, quantile_threshold)
@@ -152,23 +119,30 @@ def _quantile_line_columns(close: npt.NDArray[np.float64],
     momentum_col = f"quantile_momentum_{momentum_lookback_hours}h"
     height_col = f"avg_quantile_height_{height_lookback_hours}h"
 
-    ends, heights, directions = _end_events(long_lines_q, short_lines_q)
-
-    momentum = _windowed_sum(ends, heights * directions, n_rows, momentum_lookback_hours)
-
-    height_sums = _windowed_sum(ends, heights, n_rows, height_lookback_hours)
-    signed_sums = _windowed_sum(ends, heights * directions, n_rows, height_lookback_hours)
-    counts = _windowed_sum(ends, np.ones_like(heights), n_rows, height_lookback_hours)
-
-    avg_height = np.where(counts > 0, height_sums / np.maximum(counts, 1.0), 0.0)
-    direction_bias = np.where(height_sums > 0, signed_sums / np.maximum(height_sums, 1e-12), 0.0)
-
     density_col = f"quantile_line_density_{density_lookback_hours}h"
+    if quantile_threshold == 0:
+        ends, heights, directions = _end_events(long_lines_q, short_lines_q)
+
+        momentum = _windowed_sum(ends, heights * directions, n_rows, momentum_lookback_hours)
+
+        height_sums = _windowed_sum(ends, heights, n_rows, height_lookback_hours)
+        signed_sums = _windowed_sum(ends, heights * directions, n_rows, height_lookback_hours)
+        counts = _windowed_sum(ends, np.ones_like(heights), n_rows, height_lookback_hours)
+
+        avg_height = np.where(counts > 0, height_sums / np.maximum(counts, 1.0), 0.0)
+        direction_bias = np.where(height_sums > 0, signed_sums / np.maximum(height_sums, 1e-12), 0.0)
+
+        recency = line_recency(ends, n_rows, density_lookback_hours)
+        density = (np.searchsorted(ends, np.arange(n_rows), side='right')
+                   - np.searchsorted(ends, np.arange(n_rows) - density_lookback_hours, side='left'))
+    else:
+        recency, density, momentum, avg_height, direction_bias = _causal_columns(
+            long_lines, short_lines, n_rows, quantile_threshold,
+            density_lookback_hours, momentum_lookback_hours, height_lookback_hours)
 
     columns = [
-        pl.Series('hours_since_quantile_line', line_recency(ends, n_rows, density_lookback_hours)),
-        pl.Series(density_col, np.searchsorted(ends, np.arange(n_rows), side='right')
-                  - np.searchsorted(ends, np.arange(n_rows) - density_lookback_hours, side='left')),
+        pl.Series('hours_since_quantile_line', recency),
+        pl.Series(density_col, density),
         pl.Series(momentum_col, momentum),
         pl.Series(height_col, avg_height),
         pl.Series('quantile_direction_bias', direction_bias),
@@ -202,19 +176,6 @@ def _windowed_sum(ends: npt.NDArray[np.intp],
                   n_rows: int,
                   window: int) -> npt.NDArray[np.float64]:
 
-    '''
-    Compute per-bar sums of values whose end index falls in [t-window, t].
-
-    Args:
-        ends (np.ndarray): End indices sorted ascending
-        values (np.ndarray): Values aligned to ends
-        n_rows (int): Number of bars in the frame
-        window (int): Trailing window length in bars
-
-    Returns:
-        np.ndarray: Windowed sums per bar
-    '''
-
     if ends.size == 0 or n_rows == 0:
         return np.zeros(n_rows, dtype=np.float64)
 
@@ -225,3 +186,61 @@ def _windowed_sum(ends: npt.NDArray[np.intp],
     lower = np.searchsorted(ends, positions - window, side='left')
 
     return prefix[upper] - prefix[lower]
+
+
+def _expanding_quantiles(lines: LineArrays, n_rows: int, quantile: float) -> npt.NDArray[np.float64]:
+    thresholds = np.full(n_rows, np.inf)
+    lower: list[float] = []
+    upper: list[float] = []
+    order = np.argsort(lines[1], kind='stable')
+    cursor = 0
+    for row in range(n_rows):
+        while cursor < order.size and lines[1][order[cursor]] <= row:
+            height = float(abs(lines[2][order[cursor]]))
+            if lower and height <= -lower[0]:
+                heappush(lower, -height)
+            else:
+                heappush(upper, height)
+            cursor += 1
+        if cursor:
+            rank = (cursor - 1) * quantile
+            target = int(rank) + 1
+            while len(lower) < target:
+                heappush(lower, -heappop(upper))
+            while len(lower) > target:
+                heappush(upper, -heappop(lower))
+            # Match NumPy's linear interpolation, including its rounding at ties.
+            left, right = -lower[0], upper[0] if upper else -lower[0]
+            fraction = rank - int(rank)
+            thresholds[row] = left + (right - left) * fraction if fraction < INTERPOLATION_MIDPOINT else right - (right - left) * (1 - fraction)
+    return thresholds
+
+
+def _causal_columns(long: LineArrays, short: LineArrays, n_rows: int, quantile: float,
+                    density_window: int, momentum_window: int, height_window: int) -> tuple[
+                        npt.NDArray[np.float64], npt.NDArray[np.int64], npt.NDArray[np.float64],
+                        npt.NDArray[np.float64], npt.NDArray[np.float64]]:
+    thresholds = (_expanding_quantiles(long, n_rows, quantile),
+                  _expanding_quantiles(short, n_rows, quantile))
+    ends, heights, directions = _end_events(long, short)
+    recency = np.full(n_rows, float(density_window))
+    density = np.zeros(n_rows, dtype=np.int64)
+    momentum, average, bias = np.zeros((3, n_rows))
+    window = max(density_window, momentum_window, height_window)
+    for row in range(n_rows):
+        start = np.searchsorted(ends, row - window, side='left')
+        stop = np.searchsorted(ends, row, side='right')
+        recent = slice(start, stop)
+        keep = heights[recent] >= np.where(directions[recent] > 0, thresholds[0][row], thresholds[1][row])
+        selected_ends, selected_heights = ends[recent][keep], heights[recent][keep]
+        signed = selected_heights * directions[recent][keep]
+        if selected_ends.size:
+            recency[row] = min(row - selected_ends[-1], density_window)
+        density[row] = np.count_nonzero(selected_ends >= row - density_window)
+        momentum[row] = signed[selected_ends >= row - momentum_window].sum()
+        height_keep = selected_ends >= row - height_window
+        total = selected_heights[height_keep].sum()
+        if np.any(height_keep):
+            average[row] = total / np.count_nonzero(height_keep)
+            bias[row] = signed[height_keep].sum() / max(total, 1e-12)
+    return recency, density, momentum, average, bias
