@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import re
 from collections.abc import Callable, Mapping
-from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, validate_backtest_value as _validate_backtest_value
