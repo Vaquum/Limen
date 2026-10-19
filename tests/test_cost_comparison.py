@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import socket
+import runpy
 from types import MappingProxyType
 from dataclasses import replace
 from decimal import Decimal
@@ -129,8 +130,9 @@ def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
     document = (Path(__file__).parents[1] / 'docs/Backtest.md').read_text()
     section = document.split('<!-- recorded-cost-python:start -->', 1)[1].split('<!-- recorded-cost-python:end -->', 1)[0]
     code = section.split('```python\n', 1)[1].split('```', 1)[0]
-    namespace = {'__name__': 'recorded_cost_documentation'}
-    exec(compile(code, 'docs/Backtest.md', 'exec'), namespace)
+    example = tmp_path / 'recorded_cost_example.py'
+    example.write_text(code)
+    namespace = runpy.run_path(str(example))
     model_type = namespace['CallerModel']
     original_fit, original_predict = model_type.fit, model_type.predict
     fits, predictions, comparisons = [], [], []
