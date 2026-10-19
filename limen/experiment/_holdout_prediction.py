@@ -44,7 +44,7 @@ def _roots(sensor: Sensor) -> list[object]:
 
 def _call_codes(value: object) -> tuple[CodeType, ...]:
     if isinstance(value, partial):
-        return _call_codes(value.func)
+        return (*_call_codes(value.func), *_call_codes(type(value).__call__))
     if isinstance(value, type):
         return (*_call_codes(value.__init__), *_call_codes(value.__new__), *_call_codes(type(value).__call__))
     method = inspect.unwrap(value) if callable(value) else value

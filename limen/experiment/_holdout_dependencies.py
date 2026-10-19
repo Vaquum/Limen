@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from collections.abc import Collection, Mapping, Sequence
 from functools import lru_cache, partial
 from hashlib import sha256
@@ -52,7 +52,7 @@ def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
         return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
-    if isinstance(value, (tuple, list, set, frozenset)):
+    if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (value.tolist(), *_attributes(cast(object, value)).values())
@@ -95,7 +95,7 @@ def fitted_witness(value: object) -> bytes:
 
     def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
-        attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, np.ndarray)) else {}
+        attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, deque, np.ndarray)) else {}
         state = node(attributes) if attributes else None
         if _booster(item):
             from lightgbm import Booster
@@ -123,8 +123,8 @@ def fitted_witness(value: object) -> bytes:
         elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
             result = (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()), state)
-        elif isinstance(item, (tuple, list)):
-            result = (kind, tuple(node(part) for part in cast(Sequence[object], item)), state)
+        elif isinstance(item, (tuple, list, deque)):
+            result = (kind, tuple(node(part) for part in cast(Collection[object], item)), item.maxlen if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(sorted((node(part) for part in cast(Collection[object], item)), key=pickle.dumps)), state)
         elif object_array(item):
@@ -166,11 +166,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(value.__func__)
             visit(value.__self__)
         elif isinstance(value, partial):
-            visit(value.func)
-            visit(value.args)
-            visit(value.keywords)
-            visit(vars(value))
             provider = cast(object, value)
+            for part in children(provider):
+                visit(part)
             if type(provider) is not partial:
                 objects.append(provider)
                 methods(provider)
@@ -223,6 +221,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             break
                         item = getattr(item, str(attribute.argval))
                         following += 1
+                    if isinstance(item, ModuleType) and index > 0 and instructions[index - 1].argval == 'getattr' and following < len(instructions) and instructions[following].opname == 'LOAD_CONST' and isinstance(instructions[following].argval, str) and hasattr(item, str(instructions[following].argval)):
+                        item = getattr(item, str(instructions[following].argval))
                     if following < len(instructions) and instructions[following].opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME'):
                         aliases = references.setdefault(str(instructions[following].argval), [])
                         if all(part is not item for part in aliases):

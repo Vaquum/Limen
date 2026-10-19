@@ -1,5 +1,6 @@
 import copy
 from contextlib import ExitStack, contextmanager
+from functools import partial
 import json
 import logging
 import multiprocessing
@@ -94,6 +95,11 @@ def external_calibrator(estimator, x, y, kind='native', **params):
     return sklearn_probability_calibrator(estimator, x, y, **params)
 
 
+class CalibratorFactory(partial):
+    def __call__(self, *args, **kwargs):
+        return super().__call__(*args, **kwargs) if args else None
+
+
 def mixed_architecture(data, C=1.0, prediction_calibration_config=None):
     from limen.sfd.reference_architecture.logreg_binary import logreg_binary
     from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
@@ -131,7 +137,7 @@ def assessment_case(tmp_path_factory):
     from limen import scalers
     import limen.sfd.reference_architecture as architectures
     aliases = ExitStack()
-    aliases.enter_context(patch.object(calibration, 'f17_calibrator', external_calibrator, create=True))
+    aliases.enter_context(patch.object(calibration, 'f17_calibrator', CalibratorFactory(external_calibrator), create=True))
     aliases.enter_context(patch.object(scalers, 'f17_scaler', ExternalRobust, create=True))
     aliases.enter_context(patch.object(architectures, 'f17_mixed', mixed_architecture, create=True))
     aliases.enter_context(patch.object(architectures, 'f17_tree', tree_architecture, create=True))
@@ -635,11 +641,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     class Late(LogRegBinary):
         def predict(self, data):
             if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                if self.refit:
+                if self.refit == 'callback':
+                    self.prediction_calibration_config.calibration_func()
+                elif self.refit:
                     self.model.fit(data['x_test'], [0])
-                self.counter += 1
+                else:
+                    self.counter += 1
             return super().predict(data)
-    for refit in (False, True):
+    for refit in (False, True, 'callback'):
         late = copy.deepcopy(assessment_case[2][0][0])
         prepared, _ = late._get_manifest().sensor_input_prep(late._fitted_params['_holdout_probe'], late._fitted_params, late._round_params)
         columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]
@@ -811,6 +820,26 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    from collections import deque
+    class DequePolicy(deque):
+        def adjust(self, values):
+            return np.clip(values + self[0], 0, 1)
+    class NonpreservingDeque(DequePolicy):
+        def __deepcopy__(self, memo):
+            return type(self)((self[0] + 0.1,), maxlen=self.maxlen)
+    mapped._model.policy = DequePolicy((expected_offset,), maxlen=1)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingDeque((expected_offset,), maxlen=1)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class ModuleLookup(LogRegBinary):
+        def predict(self, data):
+            import limen.calibration as helpers
+            result = super().predict(data)
+            result['_probs'] = getattr(helpers, 'f17_later_probabilities', None)(result['_probs'])
+            return result
     class BranchImports(LogRegBinary):
         def predict(self, data):
             if not np.array_equal(np.asarray(data['x_test']), self.research_x):
@@ -850,7 +879,6 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result['_probs'] = self.adjust(result['_probs'])
             return result
     from collections import defaultdict
-    from functools import partial
     class Factory(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
@@ -891,7 +919,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(callable_selection)
         assert loader.call_count == 0
-    for implementation in (BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState):
+    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
         selection._model.research_x = late._model.research_x.copy()
