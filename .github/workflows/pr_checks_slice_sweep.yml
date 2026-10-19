@@ -111,7 +111,12 @@ jobs:
             # (which caps at 100 and would silently under-enforce
             # rules 7 and 8 on large PRs).
             gh pr view "$PR_NUM" --repo "$REPO" \
-              --json title,body,changedFiles > pr_view.json
+              --json title,body,changedFiles,headRefOid > pr_view.json
+            if [ "$(jq -r '.headRefOid' pr_view.json)" != "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUM moved after discovery; leave the new head to its own run"
+              echo "::endgroup::"
+              continue
+            fi
             jq -r '.title' pr_view.json > pr_title.txt
             jq -r '.body // ""' pr_view.json > pr_body.txt
             EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
@@ -145,7 +150,8 @@ jobs:
               --pr-body-file pr_body.txt \
               --pr-files-file pr_files.txt \
               --template .github/ISSUE_TEMPLATE/slice.yml \
-              --repo "$REPO" 2>&1)
+              --repo "$REPO" \
+              --head-sha "$HEAD_SHA" 2>&1)
             GATE_EXIT=$?
             set -e
             echo "$GATE_OUT"
@@ -204,6 +210,13 @@ jobs:
             SUMMARY=$(printf 'Posted by pr_checks_slice_sweep run %s.\n\n```\n%s\n```\n' \
               "${{ github.run_id }}" "$GATE_OUT")
             SUMMARY=${SUMMARY:0:60000}
+
+            LIVE_HEAD=$(gh pr view "$PR_NUM" --repo "$REPO" --json headRefOid --jq .headRefOid)
+            if [ "$LIVE_HEAD" != "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUM moved during validation; no stale verdict posted"
+              echo "::endgroup::"
+              continue
+            fi
 
             # Same check-run name as the pull_request workflow, so
             # branch protection sees this as the current status of

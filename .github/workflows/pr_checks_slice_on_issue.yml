@@ -106,6 +106,12 @@ jobs:
           ISSUE_NUM="${{ github.event.issue.number }}"
 
           AFFECTED="$ISSUE_NUM"
+          # A parent contract edit also invalidates child-only PR verdicts.
+          if [ "${{ github.event.action }}" != "deleted" ]; then
+            CHILDREN=$(gh api "repos/$REPO/issues/$ISSUE_NUM/sub_issues" --paginate \
+              --jq '.[] | select(any(.labels[]; .name == "slice")) | .number')
+            AFFECTED="$AFFECTED $CHILDREN"
+          fi
           # Fail loud on a parent-lookup failure: collapsing transient
           # API errors into "no parent" would silently drop the sibling
           # set — the exact staleness this workflow exists to prevent.
@@ -133,12 +139,11 @@ jobs:
             --json number,body,headRefOid > open_prs.json
 
           python3 - $AFFECTED <<'PYEOF' > linked_prs.json
-          import json, re, sys
+          import json, sys
+          sys.path.insert(0, "governance")
+          from _common import CLOSING_KEYWORD_RE
           targets = {int(a) for a in sys.argv[1:]}
-          pat = re.compile(
-              r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b',
-              re.IGNORECASE,
-          )
+          pat = CLOSING_KEYWORD_RE
           with open('open_prs.json', encoding='utf-8') as fh:
               prs = json.load(fh)
           linked = []
@@ -176,7 +181,12 @@ jobs:
             # (which caps at 100 and would silently under-enforce
             # rules 7 and 8 on large PRs).
             gh pr view "$PR_NUM" --repo "$REPO" \
-              --json title,body,changedFiles > pr_view.json
+              --json title,body,changedFiles,headRefOid > pr_view.json
+            if [ "$(jq -r '.headRefOid' pr_view.json)" != "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUM moved after discovery; leave the new head to its own run"
+              echo "::endgroup::"
+              continue
+            fi
             jq -r '.title' pr_view.json > pr_title.txt
             jq -r '.body // ""' pr_view.json > pr_body.txt
             EXPECTED_FILES=$(jq -r '.changedFiles' pr_view.json)
@@ -211,7 +221,8 @@ jobs:
               --pr-body-file pr_body.txt \
               --pr-files-file pr_files.txt \
               --template .github/ISSUE_TEMPLATE/slice.yml \
-              --repo "$REPO" 2>&1)
+              --repo "$REPO" \
+              --head-sha "$HEAD_SHA" 2>&1)
             GATE_EXIT=$?
             set -e
             echo "$GATE_OUT"
@@ -287,6 +298,13 @@ jobs:
             SUMMARY=$(printf 'Triggered by issue #%s change.\n\n```\n%s\n```\n' \
               "$ISSUE_NUM" "$GATE_OUT")
             SUMMARY=${SUMMARY:0:60000}
+
+            LIVE_HEAD=$(gh pr view "$PR_NUM" --repo "$REPO" --json headRefOid --jq .headRefOid)
+            if [ "$LIVE_HEAD" != "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUM moved during validation; no stale verdict posted"
+              echo "::endgroup::"
+              continue
+            fi
 
             # Post the check-run. Using the same name the pull_request
             # workflow uses ensures branch protection sees this as the

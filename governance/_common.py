@@ -31,7 +31,12 @@ CC_RE: Final[re.Pattern[str]] = re.compile(
 
 # Issue-closing keyword regex, shared by cc_gate and slice_gate.
 CLOSING_KEYWORD_RE: Final[re.Pattern[str]] = re.compile(
-    r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b',
+    r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)(?:\s*:\s*|\s+)#(\d+)\b',
+    re.IGNORECASE,
+)
+QUALIFIED_CLOSING_RE: Final[re.Pattern[str]] = re.compile(
+    r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)(?:\s*:\s*|\s+)'
+    r'(?P<target>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#\d+|https?://\S+/issues/\d+)\b',
     re.IGNORECASE,
 )
 

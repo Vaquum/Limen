@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
+SLICE_WORKFLOW = REPO_ROOT / '.github/workflows/pr_checks_slice.yml'
 CLOSEOUT_GUARD_WORKFLOW = REPO_ROOT / '.github/workflows/slice_closeout_guard.yml'
 ON_ISSUE_WORKFLOW = REPO_ROOT / '.github/workflows/pr_checks_slice_on_issue.yml'
 SWEEP_WORKFLOW = REPO_ROOT / '.github/workflows/pr_checks_slice_sweep.yml'
@@ -164,3 +168,60 @@ def test_typing_gate_setup_failures_exit_2() -> None:
     assert result.returncode == 2
     assert result.stdout == ''
     assert 'typing_gate: cannot parse pyproject.toml:' in result.stderr
+
+
+def test_slice_workflows_validate_the_captured_head() -> None:
+    for path in (SLICE_WORKFLOW, ON_ISSUE_WORKFLOW, SWEEP_WORKFLOW):
+        workflow = path.read_text(encoding='utf-8')
+        assert '--json title,body,changedFiles,headRefOid' in workflow
+        assert '--head-sha ' in workflow
+        assert 'PR head changed during capture' in workflow or 'no stale verdict posted' in workflow
+    # Privileged rechecks keep validator execution on the default branch.
+    assert 'ref: main' in SWEEP_WORKFLOW.read_text(encoding='utf-8')
+
+
+def test_parent_edit_rechecks_child_only_pr(tmp_path) -> None:
+    from governance.interface_contract import interface_contract_failures
+
+    workflow = yaml.safe_load(ON_ISSUE_WORKFLOW.read_text(encoding='utf-8'))
+    steps = workflow['jobs']['rerun_slice_gate_for_linked_prs']['steps']
+    script = next(step['run'] for step in steps if step.get('name') == 'Find linked PRs')
+    script = script.replace('${{ github.repository }}', 'Vaquum/Limen')
+    script = script.replace('${{ github.event.issue.number }}', '1006')
+    script = script.replace('${{ github.event.action }}', 'edited')
+    (tmp_path / 'governance').mkdir()
+    shutil.copyfile(REPO_ROOT / 'governance/_common.py', tmp_path / 'governance/_common.py')
+    # Model the published native parent/child graph; gh --jq returns child ids.
+    cli = tmp_path / 'gh'
+    cli.write_text(
+        f'#!{sys.executable}\n'
+        'import json, sys\n'
+        'args = sys.argv[1:]\n'
+        'if args[:2] == ["api", "graphql"]: print("null")\n'
+        'elif args[0] == "api" and args[1].endswith("/1006/sub_issues"): print("1007")\n'
+        'elif args[:2] == ["pr", "list"]: print(json.dumps(['
+        '{"number": 1010, "body": "Closes: #1007", "headRefOid": "a" * 40},'
+        '{"number": 1011, "body": "Closes #1008", "headRefOid": "b" * 40}]))\n'
+        'else: raise SystemExit("Unexpected gh input: " + repr(args))\n',
+        encoding='utf-8',
+    )
+    cli.chmod(0o755)
+    env = dict(os.environ, PATH=str(tmp_path) + os.pathsep + os.environ['PATH'],
+               GITHUB_OUTPUT=str(tmp_path / 'output'))
+    result = subprocess.run(['bash', '-c', script], cwd=tmp_path, env=env,
+                            capture_output=True, text=True, timeout=20, check=False)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads((tmp_path / 'linked_prs.json').read_text()) == [
+        {'number': 1010, 'headRefOid': 'a' * 40},
+    ]
+
+    def contract(interface):
+        return ('## Interface Contract\n```yaml\ndelivery: public\n'
+                f'interfaces: [{interface}]\nscope: "One complete capability."\nproof:\n'
+                f'  {interface}: [test:tests/test_capability.py::test_capability]\n```\n')
+
+    child = contract('python')
+    options = {'closing_parent': False, 'read_source': lambda _: 'def test_capability():\n    assert True\n',
+               'required_checks': set()}
+    assert not interface_contract_failures(child, child, parent_body=child, **options)
+    assert interface_contract_failures(child, child, parent_body=contract('compiled'), **options)

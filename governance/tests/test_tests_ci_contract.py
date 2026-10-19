@@ -47,6 +47,8 @@ EXPECTED_RULESET_COMMAND = (
     'governance/tests/test_tests_ci_contract.py '
     'governance/tests/test_version_gate.py '
     'governance/tests/test_governance_config.py '
+    'governance/tests/test_slice_gate.py '
+    'governance/tests/test_interface_contract.py '
     '-q'
 )
 
@@ -84,7 +86,7 @@ def _check_workflows(workflow, ruleset) -> None:
     }, 'ruleset contract command changed'
 
 
-def test_pr_checks_tests_workflow_exists() -> None:
+def test_ruleset_workflow_runs_gate_regressions() -> None:
     assert TESTS_WORKFLOW.exists()
     assert RULESET_WORKFLOW.exists()
     _check_workflows(_workflow(TESTS_WORKFLOW), _workflow(RULESET_WORKFLOW))
@@ -111,6 +113,8 @@ def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
     ('missing_probe', 'covered step changed'),
     ('missing_governance_module', 'ruleset contract command changed'),
     ('missing_workflow_contract', 'ruleset contract command changed'),
+    ('missing_slice_gate', 'ruleset contract command changed'),
+    ('missing_interface_contract', 'ruleset contract command changed'),
     ('filtered_collection', 'ruleset contract command changed'),
     ('missing_backend_step', 'missing or duplicated step: Verify coverage backend contract'),
     ('conditional_backend_step', 'backend contract step changed'),
@@ -141,6 +145,10 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason, monkeypa
             collection['run'] = collection['run'].replace('governance/tests/test_governance_config.py ', '')
         case 'missing_workflow_contract':
             collection['run'] = collection['run'].replace('governance/tests/test_tests_ci_contract.py ', '')
+        case 'missing_slice_gate':
+            collection['run'] = collection['run'].replace('governance/tests/test_slice_gate.py ', '')
+        case 'missing_interface_contract':
+            collection['run'] = collection['run'].replace('governance/tests/test_interface_contract.py ', '')
         case 'filtered_collection':
             collection['run'] += ' -k "not governance_config"'
         case 'missing_backend_step':
@@ -166,7 +174,7 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason, monkeypa
                             {TESTS_WORKFLOW: workflow, RULESET_WORKFLOW: ruleset}.__getitem__)
     with pytest.raises(AssertionError, match=reason):
         if mutation == 'job_selection':
-            test_pr_checks_tests_workflow_exists()
+            test_ruleset_workflow_runs_gate_regressions()
         else:
             _check_workflows(workflow, ruleset)
 

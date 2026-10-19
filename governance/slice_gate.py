@@ -20,18 +20,21 @@ This gate blocks a PR that:
       cited issue's ``Surfaces`` section.
   8.  Has a diff that touches any file matched by a glob in the cited
       issue's ``Out of Scope`` section.
-  9.  Has a closing set that violates PRD closure: while the cited
-      slice's parent PRD (native sub-issue parent) has other open
-      slice sub-issues, the set must be exactly {slice}; when the
-      cited slice is the parent's last open slice sub-issue, exactly
-      {slice, parent PRD}; a slice with no parent PRD requires exactly
-      {slice}.
+  9.  Closes a parent with open slice siblings or without complete
+      authoritative parent evidence. Child-only closure is allowed;
+      the last child must name the remaining parent outcome.
   10. Cites a slice with a Done Means checkbox neither checked
       (``- [x]``) nor overruled (``OVERRULED: <reason>``). The
       post-merge evidence fields (Merge SHA, Merged PR number, the
       run-id list) are not checkboxes and are exempt pre-merge; they
       are written by ``slice_closeout_guard`` when a merged PR closes
       the issue.
+  11. Omits or contradicts its Interface Contract, its slice or its
+      native parent, or cites proof absent from the exact candidate head.
+
+Rules 9 and 11 are Limen-specific delivery rules. Completeness and
+meaningful proof require semantic review; CI checks declarations and
+references. Manual parent closure is outside this PR-path validator.
 
 Rules 6 and 7 together bind the template and the issue: the template's
 Significance notes cannot drift away from what the validator demands
@@ -47,7 +50,8 @@ Usage:
     --pr-body-file <path> \
     --pr-files-file <path>         # one path per line
     --template <path>              # .github/ISSUE_TEMPLATE/slice.yml
-    --repo <owner>/<name>
+    --repo <owner>/<name> \
+    --head-sha <full candidate SHA>
 
 Exit codes:
 
@@ -67,7 +71,8 @@ import sys
 from pathlib import Path
 from typing import Final, NoReturn
 
-from _common import CLOSING_KEYWORD_RE
+from _common import CLOSING_KEYWORD_RE, QUALIFIED_CLOSING_RE
+from interface_contract import CandidateEvidence, interface_contract_failures
 
 # ``##+`` on both the heading and the terminator: issue-form-created
 # bodies render field labels as ``###``, and a terminator that only
@@ -104,17 +109,7 @@ CHECKBOX_RE: Final[re.Pattern[str]] = re.compile(
 # overrule needs a real reason, not the copy-pasted example.
 OVERRULED_RE: Final[re.Pattern[str]] = re.compile(r'\bOVERRULED:\s*(?!<reason>)\S')
 
-# GitHub also honors closing keywords followed by a qualified
-# ``owner/repo#N`` reference or an issue URL. The gate cannot fold
-# those into the closing set rules 1 and 9 validate, so their presence
-# hard-fails instead of silently widening what a merge will close.
-QUALIFIED_CLOSING_RE: Final[re.Pattern[str]] = re.compile(
-    r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+'
-    r'(?:[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+#\d+|https?://\S+/issues/\d+)',
-    re.IGNORECASE,
-)
-
-# The slice issue plus, on the last open slice, its parent PRD (rule 9).
+# The slice issue plus an explicitly completed parent PRD (rule 9).
 MAX_CLOSING_REFERENCES: Final[int] = 2
 
 
@@ -415,16 +410,14 @@ def _closing_reference_failures(refs: list[int]) -> list[str]:
             'PR body has no closing reference. The closing set must be '
             'exactly the slice issue (`Closes #N`, or Fixes/Resolves, '
             'with N an OPEN slice-labelled issue), plus its parent PRD '
-            'only when the slice is the parent\'s last open slice '
-            'sub-issue (rule 9).'
+            'only when explicitly completing the parent (rule 9).'
         ]
     if len(refs) > MAX_CLOSING_REFERENCES:
         return [
             f'PR body has {len(refs)} closing references '
             f'({", ".join(f"#{n}" for n in refs)}). The closing set must '
             f'be exactly the slice issue, plus its parent PRD only when '
-            f'the slice is the parent\'s last open slice sub-issue '
-            f'(rule 9).'
+            f'explicitly completing the parent (rule 9).'
         ]
     return []
 
@@ -591,52 +584,42 @@ def _scope_failures(
     return failures
 
 
-def _prd_closure_failures(
+def _parent_context(
     repo: str,
     issue_number: int,
     refs: list[int],
     issues: dict[int, dict[str, object]],
-) -> list[str]:
-    """Rule 9: the closing set must match the PRD-closure contract. The
-    parent PRD is the slice's native sub-issue parent; siblings are the
-    parent's other OPEN slice-labelled sub-issues."""
+    pr_body: str,
+) -> tuple[str | None, bool, list[str]]:
+    """Resolve native parent authority and optional, evidence-bound closure."""
     parent_number = fetch_parent_issue_number(repo, issue_number)
-    if parent_number is None:
-        expected = {issue_number}
-        reason = f'slice #{issue_number} has no parent PRD'
-    else:
-        open_siblings = [
-            n for n in fetch_open_slice_sub_issue_numbers(repo, parent_number)
-            if n != issue_number
-        ]
-        if open_siblings:
-            expected = {issue_number}
-            reason = (
-                f'parent PRD #{parent_number} still has other open slice '
-                f'sub-issues '
-                f'({", ".join(f"#{n}" for n in sorted(open_siblings))})'
-            )
-        else:
-            expected = {issue_number, parent_number}
-            reason = (
-                f'slice #{issue_number} is parent PRD #{parent_number}\'s '
-                f'last open slice sub-issue'
-            )
     closing_set = set(refs)
-    if closing_set != expected:
-        return [
-            f'closing set {_format_issue_set(closing_set)} must be '
-            f'exactly {_format_issue_set(expected)} because {reason} '
-            f'(rule 9).'
-        ]
-    if parent_number is not None and parent_number in closing_set:
-        parent_state = str(issues[parent_number].get('state', ''))
-        if parent_state.lower() != 'open':
-            return [
-                f'parent PRD #{parent_number} state is {parent_state!r}; '
-                f'must be OPEN for the PR to close it (rule 9).'
-            ]
-    return []
+    if parent_number is None:
+        failures = [] if closing_set == {issue_number} else [
+            f'closing set {_format_issue_set(closing_set)} must be exactly '
+            f'{{#{issue_number}}} because slice #{issue_number} has no parent PRD (rule 9).']
+        return None, False, failures
+    parent = issues.get(parent_number) or fetch_issue(repo, parent_number)
+    if parent is None or parent.get('is_pull_request'):
+        _fail_setup(f'slice_gate: native parent #{parent_number} cannot be read as an issue')
+    parent_body = str(parent.get('body') or '').replace('\r\n', '\n')
+    open_siblings = [n for n in fetch_open_slice_sub_issue_numbers(repo, parent_number) if n != issue_number]
+    closing_parent = parent_number in closing_set
+    failures = []
+    if closing_set not in ({issue_number}, {issue_number, parent_number}):
+        failures.append(f'closing set {_format_issue_set(closing_set)} may contain only slice #{issue_number} and its native parent #{parent_number} (rule 9).')
+    if closing_parent and open_siblings:
+        failures.append(
+            f'closing set {_format_issue_set(closing_set)} must be exactly {{#{issue_number}}} '
+            f'because parent PRD #{parent_number} still has other open slice sub-issues '
+            f'({", ".join(f"#{n}" for n in sorted(open_siblings))}) (rule 9).')
+    if closing_parent and str(parent.get('state', '')).lower() != 'open':
+        failures.append(f'parent PRD #{parent_number} state is {parent.get("state", "")!r}; must be OPEN for the PR to close it (rule 9).')
+    if not closing_parent and not open_siblings:
+        remaining = re.findall(r'^Parent remains open:[ \t]*(.*)$', pr_body, re.MULTILINE)
+        if len(remaining) != 1 or not remaining[0].strip() or remaining[0].strip().startswith('<') or remaining[0].strip().lower() in ('_no response_', '(none)', 'none', 'n/a'):
+            failures.append(f'last slice #{issue_number} leaves parent #{parent_number} open; add `Parent remains open: <remaining outcome or next slice>` with a concrete outcome (rule 9).')
+    return parent_body, closing_parent, failures
 
 
 def _done_means_failures(issue_number: int, issue_body: str) -> list[str]:
@@ -686,9 +669,12 @@ def gate(
     pr_files: list[str],
     template_path: Path,
     repo: str,
+    head_sha: str,
 ) -> list[str]:
     """Run all PR <-> issue checks. Return a list of failure messages
     (empty list means PASS)."""
+    evidence = CandidateEvidence(repo, head_sha)
+    pr_body = pr_body.replace('\r\n', '\n')
     form_failures = _qualified_reference_failures(pr_body)
     if form_failures:
         return form_failures
@@ -722,43 +708,24 @@ def gate(
     # failed, skipping them keeps a plain rule violation from turning
     # into an exit-2 API failure that would obscure it.
     if not metadata_failures:
-        failures.extend(_prd_closure_failures(repo, issue_number, refs, issues))
+        parent_body, closing_parent, parent_failures = _parent_context(repo, issue_number, refs, issues, pr_body)
+        failures.extend(parent_failures)
+        if not parent_failures:
+            failures.extend(interface_contract_failures(
+                pr_body, issue_body, parent_body=parent_body, closing_parent=closing_parent,
+                read_source=evidence, required_checks=evidence.required_checks))
     failures.extend(_done_means_failures(issue_number, issue_body))
     return failures
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description='Slice gate')
-    parser.add_argument(
-        '--pr-title',
-        required=True,
-        help='The PR title, byte-equal to what will match against the issue.',
-    )
-    parser.add_argument(
-        '--pr-body-file',
-        required=True,
-        help='Path to a UTF-8 file containing the PR body verbatim.',
-    )
-    parser.add_argument(
-        '--pr-files-file',
-        required=True,
-        help='Path to a UTF-8 file with one changed file path per line '
-             '(as produced by `gh pr diff --name-only`).',
-    )
-    parser.add_argument(
-        '--template',
-        required=True,
-        help='Path to the slice template '
-             '(e.g. .github/ISSUE_TEMPLATE/slice.yml). The validator '
-             'loads the template at runtime and requires every '
-             'Significance blockquote to be present verbatim in the '
-             'cited issue body.',
-    )
-    parser.add_argument(
-        '--repo',
-        required=True,
-        help='GitHub repository in owner/name form (e.g. Vaquum/new-repository-template).',
-    )
+    parser.add_argument('--pr-title', required=True, help='Exact PR title.')
+    parser.add_argument('--pr-body-file', required=True, help='UTF-8 PR body file.')
+    parser.add_argument('--pr-files-file', required=True, help='Changed paths, one per line.')
+    parser.add_argument('--template', required=True, help='Slice template with required quotations.')
+    parser.add_argument('--repo', required=True, help='GitHub owner/name.')
+    parser.add_argument('--head-sha', required=True, help='Exact live PR head, full 40-character SHA.')
     args = parser.parse_args()
 
     try:
@@ -786,6 +753,7 @@ def main() -> int:
         pr_files,
         template_path,
         args.repo,
+        args.head_sha,
     )
 
     if failures:
