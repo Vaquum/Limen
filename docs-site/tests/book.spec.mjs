@@ -20,6 +20,10 @@ test('complete research chapter',async({page})=>{
   expect((await page.request.get('/limen/assets/fonts/plex.woff2')).status()).toBe(200);
   expect((await page.request.get('/limen/')).headers()['content-security-policy']).toContain("font-src 'self'");
   await page.screenshot({path:path.join(root,'.docs-evidence/browser',test.info().project.name+'-chapter.png'),fullPage:false});
+  const about=await (await page.request.get('/limen/about/')).text();expect(about.match(/<h1(?:\s|>)/g)).toHaveLength(1);
+  const reference=await (await page.request.get('/limen/reference/trainer/')).text();
+  const lead=reference.match(/<p class="hero-lead">([^]*?)<\/p>/)[1];
+  expect(lead).toContain('round storage format');expect(lead).not.toContain('[round storage format]');expect(lead).not.toContain('`');
 });
 
 test('reference returns to the same passage and focus',async({page})=>{
