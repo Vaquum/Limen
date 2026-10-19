@@ -506,6 +506,11 @@
   "limen/inference/_fold_sensor.py": 240,
   "limen/experiment/_parallel_sources.py": 70,
   "limen/experiment/_fold_preparation.py": 180,
+  "limen/backtest/observed_costs.py": 180,
+  "limen/backtest/_cost_history.py": 230,
+  "limen/backtest/_cost_statistics.py": 220,
+  "limen/backtest/_cost_identity.py": 200,
+  "limen/backtest/_cost_comparison.py": 260,
   "limen/experiment/_holdout_prediction.py": 180,
   "limen/experiment/_holdout_dependencies.py": 260
 }
