@@ -1786,4 +1786,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.43.1] - 2026-10-19
 
+- Share checked frozen source snapshots during spawned-worker startup while preserving independent frames, native thread limits and recovery semantics.
+
+## [5.43.2] - 2026-10-19
+
 - Fit automatic fractional shims within each chronological direction/sizing prefix and align feature-valid supervision by source row identity.
