@@ -73,10 +73,10 @@ def _exclude(root: Path) -> None:
     paths = [name + suffix for name in (_HISTORY, _LEASE) for suffix in _SIDECARS] + ['manifests/holdout']
     if _git(root, 'ls-files', '--', *paths):
         raise ValueError('Holdout history/evidence must not be tracked in Git')
-    target = Path(_git(root, 'rev-parse', '--git-path', 'info/exclude'))
+    location, _, prefix = _git(root, 'rev-parse', '--git-path', 'info/exclude', '--show-prefix').partition('\n')
+    target = Path(location)
     target = target if target.is_absolute() else root / target
     old = target.read_text() if target.exists() else ''
-    prefix = _git(root, 'rev-parse', '--show-prefix')
     entries = [f'/{prefix}{name}{suffix}' for name in (_HISTORY, _LEASE) for suffix in _SIDECARS]
     entries.append(f'/{prefix}manifests/holdout/')
     missing = [entry for entry in entries if entry not in old.splitlines()]
