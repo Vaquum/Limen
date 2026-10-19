@@ -51,8 +51,10 @@ def reference(value: object) -> list[object]:
 def encode(value: object, active: frozenset[int] = frozenset()) -> list[object]:
     if value is None:
         return ['null']
-    if type(value) in (str, bool):
-        return ['str' if type(value) is str else 'bool', value]
+    if isinstance(value, str):
+        return ['str', str(value)]
+    if type(value) is bool:
+        return ['bool', value]
     if type(value) is int:
         return ['int', str(value)]
     if type(value) is float:
