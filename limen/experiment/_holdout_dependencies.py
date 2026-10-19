@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from functools import partial
 from hashlib import sha256
 import inspect
+from io import IOBase
 import dis
 import marshal
 import pickle
@@ -31,7 +32,15 @@ def children(value: object) -> tuple[object, ...]:
         return ()
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, vars(value))
-    return tuple(cast(dict[str, object], vars(value)).values()) if hasattr(value, '__dict__') else ()
+    return tuple(_attributes(value).values())
+
+
+def _attributes(value: object) -> dict[str, object]:
+    slots = [slot for cls in type(value).__mro__ for slot in cls.__dict__.get('__slots__', ()) if slot not in ('__dict__', '__weakref__')]
+    values = cast(dict[str, object], getattr(value, '__dict__', {}))
+    if slots:
+        values = {**values, **{slot: getattr(value, slot) for slot in slots if hasattr(value, slot)}}
+    return values
 
 
 def fitted_witness(value: object) -> bytes:
@@ -76,8 +85,10 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, tuple(node(part) for part in cast(Sequence[object], item)))
         elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5))
-        elif hasattr(item, '__dict__'):
-            result = (kind, node(vars(item)))
+        elif isinstance(item, IOBase):
+            raise ValueError('Holdout refuses opaque external prediction dependencies')
+        elif hasattr(item, '__dict__') or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
+            result = (kind, node(_attributes(item)))
         else:
             result = (kind, pickle.dumps(item, protocol=5))
         return result
@@ -112,7 +123,7 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
             return
         seen.add(id(value))
         module = getattr(value, '__module__', type(value).__module__)
-        if module.startswith(('numpy.random', 'random')):
+        if callable(value) and (module or type(value).__module__).startswith(('numpy.random', 'random')):
             functions.append(value)
         if inspect.ismethod(value):
             visit(value.__func__)
@@ -132,6 +143,8 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
                 visit(cell.cell_contents)
             instructions = list(dis.get_instructions(value))
             for index, instruction in enumerate(instructions):
+                if instruction.argval == 'fit_calibrator':
+                    continue
                 if instruction.opname != 'LOAD_GLOBAL' or instruction.argval not in value.__globals__:
                     continue
                 item = cast(object, value.__globals__[instruction.argval])
@@ -145,15 +158,24 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
                     evidence.append((value.__module__, value.__qualname__, instruction.argval, fitted_witness(item)))
                     visit(item)
         elif not isinstance(value, (ModuleType, type, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
-            for name in ('predict', 'predict_proba', 'transform', '__call__'):
+            pending = ['predict', 'predict_proba', 'transform', '__call__']
+            methods: set[str] = set()
+            while pending:
+                name = pending.pop()
+                if name in methods:
+                    continue
+                methods.add(name)
                 method = inspect.getattr_static(type(value), name, None)
+                if isinstance(method, property):
+                    method = method.fget
+                if isinstance(method, (staticmethod, classmethod)):
+                    method = method.__func__
                 if inspect.isfunction(method):
                     visit(method)
-                    for attribute in method.__code__.co_names:
-                        part = inspect.getattr_static(type(value), attribute, None)
-                        if part is not None and not isinstance(part, (property, type)):
-                            evidence.append((type(value).__module__, type(value).__qualname__, attribute, fitted_witness(part)))
-                            visit(part)
+                    pending.extend(method.__code__.co_names)
+                elif method is not None and not inspect.isdatadescriptor(method) and not isinstance(method, type):
+                    evidence.append((type(value).__module__, type(value).__qualname__, name, fitted_witness(method)))
+                    visit(method)
             for part in children(value):
                 visit(part)
 

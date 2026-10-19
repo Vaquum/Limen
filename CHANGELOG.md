@@ -1809,4 +1809,3 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.44.4] - 2026-10-19
 
 - Preserve owned fitted binary prediction, native iteration limits and preparation/calibration dependencies through final holdout assessment.
-

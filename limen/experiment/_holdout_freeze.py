@@ -56,11 +56,11 @@ _IMPLEMENTATIONS.update({cls: {name: getattr(cls, name) for name in ('transform'
 
 def unchanged(value: object) -> None:
     for name in ('predict', 'predict_proba', 'transform'):
-        if name in vars(value) and hasattr(type(value), name):
+        if name in getattr(value, '__dict__', {}) and hasattr(type(value), name):
             raise ValueError(f'Holdout refuses replaced {type(value).__name__}.{name}')
     for cls in type(value).__mro__:
         for name, original in _IMPLEMENTATIONS.get(cls, {}).items():
-            if name in vars(value) or getattr(cls, name) is not original:
+            if name in getattr(value, '__dict__', {}) or getattr(cls, name) is not original:
                 raise ValueError(f'Holdout refuses replaced {cls.__name__}.{name}')
 
 
@@ -178,14 +178,14 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         if classes is not None and list(classes) != [0, 1]:
             raise ValueError('Holdout estimator classes must be [0,1]')
     config = getattr(wrapper, 'prediction_calibration_config', None)
-    calibrator = vars(wrapper).get('_fitted_calibrator')
+    calibrator = getattr(wrapper, '_fitted_calibrator', None)
     if config is not None:
         if calibrator is None or not callable(getattr(calibrator, 'predict_proba', None)):
             raise ValueError('Holdout refuses configured but unfitted calibration')
         _fitted_value(calibrator)
         if isinstance(calibrator, CalibratedClassifierCV) and not calibrator.calibrated_classifiers_:
             raise ValueError('Holdout refuses unfitted calibration')
-        threshold = vars(wrapper).get('_calibration_threshold')
+        threshold = getattr(wrapper, '_calibration_threshold', None)
         if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not math.isfinite(float(threshold)):
             raise ValueError('Holdout requires a finite fitted threshold')
     manifest = cast(MLManifest | None, vars(sensor)['_manifest'])
