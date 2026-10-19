@@ -16,6 +16,7 @@ from limen.targets import NextBarUpTarget
 from limen.yaml import CompiledSFD, build_search_strategy, validate
 
 import research as research_project
+from recorded_inputs import FUNDING, HASHES, funding_history, trade_profile
 
 INPUTS = {
     'spot_1h_20240101_20241231.parquet': 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72',
@@ -33,12 +34,12 @@ def configuration(name, data_dir):
     return config
 
 
-def execute(config, output, *, bars=None, callback=None, resume=False, project_root=None, factorize=False):
+def execute(config, output, *, bars=None, callback=None, resume=False, project_root=None, factorize=False, post_processing=True):
     report = validate(config)
     if not report.valid:
         raise ValueError(str(report.errors))
     loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=project_root), data=bars, search_strategy=build_search_strategy(config), experiment_dir=output, yaml_reference=config, checkpoint_interval=1, feedback_interval=1, intra_callback=callback, project_root=project_root)
-    loop.run(config['metadata']['name'], n_permutations=config['uel']['n_permutations'], workers=1, prep_each_round=True, progress_bar=False, post_processing=True, resume=resume, factorize=factorize)
+    loop.run(config['metadata']['name'], n_permutations=config['uel']['n_permutations'], workers=1, prep_each_round=True, progress_bar=False, post_processing=post_processing, resume=resume, factorize=factorize)
     if 'strict_mode_error' in research_project.completed_log(loop).columns and research_project.completed_log(loop)['strict_mode_error'].drop_nulls().len():
         raise ValueError('A declared scenario round failed its pipeline checks')
     return loop
@@ -69,7 +70,7 @@ def model_comparisons(data_dir, output):
         if family == 'random_binary':
             np.random.seed(42)
         directory = output / family
-        loop = execute(config, directory)
+        loop = execute(config, directory, post_processing=False)
         log = research_project.completed_log(loop)
         with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
             records = [json.loads(line) for line in stream]
@@ -165,7 +166,16 @@ def execution(data_dir, output):
     loop = execute(config, output / 'experiment')
     with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
         records = [json.loads(line) for line in stream]
-    return {'rounds': research_project.completed_log(loop).height, 'metrics': research_project.completed_log(loop).select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records]}
+    history = funding_history(data_dir)
+    derived = output / 'recorded-funding.parquet'
+    history.write_parquet(derived)
+    funded_config = configuration('funded', data_dir)
+    funded_config['sfd']['manifest']['backtest']['funding']['data_source']['params']['file_path_or_url'] = str(derived.resolve())
+    funded_loop = execute(funded_config, output / 'funded')
+    with gzip.open(output / 'funded/round_data.jsonl.gz', 'rt') as stream:
+        funded_records = [json.loads(line) for line in stream]
+    funded = {'metrics': research_project.completed_log(funded_loop).select('risk_span', 'backtest_funding_pnl').to_dicts(), 'ledgers': [row['trade_ledger'] for row in funded_records], 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}
+    return {'rounds': research_project.completed_log(loop).height, 'metrics': research_project.completed_log(loop).select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records], 'funded': funded}
 # endregion execution
 
 
@@ -173,7 +183,7 @@ def execution(data_dir, output):
 def bars(data_dir, output):
     config = configuration('bars', data_dir)
     loop = execute(config, output / 'experiment')
-    return {'rounds': research_project.completed_log(loop).height, 'modes': research_project.completed_log(loop).select('bar_type', 'accuracy').to_dicts(), 'placement': 'bar formation runs separately after each chronological split'}
+    return {'rounds': research_project.completed_log(loop).height, 'modes': research_project.completed_log(loop).select('bar_type', 'accuracy').to_dicts(), 'placement': 'bar formation runs separately after each chronological split', 'trade_profile': trade_profile(data_dir, output)}
 # endregion bars
 
 

@@ -34,7 +34,7 @@ def unpack(bundle: Path, target: Path, root: Path):
         required = {'python-research/research.py', 'compiled-research/research.py',
                     'compiled-research/selection.yaml', 'evidence.schema.json', 'catalogue.json'}
         required |= {'inputs/' + name for name in INPUTS}
-        required |= {'requirements/research-env.txt', 'inputs.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
+        required |= {'requirements/research-env.txt', 'inputs.json', 'recorded_inputs.py', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
         if len(names) != len(archive.getmembers()) or any(not member.isfile() for member in archive.getmembers()):
@@ -48,6 +48,8 @@ def unpack(bundle: Path, target: Path, root: Path):
         archive.extractall(target, filter='data')
     if json.loads((target / 'inputs.json').read_text()) != INPUTS:
         raise ValueError('Candidate input declarations differ')
+    if (target / 'recorded_inputs.py').read_bytes() != (root / 'docs/examples/recorded_inputs.py').read_bytes():
+        raise ValueError('Shared recorded-input source differs')
     for name, expected in INPUTS.items():
         if hashlib.sha256((target / 'inputs' / name).read_bytes()).hexdigest() != expected:
             raise ValueError('Candidate recorded input differs')

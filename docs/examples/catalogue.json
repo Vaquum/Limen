@@ -89,5 +89,35 @@
     "tabpfn_binary": {
       "unproved": "https://github.com/Vaquum/Limen/issues/628"
     }
+  },
+  "recorded_inputs": {
+    "spot_15m_20250101_20250531.parquet": {
+      "scenario": "selection",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "spot_1h_20240101_20241231.parquet": {
+      "scenario": "execution",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "btcusdt_funding_20240101_20240108.json": {
+      "scenario": "execution",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "binance_trades_btcusdt_2025-05-23_90s.zip": {
+      "scenario": "bars",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    }
   }
 }

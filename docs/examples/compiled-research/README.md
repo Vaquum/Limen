@@ -36,6 +36,10 @@ Factorized search uses the admitted deterministic LightGBM grid with independent
 
 Search also runs Ridge, DLinear and XGBoost on next-close returns, a random binary diagnostic baseline, and direction/sizing with both independent and conditional sizing. Each has a separate `family_*.yaml` definition. The regressors share recorded rows and the current return and five past returns; their RMSE is checked against the retained predictions and independently calculated labels. This is an execution comparison, not evidence of trading performance. Direction/sizing uses completed trade outcomes and signed exposure under its declared execution contract; Trainer reconstructs the selected round. The random baseline uses the driver's visible NumPy seed and makes no Trainer replay claim.
 
+The family comparisons use `post_processing=False`. Native results, recording and Trainer reconstruction remain active. Limen's optional legacy post-experiment binary summaries currently fail on these continuous targets; this project does not claim support for those summaries.
+
+The execution scenario also runs `funded.yaml` with recorded funding. The driver normalizes the pinned funding JSON into a Parquet source through the shared `recorded_inputs.py`, resolves that derived source's path in the run definition, and retains both the realized rates and mark prices in the funding ledger. No constant funding-rate scenario replaces those records. Both projects' bar scenarios use the same shared helper to turn the recorded 90-second trade slice into three CFR diagnostic bars. That short slice is not presented as a compiled training population.
+
 The holdout scenario creates a separate Git project, reserves its final window before research, freezes selected fitted state and retains the final report. Local recorded files leave earlier exposure unknown. Preserve its project marker, history and assessment artifacts together.
 
 Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).

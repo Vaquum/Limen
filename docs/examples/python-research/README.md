@@ -22,6 +22,8 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 
 `--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.
 
+The execution scenario compares cash spot with a linear perpetual using the recorded funding history, realized rates and mark prices. The shared `recorded_inputs.py` checks and normalizes those records; the native funding ledger exposes each payment. The bar scenario also forms three CFR diagnostic bars from the pinned 90-second trade slice. This is shared preprocessing on recorded events, not a claim that the short slice can support model selection.
+
 | Scenario | Decision and output |
 |---|---|
 | `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |

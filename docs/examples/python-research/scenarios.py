@@ -2,6 +2,7 @@ import gzip
 import hashlib
 import json
 import signal
+from dataclasses import replace
 from types import SimpleNamespace
 
 import numpy as np
@@ -13,7 +14,8 @@ from sklearn.preprocessing import StandardScaler
 from limen import Cohort, Sensor, UniversalExperimentLoop
 from limen.backtest import ProductSpec, TradeInputs, TradePolicy, trade_execution
 from limen.backtest.execution_events import with_predictions
-from limen.backtest.trade_contract import source_binding
+from limen.backtest.funding_adapter import prepare_funding
+from limen.backtest.trade_contract import FundingPolicy, source_binding
 from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
 from limen.data.utils import compute_data_bars, split_walk_forward
 from limen.experiment.param_domain import ParamDomain
@@ -21,6 +23,7 @@ from limen.experiment.param_search import GridStrategy, RandomStrategy, SobolStr
 from limen.metrics.balanced_metric import balanced_metric
 
 import research as project
+from recorded_inputs import FUNDING, HASHES, funding_history, trade_profile
 
 INPUTS = {
     'spot_1h_20240101_20241231.parquet': 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72',
@@ -185,7 +188,15 @@ def execution(data_dir, output):
     ledger = trade_execution(inputs, policy)
     for name in ('states', 'intents', 'fills', 'episodes', 'funding'):
         getattr(ledger, name).write_parquet(output / (name + '.parquet'))
-    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600}
+    history = funding_history(data_dir)
+    funding = FundingPolicy('limen.backtest.funding_adapter.funding_adapter', 'limen-funding-v1', {}, None, None, 'discrete', 28800.0, 'mark', 'USDT', 'recorded_exact')
+    events = prepare_funding(funding, history, start, end)
+    binding = source_binding(history, HASHES[FUNDING], start, end, 1_000_000, 'recorded realized rates and mark prices; explicit eight-hour slots')
+    funded_inputs = replace(inputs, funding_events=events, sources=(*inputs.sources, binding))
+    funded_policy = replace(policy, product=ProductSpec('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), funding=funding)
+    funded = trade_execution(funded_inputs, funded_policy)
+    funded.funding.write_parquet(output / 'funding-payments.parquet')
+    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'payments': funded.funding.to_dicts(), 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
 # endregion execution
 
 
@@ -203,7 +214,7 @@ def bars(data_dir, output):
         formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})
         formed.write_parquet(output / (kind + '.parquet'))
         results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1]})
-    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar'}
+    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output)}
 # endregion bars
 
 

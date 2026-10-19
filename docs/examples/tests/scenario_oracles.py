@@ -143,6 +143,24 @@ def verify(interface, name, result, output, inputs):
             assert len(result['ledgers']) == 2
             assert {row['risk_span'] for row in result['metrics']} == {6, 12}
             assert all(row['backtest_completed_trades'] > 0 for row in result['metrics'])
+        funded = result['funded']
+        raw = json.loads((inputs / 'btcusdt_funding_20240101_20240108.json').read_text())['records']
+        assert funded['recorded_events'] == len(raw) == 22
+        assert funded['input_sha256'] == hashlib.sha256((inputs / 'btcusdt_funding_20240101_20240108.json').read_bytes()).hexdigest()
+        observed_rates = {row['fundingTime'] * 1_000_000: (float(row['fundingRate']), float(row['markPrice'])) for row in raw}
+        ledgers = [{'funding': funded['payments']}] if interface == 'python' else funded['ledgers']
+        for ledger in ledgers:
+            assert ledger['funding']
+            for payment in ledger['funding']:
+                rate, mark = observed_rates[payment['end_ns']]
+                assert payment['rate_decimal'] == rate and payment['valuation_price'] == mark
+                assert payment['recognized_delta'] == pytest.approx(-payment['quantity'] * rate * mark, rel=1e-12, abs=1e-12)
+        if interface == 'python':
+            assert funded['metrics']['funding_pnl'] == pytest.approx(sum(row['recognized_delta'] for row in funded['payments']))
+        else:
+            assert len(funded['metrics']) == len(funded['ledgers']) == 2
+            for row, ledger in zip(funded['metrics'], funded['ledgers']):
+                assert row['backtest_funding_pnl'] == pytest.approx(sum(payment['recognized_delta'] for payment in ledger['funding']))
     elif name == 'bars':
         if interface == 'python':
             raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=384)
@@ -154,6 +172,18 @@ def verify(interface, name, result, output, inputs):
                 assert row['first_open'] == retained['open'][0] and row['last_close'] == retained['close'][-1]
         else:
             assert result['rounds'] == 3 and {row['bar_type'] for row in result['modes']} == {'volume', 'trade', 'liquidity'}
+        profile = result['trade_profile']
+        from limen import HistoricalData
+        historical = HistoricalData()
+        historical.get_any_file(str(inputs / 'binance_trades_btcusdt_2025-05-23_90s.zip'), has_header=False, columns=['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker', '_null'])
+        trades = historical.data
+        assert isinstance(trades, pl.DataFrame) and profile['trade_rows'] == trades.height
+        assert len(profile['bars']) == 3
+        assert sum(row['volume'] for row in profile['bars']) == pytest.approx(trades['quantity'].sum())
+        assert sum(row['value_sum'] for row in profile['bars']) == pytest.approx((trades['price']*trades['quantity']).sum())
+        for row in profile['bars']:
+            assert row['vwap'] * row['volume'] == pytest.approx(row['value_sum'])
+            assert all(math.isfinite(row[column]) and row[column] >= 0 for column in ('flux_rel_std_mean', 'flux_rel_std_var', 'entropy_mean', 'entropy_var', 'Δflux_rms', 'Δentropy_rms'))
     elif name == 'allocation':
         assert interface == 'compiled' and result['rounds'] == 2
         assert all(row['allocation_training_completed'] >= 2 for row in result['results'])
