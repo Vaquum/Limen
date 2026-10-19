@@ -246,14 +246,14 @@ class FrozenHoldoutSelection:
             raise TypeError('Use freeze_holdout_selection')
         return super().__new__(cls)
 
-    def __init__(self, token: object, /, *, snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], spec: dict[str, object]) -> None:
+    def __init__(self, token: object, /) -> None:
         if token is not _TOKEN:
             raise TypeError('Use freeze_holdout_selection')
         super().__init__()
-        self._snapshot = snapshot
-        self._spec = spec
-        self._state_digest = state_digest(snapshot[0])
-        self._spec_digest = digest(spec)
+        self._snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None] | None = None
+        self._spec: dict[str, object] | None = None
+        self._state_digest: str | None = None
+        self._spec_digest: str | None = None
         self._lock = Lock()
 
 
@@ -309,10 +309,14 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
                     'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions}
-    result = FrozenHoldoutSelection.__new__(FrozenHoldoutSelection, _TOKEN)
-    result.__init__(_TOKEN, snapshot=snapshot, spec=spec)
+    result = FrozenHoldoutSelection(_TOKEN)
+    for key, value in zip(('_snapshot', '_spec', '_state_digest', '_spec_digest'), (snapshot, spec, state_digest(snapshot[0]), digest(spec)), strict=True):
+        object.__setattr__(result, key, value)
     return result
 
 
 def frozen_parts(handle: FrozenHoldoutSelection) -> tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock]:
-    return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock], tuple(object.__getattribute__(handle, key) for key in ('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock')))
+    parts = tuple(object.__getattribute__(handle, key) for key in ('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock'))
+    if any(value is None for value in parts):
+        raise ValueError('Holdout handle was not initialized by freeze_holdout_selection')
+    return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock], parts)

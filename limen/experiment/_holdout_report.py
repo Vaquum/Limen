@@ -109,7 +109,7 @@ def _path(root: Path, value: object, attempt_id: str, filename: str) -> Path:
     if value != expected:
         raise ValueError(f'Holdout attempt {attempt_id} has an invalid artifact path')
     target = (root / expected).resolve()
-    if not target.is_relative_to((root / 'manifests/holdout').resolve()):
+    if not target.is_relative_to(root) or not target.is_relative_to((root / 'manifests/holdout').resolve()):
         raise ValueError(f'Holdout attempt {attempt_id} artifact escapes evidence directory')
     return target
 

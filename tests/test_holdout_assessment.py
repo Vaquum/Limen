@@ -17,7 +17,7 @@ from limen.experiment import _holdout_assessment as assessment
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_report as reports
 from limen.experiment import manifest_core
-from limen.experiment._holdout_freeze import owned_copy
+from limen.experiment._holdout_freeze import members, owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
 from limen.targets.next_bar_up import NextBarUpTarget
@@ -84,11 +84,22 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         assert sensor.predict(probe) == clone.predict(probe) == second.predict(probe)
     trained[0][0]._round_params['C'] = 999
     calls = []
+    predictions = []
+    real_tape = assessment._tape
+    def traced_tape(selection, raw, start, failures):
+        with ExitStack() as stack:
+            for member in members(selection):
+                def predict(frame, original=member.predict, identity=member.permutation_id):
+                    predictions.append((identity, frame.height, frame['datetime'][0], frame['datetime'][-1]))
+                    return original(frame)
+                stack.enter_context(patch.object(member, 'predict', side_effect=predict))
+            return real_tape(selection, raw, start, failures)
     paths = ('limen.sfd.reference_architecture.logreg_binary.LogRegBinary.train', 'limen.sfd.reference_architecture.lightgbm_binary.LightGBMBinary.train',
         'sklearn.linear_model.LogisticRegression.fit', 'lightgbm.LGBMClassifier.fit', 'sklearn.calibration.CalibratedClassifierCV.fit',
         'sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform', 'limen.calibration.grid_threshold_optimizer',
         'limen.sfd.reference_architecture.logreg_binary.fit_calibrator', 'limen.sfd.reference_architecture.lightgbm_binary.fit_calibrator')
     with ExitStack() as stack:
+        stack.enter_context(patch.object(assessment, '_tape', side_effect=traced_tape))
         for path in paths:
             stack.enter_context(patch(path, side_effect=lambda *args, **kwargs: calls.append('fit')))
         for sensor in trained[0] + trained[1]:
@@ -97,6 +108,10 @@ def test_holdout_frozen_causal_assessment(assessment_case):
                     stack.enter_context(patch.object(type(value), '__init__', side_effect=lambda *args, **kwargs: calls.append('fitted-transform')))
         report = _report(frozen, assessment_case)
     assert calls == []
+    assert len(predictions) == 48
+    assert [row[1] for row in predictions] == [size for size in range(25, 49) for _ in range(2)]
+    assert len({row[2] for row in predictions}) == 1
+    assert all(predictions[index][3] == predictions[index + 1][3] for index in range(0, 48, 2))
     rows = pl.read_parquet(root / report['rows_path'])
     assert rows.height == 48 and rows.filter(pl.col('role') == 'final').height == 24
     assert all(len(row) == 2 for row in rows.filter(pl.col('role') == 'final')['members'].to_list())
@@ -104,6 +119,13 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     repeat = _report(frozen, assessment_case)
     assert {key: repeat[key] for key in _REPEAT_KEYS} == {key: report[key] for key in _REPEAT_KEYS}
     assert repeat['exposure']['class'] == 'subsequent'
+    majority = copy.deepcopy(cohort)
+    majority.aggregation_mode = 'majority_vote'
+    majority_report = _report(_freeze(majority), assessment_case)
+    majority_rows = pl.read_parquet(root / majority_report['rows_path']).filter(pl.col('role') == 'final')
+    assert majority_rows['aggregate_probability'].null_count() == 24
+    assert majority_report['classification']['auc']['reason'] == 'no-probability'
+    assert majority_report['classification']['accuracy']['value'] is not None
     assert _report(_freeze(trained[1][0]), assessment_case)['state'] == 'completed'
     changed = copy.deepcopy(trained[1][0])
     changed._model.model.booster_.best_iteration = 1
