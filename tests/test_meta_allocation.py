@@ -389,3 +389,28 @@ def test_declared_crash_clock_preserves_gaps_and_prefixes():
     for end in (raw.height // 3, raw.height // 2):
         prefix = dollar_bar_crash_reversal(raw.head(end), -575, -0.5, 60, bar_interval_seconds=3600)
         assert prefix['dollar_bar_crash_reversal_position'].equals(actual['dollar_bar_crash_reversal_position'].head(end))
+
+
+def test_late_censored_opportunity_preserves_nullable_label_schema():
+    _, _, _, data = _prepared()
+    raw = pl.read_parquet(FIXTURE, n_rows=1800)
+    rising = (pl.col('close') > pl.col('open'))
+    end = raw.filter(rising & rising.shift(1))['datetime'][-1]
+    raw = raw.filter(pl.col('datetime') <= end)
+    context = data['_allocation_context']
+    policy = replace(context.policy, take_profit_bps_column=None, stop_loss_bps_column=None,
+                     barrier_spec=None, max_holding_seconds=None)
+    context = replace(context, raw_train=raw, policy=policy, barriers=None)
+    labels = training_opportunities(context, folds=2, validation_fraction=0.2, include_primary_proba=False)
+    rows = labels.rows
+    assert rows.height > 100
+    assert rows['unavailable_reason'].head(100).null_count() == 100
+    assert rows['unavailable_reason'][-1] == 'open_at_opening_block_end'
+    assert rows['available'][-1] is False
+    assert rows['label_available_ns'][-1] is None
+    assert rows['net_return_on_entry_notional'][-1] is None
+    completed = rows.filter(pl.col('available'))
+    assert completed.height == rows.height - 1
+    np.testing.assert_allclose(completed['net_return_on_entry_notional'], completed['net_pnl'] / completed['entry_notional'])
+    assert labels.features.height == rows.height
+    assert rows['opportunity_id'].n_unique() == rows.height
