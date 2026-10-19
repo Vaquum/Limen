@@ -131,7 +131,7 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, item.shape, item.dtype.descr, node(item.tolist()), state)
         elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
-        elif kind == ('numpy', '_ArrayFunctionDispatcher'):
+        elif kind[0].split('.')[0] == 'numpy' and kind[1] == '_ArrayFunctionDispatcher':
             result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
