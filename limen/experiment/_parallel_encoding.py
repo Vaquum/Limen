@@ -166,7 +166,7 @@ def _decode_instance(parts: list[object]) -> object:
     if tag == 'dataclass':
         return cast(type, _import(value))(**{cast(str, key): decode(item) for key, item in cast(list[list[object]], state)})
     if tag == 'instance':
-        instance: object = object.__new__(cast(type, _import(value)))
+        instance = cast(object, object.__new__(cast(type, _import(value))))
         vars(instance).update(cast(dict[str, object], decode(state)))
         return instance
     raise ValueError('Invalid or unsupported version1 parallel parameter tag')

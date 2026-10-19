@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import date, datetime
 from typing import cast
 
@@ -72,11 +72,11 @@ def validate_evidence(record: Mapping[str, object], *, event: bool, snapshot: bo
     if outputs and not probabilities and record.get('probs') is not None:
         raise ValueError('Cannot resume parallel run with inapplicable probabilities')
     if outputs and probabilities:
-        probabilities = values(record.get('probs'), 'probabilities', len(predictions))
+        probability_values = values(record.get('probs'), 'probabilities', len(predictions))
         threshold, rule = record.get('optimal_threshold'), record.get('threshold_rule')
-        if any(float(cast(float, value)) < 0 or float(cast(float, value)) > 1 for value in probabilities) or type(threshold) not in (int, float) or not math.isfinite(float(cast(float, threshold))) or rule not in ('>', '>='):
+        if any(float(cast(float, value)) < 0 or float(cast(float, value)) > 1 for value in probability_values) or type(threshold) not in (int, float) or not math.isfinite(float(cast(float, threshold))) or rule not in ('>', '>='):
             raise ValueError('Cannot resume parallel run with invalid threshold/probability evidence')
-        selected = [int(float(cast(float, value)) >= float(cast(float, threshold))) if rule == '>=' else int(float(cast(float, value)) > float(cast(float, threshold))) for value in probabilities]
+        selected = [int(float(cast(float, value)) >= float(cast(float, threshold))) if rule == '>=' else int(float(cast(float, value)) > float(cast(float, threshold))) for value in probability_values]
         if predictions != selected:
             raise ValueError('Cannot resume parallel run with inconsistent recorded predictions')
 
@@ -89,7 +89,7 @@ def _wire(value: object) -> object:
     if isinstance(value, (list, tuple)):
         return [_wire(item) for item in cast(list[object] | tuple[object, ...], value)]
     if hasattr(value, 'tolist'):
-        return _wire(value.tolist())
+        return _wire(cast(Callable[[], object], getattr(value, 'tolist'))())
     return json_value(value)
 
 
@@ -104,7 +104,7 @@ def validate_record(record: Mapping[str, object], context: Mapping[str, object],
                     *, execution: bool, outputs: bool, event: bool = False, snapshot: bool = False) -> None:
     marker = mapping(record.get('parallel_output'), 'parallel output evidence')
     count = marker.get('count')
-    if (marker.get('version') != VERSION or type(count) is not int or cast(int, count) < 1
+    if (marker.get('version') != VERSION or type(count) is not int or count < 1
             or marker.get('kind') != contract.prediction_kind or marker.get('has_probabilities') is not contract.probabilities):
         raise ValueError('Cannot resume: missing or inconsistent parallel output evidence')
     payload = {key: value for key, value in record.items() if key != 'parallel_output'}
@@ -126,7 +126,7 @@ def validate_record(record: Mapping[str, object], context: Mapping[str, object],
         dates = alignment.get('test_datetimes')
         if not isinstance(dates, list) or len(cast(list[object], dates)) != count or len(set(cast(list[str], dates))) != count:
             raise ValueError('Cannot resume parallel run without independently aligned test rows')
-        _ = values(record.get('preds'), 'predictions', cast(int, count))
+        _ = values(record.get('preds'), 'predictions', count)
         validate_evidence(record, event=event, snapshot=snapshot, execution=execution, outputs=outputs,
                           kind=cast(str, contract.prediction_kind), probabilities=contract.probabilities)
 

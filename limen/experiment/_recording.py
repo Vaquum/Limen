@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import cast
 
 from limen.experiment._acceptance_settings import prepare_pbo_settings
-from limen.experiment._parallel_evidence import project_record as project_record
+from limen.experiment._parallel_evidence import project_record
 
-__all__: list[str] = []
+__all__ = ['project_record']
 
 _DEFAULTS: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), False)
 

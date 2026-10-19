@@ -184,7 +184,8 @@ class CheckpointManager:
                 f"Corrupt checkpoint in '{checkpoint_dir}': expected object, got {type(data).__name__}."
             )
 
-        return checkpoint_payload(data, data.get('parameter_encoding'), restore=True)
+        payload = cast(dict[str, object], data)
+        return checkpoint_payload(payload, cast(int | None, payload.get('parameter_encoding')), restore=True)
 
 
     def validate(self,

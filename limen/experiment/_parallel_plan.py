@@ -13,8 +13,9 @@ from limen.experiment._parallel_encoding import digest, encode, module_identity,
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
-_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(_manifest)['_resolve_params'])
 from limen.scalers.registry import SCALER_REGISTRY
+
+_resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(_manifest)['_resolve_params'])
 
 
 @dataclass(frozen=True)

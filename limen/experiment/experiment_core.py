@@ -1140,7 +1140,7 @@ class UniversalExperimentLoop:
                 entry = json.loads(raw_line)
                 if 'parameter_encoding' in entry:
                     from limen.experiment._parallel_evidence import wire_record
-                    entry = wire_record(entry, restore=True)
+                    entry['round_params'] = wire_record(entry, restore=True)['round_params']
                 if up_to_round is not None and entry.get('_round_index', 0) >= up_to_round:
                     break
 

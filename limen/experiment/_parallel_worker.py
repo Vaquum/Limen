@@ -122,7 +122,7 @@ def _native_pools() -> list[dict[str, object]]:
 
 def worker_init(plan: FrozenManifestPlan, sources: SourceSnapshot,
                 record_execution: bool, record_model_outputs: bool, fold_promotion: dict[str, object] | None = None) -> None:
-    global _worker_plan, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion, _worker_identity
+    global _worker_plan, _worker_sources, _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion
     _ = signal.signal(signal.SIGINT, signal.SIG_IGN)
     _ = signal.signal(signal.SIGTERM, signal.SIG_DFL)
     if os.name == 'posix':
@@ -141,7 +141,8 @@ def worker_init(plan: FrozenManifestPlan, sources: SourceSnapshot,
                                         sources.execution.read() if sources.execution is not None else None,
                                         sources.funding.read() if sources.funding is not None else None)
     _worker_plan, _worker_sources = plan, restored
-    _worker_identity = plan_identity(plan, (restored.learning, restored.execution, restored.funding))
+    _worker_identity.clear()
+    _worker_identity.update(plan_identity(plan, (restored.learning, restored.execution, restored.funding)))
     _worker_record_execution, _worker_record_model_outputs, _worker_fold_promotion = record_execution, record_model_outputs, fold_promotion
 
 
