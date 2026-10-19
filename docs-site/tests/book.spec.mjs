@@ -70,7 +70,8 @@ test('Forward interrupts a reference return without closing the reopened panel',
   let release,requested;const allowed=new Promise(resolve=>{release=resolve;}),received=new Promise(resolve=>{requested=resolve;});
   await page.route('**/reference/trainer/**',async route=>{requested();await allowed;await route.continue();});
   await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
-  await received;release();const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();const reference=page.url();
+  await received;release();const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
+  await dialog.dispatchEvent('pointerdown');const reference=page.url();
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(chapter);
   await page.evaluate(()=>history.forward());await expect(page).toHaveURL(reference);
   // Native pointer input settles the current motion without waiting for its animation.
@@ -84,6 +85,7 @@ test('further Back navigation keeps the chapter passage chosen in history',async
   await page.goto('/limen/#adopt-the-compiled-pipeline');const origin=page.url();
   await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
   const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
+  await dialog.dispatchEvent('pointerdown');
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(origin);
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(earlier);
   await dialog.dispatchEvent('pointerdown');await expect(dialog).not.toBeVisible();
