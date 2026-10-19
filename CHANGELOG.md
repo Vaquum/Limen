@@ -1804,9 +1804,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 ## [5.44.3] - 2026-10-19
 
-## [5.44.3] - 2026-10-19
-
-- Keep quantile-line end features prefix-causal and avoid repeated rank reductions.
+- Make quantile-line end features prefix-causal while preserving retrospective active counts.
 
 ## [5.44.4] - 2026-10-19
 
