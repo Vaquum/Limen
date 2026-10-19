@@ -62,7 +62,7 @@ def search(data_dir, output):
 # endregion search
 
 
-def recorded_predictions(directory, record):
+def recorded_predictions(directory: Path, record):
     metadata = json.loads((directory / 'metadata.json').read_text())
     if metadata['round_storage'] != 'gzip-jsonl-v2':
         raise ValueError('This project expects its recorded version-2 signal payloads')
@@ -70,7 +70,7 @@ def recorded_predictions(directory, record):
     digest = reference['sha256']
     if not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
         raise ValueError('Invalid recorded prediction digest')
-    with gzip.open(directory / 'round_signals' / (digest + '.json.gz'), 'rb') as stream:
+    with gzip.GzipFile(filename=directory / 'round_signals' / (digest + '.json.gz'), mode='rb') as stream:
         payload = stream.read()
     if hashlib.sha256(payload).hexdigest() != digest:
         raise ValueError('Recorded prediction payload differs')
@@ -216,7 +216,12 @@ def allocation(data_dir, output):
 # endregion allocation
 
 
-SCENARIOS = {'search': search, 'recovery': recovery, 'walk_forward': walk_forward, 'holdout': holdout, 'calibration': calibration, 'execution': execution, 'bars': bars, 'allocation': allocation}
+def command_line(data_dir, output):
+    from command_line import run as run_commands
+    return run_commands(configuration('recovery', data_dir), output)
+
+
+SCENARIOS = {'search': search, 'recovery': recovery, 'walk_forward': walk_forward, 'holdout': holdout, 'calibration': calibration, 'execution': execution, 'bars': bars, 'allocation': allocation, 'command_line': command_line}
 
 
 def run(name, data_dir, output):

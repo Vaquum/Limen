@@ -167,6 +167,21 @@ def validate_model_catalogue(root, catalogue) -> None:
             raise ValueError('Model definition differs from the public catalogue')
 
 
+def validate_cli_catalogue(root, catalogue) -> None:
+    module = ast.parse((root / 'limen/cli/main.py').read_text())
+    commands = set()
+    for node in module.body:
+        if isinstance(node, ast.FunctionDef):
+            for decorator in node.decorator_list:
+                if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and isinstance(decorator.func.value, ast.Name) and decorator.func.value.id == 'cli' and decorator.func.attr == 'command':
+                    commands.add(ast.literal_eval(decorator.args[0]) if decorator.args else node.name.replace('_', '-'))
+    if set(catalogue['cli_commands']) != commands:
+        raise ValueError('Public CLI catalogue is incomplete')
+    for entry in catalogue['cli_commands'].values():
+        if entry['interface'] != 'compiled' or entry['interface'] not in catalogue['required_scenarios'][entry['scenario']]:
+            raise ValueError('CLI command has no required compiled scenario')
+
+
 def validate_evidence(record, root: Path, *, head: str, tree: str, version: str) -> None:
     schema = json.loads((root / 'docs/examples/evidence.schema.json').read_text())
     validate_shape(record, schema)
@@ -176,6 +191,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     catalogue_data = json.loads(catalogue.read_text())
     validate_scenarios(record['validation']['scenarios'], catalogue_data)
     validate_model_catalogue(root, catalogue_data)
+    validate_cli_catalogue(root, catalogue_data)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:

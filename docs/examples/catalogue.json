@@ -35,6 +35,9 @@
     ],
     "allocation": [
       "compiled"
+    ],
+    "command_line": [
+      "compiled"
     ]
   },
   "unproved": {
@@ -119,6 +122,56 @@
         "python",
         "compiled"
       ]
+    }
+  },
+  "cli_commands": {
+    "commit": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "ls": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "validate": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "profile": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "run": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "list-templates": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "init": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "reindex": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "fork": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "lineage": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "new": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "backup": {
+      "interface": "compiled",
+      "scenario": "command_line"
     }
   }
 }

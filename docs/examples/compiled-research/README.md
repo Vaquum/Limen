@@ -31,6 +31,7 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 | `calibration` | Compare all four calibration/threshold modes and disclose validation reuse. |
 | `execution` | Execute recorded observations under explicit costs, product rules and causal clocks. |
 | `bars` | Form volume, trade and liquidity bars; omit an incomplete final bar. |
+| `command_line` | Validate, profile, store, fork, run and resume a recorded campaign; back it up and restore it through a local Git remote. |
 
 Factorized search uses the admitted deterministic LightGBM grid with independent fee and tree-count axes. The ordinary search modes use logistic regression; these are different declared comparisons. The walk-forward scenario reconstructs qualified folds and binds their complete identities into a Cohort. `allocation` adds batch meta-allocation with completed-opportunity training; it makes no live-promotion or recovery claim.
 
@@ -41,6 +42,8 @@ The family comparisons use `post_processing=False`. Native results, recording an
 The execution scenario also runs `funded.yaml` with recorded funding. The driver normalizes the pinned funding JSON into a Parquet source through the shared `recorded_inputs.py`, resolves that derived source's path in the run definition, and retains both the realized rates and mark prices in the funding ledger. No constant funding-rate scenario replaces those records. Both projects' bar scenarios use the same shared helper to turn the recorded 90-second trade slice into three CFR diagnostic bars. That short slice is not presented as a compiled training population.
 
 The holdout scenario creates a separate Git project, reserves its final window before research, freezes selected fitted state and retains the final report. Local recorded files leave earlier exposure unknown. Preserve its project marker, history and assessment artifacts together.
+
+The command-line scenario invokes the `limen` executable installed beside its Python interpreter. It inspects an installed template, then writes the project's recorded run definition, stores a production manifest, forks its lineage and verifies CSV/Parquet output after resume. Backup and `limen new --from` operate on a local Git remote. This proves restoration of that campaign; it makes no live template-download or hosted-backup claim. The original recorded-input paths remain part of the saved definition and must be available for replay.
 
 Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
 

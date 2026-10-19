@@ -188,5 +188,31 @@ def verify(interface, name, result, output, inputs):
     elif name == 'allocation':
         assert interface == 'compiled' and result['rounds'] == 2
         assert all(row['allocation_training_completed'] >= 2 for row in result['results'])
+    elif name == 'command_line':
+        assert interface == 'compiled'
+        commands = [item['args'][0] for item in result['commands']]
+        assert set(commands) == {'--version', 'list-templates', 'init', 'validate', 'profile', 'run', 'commit', 'ls', 'lineage', 'fork', 'reindex', 'backup', 'new'}
+        assert commands.count('run') == 3 and commands.count('commit') == 2
+        assert all(item['returncode'] == 0 for item in result['commands'])
+        project = output / 'project'
+        index = json.loads((project / 'manifests/committed/index.json').read_text())
+        assert result['manifests'] == index['manifests'] and len(index['manifests']) == 2
+        child = next(item for item in index['manifests'] if item['id'] != result['parent_id'])
+        assert child['parent_id'] == result['parent_id']
+        directory = output / result['run']
+        metadata = json.loads((directory / 'metadata.json').read_text())
+        assert metadata['manifest_id'] == result['parent_id']
+        csv, parquet = pl.read_csv(directory / 'results.csv'), pl.read_parquet(directory / 'results.parquet')
+        assert csv.columns == parquet.columns and csv.height == parquet.height == 4
+        assert set(csv['C']) == {.1, .5, 1., 2.} and csv['id'].n_unique() == 4
+        for column in csv.columns:
+            if csv[column].dtype.is_numeric():
+                np.testing.assert_allclose(csv[column].to_numpy(), parquet[column].to_numpy(), equal_nan=True)
+            else:
+                assert csv[column].to_list() == parquet[column].to_list()
+        restored = output / 'restored'
+        for name, expected in result['project_files'].items():
+            assert hashlib.sha256((project / name).read_bytes()).hexdigest() == expected
+            assert hashlib.sha256((restored / name).read_bytes()).hexdigest() == expected
     else:
         raise AssertionError('Unproved scenario: ' + name)

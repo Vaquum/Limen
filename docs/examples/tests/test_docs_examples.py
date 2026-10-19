@@ -41,10 +41,10 @@ def test_unknown_evidence_identity_fails():
 def test_missing_catalogue_scenario_fails():
     from check_evidence import validate_scenarios
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
-    assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation'}
+    assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation', 'command_line'}
     assert catalogue['required_scenarios']['allocation'] == ['compiled']
     records = [{'interface': interface, 'id': scenario, 'status': 'passed', 'tests': ['semantic oracle'], 'assertions': ['result']} for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces]
-    assert len(records) == 17
+    assert len(records) == 18
     validate_scenarios(records, catalogue)
     for changed in (records[:-1], records + [records[0]]):
         with pytest.raises(ValueError, match='incomplete or duplicated'):
@@ -80,6 +80,15 @@ def test_nested_yaml_version_carriers_cannot_drift():
     document['metadata']['nested'][0]['limen_version'] = __version__
     with pytest.raises(ValueError, match='without optional version literals'):
         validate_versions(document, __version__, canonical=True)
+
+
+def test_public_cli_catalogue_requires_every_command():
+    from check_evidence import validate_cli_catalogue
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    validate_cli_catalogue(ROOT, catalogue)
+    del catalogue['cli_commands']['backup']
+    with pytest.raises(ValueError, match='CLI catalogue is incomplete'):
+        validate_cli_catalogue(ROOT, catalogue)
 
 
 def test_observed_outputs_and_tolerances_are_explicit(tmp_path):
