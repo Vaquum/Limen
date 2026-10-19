@@ -811,8 +811,9 @@ class Manifest:
         Required parameters (no defaults) must be in round_params.
         '''
 
-        if (allocated := _allocation.run(self, data, round_params)) is not None:
-            return allocated
+        if self.allocation_config is not None:
+            self._apply_backtest_cost(data, round_params)
+            return _allocation.run(self, data, round_params)
         model_kwargs = self.resolve_model_kwargs(round_params)
         self._apply_backtest_cost(data, round_params)
         if self.architecture_function is None:
@@ -1140,8 +1141,9 @@ class MLManifest(Manifest):
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
 
-        if (allocated := _allocation.run(self, data, round_params)) is not None:
-            return allocated
+        if self.allocation_config is not None:
+            self._apply_backtest_cost(data, round_params)
+            return _allocation.run(self, data, round_params)
         model_kwargs = self.resolve_model_kwargs(round_params)
         if self.architecture_function is None:
             raise ValueError('MLManifest run_model requires a configured architecture_function')

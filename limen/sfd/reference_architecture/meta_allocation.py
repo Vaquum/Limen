@@ -11,7 +11,13 @@ from limen.backtest.trade_contract import JsonValue, finite_number, json_value
 from limen.experiment._allocation import AllocationBatch, AllocationContext, OpportunityLabels
 from limen.experiment.errors import StrictModeError
 from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.sfd.reference_architecture.direction_sizing import Array, ComponentEstimator, ComponentFactory, _DIRECTION_FACTORY, _SIZING_FACTORY, _identity, _predict
+from limen.sfd.reference_architecture.direction_sizing import Array, ComponentEstimator, ComponentFactory
+from limen.sfd.reference_architecture.direction_sizing import _DIRECTION_FACTORY as DIRECTION_FACTORY, _SIZING_FACTORY as SIZING_FACTORY, _identity as component_identity, _predict as component_predict
+
+
+class _Scaler(Protocol):
+    def fit(self, x: Array) -> _Scaler: ...
+    def transform(self, x: Array) -> Array: ...
 
 
 class _ProbabilityEstimator(ComponentEstimator, Protocol):
@@ -53,9 +59,9 @@ class MetaAllocationModel(ReferenceModel):
         self.primary = fit_primary(context.manifest, data, context.round_params)
         self._fit(labels, params, cast(int, minimum), cast(int, seed))
         self.batch_digests = {name: batch.digest() for name, batch in context.batches.items()}
-        self.learning_binding = {'architecture': _identity(meta_allocation), 'primary': _identity(context.manifest.architecture_function),
+        self.learning_binding = {'architecture': component_identity(meta_allocation), 'primary': component_identity(getattr(context.manifest, 'architecture_function')),
                                  'primary_params': json_value(context.round_params), 'training': json_value(labels.binding),
-                                 'probability_factory': _identity(self.probability_factory), 'sizing_factory': _identity(self.sizing_factory),
+                                 'probability_factory': component_identity(self.probability_factory), 'sizing_factory': component_identity(self.sizing_factory),
                                  'allocation_params': json_value({key: value for key, value in params.items() if key not in ('probability_factory', 'sizing_factory')}),
                                  'features': list(self.feature_names), 'batch_digests': self.batch_digests,
                                  'mapping_version': 'primary_opportunity_signed_net_notional_v1'}
@@ -82,10 +88,10 @@ class MetaAllocationModel(ReferenceModel):
         x = labels.features.select(names).to_numpy().astype(np.float64)[available]
         if not np.isfinite(x).all():
             raise ValueError('Meta opportunity features must be finite')
-        self.scaler = StandardScaler().fit(x)
+        self.scaler = cast(_Scaler, StandardScaler()).fit(x)
         x = self.scaler.transform(x)
-        self.probability_factory = cast(ComponentFactory, params.get('probability_factory', _DIRECTION_FACTORY))
-        self.sizing_factory = cast(ComponentFactory, params.get('sizing_factory', _SIZING_FACTORY))
+        self.probability_factory = cast(ComponentFactory, params.get('probability_factory', DIRECTION_FACTORY))
+        self.sizing_factory = cast(ComponentFactory, params.get('sizing_factory', SIZING_FACTORY))
         self.probability_model = cast(_ProbabilityEstimator, self.probability_factory(seed=seed, **cast(Mapping[str, JsonValue], params.get('probability_params') or {'C': 1, 'max_iter': 1000})))
         self.sizing_model = self.sizing_factory(seed=seed, **cast(Mapping[str, JsonValue], params.get('sizing_params') or {'alpha': 1}))
         _ = self.probability_model.fit(x, y[available])
@@ -128,7 +134,7 @@ class MetaAllocationModel(ReferenceModel):
         probabilities = np.asarray(self.probability_model.predict_proba(x), dtype=np.float64)
         if probabilities.shape != (len(decisions), 2) or not np.isfinite(probabilities).all() or not np.allclose(probabilities.sum(axis=1), 1):
             raise ValueError('Malformed take probabilities')
-        gains = _predict(self.sizing_model, x)
+        gains = component_predict(self.sizing_model, x)
         exposure = np.zeros(len(decisions), dtype=np.float64)
         held, previous = 0.0, 0.0
         for i, decision in enumerate(decisions):
@@ -148,7 +154,7 @@ class MetaAllocationModel(ReferenceModel):
                                     'allocation_training_completed': int(self.training_rows['available'].sum()),
                                     'allocation_training_unavailable': int((~self.training_rows['available']).sum())}
         alignment = cast(dict[str, object], data['_alignment'])
-        alignment.pop('model_outputs', None)
+        _ = alignment.pop('model_outputs', None)
         if data.get('_record_model_outputs'):
             alignment['model_outputs'] = {'architecture': 'meta_allocation', 'primary': json_value({key: np.asarray(value).tolist() for key, value in cast(Mapping[str, object], output['primary']).items()}),
                                           'take_probability': json_value(np.asarray(output['take_probability']).tolist()),
@@ -162,7 +168,7 @@ class MetaAllocationModel(ReferenceModel):
         return result
 
 
-def meta_allocation(data: dict[str, object], *, context: AllocationContext, folds: int = 5, internal_validation_fraction: float = 0.2, min_train_samples: int = 20, features: Sequence[str] | None = None, include_primary_proba: bool = False, probability_factory: ComponentFactory = _DIRECTION_FACTORY, sizing_factory: ComponentFactory = _SIZING_FACTORY, probability_params: Mapping[str, JsonValue] | None = None, sizing_params: Mapping[str, JsonValue] | None = None, probability_threshold: float = 0.5, return_scale: float = 0.01, max_size: float = 1.0, risk_budget_fraction: float | None = None, seed: int = 42) -> dict[str, object]:
+def meta_allocation(data: dict[str, object], *, context: AllocationContext, folds: int = 5, internal_validation_fraction: float = 0.2, min_train_samples: int = 20, features: Sequence[str] | None = None, include_primary_proba: bool = False, probability_factory: ComponentFactory = DIRECTION_FACTORY, sizing_factory: ComponentFactory = SIZING_FACTORY, probability_params: Mapping[str, JsonValue] | None = None, sizing_params: Mapping[str, JsonValue] | None = None, probability_threshold: float = 0.5, return_scale: float = 0.01, max_size: float = 1.0, risk_budget_fraction: float | None = None, seed: int = 42) -> dict[str, object]:
     params = dict(locals())
     del params['data']
     model = MetaAllocationModel().train(data, **params)
