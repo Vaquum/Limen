@@ -3,11 +3,19 @@ import hashlib
 import json
 from pathlib import Path
 
+import polars as pl
 from ruamel.yaml import YAML
 
 from limen import Trainer, UniversalExperimentLoop
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
+
+
+def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
+    log = loop.experiment_log
+    if log is None:
+        raise ValueError("The experiment has no completed result log")
+    return log
 
 
 # region experiment
@@ -26,7 +34,7 @@ def run_research(data_dir, output_dir):
     )
     loop.run("compiled-selection", n_permutations=2, workers=1,
              post_processing=True, progress_bar=False)
-    selected = loop.experiment_log.sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
+    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
     sensors = Trainer(output_dir).train(selected)
     return loop, sensors, selected
 # endregion experiment
@@ -49,7 +57,7 @@ def main():
         return
     loop, sensors, selected = run_research(args.data_dir, args.output_dir)
     report = {"interface": "compiled", "scenario": args.scenario,
-              "rounds": loop.experiment_log.height, "selected_rounds": len(selected),
+              "rounds": completed_log(loop).height, "selected_rounds": len(selected),
               "reconstructed_sensors": len(sensors)}
     (args.output_dir / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(report, indent=2))

@@ -140,6 +140,8 @@ Assertions must establish the promised behavior. Depending on the claim, this in
 
 Retained output displayed in the book must match its evidence record exactly. Retain a named, immutable output record for display; each fresh execution compares its semantic results with that record under declared per-metric tolerances and deterministic settings. In-tolerance numerical drift alone does not require editing displayed output. A changed claim, failed invariant or exceeded tolerance requires inspection and, where warranted, a regenerated record and synchronized prose. Record timestamps, attempt identities and timing measurements as run evidence; do not require fresh executions to reproduce a previous run's incidental identifiers. Explain why a reader's environment can produce different digits and what invariant must still hold.
 
+Verify a retained observation's source region against its recorded execution commit. Verify the current excerpt against the current executable source separately. A later source edit must pass fresh semantic comparison; it must not relabel the earlier observation as a new run.
+
 ## Source and current validation
 
 Every displayed example exposes its immutable source identity and separate current validation. A source hash does not prove compatibility with a later package.

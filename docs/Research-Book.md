@@ -46,7 +46,7 @@ def run_research(bars, experiment_name):
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
     selected = (
-        uel.experiment_log.sort(
+        completed_log(uel).sort(
             ["window", "validation_net_return", "alpha"],
             descending=[False, True, False],
         ).unique(subset="window", keep="first", maintain_order=True)
@@ -85,7 +85,7 @@ def run_research(data_dir, output_dir):
     )
     loop.run("compiled-selection", n_permutations=2, workers=1,
              post_processing=True, progress_bar=False)
-    selected = loop.experiment_log.sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
+    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
     sensors = Trainer(output_dir).train(selected)
     return loop, sensors, selected
 ```

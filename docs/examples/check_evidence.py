@@ -124,6 +124,20 @@ def validate_shape(value, schema, at='$') -> None:
         raise ValueError(f'{at}: invalid numeric bound')
 
 
+def validate_retained_source(root, retained, source, display) -> None:
+    commit = retained['revision']['tested_commit']
+    if not re.fullmatch(r'[0-9a-f]{40}', commit) or display['retained_commit'] != commit:
+        raise ValueError('Retained run identity differs')
+    historical = next(item for item in retained['sources'] if item['path'] == source['path'] and item['region'] == source['region'])
+    text = subprocess.check_output(['git', 'show', f"{commit}:{source['path']}"], cwd=root, text=True)
+    start, end = '# region ' + source['region'] + '\n', '# endregion ' + source['region']
+    if text.count(start) != 1 or text.count(end) != 1:
+        raise ValueError('Retained source region is unavailable')
+    observed = text.split(start, 1)[1].split(end, 1)[0].rstrip('\n') + '\n'
+    if display['source_sha256'] != historical['sha256'] or historical['sha256'] != digest(observed.encode()):
+        raise ValueError('Retained source identity differs from its immutable execution revision')
+
+
 def validate_scenarios(records, catalogue) -> None:
     expected = {(interface, scenario) for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces}
     actual = [(item['interface'], item['id']) for item in records]
@@ -150,8 +164,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             raise ValueError('Observed output identity differs')
         current = next(item for item in record['validation']['scenarios'] if item['interface'] == binding['interface'] and item['id'] == binding['scenario'])
         source = next(item for item in record['sources'] if f"/{binding['interface']}-research/" in item['path'] and item['region'] == 'experiment')
-        if display['source_sha256'] != source['sha256'] or display['retained_commit'] != retained['revision']['tested_commit']:
-            raise ValueError('Retained source or run identity differs')
+        validate_retained_source(root, retained, source, display)
         compare_output(json.loads((root / current['output_path']).read_text()), json.loads((root / display['path']).read_text()), display['metrics'])
     if record['revision']['head'] != head or record['revision']['tree'] != tree:
         raise ValueError('Wrong execution revision')

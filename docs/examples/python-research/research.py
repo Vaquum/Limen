@@ -59,6 +59,13 @@ def prepare_live(history, params):
 # endregion preparation
 
 
+def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
+    log = loop.experiment_log
+    if log is None:
+        raise ValueError("The experiment has no completed result log")
+    return log
+
+
 # region experiment
 def run_research(bars, experiment_name):
     research = bars[:1440]
@@ -80,7 +87,7 @@ def run_research(bars, experiment_name):
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
     selected = (
-        uel.experiment_log.sort(
+        completed_log(uel).sort(
             ["window", "validation_net_return", "alpha"],
             descending=[False, True, False],
         ).unique(subset="window", keep="first", maintain_order=True)
@@ -124,7 +131,7 @@ def main():
     predictions = cohort.predict_all(bars[1428:1920])[12:]
     report = {
         "interface": "python", "scenario": args.scenario,
-        "rounds": uel.experiment_log.height, "selected": selected,
+        "rounds": completed_log(uel).height, "selected": selected,
         "retained_models": len(retained), "inference_rows": len(predictions),
         "last_prediction": predictions[-1].prediction,
         "fitting_cutoff": bars["datetime"][960].isoformat(),

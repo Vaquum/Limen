@@ -71,3 +71,16 @@ def test_observed_outputs_and_tolerances_are_explicit(tmp_path):
     current = copy.deepcopy(retained);current['retained_models'] += 1
     with pytest.raises(ValueError, match='exact value'):
         compare_output(current, retained, limits)
+
+
+def test_retained_source_is_bound_to_its_observed_revision():
+    from check_evidence import validate_retained_source
+    retained = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())
+    for index, (source, display) in enumerate(zip(retained['sources'], retained['displays'])):
+        validate_retained_source(ROOT, retained, source, display)
+        changed = copy.deepcopy(retained)
+        changed['sources'][index]['sha256'] = '0' * 64
+        with pytest.raises(ValueError, match='immutable execution revision'):
+            validate_retained_source(ROOT, changed, source, display)
+        with pytest.raises(ValueError, match='Retained run identity'):
+            validate_retained_source(ROOT, retained, source, display | {'retained_commit': '0' * 40})

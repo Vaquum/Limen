@@ -1,3 +1,4 @@
+from datetime import datetime
 import gzip
 import hashlib
 import json
@@ -12,6 +13,8 @@ from limen import Cohort, Trainer, UniversalExperimentLoop
 from limen.experiment.holdout import final_holdout_report, freeze_holdout_selection, read_holdout_report, reserve_holdout
 from limen.targets import NextBarUpTarget
 from limen.yaml import CompiledSFD, build_search_strategy, validate
+
+import research as research_project
 
 INPUTS = {
     'spot_1h_20240101_20241231.parquet': 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72',
@@ -35,7 +38,7 @@ def execute(config, output, *, bars=None, callback=None, resume=False, project_r
         raise ValueError(str(report.errors))
     loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=project_root), data=bars, search_strategy=build_search_strategy(config), experiment_dir=output, yaml_reference=config, checkpoint_interval=1, feedback_interval=1, intra_callback=callback, project_root=project_root)
     loop.run(config['metadata']['name'], n_permutations=config['uel']['n_permutations'], workers=1, prep_each_round=True, progress_bar=False, post_processing=True, resume=resume, factorize=factorize)
-    if 'strict_mode_error' in loop.experiment_log.columns and loop.experiment_log['strict_mode_error'].drop_nulls().len():
+    if 'strict_mode_error' in research_project.completed_log(loop).columns and research_project.completed_log(loop)['strict_mode_error'].drop_nulls().len():
         raise ValueError('A declared scenario round failed its pipeline checks')
     return loop
 
@@ -51,7 +54,7 @@ def search(data_dir, output):
         if kind in ('shuffled', 'factorized'):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
-        results[kind] = loop.experiment_log.select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
+        results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
     return {'runs': results, 'seed': 42}
 # endregion search
 
@@ -69,10 +72,19 @@ def recovery(data_dir, output):
     resumed = execute(config, output / 'experiment', resume=True)
     with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
         records = [json.loads(line) for line in stream]
-    selected = resumed.experiment_log['id'][0]
+    selected = research_project.completed_log(resumed)['id'][0]
     sensors = Trainer(output / 'experiment').train([selected])
-    return {'interrupted_rounds': first.experiment_log.height, 'rounds': resumed.experiment_log.height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors)}
+    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors)}
 # endregion recovery
+
+
+def fold_metadata(sensor):
+    fold = getattr(sensor, 'fold')
+    fitting = getattr(sensor, 'fitting_cutoff')
+    selection = getattr(sensor, 'selection_cutoff')
+    if not isinstance(fold, int) or not isinstance(fitting, datetime) or not isinstance(selection, datetime):
+        raise ValueError('Trainer must provide a qualified fold and its fitting and selection cutoffs')
+    return {'fold': fold, 'fitting': fitting.isoformat(), 'selection': selection.isoformat()}
 
 
 # region walk_forward
@@ -80,12 +92,13 @@ def walk_forward(data_dir, output):
     config = configuration('walk_forward', data_dir)
     bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
     loop = execute(config, output / 'experiment', bars=bars)
-    round_id = loop.experiment_log['id'][0]
+    round_id = research_project.completed_log(loop)['id'][0]
     trainer = Trainer(output / 'experiment', data=bars)
     sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
     cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
     cohort.set_members(sensors)
-    return {'rounds': loop.experiment_log.height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_pnl_per_bar_bps').to_dicts(), 'member_folds': [sensor.fold for sensor in sensors], 'fitting_cutoffs': [sensor.fitting_cutoff.isoformat() for sensor in sensors], 'selection_cutoffs': [sensor.selection_cutoff.isoformat() for sensor in sensors], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+    metadata = [fold_metadata(sensor) for sensor in sensors]
+    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_pnl_per_bar_bps').to_dicts(), 'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
 # endregion walk_forward
 
 
@@ -99,15 +112,19 @@ def holdout(data_dir, output):
     config = configuration('holdout', data_dir)
     directory = project / 'experiment'
     loop = execute(config, directory, project_root=project)
-    selected = Trainer(directory, project_root=project).train([loop.experiment_log['id'][0]])
-    cohort = Cohort(experiment_log_path=str(directory), permutation_ids=[sensor.permutation_id for sensor in selected])
+    selected_ids = research_project.completed_log(loop)['id'].head(1).to_list()
+    selected = Trainer(directory, project_root=project).train(selected_ids)
+    cohort = Cohort(experiment_log_path=str(directory), permutation_ids=selected_ids)
     cohort.set_members(selected)
     frozen = freeze_holdout_selection(cohort, context_start='2024-01-04', scenarios=[dict(fee_bps=5.0, slip_bps=2.0, notional_rate=.25, execution_lag_bars=1, take_profit_bps=None, stop_loss_bps=None)], evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up'))
     report = final_holdout_report(frozen, project_root=project, reservation_id=reservation)
-    if read_holdout_report(project, report['attempt_id']) != report:
+    attempt_id = report['attempt_id']
+    if not isinstance(attempt_id, str):
+        raise ValueError('The final report must have an attempt identity')
+    if read_holdout_report(project, attempt_id) != report:
         raise ValueError('Retained final report differs')
     (output / 'retained-report.json').write_text(json.dumps(report, indent=2, allow_nan=False))
-    return {'rounds': loop.experiment_log.height, 'planned': report['planned'], 'classification': report['classification'], 'scenarios': report['scenarios'], 'exposure': report['exposure'], 'rows_sha256': report['rows_sha256'], 'source': report['source']}
+    return {'rounds': research_project.completed_log(loop).height, 'planned': report['planned'], 'classification': report['classification'], 'scenarios': report['scenarios'], 'exposure': report['exposure'], 'rows_sha256': report['rows_sha256'], 'source': report['source']}
 # endregion holdout
 
 
@@ -115,8 +132,8 @@ def holdout(data_dir, output):
 def calibration(data_dir, output):
     config = configuration('calibration', data_dir)
     loop = execute(config, output / 'experiment')
-    sensors = Trainer(output / 'experiment').train(loop.experiment_log['id'].to_list())
-    return {'modes': loop.experiment_log.select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
+    sensors = Trainer(output / 'experiment').train(research_project.completed_log(loop)['id'].to_list())
+    return {'modes': research_project.completed_log(loop).select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
 # endregion calibration
 
 
@@ -126,7 +143,7 @@ def execution(data_dir, output):
     loop = execute(config, output / 'experiment')
     with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
         records = [json.loads(line) for line in stream]
-    return {'rounds': loop.experiment_log.height, 'metrics': loop.experiment_log.select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records]}
+    return {'rounds': research_project.completed_log(loop).height, 'metrics': research_project.completed_log(loop).select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records]}
 # endregion execution
 
 
@@ -134,7 +151,7 @@ def execution(data_dir, output):
 def bars(data_dir, output):
     config = configuration('bars', data_dir)
     loop = execute(config, output / 'experiment')
-    return {'rounds': loop.experiment_log.height, 'modes': loop.experiment_log.select('bar_type', 'accuracy').to_dicts(), 'placement': 'bar formation runs separately after each chronological split'}
+    return {'rounds': research_project.completed_log(loop).height, 'modes': research_project.completed_log(loop).select('bar_type', 'accuracy').to_dicts(), 'placement': 'bar formation runs separately after each chronological split'}
 # endregion bars
 
 
@@ -143,7 +160,7 @@ def allocation(data_dir, output):
     config = configuration('allocation', data_dir)
     loop = execute(config, output / 'experiment')
     columns = ['risk_span', 'allocation_training_completed', 'allocation_training_unavailable', 'backtest_total_return', 'backtest_completed_trades']
-    return {'rounds': loop.experiment_log.height, 'results': loop.experiment_log.select(columns).to_dicts(), 'promotion': 'batch research only; no live Sensor promotion or resumed allocation claim'}
+    return {'rounds': research_project.completed_log(loop).height, 'results': research_project.completed_log(loop).select(columns).to_dicts(), 'promotion': 'batch research only; no live Sensor promotion or resumed allocation claim'}
 # endregion allocation
 
 

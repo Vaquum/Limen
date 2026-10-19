@@ -55,7 +55,7 @@ def search(data_dir, output):
 
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
-        runs[name] = loop.experiment_log.select('window', 'alpha', 'validation_net_return').to_dicts()
+        runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
     return {'runs': runs, 'seed': 42}
 # endregion search
 
@@ -85,15 +85,15 @@ def recovery(data_dir, output):
     def loop(callback=None):
         return UniversalExperimentLoop(data=bars, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output / 'experiment', checkpoint_interval=1, feedback_interval=1, intra_callback=callback)
 
-    recording = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+    recording: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     interrupted = loop(stop_after_two)
     interrupted.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
-    completed_before_resume = interrupted.experiment_log.height
+    completed_before_resume = project.completed_log(interrupted).height
     resumed = loop()
     resumed.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording, resume=True)
     with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
         records = [json.loads(line) for line in stream]
-    return {'interrupted_rounds': completed_before_resume, 'rounds': resumed.experiment_log.height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False}
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False}
 # endregion recovery
 
 
@@ -159,7 +159,9 @@ def calibration(data_dir, output):
             sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows, state_id=f'sigmoid={calibrate};threshold={tune}', fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
             cohort = Cohort.from_python([sensor], aggregate='vote')
             tape = cohort.predict_all(bars[1428:1920])[12:]
-            modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction for point in tape)})
+            if any(point.prediction not in (0, 1) for point in tape):
+                raise ValueError('Classifier inference must provide a binary decision for every assessment row')
+            modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
     return {'modes': modes, 'validation_reused': True}
 # endregion calibration
 
