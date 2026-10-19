@@ -1,5 +1,42 @@
 # Backtest
 
+## Recorded execution price costs
+
+`limen.backtest.observed_costs.CostCalibration` audits local normalized fill
+records and saves immutable evidence. Recorded cross-account fees are
+descriptive; they do not establish another account's fee tier. The bundled
+Chainticks sample has three dates, inferred minute snapshot times and strongly
+concentrated sell support. Its report exposes those limits explicitly.
+
+From a source checkout, inspect the licensed recorded sample without network
+access:
+
+```python
+from datetime import datetime
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
+
+from limen.backtest.observed_costs import CostCalibration
+
+with TemporaryDirectory() as directory:
+    history = Path(directory) / "history.json"
+    with ZipFile("tests/fixtures/observed_costs/history.zip") as archive:
+        history.write_bytes(archive.read("admitted.json"))
+    cutoff = int(datetime.fromisoformat("2026-08-04T02:33:11+00:00").timestamp()) * 10**9
+    calibration = CostCalibration.from_history(history, cutoff_ns=cutoff)
+    expected_digest = calibration.digest  # Pin separately in the research specification.
+    artifact = Path(directory) / "calibration.json"
+    calibration.write(artifact)
+    restored = CostCalibration.read(artifact, expected_digest=expected_digest)
+    print(restored.report()["support"])
+```
+
+Reading a pinned artifact preserves its recorded estimates. Changed content or
+an incompatible expected digest fails; writing different content to an existing
+artifact path fails. Dataset attribution and reproduction are in
+`tests/fixtures/observed_costs/license.json` and `reproduce.py`.
+
 Backtest evaluates declared trading economics. The legacy snapshot reports binary long-flat per-bar returns. Configured event execution supports signed exposure, elapsed exits and funding with separate intent, fill and episode ledgers.
 
 The layer evaluates entry signals together with declared costs, sizing, and optional fixed take-profit/stop-loss exits.
