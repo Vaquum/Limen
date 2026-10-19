@@ -30,6 +30,7 @@ def build(root: Path, output: Path) -> str:
         entries['inputs/' + name] = data
     entries['requirements/research-env.txt'] = (root / 'requirements/ci/research-env.txt').read_bytes()
     entries['inputs.json'] = (json.dumps(INPUTS, indent=2) + '\n').encode()
+    entries['bundle.json'] = (json.dumps({'schema_version': 1, 'files': {name: hashlib.sha256(content).hexdigest() for name, content in sorted(entries.items())}}, indent=2) + '\n').encode()
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open('wb') as stream, gzip.GzipFile(fileobj=stream, mode='wb', mtime=0, filename='') as compressed, tarfile.open(fileobj=compressed, mode='w|') as archive:
         for name, content in sorted(entries.items()):

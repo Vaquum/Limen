@@ -20,7 +20,7 @@ def run(argv, *, cwd, env=None):
     subprocess.run([str(arg) for arg in argv], cwd=cwd, env=environment, check=True, timeout=90)
 
 
-def unpack(bundle: Path, target: Path):
+def unpack(bundle: Path, target: Path, root: Path):
     with tarfile.open(bundle) as archive:
         names = set(archive.getnames())
         required = {'python-research/research.py', 'compiled-research/research.py',
@@ -29,7 +29,26 @@ def unpack(bundle: Path, target: Path):
         required |= {'requirements/research-env.txt', 'inputs.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
+        if len(names) != len(archive.getmembers()) or any(not member.isfile() for member in archive.getmembers()):
+            raise ValueError('Candidate archive has duplicate or non-file members')
+        manifest = json.load(archive.extractfile('bundle.json'))
+        if manifest['schema_version'] != 1 or set(manifest['files']) | {'bundle.json'} != names:
+            raise ValueError('Candidate archive inventory differs')
+        for name, expected in manifest['files'].items():
+            if hashlib.sha256(archive.extractfile(name).read()).hexdigest() != expected:
+                raise ValueError('Candidate archive member changed: ' + name)
         archive.extractall(target, filter='data')
+    if json.loads((target / 'inputs.json').read_text()) != INPUTS:
+        raise ValueError('Candidate input declarations differ')
+    for name, expected in INPUTS.items():
+        if hashlib.sha256((target / 'inputs' / name).read_bytes()).hexdigest() != expected:
+            raise ValueError('Candidate recorded input differs')
+    for interface in ('python', 'compiled'):
+        for source in (root / f'docs/examples/{interface}-research').rglob('*'):
+            if source.is_file() and source.suffix in ('.py', '.yaml', '.md'):
+                relative = source.relative_to(root / 'docs/examples')
+                if not (target / relative).is_file() or (target / relative).read_bytes() != source.read_bytes():
+                    raise ValueError('Candidate project source differs: ' + str(relative))
 
 
 def prove_wheel(root: Path, temporary: Path):
@@ -61,7 +80,7 @@ def prove_wheel(root: Path, temporary: Path):
     (site / 'research-dependencies.pth').write_text(str(dependencies) + '\n')
     project = temporary / 'bundle'
     project.mkdir()
-    unpack(bundle, project)
+    unpack(bundle, project, root)
     info_file = temporary / 'installed.json'
     inspect = '''import importlib.metadata as m,json,sys,limen
 from pathlib import Path
