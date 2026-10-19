@@ -109,6 +109,12 @@ def pytest_sessionfinish(session, exitstatus):
     sources = [item | {'region': '__file__'} for item in provenance['files']]
     excerpts = {(item['path'], item['region']): item for item in all_bindings(ROOT)}
     sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values()]
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    details = catalogue['scenario_details']
+    tests = {name for name, _ in REPORTS}
+    for identity, entry in details.items():
+        if entry['test'] + '[' + identity.replace('/', '-') + ']' not in tests:
+            raise ValueError('Required scenario test did not execute: ' + identity)
     record = {
         'schema_version': 1, 'mode': 'candidate',
         'revision': {'head': head, 'tested_commit': tested, 'tree': tree, 'dirty': bool(git('status', '--porcelain', '--untracked-files=normal'))},
@@ -119,7 +125,7 @@ def pytest_sessionfinish(session, exitstatus):
         'inputs': [{'path': 'tests/fixtures/' + name, 'sha256': value, 'window': 'pinned input or attribution/reproduction file; scenario windows are in the catalogue'} for name, value in INPUTS.items()],
         'sources': sources, 'displays': [],
         'validation': {'catalogue_sha256': digest((ROOT / 'docs/examples/catalogue.json').read_bytes()), 'status': 'passed', 'scenarios': [
-            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [name for name, _ in REPORTS], 'assertions': ['independent selection/cost/clock and fitted-state oracles', 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
+            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [details[interface + '/' + scenario]['test'] + '[' + interface + '-' + scenario + ']'], 'assertions': [details[interface + '/' + scenario]['assertions'], 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
         'publication': None,
     }
     record['displays'] = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())['displays']

@@ -1,5 +1,6 @@
 import ast
 from pathlib import Path
+from catalogue_tests import validate_test_reference
 
 REGISTRIES = {
     'search': ('limen/experiment/param_search/registry.py', 'STRATEGY_REGISTRY', 'docs/Advanced-Search.md', ['python', 'compiled'], 'search'),
@@ -21,6 +22,8 @@ def assignment(tree: ast.Module, name: str) -> ast.expr:
 
 
 def topic(module):
+    if module == 'limen.experiment.holdout':
+        return 'holdout'
     if module == 'limen.backtest.observed_costs':
         return 'observed_costs'
     if module == 'limen.sfd.reference_architecture.meta_allocation':
@@ -47,6 +50,8 @@ def context(interfaces, scenario):
 def inventory(root: Path):
     exports = {}
     for source in sorted((root / 'limen').rglob('*.py')):
+        if any(part.startswith('_') and part != '__init__.py' for part in source.relative_to(root).parts):
+            continue
         tree = ast.parse(source.read_text())
         declarations = [node for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign)) and any(isinstance(target, ast.Name) and target.id == '__all__' for target in (node.targets if isinstance(node, ast.Assign) else [node.target]))]
         if not declarations:
@@ -56,7 +61,7 @@ def inventory(root: Path):
             continue
         module = '.'.join((source.parent if source.name == '__init__.py' else source.with_suffix('')).relative_to(root).parts)
         interfaces = (['python'] if module == 'limen.backtest.observed_costs' else ['compiled']
-                      if module.startswith(('limen.cli', 'limen.yaml', 'limen.sfd.foundational_sfd', 'limen.sfd.reference_architecture.meta_allocation', 'limen.sfd.reference_architecture.direction_sizing', 'limen.targets.trade_outcome')) or module == 'limen.sfd' else ['python', 'compiled'])
+                      if module.startswith(('limen.cli', 'limen.yaml', 'limen.sfd.foundational_sfd', 'limen.sfd.reference_architecture.meta_allocation', 'limen.sfd.reference_architecture.direction_sizing', 'limen.targets.trade_outcome')) or module in ('limen.sfd', 'limen.experiment.holdout') else ['python', 'compiled'])
         reference = next(directory / 'README.md' for directory in source.parents if (directory / 'README.md').is_file())
         if module == 'limen':
             reference = root / 'README.md'
@@ -115,6 +120,7 @@ def validate_surface_catalogue(root, catalogue):
     if set(catalogue['scenario_details']) != expected:
         raise ValueError('Scenario descriptions do not cover the required interface matrix')
     for identity, entry in catalogue['scenario_details'].items():
+        validate_test_reference(root, entry['test'])
         if identity != entry['interface'] + '/' + entry['scenario'] or entry['role'] != 'executed':
             raise ValueError('An execution obligation was relabelled or assigned to the wrong interface')
         source = root / entry['source']
@@ -125,3 +131,6 @@ def validate_surface_catalogue(root, catalogue):
             raise ValueError('Scenario has no unique canonical source region')
         if not (root / entry['page']).is_file() or not entry['recorded_window'] or not entry['prerequisites'] or not entry['assertions']:
             raise ValueError('Scenario lacks a page, input window, prerequisites or independent assertions')
+    for proof in catalogue['reference_proofs'].values():
+        for reference in proof['tests']:
+            validate_test_reference(root, reference)

@@ -44,15 +44,29 @@ def test_missing_catalogue_scenario_fails():
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
     assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation', 'command_line', 'observed_costs'}
     assert catalogue['required_scenarios']['allocation'] == ['compiled']
-    records = [{'interface': interface, 'id': scenario, 'status': 'passed', 'tests': ['semantic oracle'], 'assertions': ['result']} for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces]
+    records = [{'interface': entry['interface'], 'id': entry['scenario'], 'status': 'passed',
+                'tests': [entry['test'] + '[' + entry['interface'] + '-' + entry['scenario'] + ']'],
+                'assertions': [entry['assertions']]} for entry in catalogue['scenario_details'].values()]
     assert len(records) == 19
-    validate_scenarios(records, catalogue)
+    validate_scenarios(records, catalogue, ROOT)
     for changed in (records[:-1], records + [records[0]]):
         with pytest.raises(ValueError, match='incomplete or duplicated'):
-            validate_scenarios(changed, catalogue)
+            validate_scenarios(changed, catalogue, ROOT)
+    changed = copy.deepcopy(records)
+    changed[0]['tests'].append('docs/examples/tests/test_research_examples.py::test_nonexistent_proof')
+    with pytest.raises(ValueError, match='Unknown documentation proof test'):
+        validate_scenarios(changed, catalogue, ROOT)
     records[0]['status'] = 'skipped'
     with pytest.raises(ValueError, match='successful semantic proof'):
-        validate_scenarios(records, catalogue)
+        validate_scenarios(records, catalogue, ROOT)
+
+
+def test_unmarked_candidate_fence_fails(tmp_path):
+    from check_evidence import validate_fences
+    document = tmp_path / 'chapter.md'
+    document.write_text((ROOT / 'docs/Research-Book.md').read_text() + '\n```python\nprint("unbound")\n```\n')
+    with pytest.raises(ValueError, match='Unbound code fence'):
+        validate_fences(ROOT, document)
 
 
 def test_public_model_catalogue_requires_every_export():
@@ -97,7 +111,8 @@ def test_public_surface_catalogue_matches_current_source():
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
     validate_surface_catalogue(ROOT, catalogue)
     assert catalogue['surfaces']['public_exports']['limen.backtest.observed_costs']['interfaces'] == ['python']
-    for kind in ('export', 'leaf', 'registry', 'manifest', 'execution'):
+    assert catalogue['surfaces']['public_exports']['limen.experiment.holdout']['interfaces'] == ['compiled']
+    for kind in ('export', 'leaf', 'registry', 'manifest', 'execution', 'test'):
         changed = copy.deepcopy(catalogue)
         if kind == 'export':
             changed['surfaces']['public_exports']['limen.scalers']['names'].pop()
@@ -107,9 +122,11 @@ def test_public_surface_catalogue_matches_current_source():
             changed['surfaces']['registries']['reducers']['names'].pop()
         elif kind == 'manifest':
             changed['surfaces']['manifest_fields']['field_groups']['ML_MANIFEST_OPTIONAL'].pop()
-        else:
+        elif kind == 'execution':
             changed['scenario_details']['python/selection']['role'] = 'signature/reference'
-        with pytest.raises(ValueError, match='surface catalogue differs|execution obligation'):
+        else:
+            changed['scenario_details']['python/selection']['test'] = 'docs/examples/tests/test_research_examples.py::test_nonexistent_proof'
+        with pytest.raises(ValueError, match='surface catalogue differs|execution obligation|Unknown documentation proof test'):
             validate_surface_catalogue(ROOT, changed)
 
 

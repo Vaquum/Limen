@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import shlex
 import sys
 import tarfile
 import venv
@@ -35,7 +36,7 @@ def unpack(bundle: Path, target: Path, root: Path):
         required = {'python-research/research.py', 'compiled-research/research.py',
                     'compiled-research/selection.yaml', 'evidence.schema.json', 'catalogue.json'}
         required |= {'inputs/' + name for name in INPUTS}
-        required |= {'requirements/research-env.txt', 'inputs.json', 'recorded_inputs.py', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
+        required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
         if len(names) != len(archive.getmembers()) or any(not member.isfile() for member in archive.getmembers()):
@@ -49,8 +50,13 @@ def unpack(bundle: Path, target: Path, root: Path):
         archive.extractall(target, filter='data')
     if json.loads((target / 'inputs.json').read_text()) != INPUTS:
         raise ValueError('Candidate input declarations differ')
-    if (target / 'recorded_inputs.py').read_bytes() != (root / 'docs/examples/recorded_inputs.py').read_bytes():
-        raise ValueError('Shared recorded-input source differs')
+    canonical = {name: root / 'docs/examples' / name for name in ('recorded_inputs.py', 'commands.json', 'catalogue.json', 'evidence.schema.json')}
+    canonical.update({'requirements/research-env.txt': root / 'requirements/ci/research-env.txt',
+                      'requirements/research-macos.txt': root / 'docs/examples/requirements-research-macos.txt',
+                      'requirements/build.txt': root / 'docs/examples/requirements-build.txt'})
+    for name, path in canonical.items():
+        if (target / name).read_bytes() != path.read_bytes():
+            raise ValueError('Canonical bundle member differs: ' + name)
     for name, expected in INPUTS.items():
         if hashlib.sha256((target / 'inputs' / name).read_bytes()).hexdigest() != expected:
             raise ValueError('Candidate recorded input differs')
@@ -103,9 +109,11 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert not any(Path(entry or project).resolve() == root.resolve() for entry in info['sys_path'])
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
+    canonical_commands = json.loads((project / 'commands.json').read_text())
+    runtime_environment = dict(os.environ, PATH=str(python.parent) + os.pathsep + os.environ['PATH'])
     for interface in ('python', 'compiled'):
-        command = [python, f'{interface}-research/research.py', '--scenario', 'selection', '--data-dir', 'inputs', '--output-dir', f'results/{interface}']
-        run(command, cwd=project)
+        command = shlex.split(canonical_commands[interface + '-selection'])
+        run(command, cwd=project, env=runtime_environment)
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
         assert summary['interface'] == interface and summary['scenario'] == 'selection'
         assert summary['rounds'] == (4 if interface == 'python' else 2)
@@ -118,8 +126,8 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
         summaries[interface] = {'summary': summary, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
         commands[interface] = [str(arg) for arg in command]
         scenario_reports[(interface, 'selection')] = summaries[interface] | {'command': commands[interface]}
-        command = [python, f'{interface}-research/research.py', '--scenario', 'all', '--data-dir', 'inputs', '--output-dir', f'results/{interface}-all']
-        run(command, cwd=project)
+        command = shlex.split(canonical_commands[interface + '-all'])
+        run(command, cwd=project, env=runtime_environment)
         report = json.loads((project / f'results/{interface}-all/summary.json').read_text())
         catalogue = json.loads((project / 'catalogue.json').read_text())
         expected = {name for name, interfaces in catalogue['required_scenarios'].items() if interface in interfaces} - {'selection'}

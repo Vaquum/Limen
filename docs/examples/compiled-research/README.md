@@ -12,6 +12,7 @@ Use the project and input bundle identified by the example evidence, Python 3.10
 
 Install the matching `vaquum-limen[data]` distribution. From the example bundle root, supply the directory containing the recorded input files:
 
+<!-- example: compiled-selection-command source=docs/examples/commands.json region=compiled-selection scenario=selection interface=compiled role=executed -->
 ```bash
 python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
 ```

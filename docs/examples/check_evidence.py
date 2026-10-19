@@ -10,6 +10,7 @@ import tarfile
 from pathlib import Path
 
 from catalogue_surfaces import validate_surface_catalogue
+from catalogue_tests import validate_test_reference
 
 
 def digest(value: bytes) -> str:
@@ -17,6 +18,13 @@ def digest(value: bytes) -> str:
 
 
 def region(path: Path, name: str) -> str:
+    if name == '__file__':
+        return path.read_text()
+    if path.suffix == '.json':
+        command = json.loads(path.read_text())[name]
+        if not isinstance(command, str) or '\n' in command or not command.strip():
+            raise ValueError('Invalid canonical command: ' + name)
+        return command + '\n'
     source = path.read_text()
     start, end = f'# region {name}\n', f'# endregion {name}'
     if source.count(start) != 1 or source.count(end) != 1:
@@ -26,7 +34,7 @@ def region(path: Path, name: str) -> str:
 
 def bindings(root: Path, document: Path) -> list[dict[str, str]]:
     text = document.read_text()
-    pattern = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```python\n(.*?)\n```'
+    pattern = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
     found = []
     for match in re.finditer(pattern, text, re.S):
         identity, source, name, scenario, interface, excerpt = match.groups()
@@ -71,6 +79,12 @@ def output_bindings(root: Path, document: Path) -> list[dict[str, str]]:
     if len(found) != text.count('role=observed') or len({item['id'] for item in found}) != len(found):
         raise ValueError('Missing or duplicate observed output bindings')
     return found
+
+
+def validate_fences(root: Path, document: Path) -> None:
+    fences = list(re.finditer(r'(?ms)^(?P<ticks>`{3,})[^\n]*\n.*?^(?P=ticks)[ \t]*(?:\n|$)', document.read_text()))
+    if len(fences) != len(bindings(root, document)) + len(output_bindings(root, document)):
+        raise ValueError('Unbound code fence in candidate documentation: ' + str(document))
 
 
 def compare_output(current, retained, tolerances, at='') -> None:
@@ -154,13 +168,20 @@ def validate_retained_source(root, retained, source, display) -> None:
         raise ValueError('Retained source identity differs from its immutable execution revision')
 
 
-def validate_scenarios(records, catalogue) -> None:
+def validate_scenarios(records, catalogue, root: Path) -> None:
     expected = {(interface, scenario) for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces}
     actual = [(item['interface'], item['id']) for item in records]
     if len(set(actual)) != len(actual) or set(actual) != expected:
         raise ValueError('Research scenario catalogue is incomplete or duplicated')
     if any(item['status'] != 'passed' or not item['tests'] or not item['assertions'] for item in records):
         raise ValueError('Research scenario lacks successful semantic proof')
+    for item in records:
+        entry = catalogue['scenario_details'][item['interface'] + '/' + item['id']]
+        required = entry['test'] + '[' + item['interface'] + '-' + item['id'] + ']'
+        if required not in item['tests'] or entry['assertions'] not in item['assertions']:
+            raise ValueError('Research scenario lacks its required semantic test or assertion')
+        for reference in item['tests']:
+            validate_test_reference(root, reference.split('[', 1)[0])
 
 
 def validate_model_catalogue(root, catalogue) -> None:
@@ -204,10 +225,12 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     if record['validation']['catalogue_sha256'] != digest(catalogue.read_bytes()):
         raise ValueError('Wrong research catalogue identity')
     catalogue_data = json.loads(catalogue.read_text())
-    validate_scenarios(record['validation']['scenarios'], catalogue_data)
+    validate_scenarios(record['validation']['scenarios'], catalogue_data, root)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
     validate_surface_catalogue(root, catalogue_data)
+    for page in catalogue_data['candidate_pages']:
+        validate_fences(root, root / page)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:
