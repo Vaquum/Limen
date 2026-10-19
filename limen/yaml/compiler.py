@@ -1,3 +1,4 @@
+from limen.yaml._backtest_spec import apply_backtest
 from limen.experiment._allocation import apply_yaml as apply_allocation
 from limen.experiment._holdout_research import initialize_compiled, cached_manifest
 import inspect
@@ -131,33 +132,7 @@ def _apply_base(manifest: Manifest, m: dict[str, Any]) -> None:
             raise ValueError(f"'required_columns' must be a list, got {type(cols).__name__}")
         _ = manifest.set_required_bar_columns(list(cols))
 
-    _apply_backtest(manifest, m)
-
-
-def _apply_backtest(manifest: Manifest, m: dict[str, Any]) -> None:
-
-    backtest = m.get('backtest')
-    if not backtest:
-        return
-    from limen.experiment.manifest_core import DataSourceConfig, FundingConfig, ProductConfig
-    from limen.experiment._resolve_trade_policy import BACKTEST_FIELDS
-
-    kwargs = {key: backtest[key] for key in BACKTEST_FIELDS if key in backtest}
-    if 'product' in kwargs and kwargs['product'] is not None:
-        kwargs['product'] = ProductConfig(**kwargs['product'])
-    for key in ('execution_data_source', 'barrier_features'):
-        if kwargs.get(key) is not None:
-            source = kwargs[key]
-            kwargs[key] = DataSourceConfig(resolve(source['method']), source.get('params', {}))
-    if kwargs.get('funding') is not None:
-        funding = dict(kwargs['funding'])
-        if 'adapter' in funding:
-            funding['adapter'] = resolve(funding['adapter'])
-        if funding.get('data_source') is not None:
-            source = funding['data_source']
-            funding['data_source'] = DataSourceConfig(resolve(source['method']), source.get('params', {}))
-        kwargs['funding'] = FundingConfig(**funding)
-    _ = manifest.set_backtest_config(**kwargs)
+    apply_backtest(manifest, m)
 
 
 def _apply_split(manifest: Manifest, m: dict[str, Any]) -> None:

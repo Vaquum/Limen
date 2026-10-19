@@ -1,11 +1,15 @@
 import re
-from collections.abc import Mapping
-from typing import cast
+from collections.abc import Callable, Mapping
+from __future__ import annotations
+from typing import TYPE_CHECKING, cast
 
 from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, validate_backtest_value as _validate_backtest_value
 from limen.yaml.errors import YAMLError
 from limen.experiment._resolve_trade_policy import FundingConfig, ProductConfig, TRADE_NUMBERS
 from limen.backtest.trade_contract import BPS, finite_number
+
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import Manifest
 
 _PARAM_REF_RE = re.compile(r'\{(\w+)\}')
 
@@ -116,3 +120,29 @@ def _check_value(key: str, value: object, path: str, errors: list[YAMLError]) ->
 
 
 __all__ = ['check_backtest_spec']
+
+
+def apply_backtest(manifest: Manifest, declaration: Mapping[str, object]) -> None:
+    from limen.experiment.manifest_core import DataSourceConfig
+    from limen.experiment._resolve_trade_policy import BACKTEST_FIELDS
+    from limen.yaml.resolver import resolve
+
+    backtest = _mapping(declaration.get('backtest'))
+    if not backtest:
+        return
+    kwargs = {key: backtest[key] for key in BACKTEST_FIELDS if key in backtest}
+    if kwargs.get('product') is not None:
+        kwargs['product'] = cast(Callable[..., object], ProductConfig)(**_mapping(kwargs['product']))
+    for key in ('execution_data_source', 'barrier_features'):
+        if kwargs.get(key) is not None:
+            source = _mapping(kwargs[key])
+            kwargs[key] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_mapping(source.get('params'))))
+    if kwargs.get('funding') is not None:
+        funding = dict(_mapping(kwargs['funding']))
+        if 'adapter' in funding:
+            funding['adapter'] = resolve(cast(str, funding['adapter']))
+        if funding.get('data_source') is not None:
+            source = _mapping(funding['data_source'])
+            funding['data_source'] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_mapping(source.get('params'))))
+        kwargs['funding'] = cast(Callable[..., object], FundingConfig)(**funding)
+    _ = cast(Callable[..., object], manifest.set_backtest_config)(**kwargs)
