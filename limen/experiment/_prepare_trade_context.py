@@ -125,7 +125,7 @@ def prepare_trade_context(config: BacktestConfig, policy: TradePolicy, raw_split
         observations = raw_prices if execution is None else execution.filter((pl.col('start_ns') <= end) & (pl.col('end_ns') >= start))
         funding = prepare_funding(policy.funding, history, start, end) if policy.funding is not None else None
         sources = [source_binding(observations, f'execution:partition:{index}', start, end, _precision(observations), 'causal_recorded_prices')]
-        sources.append(source_binding(mapping, f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
+        sources.append(source_binding(mapping.select('datetime', 'row_id', 'available_at_ns'), f'model:partition:{index}', start, end, _precision(raw_prices), 'model_bar_membership_and_availability'))
         if funding is not None:
             sources.append(source_binding(funding, f'funding:partition:{index}', start, end, 1, 'normalized_funding_support'))
         signals = mapping.drop('datetime').with_columns(pl.lit(None, dtype=pl.Float64).alias('target'))

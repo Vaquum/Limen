@@ -51,7 +51,7 @@ def _yaml():
     return {
         'schema_version': '1.0', 'metadata': {'name': 'dynamic_barrier_proof', 'mode': 'development', 'limen_version': __version__},
         'sfd': {'manifest': {
-            'type': 'rule_based', 'data_source': {'method': 'tests.test_dynamic_barriers.recorded_source'},
+            'type': 'rule_based', 'data_source': {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(FIXTURE.resolve())}},
             'split_dates': {'train_start': '2024-01-02', 'train_end': '2024-01-03', 'val_start': '2024-01-04', 'val_end': '2024-01-04', 'test_start': '2024-01-05', 'test_end': '2024-01-05'},
             'strategy': {'conditions': [{'id': 'entry', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], 'entry': 'entry'},
             'reference_architecture': 'limen.sfd.reference_architecture.rule_based.rule_based',
@@ -118,6 +118,11 @@ def test_native_yaml_and_outcome_contract_parity(tmp_path):
         distances = mapping.select('datetime').join(expected, on='datetime', maintain_order='left')
         assert partition.signals['volatility_stop_loss_bps'].equals(distances['volatility_stop_loss_bps'])
     assert not any('volatility_' in name or name == '__barrier_ready__' for name in data['train'].columns)
+    from limen.backtest._event_plan import event_plan
+    other = manifest.prepare_data(raw, {'risk_span': 12})
+    left = event_plan(data['_trade_inputs'], data['_trade_policy'])
+    right = event_plan(other['_trade_inputs'], other['_trade_policy'])
+    assert left.events is right.events and left.binding != right.binding
     result = manifest.run_model(data, {'risk_span': 6})
     assert result['backtest_completed_trades'] >= 1
     path = tmp_path / 'barriers.yaml'
