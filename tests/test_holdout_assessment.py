@@ -46,11 +46,12 @@ class ExternalRobust:
 
 
 class FittedProbabilityAdjustment:
+    __slots__ = ('estimator', '__offset')
     def __init__(self, estimator, x, y):
         self.estimator = estimator
-        self.offset = float(np.mean(np.asarray(y)) - np.mean(estimator.predict_proba(np.asarray(x))[:, 1]))
+        self.__offset = float(np.mean(np.asarray(y)) - np.mean(estimator.predict_proba(np.asarray(x))[:, 1]))
     def predict_proba(self, x):
-        positive = np.clip(self.estimator.predict_proba(np.asarray(x))[:, 1] + self.offset, 0, 1)
+        positive = np.clip(self.estimator.predict_proba(np.asarray(x))[:, 1] + self.__offset, 0, 1)
         return np.column_stack((1 - positive, positive))
 
 
@@ -558,6 +559,30 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(sealed, assessment_case)
         assert loader.call_count == 0
+    class SlotOffset:
+        __slots__ = 'offset'
+        def __init__(self, offset):
+            self.offset = offset
+        def adjust(self, values):
+            return np.clip(values + self.offset, 0, 1)
+    class Adjusted(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.adjust(result['_probs'])
+            return result
+    slotted = copy.deepcopy(assessment_case[2][0][0])
+    slotted._model.__class__ = Adjusted
+    slotted._model.policy = SlotOffset(slotted._model._calibration_threshold)
+    stable = _freeze(slotted)
+    first = _report(stable, assessment_case)
+    slotted._model.policy.offset += 0.1
+    assert _report(stable, assessment_case)['rows_sha256'] == first['rows_sha256']
+    class NonpreservingSlot(SlotOffset):
+        def __deepcopy__(self, memo):
+            return type(self)(self.offset + 0.1)
+    slotted._model.policy = NonpreservingSlot(slotted._model._calibration_threshold)
+    with pytest.raises(ValueError, match='copy changed'):
+        _freeze(slotted)
     changed = copy.deepcopy(assessment_case[2][0][0])
     changed._model.model = LogisticRegression()
     with pytest.raises(ValueError, match='not fitted'):

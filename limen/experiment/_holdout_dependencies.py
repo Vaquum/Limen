@@ -37,10 +37,17 @@ def children(value: object) -> tuple[object, ...]:
 
 
 def _attributes(value: object) -> dict[str, object]:
-    slots = [slot for cls in type(value).__mro__ for slot in ((cls.__dict__['__slots__'],) if isinstance(cls.__dict__.get('__slots__'), str) else cls.__dict__.get('__slots__', ())) if slot not in ('__dict__', '__weakref__')]
-    values = cast(dict[str, object], getattr(value, '__dict__', {}))
-    if slots:
-        values = {**values, **{slot: getattr(value, slot) for slot in slots if hasattr(value, slot)}}
+    values = dict(cast(dict[str, object], getattr(value, '__dict__', {})))
+    for cls in type(value).__mro__:
+        declaration = cls.__dict__.get('__slots__', ())
+        slots = (declaration,) if isinstance(declaration, str) else declaration
+        for slot in slots:
+            if slot in ('__dict__', '__weakref__'):
+                continue
+            name = f'_{cls.__name__.lstrip("_")}{slot}' if slot.startswith('__') and not slot.endswith('__') else slot
+            descriptor = cls.__dict__[name]
+            if hasattr(value, name):
+                values[f'{cls.__module__}.{cls.__qualname__}:{name}'] = descriptor.__get__(value, type(value))
     return values
 
 
@@ -180,6 +187,8 @@ def inference_functions(values: Sequence[object], active: set[str] | None = None
             evidence.append(fitted_witness(value))
         elif not isinstance(value, (ModuleType, type, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
             pending = ['predict', 'predict_proba', 'transform', '__call__']
+            if active is not None:
+                pending.extend(name for cls in type(value).__mro__ for name, method in cls.__dict__.items() if inspect.isfunction(method) and sha256(marshal.dumps(method.__code__)).hexdigest() in active)
             methods: set[str] = set()
             while pending:
                 name = pending.pop()
