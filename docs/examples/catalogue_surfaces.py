@@ -4,7 +4,7 @@ from pathlib import Path
 REGISTRIES = {
     'search': ('limen/experiment/param_search/registry.py', 'STRATEGY_REGISTRY', 'docs/Advanced-Search.md', ['python', 'compiled'], 'search'),
     'scalers': ('limen/scalers/registry.py', 'SCALER_REGISTRY', 'docs/Scalers.md', ['python', 'compiled'], 'selection'),
-    'reducers': ('limen/experiment/reducer/registry.py', 'REDUCER_REGISTRY', 'docs/Reducers-And-Feedback.md', ['python', 'compiled'], 'recovery'),
+    'reducers': ('limen/experiment/reducer/registry.py', 'REDUCER_REGISTRY', 'docs/Reducers-And-Feedback.md', ['python', 'compiled'], 'search'),
     'selectors': ('limen/cohort/sfc/__init__.py', 'BUILTIN_SELECTORS', 'docs/Cohort.md', ['compiled'], 'walk_forward'),
     'funding': ('limen/backtest/funding_presets.py', 'PRESETS', 'docs/Backtest.md', ['python', 'compiled'], 'execution'),
 }
@@ -24,7 +24,7 @@ def topic(module):
     if module.startswith('limen.cli') or module == 'limen.yaml':
         return 'command_line'
     if module.startswith('limen.experiment.reducer'):
-        return 'recovery'
+        return 'search'
     if module.startswith('limen.calibration'):
         return 'calibration'
     if module.startswith('limen.backtest'):

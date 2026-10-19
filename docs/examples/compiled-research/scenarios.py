@@ -15,6 +15,7 @@ from limen import Cohort, Trainer, UniversalExperimentLoop
 from limen.experiment.holdout import final_holdout_report, freeze_holdout_selection, read_holdout_report, reserve_holdout
 from limen.targets import NextBarUpTarget
 from limen.yaml import CompiledSFD, build_search_strategy, validate
+from limen.yaml.compiler import build_pruning_strategies
 
 import research as research_project
 from recorded_inputs import FUNDING, HASHES, funding_history, trade_profile
@@ -39,7 +40,7 @@ def execute(config, output, *, bars=None, callback=None, resume=False, project_r
     report = validate(config)
     if not report.valid:
         raise ValueError(str(report.errors))
-    loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=project_root), data=bars, search_strategy=build_search_strategy(config), experiment_dir=output, yaml_reference=config, checkpoint_interval=1, feedback_interval=1, intra_callback=callback, project_root=project_root)
+    loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=project_root), data=bars, search_strategy=build_search_strategy(config), pruning_strategies=build_pruning_strategies(config), experiment_dir=output, yaml_reference=config, checkpoint_interval=1, feedback_interval=1, intra_callback=callback, project_root=project_root)
     loop.run(config['metadata']['name'], n_permutations=config['uel']['n_permutations'], workers=1, prep_each_round=True, progress_bar=False, post_processing=post_processing, resume=resume, factorize=factorize)
     if 'strict_mode_error' in research_project.completed_log(loop).columns and research_project.completed_log(loop)['strict_mode_error'].drop_nulls().len():
         raise ValueError('A declared scenario round failed its pipeline checks')
@@ -58,8 +59,19 @@ def search(data_dir, output):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
         results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'seed': 42, 'families': model_comparisons(data_dir, output / 'families')}
+    return {'runs': results, 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'), 'adaptive': adaptive_search(data_dir, output / 'adaptive')}
 # endregion search
+
+
+# region adaptive_search
+def adaptive_search(data_dir, output):
+    config = configuration('adaptive', data_dir)
+    loop = execute(config, output)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
+# endregion adaptive_search
 
 
 def recorded_predictions(directory: Path, record):

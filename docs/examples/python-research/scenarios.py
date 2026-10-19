@@ -20,6 +20,7 @@ from limen.calibration import grid_threshold_optimizer, sklearn_probability_cali
 from limen.data.utils import compute_data_bars, split_walk_forward
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import GridStrategy, RandomStrategy, SobolStrategy
+from limen.experiment.reducer import BudgetReducer
 from limen.metrics.balanced_metric import balanced_metric
 
 import research as project
@@ -42,6 +43,13 @@ def quarter_hour(data_dir):
     return recorded(data_dir, 'spot_15m_20250101_20250531.parquet', 1920)
 
 
+def recordable_prep(raw, round_params):
+    data = project.prep(raw, round_params)
+    validation = data['validation']
+    data['_alignment'] = {'missing_datetimes': [], 'first_test_datetime': validation['datetime'][0], 'last_test_datetime': validation['datetime'][-1]}
+    return data
+
+
 # region search
 def search(data_dir, output):
     bars = quarter_hour(data_dir)[:1440]
@@ -59,8 +67,28 @@ def search(data_dir, output):
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
-    return {'runs': runs, 'seed': 42}
+    return {'runs': runs, 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive')}
 # endregion search
+
+
+# region adaptive_search
+def adaptive_search(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
+
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=quarter_hour(data_dir)[:1440], sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
+                                   experiment_dir=output, checkpoint_interval=1, feedback_interval=1,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-adaptive-search', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
+# endregion adaptive_search
 
 
 # region recovery
@@ -68,18 +96,12 @@ def recovery(data_dir, output):
     bars = quarter_hour(data_dir)[:1440]
     space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
 
-    def prepare(raw, round_params):
-        data = project.prep(raw, round_params)
-        validation = data['validation']
-        data['_alignment'] = {'missing_datetimes': [], 'first_test_datetime': validation['datetime'][0], 'last_test_datetime': validation['datetime'][-1]}
-        return data
-
     def model(data, round_params):
         fitted = project.fit(data['train'], round_params)
         forecasts = fitted.predict(data['validation'].select('momentum'))
         return {'validation_net_return': project.backtest(data['validation'], forecasts), '_preds': forecasts}
 
-    sfd = SimpleNamespace(__name__='book_python_recovery', params=lambda: space, prep=prepare, model=model)
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
 
     def stop_after_two(log, msq):
         if log.height == 2:

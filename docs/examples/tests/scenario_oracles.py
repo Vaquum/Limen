@@ -41,6 +41,16 @@ def verify(interface, name, result, output, inputs):
                     identities.append({row['C']: row['id'] for row in rows})
         if identities:
             assert all(identity == identities[0] for identity in identities)
+        adaptive = result['adaptive']
+        assert len(adaptive['rows']) == adaptive['checkpoint_yielded'] == 3 and adaptive['checkpoint_remaining'] == 0
+        assert all(row['errors'] == [] for row in adaptive['audit'])
+        assert any(item['op'] == 'trim' and item['target_count'] == 3 for row in adaptive['audit'] for item in row['interventions'])
+        for row in adaptive['rows']:
+            if interface == 'python':
+                assert row['validation_net_return'] == pytest.approx(ridge_score(bars, row['window'], row['alpha']), rel=1e-10, abs=1e-12)
+            else:
+                original = next(item for item in result['runs']['grid'] if item['C'] == row['C'])
+                assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
         if interface == 'compiled':
             assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')

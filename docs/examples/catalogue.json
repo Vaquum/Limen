@@ -459,8 +459,8 @@
           "compiled"
         ],
         "project_context": [
-          "python/recovery",
-          "compiled/recovery"
+          "python/search",
+          "compiled/search"
         ],
         "proof": "public-signature-inventory",
         "source": "limen/experiment/reducer/__init__.py",
@@ -1120,8 +1120,8 @@
           "compiled"
         ],
         "project_context": [
-          "python/recovery",
-          "compiled/recovery"
+          "python/search",
+          "compiled/search"
         ],
         "proof": "public-signature-inventory",
         "source": "limen/experiment/reducer/registry.py",
@@ -1421,7 +1421,7 @@
       ],
       "recorded_window": "quarter-hour: first 1,440 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Every strategy visits the bounded domain; closed-form standardized Ridge independently reproduces validation scores."
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds."
     },
     "compiled/search": {
       "interface": "compiled",
@@ -1436,7 +1436,7 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Exact strategy candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds."
+      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three."
     },
     "python/recovery": {
       "interface": "python",
@@ -1646,7 +1646,7 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025; local recorded campaign backup",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Installed CLI exits successfully; parent/child lineage, four unique result rows, CSV/Parquet agreement and exact restored project bytes."
+      "assertions": "Installed CLI exits successfully; parent/child lineage, four unique result rows, CSV/Parquet agreement and exact restored tracked campaign bytes."
     }
   }
 }
