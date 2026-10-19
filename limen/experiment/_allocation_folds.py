@@ -140,7 +140,11 @@ def _opportunity(context: AllocationContext, prices: pl.DataFrame, frame: pl.Dat
     signals = signal_rows.drop('datetime').with_columns(pl.Series('target', exposure))
     start_ns = int(times[0])
     observations = prices.filter((pl.col('start_ns') >= start_ns) & (pl.col('available_at_ns') <= support_end))
-    partition = TradeInputs(context.initial_equity, start_ns, support_end, signals, observations, None, ())
+    funding = context.train_inputs.funding_events
+    if funding is not None:
+        funding = funding.filter((pl.col('end_ns') >= start_ns) & (pl.col('start_ns') <= support_end)).with_columns(pl.col('start_ns').clip(lower_bound=start_ns), pl.col('end_ns').clip(upper_bound=support_end), pl.col('time_ns').clip(lower_bound=start_ns, upper_bound=support_end))
+    source = source_binding(observations, f'primary-opportunity:{start_ns}', start_ns, support_end, 1, 'recorded_primary_opportunity_prices')
+    partition = TradeInputs(context.initial_equity, start_ns, support_end, signals, observations, funding, (source,))
     ledger = trade_execution(partition, policy)
     opening = signal_rows.row(0, named=True)
     row: dict[str, object] = {'opportunity_id': f'opportunity:{start_ns}', 'opening_block': block_id,

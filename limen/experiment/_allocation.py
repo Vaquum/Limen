@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import polars as pl
 
-from limen.backtest.trade_contract import TradePolicy, contract_digest, json_value, source_binding
+from limen.backtest.trade_contract import TradeInputs, TradePolicy, contract_digest, json_value, source_binding
 from limen.sfd.reference_architecture.direction_sizing import _identity
 
 if TYPE_CHECKING:
@@ -37,7 +37,7 @@ class AllocationBatch:
     def digest(self) -> str:
         identities = pl.DataFrame({'row_id': self.row_ids, 'available_at_ns': self.available_at_ns,
                                    'stop_loss_bps': self.stop_loss_bps, 'barrier_ready': self.barrier_ready})
-        if identities.height != self.meta_features.height or len(set(self.row_ids)) != len(self.row_ids):
+        if identities.height != len(self.stop_loss_bps) or identities.height != len(self.barrier_ready) or identities.height != self.meta_features.height or len(set(self.row_ids)) != len(self.row_ids):
             raise ValueError('Allocation batch requires complete unique ordered membership')
         features = source_binding(self.meta_features, self.batch_id, self.partition_start_ns, self.partition_end_ns, 1, 'allocation_features').checksum
         primary = {}
@@ -66,7 +66,7 @@ class AllocationContext:
     batches: Mapping[str, AllocationBatch]
     barriers: pl.DataFrame | None
     initial_equity: float
-    train_inputs: object
+    train_inputs: TradeInputs
 
 
 __all__: list[str] = []
@@ -117,6 +117,8 @@ def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], 
     trade = data.get('_trade_context')
     if not isinstance(trade, PreparedTradeContext) or manifest.backtest_config is None:
         raise ValueError('Allocation requires original event source context')
+    if any(partition.observations['available_at_ns'].ne(partition.observations['end_ns']).any() for partition in trade.partitions):
+        raise ValueError('Allocation requires co-timed regular close observations')
     train = _resolve_split(manifest, raw)[0]
     history = raw.filter(pl.col('datetime') <= train['datetime'][-1])
     barriers = prepare_barriers(manifest.backtest_config, trade.policy, history)
@@ -135,7 +137,7 @@ def attach(manifest: Manifest, raw: pl.DataFrame, params: Mapping[str, object], 
             excluded = {item['id'] for item in cast(list[dict[str, object]], conditions)}
             meta = frame.select([key for key, dtype in frame.schema.items() if dtype.is_numeric() and key not in excluded])
         signals = partition.signals
-        ids = tuple(f'source:{int(value)}' for value in signals['available_at_ns'])
+        ids = tuple(f'source:{int(value) - int(manifest.backtest_config.source_interval_seconds * 1000000000)}' for value in signals['available_at_ns'])
         stop = tuple(signals[trade.policy.stop_loss_bps_column].to_list()) if trade.policy.stop_loss_bps_column else (trade.policy.stop_loss_bps,) * signals.height
         ready = tuple(signals['__barrier_ready__'].to_list()) if '__barrier_ready__' in signals.columns else (True,) * signals.height
         batches[name] = AllocationBatch(name, partition.partition_start_ns, partition.partition_end_ns, ids, tuple(signals['available_at_ns'].to_list()), primary, meta, stop, ready)
