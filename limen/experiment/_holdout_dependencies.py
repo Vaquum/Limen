@@ -36,7 +36,7 @@ def children(value: object) -> tuple[object, ...]:
 
 
 def _attributes(value: object) -> dict[str, object]:
-    slots = [slot for cls in type(value).__mro__ for slot in cls.__dict__.get('__slots__', ()) if slot not in ('__dict__', '__weakref__')]
+    slots = [slot for cls in type(value).__mro__ for slot in ((cls.__dict__['__slots__'],) if isinstance(cls.__dict__.get('__slots__'), str) else cls.__dict__.get('__slots__', ())) if slot not in ('__dict__', '__weakref__')]
     values = cast(dict[str, object], getattr(value, '__dict__', {}))
     if slots:
         values = {**values, **{slot: getattr(value, slot) for slot in slots if hasattr(value, slot)}}
@@ -142,12 +142,24 @@ def inference_functions(values: Sequence[object]) -> tuple[list[object], list[ob
             for cell in value.__closure__ or ():
                 visit(cell.cell_contents)
             instructions = list(dis.get_instructions(value))
+            references = dict(value.__globals__)
+            references.update(zip(value.__code__.co_freevars, (cell.cell_contents for cell in value.__closure__ or ()), strict=True))
+            imported: ModuleType | None = None
+            binding: object = None
             for index, instruction in enumerate(instructions):
-                if instruction.argval == 'fit_calibrator':
+                name = str(instruction.argval)
+                if instruction.opname == 'IMPORT_NAME':
+                    imported = sys.modules.get(name)
+                    if imported is None:
+                        raise ValueError(f'Holdout prediction import lacks loaded evidence: {name}')
+                    binding = imported
+                elif instruction.opname == 'IMPORT_FROM' and imported is not None:
+                    binding = getattr(imported, name)
+                elif instruction.opname == 'STORE_FAST' and binding is not None:
+                    references[name], binding = binding, None
+                if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_DEREF', 'LOAD_FAST') or name not in references:
                     continue
-                if instruction.opname != 'LOAD_GLOBAL' or instruction.argval not in value.__globals__:
-                    continue
-                item = cast(object, value.__globals__[instruction.argval])
+                item = cast(object, references[name])
                 for attribute in instructions[index + 1:]:
                     if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD'):
                         break

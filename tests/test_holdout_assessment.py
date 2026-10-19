@@ -524,6 +524,27 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match=reason):
                 _freeze(changed)
             assert loader.call_count == 0
+    defaults, closure = {'offset': 0.0}, {'offset': 0.0}
+    def correction(values=defaults):
+        return values['offset'] + closure['offset']
+    class Configured(LogRegBinary):
+        rules = {'offset': 0.0}
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + correction() + self.rules['offset'], 0, 1)
+            return result
+    configured = copy.deepcopy(assessment_case[2][0][0])
+    configured._model.__class__ = Configured
+    sealed = _freeze(configured)
+    for dependency in (defaults, closure, Configured.rules):
+        with patch.dict(dependency, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(sealed, assessment_case)
+            assert loader.call_count == 0
+    with patch.object(Configured, 'predict', LogRegBinary.predict), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(sealed, assessment_case)
+        assert loader.call_count == 0
     changed = copy.deepcopy(assessment_case[2][0][0])
     changed._model.model = LogisticRegression()
     with pytest.raises(ValueError, match='not fitted'):
