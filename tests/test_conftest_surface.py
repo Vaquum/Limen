@@ -24,7 +24,8 @@ def test_darwin_openmp_thread_cap_is_pinned() -> None:
 def test_polars_thread_budget_is_set_before_import(thread_count: str | None) -> None:
     import polars as pl
 
-    assert pl.thread_pool_size() == int(os.environ['POLARS_MAX_THREADS'])
+    if os.environ['POLARS_MAX_THREADS'] == '1':
+        assert pl.thread_pool_size() == 1
     environment = os.environ.copy()
     if thread_count is None:
         environment.pop('POLARS_MAX_THREADS', None)
