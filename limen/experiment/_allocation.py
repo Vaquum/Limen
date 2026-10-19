@@ -14,9 +14,12 @@ def component_identity(value: object) -> dict[str, JsonValue]:
     return identity(value)
 
 
+class _Primary(Protocol):
+    def resolve_model_kwargs(self, params: dict[str, object]) -> dict[str, object]: ...
+
+
 def primary_parameters(manifest: object, params: Mapping[str, object]) -> dict[str, object]:
-    resolve = cast(Callable[[dict[str, object]], dict[str, object]], getattr(manifest, 'resolve_model_kwargs'))
-    return resolve(dict(params))
+    return cast(_Primary, manifest).resolve_model_kwargs(dict(params))
 
 
 @dataclass(frozen=True)
