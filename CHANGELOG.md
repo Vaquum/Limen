@@ -1735,3 +1735,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.36.0] - 2026-10-19
 
 - Add bounded acceptance PBO block configuration with persisted counts, conflict checks and nominal partition resolution.
+
+## [5.37.0] - 2026-10-19
+
+- Add project final-window reservations, native research exclusion and recorded experiment, refit and replay provenance.

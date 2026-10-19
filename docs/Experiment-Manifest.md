@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.36.0"
+  limen_version: "5.37.0"
   mode: development
 
 sfd:
@@ -459,7 +459,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.36.0"
+  limen_version: "5.37.0"
   mode: development
 sfd:
   manifest:
@@ -516,7 +516,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.36.0"
+  limen_version: "5.37.0"
   mode: development
 sfd:
   manifest:
@@ -1391,3 +1391,5 @@ This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the or
 - Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), and [Scalers](Scalers.md) as the reference layer while authoring manifests.
 
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+
+See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.

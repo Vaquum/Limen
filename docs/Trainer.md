@@ -229,3 +229,5 @@ The operating model is:
 - Continue to [Reference Architecture](Reference-Architecture.md) for the class-based model contract that Trainer reconstructs and replays.
 - Continue to [Cohort](Cohort.md) to bind selected sensors into an ensemble inference surface.
 - Continue to [Command-Line Interface](Command-Line-Interface.md) for the YAML run layer that produces result directories.
+
+See [Reserve final observations](Final-Holdout.md) for project research exclusion, recorded preparation bounds and the limits of local exposure history.

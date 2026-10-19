@@ -41,7 +41,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
     checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
 
     try:
-        compiled = CompiledSFD(yaml_reference)
+        compiled = CompiledSFD(yaml_reference, project_root=results_dir)
         search_strategy = build_search_strategy(yaml_reference)
         pruning_strategies = build_pruning_strategies(yaml_reference)
     except Exception as exc:  # noqa: BLE001
@@ -51,6 +51,8 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
     click.echo(f"Resuming '{experiment_name}' (target: {target_permutations} permutations) ...")
 
     try:
+        from limen.experiment._holdout_research import reject_modes
+        reject_modes(compiled.manifest(), resume=True)
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,

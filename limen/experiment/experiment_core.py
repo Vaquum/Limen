@@ -1,3 +1,4 @@
+import limen.experiment._holdout_research as _holdout
 import limen.experiment._round_storage as _storage
 import csv
 import importlib.metadata
@@ -10,7 +11,7 @@ from collections.abc import Callable, Mapping
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pandas as pd
 import polars as pl
@@ -64,7 +65,8 @@ class UniversalExperimentLoop:
                  experiment_dir: str | Path | None = None,
                  intra_callback: Callable[[Any, MSQ], None] | None = None,
                  test_mode: bool = False,
-                 yaml_reference: dict[str, Any] | None = None) -> None:
+                 yaml_reference: dict[str, Any] | None = None,
+                 project_root: str | Path | None = None) -> None:
 
         '''Configure the manifest or custom SFD and optional MSQ persistence.'''
 
@@ -79,42 +81,9 @@ class UniversalExperimentLoop:
         self.prep: Callable[..., dict[str, Any]] | None = None
         self.model: Callable[..., dict[str, Any]] | None = None
 
-        if hasattr(sfd, 'manifest'):
-            manifest = sfd.manifest()
-            self.manifest = manifest
-
-            if data is None:
-                if self.manifest.data_source_config is None:
-                    raise ValueError(
-                        'UniversalExperimentLoop No data source configured in manifest. Add .set_data_source(method=HistoricalData.get_spot_klines, params={...}) to manifest or pass data explicitly.'
-                    )
-
-                if test_mode and self.manifest.test_data_source_config is not None:
-                    self.data = self.manifest.fetch_test_data()
-                else:
-                    self.data = self.manifest.fetch_data()
-            else:
-                self.data = data
-
-            if getattr(self.manifest, 'architecture_function', None) is not None:
-                def _manifest_prep(data: Any, round_params: dict[str, Any] | None = None) -> dict[str, Any]:
-                    return manifest.prepare_data(data, round_params or {})
-
-                def _manifest_model(data: Any, round_params: dict[str, Any] | None) -> dict[str, Any]:
-                    return manifest.run_model(data, round_params or {})
-
-                self.prep = _manifest_prep
-                self.model = _manifest_model
-            else:
-                raise ValueError(
-                    'UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.'
-                )
-        else:
-            if data is None:
-                raise ValueError('UniversalExperimentLoop data parameter required for custom SFDs using custom functions approach')
-            self.data = data
-            self.prep = getattr(sfd, 'prep', None)
-            self.model = getattr(sfd, 'model', None)
+        bound_manifest, self.data, self.prep, self.model = _holdout.initialize_loop(self, sfd, data, test_mode=test_mode,
+                                 project_root=project_root, experiment_dir=experiment_dir)
+        self.manifest = cast(Manifest | None, bound_manifest)
 
         self._manifest_functions = (self.prep, self.model)
         self.extras: list[Any] = []
@@ -153,6 +122,7 @@ class UniversalExperimentLoop:
 
     check_parallel_admission = _parallel.admit_parallel
 
+    @_holdout.run_guard
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
@@ -1048,6 +1018,8 @@ class UniversalExperimentLoop:
             metadata['yaml_reference'] = data_no_lineage
             metadata['manifest_id'] = canonical_manifest_id(self._yaml_reference)
 
+        if holdout := _holdout.metadata(self.manifest):
+            metadata['holdout'] = holdout
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
 
@@ -1111,7 +1083,7 @@ class UniversalExperimentLoop:
             '_round_index': round_index,
             'round_params': round_params,
             'preds': preds.tolist() if hasattr(preds, 'tolist') else list(preds),
-            **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding') if key in alignment},
+            **{key: alignment[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in alignment},
             'alignment': {
                 'missing_datetimes': [
                     dt.isoformat()
@@ -1126,6 +1098,8 @@ class UniversalExperimentLoop:
             },
         }
 
+        if 'holdout' in entry:
+            entry['holdout'] = _holdout.bind_round(self.manifest, cast(Mapping[str, object], entry['holdout']), round_id)
         if 'learning_binding' in alignment:
             entry['learning_binding'] = {'round_id': round_id, 'manifest_id': canonical_manifest_id(self._yaml_reference) if self._yaml_reference is not None else None, 'model': alignment['learning_binding']}
 

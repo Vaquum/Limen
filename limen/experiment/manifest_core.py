@@ -1,10 +1,10 @@
+import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
 from limen.targets.trade_outcome import OutcomeLabels
 from limen.experiment._prepare_trade_context import source_interval as _source_interval, attach_outcomes, resolve_component_kwargs, sensor_decisions, target_context
 from limen.experiment._resolve_trade_policy import BacktestConfig, FundingConfig, ProductConfig, resolve_number as _resolve_trade_number, resolve_trade_policy as _resolve_trade_policy
-from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context, prepare_trade_context as _prepare_trade_context
-from limen.experiment._prepare_backtest_data import prepare_backtest_data as _prepare_backtest_data
+from limen.experiment._prepare_trade_context import PreparedTradeContext, validate_cached_context as _validate_cached_context, finish_trade_result as _finish_trade_result, attach_trade_context as _attach_trade_context
 from limen.experiment._objective import ObjectiveConfig, prepare_objective as _prepare_objective, score_objective as _score_objective, threshold_params as _objective_threshold_params
 from limen.experiment._backtest_provenance import SOURCE_ROW as _SOURCE_ROW, attach_witness as _attach_witness, capture_backtest as _capture_backtest, restore_source_rows as _restore_source_rows, preflight_backtest as _preflight_backtest, validate_witness as _validate_witness
 from collections.abc import Mapping
@@ -329,7 +329,8 @@ class Manifest:
         if self.data_source_config is None:
             raise ValueError('Manifest No data source configured')
 
-        return DataSourceResolver.resolve(self.data_source_config)
+        config = self.data_source_config
+        return _holdout.fetch(self, lambda: DataSourceResolver.resolve(config))
 
     def fetch_test_data(self) -> pl.DataFrame:
 
@@ -629,6 +630,7 @@ class Manifest:
 
         return new_manifest
 
+    @_holdout.preparation
     def compute_test_bars(self, raw_data: pl.DataFrame, round_params: dict[str, Any]) -> pl.DataFrame:
 
         '''
@@ -644,10 +646,11 @@ class Manifest:
             pl.DataFrame: Bar-formed test split data
         '''
 
+        raw_data = _holdout.admit(self, raw_data)
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
             resolved = _resolve_params(base_params, round_params)
-            raw_data = func(raw_data, **resolved)
+            raw_data = _holdout.selected_input(self, func(raw_data, **resolved))
 
         # compute_test_bars consumes only split_data[2], so materialising all
         # three windows here would do 2x wasted filter work on the date path
@@ -663,6 +666,7 @@ class Manifest:
             )
         else:
             test_split = split_sequential(raw_data, self.split_config)[2]
+        _holdout.capture_geometry(self, raw_data, {'test': test_split})
         _, test_bar_data = _process_bars(self, test_split, round_params)
 
         return test_bar_data
@@ -1002,6 +1006,7 @@ class MLManifest(Manifest):
 
         return self._prepare_data_with_fitted(raw_data, round_params, {})
 
+    @_holdout.preparation
     def _prepare_data_with_fitted(
         self, raw_data: pl.DataFrame, round_params: dict[str, object],
         fitted_params: Mapping[str, object],
@@ -1066,6 +1071,8 @@ class MLManifest(Manifest):
 
             if is_train and outcome_target:
                 raw_features = data.drop([name for name in (self.target_column, _SOURCE_ROW) if name is not None and name in data.columns])
+            if is_train:
+                _holdout.capture_schema(self, data, 'input')
             data, all_fitted_params = _apply_scaler(self, data, round_params, all_fitted_params, is_train)
 
             if n_cco_feature_rows > 0:
@@ -1107,6 +1114,7 @@ class MLManifest(Manifest):
 
         if self.split_walk_forward is not None:
             _validate_fold_splits(split_data, require_validation=_requires_fold_validation(self, round_params))
+        _holdout.capture_schema(self, split_data[0], 'model')
         data_dict = _finalize_to_data_dict(self, split_data, all_datetimes, all_fitted_params, round_params, price_data_for_backtest)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
@@ -1198,14 +1206,9 @@ class MLManifest(Manifest):
         indicator_lookback = _count_leading_nulls(data)
 
         all_fitted_params = dict(fitted_params)
-        data, _ = _apply_scaler(self, data, round_params, all_fitted_params, is_training=False)
-        data = data.fill_nan(None)
-
-        data = _apply_sensor_pca(self, data, round_params, all_fitted_params)
-
-        if decisions is not None:
-            data = data.join(decisions, on='datetime', how='left', maintain_order='left')
-        return data, indicator_lookback
+        from limen.experiment._manifest_preparation import finish_sensor_input
+        return finish_sensor_input(self, data, indicator_lookback, round_params, all_fitted_params,
+                                   decisions, scale=_apply_scaler, compress=_apply_sensor_pca)
 
 
 @dataclass
@@ -1234,6 +1237,7 @@ class RuleBasedManifest(Manifest):
         return self
 
     @override
+    @_holdout.preparation
     def prepare_data(
         self,
         raw_data: pl.DataFrame,
@@ -1887,30 +1891,20 @@ def _run_prepare_setup(
         round_params: dict[str, Any],
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
+    raw_data = _holdout.admit(manifest, raw_data)
+    resolved = None
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
         resolved = _resolve_params(base_params, round_params)
-        raw_data = func(raw_data, **resolved)
+        raw_data = _holdout.selected_input(manifest, func(raw_data, **resolved))
 
     raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
-    split_data = raw_splits
+    _holdout.selected(manifest, raw_data, raw_splits, round_params, resolved)
 
-    datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in split_data]
-    all_datetimes = cast(list[datetime] | list[int], [dt for datetimes, _ in datetime_bar_pairs for dt in datetimes])
-    split_data = [bar_data for _, bar_data in datetime_bar_pairs]
+    datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in raw_splits]
 
-    policy = manifest.resolve_trade_policy(round_params)
-    frozen_sources = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
-    if callable(frozen_sources):
-        frozen_sources = frozen_sources(manifest.backtest_config, round_params)
-    trade = None
-    if policy is not None and manifest.backtest_config is not None:
-        interval = _source_interval(manifest.data_source_config)
-        trade = _prepare_trade_context(manifest.backtest_config, policy, raw_splits, split_data, round_params, interval_seconds=interval,
-                                       frozen_sources=frozen_sources)
-        split_data = [split.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in split.columns]) for split in split_data]
-    prepared = _prepare_backtest_data(split_data, all_datetimes, configured=policy is None and _configured_barriers(manifest.backtest_config))
-    return (*prepared, trade)
+    from limen.experiment._manifest_preparation import finish_prepare_setup
+    return finish_prepare_setup(manifest, raw_splits, datetime_bar_pairs, round_params)
 
 
 def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:

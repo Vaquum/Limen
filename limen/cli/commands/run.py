@@ -37,7 +37,7 @@ def run_experiment(yaml_path: Path,
 
     if dry_run:
         try:
-            _ = CompiledSFD(yaml_dict).manifest()
+            _ = CompiledSFD(yaml_dict, project_root=yaml_path.parent).manifest()
         except Exception as exc:  # noqa: BLE001
             click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
             return False
@@ -58,7 +58,7 @@ def run_experiment(yaml_path: Path,
     try:
         search_strategy = build_search_strategy(yaml_dict)
         pruning_strategies = build_pruning_strategies(yaml_dict)
-        compiled = CompiledSFD(yaml_dict)
+        compiled = CompiledSFD(yaml_dict, project_root=yaml_path.parent)
         uel = UniversalExperimentLoop(
             sfd=compiled,
             search_strategy=search_strategy,
@@ -69,6 +69,8 @@ def run_experiment(yaml_path: Path,
             checkpoint_interval=checkpoint_interval,
             yaml_reference=dict(yaml_dict),
         )
+        from limen.experiment._holdout_research import reject_modes
+        reject_modes(uel.manifest, workers=effective_workers, factorize=uel_cfg.get('factorize', False))
         uel.check_parallel_admission(effective_workers, prep_each_round,
                                      factorize=uel_cfg.get('factorize', False))
     except Exception as exc:  # noqa: BLE001

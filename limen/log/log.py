@@ -1,3 +1,4 @@
+import limen.experiment._holdout_research as _holdout
 import pandas as pd
 import polars as pl
 from typing import Any
@@ -68,6 +69,7 @@ class Log:
             self.inverse_scaler = None
 
 
+    @_holdout.replay_guard
     def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
         if not self.fold_results.is_empty():
             raise ValueError('Walk-forward prediction replay requires a fold-specific test set')
@@ -80,6 +82,7 @@ class Log:
         return self._permutation_prediction_performance(round_id)
 
 
+    @_holdout.replay_guard
     def _get_test_data_with_all_cols(self, round_id: int) -> pl.DataFrame:
 
         '''Reconstruct a retained round's test-window columns.'''
