@@ -42,6 +42,40 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
     return found
 
 
+def output_bindings(root: Path, document: Path) -> list[dict[str, str]]:
+    text = document.read_text()
+    pattern = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
+    found = []
+    for match in re.finditer(pattern, text, re.S):
+        identity, source, scenario, interface, excerpt = match.groups()
+        path = (root / source).resolve()
+        if not path.is_relative_to(root.resolve()) or path.read_text() != excerpt + '\n':
+            raise ValueError('Observed output differs from its retained artifact')
+        found.append({'id': identity, 'path': source, 'scenario': scenario, 'interface': interface, 'sha256': digest(path.read_bytes())})
+    if len(found) != text.count('role=observed') or len({item['id'] for item in found}) != len(found):
+        raise ValueError('Missing or duplicate observed output bindings')
+    return found
+
+
+def compare_output(current, retained, tolerances, at='') -> None:
+    if at in tolerances:
+        limits = tolerances[at]
+        if type(current) not in (int, float) or type(retained) not in (int, float) or not math.isfinite(current) or not math.isfinite(retained) or not math.isclose(current, retained, abs_tol=limits['absolute_tolerance'], rel_tol=limits['relative_tolerance']):
+            raise ValueError('Observed metric exceeds its declared tolerance: ' + at)
+    elif isinstance(retained, dict):
+        if not isinstance(current, dict) or set(current) != set(retained):
+            raise ValueError('Observed output fields differ')
+        for key, value in retained.items():
+            compare_output(current[key], value, tolerances, key if not at else at + '.' + key)
+    elif isinstance(retained, list):
+        if not isinstance(current, list) or len(current) != len(retained):
+            raise ValueError('Observed output population differs')
+        for index, value in enumerate(retained):
+            compare_output(current[index], value, tolerances, at + '.' + str(index))
+    elif type(current) is not type(retained) or current != retained:
+        raise ValueError('Observed exact value differs: ' + at)
+
+
 def validate_shape(value, schema, at='$') -> None:
     if 'oneOf' in schema:
         successes = 0
@@ -107,6 +141,16 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     if record['validation']['catalogue_sha256'] != digest(catalogue.read_bytes()):
         raise ValueError('Wrong research catalogue identity')
     validate_scenarios(record['validation']['scenarios'], json.loads(catalogue.read_text()))
+    retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
+    displays = {item['id']: item for item in record['displays']}
+    if displays != {item['id']: item for item in retained['displays']}:
+        raise ValueError('Retained display identity was replaced by a current run')
+    for binding in output_bindings(root, root / 'docs/Research-Book.md'):
+        display = displays[binding['id']]
+        if (display['path'], display['sha256']) != (binding['path'], binding['sha256']) or display['environment_sha256'] != digest(json.dumps(retained['environment'], sort_keys=True).encode()):
+            raise ValueError('Observed output identity differs')
+        current = next(item for item in record['validation']['scenarios'] if item['interface'] == binding['interface'] and item['id'] == binding['scenario'])
+        compare_output(json.loads((root / current['output_path']).read_text()), json.loads((root / display['path']).read_text()), display['metrics'])
     if record['revision']['head'] != head or record['revision']['tree'] != tree:
         raise ValueError('Wrong execution revision')
     if record['revision']['dirty'] or record['package']['version'] != version:

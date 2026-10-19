@@ -52,3 +52,22 @@ def test_missing_catalogue_scenario_fails():
     records[0]['status'] = 'skipped'
     with pytest.raises(ValueError, match='successful semantic proof'):
         validate_scenarios(records, catalogue)
+
+
+def test_observed_outputs_and_tolerances_are_explicit(tmp_path):
+    from check_evidence import compare_output, output_bindings
+    assert {item['interface'] for item in output_bindings(ROOT, ROOT / 'docs/Research-Book.md')} == {'python', 'compiled'}
+    document = (ROOT / 'docs/Research-Book.md').read_text().replace('"retained_models": 4', '"retained_models": 40')
+    changed = tmp_path / 'changed.md';changed.write_text(document)
+    with pytest.raises(ValueError, match='differs from its retained'):
+        output_bindings(ROOT, changed)
+    retained = json.loads((ROOT / 'docs/examples/retained/python-selection.json').read_text())
+    limits = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())['displays'][0]['metrics']
+    current = copy.deepcopy(retained);current['last_prediction'] += 1e-12
+    compare_output(current, retained, limits)
+    current['last_prediction'] += .01
+    with pytest.raises(ValueError, match='declared tolerance'):
+        compare_output(current, retained, limits)
+    current = copy.deepcopy(retained);current['retained_models'] += 1
+    with pytest.raises(ValueError, match='exact value'):
+        compare_output(current, retained, limits)

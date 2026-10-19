@@ -4,6 +4,10 @@ A model can fit the past and still fail as a trading signal. The research questi
 
 These projects use recorded Bitcoin observations. Their results describe those observations and decisions; they do not establish future returns. The same research question does not require identical models or make unlike evaluation populations comparable.
 
+## Prerequisites
+
+Use the recorded input bundle and its matching Limen wheel. The project pages state the working directory and optional dependencies. This chapter uses the selection scenario; search, recovery and assessment are separate decisions.
+
 ## Choose who owns the experiment
 
 Python Research keeps data, preparation, fitting, backtesting and selection in your functions. Compiled Research records the Manifest definition and applies its configured checks. Invoking that Manifest from Python remains Compiled Research.
@@ -92,7 +96,48 @@ Reconstruction validates the replayed numeric metrics against the recorded round
 
 The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) give the entry-point commands and required inputs. Their source is the source executed by documentation tests. A partial chapter excerpt does not replace the complete project or its preparation functions.
 
-The reader and proof system are being implemented in the current slice. Until the current-wheel, binding and browser checks pass, this chapter makes no claim that the comprehensive projects or production publication are complete. Observed outputs will be added only from identified successful execution.
+## Observe the retained run
+
+These are retained outputs of the identified successful run. Their counts and selected parameters are exact. The Python forecast permits only the numerical tolerance stated in its evidence record. The current validation is shown separately; it does not change when these observations were made.
+
+### Python selection result
+
+<!-- example-output: python-selection source=docs/examples/retained/python-selection.json scenario=selection interface=python role=observed -->
+```json
+{
+  "interface": "python",
+  "scenario": "selection",
+  "rounds": 4,
+  "selected": [
+    {
+      "window": 4,
+      "alpha": 0.1
+    },
+    {
+      "window": 12,
+      "alpha": 0.1
+    }
+  ],
+  "retained_models": 4,
+  "inference_rows": 480,
+  "last_prediction": 0.0003680179954790141,
+  "fitting_cutoff": "2025-01-11T00:00:00+00:00",
+  "selection_cutoff": "2025-01-16T00:00:00+00:00"
+}
+```
+
+### Compiled selection result
+
+<!-- example-output: compiled-selection source=docs/examples/retained/compiled-selection.json scenario=selection interface=compiled role=observed -->
+```json
+{
+  "interface": "compiled",
+  "scenario": "selection",
+  "rounds": 2,
+  "selected_rounds": 1,
+  "reconstructed_sensors": 1
+}
+```
 
 ## Inspect the result before continuing
 

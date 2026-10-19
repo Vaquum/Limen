@@ -111,10 +111,7 @@ def pytest_sessionfinish(session, exitstatus):
             {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [name for name, _ in REPORTS], 'assertions': ['independent selection/cost/clock and fitted-state oracles', 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
         'publication': None,
     }
-    # Display records are retained separately; before capture, the actual output
-    # is still reachable as current evidence, without a fabricated historical run.
-    env_sha = digest(json.dumps(record['environment'], sort_keys=True).encode())
-    record['displays'] = [{'id': interface + '-selection', 'scenario': 'selection', 'path': wheel['summaries'][interface]['output_path'], 'sha256': wheel['summaries'][interface]['output_sha256'], 'source_sha256': next(item['sha256'] for item in sources if f'/{interface}-research/' in item['path']), 'environment_sha256': env_sha, 'retained_commit': tested, 'metrics': {}} for interface in ('python', 'compiled')]
+    record['displays'] = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())['displays']
     version = (ROOT / 'pyproject.toml').read_text().split('version = "', 1)[1].split('"', 1)[0]
     validate_evidence(record, ROOT, head=head, tree=tree, version=version)
     target = Path(session.config.getoption('--docs-evidence'))

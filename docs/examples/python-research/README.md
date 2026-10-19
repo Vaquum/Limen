@@ -4,6 +4,10 @@ Your functions own preparation, fitting, backtesting and selection. The selected
 
 The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the proof required before this candidate is published as the complete book.
 
+## Prerequisites
+
+Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats]`; Sobol uses statistics.
+
 ## Run the selection scenario
 
 Install the matching `vaquum-limen[data]` distribution. From the example bundle root, supply the directory containing the recorded input files:
@@ -14,6 +18,22 @@ python python-research/research.py --scenario selection --data-dir inputs --outp
 
 From a repository checkout, work in `docs/examples/`, use `--data-dir ../../tests/fixtures` and put generated output under `../../.docs-evidence/`. The command checks the recorded file digest before research. It writes `research.csv` and `summary.json`. The evaluated models and Sensors remain in caller-owned memory during the run; those two files do not restore fitted state. Import `run_research` to continue using the returned Cohort and retained models in the same Python process.
 
-## Scope
+## Continue through the research decisions
 
-The first scenario establishes selection and inference handoff. The reader slice is still in development: its required catalogue, remaining scenarios, fresh-wheel reproduction and browser acceptance must pass before this project is described as comprehensive. Real TabPFN validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
+`--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.
+
+| Scenario | Decision and output |
+|---|---|
+| `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |
+| `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
+| `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
+| `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |
+| `calibration` | Compare all four calibration/threshold modes and disclose validation reuse. |
+| `execution` | Execute recorded observations under explicit costs, product rules and causal clocks. |
+| `bars` | Form volume, trade and liquidity bars; omit an incomplete final bar. |
+
+Python recovery restores search/results, not arbitrary model weights. Continue inference with the evaluated objects returned in memory, or own the persistence and identity contract yourself.
+
+Walk-forward selection and final assessment remain caller-owned. They do not create guarded project reservations, compiled fold identities or an exposure-history guarantee. Calibration shows an arbitrary fitted classifier through `Sensor.from_python`; its output mapping owns the meaning of the binary decision.
+
+Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
