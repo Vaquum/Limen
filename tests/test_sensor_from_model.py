@@ -92,6 +92,7 @@ def test_from_model_custom_hooks_and_unavailability(recorded_model):
         pl.Series('reason', [None, None, None, None, 'warm-up', None]),
     )
     calls = []
+    mapped_calls = []
 
     def prepare(supplied, params):
         assert params == {'scale': 10000}
@@ -106,6 +107,7 @@ def test_from_model_custom_hooks_and_unavailability(recorded_model):
         return frame['momentum']
 
     def map_output(output):
+        mapped_calls.append(output)
         return [(value * 10000, 0.6) for value in output]
 
     sensor = Sensor.from_model(
@@ -122,7 +124,7 @@ def test_from_model_custom_hooks_and_unavailability(recorded_model):
     assert results[1].probability == 0.6
     blocked = unavailable.with_columns(pl.lit('warm-up').alias('reason'))
     assert all(row.reason is not None for row in sensor({'bars': blocked}))
-    assert len(calls) == 1
+    assert len(calls) == len(mapped_calls) == 1
     first_cutoff = history['datetime'][0]
     missing = history.with_columns(
         pl.when(pl.int_range(pl.len()) == 0).then(None).otherwise(pl.col('momentum')).alias('momentum'),
@@ -198,7 +200,10 @@ def test_from_model_boolean_containers_and_invalid_aligned_scalars(recorded_mode
     named, _unnamed, _imputer, history = recorded_model
     cutoff = history['datetime'][0]
     labels = (history['momentum'] > 0).to_list()
-    for output in (labels, tuple(labels), np.asarray(labels), np.asarray(labels, dtype=object), pl.Series(labels)):
+    for output in (
+        labels, tuple(labels), np.asarray(labels), pl.Series(labels),
+        np.asarray([np.bool_(value) for value in labels], dtype=object),
+    ):
         sensor = Sensor.from_model(named, predict=lambda m, f, p, output=output: output, selection_cutoff=cutoff)
         results = sensor(history)
         assert [row.prediction for row in results] == [int(value) for value in labels]
@@ -241,3 +246,12 @@ def test_from_model_explicit_model_input_and_custom_prediction(recorded_model):
         predict=lambda m, f, p: f['momentum'], selection_cutoff=cutoff,
     )
     assert [row.prediction for row in sensor(history)] == history['momentum'].to_list()
+    categorical = history.with_columns(
+        pl.when(pl.int_range(pl.len()) == 2).then(None)
+        .otherwise(pl.col('datetime').dt.strftime('%A')).alias('weekday'),
+    )
+    sensor = Sensor.from_model(
+        object(), feature_columns=['weekday', 'momentum'],
+        predict=lambda m, f, p: f['momentum'], selection_cutoff=cutoff,
+    )
+    assert [row.reason for row in sensor(categorical)] == [None, None, 'null-features', None, None, None]
