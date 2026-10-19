@@ -91,6 +91,24 @@ def test_public_cli_catalogue_requires_every_command():
         validate_cli_catalogue(ROOT, catalogue)
 
 
+def test_public_surface_catalogue_matches_current_source():
+    from catalogue_surfaces import validate_surface_catalogue
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    validate_surface_catalogue(ROOT, catalogue)
+    for kind in ('export', 'registry', 'manifest', 'execution'):
+        changed = copy.deepcopy(catalogue)
+        if kind == 'export':
+            changed['surfaces']['public_exports']['limen.scalers']['names'].pop()
+        elif kind == 'registry':
+            changed['surfaces']['registries']['reducers']['names'].pop()
+        elif kind == 'manifest':
+            changed['surfaces']['manifest_fields']['field_groups']['ML_MANIFEST_OPTIONAL'].pop()
+        else:
+            changed['scenario_details']['python/selection']['role'] = 'signature/reference'
+        with pytest.raises(ValueError, match='surface catalogue differs|execution obligation'):
+            validate_surface_catalogue(ROOT, changed)
+
+
 def test_observed_outputs_and_tolerances_are_explicit(tmp_path):
     from check_evidence import compare_output, output_bindings
     assert {item['interface'] for item in output_bindings(ROOT, ROOT / 'docs/Research-Book.md')} == {'python', 'compiled'}

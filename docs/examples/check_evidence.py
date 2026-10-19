@@ -8,6 +8,8 @@ import re
 import subprocess
 from pathlib import Path
 
+from catalogue_surfaces import validate_surface_catalogue
+
 
 def digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
@@ -192,6 +194,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_scenarios(record['validation']['scenarios'], catalogue_data)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
+    validate_surface_catalogue(root, catalogue_data)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:

@@ -216,9 +216,11 @@ def allocation(data_dir, output):
 # endregion allocation
 
 
+# region command_line
 def command_line(data_dir, output):
     from command_line import run as run_commands
     return run_commands(configuration('recovery', data_dir), output)
+# endregion command_line
 
 
 SCENARIOS = {'search': search, 'recovery': recovery, 'walk_forward': walk_forward, 'holdout': holdout, 'calibration': calibration, 'execution': execution, 'bars': bars, 'allocation': allocation, 'command_line': command_line}
