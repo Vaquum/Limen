@@ -6,6 +6,8 @@ import polars as pl
 from limen.backtest.trade_contract import TradeInputs, TradeLedger, export_trade_contract
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.sfd.reference_architecture.meta_allocation import MetaAllocationModel
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+from limen.experiment import RuleBasedManifest
 from limen.yaml import CompiledSFD
 
 
@@ -28,8 +30,10 @@ def allocation_case(config, output):
     del primary_declaration['allocation'], primary_declaration['backtest']
     plain = CompiledSFD(plain_config).manifest()
     plain_data = plain.prepare_data(raw, params)
-    plain_result = plain.run_model(plain_data, params)
-    primary = plain_result['_model']
+    if isinstance(plain, RuleBasedManifest):
+        primary = RuleBasedStrategy(**plain.resolve_model_kwargs(params)).train(plain_data)
+    else:
+        primary = plain.run_model(plain_data, params)['_model']
     if not isinstance(primary, ReferenceModel):
         raise TypeError('The original primary must retain its fitted model')
     original = primary.predict(dict(batch.primary_inputs))
