@@ -47,4 +47,4 @@ def atr(
         atr_from_true_range_expr(ATR_TR_COL, period).alias(out_col)
     ).drop(ATR_TR_COL)
 
-_parallel(atr)
+_parallel(atr, backend_imports=('limen.indicators._atr',))

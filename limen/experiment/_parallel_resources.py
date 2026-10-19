@@ -64,6 +64,8 @@ def unfrozen_stage(_params: Mapping[str, object]) -> None:
 def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -> None:
     configs = configurations(plan.manifest, params)
     for stage in plan.stages:
+        if stage.path not in configs:
+            continue  # The native Manifest skips this conditional stage for this candidate.
         if stage.path.startswith('architecture.') and configs['architecture'].get(stage.path.split('.', 1)[1]) is not stage.component:
             raise ValueError(f'Parallel stage {stage.path}: frozen independence contract differs')
         config = configs[stage.path]

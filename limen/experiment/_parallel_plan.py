@@ -66,7 +66,10 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
             'source_digest': source_digest(frames), 'parameter_encoding': 1}
 
 
-def _normalize(value: object) -> object:
+def _normalize(value: object, active: frozenset[int] = frozenset()) -> object:
+    if id(value) in active:
+        raise ValueError('Parallel encoding rejects cycles')
+    active |= {id(value)}
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -75,14 +78,14 @@ def _normalize(value: object) -> object:
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
     if isinstance(value, dict):
-        return {key: _normalize(item) for key, item in cast(dict[str, object], value).items()}
+        return {key: _normalize(item, active) for key, item in cast(dict[str, object], value).items()}
     if isinstance(value, (list, tuple)):
-        items = [_normalize(item) for item in cast(list[object] | tuple[object, ...], value)]
+        items = [_normalize(item, active) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
     if is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
         for field in fields(value):
-            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name)))
+            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active))
         return clone
     return copy.deepcopy(value)
 
@@ -150,24 +153,40 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
             raise ValueError(f'Parallel stage {stage.path}: invalid prediction-kind declaration')
     # Force transport validation even when a stage validator consumes no parameters.
     _ = encode(frozen)
-    imports = sorted({name for stage in stages for name in stage.contract.backend_imports})
-    resources = (stages, [module_identity(name) for name in imports],
-                 module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})
-    return FrozenManifestPlan(frozen, stages, digest(frozen), digest(resources))
+    pipeline, resources = plan_digests(frozen, stages)
+    return FrozenManifestPlan(frozen, stages, pipeline, resources)
 
 
-def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1) -> dict[str, object]:
+def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[str, str]:
+    imports = [module_identity(name) for name in sorted({name for stage in stages for name in stage.contract.backend_imports})]
+    return (digest((manifest, stages, imports)),
+            digest((stages, imports, module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})))
+
+
+def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture') -> dict[str, object]:
     signature = inspect.signature(cast(Callable[..., object], component))
-    result = dict(params)
+    owner = component.__self__ if inspect.ismethod(component) else component
+    state = vars(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) and hasattr(owner, '__dict__') else {}
+    result = cast(dict[str, object], dict(state)) | dict(params)
     for i, (key, value) in enumerate(signature.parameters.items()):
         if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
             continue
-        if key not in result and value.default is not inspect.Parameter.empty:
+        if key not in result:
+            if value.default is inspect.Parameter.empty:
+                raise ValueError(f'Parallel stage {path}: unresolved parameter {key}')
             result[key] = value.default
     return result
 
 
+def _configured(path: str, component: object, arguments: Mapping[str, object], params: Mapping[str, object], *, skip: int = 1) -> dict[str, object]:
+    try:
+        return _defaults(component, _resolve_params(arguments, params), skip=skip, path=path)
+    except KeyError as exc:
+        raise ValueError(f'Parallel stage {path}: unresolved parameter {exc.args[0]}') from exc
+
+
 def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str, dict[str, object]]:
+    _ = _defaults(manifest.architecture_function, params)
     resolved = cast(dict[str, object], manifest.resolve_model_kwargs(dict(params)))
     from limen.experiment._prepare_trade_context import resolve_component_kwargs
     resolve_component_kwargs(manifest.architecture_function, {}, resolved, params)
@@ -178,14 +197,15 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
             result[f'architecture.{key}'] = _defaults(resolved[key], dict(cast(Mapping[str, object], resolved.get(f'{role}_params') or {})) | {'seed': resolved.get('seed')}, skip=0)
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
-        if step is not None:
-            result[path] = _defaults(step[0], _resolve_params(step[1], dict(params)))
-    result.update({f'feature_transforms.{i}': _defaults(entry.func, _resolve_params(entry.params, dict(params)))
-                   for i, entry in enumerate(manifest.feature_transforms)})
+        if step is not None and (path != 'bar_formation' or params.get('bar_type', 'base') != 'base'):
+            result[path] = _configured(path, step[0], step[1], params)
+    included = cast(Callable[[object, Mapping[str, object]], bool], vars(_manifest)['_should_include_transform'])
+    result.update({f'feature_transforms.{i}': _configured(f'feature_transforms.{i}', entry.func, entry.params, params)
+                   for i, entry in enumerate(manifest.feature_transforms) if included(entry, params)})
     target = manifest.target_class_config
     if target is not None:
-        result['target'] = _defaults(target.target_class, _resolve_params(target.fit_params, dict(params)), skip=2)
-        result['target']['transform_params'] = _resolve_params(target.transform_params, dict(params))
+        result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2)
+        result['target']['transform_params'] = _configured('target.transform', target.target_class.transform, target.transform_params, params, skip=2)
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, _, arguments = manifest.scaler
@@ -201,14 +221,15 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if manifest.data_dict_extension is not None:
             result['data_dict_extension'] = dict(params)
         if manifest.ablation_config is not None:
-            result['ablation'] = {'random_state': params.get(manifest.ablation_config.seed_key, 0)}
+            seed = params.get(manifest.ablation_config.seed_key)
+            result['ablation'] = {'random_state': 0 if seed is None else seed}
         result.update(pca={'svd_solver': 'full'}, feature_shims=dict(params))
         calibration = manifest.prediction_calibration_config
-        if calibration is not None:
+        if calibration is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
             config = calibration.resolve(dict(params))
             for name in ('calibration', 'threshold'):
                 function = getattr(config, f'{name}_func')
-                if function is not None:
+                if function is not None and params.get(f'use_{name}', True):
                     result[name] = _defaults(function, getattr(config, f'{name}_params'), skip=2)
     return result
 

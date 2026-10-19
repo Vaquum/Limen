@@ -9,12 +9,14 @@ import gzip
 import shutil
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
+from dataclasses import dataclass, fields, is_dataclass
+from functools import partial
 
 import pytest
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, declare_parallel
-from limen.experiment._parallel_encoding import decode, digest, encode
+from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, source_digest
 from limen.experiment._parallel_plan import ScalerFactory, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
@@ -48,6 +50,22 @@ def _caller_validator(params):
         raise ValueError('positive integer window required')
 
 
+@dataclass
+class CallerRolling:
+    window: int
+
+    def transform(self, data):
+        return _caller_feature(data, self.window)
+
+
+def _carried_probe(plan, params):
+    validate_resources(plan, params)
+    from tests.test_parallel_rounds import recorded_source
+    data = recorded_source().head(24).select('close')
+    component = plan.manifest.feature_transforms[-1].func
+    return component(data)['caller_mean'].to_list(), os.getpid()
+
+
 def _frozen_probe(plan, params):
     validate_resources(plan, params)
     from tests.test_parallel_rounds import recorded_source
@@ -77,7 +95,9 @@ def test_frozen_manifest_round_plan() -> None:
         cases = [(native, _parameters()), (native, _parameters() | {'scaler_type': 'rank_gauss'})]
         fixed = copy.deepcopy(native).set_scaler(RobustScaler, extra_params={'quantile_range': (0.1, 0.9)})
         dynamic = copy.deepcopy(native).set_scaler_from_params(extra_params={'quantile_range': '{range}'})
-        cases += [(fixed, _parameters()), (dynamic, _parameters())]
+        renamed = copy.deepcopy(native).set_scaler_from_params(param_name='scale_choice')
+        cases += [(fixed, _parameters()), (dynamic, _parameters()),
+                  (renamed, {key: value for key, value in _parameters().items() if key != 'scaler_type'} | {'scale_choice': 'robust'})]
         for manifest, params in cases:
             frozen = freeze_manifest(manifest, None)
             actual = pool.submit(_frozen_probe, frozen, params).result(timeout=30)
@@ -85,6 +105,13 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform):
+            declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
+            carried = copy.deepcopy(plan.manifest).add_feature(component)
+            frozen = freeze_manifest(carried, None)
+            actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
+            expected, _ = _carried_probe(frozen, _parameters())
+            assert actual == expected and pid != os.getpid()
     original.split_config = (2, 1, 1)
     assert plan.manifest.split_config != original.split_config
     with pytest.raises(ValueError, match='unchanged compiled YAML'):
@@ -93,14 +120,67 @@ def test_frozen_manifest_round_plan() -> None:
     assert decode(json.loads(json.dumps(encode(values)))) == values
     assert digest(values['tuple']) != digest(values['list'])
     assert digest(values) == digest(dict(reversed(list(values.items()))))
+    _assert_plan_identity(plan)
+
+
+def _assert_plan_identity(plan):
+    from tests.test_parallel_rounds import recorded_source
+    import limen.experiment._parallel_encoding as codec
+    import limen.experiment._parallel_plan as plans
+    def check(value):
+        assert not isinstance(value, (pl.DataFrame, pl.LazyFrame)) and not hasattr(value, 'read')
+        if is_dataclass(value) and not isinstance(value, type):
+            for field in fields(value):
+                check(getattr(value, field.name))
+        elif isinstance(value, dict):
+            for item in value.values():
+                check(item)
+        elif isinstance(value, (tuple, list)):
+            for item in value:
+                check(item)
+        assert not any(name.endswith('_') and not name.startswith('_') for name in vars(value)) if hasattr(value, '__dict__') else True
+    check(plan)
+    source = recorded_source()
+    expected = source_digest((source, None, None))
+    assert source_digest((pl.concat([source.head(10), source.slice(10)], rechunk=False), None, None)) == expected
+    for changed in (source.reverse(), source.slice(1), source.select(reversed(source.columns))):
+        assert source_digest((changed, None, None)) != expected
+    original = codec.module_identity
+    for module, changes in (('limen.scalers.robust_scaler', True), ('limen.indicators._atr', True), ('limen.indicators.obv', False)):
+        def identity(name):
+            result = original(name)
+            return [result[0], 'changed-source', result[2]] if name == module else result
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(codec, 'module_identity', identity)
+            patch.setattr(plans, 'module_identity', identity)
+            altered = freeze_manifest(build_manifest(_configuration()), _configuration())
+            assert (altered.pipeline_digest != plan.pipeline_digest) is changes
+            assert (altered.resource_digest != plan.resource_digest) is changes
+    cyclic = copy.deepcopy(plan.manifest)
+    cyclic.params = {}  # Deliberately undeclared state is rejected rather than transported.
+    with pytest.raises(ValueError, match='undeclared runtime state'):
+        freeze_manifest(cyclic, None)
 
 
 def test_effective_resources_and_output_evidence(tmp_path) -> None:
+    declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
     config = _configuration()
     plan = freeze_manifest(build_manifest(config), config)
     params = _parameters()
     validate_resources(plan, params)
     validate_domain(plan, {key: [value] for key, value in params.items()}, None)
+    class_weights = {0: 1, 1: 2}
+    assert decode(encode(class_weights)) == class_weights
+    validate_resources(plan, params | {'class_weight': class_weights})
+    assert parameter_matches('(1, 2)', [1, 2], legacy=True)
+    assert not parameter_matches('(1, 2)', [1, 2])
+    ablation = copy.deepcopy(plan.manifest).set_feature_ablation()
+    validate_resources(freeze_manifest(ablation, None), params | {'feature_drop_seed': None})
+    disabled = copy.deepcopy(plan.manifest).add_feature(_caller_feature, include_if='optional', window='{unused_window}')
+    without_calibration = {key: value for key, value in params.items() if not key.startswith(('cal_', 'threshold_'))}
+    validate_resources(freeze_manifest(disabled, None), without_calibration | {'use_calibration': False, 'use_threshold': False})
+    with pytest.raises(ValueError, match='feature_transforms.*unresolved parameter unused_window'):
+        validate_resources(freeze_manifest(disabled, None), params | {'optional': True})
     for jobs in (None, True, 0, -1, 2):
         with pytest.raises(ValueError, match='effective n_jobs=1'):
             validate_resources(plan, params | {'n_jobs': jobs})
@@ -134,6 +214,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     configuration = parallel_config()
     configuration['uel']['n_permutations'] = 2
     configuration['sfd']['params']['tuple_tag'] = [(1, 2), (3, 4)]
+    configuration['sfd']['params']['class_weight'] = [class_weights]
     configuration['uel'].pop('pruning_strategies')
     directory = tmp_path / 'recorded'
     loop = run_loop(configuration, directory, workers=2)
@@ -200,8 +281,9 @@ def _assert_native_output_forms():
     exposure.set_backtest_config(prediction_mode='target_exposure', product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), max_holding_seconds=7200)
     cases = [(continuous, {'alpha': 0.1, 'solver': 'svd'}, 'continuous'),
              (rule, {key: values[0] for key, values in rule_config['sfd']['params'].items()}, 'binary'),
-             (exposure, {'seed': 42, 'folds': 3, 'min_train_samples': 20}, 'target_exposure')]
+             (exposure, {'seed': 42, 'folds': 3, 'min_train_samples': 20, 'sizing_params': {'solver': 'svd'}}, 'target_exposure')]
     for manifest, params, kind in cases:
+        assert digest(decode(encode(manifest))) == digest(manifest)
         plan = freeze_manifest(manifest, None)
         validate_resources(plan, params)
         vars(manifest)['_parallel_evidence'] = True

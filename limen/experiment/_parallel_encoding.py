@@ -79,9 +79,10 @@ def _encode_composite(value: object, active: frozenset[int]) -> list[object]:
     active |= {id(value)}
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
-        if any(not isinstance(key, str) for key in mapping):
-            raise ValueError('Parallel mappings require string keys')
-        return ['map', [[key, encode(mapping[key], active)] for key in sorted(cast(Mapping[str, object], mapping))]]
+        if all(isinstance(key, str) for key in mapping):
+            return ['map', [[key, encode(mapping[key], active)] for key in sorted(cast(Mapping[str, object], mapping))]]
+        pairs = [[encode(key, active), encode(item, active)] for key, item in mapping.items()]
+        return ['keyed_map', sorted(pairs, key=lambda pair: json.dumps(pair[0], separators=(',', ':'))) ]
     if isinstance(value, (list, tuple)):
         return ['tuple' if isinstance(value, tuple) else 'list',
                 [encode(item, active) for item in cast(list[object] | tuple[object, ...], value)]]
@@ -118,7 +119,7 @@ def _import(node: object) -> object:
 
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
-          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'import': 2, 'partial': 4,
+          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'import': 2, 'partial': 4,
           'method': 3, 'dataclass': 3, 'instance': 3}
 
 
@@ -151,6 +152,8 @@ def _decode_composite(parts: list[object]) -> object:
         return tuple(items) if tag == 'tuple' else items
     if tag == 'map' and isinstance(value, list):
         return {cast(str, pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
+    if tag == 'keyed_map' and isinstance(value, list):
+        return {decode(pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
     if tag == 'partial':
@@ -164,7 +167,13 @@ def _decode_composite(parts: list[object]) -> object:
 def _decode_instance(parts: list[object]) -> object:
     tag, value, state = parts
     if tag == 'dataclass':
-        return cast(type, _import(value))(**{cast(str, key): decode(item) for key, item in cast(list[list[object]], state)})
+        cls = cast(type, _import(value))
+        params = {cast(str, key): decode(item) for key, item in cast(list[list[object]], state)}
+        instance = cls(**{field.name: params[field.name] for field in fields(cls) if field.init})
+        for field in fields(cls):
+            if not field.init:
+                object.__setattr__(instance, field.name, params[field.name])
+        return instance
     if tag == 'instance':
         instance = cast(object, object.__new__(cast(type, _import(value))))
         vars(instance).update(cast(dict[str, object], decode(state)))
@@ -207,12 +216,12 @@ def source_digest(frames: tuple[pl.DataFrame | None, ...]) -> str:
             identity.append((role, None))
         else:
             stream = BytesIO()
-            frame.write_ipc(stream, compression='uncompressed')
+            frame.rechunk().write_ipc(stream, compression='uncompressed')
             identity.append((role, pl.__version__, list(zip(frame.columns, map(str, frame.dtypes), strict=True)), hashlib.sha256(stream.getvalue()).hexdigest()))
     return digest(identity)
 
 
-def parameter_matches(cell: str | None, value: object) -> bool:
+def parameter_matches(cell: str | None, value: object, *, legacy: bool = False) -> bool:
     if cell is None or value is None:
         return cell == ''
     if type(value) is bool:
@@ -223,7 +232,8 @@ def parameter_matches(cell: str | None, value: object) -> bool:
         if type(value) is float:
             return float(cell) == value
         if isinstance(value, (list, tuple, dict)):
-            return encode(literal_eval(cell)) == encode(cast(object, value))
+            parsed = literal_eval(cell)
+            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(cast(object, value))
     except (ValueError, SyntaxError, InvalidOperation) as exc:
         raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
     return cell == str(value)

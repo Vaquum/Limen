@@ -14,7 +14,7 @@ from limen.experiment._objective_run import finalize_objective_result, run_objec
 from limen.experiment._parallel_commit import context_parameter_keys, failed_parameters
 from limen.experiment._parallel_evidence import mapping as _mapping, values as _values, validate_evidence as _evidence
 from limen.experiment._parallel_evidence import record_context, validate_record, wire_record
-from limen.experiment._parallel_encoding import parameter_matches as _parameter_matches
+from limen.experiment._parallel_encoding import encode, parameter_matches as _parameter_matches
 from limen.experiment._parallel_plan import FrozenManifestPlan, legacy_metadata
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -61,9 +61,9 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         raise ValueError('Parallel checkpoint restore requires experiment_dir and search_strategy')
     metadata = _mapping(json.loads((directory / 'metadata.json').read_text()), 'metadata')
     legacy = legacy_metadata(metadata)
-    if not legacy and metadata.get('parallel_plan') != attributes['_parallel_identity']:
+    if not legacy and encode(metadata.get('parallel_plan')) != encode(attributes['_parallel_identity']):
         raise ValueError('Cannot resume parallel run with changed pipeline, resources or source identity')
-    if metadata.get('workers', 1) != attributes['_workers'] or metadata.get('worker_native_threads', 1) != 1:
+    if any(type(metadata.get(key, 1)) is not int for key in ('workers', 'worker_native_threads')) or metadata.get('workers', 1) != attributes['_workers'] or metadata.get('worker_native_threads', 1) != 1:
         raise ValueError('Cannot resume with a different worker/thread policy')
     for key in ('record_execution', 'record_model_outputs', 'factorize'):
         if metadata.get(key, False) != attributes[f'_{key}']:
@@ -121,7 +121,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         if not parameter_keys <= parameters.keys():
             raise ValueError('Cannot resume parallel run without all recorded parameters')
         row = rows[cast(int, entry['_round_index'])]
-        if any(not _parameter_matches(row.get(key), value) for key, value in parameters.items() if not key.startswith('_')):
+        if any(not _parameter_matches(row.get(key), value, legacy=legacy) for key, value in parameters.items() if not key.startswith('_')):
             raise ValueError('Cannot resume parallel run with mismatched CSV/JSONL round parameters')
         recorded_parameters[cast(int, entry['_round_index'])] = parameters
         if row['strict_mode_error']:
@@ -136,7 +136,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
         if not legacy:
             plan = cast(FrozenManifestPlan, attributes['_parallel_plan'])
             contract = next(stage.contract for stage in plan.stages if stage.path == 'architecture')
-            if entry.get('parallel_plan') != attributes['_parallel_identity']:
+            if encode(entry.get('parallel_plan')) != encode(attributes['_parallel_identity']):
                 raise ValueError('Cannot resume parallel run with mismatched recorded plan/source identity')
             validate_record(entry, record_context(entry), contract, execution=bool(attributes['_record_execution']),
                             outputs=bool(attributes['_record_model_outputs']), event=event, snapshot=snapshot)

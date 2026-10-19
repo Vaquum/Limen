@@ -99,8 +99,10 @@ def _wire(value: object) -> object:
 
 def stamp(record: dict[str, object], context: Mapping[str, object], contract: ParallelRoundContract,
           count: int) -> None:
+    supplied = all(mapping(fold['parallel_output'], 'fold output')['has_probabilities'] is True
+                   for fold in cast(list[Mapping[str, object]], record['folds'])) if 'folds' in record else record.get('probs') is not None
     evidence = {'version': VERSION, 'kind': contract.prediction_kind, 'count': count,
-                'has_probabilities': contract.probabilities}
+                'has_probabilities': supplied}
     record['parallel_output'] = evidence | {'digest': digest((context, evidence, record))}
 
 
@@ -108,9 +110,13 @@ def validate_record(record: Mapping[str, object], context: Mapping[str, object],
                     *, execution: bool, outputs: bool, event: bool = False, snapshot: bool = False) -> None:
     marker = mapping(record.get('parallel_output'), 'parallel output evidence')
     count = marker.get('count')
-    if (marker.get('version') != VERSION or type(count) is not int or count < 1
-            or marker.get('kind') != contract.prediction_kind or marker.get('has_probabilities') is not contract.probabilities):
+    if (type(marker.get('version')) is not int or marker.get('version') != VERSION or type(count) is not int or count < 1
+            or marker.get('kind') != contract.prediction_kind or marker.get('has_probabilities') is not (outputs and contract.probabilities)):
         raise ValueError('Cannot resume: missing or inconsistent parallel output evidence')
+    if not contract.probabilities and any(record.get(key) is not None for key in ('probs', 'optimal_threshold', 'threshold_rule')):
+        raise ValueError('Cannot resume parallel run with inapplicable probabilities/threshold')
+    if record.get('best_iteration') is not None and (type(record['best_iteration']) is not int or cast(int, record['best_iteration']) < 0):
+        raise ValueError('Cannot resume parallel run with invalid iteration evidence')
     payload = {key: value for key, value in record.items() if key not in ('parallel_output', 'parallel_parameters')}
     evidence = {key: value for key, value in marker.items() if key != 'digest'}
     if marker.get('digest') != digest((context, evidence, payload)):

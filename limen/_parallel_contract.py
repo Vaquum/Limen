@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
+from inspect import ismethod
 from typing import Literal, Protocol, cast
 
 
@@ -22,7 +23,7 @@ class _Declared(Protocol):
 def declare_parallel(component: object, contract: ParallelRoundContract) -> None:
     if not callable(component):
         raise TypeError('Parallel declarations require a callable and ParallelRoundContract')
-    cast(_Declared, component).__parallel_round_contract__ = contract
+    cast(_Declared, component.__func__ if ismethod(component) else component).__parallel_round_contract__ = contract
 
 
 def _validate(name: str, params: Mapping[str, object]) -> None:

@@ -16,8 +16,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
-from limen.experiment._parallel_plan import FrozenManifestPlan, freeze_manifest, plan_identity
-from limen.experiment._parallel_encoding import digest
+from limen.experiment._parallel_plan import FrozenManifestPlan, freeze_manifest, plan_identity, plan_digests
 from limen.experiment._parallel_evidence import round_record
 from limen.experiment._parallel_resources import backend_imports, validate_resources, validate_domain
 from limen.experiment.convergence_report import convergence_warning
@@ -130,7 +129,7 @@ def worker_init(plan: FrozenManifestPlan, sources: SourceSnapshot,
         _ = signal.pthread_sigmask(signal.SIG_UNBLOCK, (signal.SIGINT, signal.SIGTERM))
     if any(os.environ.get(key) != '1' for key in _THREAD_ENV):
         raise ValueError('Parallel worker startup limits were not applied before imports')
-    if digest(plan.manifest) != plan.pipeline_digest:
+    if plan_digests(plan.manifest, plan.stages) != (plan.pipeline_digest, plan.resource_digest):
         raise ValueError('Parallel worker pipeline import identity changed')
     for name in backend_imports(plan):
         _ = import_module(name)
