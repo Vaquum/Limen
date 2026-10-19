@@ -176,6 +176,17 @@ def digest(value: object) -> str:
     return hashlib.sha256(json.dumps(encode(value), ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
+def parameter_projection(node: list[object]) -> object:
+    tag = node[0]
+    if tag in ('null', 'str', 'bool', 'int', 'float'):
+        return decode(node)
+    if tag == 'map':
+        return {cast(str, key): parameter_projection(cast(list[object], value)) for key, value in cast(list[list[object]], node[1])}
+    if tag in ('tuple', 'list'):
+        return [parameter_projection(cast(list[object], value)) for value in cast(list[object], node[1])]
+    return node
+
+
 def checkpoint_payload(data: Mapping[str, object], version: int | None, *, restore: bool = False) -> dict[str, object]:
     result = dict(data)
     if version is None:

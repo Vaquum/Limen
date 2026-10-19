@@ -7,7 +7,7 @@ from typing import cast
 
 from limen._parallel_contract import ParallelRoundContract
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
-from limen.experiment._parallel_encoding import VERSION, decode, digest, encode
+from limen.experiment._parallel_encoding import VERSION, decode, digest, encode, parameter_projection
 
 def mapping(value: object, name: str) -> dict[str, object]:
     if not isinstance(value, dict):
@@ -166,14 +166,22 @@ def record_context(record: Mapping[str, object]) -> dict[str, object]:
 def wire_record(record: Mapping[str, object], *, legacy: bool = False, restore: bool = False) -> dict[str, object]:
     result = dict(record)
     if legacy:
-        for name in ('parallel_output', 'parallel_plan', 'parameter_encoding'):
+        for name in ('parallel_output', 'parallel_plan', 'parameter_encoding', 'parallel_parameters'):
             _ = result.pop(name, None)
         if 'folds' in result:
             result['folds'] = [wire_record(fold, legacy=True) for fold in cast(list[Mapping[str, object]], result['folds'])]
         return result
     if result.get('parameter_encoding') != VERSION:
         raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
-    result['round_params'] = decode(result['round_params']) if restore else encode(result['round_params'])
+    if restore:
+        node = result.pop('parallel_parameters', None)
+        native = decode(node)
+        if encode(parameter_projection(encode(native))) != encode(result['round_params']):
+            raise ValueError('Cannot resume parallel run with mismatched typed parameter evidence')
+        result['round_params'] = native
+    else:
+        node = encode(result['round_params'])
+        result.update(parallel_parameters=node, round_params=parameter_projection(node))
     return result
 
 
