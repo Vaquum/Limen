@@ -39,14 +39,15 @@ def _get_weights_ffd(d: float, threshold: float = 1e-5) -> npt.NDArray[np.float6
 
     weights = [1.0]
     k = 1
-    while True:
-        w = -weights[-1] * (d - k + 1) / k
-        if not np.isfinite(w):
-            raise ValueError(f"fractional_diff weight must be finite, got {w} at index {k}")
-        if abs(w) < threshold:
-            break
-        weights.append(w)
-        k += 1
+    with np.errstate(over='ignore'):
+        while True:
+            w = -weights[-1] * (d - k + 1) / k
+            if not np.isfinite(w):
+                raise ValueError(f"fractional_diff weight must be finite, got {w} at index {k}")
+            if abs(w) < threshold:
+                break
+            weights.append(w)
+            k += 1
 
     return np.array(weights[::-1])
 

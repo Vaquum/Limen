@@ -221,21 +221,22 @@ for d, threshold, parameter in INVALID_PARAMETERS:
 
 def test_fractional_diff_weights_reject_overflow_before_append():
     subprocess.run(
-        [sys.executable, '-c', '''
+        [sys.executable, '-W', 'error', '-c', '''
 import numpy as np
 import pytest
 from limen.features.fractional_diff import _get_weights_ffd
 
-with pytest.raises(ValueError, match='fractional_diff weight must be finite') as raised:
-    _get_weights_ffd(1e308, threshold=0.1)
+for d in (1e308, np.float64(1e308)):
+    with pytest.raises(ValueError, match='fractional_diff weight must be finite') as raised:
+        _get_weights_ffd(d, threshold=0.1)
 
-traceback = raised.value.__traceback__
-assert traceback is not None
-while traceback.tb_next is not None:
-    traceback = traceback.tb_next
-assert traceback.tb_frame.f_code is _get_weights_ffd.__code__
-assert traceback.tb_frame.f_locals['weights'] == [1.0, -1e308]
-assert not np.isfinite(traceback.tb_frame.f_locals['w'])
+    traceback = raised.value.__traceback__
+    assert traceback is not None
+    while traceback.tb_next is not None:
+        traceback = traceback.tb_next
+    assert traceback.tb_frame.f_code is _get_weights_ffd.__code__
+    assert traceback.tb_frame.f_locals['weights'] == [1.0, -1e308]
+    assert not np.isfinite(traceback.tb_frame.f_locals['w'])
 '''],
         check=True,
         timeout=5,
