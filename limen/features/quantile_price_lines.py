@@ -29,9 +29,8 @@ def quantile_price_lines(data: pl.DataFrame,
     '''
     Compute quantile-line end features from lines completed through each row.
     Select heights at or above each direction's expanding quantile, with ties.
-    End windows include both boundaries [t-window, t]. Recency is capped
-    at density_lookback_hours; other empty-window features return zero. The optional
-    active_quantile_count retains retrospective whole-frame span selection.
+    End windows include both boundaries [t-window, t]; recency caps at density_lookback_hours.
+    Other empty windows return zero; active_quantile_count retains retrospective whole-frame spans.
 
     Args:
         data (pl.DataFrame | pl.LazyFrame): Klines with a close column
