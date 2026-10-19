@@ -1780,3 +1780,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add research batch meta allocation trained on causal primary-opportunity outcomes with per-opportunity exposure and declared stop-risk caps.
 - Preserve recorded hour-end bar availability and aligned missing intervals through explicit source timestamp metadata.
+
+## [5.42.1] - 2026-10-19
+
+- Reuse each funded outcome candidate plan for its paired long/short labels and avoid unused ledger state frames and aggregate metrics while preserving complete funding execution.
