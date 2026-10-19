@@ -89,9 +89,9 @@ def test_witness_validation_stages(fold_campaigns, mutation):
             Trainer(campaign.path, data=campaign.bars)
         return
     before_fit = mutation in ('lean', 'witness', 'version', 'source', 'ratio', 'raw', 'count', 'competing')
-    with patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early')) if before_fit else patch.object(trainer, '_validate_metrics', side_effect=AssertionError('aggregate used')):
-        with pytest.raises(ReconstructionError, match=f'Permutation {pid}, fold {campaign.fold}'):
-            trainer.train([pid], fold=campaign.fold)
+    guard = patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early')) if before_fit else patch.object(trainer, '_validate_metrics', side_effect=AssertionError('aggregate used'))
+    with guard, pytest.raises(ReconstructionError, match=f'Permutation {pid}, fold {campaign.fold}'):
+        trainer.train([pid], fold=campaign.fold)
 
 
 def test_fold_fingerprint_codec():
