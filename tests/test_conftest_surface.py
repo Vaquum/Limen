@@ -34,3 +34,23 @@ def test_polars_thread_budget_is_set_before_import(thread_count: str | None) -> 
     code = "import runpy; runpy.run_path('tests/conftest.py'); import polars as pl; print(pl.thread_pool_size())"
     actual = subprocess.check_output([sys.executable, '-c', code], cwd=ROOT, env=environment, text=True)
     assert actual.strip() == (thread_count or '1')
+
+
+@pytest.mark.parametrize('thread_count', [None, '2'])
+def test_complete_proof_runner_preserves_polars_override(tmp_path: Path, thread_count: str | None) -> None:
+    test_path = tmp_path / 'test_polars_pool.py'
+    test_path.write_text(
+        "import polars as pl\ndef test_pool():\n    assert pl.thread_pool_size() == "
+        + (thread_count or '1') + "\n", encoding='utf-8',
+    )
+    environment = os.environ.copy()
+    environment['LIMEN_RUNTIME_PROFILE_PATH'] = str(tmp_path / 'runtime.json')
+    if thread_count is None:
+        environment.pop('POLARS_MAX_THREADS', None)
+    else:
+        environment['POLARS_MAX_THREADS'] = thread_count
+    result = subprocess.run(
+        [sys.executable, '-m', 'tests.run', str(test_path), '-q'],
+        cwd=ROOT, env=environment, capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
