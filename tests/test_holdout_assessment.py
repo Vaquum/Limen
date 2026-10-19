@@ -40,6 +40,7 @@ def assessment_case(tmp_path_factory):
         if architecture == 'logreg':
             current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
             current['sfd']['params']['C'] = [1.0, 0.5]
+            current['sfd']['params']['use_calibration'] = [True, False]
             current['uel']['n_permutations'] = 2
         elif architecture == 'warmup':
             current['sfd']['manifest']['indicators'][0]['params']['period'] = 30
@@ -202,7 +203,7 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
             ids.append(pipe.recv())
         pipes[1].send('fail')
         assert pipes[1].poll(5) and pipes[1].recv() == 'failed'
-        workers[0].terminate()
+        workers[0].kill()
         for worker in workers:
             worker.join(5)
             assert not worker.is_alive()
@@ -215,7 +216,7 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
     finally:
         for worker in workers:
             if worker.is_alive():
-                worker.terminate()
+                worker.kill()
                 worker.join(5)
         for pipe in pipes:
             pipe.close()

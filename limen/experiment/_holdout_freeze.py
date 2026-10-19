@@ -23,7 +23,7 @@ from sklearn.utils import validation as _validation
 from limen.cohort import Cohort
 from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
-from limen.experiment.manifest_core import MLManifest
+from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
@@ -221,7 +221,13 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     if backtest is not None and (backtest.product is not None or backtest.execution_data_source is not None or backtest.funding is not None or backtest.prediction_mode != 'binary'):
         raise ValueError('Unsupported holdout execution mode')
     resolved = effective.prediction_calibration_config
-    if normalized(config) != normalized(resolved.resolve(cast(dict[str, object], vars(sensor)['_round_params'])) if resolved is not None else None):
+    params = cast(dict[str, object], vars(sensor)['_round_params'])
+    expected = None
+    if resolved is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
+        declared = resolved.resolve(params)
+        expected = CalibrationConfig(calibration_func=declared.calibration_func if params.get('use_calibration', True) else None,
+            calibration_params=declared.calibration_params, threshold_func=declared.threshold_func if params.get('use_threshold', True) else None, threshold_params=declared.threshold_params)
+    if normalized(config) != normalized(expected):
         raise ValueError('Holdout fitted calibration differs from declared configuration')
     proof = provenance(sensor)
     interval = proof.get('interval_seconds')
