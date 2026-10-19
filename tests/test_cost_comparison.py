@@ -3,9 +3,10 @@ from __future__ import annotations
 import copy
 import json
 import socket
-from types import MappingProxyType, SimpleNamespace
+from types import MappingProxyType
 from dataclasses import replace
 from decimal import Decimal
+from pathlib import Path
 from itertools import pairwise
 
 import polars as pl
@@ -14,9 +15,6 @@ from polars.testing import assert_frame_equal
 
 from limen.backtest import _cost_comparison
 from limen.backtest.funding_adapter import ADAPTER_VERSION, prepare_funding
-from limen.experiment import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search.grid_strategy import GridStrategy
 from limen.backtest.observed_costs import CostCalibration, CostCandidate
 from limen.backtest.trade_contract import FundingPolicy, ProductSpec, TradeInputs, TradePolicy, source_binding
 from limen.backtest.trade_execution import trade_execution
@@ -121,21 +119,6 @@ def test_frozen_event_scenarios(tmp_path, monkeypatch, mode, funded, barrier, la
         calibration.compare({'first': first})
 
 
-class _CallerModel:
-    def __init__(self):
-        self.fit_count = 0
-
-    def fit(self, frame):
-        self.fit_count += 1
-        self.mean = frame['price'].mean()
-        return self
-
-    def predict(self, frame, mode, scale):
-        values = [1.0 if price >= self.mean else (0.0 if mode == 'binary' else -scale) for price in frame['price']]
-        values[-1] = 0.0  # Explicit hypothetical terminal strategy decision.
-        return pl.Series('target', values, dtype=pl.Float64)
-
-
 @pytest.mark.parametrize('mode', ['binary', 'target_exposure'])
 def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
     monkeypatch.setattr(socket, 'socket', _no_network)
@@ -143,50 +126,41 @@ def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
     pinned = calibration.write(artifact)
     pin_file = tmp_path / 'caller-research-specification.json'
     pin_file.write_text(json.dumps({'calibration_digest': pinned}))
-    retained, comparisons = [], []
+    document = (Path(__file__).parents[1] / 'docs/Backtest.md').read_text()
+    section = document.split('<!-- recorded-cost-python:start -->', 1)[1].split('<!-- recorded-cost-python:end -->', 1)[0]
+    code = section.split('```python\n', 1)[1].split('```', 1)[0]
+    namespace = {'__name__': 'recorded_cost_documentation'}
+    exec(compile(code, 'docs/Backtest.md', 'exec'), namespace)
+    model_type = namespace['CallerModel']
+    original_fit, original_predict = model_type.fit, model_type.predict
+    fits, predictions, comparisons = [], [], []
+
+    def fit(model, training):
+        fits.append(model)
+        return original_fit(model, training)
+
+    def predict(model, evaluation, mode, scale):
+        result = original_predict(model, evaluation, mode, scale)
+        predictions.append((result, result.to_numpy().tobytes()))
+        monkeypatch.setattr(model, 'fit', _no_estimation)
+        return result
+
+    monkeypatch.setattr(model_type, 'fit', fit)
+    monkeypatch.setattr(model_type, 'predict', predict)
+    from limen.backtest import _cost_statistics
+    monkeypatch.setattr(_cost_statistics, 'report', _no_estimation)
     for hour in (1, 2):
-        expected = json.loads(pin_file.read_text())['calibration_digest']
-        with monkeypatch.context() as context:
-            from limen.backtest import _cost_statistics
-            context.setattr(_cost_statistics, 'report', _no_estimation)
-            loaded = CostCalibration.read(artifact, expected_digest=expected)
-        inputs, policy, conditions, benchmark = _recorded_candidate(mode, hour)
-        first = inputs.partition_start_ns - 180_000_000_000
-        recorded = benchmark.filter(pl.col('time_ns').is_between(first, inputs.partition_end_ns))
-        space = {'scale': [0.5]}
-
-        def prep(frame, round_params):
-            return {'train': frame.head(3), 'evaluation': frame.tail(5), 'scale': round_params['scale']}
-
-        def model(data, round_params, inputs=inputs, policy=policy, hour=hour,
-                  conditions=conditions, benchmark=benchmark, loaded=loaded):
-            fitted = _CallerModel().fit(data['train'])
-            predictions = fitted.predict(data['evaluation'], mode, round_params['scale'])
-            original_bytes = predictions.to_numpy().tobytes()
-            frozen = replace(inputs, signals=inputs.signals.with_columns(predictions))
-            candidate = CostCandidate(frozen, policy, f'caller-owned:experiment-{hour}', conditions, benchmark)
-            with monkeypatch.context() as context:
-                context.setattr(fitted, 'fit', _no_estimation)
-                result = loaded.compare({'caller': candidate})
-            assert predictions.to_numpy().tobytes() == original_bytes
-            assert fitted.fit_count == 1
-            retained.append((fitted, original_bytes))
-            comparisons.append(result)
-            result.write(tmp_path / f'comparison-{hour}.json')
-            return {'original_return': result.ledger('caller', 'original').metrics['total_return'],
-                    'calibrated_return': result.ledger('caller', 'calibrated').metrics['total_return']}
-
-        sfd = SimpleNamespace(params=lambda space=space: space, prep=prep, model=model)
-        loop = UniversalExperimentLoop(data=recorded, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)))
-        loop.run(str(tmp_path / f'python-experiment-{hour}'), n_permutations=1,
-                 workers=1, post_processing=False, progress_bar=False)
-        assert loop.manifest is None
-        assert loop.experiment_log.height == 1
-        assert loop.experiment_log['calibrated_return'][0] == comparisons[-1].ledger('caller', 'calibrated').metrics['total_return']
-        assert comparisons[-1].ledger('caller', 'calibrated').fills.height > 0
-        assert comparisons[-1].report()['calibration_digest'] == pinned
-    assert len(retained) == len({id(model) for model, _ in retained}) == 2
-    assert all(model.fit_count == 1 for model, _ in retained)
+        experiment, result = namespace['run_cost_experiment'](
+            artifact, pin_file, FIXTURE / 'benchmark.json', tmp_path / f'experiment-{hour}', mode=mode, hour=hour)
+        comparisons.append(result)
+        assert experiment.manifest is None
+        assert experiment.experiment_log.height == 1
+        assert experiment.experiment_log['calibrated_return'][0] == result.ledger('caller', 'calibrated').metrics['total_return']
+        assert result.ledger('caller', 'calibrated').fills.height > 0
+        assert result.report()['calibration_digest'] == pinned
+        assert (tmp_path / f'experiment-{hour}' / 'comparison.json').is_file()
+    assert len(fits) == len({id(model) for model in fits}) == 2
+    assert all(series.to_numpy().tobytes() == before for series, before in predictions)
     first_result, later_result = [value.report()['candidates']['caller'] for value in comparisons]
     assert first_result['input_digest'] != later_result['input_digest']
     assert first_result['application_digest'] != later_result['application_digest']

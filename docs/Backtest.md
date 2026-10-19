@@ -37,6 +37,164 @@ an incompatible expected digest fails; writing different content to an existing
 artifact path fails. Dataset attribution and reproduction are in
 `tests/fixtures/observed_costs/license.json` and `reproduce.py`.
 
+### Frozen candidates in custom Python research
+
+`CostCandidate` freezes caller-owned `TradeInputs`, `TradePolicy`, conditions and
+benchmark rows. `CostCalibration.compare()` executes fresh original and
+calibrated ledgers from those same signals. It changes only `slip_bps`; candidate
+fees, funding, sizing, barriers and lag remain their declared software scenarios.
+It neither fits a model nor changes UEL's search or selection rules.
+
+The following source-checkout example uses recorded midpoint prices and a caller
+model. Its exposure decisions and capital are hypothetical software controls.
+The point encoding repeats each recorded midpoint in OHLC; it supplies no
+intraminute extrema. Both runs are retrospective stress: the August 4 archive
+availability follows the August 1 evaluation, and historical delivery is unknown.
+
+<!-- recorded-cost-python:start -->
+```python
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+import polars as pl
+
+from limen.backtest.observed_costs import CostCalibration, CostCandidate
+from limen.backtest.trade_contract import (
+    ProductSpec, TradeInputs, TradePolicy, source_binding,
+)
+from limen.experiment import UniversalExperimentLoop
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search.grid_strategy import GridStrategy
+
+
+class CallerModel:
+    def fit(self, training):
+        self.mean = training["price"].mean()
+        return self
+
+    def predict(self, evaluation, mode, scale):
+        exposure = [1.0 if price >= self.mean else
+                    (0.0 if mode == "binary" else -scale)
+                    for price in evaluation["price"]]
+        exposure[-1] = 0.0
+        return pl.Series("target", exposure, dtype=pl.Float64)
+
+
+def run_cost_experiment(calibration_path, specification_path, benchmark_path,
+                        output, *, mode="binary", hour=1):
+    expected = json.loads(Path(specification_path).read_text())["calibration_digest"]
+    calibration = CostCalibration.read(calibration_path, expected_digest=expected)
+    benchmark = pl.DataFrame(json.loads(Path(benchmark_path).read_text()), schema={
+        "row_id": pl.String, "phase": pl.String, "time_ns": pl.Int64,
+        "replay_available_at_ns": pl.Int64, "price": pl.Float64,
+        "reference_id": pl.String, "observed_receipt_ns": pl.Int64,
+    })
+    first = benchmark["time_ns"][0] + (hour - 1) * 3_600_000_000_000
+    recorded = benchmark.filter(pl.col("time_ns").is_between(
+        first, first + 420_000_000_000))
+    output = Path(output)
+    output.mkdir()
+    comparisons = []
+    space = {"scale": [0.5]}
+
+    def prep(frame, round_params):
+        return {"training": frame.head(3), "evaluation": frame.tail(5)}
+
+    def model(data, round_params):
+        evaluation = data["evaluation"]
+        fitted = CallerModel().fit(data["training"])
+        predictions = fitted.predict(evaluation, mode, round_params["scale"])
+        signals = evaluation.select(
+            "row_id", pl.col("time_ns").alias("available_at_ns")
+        ).with_columns(predictions)
+        observations = evaluation.select(
+            "row_id", pl.col("time_ns").alias("start_ns"),
+            pl.col("time_ns").alias("end_ns"),
+            pl.col("replay_available_at_ns").alias("open_available_at_ns"),
+            pl.col("replay_available_at_ns").alias("available_at_ns"),
+            *(pl.col("price").alias(name) for name in ("open", "high", "low", "close")),
+        )
+        start, end = evaluation["time_ns"][0], evaluation["time_ns"][-1]
+        binding = source_binding(observations, "recorded_midpoints", start, end,
+                                 1, "retrospective_assumed_exchange_label")
+        inputs = TradeInputs(10_000.0, start, end, signals, observations, None, (binding,))
+        policy = TradePolicy(
+            ProductSpec("linear_perpetual", "BTC", "BTC", "USDC", 0.00001, 1.0),
+            prediction_mode=mode, fee_bps=5.0, slip_bps=5.0,
+        )
+        conditions = {
+            "venue": "hyperliquid", "environment": "mainnet",
+            "product_kind": "linear_perpetual", "instrument": "BTC",
+            "base_currency": "BTC", "quote_currency": "USDC",
+            "reference_id": benchmark["reference_id"][0],
+            "reference_convention": "minute_midpoint_label",
+            "clock": "assumed_exchange_label",
+        }
+        candidate = CostCandidate(inputs, policy, f"caller:experiment-{hour}",
+                                  conditions, benchmark)
+        comparison = calibration.compare({"caller": candidate})
+        comparison.write(output / "comparison.json")
+        comparisons.append(comparison)
+        return {
+            "original_return": comparison.ledger("caller", "original").metrics["total_return"],
+            "calibrated_return": comparison.ledger("caller", "calibrated").metrics["total_return"],
+        }
+
+    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+    experiment = UniversalExperimentLoop(
+        data=recorded, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
+    )
+    experiment.run(str(output / "experiment"), n_permutations=1, workers=1,
+                   post_processing=False, progress_bar=False)
+    return experiment, comparisons[0]
+```
+<!-- recorded-cost-python:end -->
+
+Create the calibration once, pin its digest separately, then reuse that artifact
+for the later hour. No estimated rate is copied into the caller's policy:
+
+```python
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
+
+fixture = Path("tests/fixtures/observed_costs")
+with TemporaryDirectory() as directory:
+    root = Path(directory)
+    with ZipFile(fixture / "history.zip") as archive:
+        history = root / "history.json"
+        history.write_bytes(archive.read("admitted.json"))
+    calibration = CostCalibration.from_history(history, cutoff_ns=1785810791000000000)
+    artifact = root / "calibration.json"
+    specification = root / "research-specification.json"
+    calibration.write(artifact)
+    specification.write_text(json.dumps({"calibration_digest": calibration.digest}))
+    earlier, first = run_cost_experiment(
+        artifact, specification, fixture / "benchmark.json", root / "first", hour=1,
+    )
+    later, second = run_cost_experiment(
+        artifact, specification, fixture / "benchmark.json", root / "later", hour=2,
+        mode="target_exposure",
+    )
+    assert first.report()["calibration_digest"] == second.report()["calibration_digest"]
+    print(second.report()["ranks"], second.report()["unavailable"])
+```
+
+Each saved comparison binds the pinned calibration, caller research identity,
+ordered inputs, benchmark, policies, executed ledgers and support dispositions.
+`report()` and `ledger()` return copies. Missing reference/phase evidence or
+incompatible conditions retains the candidate with an unavailable calibrated
+scenario; malformed inputs raise before any family member executes. Only the
+kernel's declared economic failures become `economic_failure`; other errors
+propagate. Comparisons have a write API and no read API.
+
+Ranks are scenario-specific complete-family dense ranks. All candidates must
+succeed with common partition, benchmark, currency, capital and effective
+fee/slippage settings. Otherwise that rank set is null; rank deltas require both
+sets. A calibration does not transfer account fees or establish deployment
+survival. This opt-in API supports custom Python research; no automatic
+Manifest/YAML option is exposed.
+
 Backtest evaluates declared trading economics. The legacy snapshot reports binary long-flat per-bar returns. Configured event execution supports signed exposure, elapsed exits and funding with separate intent, fill and episode ledgers.
 
 The layer evaluates entry signals together with declared costs, sizing, and optional fixed take-profit/stop-loss exits.

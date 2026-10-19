@@ -127,7 +127,7 @@ def validate(value: object) -> dict[str, JsonValue]:
     if type(history['version']) is not int or history['version'] != 1:
         raise ValueError('Unsupported recorded-cost history version')
     source = _source(history['source'])
-    assets = {cast(str, item['sha256']) for item in rows(source['assets'], 'assets')}
+    assets = {cast(str, item['sha256']) for item in rows(source['assets'], 'assets') if item['kind'] == 'fills'}
     fills = rows(history['fills'], 'fills')
     seen: set[tuple[str, str | None, str]] = set()
     previous: tuple[int, int, str, int, str] | None = None
@@ -160,7 +160,7 @@ def validate(value: object) -> dict[str, JsonValue]:
             raise ValueError('Fill reference cannot come from the future')
         sha = digest_id(fill['source_asset_sha256'])
         if sha not in assets:
-            raise ValueError('Fill has no pinned source asset')
+            raise ValueError('Fill has no pinned fills-kind source asset')
         order = (cast(int, fill['time_ns']), cast(int, fill['block_number']), sha,
                  cast(int, fill['source_row']), cast(str, fill['leg_id']))
         if previous is not None and order < previous:

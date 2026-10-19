@@ -135,6 +135,14 @@ def test_recorded_parent_calibration(tmp_path, monkeypatch):
         fault['fills'][0][receipt] = 0
         with pytest.raises(ValueError, match='cannot precede'):
             CostCalibration.from_history(_write_fault(tmp_path / f'fault-early-{receipt}.json', fault), cutoff_ns=0)
+    for label in ('benchmark_only', 'one_wrong_kind'):
+        fault = copy.deepcopy(facts)
+        fill_sha = fault['fills'][0]['source_asset_sha256']
+        for asset in fault['source']['assets']:
+            if label == 'benchmark_only' or asset['sha256'] == fill_sha:
+                asset['kind'] = 'benchmark'
+        with pytest.raises(ValueError, match='fills-kind source asset'):
+            CostCalibration.from_history(_write_fault(tmp_path / f'fault-{label}.json', fault), cutoff_ns=CUTOFF)
     late = CostCalibration.from_history(path, cutoff_ns=CUTOFF - 1).report()
     assert late['support']['disposition'] == 'unavailable'
     assert late['estimates']['slip_bps'] is None
