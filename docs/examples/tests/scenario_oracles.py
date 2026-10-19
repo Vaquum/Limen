@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
 import json
 import math
@@ -368,7 +368,8 @@ def verify(interface, name, result, output, inputs):
                 if name == 'ml':
                     assert fold['fit_prefix_rows'] < case['training_rows']
             window = case['training_window']
-            source = raw.filter(pl.col('datetime').is_between(datetime.fromisoformat(window['train_start']), datetime.fromisoformat(window['train_end']), closed='left'))
+            start, end = [datetime.fromisoformat(window[key]).replace(tzinfo=timezone.utc) for key in ('train_start', 'train_end')]
+            source = raw.filter(pl.col('datetime').is_between(start, end, closed='left'))
             assert source.height == case['training_rows']
             checksum = hashlib.sha256(str(source.schema).encode() + source.hash_rows(seed=0).to_numpy().tobytes()).hexdigest()
             assert checksum == binding['raw_train']
