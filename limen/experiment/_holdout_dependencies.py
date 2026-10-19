@@ -116,7 +116,7 @@ def fitted_witness(value: object) -> bytes:
         elif isinstance(item, partial):
             result = ('partial', node(item.func), node(item.args), node(item.keywords), node(vars(item)))
         elif isinstance(item, (str, int, float, bytes)):
-            payload = str.__str__(item) if isinstance(item, str) else int.__int__(item) if isinstance(item, int) else float.__float__(item) if isinstance(item, float) else bytes.__bytes__(item)
+            payload = str.__str__(item) if isinstance(item, str) else int.__int__(item) if isinstance(item, int) else float.__float__(item) if isinstance(item, float) else bytes.__repr__(item)
             result = (kind, payload, node(_attributes(item)))
         elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
