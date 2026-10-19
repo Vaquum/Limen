@@ -5,6 +5,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import TradeInputs, TradeLedger, export_trade_contract
 from limen.sfd.reference_architecture.base import ReferenceModel
+from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.sfd.reference_architecture.meta_allocation import MetaAllocationModel
 from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
 from limen.experiment import RuleBasedManifest
@@ -75,12 +76,7 @@ def prefix_probe(model: MetaAllocationModel, original, params):
     manifest.split_dates = None
     manifest.split_config = (int(prefix.height * .8), int(prefix.height * .2), 0)
     prepared = manifest.prepare_data(prefix, params)
-    # The validation partition supplies evaluation rows; fitting remains prefix-only.
-    fitting = dict(prepared, x_test=prepared['x_val'], y_test=prepared['y_val'])
-    result = manifest.run_model(fitting, params)
-    primary = result['_model']
-    if not isinstance(primary, ReferenceModel):
-        raise TypeError('Prefix fitting must retain the original primary')
+    primary = LogRegBinary().train(prepared, **manifest.resolve_model_kwargs(params))
     features, _ = manifest.sensor_input_prep(raw.head(end), prepared['_fitted_params'], params)
     features = features.filter(pl.col('datetime').is_between(raw['datetime'][start], raw['datetime'][end-1]))
     features = features.select(prepared['x_train'].columns).fill_nan(None).drop_nulls()
