@@ -69,7 +69,7 @@ def campaign(tmp_path_factory):
     return directory, config, raw, loop
 
 
-@pytest.mark.parametrize('entry', ['native', 'staged', 'wrapper', 'yaml', 'none', 'fixed', 'stateless'])
+@pytest.mark.parametrize('entry', ['native', 'staged', 'wrapper', 'yaml', 'none', 'fixed', 'stateless', 'insufficient'])
 def test_conditional_shims_native_and_compiled(entry, campaign):
     if entry == 'yaml':
         directory, _, _, loop = campaign
@@ -93,6 +93,10 @@ def test_conditional_shims_native_and_compiled(entry, campaign):
     if entry == 'wrapper':
         manifest.with_reference_architecture(wrapped_direction_sizing)
     data = manifest.prepare_data(recorded_source(limit=120), {} if entry == 'staged' else dict(PARAMS))
+    if entry == 'insufficient':
+        with pytest.raises(ValueError, match='Chronological fold 1:'):
+            manifest.run_model(data, {**PARAMS, 'folds': 24})
+        return
     result = manifest.run_model(data, dict(PARAMS))
     assert result['_model'].conditional
     assert result['_preds'].shape == (data['x_test'].height,)
@@ -162,12 +166,28 @@ def test_inner_shim_prefix_identity_and_causality(count, pca):
     assert set(actual.train_rows) <= set(earlier)
     assert actual.predict_rows == tuple(predicted)
     assert widths['close'] != widths['volume']
-    extended = manifest.prepare_data(recorded_source(limit=count + 80), dict(params))['_fold_preparation']
-    same_prefix = extended.fit_transform(earlier, predicted)
+    extended_data = manifest.prepare_data(recorded_source(limit=count + 80), dict(params))
+    same_prefix = extended_data['_fold_preparation'].fit_transform(earlier, predicted)
     assert actual.train_rows == same_prefix.train_rows
     assert actual.predict_rows == same_prefix.predict_rows
     np.testing.assert_array_equal(actual.train, same_prefix.train)
     np.testing.assert_array_equal(actual.predict, same_prefix.predict)
+    cutoff = identities.filter(pl.col('row_id') == predicted[0])['available_at_ns'][0]
+
+    def prefix_prediction(features, prepared):
+        labels = pl.DataFrame({'row_id': features.train_rows}).join(prepared['_trade_labels'].rows, on='row_id', how='left', maintain_order='left')
+        completed = labels.select(pl.max_horizontal('long_label_available_ns', 'short_label_available_ns')).to_series()
+        eligible = (labels['long_available'] & labels['short_available'] & (completed < cutoff)).fill_null(False)
+        selected = labels.filter(eligible)
+        long, short = selected['long_return'].to_numpy(), selected['short_return'].to_numpy()
+        direction = np.where((long > 0) & (long > short), 1, np.where((short > 0) & (short > long), -1, 0))
+        model = LogisticRegression(random_state=42, max_iter=1000).fit(features.train.to_numpy()[eligible.to_numpy()], direction)
+        return model.predict(features.predict.to_numpy()), selected.select('row_id', 'long_return', 'short_return')
+
+    first_prediction, first_labels = prefix_prediction(actual, data)
+    later_prediction, later_labels = prefix_prediction(same_prefix, extended_data)
+    assert first_labels.equals(later_labels)
+    np.testing.assert_array_equal(first_prediction, later_prediction)
     with pytest.raises(ValueError, match='ordered original row identities'):
         preparation.fit_transform(earlier[::-1], predicted)
     if count == 336:
@@ -189,8 +209,10 @@ def test_conditional_shim_replay_and_outer_state(proof, campaign, tmp_path):
         valid = [item for item in first if item.reason is None]
         assert valid and all(np.isfinite(item.prediction) for item in valid)
         features, _ = sensor._manifest.sensor_input_prep(rows, sensor._fitted_params, sensor.round_params)
-        times = [item.datetime for item in valid]
-        expected = sensor._model.predict({'x_test': features.filter(pl.col('datetime').is_in(times)).select(sensor._model.feature_names)})['_preds']
+        times = pl.Series('datetime', [item.datetime for item in valid], dtype=features.schema['datetime'])
+        expected_input = features.join(times.to_frame(), on='datetime', how='inner', maintain_order='left').select(sensor._model.feature_names)
+        assert expected_input.height == len(valid)
+        expected = sensor._model.predict({'x_test': expected_input})['_preds']
         np.testing.assert_array_equal([item.prediction for item in valid], expected)
         return
     if proof == 'walk-forward':
