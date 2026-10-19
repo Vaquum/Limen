@@ -158,8 +158,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
     seen: dict[int, object] = {}
     evidence: list[object] = []
     functions: list[object] = []
-    omitted = {id(value) for value in exclude}
-    sealed = {id(value) for value in resolved}
+    omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
+    function_witness = lru_cache(maxsize=None)(fitted_witness)
     attributes: set[str] = set()
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
@@ -185,7 +185,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             visit(value.keywords)
         elif inspect.isfunction(value):
             functions.append(value)
-            evidence.append(fitted_witness(value))
+            evidence.append(function_witness(value))
             if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
@@ -238,7 +238,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     references[str(instructions[following].argval)] = item
                 if not isinstance(item, ModuleType):
                     try:
-                        witness = fitted_witness(item)
+                        witness = function_witness(item) if inspect.isfunction(item) else fitted_witness(item)
                         evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
                         visit(item)
                     except (ValueError, TypeError, pickle.PickleError) as exc:
@@ -276,7 +276,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             if isinstance(method, (staticmethod, classmethod)):
                 method = method.__func__
             if method is not None and not inspect.isdatadescriptor(method):
-                evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
+                evidence.append((cls.__module__, cls.__qualname__, name, function_witness(method) if inspect.isfunction(method) else fitted_witness(method)))
                 visit(method)
 
     for value in values:
