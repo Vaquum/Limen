@@ -1,26 +1,19 @@
 #!/usr/bin/env python3
 """Conventional Commits gate -- hard-fail on any deviation.
 
-The linked-issue rule checks every closing-referenced issue rather
-than short-circuiting on a single reference: under slice-gate rule 9
-the last slice's PR closes {slice, parent PRD}, and a single-reference
-short-circuit would skip slice-title validation exactly there. Only
-parent PRDs — issues carrying the ``planning`` label — are exempt,
-because the PRD title format is not a Conventional Commits subject.
+The slice gate owns closing-reference counts and issue existence.
 
 This gate enforces the Conventional Commits v1.0.0 specification on:
 
   1. The PR title.
-  2. The title of every issue the PR closes except ``planning``-labelled
-     parent PRDs (resolved by the same Closes/Fixes/Resolves #N rule
-     the slice gate uses; reference-count discipline and unresolvable
-     references are the slice gate's concern, not duplicated here).
-  3. Every non-merge commit message in the PR's commit range
-     (``$BASE..$HEAD``).
+  2. Every closing-referenced issue title except ``planning``-labelled
+     parent PRDs, using the shared Closes/Fixes/Resolves parser.
+  3. Every non-merge commit subject in ``$BASE..$HEAD``.
 
-It additionally fails if the PR title or any non-merge commit message
-names an AI/LLM assistant -- commit metadata in this org never carries
-AI attribution.
+It also rejects AI/LLM attribution in PR titles and non-merge commit
+messages; commit metadata in this org never carries AI attribution.
+Every commit closing reference, including merge messages, must also be
+declared in the PR body so slice/parent admission validates the full set.
 
 Specification reference: https://www.conventionalcommits.org/en/v1.0.0/
 
@@ -28,18 +21,12 @@ Accepted format:
 
     <type>[optional scope][!]: <description>
 
-where ``<type>`` is one of::
-
-    feat | fix | docs | style | refactor | perf | test | build |
-    ci | chore | revert
-
-all lowercase. Optional ``scope`` is parenthesized lowercase
-alphanumeric (hyphens, underscores, slashes, dots allowed). Optional ``!`` before
-the colon marks a breaking change. ``<description>`` must be
-non-empty after the ``:`` plus exactly one space.
+Types are listed in ``CC_TYPES``. Types/scopes are lowercase; scopes allow
+alphanumeric, hyphen, underscore, slash and dot. ``!`` marks breaking changes.
+Require a nonblank description after the colon and exactly one space.
 
 Exit codes:
-  0 -- every checked subject matches CC.
+  0 -- every rule passes.
   1 -- at least one deviation.
   2 -- gate setup failure (bad args, git/gh failure, etc.).
 
@@ -57,13 +44,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 from typing import Final
+from urllib.parse import urlsplit
 
-from _common import CC_RE, CLOSING_KEYWORD_RE
+from _common import CC_RE, CLOSING_KEYWORD_RE, QUALIFIED_CLOSING_RE
 
 # git log --format=%H%x09%P%x09%s yields exactly three tab-separated fields.
 GIT_LOG_FIELD_COUNT: Final[int] = 3
@@ -251,14 +240,9 @@ def attribution_hit(text: str) -> str | None:
 
 
 def list_commit_messages(base_ref: str, head_ref: str) -> list[tuple[str, str]]:
-    """Return ``(sha, full message)`` for every non-merge commit in range.
-
-    Merge commits are excluded (``--no-merges``) so an auto-generated merge
-    subject that happens to name a branch like ``copilot/...`` does not
-    register as authored attribution.
-    """
+    """Return every full message, including merges that can close issues."""
     out = run_git([
-        'log', f'{base_ref}..{head_ref}', '--no-merges', '--format=%H%x1f%B%x1e',
+        'log', f'{base_ref}..{head_ref}', '--format=%H%x1f%B%x1e',
     ])
     messages: list[tuple[str, str]] = []
     for record in out.split('\x1e'):
@@ -268,6 +252,26 @@ def list_commit_messages(base_ref: str, head_ref: str) -> list[tuple[str, str]]:
         sha, _, body = stripped.partition('\x1f')
         messages.append((sha.strip(), body))
     return messages
+
+
+def _commit_closure_failures(message: str, declared: set[int], repo: str) -> list[str]:
+    refs = set(find_closing_references(message))
+    for match in QUALIFIED_CLOSING_RE.finditer(message):
+        target = match.group('target')
+        if target.lower().startswith(('https://', 'http://')):
+            parsed = urlsplit(target)
+            parts = parsed.path.strip('/').split('/')
+            owner_repo = '/'.join(parts[:2])
+            if parsed.netloc.lower() != os.environ.get('GH_HOST', 'github.com').lower() or len(parts) != 4:
+                owner_repo = ''
+            number = parts[-1]
+        else:
+            owner_repo, number = target.rsplit('#', 1)
+        if owner_repo.lower() != repo.lower():
+            return [f'cross-repository commit closure {target!r} is forbidden; use a non-closing reference.']
+        refs.add(int(number))
+    return [f'commit closure #{number} is absent from the validated PR body; add `Closes #{number}` to the PR body.'
+            for number in sorted(refs - declared)]
 
 
 def gate(
@@ -320,8 +324,10 @@ def gate(
         failures.append(
             f'PR title names an AI/LLM assistant ({title_hit!r}); strip the attribution.'
         )
+    merge_shas = {str(c['sha']) for c in commits if c['is_merge']}
     for sha, message in list_commit_messages(base_ref, head_ref):
-        hit = attribution_hit(message)
+        failures.extend(_commit_closure_failures(message, set(refs), repo))
+        hit = attribution_hit(message) if sha not in merge_shas else None
         if hit is not None:
             failures.append(
                 f'commit {sha[:8]} message names an AI/LLM assistant '

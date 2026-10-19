@@ -16,9 +16,9 @@ Nineteen laws. Eighteen are workflow gates on every PR; the nineteenth is branch
 
 The list is long because this repository ships a package: alongside the governance gates it carries packaging verification, a built-wheel install matrix across four interpreters, a coverage floor, a suite runtime budget, and a documentation site. Every one of those is a required check, and law 17 requires each to be named here.
 
-1. **Every PR closes exactly one OPEN slice-labelled issue — plus that slice's parent PRD when, and only when, the slice is the PRD's last open slice sub-issue.** PR title byte-equals the slice issue's title. Diff stays within the issue's `## Surfaces` globs. Diff touches no path in `## Out of Scope`. Issue body preserves every `> **Significance.**` blockquote from the slice template verbatim, and every `Done Means` checkbox is checked or carries `OVERRULED: <reason>` before merge; the `slice_closeout_guard` workflow writes the closeout evidence fields when a merged PR closes the issue and reopens an evidence-less close. *(pr_checks_slice)*
+1. **Every PR closes exactly one OPEN slice-labelled issue; closing its native parent PRD additionally requires no other open slice children and complete parent evidence.** A completed last child may leave its parent open with `Parent remains open: <remaining outcome or next slice>` in the PR body. Every PR carries the [Interface Contract](#research-interface-contract), agrees with its slice when declared, and respects its authoritative parent contract. Public delivery must completely support each claimed interface. PR title byte-equals the slice issue's title. Diff stays within the issue's `## Surfaces` globs and touches no path in `## Out of Scope`. Issue body preserves every existing `> **Significance.**` blockquote from the slice template verbatim. Every `Done Means` checkbox is checked or carries `OVERRULED: <reason>` before merge; this cannot waive the independent interface contract. The `slice_closeout_guard` workflow writes closeout evidence when a merged PR closes the slice and reopens an evidence-less close. *(pr_checks_slice)*
 
-2. **PR title, every non-merge commit, and the linked issue title match Conventional Commits v1.0.0, and no commit message or the PR title names an AI/LLM assistant.** Allowed types: `feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert`. *(pr_checks_cc)*
+2. **PR title, every non-merge commit, and the linked issue title match Conventional Commits v1.0.0, and no commit message or the PR title names an AI/LLM assistant.** Allowed types: `feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert`. Every commit-message closing reference, including merge commits, must also appear explicitly as a same-repository closing reference in the PR body; cross-repository commit closures are rejected. *(pr_checks_cc)*
 
 3. **Typing discipline never weakens.** No new `Any`, `cast(..., Any)`, `# type: ignore`, `# pyright: ignore`, or `# noqa`. Pyright error count cannot rise. `.github/typing_budget.json` cannot be raised by the PR it gates. The budget is seeded at this repository's measured state, not at zero: law 3 guarantees "no worse", not "clean". *(pr_checks_typing)*
 
@@ -57,6 +57,48 @@ The list is long because this repository ships a package: alongside the governan
 19. **No direct push to `main`. No force-push. No branch deletion.** Branch must be up-to-date with `main` before merge. One approving review, code-owner review on the enforcement surfaces owned in `.github/CODEOWNERS`, and every review thread resolved. *(branch protection, server-side)*
 
 Beyond the gates, `audit_main_ruleset` re-checks the live ruleset on every push to `main` with a privileged token — including `bypass_actors`, which the PR-time ruleset gate (`pr_checks_ruleset`) cannot observe. It is a post-merge alarm, not a merge gate, so it carries no law of its own. The release and publish path (`pr_post_release`, `pr_publish_pypi`), the weekly fuzz smoke, and the OpenSSF Scorecard analysis run outside the merge gate for the same reason.
+
+## Research interface contract
+
+Limen has two research interfaces. **Python Research** gives callers their own data, models, features, backtesting and selection in ordinary Python: custom SFD `params`/`prep`/`model` functions through `UniversalExperimentLoop`, caller-controlled search through MSQ, and `Sensor.from_python` for native inference handoff. It requires no new research language or built-in-model whitelist. **Compiled Research** adopts the `Manifest` (`MLManifest`/`RuleBasedManifest`) contract, directly or through `CompiledSFD` and CLI validation/compilation. A Manifest invoked from Python remains Compiled Research. UEL/MSQ, indicators, features and scalers are shared machinery, not exclusive interface markers.
+
+A public capability must work across every semantically applicable combination admitted by each interface that exposes it. Complete Python-only or Compiled-only delivery is valid; an unfinished second interface must remain unavailable. Restrictions must follow the capability's methodology or necessary evidence, not an implementation whitelist. Shared changes preserve existing guarantees on both paths. Completeness applies to the introduced or extended user capability, not every individual helper; unrelated maintenance does not have to repair every legacy limitation.
+
+This is a deliberate Limen-specific extension of the upstream governance plane, including law 1's independent child completion. It uses existing required contexts and introduces no additional research interface or required status context.
+
+### Declaration
+
+Every implementation PR has exactly one `## Interface Contract` section; issue forms may render it as `### Interface Contract`. It contains exactly one YAML fence with exactly four keys:
+
+```yaml
+delivery: maintenance
+interfaces: []
+scope: "Change contributor governance without changing research execution."
+proof: {}
+```
+
+- `delivery` is `public`, `prerequisite` or `maintenance`. Public delivery requires at least one interface and full support for each. A prerequisite exposes no unfinished public capability. Maintenance repairs or preserves existing behavior without enlarging its public contract.
+- `interfaces` is a duplicate-free subset of `python`, `compiled`. Prerequisite and maintenance work may use `[]` when no research capability changes; ordinary slice Proof and CI obligations still apply.
+- `scope` is a nonblank string naming the capability and justified exclusions, or the non-public purpose. Quote prose values to avoid YAML ambiguity. It cannot redefine an implementation gap as methodological inapplicability.
+- `proof` maps exactly the listed interfaces to nonempty reference lists; `interfaces: []` uses `proof: {}`. Public delivery needs at least one named test for every interface. Other roles may instead cite a relevant required check.
+
+Duplicate or unknown keys, aliases/merge keys, non-string enum values, placeholders and duplicate sections are rejected. CRLF and interface/reference ordering do not change a declaration's meaning. New issue forms require the field; CLI-authored issues follow the same planning discipline. The new slice field has no Significance blockquote, so it does not invalidate existing issues' quotations.
+
+### Evidence and review
+
+Test references use `test:tests/<path>/test_<module>.py::test_<name>` or `test:tests/<path>/test_<module>.py::Test<Class>::test_<name>`; the intermediate path may be absent. They name directly declared, normally discovered package tests. Reference a whole parametrized function, not selected cases. The gate rejects unsafe paths, symlinks, missing files/symbols and statically declared skip/xfail evidence. Only prerequisite/maintenance work may use `check:<required context>`, resolved against the trusted default branch's ruleset, not the candidate snapshot.
+
+Gate reads use the judged PR head as data; missing head identity or unavailable evidence cannot pass. Privileged issue/sweep jobs never import, collect or execute candidate tests. Reference existence and check membership do not prove execution or relevance. Required CI and semantic review must establish actual passing, unskipped execution, meaningful assertions, full claimed scope and honest exclusions. A formatting or admission check cannot prove a public research capability.
+
+### Adoption and parent completion
+
+The PR declaration must equal its slice's parsed declaration when present. If the slice lacks the section, its own PR supplies it; every PR still declares a contract, so no adoption-date exemption is needed. A native parent's contract must persist in that parent issue before child admission. Add it with a targeted issue edit, preserve the parent's agreed outcomes, and never replace it with a PR-body backfill.
+
+A public child requires a public parent and may claim a subset of its interfaces. A prerequisite's interfaces must also be a subset of the parent's targets. Maintenance may additionally name existing interfaces preserved by a shared repair without enlarging the parent's delivered product scope. Validate compatibility on every child; defer only parent proof-reference lookup until closure.
+
+A completed child may close independently. A last-child PR leaving the parent open names the remaining outcome or next slice in `Parent remains open: ...`. When ready, a new completion slice may close itself and the parent with all parent evidence. Child counts alone never establish product completion. GitHub's optional-colon closing syntax is recognized; commit-based closures must be represented in the PR body so they receive the same checks. Add a missing reference to the PR body rather than rewriting commit history.
+
+The gate covers PR-path parent closure. Manual PRD closure has no automatic evidence guard; contributors must not use it to evade this law. Material PR/issue contract edits require renewed semantic review of both the current head and changed declaration; GitHub does not automatically dismiss approval on body edits. These are explicit mechanical limits, not completeness guarantees. After correcting a stale API-posted sweep failure, dispatch `pr_checks_slice_sweep` with `workflow_dispatch` to refresh the verdict instead of waiting six hours.
 
 ## Workflow
 

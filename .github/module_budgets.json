@@ -15,6 +15,7 @@
   "governance/check_test_code_ratio.py": 40,
   "governance/check_test_fallbacks.py": 40,
   "governance/fail_loud_gate.py": 400,
+  "governance/interface_contract.py": 500,
   "governance/privileged_ruleset_audit.py": 120,
   "governance/ruleset_gate.py": 190,
   "governance/slice_gate.py": 680,

@@ -1749,6 +1749,13 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add explicit frozen fitted-selection assessment on reserved final observations with durable exposure attempts, causal member predictions, declared snapshot economics and verified retained evidence.
 
+## [5.39.1] - 2026-10-19
+
+- Require complete Python Research, Compiled Research or dual-interface capability contracts in planning, PR admission and semantic review.
+- Permit finished slices to leave incomplete parents open with explicit remaining work; validate parent contracts and proof before PR-driven closure.
+- Validate candidate-head proof references as data, recheck child PRs after parent edits, and run gate regressions in required CI.
+- Require commit-message closing references in the validated PR body and recognize optional-colon issue closures.
+
 ## [5.40.0] - 2026-10-19
 
 - Add `Sensor.from_model` with fitted-model defaults and optional preparation, prediction and mapping hooks.

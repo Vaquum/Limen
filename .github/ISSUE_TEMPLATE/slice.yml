@@ -11,7 +11,7 @@ body:
       value: |
         ## How this template works
 
-        Every section below opens with a blockquoted **Significance** note. That note
+        The existing planning sections carry a blockquoted **Significance** note. That note
         explains what the section is for and what content the section does and does not
         accept. **The Significance notes are part of the filed issue.** They ride
         alongside your content so anyone reading this issue — now or a year from now —
@@ -19,8 +19,11 @@ body:
         A slice issue without its Significance notes is not a slice issue and will be
         closed unfiled.
 
+        The Interface Contract adds the structured declaration defined in CLAUDE.md
+        without adding a Significance quotation to the legacy issue contract.
+
         Prose goals, noun-phrase objectives, philosophy of proof, taxonomy of
-        guardrails: not accepted. Every section asks for a mechanical predicate —
+        guardrails: not accepted as proof. Proof sections ask for a mechanical predicate —
         a command, a file path, a function signature, a commit SHA, or a CI
         workflow name — that can be evaluated against repo state at merge.
 
@@ -79,6 +82,30 @@ body:
         -
         Unlocks:
         -
+    validations:
+      required: true
+
+  - type: textarea
+    id: interface_contract
+    attributes:
+      label: Interface Contract
+      description: |
+        Follow CLAUDE.md's Research interface contract
+        (https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#research-interface-contract).
+        Declare public, prerequisite or maintenance and copy the declaration to
+        the delivering PR. Public delivery needs a named package test per claimed
+        interface. Non-public work with no research behavior change uses
+        interfaces: [] and proof: {}. A native parent's declaration belongs in
+        its own issue; a child must not narrow it. Replace the example scope and
+        proof; retain exactly one YAML fence.
+      value: |
+        ```yaml
+        delivery: public
+        interfaces: [python]
+        scope: "REPLACE: complete capability and justified exclusions."
+        proof:
+          python: [test:tests/test_example.py::test_python_capability]
+        ```
     validations:
       required: true
 

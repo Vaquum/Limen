@@ -21,6 +21,7 @@ Before opening or updating a Limen PR:
 
 | Task | Read this next | Why |
 |---|---|---|
+| planning or delivering research, maintenance or private prerequisites | [Research interface contract](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#research-interface-contract) | Defines complete interface delivery, declarations, proof and parent progression. |
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
 | updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
@@ -34,16 +35,28 @@ Before opening or updating a Limen PR:
 
 ## Contributor workflow
 
-1. Start with data: confirm whether the task uses bundled YAML templates, direct `HistoricalData`, or an external OHLC-compatible source.
+The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canonical. Every implementation PR declares its Interface Contract, including maintenance and prerequisites. Issue forms require it; a PR can supply its own slice's missing section, while a parent's contract must persist in the parent issue. Neutral work may declare no research interfaces; it still satisfies ordinary slice proof and required checks.
+
+For research behavior changes:
+
+1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. A Manifest called from Python still follows the latter contract. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
 2. Confirm the signal layer: read the relevant [Indicators](../Indicators.md), [Features](../Features.md), [Transforms](../Transforms.md), and [Scalers](../Scalers.md) pages before changing prep.
-3. Confirm prep semantics: preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations.
-4. Confirm the target: read [Targets](../Targets.md) and make sure fitting happens only on the training split when the target learns thresholds.
-5. Confirm hyperparameters: route search-space changes through the manifest/YAML params surface unless the task is Python-extension-only.
-6. Run YAML experiments through CLI, or Python SFDs through UEL with a search strategy (Python/MSQ). Both routes use the same MSQ execution path.
+3. For Compiled Research prep, preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations. Python Research keeps methodology caller-owned.
+4. For target changes, read [Targets](../Targets.md); preserve training-only threshold fitting in the governed pipeline.
+5. Declare Compiled Research search spaces through Manifest/YAML params; preserve caller-owned parameter and search choices in Python Research.
+6. Run compiled experiments through CLI/Manifest, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
 7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
 8. Make code, docs, tests, changelog, and version changes together when they belong together.
 9. Review the full GitHub diff before requesting review.
 10. Confirm the PR template items are true, not just checked.
+
+Complete single-interface delivery may ship while another interface remains unavailable. Private groundwork must not expose an unfinished public capability. A last child can leave its parent open by naming the remaining outcome or next slice; a later completion slice can close both with complete parent evidence. See the canonical contract for grammar, role compatibility and proof-reference rules.
+
+Material contract edits require renewed semantic review of the current head and declaration. Static proof references do not establish passing execution or methodological completeness. Manual parent closure has no automatic evidence guard and must not bypass review. If a corrected PR remains blocked by a stale API-posted sweep verdict, run the existing sweep from the trusted default branch:
+
+```bash
+gh workflow run pr_checks_slice_sweep.yml --ref main
+```
 
 Canonical bootstrap:
 
