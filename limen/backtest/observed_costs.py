@@ -56,7 +56,7 @@ class ComparisonReport(TypedDict):
     limitations: JsonValue
 
 
-@dataclass(frozen=True, slots=True, eq=False)
+@dataclass(frozen=True, eq=False)
 class CostCandidate:
     inputs: InitVar[TradeInputs]
     policy: InitVar[TradePolicy]
@@ -188,8 +188,9 @@ class CostCalibration:
             _ = _history.text(name, 'candidate name')
             if not isinstance(cast(object, candidate), CostCandidate):
                 raise TypeError('Every candidate must be a CostCandidate')
-            snapshot = cast(dict[str, object], getattr(candidate, '_snapshot'))
-            if _identity.digest(snapshot) != cast(str, getattr(candidate, '_seal')):
+            state = cast(dict[str, object], vars(candidate))
+            snapshot = cast(dict[str, object], state['_snapshot'])
+            if _identity.digest(snapshot) != state['_seal']:
                 raise ValueError('Frozen candidate content changed')
             frozen[name] = snapshot
         payload, ledgers = _comparison.compare(self._payload, self.digest, frozen)
