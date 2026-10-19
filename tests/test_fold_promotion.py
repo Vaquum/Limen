@@ -12,8 +12,6 @@ from limen.experiment._fold_fingerprint import fingerprint, membership
 from limen.inference import Trainer
 from limen.inference._fold_metrics import scalar_matches
 from limen.inference.errors import ReconstructionError
-from tests.fold_components import FIXTURE
-
 pytest_plugins = ['tests.fold_components']
 
 
@@ -106,12 +104,12 @@ def test_witness_validation_stages(fold_campaigns, mutation):
         trainer.train([pid], fold=campaign.fold)
 
 
-def test_ambiguous_selected_rows_and_incomplete_model_decline():
+def test_ambiguous_selected_rows_and_incomplete_model_decline(fold_campaigns):
     from limen.experiment._fold_evidence import model_witness
     from limen.experiment._fold_fingerprint import FoldEvidenceError
     from limen.experiment._fold_partitions import raw
 
-    rows = pl.read_parquet(FIXTURE, n_rows=4)
+    rows = fold_campaigns['anchored'].history.head(4)
     duplicate = pl.concat([rows, rows.head(1)])
     state = {'trial': {}}
     raw(SimpleNamespace(_fold_capture=state), duplicate, [duplicate, rows.clear(), rows])
@@ -120,8 +118,8 @@ def test_ambiguous_selected_rows_and_incomplete_model_decline():
         model_witness(SimpleNamespace(predict=lambda data: data))
 
 
-def test_fold_fingerprint_codec():
-    frame = pl.read_parquet(FIXTURE, n_rows=2)
+def test_fold_fingerprint_codec(fold_campaigns):
+    frame = fold_campaigns['anchored'].history.head(2)
     assert fingerprint(frame) == '4d17b350e56611cd6cde9fb7059098f64a665df3b99098b45ca625ea993ae5bf'
     assert membership([[0], [1]]) == '0144ca736aaf96da235bb3482b5990551e7a9a00863470a0073324fe4a0ff45f'
     for unit in ('ms', 'us', 'ns'):

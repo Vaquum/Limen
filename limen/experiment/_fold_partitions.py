@@ -4,6 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Protocol, TypeVar, cast
 
 import polars as pl
+import numpy as np
 
 from limen.experiment._walk_forward_split import WalkForwardConfig
 from limen.experiment._fold_fingerprint import FoldEvidenceError, clock, membership, schema, segments, validate_digest, validate_schema
@@ -44,6 +45,19 @@ def validate_partition(value: object, limit: int, *, raw_rows: bool) -> None:
 def partition(frame: pl.DataFrame, groups: Sequence[Sequence[int]]) -> dict[str, object]:
     return {'rows': len(groups), 'segments': segments(index for group in groups for index in group),
             'row_digest': membership(groups), 'schema': schema(frame.drop('__backtest_source_row__', strict=False))}
+
+
+def _same_inputs(actual: object, expected: pl.DataFrame | pl.Series) -> bool:
+    if isinstance(actual, pl.DataFrame) and isinstance(expected, pl.DataFrame):
+        return actual.equals(expected)
+    if isinstance(actual, pl.Series) and isinstance(expected, pl.Series):
+        return actual.equals(expected)
+    try:
+        left, right = np.asarray(actual), np.asarray(expected)
+        numeric = np.issubdtype(left.dtype, np.number) and np.issubdtype(right.dtype, np.number)
+        return bool(np.array_equal(left, right, equal_nan=numeric))
+    except (TypeError, ValueError, RuntimeError) as exc:
+        raise FoldEvidenceError('row_membership', f'Cannot recover native model input rows: {exc}') from exc
 
 
 def raw(manifest: object, selected: pl.DataFrame, splits: list[pl.DataFrame]) -> None:
@@ -105,6 +119,9 @@ def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, objec
             rows = [groups[value] for value in clock(frame)] if frame.height else []
             if len(cast(Sequence[object], data['x_' + suffix])) != len(rows):
                 raise FoldEvidenceError('row_membership', f'{name} extension changed model rows without recoverable carriers')
+            columns = [column for column in frame.columns if column not in ('datetime', '__backtest_source_row__')]
+            if not _same_inputs(data['x_' + suffix], frame.select(columns[:-1])) or not _same_inputs(data['y_' + suffix], frame[columns[-1]]):
+                raise FoldEvidenceError('row_membership', f'{name} model rows differ from their retained source carriers')
             allowed = {index for first, last in cast(list[list[int]], raw_witnesses[name]['segments']) for index in range(first, last)}
             if any(index not in allowed for group in rows for index in group):
                 raise FoldEvidenceError('row_membership', f'{name} retained support escaped its raw partition')

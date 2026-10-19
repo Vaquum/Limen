@@ -49,6 +49,7 @@ class Campaign:
     sensor: object
     fold: int
     elapsed: dict[str, float]
+    history: pl.DataFrame
 
 
 def config(kind: str, source: Path) -> dict:
@@ -134,7 +135,7 @@ def fold_campaigns(tmp_path_factory):
         shutil.move(output, destination)
         metadata = json.loads((destination / 'metadata.json').read_text())
         record = json.loads(_round_storage.text(_round_storage.round_path(destination)).splitlines()[0])
-        result[kind] = Campaign(destination, bars, copy.deepcopy(reference), metadata, record, sensor, selected, {'research': research_elapsed, 'promotion': promotion_elapsed, 'total': time.perf_counter() - started})
+        result[kind] = Campaign(destination, bars, copy.deepcopy(reference), metadata, record, sensor, selected, {'research': research_elapsed, 'promotion': promotion_elapsed, 'total': time.perf_counter() - started}, original)
     report = json.dumps({key: item.elapsed for key, item in result.items()}, indent=2)
     (root / 'timings.json').write_text(report)
     profile = ROOT / 'build/fold-campaign-profile.json'

@@ -7,8 +7,6 @@ import pytest
 from limen.cohort import Cohort
 from limen.inference import Sensor
 from limen.inference._python_sensor import decision_rows
-from tests.fold_components import FIXTURE
-
 pytest_plugins = ['tests.fold_components']
 
 
@@ -18,7 +16,7 @@ def test_guard_failure_precedence(fold_campaigns, kind, failure):
     item = fold_campaigns[kind]
     sensor = copy.deepcopy(item.sensor)
     source = item.bars.sort('datetime')
-    history = pl.read_parquet(FIXTURE, n_rows=600)
+    history = item.history.head(600)
     manifest = sensor._get_manifest()
     if failure == 'feature':
         context = patch.object(manifest, '_prepare_column_shims', side_effect=ValueError('feature failure'))
@@ -50,7 +48,7 @@ def test_guard_failure_precedence(fold_campaigns, kind, failure):
 @pytest.mark.parametrize('kind', ['anchored', 'signed'])
 def test_native_missing_bars_retain_recorded_clock(fold_campaigns, kind):
     sensor = fold_campaigns[kind].sensor
-    history = pl.read_parquet(FIXTURE, n_rows=600)
+    history = fold_campaigns[kind].history.head(600)
     history = pl.concat([history[:500], history[501:]])
     rows = sensor.predict_all(history)
     assert len(rows) == len(history)
@@ -59,7 +57,7 @@ def test_native_missing_bars_retain_recorded_clock(fold_campaigns, kind):
 
 def test_incomplete_formed_bar_warms_up(fold_campaigns):
     sensor = fold_campaigns['formed'].sensor
-    first = pl.read_parquet(FIXTURE, n_rows=1)
+    first = fold_campaigns['formed'].history.head(1)
     assert sensor.predict_all(first) == []
     result = sensor.predict(first)
     assert result.reason == 'warm-up' and result.prediction is None
@@ -68,7 +66,7 @@ def test_incomplete_formed_bar_warms_up(fold_campaigns):
 @pytest.mark.parametrize('kind', ['ordinary', 'anchored', 'formed'])
 def test_predict_keyword_keeps_public_signature(fold_campaigns, kind):
     sensor = fold_campaigns[kind].sensor
-    history = pl.read_parquet(FIXTURE, n_rows=600)
+    history = fold_campaigns[kind].history.head(600)
     assert sensor.predict(raw_klines=history) == sensor.predict(history)
 
 
