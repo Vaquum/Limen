@@ -144,7 +144,11 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
         raise ValueError('Holdout requires an idle frozen selection')
     try:
         from limen.experiment._holdout_freeze import prediction_dependencies
-        if prediction_dependencies(snapshot[0]) != frozen_spec.get('prediction_dependencies'):
+        try:
+            dependencies = prediction_dependencies(snapshot[0])
+        except (ValueError, TypeError) as exc:
+            raise ValueError('Frozen holdout prediction dependency changed or became unowned') from exc
+        if dependencies != frozen_spec.get('prediction_dependencies'):
             raise ValueError('Frozen holdout prediction dependency changed')
         if digest(frozen_spec) != spec_sha or state_digest(snapshot[0]) != state_sha:
             raise ValueError('Frozen holdout specification/state changed')

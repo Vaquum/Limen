@@ -242,7 +242,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
         done = processed.setdefault(id(value), set())
         while pending:
             name = pending.pop()
-            if name in done:
+            if name in done or fitting_call(cls.__module__, f'{cls.__qualname__}.{name}'):
                 continue
             done.add(name)
             method = inspect.getattr_static(cls, name, None)
