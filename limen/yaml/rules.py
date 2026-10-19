@@ -663,7 +663,7 @@ class PruningStrategiesSpec:
 
 class AcceptanceSpec:
     def check(self, yaml_dict: dict[str, object], errors: list[YAMLError], _warnings: list[YAMLError]) -> None:
-        from limen.experiment.acceptance_report import read_acceptance
+        from limen.experiment._acceptance_settings import read_acceptance
 
         for path in ('acceptance', 'uel.acceptance'):
             found, _ = get_at(yaml_dict, path)

@@ -1731,3 +1731,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.35.2] - 2026-10-19
 
 - Reject Cohort sources carrying the persisted walk-forward declaration before ID validation, and include the inner `Cohort` prefix in qualified-source errors.
+
+## [5.36.0] - 2026-10-19
+
+- Add bounded acceptance PBO block configuration with persisted counts, conflict checks and nominal partition resolution.
