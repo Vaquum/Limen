@@ -30,13 +30,14 @@ Most existing pages still need their examples classified and connected to the pr
 
 ## Validating the candidate reader
 
-Use Python 3.12 and Node.js 20 or later. Install the package's development, data, statistics and boosting dependencies for the complete project. CI installs the hash-pinned research environment and the tools in `docs/examples/requirements-quality.txt`; a local supported installation records its actual dependency identity instead of claiming equivalence with that lock.
+Use Python 3.12 and Node.js 20 or later. CI installs the hash-pinned research environment and the tools in `docs/examples/requirements-quality.txt`. Prepare runtime and build wheels before pytest. The proof creates a new environment, installs those wheels offline with hash checking, builds without isolated dependency resolution and installs the candidate wheel there. It imports no dependency from the invoking environment. Linux uses the research CI lock; macOS uses its separately resolved lock with the same version constraints. Both records identify the resolution target and actual interpreter.
 
 From the repository root, after publishing the candidate PR:
 
 ```bash
 python docs/examples/check_sources.py
 python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
+python docs/examples/prepare_environment.py
 python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
 ```
 

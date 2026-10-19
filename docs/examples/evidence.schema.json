@@ -14,7 +14,8 @@
     "displays",
     "validation",
     "publication",
-    "bundle"
+    "bundle",
+    "native_outputs"
   ],
   "properties": {
     "schema_version": {
@@ -86,7 +87,9 @@
         "runner",
         "lock_sha256",
         "lock_resolution_target",
-        "dependencies_sha256"
+        "dependencies_sha256",
+        "build_lock_sha256",
+        "wheelhouse_manifest_sha256"
       ],
       "properties": {
         "python": {
@@ -112,6 +115,14 @@
         "dependencies_sha256": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
+        },
+        "build_lock_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "wheelhouse_manifest_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
         }
       }
     },
@@ -387,6 +398,24 @@
       ]
     },
     "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "native_outputs": {
       "type": "object",
       "additionalProperties": false,
       "required": [

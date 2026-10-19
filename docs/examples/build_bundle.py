@@ -20,6 +20,27 @@ INPUTS = {
 }
 
 
+def write_archive(entries: dict[str, bytes], output: Path) -> str:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open('wb') as stream, gzip.GzipFile(fileobj=stream, mode='wb', mtime=0, filename='') as compressed, tarfile.open(fileobj=compressed, mode='w|') as archive:
+        for name, content in sorted(entries.items()):
+            member = tarfile.TarInfo(name)
+            member.size, member.mode = len(content), 0o644
+            archive.addfile(member, io.BytesIO(content))
+    return hashlib.sha256(output.read_bytes()).hexdigest()
+
+
+def build_results(project: Path, environment: Path, output: Path) -> str:
+    entries = {'environment/installed.json': environment.read_bytes()}
+    for path in sorted((project / 'results').rglob('*')):
+        if path.is_symlink():
+            raise ValueError('Native results cannot substitute an external file: ' + str(path))
+        if path.is_file():
+            entries[str(path.relative_to(project))] = path.read_bytes()
+    entries['files.json'] = (json.dumps({name: hashlib.sha256(data).hexdigest() for name, data in entries.items()}, indent=2) + '\n').encode()
+    return write_archive(entries, output)
+
+
 def build(root: Path, output: Path) -> str:
     entries = {}
     for interface in ('python', 'compiled'):
@@ -34,15 +55,11 @@ def build(root: Path, output: Path) -> str:
             raise ValueError(f'Recorded input digest differs: {name}')
         entries['inputs/' + name] = data
     entries['requirements/research-env.txt'] = (root / 'requirements/ci/research-env.txt').read_bytes()
+    entries['requirements/research-macos.txt'] = (root / 'docs/examples/requirements-research-macos.txt').read_bytes()
+    entries['requirements/build.txt'] = (root / 'docs/examples/requirements-build.txt').read_bytes()
     entries['inputs.json'] = (json.dumps(INPUTS, indent=2) + '\n').encode()
     entries['bundle.json'] = (json.dumps({'schema_version': 1, 'files': {name: hashlib.sha256(content).hexdigest() for name, content in sorted(entries.items())}}, indent=2) + '\n').encode()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open('wb') as stream, gzip.GzipFile(fileobj=stream, mode='wb', mtime=0, filename='') as compressed, tarfile.open(fileobj=compressed, mode='w|') as archive:
-        for name, content in sorted(entries.items()):
-            member = tarfile.TarInfo(name)
-            member.size, member.mode = len(content), 0o644
-            archive.addfile(member, io.BytesIO(content))
-    return hashlib.sha256(output.read_bytes()).hexdigest()
+    return write_archive(entries, output)
 
 
 if __name__ == '__main__':

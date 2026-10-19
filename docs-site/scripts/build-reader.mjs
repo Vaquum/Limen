@@ -28,6 +28,8 @@ await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/boo
 for(const [from,to]of [['@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2','archivo.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2','plex.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2','plex-medium.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-italic.woff2','plex-italic.woff2'],['@fontsource-variable/archivo/LICENSE','archivo-OFL.txt'],['@fontsource/ibm-plex-mono/LICENSE','plex-OFL.txt']])await fs.copyFile(path.join(site,'node_modules',from),path.join(output,'assets/fonts',to));
 await fs.mkdir(path.join(output,'evidence'),{recursive:true});await fs.copyFile(evidencePath,path.join(output,'evidence/current.json'));
 const bundleTarget=path.join(output,'evidence',path.basename(evidence.bundle.path));await fs.copyFile(path.resolve(root,evidence.bundle.path),bundleTarget);
+await fs.copyFile(path.resolve(root,evidence.native_outputs.path),path.join(output,'evidence',path.basename(evidence.native_outputs.path)));
+await fs.copyFile(path.join(root,'.docs-evidence/environment-wheels.json'),path.join(output,'evidence/environment-wheels.json'));
 const wheelNames=(await fs.readdir(path.join(root,'.docs-evidence'))).filter(name=>name.startsWith('vaquum_limen-'+version+'-')&&name.endsWith('.whl'));
 if(wheelNames.length!==1)throw Error('Expected exactly the validated wheel');
 await fs.copyFile(path.join(root,'.docs-evidence',wheelNames[0]),path.join(output,'evidence',wheelNames[0]));

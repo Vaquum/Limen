@@ -275,4 +275,6 @@ SCENARIOS = {'search': search, 'recovery': recovery, 'walk_forward': walk_forwar
 
 def run(name, data_dir, output):
     output.mkdir(parents=True, exist_ok=True)
-    return SCENARIOS[name](data_dir, output)
+    result = SCENARIOS[name](data_dir, output)
+    (output / 'summary.json').write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+    return result

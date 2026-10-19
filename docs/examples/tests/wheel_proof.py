@@ -8,7 +8,8 @@ import tarfile
 import venv
 import zipfile
 
-from build_bundle import INPUTS, build
+from build_bundle import INPUTS, build, build_results
+from prepare_environment import verify_wheelhouse
 from scenario_oracles import verify
 
 
@@ -66,10 +67,17 @@ def prove_wheel(root: Path, temporary: Path):
     output.mkdir(exist_ok=True)
     bundle = output / 'examples.tar.gz'
     bundle_sha = build(root, bundle)
+    offline = verify_wheelhouse(root)
+    isolated = temporary / 'isolated'
+    venv.EnvBuilder(with_pip=True).create(isolated)
+    python = isolated / 'bin/python'
+    run([python, '-m', 'pip', 'install', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
+         '--require-hashes', '-r', root / offline['runtime_lock'], '-r', root / 'docs/examples/requirements-build.txt'], cwd=temporary)
     wheel_dir = temporary / 'wheels'
     environment = dict(os.environ)
     environment['SOURCE_DATE_EPOCH'] = subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=root, text=True).strip()
-    run([sys.executable, '-m', 'build', '--wheel', '--outdir', wheel_dir], cwd=root, env=environment)
+    environment['PIP_NO_INDEX'] = '1'
+    run([python, '-m', 'build', '--wheel', '--no-isolation', '--outdir', wheel_dir], cwd=root, env=environment)
     wheels = list(wheel_dir.glob('*.whl'))
     assert len(wheels) == 1
     wheel = wheels[0]
@@ -79,28 +87,21 @@ def prove_wheel(root: Path, temporary: Path):
         assert shipped == expected
         for name in shipped:
             assert archive.read(name) == (root / name).read_bytes()
-    isolated = temporary / 'isolated'
-    venv.EnvBuilder(with_pip=True).create(isolated)
-    python = isolated / 'bin/python'
-    run([python, '-m', 'pip', 'install', '--no-deps', wheel], cwd=temporary)
-    site = isolated / f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages'
-    dependencies = Path(sys.prefix) / f'lib/python{sys.version_info.major}.{sys.version_info.minor}/site-packages'
-    # Reuse the invoking environment's already-installed runtime dependencies.
-    # A plain .pth directory does not execute that directory's editable .pth files.
-    (site / 'research-dependencies.pth').write_text(str(dependencies) + '\n')
+    run([python, '-m', 'pip', 'install', '--no-index', '--no-deps', wheel], cwd=temporary)
     project = temporary / 'bundle'
     project.mkdir()
     unpack(bundle, project, root)
     info_file = temporary / 'installed.json'
     inspect = '''import importlib.metadata as m,json,sys,limen
 from pathlib import Path
-info={"version":m.version("vaquum-limen"),"import_location":str(Path(limen.__file__).resolve()),"distribution_location":str(m.distribution("vaquum-limen").locate_file("").resolve()),"sys_path":sys.path,"python":sys.version,"dependencies":sorted((d.metadata["Name"],d.version) for d in m.distributions())}
+info={"version":m.version("vaquum-limen"),"import_location":str(Path(limen.__file__).resolve()),"distribution_location":str(m.distribution("vaquum-limen").locate_file("").resolve()),"sys_path":sys.path,"python":sys.version,"dependencies":sorted((d.metadata["Name"],d.version) for d in m.distributions()),"distribution_locations":[str(d.locate_file("").resolve()) for d in m.distributions()]}
 Path(sys.argv[1]).write_text(json.dumps(info))'''
     run([python, '-I', '-c', inspect, info_file], cwd=project)
     info = json.loads(info_file.read_text())
     assert Path(info['import_location']).is_relative_to(isolated)
     assert Path(info['distribution_location']).is_relative_to(isolated)
     assert not any(Path(entry or project).resolve() == root.resolve() for entry in info['sys_path'])
+    assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
     for interface in ('python', 'compiled'):
         command = [python, f'{interface}-research/research.py', '--scenario', 'selection', '--data-dir', 'inputs', '--output-dir', f'results/{interface}']
@@ -130,6 +131,9 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             scenario_reports[(interface, name)] = {'summary': result, 'command': [str(arg) for arg in command], 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
     wheel_destination = output / wheel.name
     wheel_destination.write_bytes(wheel.read_bytes())
-    return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info,
+    native = output / 'native-results.tar.gz'
+    native_sha = build_results(project, info_file, native)
+    return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info, 'offline': offline,
+            'native_outputs': {'path': str(native.relative_to(root)), 'sha256': native_sha},
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},
             'wheel_sha256': hashlib.sha256(wheel.read_bytes()).hexdigest()}

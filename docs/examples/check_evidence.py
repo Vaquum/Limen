@@ -6,6 +6,7 @@ import json
 import math
 import re
 import subprocess
+import tarfile
 from pathlib import Path
 
 from catalogue_surfaces import validate_surface_catalogue
@@ -257,7 +258,39 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             raise ValueError('Retained artifact is missing or changed')
     for item in record['inputs']:
         verified_file(item['path'], item['sha256'])
+    locks = [root / 'requirements/ci/research-env.txt', root / 'docs/examples/requirements-research-macos.txt']
+    if record['environment']['lock_sha256'] not in {digest(path.read_bytes()) for path in locks}:
+        raise ValueError('Research dependency lock is unrecognized')
+    verified_file('docs/examples/requirements-build.txt', record['environment']['build_lock_sha256'])
+    verified_file('.docs-evidence/environment-wheels.json', record['environment']['wheelhouse_manifest_sha256'])
     verified_file(record['bundle']['path'], record['bundle']['sha256'])
+    verified_file(record['native_outputs']['path'], record['native_outputs']['sha256'])
+    with tarfile.open(root / record['native_outputs']['path']) as archive:
+        members = archive.getmembers()
+        if len({item.name for item in members}) != len(members) or any(not item.isfile() for item in members):
+            raise ValueError('Native output archive contains substituted or duplicate members')
+        contents = {}
+        for member in members:
+            stream = archive.extractfile(member)
+            if stream is None:
+                raise ValueError('Missing native output member')
+            with stream:
+                contents[member.name] = stream.read()
+        inventory = json.loads(contents['files.json'])
+        if inventory != {name: digest(data) for name, data in contents.items() if name != 'files.json'}:
+            raise ValueError('Native output archive inventory differs')
+        installed = json.loads(contents['environment/installed.json'])
+        if digest(json.dumps(installed['dependencies']).encode()) != record['environment']['dependencies_sha256']:
+            raise ValueError('Retained installed dependency identity differs')
+        for scenario in record['validation']['scenarios']:
+            interface, name = scenario['interface'], scenario['id']
+            directory = f'results/{interface}' if name == 'selection' else f'results/{interface}-all/{name}'
+            if not any(path.startswith(directory + '/') for path in contents):
+                raise ValueError('A required scenario has no retained native artifacts')
+            summary = json.loads(contents[f'results/{interface}/summary.json'] if name == 'selection' else contents[f'results/{interface}-all/summary.json'])
+            native_result = summary if name == 'selection' else summary['scenarios'][name]
+            if native_result != json.loads((root / scenario['output_path']).read_text()):
+                raise ValueError('Retained native summary differs from validated output')
     wheels = [path for path in (root / '.docs-evidence').glob(f'vaquum_limen-{version}-*.whl') if digest(path.read_bytes()) == record['package']['wheel_sha256']]
     if len(wheels) != 1:
         raise ValueError('Installed wheel artifact does not match')

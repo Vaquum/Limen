@@ -37,6 +37,9 @@ jobs:
       - name: Check documentation Python
         run: python docs/examples/check_sources.py
 
+      - name: Prepare hashed offline research dependencies
+        run: python docs/examples/prepare_environment.py
+
       - name: Acquire merged source identities
         env:
           GH_TOKEN: ${{ github.token }}
@@ -93,4 +96,6 @@ jobs:
           name: research-book-evidence
           include-hidden-files: true
           if-no-files-found: error
-          path: .docs-evidence/
+          path: |
+            .docs-evidence/
+            !.docs-evidence/wheelhouse/**
