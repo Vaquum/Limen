@@ -1,8 +1,9 @@
 """Quantile end events must depend only on the recorded prefix."""
+import numpy as np
 import pytest
 from polars.testing import assert_frame_equal
 
-from limen.features.quantile_price_lines import quantile_price_lines
+from limen.features.quantile_price_lines import _expanding_quantiles, quantile_price_lines
 from tests.test_line_performance import BASELINES, DATA
 
 
@@ -38,3 +39,17 @@ def test_quantile_rows_match_frozen_prefix_oracle(quantile, research, windows):
         assert_frame_equal(result.slice(cutoff - 1, 1).select(columns), expected.tail(1).select(columns),
                            rel_tol=1e-12, abs_tol=1e-12)
     assert result.schema == expected.schema
+
+
+@pytest.mark.parametrize('quantile', [0., .5, .7, .75, .8, 1.])
+def test_expanding_quantiles_match_numpy_exactly(quantile):
+    close = DATA['close'].head(384).to_numpy()
+    for records in BASELINES['find_price_lines'].find_price_lines(close, 48, .002):
+        lines = (np.array([line['start_idx'] for line in records], dtype=np.intp),
+                 np.array([line['end_idx'] for line in records], dtype=np.intp),
+                 np.array([line['height_pct'] for line in records], dtype=np.float64))
+        thresholds = _expanding_quantiles(lines, len(close), quantile)
+        for cutoff in (1, 2, 17, 48, 96, 192, 384):
+            completed = np.abs(lines[2][lines[1] < cutoff])
+            expected = np.quantile(completed, quantile) if completed.size else np.inf
+            assert thresholds[cutoff - 1] == expected

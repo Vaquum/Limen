@@ -14,6 +14,7 @@ DEFAULT_DENSITY_LOOKBACK_HOURS = 48
 DEFAULT_MOMENTUM_LOOKBACK_HOURS = 6
 DEFAULT_HEIGHT_LOOKBACK_HOURS = 24
 STRUCT_COL = '_quantile_price_lines'
+INTERPOLATION_MIDPOINT = 0.5
 
 
 def quantile_price_lines(data: pl.DataFrame,
@@ -27,9 +28,8 @@ def quantile_price_lines(data: pl.DataFrame,
 
     '''
     Compute quantile-line end features from lines completed through each row.
-
-    Select heights at or above each direction's expanding quantile, including
-    ties. End windows include both boundaries [t-window, t]. Recency is capped
+    Select heights at or above each direction's expanding quantile, with ties.
+    End windows include both boundaries [t-window, t]. Recency is capped
     at density_lookback_hours; other empty-window features return zero. The optional
     active_quantile_count retains retrospective whole-frame span selection.
 
@@ -44,8 +44,7 @@ def quantile_price_lines(data: pl.DataFrame,
         include_research_only (bool): Add the retrospective active_quantile_count
 
     Returns:
-        pl.DataFrame | pl.LazyFrame: Matching input type with five end-event
-            columns and, by default, the research-only span count
+        pl.DataFrame | pl.LazyFrame: Input type with five end columns and optional span count
 
     Raises:
         ValueError: If a lookback is below 1 or include_research_only is not bool
@@ -212,7 +211,9 @@ def _expanding_quantiles(lines: LineArrays, n_rows: int, quantile: float) -> npt
             while len(lower) > target:
                 heappush(upper, -heappop(lower))
             # Match NumPy's linear interpolation, including its rounding at ties.
-            thresholds[row] = np.quantile([-lower[0], upper[0] if upper else -lower[0]], rank - int(rank))
+            left, right = -lower[0], upper[0] if upper else -lower[0]
+            fraction = rank - int(rank)
+            thresholds[row] = left + (right - left) * fraction if fraction < INTERPOLATION_MIDPOINT else right - (right - left) * (1 - fraction)
     return thresholds
 
 
