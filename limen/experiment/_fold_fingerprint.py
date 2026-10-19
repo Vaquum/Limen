@@ -27,6 +27,26 @@ _FORMATS = {'i8': 'b', 'i16': 'h', 'i32': 'i', 'i64': 'q',
 _TAGS: dict[object, str] = {pl.Boolean: 'bool', pl.Int8: 'i8', pl.Int16: 'i16', pl.Int32: 'i32', pl.Int64: 'i64',
          pl.UInt8: 'u8', pl.UInt16: 'u16', pl.UInt32: 'u32', pl.UInt64: 'u64',
          pl.Float32: 'f32', pl.Float64: 'f64', pl.String: 'utf8', pl.Date: 'date'}
+_SCHEMA_PAIR = 2
+_DIGEST_LENGTH = 64
+
+
+def validate_schema(value: object) -> None:
+    if not isinstance(value, list):
+        raise ValueError('fold witness schema must be an ordered field list')
+    names: set[str] = set()
+    for field in cast(list[object], value):
+        if not isinstance(field, list) or len(cast(list[object], field)) != _SCHEMA_PAIR:
+            raise ValueError('fold witness schema field is incomplete')
+        name, tag = cast(list[object], field)
+        if not isinstance(name, str) or not isinstance(tag, str) or tag not in {*_TAGS.values(), 'datetime_utc_ns'} or name in names:
+            raise ValueError('fold witness schema field is invalid or repeated')
+        names.add(name)
+
+
+def validate_digest(value: object) -> None:
+    if not isinstance(value, str) or len(value) != _DIGEST_LENGTH or any(char not in '0123456789abcdef' for char in value):
+        raise ValueError('fold witness requires a lowercase SHA-256 digest')
 
 
 def schema(frame: pl.DataFrame) -> list[list[str]]:

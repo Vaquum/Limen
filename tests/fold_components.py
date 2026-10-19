@@ -8,6 +8,8 @@ import time
 import polars as pl
 import pytest
 from threadpoolctl import threadpool_limits
+import limen.data as _data_namespace
+import limen.sfd.reference_architecture as _architecture_namespace
 
 from limen.experiment import UniversalExperimentLoop, _round_storage
 from limen.inference import Trainer
@@ -33,9 +35,6 @@ def sorted_source(frame: pl.DataFrame) -> pl.DataFrame:
 
 
 # Install real caller components in the namespaces admitted by Compiled Research.
-import limen.data as _data_namespace
-import limen.sfd.reference_architecture as _architecture_namespace
-
 vars(_architecture_namespace)['_fold_test_binary'] = caller_binary
 vars(_data_namespace)['_fold_test_sorted_source'] = sorted_source
 

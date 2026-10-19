@@ -6,11 +6,39 @@ from typing import TypeVar, cast
 import polars as pl
 
 from limen.experiment._walk_forward_split import WalkForwardConfig
-from limen.experiment._fold_fingerprint import FoldEvidenceError, clock, membership, schema, segments
+from limen.experiment._fold_fingerprint import FoldEvidenceError, clock, membership, schema, segments, validate_digest, validate_schema
 
 __all__: list[str] = []
 _NAMES = ('fit', 'validation', 'test')
 _T = TypeVar('_T')
+_SEGMENT_FIELDS = 2
+
+
+def validate_partition(value: object, limit: int, *, raw_rows: bool) -> None:
+    if not isinstance(value, dict):
+        raise ValueError('fold witness partition must be an object')
+    item = cast(dict[str, object], value)
+    if set(item) != {'rows', 'segments', 'row_digest', 'schema'} or type(item['rows']) is not int or cast(int, item['rows']) < 0 or not isinstance(item['segments'], list):
+        raise ValueError('fold witness partition fields are invalid')
+    validate_schema(item['schema'])
+    validate_digest(item['row_digest'])
+    positions: list[int] = []
+    previous = -1
+    for segment in cast(list[object], item['segments']):
+        if not isinstance(segment, list) or len(cast(list[object], segment)) != _SEGMENT_FIELDS:
+            raise ValueError('fold witness partition segment is incomplete')
+        pair = cast(list[object], segment)
+        if any(type(index) is not int for index in pair):
+            raise ValueError('fold witness partition indices must be literal integers')
+        first, last = cast(list[int], pair)
+        if not 0 <= first < last <= limit or first <= previous:
+            raise ValueError('fold witness partition segments overlap or escape source rows')
+        positions.extend(range(first, last))
+        previous = last
+    if (not positions) != (item['rows'] == 0) or cast(int, item['rows']) > len(positions):
+        raise ValueError('fold witness partition row count is inconsistent')
+    if raw_rows and (item['rows'] != len(positions) or item['row_digest'] != membership([[index] for index in positions])):
+        raise ValueError('fold witness raw membership digest/count disagrees with segments')
 
 
 def partition(frame: pl.DataFrame, groups: Sequence[Sequence[int]]) -> dict[str, object]:

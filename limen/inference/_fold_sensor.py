@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
+from calendar import timegm
 import copy
 from datetime import date, datetime, timezone
 from functools import wraps
@@ -50,7 +51,7 @@ def reject_legacy_members(members: Sequence[object], *, qualified_folds: bool = 
 def last_inside(sensor: object, dt: object, manifest: object) -> bool:
     context = cast(Mapping[str, object] | None, getattr(sensor, '_fold_context', None))
     if context is not None:
-        return isinstance(dt, datetime) and (int(dt.timestamp()) * 1_000_000 + dt.microsecond) * 1000 < cast(int, cast(Mapping[str, object], context['campaign'])['selection_cutoff_ns'])
+        return isinstance(dt, datetime) and (timegm(dt.utctimetuple()) * 1_000_000 + dt.microsecond) * 1000 < cast(int, cast(Mapping[str, object], context['campaign'])['selection_cutoff_ns'])
     dates = cast(tuple[date, date, date, date, date, date] | None, getattr(manifest, 'split_dates', None))
     if dates is None or dt is None:
         return False

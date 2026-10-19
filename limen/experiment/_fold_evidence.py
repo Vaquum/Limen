@@ -4,11 +4,13 @@ from collections.abc import Callable, Mapping
 import copy
 from hashlib import sha256
 import json
+import math
 from typing import TYPE_CHECKING, Protocol, cast
 
 import polars as pl
 
-from limen.experiment._fold_fingerprint import FoldEvidenceError, source
+from limen.experiment._fold_fingerprint import FoldEvidenceError, source, validate_schema
+from limen.experiment._fold_partitions import validate_partition
 from limen.experiment._holdout_research import prepare_walk_forward
 from limen.experiment._resolve_trade_policy import resolve_json
 
@@ -120,7 +122,7 @@ def checked(value: object) -> dict[str, object]:
     if not isinstance(value, dict):
         raise FoldEvidenceError('row_membership', 'Missing fold witness; rerun with version 1 evidence')
     record = cast(dict[str, object], value)
-    if record.get('version') != 1:
+    if type(record.get('version')) is not int or record.get('version') != 1:
         raise FoldEvidenceError('row_membership', 'Unsupported fold witness; rerun with version 1 evidence')
     if 'unavailable_reason' in record:
         reason = cast(Mapping[str, object], record['unavailable_reason'])
@@ -137,6 +139,7 @@ def _source(value: object) -> dict[str, object]:
     digest = item['digest']
     if not isinstance(digest, str) or len(digest) != _DIGEST_LENGTH or any(char not in '0123456789abcdef' for char in digest) or cast(int, item['rows']) <= 0 or cast(int, item['interval_ns']) <= 0 or cast(int, item['first_ns']) > cast(int, item['last_ns']):
         raise ValueError('fold witness source identity is invalid; rerun')
+    validate_schema(item['schema'])
     return item
 
 
@@ -146,6 +149,8 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
         raise ValueError('Fold promotion requires uel.recording.fold_details: true; rerun')
     policy = cast(Mapping[str, object], recording)
     campaign, trial = checked(metadata.get('fold_promotion')), checked(round_entry.get('fold_promotion'))
+    if set(campaign) != {'version', 'origin', 'source', 'selection_cutoff_ns'} or set(trial) != {'version', 'campaign_source_digest', 'selected_source', 'validation_ratio', 'preparation'}:
+        raise ValueError('fold witness campaign/trial fields are incomplete; rerun')
     original, selected = _source(campaign.get('source')), _source(trial.get('selected_source'))
     config = cast(Mapping[str, object], metadata['split_walk_forward'])
     n_folds = config['n_folds']
@@ -159,16 +164,23 @@ def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, 
     entries = cast(list[Mapping[str, object]], folds)
     for index, entry in enumerate(entries):
         witness = checked(entry.get('fold_promotion'))
-        if entry.get('fold') != index or witness.get('fold') != index or witness.get('n_folds') != n_folds:
+        if type(entry.get('fold')) is not int or type(witness.get('fold')) is not int or type(witness.get('n_folds')) is not int or entry.get('fold') != index or witness.get('fold') != index or witness.get('n_folds') != n_folds:
             raise ValueError('fold witness identity/count mismatch; rerun')
     entry = entries[fold]
     witness = checked(entry['fold_promotion'])
+    if set(witness) != {'version', 'fold', 'n_folds', 'raw', 'retained', 'fitting_cutoff_ns', 'fitted_threshold', 'inference_model'}:
+        raise ValueError('fold witness fitted fields are incomplete; rerun')
+    threshold = witness['fitted_threshold']
+    if threshold is not None and (isinstance(threshold, bool) or not isinstance(threshold, (int, float)) or not math.isfinite(threshold)):
+        raise ValueError('fold witness fitted threshold must be finite or absent')
     if type(witness.get('fitting_cutoff_ns')) is not int or cast(int, witness['fitting_cutoff_ns']) > cast(int, campaign['selection_cutoff_ns']) or not isinstance(witness.get('inference_model'), dict):
         raise ValueError('fold witness fitted inference context is incomplete; rerun')
     for key in ('raw', 'retained'):
         groups = witness.get(key)
         if not isinstance(groups, dict) or set(cast(dict[str, object], groups)) != {'fit', 'validation', 'test'}:
             raise ValueError('fold witness partition context is incomplete; rerun')
+        for partition in cast(dict[str, object], groups).values():
+            validate_partition(partition, cast(int, selected['rows']), raw_rows=key == 'raw')
     payload = {'version': 1, 'manifest_id': metadata['manifest_id'], 'permutation_id': round_entry['round_id'],
                'fold': fold, 'campaign': campaign, 'trial': trial, 'fold_witness': witness,
                'trade_contract_digest': entry.get('trade_contract_digest'), 'learning_binding': entry.get('learning_binding'),
