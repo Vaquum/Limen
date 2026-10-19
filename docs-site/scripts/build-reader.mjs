@@ -4,7 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {execFileSync} from 'node:child_process';
 import {docs} from './assemble-docs.mjs';
-import {renderPage,hash} from '../reader/render.mjs';
+import {content,renderPage,hash} from '../reader/render.mjs';
 const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),root=path.dirname(site);
 const {values}=parseArgs({options:{evidence:{type:'string',default:'../.docs-evidence/current.json'},output:{type:'string',default:'reader-build'}}});
 const dirty=execFileSync('git',['status','--porcelain','--untracked-files=normal'],{cwd:root,encoding:'utf8'});
@@ -16,8 +16,8 @@ if(evidence.revision.head!==expectedHead||evidence.revision.tree!==expectedTree|
 const packageText=await fs.readFile(path.join(root,'pyproject.toml'),'utf8');const version=packageText.match(/^version = "([^"]+)"/m)[1];
 if(evidence.package.version!==version)throw Error('Reader evidence belongs to a different package version');
 execFileSync(process.env.LIMEN_PYTHON||'python3',[path.join(root,'docs/examples/check_evidence.py'),'--evidence',evidencePath,'--head',expectedHead,'--tree',expectedTree,'--version',version],{cwd:root,stdio:'inherit'});
-const overrides={'docs/Research-Book.md':{route:'/',bookOrder:0},'docs/examples/python-research/README.md':{route:'/book/python-research/',bookOrder:1},'docs/examples/compiled-research/README.md':{route:'/book/compiled-research/',bookOrder:2},'README.md':{route:'/about/'},'docs/Trainer.md':{route:'/reference/trainer/'},'docs/Cohort.md':{route:'/reference/cohort/'}};
-const pages=await Promise.all(docs.map(async doc=>{const markdown=await fs.readFile(path.join(root,doc.source),'utf8');const chosen=overrides[doc.source]||{};const route=chosen.route||(doc.slug.replace(/^\/guides\//,'/book/').replace(/^\/packages\//,'/reference/packages/')+'/');return {...doc,...chosen,markdown,route,url:'/limen'+route,title:markdown.match(/^# (.+)$/m)?.[1]?.replaceAll('`','')||doc.sidebarLabel||'Limen',part:chosen.bookOrder!==undefined?'Book':route.startsWith('/developer/')?'Developer':route.startsWith('/reference/')||doc.source==='docs/Trainer.md'||doc.source==='docs/Cohort.md'?'Reference':'Book'};}));
+const overrides=content.pages;
+const pages=await Promise.all(docs.map(async doc=>{const markdown=await fs.readFile(path.join(root,doc.source),'utf8');const chosen=overrides[doc.source]||{};const route=chosen.route||(doc.slug.replace(/^\/guides\//,'/book/').replace(/^\/packages\//,'/reference/packages/')+'/');return {...doc,...chosen,markdown,route,url:content.product.basePath+route,title:markdown.match(/^# (.+)$/m)?.[1]?.replaceAll('`','')||doc.sidebarLabel||content.product.name,part:chosen.bookOrder!==undefined?'Book':route.startsWith('/developer/')?'Developer':route.startsWith('/reference/')||doc.source==='docs/Trainer.md'||doc.source==='docs/Cohort.md'?'Reference':'Book'};}));
 const referenceLinks=pages.filter(p=>p.part==='Reference').sort((a,b)=>a.title.localeCompare(b.title)).map(p=>`- [${p.title}](${p.url})`).join('\n');
 pages.push({source:null,route:'/reference/',url:'/limen/reference/',part:'Reference',title:'Reference',markdown:'# Reference\n\nNames, parameters, return values and the boundaries of the two research interfaces.\n\n'+referenceLinks+'\n'});
 const output=path.resolve(site,values.output);if(output===path.join(site,'build')||!output.startsWith(site+path.sep))throw Error('Candidate output must be separate from production');
@@ -34,7 +34,7 @@ await fs.copyFile(path.join(root,'.docs-evidence',wheelNames[0]),path.join(outpu
 for(const source of [...evidence.sources,...evidence.displays]){const target=path.join(output,'source',source.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.copyFile(path.join(root,source.path),target);}
 await fs.writeFile(path.join(output,'search.json'),JSON.stringify(pages.map(p=>({title:p.title,route:p.url,text:p.markdown.replace(/```[\s\S]*?```/g,'').replace(/<!--[^]*?-->/g,'').replace(/[#*`|]/g,'').replace(/\s+/g,' ').trim()}))));
 await fs.writeFile(path.join(output,'routes.json'),JSON.stringify(pages.map(p=>({source:p.source,url:p.url,part:p.part}))));
-await fs.writeFile(path.join(output,'sitemap.xml'),'<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(p=>`<url><loc>https://docs.vaquum.fi${p.url}</loc></url>`).join('')+'</urlset>');
+await fs.writeFile(path.join(output,'sitemap.xml'),'<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(p=>`<url><loc>${content.product.origin}${p.url}</loc></url>`).join('')+'</urlset>');
 const members={};
 async function collect(folder){for(const entry of await fs.readdir(folder,{withFileTypes:true})){const absolute=path.join(folder,entry.name);if(entry.isDirectory())await collect(absolute);else members[path.relative(output,absolute)]=hash(await fs.readFile(absolute));}}
 await collect(output);
