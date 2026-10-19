@@ -91,6 +91,8 @@ def _contract(component: object, path: str) -> ParallelRoundContract:
     contract = getattr(component, '__parallel_round_contract__', None)
     if not isinstance(contract, ParallelRoundContract):
         raise ValueError(f'Parallel stage {path}: missing independence contract')
+    if not inspect.isfunction(contract.validate):
+        raise ValueError(f'Parallel stage {path}: validator must be an importable function')
     _ = reference(contract.validate)
     return contract
 
@@ -142,6 +144,10 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     stages = tuple(FrozenStage(path, component, _contract(component, path)) for path, component in components(frozen))
+    for stage in stages:
+        if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
+                or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):
+            raise ValueError(f'Parallel stage {stage.path}: invalid prediction-kind declaration')
     # Force transport validation even when a stage validator consumes no parameters.
     _ = encode(frozen)
     imports = sorted({name for stage in stages for name in stage.contract.backend_imports})
