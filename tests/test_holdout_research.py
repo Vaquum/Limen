@@ -65,10 +65,11 @@ def _lease_worker(root, pipe):
             pipe.send((type(exc).__name__, str(exc)))
 
 
-def test_holdout_reservation_and_research_exclusion(tmp_path):
+def test_holdout_reservation_and_research_exclusion(tmp_path, monkeypatch):
     root = _project(tmp_path / 'project')
     config = _configuration(root)
     first = reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    monkeypatch.setattr(history.time, 'time_ns', lambda: 0)
     binding = history.bind(root)
     compiled = CompiledSFD(config, project_root=root)
     loop = UniversalExperimentLoop(sfd=compiled, project_root=root)
@@ -80,8 +81,7 @@ def test_holdout_reservation_and_research_exclusion(tmp_path):
     seen = []
     manifest = compiled.manifest()
     manifest.set_pre_split_data_selector(lambda frame: seen.append(frame.height) or frame.slice(1))
-    with patch.object(history.time, 'time_ns', return_value=0):
-        prepared = manifest.prepare_data(raw, {key: values[0] for key, values in compiled.params().items()})
+    prepared = manifest.prepare_data(raw, {key: values[0] for key, values in compiled.params().items()})
     assert seen == [96]
     assert prepared['holdout']['selected']['rows'] == 95
     assert prepared['holdout']['source']['admitted']['rows'] == 96
@@ -251,6 +251,12 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
     new.data = pl.read_parquet(_FIXTURE).head(168)
     new.run('mutated-frame', n_permutations=1, progress_bar=False, prep_each_round=True)
     assert new.data.height == 96
+    new.data.extend(pl.read_parquet(_FIXTURE).slice(96, 24))
+    new.run('extended-frame', n_permutations=1, progress_bar=False, prep_each_round=True, post_processing=True)
+    source = new._alignment[0]['holdout']['source']
+    assert source['kind'] == 'caller_frame'
+    assert source['materialized']['rows'] == 120
+    assert source['admitted']['rows'] == new.data.height == 96
     # A file-location hint binds even when CLI is launched outside the project.
     monkeypatch.chdir(tmp_path)
     config['uel']['workers'] = 2

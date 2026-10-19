@@ -167,7 +167,8 @@ def admit(manifest: object, raw: pl.DataFrame, *, force_caller: bool = False) ->
     check_binding(binding)
     frame, evidence = frame_evidence(raw, binding)
     previous = cast(SourceEvidence | None, getattr(manifest, '_holdout_source', None))
-    if not force_caller and previous is not None and previous['admitted_sha256'] == evidence['admitted_sha256']:
+    if (not force_caller and previous is not None and previous['admitted_sha256'] == evidence['admitted_sha256']
+            and previous['admitted'] == evidence['materialized']):
         evidence = previous
     op = _CURRENT.get()
     if op is not None and op.manifest is manifest:
