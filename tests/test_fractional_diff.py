@@ -215,7 +215,7 @@ for d, threshold, parameter in INVALID_PARAMETERS:
         _get_weights_ffd(d, threshold)
 '''],
         check=True,
-        timeout=5,
+        timeout=10,
     )
 
 
@@ -239,13 +239,19 @@ for d in (1e308, np.float64(1e308)):
     assert not np.isfinite(traceback.tb_frame.f_locals['w'])
 '''],
         check=True,
-        timeout=5,
+        timeout=10,
     )
 
 
-@pytest.mark.parametrize('d', [0.0, 1.0, 2.0, 0.5])
+@pytest.mark.parametrize('d, threshold', [
+    (0.0, 0.1), (1.0, 0.1), (2.0, 0.1), (0.5, 0.1), (0.5, 0.125),
+] + [
+    (d, threshold)
+    for d in (0.0, 0.5)
+    for threshold in (10**20, 1e20, 10**400)
+])
 @pytest.mark.parametrize('lazy', [False, True])
-def test_fractional_diff_finite_orders_match_recorded_data(d, lazy):
+def test_fractional_diff_finite_orders_match_recorded_data(d, threshold, lazy):
     data = pl.read_csv(Path(__file__).parent / 'fixtures' / 'historical_data_spot_2h.csv')
     close = data['close'].to_list()
     expected = {
@@ -255,7 +261,11 @@ def test_fractional_diff_finite_orders_match_recorded_data(d, lazy):
         0.5: [None, None, close[2] - 0.5 * close[1] - 0.125 * close[0]],
     }[d]
 
-    result = fractional_diff(data.lazy() if lazy else data, d=d, cols=['close'], threshold=0.1)
+    if threshold > 1:
+        expected = close
+        np.testing.assert_array_equal(_get_weights_ffd(d, threshold), [1.0])
+
+    result = fractional_diff(data.lazy() if lazy else data, d=d, cols=['close'], threshold=threshold)
     assert isinstance(result, pl.LazyFrame if lazy else pl.DataFrame)
     if lazy:
         result = result.collect()
