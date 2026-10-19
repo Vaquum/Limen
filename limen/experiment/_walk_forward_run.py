@@ -18,6 +18,8 @@ from limen.experiment.manifest_core import Manifest, MLManifest
 from limen.experiment._walk_forward_split import WalkForwardConfig, read_walk_forward_config
 from limen.log._permutation_returns import TrialReturnsWriter
 
+from limen.experiment._acceptance_settings import validate_pbo_resume
+
 __all__ = ['WalkForwardRun', 'validate_walk_forward_resume']
 
 
@@ -31,6 +33,7 @@ _requires_fold_validation = cast(Callable[[Manifest, Mapping[str, object]], bool
 
 
 def validate_walk_forward_resume(manifest: Manifest | None, metadata: Mapping[str, object]) -> None:
+    validate_pbo_resume(None if manifest is None else manifest.acceptance, metadata)
     config = None if manifest is None else manifest.split_walk_forward
     declaration = None if config is None else config.as_dict()
     saved = metadata.get('split_walk_forward')

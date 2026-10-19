@@ -472,14 +472,14 @@ class Manifest:
 
     def set_acceptance(
         self: _TManifest, *, min_deflated_sharpe_probability: float | None = None,
-        max_pbo: float | None = None,
+        max_pbo: float | None = None, pbo_blocks: int | None = None,
     ) -> _TManifest:
-        from limen.experiment.acceptance_report import read_acceptance
+        from limen.experiment._acceptance_settings import read_acceptance
 
         if self.split_walk_forward is None:
             raise ValueError('acceptance requires split_walk_forward')
         self.acceptance = read_acceptance({key: value for key, value in {
-            'min_deflated_sharpe_probability': min_deflated_sharpe_probability, 'max_pbo': max_pbo,
+            'min_deflated_sharpe_probability': min_deflated_sharpe_probability, 'max_pbo': max_pbo, 'pbo_blocks': pbo_blocks,
         }.items() if value is not None})
         return self
 

@@ -20,6 +20,7 @@ from tqdm import tqdm
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment._fixed_trade_sources import fixed_trade_sources
 from limen.experiment.acceptance_report import acceptance_report
+from limen.experiment._acceptance_settings import pbo_blocks
 from limen.experiment.convergence_report import convergence_report, convergence_warning, convergence_header, convergence_warnings
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
@@ -1010,8 +1011,7 @@ class UniversalExperimentLoop:
         add_grid_metadata(self._search_strategy, metadata)
         add_objective_metadata(self.manifest, metadata)
         if self._walk_forward is not None:
-            metadata['split_walk_forward'] = self._walk_forward.config.as_dict()
-            metadata['walk_forward_validation_ratio'] = list(self._walk_forward.manifest.split_config[:2])
+            metadata.update(split_walk_forward=self._walk_forward.config.as_dict(), walk_forward_validation_ratio=list(self._walk_forward.manifest.split_config[:2]), pbo_blocks=pbo_blocks(self._walk_forward.manifest.acceptance))
         if self._yaml_reference is not None:
             data_no_lineage = {k: v for k, v in self._yaml_reference.items() if k != 'lineage'}
             metadata['yaml_reference'] = data_no_lineage
