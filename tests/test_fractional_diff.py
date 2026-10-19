@@ -1,5 +1,10 @@
+import subprocess
+import sys
+from pathlib import Path
+
 import numpy as np
 import polars as pl
+import pytest
 
 from limen.experiment import MLManifest
 from limen.features.fractional_diff import _get_weights_ffd
@@ -8,6 +13,15 @@ from limen.features.fractional_diff import fractional_diff
 from limen.targets import RandomBinaryTarget
 from limen.utils.adf_test import adf_test
 from tests.utils.historical_data import get_cached_spot_klines_2h
+
+
+INVALID_PARAMETERS = [
+    (value, 0.1, 'd') for value in (float('nan'), float('inf'), -float('inf'), -0.5)
+] + [
+    (d, value, 'threshold')
+    for d in (0.0, 0.5)
+    for value in (float('nan'), float('inf'), -float('inf'), 0.0, -0.1)
+]
 
 
 def test_fractional_diff_d_zero_copies():
@@ -175,3 +189,92 @@ def test_fractional_diff_manifest_integration():
     raw_data = manifest.fetch_test_data()
     data = manifest.prepare_data(raw_data, {})
     assert data['x_train'].height > 0
+
+
+@pytest.mark.parametrize('d, threshold, parameter', INVALID_PARAMETERS)
+def test_fractional_diff_rejects_invalid_parameters_before_weights(monkeypatch, d, threshold, parameter):
+    data = pl.read_csv(Path(__file__).parent / 'fixtures' / 'historical_data_spot_2h.csv')
+
+    def fail_weights(*_args, **_kwargs):
+        raise AssertionError('Invalid parameters reached weight generation')
+
+    monkeypatch.setitem(fractional_diff.__globals__, '_get_weights_ffd', fail_weights)
+    with pytest.raises(ValueError, match=f'fractional_diff {parameter} must be'):
+        fractional_diff(data, d=d, cols=['close'], threshold=threshold)
+
+
+def test_fractional_diff_weights_reject_invalid_parameters():
+    subprocess.run(
+        [sys.executable, '-c', '''
+import pytest
+from limen.features.fractional_diff import _get_weights_ffd
+from tests.test_fractional_diff import INVALID_PARAMETERS
+
+for d, threshold, parameter in INVALID_PARAMETERS:
+    with pytest.raises(ValueError, match=f'fractional_diff {parameter} must be'):
+        _get_weights_ffd(d, threshold)
+'''],
+        check=True,
+        timeout=10,
+    )
+
+
+def test_fractional_diff_weights_reject_overflow_before_append():
+    subprocess.run(
+        [sys.executable, '-W', 'error', '-c', '''
+import numpy as np
+import pytest
+from limen.features.fractional_diff import _get_weights_ffd
+
+for d in (1e308, np.float64(1e308)):
+    with pytest.raises(ValueError, match='fractional_diff weight must be finite') as raised:
+        _get_weights_ffd(d, threshold=0.1)
+
+    traceback = raised.value.__traceback__
+    assert traceback is not None
+    while traceback.tb_next is not None:
+        traceback = traceback.tb_next
+    assert traceback.tb_frame.f_code is _get_weights_ffd.__code__
+    assert traceback.tb_frame.f_locals['weights'] == [1.0, -1e308]
+    assert not np.isfinite(traceback.tb_frame.f_locals['w'])
+'''],
+        check=True,
+        timeout=10,
+    )
+
+
+@pytest.mark.parametrize('d, threshold', [
+    (0.0, 0.1), (1.0, 0.1), (2.0, 0.1), (0.5, 0.1), (0.5, 0.125),
+] + [
+    (d, threshold)
+    for d in (0.0, 0.5)
+    for threshold in (10**20, 1e20, 10**400)
+])
+@pytest.mark.parametrize('lazy', [False, True])
+def test_fractional_diff_finite_orders_match_recorded_data(d, threshold, lazy):
+    data = pl.read_csv(Path(__file__).parent / 'fixtures' / 'historical_data_spot_2h.csv')
+    close = data['close'].to_list()
+    expected = {
+        0.0: close,
+        1.0: [None, close[1] - close[0], close[2] - close[1]],
+        2.0: [None, None, close[2] - 2 * close[1] + close[0]],
+        0.5: [None, None, close[2] - 0.5 * close[1] - 0.125 * close[0]],
+    }[d]
+
+    if threshold > 1:
+        expected = close
+        np.testing.assert_array_equal(_get_weights_ffd(d, threshold), [1.0])
+
+    result = fractional_diff(data.lazy() if lazy else data, d=d, cols=['close'], threshold=threshold)
+    assert isinstance(result, pl.LazyFrame if lazy else pl.DataFrame)
+    if lazy:
+        result = result.collect()
+    assert result.select(data.columns).equals(data)
+    actual = result['close_fracdiff'].to_list()
+    assert [value is None for value in actual] == [value is None for value in expected]
+    np.testing.assert_allclose(
+        [value for value in actual if value is not None],
+        [value for value in expected if value is not None],
+        rtol=0,
+        atol=1e-10,
+    )
