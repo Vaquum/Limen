@@ -193,7 +193,8 @@ def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> No
 
 
 def main() -> int:
-    for variable in ('POLARS_MAX_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+    _ = os.environ.setdefault('POLARS_MAX_THREADS', '1')
+    for variable in ('OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                      'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'OMP_NUM_THREADS', 'OMP_THREAD_LIMIT'):
         os.environ[variable] = '1'
     setup_cleanup_handlers()
