@@ -1807,4 +1807,3 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ### Fixed
 
 - Infer allocation opportunity-label types across every row so late censored outcomes retain their nullable fields without aborting a sweep.
-
