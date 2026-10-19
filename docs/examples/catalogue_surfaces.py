@@ -10,10 +10,12 @@ REGISTRIES = {
 }
 
 
-def assignment(tree, name):
+def assignment(tree: ast.Module, name: str) -> ast.expr:
     for node in tree.body:
         targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
         if any(isinstance(target, ast.Name) and target.id == name for target in targets):
+            if not isinstance(node, (ast.Assign, ast.AnnAssign)) or node.value is None:
+                raise ValueError('Public declaration has no value: ' + name)
             return node.value
     raise ValueError('Missing declared public surface: ' + name)
 
@@ -49,7 +51,7 @@ def inventory(root: Path):
         interfaces = ['compiled'] if module in {'limen.cli', 'limen.yaml', 'limen.sfd', 'limen.sfd.foundational_sfd'} else ['python', 'compiled']
         reference = source.with_name('README.md') if module != 'limen' else root / 'README.md'
         exports[module] = context(interfaces, topic(module)) | {'source': str(source.relative_to(root)), 'entry_point': module,
-                                                             'names': sorted(ast.literal_eval(declarations[0].value)), 'reference': str(reference.relative_to(root))}
+                                                             'names': sorted(ast.literal_eval(assignment(tree, '__all__'))), 'reference': str(reference.relative_to(root))}
         overrides = {'limen': ['MLManifest', 'Manifest', 'ReconstructionError', 'RuleBasedManifest', 'Trainer', 'sfd'],
                      'limen.experiment': ['CalibrationConfig', 'MLManifest', 'Manifest', 'RuleBasedManifest'],
                      'limen.inference': ['ReconstructionError', 'Trainer'],
@@ -62,14 +64,19 @@ def inventory(root: Path):
         value = assignment(ast.parse((root / source).read_text()), symbol)
         if not isinstance(value, ast.Dict):
             raise ValueError('Registry declaration must expose its current keys: ' + symbol)
-        registries[name] = context(interfaces, scenario) | {'source': source, 'entry_point': symbol, 'names': sorted(ast.literal_eval(key) for key in value.keys), 'reference': reference}
+        keys = []
+        for key in value.keys:
+            if key is None:
+                raise ValueError('Registry inventory requires explicit keys: ' + symbol)
+            keys.append(ast.literal_eval(key))
+        registries[name] = context(interfaces, scenario) | {'source': source, 'entry_point': symbol, 'names': sorted(keys), 'reference': reference}
     schema = ast.parse((root / 'limen/yaml/schema.py').read_text())
     groups = {}
     for node in schema.body:
         targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
         names = [target.id for target in targets if isinstance(target, ast.Name) and target.id.endswith(('_REQUIRED', '_OPTIONAL'))]
         for name in names:
-            value = node.value
+            value = assignment(schema, name)
             if name == 'BACKTEST_OPTIONAL':
                 trade = ast.parse((root / 'limen/experiment/_resolve_trade_policy.py').read_text())
                 config = next(item for item in trade.body if isinstance(item, ast.ClassDef) and item.name == 'BacktestConfig')

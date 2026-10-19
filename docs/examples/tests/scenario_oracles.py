@@ -2,6 +2,7 @@ from datetime import datetime
 import hashlib
 import json
 import math
+import subprocess
 
 import numpy as np
 import polars as pl
@@ -211,6 +212,10 @@ def verify(interface, name, result, output, inputs):
             else:
                 assert csv[column].to_list() == parquet[column].to_list()
         restored = output / 'restored'
+        original_names = set(subprocess.check_output(['git', '-C', str(project), 'ls-files', '-z'], text=True).split('\0')) - {''}
+        restored_names = set(subprocess.check_output(['git', '-C', str(restored), 'ls-files', '-z'], text=True).split('\0')) - {''}
+        assert set(result['project_files']) == original_names == restored_names
+        assert 'manifests/holdout-lease.sqlite3' not in original_names
         for name, expected in result['project_files'].items():
             assert hashlib.sha256((project / name).read_bytes()).hexdigest() == expected
             assert hashlib.sha256((restored / name).read_bytes()).hexdigest() == expected

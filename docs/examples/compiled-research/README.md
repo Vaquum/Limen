@@ -43,7 +43,7 @@ The execution scenario also runs `funded.yaml` with recorded funding. The driver
 
 The holdout scenario creates a separate Git project, reserves its final window before research, freezes selected fitted state and retains the final report. Local recorded files leave earlier exposure unknown. Preserve its project marker, history and assessment artifacts together.
 
-The command-line scenario invokes the `limen` executable installed beside its Python interpreter. It inspects an installed template, then writes the project's recorded run definition, stores a production manifest, forks its lineage and verifies CSV/Parquet output after resume. Backup and `limen new --from` operate on a local Git remote. This proves restoration of that campaign; it makes no live template-download or hosted-backup claim. The original recorded-input paths remain part of the saved definition and must be available for replay.
+The command-line scenario invokes the `limen` executable installed beside its Python interpreter. It inspects an installed template, then writes the project's recorded run definition, stores a production manifest, forks its lineage and verifies CSV/Parquet output after resume. Backup and `limen new --from` operate on a local Git remote. Every tracked campaign file must restore byte for byte. Git backup honors ignore rules: local runtime leases and guarded holdout history are deliberately excluded and require separate preservation. This scenario makes no live template-download or hosted-backup claim. The original recorded-input paths remain part of the saved definition and must be available for replay.
 
 Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
 

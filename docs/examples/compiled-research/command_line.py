@@ -71,9 +71,9 @@ def run(config, output):
     command('new', restored, '--from', backup, cwd=output)
     command('ls', cwd=restored)
     index = json.loads(index_path.read_text())
-    digests = {str(path.relative_to(project)): hashlib.sha256(path.read_bytes()).hexdigest()
-               for path in project.rglob('*') if path.is_file() and '.git' not in path.relative_to(project).parts}
+    tracked = subprocess.check_output(['git', '-C', str(project), 'ls-files', '-z'], text=True).split('\0')
+    digests = {name: hashlib.sha256((project / name).read_bytes()).hexdigest() for name in tracked if name}
     return {'commands': calls, 'manifests': index['manifests'], 'parent_id': parent_id,
             'run': str(directory.relative_to(output)), 'project_files': digests,
-            'backup': 'local Git remote; restoration is exercised without a live template download'}
+            'backup': 'tracked campaign files through a local Git remote; ignored runtime leases and holdout history are not restored'}
 # endregion lifecycle
