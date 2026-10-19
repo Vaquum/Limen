@@ -68,6 +68,20 @@ def test_public_model_catalogue_requires_every_export():
         validate_model_catalogue(ROOT, changed)
 
 
+def test_nested_yaml_version_carriers_cannot_drift():
+    from check_sources import validate_versions
+    from limen import __version__
+    from ruamel.yaml import YAML
+    document = YAML(typ='safe').load(ROOT / 'docs/examples/compiled-research/selection.yaml')
+    validate_versions(document, __version__, canonical=True)
+    document['metadata']['nested'] = [{'limen_version': '0.0.0'}]
+    with pytest.raises(ValueError, match='Stale documentation YAML'):
+        validate_versions(document, __version__, canonical=False)
+    document['metadata']['nested'][0]['limen_version'] = __version__
+    with pytest.raises(ValueError, match='without optional version literals'):
+        validate_versions(document, __version__, canonical=True)
+
+
 def test_observed_outputs_and_tolerances_are_explicit(tmp_path):
     from check_evidence import compare_output, output_bindings
     assert {item['interface'] for item in output_bindings(ROOT, ROOT / 'docs/Research-Book.md')} == {'python', 'compiled'}

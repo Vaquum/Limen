@@ -2,11 +2,33 @@ import argparse
 import ast
 import json
 from pathlib import Path
+import re
 import subprocess
 import sys
 
+from ruamel.yaml import YAML
+
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES = ROOT / 'docs/examples'
+
+
+def declared_versions(value):
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if key == 'limen_version':
+                yield item
+            yield from declared_versions(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from declared_versions(item)
+
+
+def validate_versions(document, version, *, canonical):
+    values = list(declared_versions(document))
+    if any(value != version for value in values):
+        raise ValueError('Stale documentation YAML version carrier')
+    if canonical and values:
+        raise ValueError('Canonical projects use their matching wheel without optional version literals')
 
 
 def main():
@@ -31,6 +53,12 @@ def main():
         tree = ast.parse(path.read_text(), filename=str(path))
         if any(isinstance(node, ast.Name) and node.id == 'Any' or isinstance(node, ast.Attribute) and node.attr == 'Any' for node in ast.walk(tree)):
             raise ValueError('Documentation source introduces an explicit untyped escape: ' + str(path))
+    version = re.search(r'^version = "([^"]+)"$', (ROOT / 'pyproject.toml').read_text(), re.M)
+    if version is None:
+        raise ValueError('Package version is unavailable')
+    for path in EXAMPLES.rglob('*.yaml'):
+        canonical = path.is_relative_to(EXAMPLES / 'python-research') or path.is_relative_to(EXAMPLES / 'compiled-research')
+        validate_versions(YAML(typ='safe').load(path), version[1], canonical=canonical)
     evidence.write_text(json.dumps({'status': 'passed', 'files': len(files), 'silent_fallbacks': counts}) + '\n')
     print('Documentation Python passes lint, type checking and the zero-fallback scan.')
 
