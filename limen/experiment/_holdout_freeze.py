@@ -60,9 +60,8 @@ def unchanged(value: object) -> None:
         if name in getattr(value, '__dict__', {}) and hasattr(type(value), name):
             raise ValueError(f'Holdout refuses replaced {type(value).__name__}.{name}')
     for cls in type(value).__mro__:
-        if cls.__module__ == 'lightgbm.sklearn' and cls.__name__ == 'LGBMClassifier':
-            if any(getattr(getattr(cls, name), '__module__', None) != cls.__module__ or getattr(getattr(cls, name), '__qualname__', None) != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
-                raise ValueError('Holdout refuses replaced LightGBM prediction methods')
+        if cls.__module__ == 'lightgbm.sklearn' and cls.__name__ == 'LGBMClassifier' and any(getattr(getattr(cls, name), '__module__', None) != cls.__module__ or getattr(getattr(cls, name), '__qualname__', None) != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
+            raise ValueError('Holdout refuses replaced LightGBM prediction methods')
         for name, original in _IMPLEMENTATIONS.get(cls, {}).items():
             if name in getattr(value, '__dict__', {}) or getattr(cls, name) is not original:
                 raise ValueError(f'Holdout refuses replaced {cls.__name__}.{name}')

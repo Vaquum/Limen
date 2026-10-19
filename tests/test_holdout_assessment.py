@@ -6,6 +6,7 @@ import multiprocessing
 from importlib.metadata import version
 from pathlib import Path
 from threading import Thread
+from typing import ClassVar
 from unittest.mock import patch
 
 import numpy as np
@@ -46,7 +47,7 @@ class ExternalRobust:
 
 
 class FittedProbabilityAdjustment:
-    __slots__ = ('estimator', '__offset')
+    __slots__ = ('__offset', 'estimator')
     def __init__(self, estimator, x, y):
         self.estimator = estimator
         self.__offset = float(np.mean(np.asarray(y)) - np.mean(estimator.predict_proba(np.asarray(x))[:, 1]))
@@ -544,7 +545,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     def correction(values=defaults):
         return values['offset'] + closure['offset']
     class Configured(LogRegBinary):
-        rules = {'offset': 0.0}
+        rules: ClassVar[dict[str, float]] = {'offset': 0.0}
         def predict(self, data):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + correction() + self.rules['offset'], 0, 1)
@@ -561,8 +562,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(sealed, assessment_case)
         assert loader.call_count == 0
+    slot_name = 'offset'
     class SlotOffset:
-        __slots__ = 'offset'
+        __slots__ = slot_name
         def __init__(self, offset):
             self.offset = offset
         def adjust(self, values):
@@ -585,6 +587,29 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     slotted._model.policy = NonpreservingSlot(slotted._model._calibration_threshold)
     with pytest.raises(ValueError, match='copy changed'):
         _freeze(slotted)
+    class Late(LogRegBinary):
+        def predict(self, data):
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                if self.refit:
+                    self.model.fit(data['x_test'], [0])
+                self.counter += 1
+            return super().predict(data)
+    for refit in (False, True):
+        late = copy.deepcopy(assessment_case[2][0][0])
+        prepared, _ = late._get_manifest().sensor_input_prep(late._fitted_params['_holdout_probe'], late._fitted_params, late._round_params)
+        columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]
+        late._model.__class__ = Late
+        late._model.research_x = np.asarray(prepared.select(columns).tail(1), dtype=float)
+        late._model.counter, late._model.refit = 0, refit
+        handle = _freeze(late)
+        with pytest.raises(ValueError, match='attempted fitting' if refit else 'changed fitted state') as failed:
+            _report(handle, assessment_case)
+        with history.connection(assessment_case[0] / history._HISTORY) as db:
+            record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+            assert record['state'] == 'failed' and record['id'] in str(failed.value)
+            assert json.loads(record['error_json'])['stage'] == 'predict'
+        with pytest.raises(ValueError, match='not completed'):
+            read_holdout_report(assessment_case[0], record['id'])
     changed = copy.deepcopy(assessment_case[2][0][0])
     changed._model.model = LogisticRegression()
     with pytest.raises(ValueError, match='not fitted'):
