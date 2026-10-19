@@ -86,13 +86,11 @@ def dollar_bar_crash_reversal(
     momentum_threshold_bps: float,
     flow_z_threshold: float,
     hold_minutes: int,
+    *, bar_interval_seconds: int | None = None,
 ) -> pl.DataFrame | pl.LazyFrame:
-    '''Build the 15M-dollar-bar crash-reversal long/flat position signal.
+    '''Build prior-only momentum/robust-flow crash-reversal positions.
 
-    Momentum compares each close with the latest open at or before four hours
-    earlier. Maker flow is standardized against prior-only 30-day rolling
-    medians and median absolute deviations. A trigger remains active for the
-    requested wall-clock hold window.
+    Hold triggers for the wall-clock window; a verified interval removes the next-row day-mask dependency.
     '''
 
     validated_data = _validate_data(data)
@@ -128,6 +126,14 @@ def dollar_bar_crash_reversal(
 
     eager = isinstance(validated_data, pl.DataFrame)
     lazy = validated_data.lazy() if eager else validated_data
+    next_time = pl.col('datetime').shift(-1)
+    if bar_interval_seconds is not None:
+        interval = _validate_hold_minutes(bar_interval_seconds)
+        times = lazy.select('datetime').collect()['datetime'].dt.epoch('ns')
+        differences = times.diff().drop_nulls()
+        if not times.is_sorted() or ((differences < interval * 1000000000) | (differences % (interval * 1000000000) != 0)).any():
+            raise ValueError('Declared crash-reversal interval is not verified regular')
+        next_time = pl.col('datetime') + pl.duration(seconds=interval)
     reference = lazy.select(
         pl.col('datetime').alias(_REFERENCE_DATETIME_COLUMN),
         pl.col('open').alias(_REFERENCE_OPEN_COLUMN),
@@ -150,7 +156,7 @@ def dollar_bar_crash_reversal(
         .with_columns(
             (
                 pl.col('datetime').dt.date()
-                == pl.col('datetime').shift(-1).dt.date()
+                == next_time.dt.date()
             ).fill_null(False).alias(_STRUCTURAL_CORE_COLUMN)
         )
         .with_columns(

@@ -1787,3 +1787,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.43.1] - 2026-10-19
 
 - Share checked frozen source snapshots during spawned-worker startup while preserving independent frames, native thread limits and recovery semantics.
+
+## [5.44.0] - 2026-10-19
+
+- Add research batch meta allocation trained on causal primary-opportunity outcomes with per-opportunity exposure and declared stop-risk caps.
+- Preserve recorded hour-end bar availability and aligned missing intervals through explicit source timestamp metadata.
