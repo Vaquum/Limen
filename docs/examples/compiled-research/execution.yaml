@@ -1,0 +1,59 @@
+schema_version: '1.0'
+metadata:
+  name: book_compiled_execution
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-02'
+      train_end: '2024-01-03'
+      val_start: '2024-01-04'
+      val_end: '2024-01-05'
+      test_start: '2024-01-05'
+      test_end: '2024-01-06'
+    backtest:
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-05
+        min_notional: 5
+      source_interval_seconds: 3600
+      fee_bps: 10
+      slip_bps: 5
+      take_profit_bps_column: volatility_take_profit_bps
+      stop_loss_bps_column: volatility_stop_loss_bps
+      barrier_features:
+        method: limen.features.volatility_barriers.volatility_barriers
+        params:
+          span: '{risk_span}'
+          regime_span: 24
+          min_periods: 3
+    reference_architecture: 
+      limen.sfd.reference_architecture.rule_based.rule_based
+    strategy:
+      conditions:
+      - id: entry
+        name: Recorded close above open
+        type: relative
+        column: close
+        operator: '>'
+        other_column: open
+      entry: entry
+  params:
+    risk_span:
+    - 6
+    - 12
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  prep_each_round: true

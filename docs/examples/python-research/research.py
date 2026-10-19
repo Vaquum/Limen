@@ -101,10 +101,19 @@ def run_research(bars, experiment_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Run caller-owned Python research on recorded Bitcoin bars.")
-    parser.add_argument("--scenario", choices=["selection"], default="selection")
+    import scenarios
+    parser.add_argument("--scenario", choices=["selection", "all", *scenarios.SCENARIOS], default="selection")
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
+    if args.scenario != "selection":
+        chosen = list(scenarios.SCENARIOS) if args.scenario == "all" else [args.scenario]
+        reports = {name: scenarios.run(name, args.data_dir.resolve(), args.output_dir.resolve() / name) for name in chosen}
+        report = {"interface": "python", "scenario": args.scenario, "scenarios": reports}
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        (args.output_dir / "summary.json").write_text(json.dumps(report, indent=2, allow_nan=False, default=str) + "\n")
+        print(json.dumps(report, indent=2, allow_nan=False, default=str))
+        return
     source = args.data_dir / "spot_15m_20250101_20250531.parquet"
     expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
     if hashlib.sha256(source.read_bytes()).hexdigest() != expected:

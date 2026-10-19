@@ -34,10 +34,19 @@ def run_research(data_dir, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="Run the declared Compiled Research pipeline on recorded Bitcoin bars.")
-    parser.add_argument("--scenario", choices=["selection"], default="selection")
+    import scenarios
+    parser.add_argument("--scenario", choices=["selection", "all", *scenarios.SCENARIOS], default="selection")
     parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args()
+    if args.scenario != "selection":
+        chosen = list(scenarios.SCENARIOS) if args.scenario == "all" else [args.scenario]
+        reports = {name: scenarios.run(name, args.data_dir.resolve(), args.output_dir.resolve() / name) for name in chosen}
+        report = {"interface": "compiled", "scenario": args.scenario, "scenarios": reports}
+        args.output_dir.mkdir(parents=True, exist_ok=True)
+        (args.output_dir / "summary.json").write_text(json.dumps(report, indent=2, allow_nan=False, default=str) + "\n")
+        print(json.dumps(report, indent=2, allow_nan=False, default=str))
+        return
     loop, sensors, selected = run_research(args.data_dir, args.output_dir)
     report = {"interface": "compiled", "scenario": args.scenario,
               "rounds": loop.experiment_log.height, "selected_rounds": len(selected),
