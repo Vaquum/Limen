@@ -130,7 +130,8 @@ def dollar_bar_crash_reversal(
     if bar_interval_seconds is not None:
         interval = _validate_hold_minutes(bar_interval_seconds)
         times = lazy.select('datetime').collect()['datetime'].dt.epoch('ns')
-        if not times.is_sorted() or times.diff().drop_nulls().ne(interval * 1000000000).any():
+        differences = times.diff().drop_nulls()
+        if not times.is_sorted() or ((differences < interval * 1000000000) | (differences % (interval * 1000000000) != 0)).any():
             raise ValueError('Declared crash-reversal interval is not verified regular')
         next_time = pl.col('datetime') + pl.duration(seconds=interval)
     reference = lazy.select(

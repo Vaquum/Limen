@@ -219,7 +219,7 @@ def test_crash_reversal_declared_clock_preserves_nonterminal_prefixes():
         prefix = dollar_bar_crash_reversal(raw.head(end), -575, -0.5, 60, bar_interval_seconds=3600)
         assert prefix[column].equals(configured[column].head(end))
     with pytest.raises(ValueError, match='verified regular'):
-        dollar_bar_crash_reversal(raw, -575, -0.5, 60, bar_interval_seconds=900)
+        dollar_bar_crash_reversal(raw, -575, -0.5, 60, bar_interval_seconds=3601)
 
 
 def test_primary_fitting_excludes_later_batch_evidence():
@@ -328,3 +328,58 @@ def test_allocation_reference_preserves_shared_primary_kwargs():
     model = manifest.run_model(data, params)['_model']
     assert model.primary.model.get_params()['random_state'] == 73
     assert model.learning_binding['primary_params']['seed'] == 73
+
+
+@pytest.mark.parametrize('ml', [False, True])
+def test_end_stamped_gapped_source_preserves_prices_and_decision_clocks(ml):
+    from limen.experiment._prepare_trade_context import normalize_observations, sensor_decisions
+    config = _config(ml)
+    config['sfd']['manifest']['backtest']['source_timestamp_role'] = 'end'
+    assert validate(config).valid
+    manifest = CompiledSFD(config).manifest()
+    original = pl.read_parquet(FIXTURE, n_rows=480).with_row_index().filter(~pl.col('index').is_in([30, 31, 160])).drop('index')
+    encoded = original.with_columns(pl.col('datetime') + pl.duration(hours=1))
+    expected = normalize_observations(original.with_columns(
+        pl.col('datetime').dt.epoch('ns').alias('start_ns'),
+        (pl.col('datetime').dt.epoch('ns') + 3600000000000).alias('end_ns'),
+        pl.col('datetime').dt.epoch('ns').alias('open_available_at_ns'),
+        (pl.col('datetime').dt.epoch('ns') + 3600000000000).alias('available_at_ns')))
+    actual = normalize_observations(encoded, interval_seconds=3600, timestamp_role='end')
+    assert actual.equals(expected)
+    assert actual.height == original.height
+    params = {key: values[0] for key, values in config['sfd']['params'].items()}
+    data = manifest.prepare_data(encoded, params)
+    for rows in data['_trade_context'].model_rows:
+        assert rows['available_at_ns'].equals(rows['datetime'].dt.epoch('ns').rename('available_at_ns'))
+    context = data['_allocation_context']
+    labels = training_opportunities(context, folds=3, validation_fraction=0.2, include_primary_proba=False)
+    assert labels.rows['first_fill_ns'].ge(labels.rows['decision_available_at_ns']).drop_nulls().all()
+    model = manifest.run_model(data, params)['_model']
+    assert model.context.policy.source_timestamp_role == 'end'
+    metadata = sensor_decisions(encoded, encoded, interval_seconds=3600, timestamp_role='end')
+    assert metadata['__trade_available_at_ns__'].to_list() == encoded['datetime'].dt.epoch('ns').to_list()
+
+
+def test_hour_end_configuration_rejects_missing_or_incoherent_metadata():
+    from limen.experiment._prepare_trade_context import normalize_observations
+    raw = pl.read_parquet(FIXTURE, n_rows=12)
+    for invalid in ('close', None, 1):
+        config = _config()
+        config['sfd']['manifest']['backtest']['source_timestamp_role'] = invalid
+        assert not validate(config).valid
+    config = _config()
+    config['sfd']['manifest']['backtest'].update(source_timestamp_role='end', source_interval_seconds=None)
+    assert not validate(config).valid
+    with pytest.raises(ValueError, match='verified regular'):
+        normalize_observations(raw, interval_seconds=3601, timestamp_role='end')
+
+
+def test_declared_crash_clock_preserves_gaps_and_prefixes():
+    from limen.features import dollar_bar_crash_reversal
+    raw = pl.read_parquet(FIXTURE).with_row_index().filter(~pl.col('index').is_in([30, 31, 160])).drop('index')
+    actual = dollar_bar_crash_reversal(raw, -575, -0.5, 60, bar_interval_seconds=3600)
+    assert actual.height == raw.height
+    assert actual['dollar_bar_crash_reversal_position'].sum() > 0
+    for end in (raw.height // 3, raw.height // 2):
+        prefix = dollar_bar_crash_reversal(raw.head(end), -575, -0.5, 60, bar_interval_seconds=3600)
+        assert prefix['dollar_bar_crash_reversal_position'].equals(actual['dollar_bar_crash_reversal_position'].head(end))

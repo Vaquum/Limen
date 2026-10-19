@@ -754,11 +754,11 @@ class Manifest:
                             execution_lag_seconds: float | str = 0.0, max_price_gap_seconds: float | str | None = None,
                             execution_data_source: DataSourceConfig | None = None, funding: FundingConfig | None = None,
                             take_profit_bps_column: str | None = None, stop_loss_bps_column: str | None = None,
-                            barrier_features: DataSourceConfig | None = None, source_interval_seconds: float | None = None) -> 'Manifest':
+                            barrier_features: DataSourceConfig | None = None, source_interval_seconds: float | None = None, source_timestamp_role: Literal['start', 'end'] = 'start') -> 'Manifest':
         self.backtest_config = BacktestConfig(fee_bps, slip_bps, notional_rate, take_profit_bps, stop_loss_bps,
             prediction_mode, product, initial_equity, max_exposure, signal_change_bps, flat_threshold,
             max_holding_seconds, timer_interval_seconds, timer_phase_utc_seconds, execution_lag_seconds,
-            max_price_gap_seconds, execution_data_source, funding, take_profit_bps_column, stop_loss_bps_column, barrier_features, source_interval_seconds)
+            max_price_gap_seconds, execution_data_source, funding, take_profit_bps_column, stop_loss_bps_column, barrier_features, source_interval_seconds, source_timestamp_role)
         return self
 
     def with_allocation(self: _TManifest, method: Callable[..., dict[str, object]], params: Mapping[str, object] | None = None) -> _TManifest:
@@ -1194,7 +1194,7 @@ class MLManifest(Manifest):
         if self.resolve_trade_policy(round_params) is not None:
             interval = (self.backtest_config.source_interval_seconds if self.backtest_config else None) or _source_interval(self.data_source_config)
             interval = None if interval is None else _resolve_trade_number(interval, round_params, 'recorded source interval')
-            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval)
+            decisions = sensor_decisions(raw_klines, data, interval_seconds=interval, timestamp_role=self.backtest_config.source_timestamp_role if self.backtest_config else 'start')
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
 
         lazy = data.lazy()

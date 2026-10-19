@@ -30,6 +30,9 @@ def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]
     backtest = _mapping(_mapping(sfd.get('manifest')).get('backtest'))
     params = _mapping(sfd.get('params'))
     allocation = _mapping(_mapping(sfd.get('manifest')).get('allocation'))
+    role = backtest.get('source_timestamp_role', 'start')
+    if role not in ('start', 'end') or (role == 'end' and backtest.get('source_interval_seconds') is None):
+        errors.append(YAMLError(message='Source timestamp role requires start/end; end requires literal interval metadata', path='sfd.manifest.backtest.source_timestamp_role'))
     _check_source(_mapping(sfd.get('manifest')).get('allocation'), 'sfd.manifest.allocation', errors)
     if allocation and (backtest.get('prediction_mode') != 'target_exposure' or backtest.get('product') is None):
         errors.append(YAMLError(message='Allocation requires explicit event target-exposure economics', path='sfd.manifest.allocation'))

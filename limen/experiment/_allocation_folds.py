@@ -72,7 +72,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
         raise StrictModeError('Allocation fold count exceeds original raw training rows')
     if include_primary_proba and manifest.architecture_function is rule_based:
         raise ValueError('Rule primary supplies no learned probability')
-    prices = normalize_observations(raw, interval_seconds=manifest.backtest_config.source_interval_seconds if manifest.backtest_config else None)
+    prices = normalize_observations(raw, interval_seconds=manifest.backtest_config.source_interval_seconds if manifest.backtest_config else None, timestamp_role=manifest.backtest_config.source_timestamp_role if manifest.backtest_config else 'start')
     prices = prices.with_columns(pl.Series('row_id', [f'source:{value}' for value in prices['start_ns']]))
     rule_features = _rule_features(manifest, raw, params) if isinstance(manifest, RuleBasedManifest) else None
     labels: list[dict[str, object]] = []
@@ -168,16 +168,18 @@ def _opportunity(context: AllocationContext, prices: pl.DataFrame, frame: pl.Dat
     following_flat = np.flatnonzero(decisions[local:] == 0)
     count = int(following_flat[0]) + 1 if following_flat.size else frame.height - local
     subset = frame.slice(local, count)
-    support_end = min(block_end, int(subset['datetime'].dt.epoch('ns')[-1]) + int(prices['available_at_ns'][0] - prices['start_ns'][0]))
+    interval = int(prices['available_at_ns'][0] - prices['start_ns'][0])
+    shift = 0 if context.policy.source_timestamp_role == 'end' else interval
+    support_end = min(block_end, int(subset['datetime'].dt.epoch('ns')[-1]) + shift)
     times = subset['datetime'].dt.epoch('ns')
-    signal_rows = pl.DataFrame({'datetime': subset['datetime'], 'row_id': [f'source:{value}' for value in times],
-                                'available_at_ns': times + int(prices['available_at_ns'][0] - prices['start_ns'][0])})
+    signal_rows = pl.DataFrame({'datetime': subset['datetime'], 'row_id': [f'source:{value + shift - interval}' for value in times],
+                                'available_at_ns': times + shift})
     if context.barriers is not None:
         signal_rows = signal_rows.join(context.barriers, on='datetime', how='left', maintain_order='left')
     policy = replace(context.policy, notional_rate=1.0)
     exposure = decisions[local:local + count] * min(1.0, policy.max_exposure)
     signals = signal_rows.drop('datetime').with_columns(pl.Series('target', exposure))
-    start_ns = int(times[0])
+    start_ns = int(times[0]) + shift - interval
     observations = prices.filter((pl.col('start_ns') >= start_ns) & (pl.col('start_ns') <= support_end))
     funding = context.train_inputs.funding_events
     if funding is not None:
