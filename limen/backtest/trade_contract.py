@@ -178,7 +178,7 @@ def json_value(value: object) -> JsonValue:
             raise ValueError('Nonfinite contract value')
         return value
     if is_dataclass(value) and not isinstance(value, type):
-        omitted = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds'} if isinstance(value, TradePolicy) else set()
+        omitted: set[str] = {'take_profit_bps_column', 'stop_loss_bps_column', 'barrier_spec', 'source_interval_seconds'} if isinstance(value, TradePolicy) else set()
         return {field.name: json_value(getattr(value, field.name)) for field in fields(value) if field.name not in omitted or getattr(value, field.name) is not None}
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)

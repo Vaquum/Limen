@@ -29,7 +29,7 @@ def _plan_key(inputs: TradeInputs, policy: TradePolicy) -> str:
     # still contain a DataFrame or funding parameter mapping changed in place.
     projected = json_value(policy)
     if isinstance(projected, dict):
-        projected.pop('barrier_spec', None)
+        _ = projected.pop('barrier_spec', None)
     return contract_digest({
         'policy': projected, 'sources': json_value(inputs.sources),
         'initial_equity': str(inputs.initial_equity),

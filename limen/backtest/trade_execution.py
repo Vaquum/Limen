@@ -97,8 +97,8 @@ class Account:
         self.ready_at_ns = time_ns + (round(self.policy.execution_lag_seconds * NANOSECONDS) if reason == 'signal' else 0)
 
     def accept_signal(self, value: object, time_ns: int) -> None:
-        row = cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
-        signal = _canonical_signal(row['target'] if row else value, self.policy)
+        row: Mapping[str, object] = cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
+        signal = _canonical_signal(row['target'] if isinstance(value, Mapping) else value, self.policy)
         if signal is None:
             return
         changed = abs(signal - self.last_signal) > self.policy.signal_change_bps / BPS

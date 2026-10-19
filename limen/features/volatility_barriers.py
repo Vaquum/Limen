@@ -18,7 +18,7 @@ def volatility_barriers(data: pl.DataFrame, *, span: int = 24, regime_span: int 
         raise ValueError('Require integer 2 <= min_periods <= span <= regime_span')
     positive = (take_profit_multiple, stop_loss_multiple, minimum_bps, maximum_bps,
                 low_regime_ratio, high_regime_ratio, low_multiplier, normal_multiplier, high_multiplier)
-    if any(isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0 for value in positive):
+    if not all(_positive(value) for value in positive):
         raise ValueError('Barrier coefficients must be finite and positive')
     if not minimum_bps <= maximum_bps < _BPS or low_regime_ratio >= high_regime_ratio:
         raise ValueError('Require ordered barrier clips below 10000 bps and regime thresholds')
@@ -37,3 +37,7 @@ def volatility_barriers(data: pl.DataFrame, *, span: int = 24, regime_span: int 
     )
     ready = pl.Series('__barrier_ready__', [index >= min_periods + 1 for index in range(data.height)])
     return data.hstack(distances).with_columns(ready)
+
+
+def _positive(value: object) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value) and value > 0

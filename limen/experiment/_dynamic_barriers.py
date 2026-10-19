@@ -1,20 +1,33 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from hashlib import sha256
 from importlib import import_module
 from inspect import getsourcefile
 from pathlib import Path
-from typing import TYPE_CHECKING, TypedDict, cast
+from typing import Protocol, TypedDict, cast
 
 import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, TradePolicy, finite_number
 
-if TYPE_CHECKING:
-    from limen.experiment._resolve_trade_policy import BacktestConfig
-
 __all__: list[str] = []
+
+
+class _ProducerConfig(Protocol):
+    @property
+    def method(self) -> Callable[..., object]: ...
+
+
+class _BarrierConfig(Protocol):
+    @property
+    def take_profit_bps_column(self) -> str | None: ...
+    @property
+    def stop_loss_bps_column(self) -> str | None: ...
+    @property
+    def barrier_features(self) -> _ProducerConfig | None: ...
+    @property
+    def source_interval_seconds(self) -> float | None: ...
 
 
 class _BarrierPolicy(TypedDict):
@@ -39,12 +52,8 @@ def admit_research_run(manifest: object, workers: int, resume: bool) -> None:
         raise ValueError('Research-only dynamic barriers/allocation require fresh serial runs; resume and native workers>1 are unsupported')
 
 
-def barrier_policy(config: BacktestConfig, params: Mapping[str, object]) -> _BarrierPolicy:
-    from limen.experiment._resolve_trade_policy import resolve_json
-
-    columns = [config.take_profit_bps_column, config.stop_loss_bps_column]
-    if any(value is not None and (not isinstance(value, str) or not value.isidentifier() or value.startswith('__')) for value in columns):
-        raise ValueError('Barrier column names must be literal public identifiers')
+def barrier_policy(config: _BarrierConfig, producer_params: JsonValue) -> _BarrierPolicy:
+    columns = [_column_name(config.take_profit_bps_column), _column_name(config.stop_loss_bps_column)]
     if dynamic_barriers(config) and (not any(columns) or config.barrier_features is None):
         raise ValueError('Dynamic columns require an isolated barrier_features producer')
     spec: Mapping[str, JsonValue] | None = None
@@ -56,14 +65,14 @@ def barrier_policy(config: BacktestConfig, params: Mapping[str, object]) -> _Bar
         path = getsourcefile(method)
         if path is None:
             raise ValueError('Barrier producer requires readable source')
-        spec = {'method': f'{module}.{name}', 'source_sha256': sha256(Path(path).read_bytes()).hexdigest(), 'params': resolve_json(config.barrier_features.params, params)}
+        spec = {'method': f'{module}.{name}', 'source_sha256': sha256(Path(path).read_bytes()).hexdigest(), 'params': producer_params}
     interval = config.source_interval_seconds
-    if interval is not None and (isinstance(interval, str) or finite_number(interval, 'source interval') <= 0):
+    if interval is not None and finite_number(interval, 'source interval') <= 0:
         raise ValueError('source_interval_seconds must be positive literal metadata')
     return {'take_profit_bps_column': columns[0], 'stop_loss_bps_column': columns[1], 'barrier_spec': spec, 'source_interval_seconds': interval}
 
 
-def prepare_barriers(config: BacktestConfig, policy: TradePolicy, raw: pl.DataFrame) -> pl.DataFrame | None:
+def prepare_barriers(config: _BarrierConfig, policy: TradePolicy, raw: pl.DataFrame) -> pl.DataFrame | None:
     from limen.backtest.execution_events import validate_signal_barriers
     from limen.backtest.trade_contract import TradeInputs
 
@@ -92,10 +101,22 @@ def prepare_barriers(config: BacktestConfig, policy: TradePolicy, raw: pl.DataFr
 
 
 def reject_yaml_promotion(reference: Mapping[str, object]) -> None:
-    sfd = reference.get('sfd')
-    manifest = sfd.get('manifest') if isinstance(sfd, Mapping) else None
-    if isinstance(manifest, Mapping):
-        config = manifest.get('backtest')
-        configured = isinstance(config, Mapping) and any(config.get(key) is not None for key in ('take_profit_bps_column', 'stop_loss_bps_column', 'barrier_features'))
+    sfd = _mapping(reference.get('sfd'))
+    manifest = _mapping(sfd.get('manifest')) if sfd is not None else None
+    if manifest is not None:
+        config = _mapping(manifest.get('backtest'))
+        configured = config is not None and any(config.get(key) is not None for key in ('take_profit_bps_column', 'stop_loss_bps_column', 'barrier_features'))
         if configured or manifest.get('allocation') is not None:
             raise ValueError('research-only dynamic barriers/allocation cannot be promoted')
+
+
+def _mapping(value: object) -> Mapping[str, object] | None:
+    return cast(Mapping[str, object], value) if isinstance(value, Mapping) else None
+
+
+def _column_name(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.isidentifier() or value.startswith('__'):
+        raise ValueError('Barrier column names must be literal public identifiers')
+    return value

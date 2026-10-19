@@ -95,7 +95,7 @@ def resolve_trade_policy(config: BacktestConfig | None, params: Mapping[str, obj
         return None
     from limen.experiment._dynamic_barriers import barrier_policy, dynamic_barriers
 
-    extra = barrier_policy(config, params)
+    extra = barrier_policy(config, resolve_json(config.barrier_features.params, params) if config.barrier_features is not None else None)
     enabled = dynamic_barriers(config) or config.source_interval_seconds is not None or config.prediction_mode != 'binary' or config.product is not None or any(value is not None for value in (config.max_holding_seconds, config.timer_interval_seconds, config.execution_data_source, config.funding, config.max_price_gap_seconds)) or any(getattr(config, name) != default for name, default in (('initial_equity', 10000.0), ('max_exposure', 1.0), ('signal_change_bps', 0.0), ('flat_threshold', 0.0), ('timer_phase_utc_seconds', 0.0), ('execution_lag_seconds', 0.0)))
     if not enabled:
         return None

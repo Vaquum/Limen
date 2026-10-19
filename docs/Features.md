@@ -21,6 +21,7 @@ from limen.features import kline_imbalance, vwap
 from limen.indicators import atr, roc
 from limen.sfd.reference_architecture import logreg_binary
 
+
 def manifest():
     return (
         MLManifest()
