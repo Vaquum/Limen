@@ -187,7 +187,7 @@ class PythonCohortBase(Generic[HistoryT]):
         stamp = cast(datetime, bars[0].datetime)
         known = [bar.available_at_ns for bar in bars]
         available = max(cast(list[int], known)) if all(value is not None for value in known) else None
-        reasons = [bar.reason for bar in bars if bar.reason is not None]
+        reasons: list[PredictionReason] = [bar.reason for bar in bars if bar.reason is not None]
         reason: PredictionReason | None = max(reasons, key=_PRIORITY.__getitem__) if reasons else None
         if stamp < self.selection_cutoff:
             reason = 'inside-training-window'

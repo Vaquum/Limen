@@ -43,7 +43,7 @@ def _features(value: object) -> tuple[str, ...]:
         raise TypeError('Python Sensor feature_columns must be a sequence of strings')
     if not isinstance(value, (Sequence, np.ndarray, pl.Series)):
         raise TypeError('Python Sensor feature_columns must be a sequence of strings')
-    names = _vector(value)
+    names = _vector(cast(object, value))
     if any(not isinstance(name, str) for name in names):
         raise TypeError('Python Sensor feature_columns must contain strings')
     columns = cast(tuple[str, ...], tuple(names))
@@ -58,7 +58,7 @@ def _default_pairs(output: object, count: int) -> ModelPairs:
         raise ValueError('Python Sensor prediction count must match eligible feature rows')
     pairs: list[tuple[int | float | None, float | None]] = []
     for value in values:
-        normalized = int(value) if isinstance(value, (bool, np.bool_)) else value
+        normalized = (1 if value else 0) if isinstance(value, (bool, np.bool_)) else value
         prediction, probability, _reason = mapped_values((normalized, None))
         pairs.append((prediction, probability))
     return pairs
@@ -68,7 +68,7 @@ def _feature_reasons(frame: pl.DataFrame, missing: Missing) -> list[PredictionRe
     if missing == 'model':
         return [None] * frame.height
     invalid = frame.select(pl.any_horizontal([
-        pl.col(name).is_null() | (~pl.col(name).is_finite() if dtype in (pl.Float32, pl.Float64) else pl.lit(False))
+        pl.col(name).is_null() | (~pl.col(name).is_finite() if dtype in (pl.Float32(), pl.Float64()) else pl.lit(False))
         for name, dtype in frame.schema.items()
     ])).to_series().to_list()
     first_valid = next((i for i, blocked in enumerate(invalid) if not blocked), frame.height)
