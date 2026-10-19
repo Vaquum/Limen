@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.43.0"
+  limen_version: "5.44.0"
   mode: development
 
 sfd:
@@ -416,7 +416,7 @@ In saved CLI or Python/MSQ runs, `round_data.jsonl.gz` omits nested `folds` by d
 
 Every fold starts execution independently. Snapshot net returns are the existing notional-scaled `execution.net` values. Event execution samples its recorded equity at retained test-bar endpoints, including the terminal mark in the final value; each return is current equity divided by prior equity minus one, starting from the policy's initial equity. The return track is captured for walk-forward trials even when `record_execution` is off; that flag retains its existing optional JSONL fields. Existing snapshot metrics and their columns remain unchanged.
 
-Explicit full recording allows resume, which rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. Any lighter recording policy rejects resume before artifact changes. This adds no fold-specific Trainer promotion or Sensor reconstruction contract. New single-split runs use the same lean defaults; existing full logs retain resume behavior.
+Explicit full recording allows resume, which rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. Any lighter recording policy rejects resume before artifact changes. Promotion separately requires [versioned fold evidence](Trainer.md#recorded-walk-forward-folds). New single-split runs use the same lean defaults; existing full logs retain resume behavior.
 
 These folds provide recorded out-of-sample evaluations. The selection report below assesses the recorded sweep; its statistics provide no guarantee against selection optimism or future loss. Omitting `split_walk_forward` preserves the existing single-split path.
 
@@ -459,7 +459,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.43.0"
+  limen_version: "5.44.0"
   mode: development
 sfd:
   manifest:
@@ -516,7 +516,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.43.0"
+  limen_version: "5.44.0"
   mode: development
 sfd:
   manifest:
@@ -1396,4 +1396,4 @@ See [Reserve final observations](Final-Holdout.md) for project research exclusio
 
 ### Fold promotion evidence
 
-With `uel.recording.fold_details: true`, walk-forward campaigns retain versioned original-source, selected-source and raw/retained partition witnesses for validated native inference. Serial and parallel origins share the same trial/fold evidence. Default lean recording is unchanged. See [Trainer](Trainer.md#recorded-walk-forward-folds) for the reconstruction and clock contract.
+With `uel.recording.fold_details: true`, walk-forward campaigns retain versioned original-source, selected-source and raw/retained partition witnesses for validated native inference. Serial and parallel origins share the same trial/fold evidence. Default lean recording is unchanged. See [Trainer](Trainer.md#recorded-walk-forward-folds) for the reconstruction and clock contract, and [Cohort](Cohort.md#recorded-walk-forward-members) for explicit binary fold composition.

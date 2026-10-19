@@ -179,7 +179,7 @@ reconstruction failures remain visible rather than dropping selected members.
 Supplying the same recorded DataFrame to each Trainer avoids repeated fetching;
 Cohort adds no shared training or data cache.
 
-The canonical member key is `(manifest_id, permutation_id)`. Duplicate keys
+For ordinary rounds, the canonical member key is `(manifest_id, permutation_id)`. Duplicate keys
 reject, including aliases of a directory or repeated runs of one manifest.
 Directories sharing a manifest may contribute distinct rounds. The same bare
 round ID under different manifests is allowed and counted once per selected
@@ -188,7 +188,7 @@ weight; Cohort does not detect or deduplicate equivalent models.
 
 ### Provenance and identity
 
-`member_ids` preserves the selected order of qualified pairs. `source_metadata`
+For ordinary-only selections, `member_ids` preserves the selected order of qualified pairs. `source_metadata`
 maps resolved directory paths to their own metadata. The new form's existing
 provenance attributes depend on its number of resolved directories:
 
@@ -213,7 +213,7 @@ payload = {
 }
 ```
 
-Several distinct manifests use:
+Several distinct manifests in ordinary-only selections use:
 
 ```python
 payload = {
@@ -249,8 +249,54 @@ still blocks the aggregate bar; different windows can leave no usable
 predictions. Target, calibration and cost settings may differ. This does not
 certify equivalent target meaning or comparable cross-run research metrics.
 The aggregate is inference-only: `trade_contract_digest` and `available_at_ns`
-remain `None`. Ordinary persisted rounds are supported; walk-forward fold
-promotion and signed target-exposure aggregation are outside this interface.
+remain `None`. Ordinary persisted rounds and [qualified binary folds](#recorded-walk-forward-members) are supported; signed target-exposure aggregation remains unavailable.
+
+## Recorded walk-forward members
+
+Choose explicit zero-based folds with three-element selections; ordinary selections keep two elements. Reconstruct each selected fold through its own Trainer, then bind the returned Sensors:
+
+```python
+from limen import Cohort, Trainer
+
+# A completed campaign retained recording.fold_details: true and at least four folds.
+fold_trainer = Trainer(fold_directory, data=recorded_source)
+fold_members = [fold_trainer.train([fold_id], fold=k)[0] for k in (1, 3)]
+ordinary_member = Trainer(ordinary_directory, data=recorded_source).train([ordinary_id])[0]
+cohort = Cohort(rounds=[
+    (fold_directory, fold_id, 1),
+    (ordinary_directory, ordinary_id),
+    (fold_directory, fold_id, 3),
+])
+cohort.set_members([ordinary_member, *fold_members])
+latest = cohort.predict(future_history)
+```
+
+Selection and binding perform no fitting or source fetching. Missing files raise `FileNotFoundError`; malformed JSON, versioned witnesses or disagreeing metadata/YAML declarations raise `ReconstructionError` naming the source. Invalid selections and incompatible/bound members raise `ValueError`. Folds require nonnegative literal integers: booleans, floats, nulls and out-of-range indices reject. An unqualified walk-forward round rejects with `supply fold`; an ordinary source cannot take a fold index.
+
+Fold-containing `member_ids` retain caller order and mix `(manifest_id, permutation_id, fold, provenance_digest)` with ordinary `(manifest_id, permutation_id)` pairs. The digest is the Sensor's raw 64-character hexadecimal selected-artifact digest. Same trial, distinct folds are distinct members. Duplicate keys reject across copies and aliases; different evidence for the same trial/fold raises `Cohort evidence conflict`. Binding checks every member key, architecture and native binary declaration before matching fold count and exact selected-artifact digest. A wrong digest cannot bind by matching the trial/fold key alone. Transparent attribute-forwarding wrappers may bind; hiding fold identity cannot convert a fold Sensor into an ordinary member.
+
+All members must share the configured source method and parameters except date bounds, the actual architecture function and the effective bar formation. Fold members additionally share original campaign source digest, row count, timestamp extent, interval and split declaration; serial/parallel recording origin alone does not create incompatibility. Ordinary members need no invented historical fingerprint. Each Sensor retains its own preprocessing and guards, and live output clocks must align.
+
+Every member's fitted native model must declare immutable `inference_output = ('binary', bool_probabilities)` and binary prediction mode. Continuous, signed and undeclared meanings reject. If every member promises probabilities, aggregation is `probability_weighted`; otherwise it is `majority_vote`. Both retain the existing binary threshold 0.5. This explicit declaration replaces architecture-name guessing only for fold-containing cohorts.
+
+Before successful binding, `cohort_id`, `supports_probabilities` and `aggregation_mode` are `None`; after binding the latter two reflect the actual models. `permutation_ids` remains `None`, because `member_ids` carries the fold identities. A single resolved directory supplies `experiment_dir`, `metadata` and `available_permutation_ids`; multiple directories set those attributes to `None`. `experiment_id` is `None`; `manifest_id` is the sole distinct known ID or `None`. `source_metadata` maps every resolved directory to its metadata.
+
+Fold-containing identity uses this payload with Python's default JSON separators, `json.dumps(payload, sort_keys=True)`, and the existing `sha256:` prefix:
+
+```python
+payload = {
+    'architecture_id': cohort.architecture_id,
+    'aggregation_mode': cohort.aggregation_mode,
+    'members': sorted_tagged_member_rows,
+}
+# Rows: ['fold', manifest_id, permutation_id, fold, provenance_digest]
+#    or ['ordinary', manifest_id, permutation_id]
+# Sort by (manifest_id, permutation_id, kind, fold_or_minus_one, digest_or_empty).
+```
+
+Paths, copies and selection/binding order do not change identity; changed selected evidence does. Ordinary-only IDs keep the earlier payloads byte-for-byte. The hash records artifact lineage, not model equivalence or code attestation.
+
+Every fold blocks timestamps earlier than its campaign selection cutoff, including its own training history, intervening folds, gaps and warm-up. The cohort remains blocked if any member is inside its guarded history, including when another member fails. Formed-bar failures preserve the established formed decision clock. Consequently, mixed ordinary/fold cohorts can have no usable historical predictions. See [Trainer](Trainer.md#recorded-walk-forward-folds) for original-source and reconstruction requirements. Python fold composition and frozen-holdout fold assessment remain unavailable.
 
 ## Selector contract
 
@@ -535,7 +581,7 @@ source/bar compatibility and every member's guards still apply.
 - no bound members at inference raises `RuntimeError`
 - healthy member lists of different lengths or participating timestamp mismatches raise `ValueError`
 - when a member returns `sensor-error` for a bar, it is excluded from aggregation for that bar; only when all members return `sensor-error` does the cohort return `reason='sensor-error'`
-- architecture capability detection is currently hint-based; validate behavior for the target architecture set
+- ordinary-only architecture capability detection remains hint-based; fold-containing cohorts require native binary model declarations
 - selectors that depend on `results.csv` raise if the required columns are missing
 
 ## Read next
@@ -545,4 +591,4 @@ source/bar compatibility and every member's guards still apply.
 
 See [Reserve and assess final observations](Final-Holdout.md) for project research exclusion, frozen fitted-selection assessment, retained scenario evidence and the limits of local exposure history.
 
-Fold-bearing compiled Sensors require qualified fold selection. Legacy `set_members`, ordinary round binding and `Cohort.from_python` reject them so a two-part trial identity cannot discard fold provenance or its campaign cutoff. See [Trainer](Trainer.md#recorded-walk-forward-folds).
+Fold-bearing compiled Sensors require [qualified fold selection](#recorded-walk-forward-members). Legacy `set_members`, ordinary round binding and `Cohort.from_python` reject them so a two-part trial identity cannot discard fold provenance or its campaign cutoff.
