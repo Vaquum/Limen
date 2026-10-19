@@ -51,7 +51,7 @@ def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
 
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(cast(object, value)).values())
+        return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset)):
         return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
     if object_array(value):
@@ -248,8 +248,9 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
         elif object_array(value):
             visit(value.tolist())
         elif not isinstance(value, (ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
-            objects.append(value)
-            methods(value)
+            if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
+                objects.append(value)
+                methods(value)
             if not isinstance(value, type):
                 for part in children(value):
                     visit(part)
