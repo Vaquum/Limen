@@ -32,6 +32,14 @@ def sorted_source(frame: pl.DataFrame) -> pl.DataFrame:
     return frame.sort('datetime').unique('datetime', keep='first', maintain_order=True)
 
 
+# Install real caller components in the namespaces admitted by Compiled Research.
+import limen.data as _data_namespace
+import limen.sfd.reference_architecture as _architecture_namespace
+
+vars(_architecture_namespace)['_fold_test_binary'] = caller_binary
+vars(_data_namespace)['_fold_test_sorted_source'] = sorted_source
+
+
 @dataclass
 class Campaign:
     path: Path
@@ -65,9 +73,9 @@ def config(kind: str, source: Path) -> dict:
         manifest['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}},
                                    'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer', 'params': {'metric': 'limen.metrics.balanced_metric.balanced_metric', 'threshold_min': 0.5, 'threshold_max': 0.5, 'threshold_step': 0.1}}}
     if kind == 'custom':
-        manifest['reference_architecture'] = 'tests.fold_components.caller_binary'
+        manifest['reference_architecture'] = 'limen.sfd.reference_architecture._fold_test_binary'
     if kind == 'reordered':
-        manifest['pre_split_data_selector'] = {'func': 'tests.fold_components.sorted_source'}
+        manifest['pre_split_data_selector'] = {'func': 'limen.data._fold_test_sorted_source'}
     if kind == 'formed':
         manifest['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': 100000}}
         parameters['bar_type'] = ['trade']

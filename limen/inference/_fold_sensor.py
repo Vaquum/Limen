@@ -31,10 +31,12 @@ def single_guard(func: Callable[[_S, pl.DataFrame], BarPrediction]) -> Callable[
     return predict
 
 
-def reject_manual(reference: Mapping[str, object], sensor: object) -> None:
-    sfd = cast(Mapping[str, object], reference.get('sfd', {}))
-    manifest = cast(Mapping[str, object], sfd.get('manifest', {}))
-    if manifest.get('split_walk_forward') is not None and not hasattr(sensor, '_fold_context'):
+def reject_manual(reference: object, sensor: object) -> None:
+    if not isinstance(reference, Mapping):
+        return
+    sfd = cast(Mapping[str, object], reference).get('sfd')
+    manifest = cast(Mapping[str, object], sfd).get('manifest') if isinstance(sfd, Mapping) else None
+    if isinstance(manifest, Mapping) and cast(Mapping[str, object], manifest).get('split_walk_forward') is not None and not hasattr(sensor, '_fold_context'):
         raise ValueError('Walk-forward Sensor requires validated Trainer.train(..., fold=k) evidence')
 
 
