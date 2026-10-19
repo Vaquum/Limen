@@ -14,7 +14,9 @@ from limen.experiment import CalibrationConfig, UniversalExperimentLoop
 from limen.inference import Trainer
 from limen.sfd.reference_architecture import LightGBMBinary, LogRegBinary, TabPFNBinary, XGBoostRegressor
 from limen.sfd.reference_architecture.base import ReferenceModel
-from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
+from limen.yaml import CompiledSFD, build_search_strategy, validate
+
+from tests.utils.yaml_config import yaml_config
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -29,8 +31,7 @@ def recorded_source(**kwargs):
 
 
 def _config(kind='logreg', *, calibrated=False):
-    config, errors = parse((ROOT / 'limen/yaml/templates/ridge_regressor.yaml').read_text())
-    assert not errors
+    config = yaml_config((ROOT / 'limen/yaml/templates/ridge_regressor.yaml').read_text())
     manifest = config['sfd']['manifest']
     manifest['split_dates'] = {
         'train_start': '2024-01-01', 'train_end': '2024-01-23',

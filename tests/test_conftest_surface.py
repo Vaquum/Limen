@@ -54,3 +54,28 @@ def test_complete_proof_runner_preserves_polars_override(tmp_path: Path, thread_
         cwd=ROOT, env=environment, capture_output=True, text=True, check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_cached_yaml_setup_preserves_content_and_nested_isolation(monkeypatch: pytest.MonkeyPatch) -> None:
+    from tests.utils import yaml_config as helper
+
+    helper._parsed.cache_clear()
+    parse = helper.parse
+    calls = []
+
+    def observe(text):
+        calls.append(text)
+        return parse(text)
+
+    monkeypatch.setattr(helper, 'parse', observe)
+    for template in ('ridge_regressor', 'logreg_binary'):
+        text = (ROOT / 'limen/yaml/templates' / (template + '.yaml')).read_text()
+        expected, errors = parse(text)
+        assert not errors
+        first = helper.yaml_config(text)
+        assert first == expected
+        first['sfd']['manifest']['backtest']['fee_bps'] = -999
+        second = helper.yaml_config(text)
+        assert second == expected
+        assert second['sfd'] is not first['sfd']
+    assert len(calls) == len(set(calls)) == 2
