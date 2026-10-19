@@ -168,6 +168,8 @@ def _source(value: object) -> dict[str, object]:
 
 
 def read_fold_context(metadata: Mapping[str, object], round_entry: Mapping[str, object], fold: int) -> dict[str, object]:
+    if any(not isinstance(value, str) or not value.strip() for value in (metadata.get('manifest_id'), round_entry.get('round_id'))):
+        raise ValueError('fold witness requires manifest and trial identities; rerun')
     recording = metadata.get('recording')
     if not isinstance(recording, Mapping) or cast(Mapping[str, object], recording).get('fold_details') is not True:
         raise ValueError('Fold promotion requires uel.recording.fold_details: true; rerun')

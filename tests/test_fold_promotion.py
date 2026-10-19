@@ -50,7 +50,7 @@ def test_selected_fold_reconstruction(fold_campaigns, kind):
         assert other.sensor.provenance_digest != sensor.provenance_digest
 
 
-@pytest.mark.parametrize('mutation', ['lean', 'witness', 'version', 'source', 'ratio', 'raw', 'retained', 'threshold', 'metric', 'binding', 'model', 'count', 'competing', 'csv', 'other_unavailable', 'selected_unavailable'])
+@pytest.mark.parametrize('mutation', ['lean', 'witness', 'version', 'source', 'ratio', 'raw', 'retained', 'threshold', 'metric', 'binding', 'model', 'count', 'competing', 'csv', 'other_unavailable', 'selected_unavailable', 'identity'])
 def test_witness_validation_stages(fold_campaigns, mutation):
     campaign = fold_campaigns['anchored']
     trainer = Trainer(campaign.path, data=campaign.bars)
@@ -59,6 +59,8 @@ def test_witness_validation_stages(fold_campaigns, mutation):
     witness = entry['folds'][campaign.fold]['fold_promotion']
     if mutation == 'lean':
         trainer._metadata['recording']['fold_details'] = False
+    if mutation == 'identity':
+        trainer._metadata['manifest_id'] = None
     if mutation == 'witness':
         entry.pop('fold_promotion')
     if mutation == 'version':
@@ -94,7 +96,7 @@ def test_witness_validation_stages(fold_campaigns, mutation):
         with patch('limen.inference.trainer.load_original_log', side_effect=AssertionError('must not read aggregate')):
             Trainer(campaign.path, data=campaign.bars)
         return
-    before_fit = mutation in ('lean', 'witness', 'version', 'source', 'ratio', 'raw', 'count', 'competing')
+    before_fit = mutation in ('lean', 'witness', 'version', 'source', 'ratio', 'raw', 'count', 'competing', 'identity')
     if before_fit:
         guard = patch('limen.experiment.manifest_core._apply_scaler', side_effect=AssertionError('preprocessing fitted too early'))
     elif mutation == 'retained':
