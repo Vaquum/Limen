@@ -180,6 +180,8 @@ def validate_scenarios(records, catalogue, root: Path) -> None:
         required = entry['test'] + '[' + item['interface'] + '-' + item['id'] + ']'
         if required not in item['tests'] or entry['assertions'] not in item['assertions']:
             raise ValueError('Research scenario lacks its required semantic test or assertion')
+        if not set(entry.get('extra_tests', [])) <= set(item['tests']):
+            raise ValueError('Research scenario lacks its required integrity tests')
         for reference in item['tests']:
             validate_test_reference(root, reference.split('[', 1)[0])
 

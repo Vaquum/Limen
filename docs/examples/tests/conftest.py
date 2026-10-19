@@ -53,6 +53,22 @@ def cost_model():
     return module_at('book_cost_research', ROOT / 'docs/examples/python-research/cost_research.py')
 
 
+@pytest.fixture
+def python_scenarios(monkeypatch):
+    directory = ROOT / 'docs/examples/python-research'
+    monkeypatch.syspath_prepend(str(directory))
+    monkeypatch.setitem(sys.modules, 'research', module_at('book_python_driver', directory / 'research.py'))
+    return module_at('book_python_scenarios', directory / 'scenarios.py')
+
+
+@pytest.fixture
+def compiled_scenarios(monkeypatch):
+    directory = ROOT / 'docs/examples/compiled-research'
+    monkeypatch.syspath_prepend(str(directory))
+    monkeypatch.setitem(sys.modules, 'research', module_at('book_compiled_driver', directory / 'research.py'))
+    return module_at('book_compiled_scenarios', directory / 'scenarios.py')
+
+
 @pytest.fixture(scope='session')
 def research_proof(python_project, compiled_project, tmp_path_factory, request):
     proof = module_at('book_semantic_oracles', ROOT / 'docs/examples/tests/test_research_examples.py')
@@ -113,7 +129,8 @@ def pytest_sessionfinish(session, exitstatus):
     details = catalogue['scenario_details']
     tests = {name for name, _ in REPORTS}
     for identity, entry in details.items():
-        if entry['test'] + '[' + identity.replace('/', '-') + ']' not in tests:
+        required = {entry['test'] + '[' + identity.replace('/', '-') + ']', *entry.get('extra_tests', [])}
+        if not required <= tests:
             raise ValueError('Required scenario test did not execute: ' + identity)
     record = {
         'schema_version': 1, 'mode': 'candidate',
@@ -125,7 +142,7 @@ def pytest_sessionfinish(session, exitstatus):
         'inputs': [{'path': 'tests/fixtures/' + name, 'sha256': value, 'window': 'pinned input or attribution/reproduction file; scenario windows are in the catalogue'} for name, value in INPUTS.items()],
         'sources': sources, 'displays': [],
         'validation': {'catalogue_sha256': digest((ROOT / 'docs/examples/catalogue.json').read_bytes()), 'status': 'passed', 'scenarios': [
-            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [details[interface + '/' + scenario]['test'] + '[' + interface + '-' + scenario + ']'], 'assertions': [details[interface + '/' + scenario]['assertions'], 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
+            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [details[interface + '/' + scenario]['test'] + '[' + interface + '-' + scenario + ']', *details[interface + '/' + scenario].get('extra_tests', [])], 'assertions': [details[interface + '/' + scenario]['assertions'], 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
         'publication': None,
     }
     record['displays'] = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())['displays']

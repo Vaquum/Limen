@@ -121,6 +121,8 @@ def validate_surface_catalogue(root, catalogue):
         raise ValueError('Scenario descriptions do not cover the required interface matrix')
     for identity, entry in catalogue['scenario_details'].items():
         validate_test_reference(root, entry['test'])
+        for reference in entry.get('extra_tests', []):
+            validate_test_reference(root, reference)
         if identity != entry['interface'] + '/' + entry['scenario'] or entry['role'] != 'executed':
             raise ValueError('An execution obligation was relabelled or assigned to the wrong interface')
         source = root / entry['source']

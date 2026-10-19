@@ -2092,7 +2092,10 @@
       ],
       "recorded_window": "hourly: first 1,440 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Two completed rounds become four unique occurrence indices and equal uninterrupted native results after resume; arbitrary fitted state is not restored."
+      "assertions": "Two completed rounds become four unique occurrence indices and equal uninterrupted native results after resume; arbitrary fitted state is not restored.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry"
+      ]
     },
     "compiled/recovery": {
       "interface": "compiled",
@@ -2107,7 +2110,10 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer."
+      "assertions": "Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry"
+      ]
     },
     "python/walk_forward": {
       "interface": "python",
@@ -2137,7 +2143,11 @@
       ],
       "recorded_window": "hourly: first 384 rows; two recorded folds",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff."
+      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry",
+        "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local"
+      ]
     },
     "python/holdout": {
       "interface": "python",
@@ -2167,7 +2177,10 @@
       ],
       "recorded_window": "hourly: January 1\u20136 2024; reserved January 5\u20136",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown."
+      "assertions": "Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_guarded_holdout_excludes_research_and_never_refits"
+      ]
     },
     "python/calibration": {
       "interface": "python",

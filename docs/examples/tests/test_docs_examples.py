@@ -45,7 +45,7 @@ def test_missing_catalogue_scenario_fails():
     assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation', 'command_line', 'observed_costs'}
     assert catalogue['required_scenarios']['allocation'] == ['compiled']
     records = [{'interface': entry['interface'], 'id': entry['scenario'], 'status': 'passed',
-                'tests': [entry['test'] + '[' + entry['interface'] + '-' + entry['scenario'] + ']'],
+                'tests': [entry['test'] + '[' + entry['interface'] + '-' + entry['scenario'] + ']', *entry.get('extra_tests', [])],
                 'assertions': [entry['assertions']]} for entry in catalogue['scenario_details'].values()]
     assert len(records) == 19
     validate_scenarios(records, catalogue, ROOT)
