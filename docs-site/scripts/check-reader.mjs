@@ -1,0 +1,12 @@
+import {spawnSync} from 'node:child_process';
+import fs from 'node:fs/promises';
+import {gzipSync} from 'node:zlib';
+import path from 'node:path';
+const root=path.resolve(process.cwd(),'..');
+const evidence=JSON.parse(await fs.readFile(path.join(root,'.docs-evidence/current.json'),'utf8'));
+if(evidence.validation?.status!=='passed')throw Error('Current successful research execution is required before reader checks');
+let js=0,css=0;for(const name of await fs.readdir('reader-build/assets')){if(name.endsWith('.mjs'))js+=gzipSync(await fs.readFile(path.join('reader-build/assets',name))).length;if(name.endsWith('.css'))css+=gzipSync(await fs.readFile(path.join('reader-build/assets',name))).length;}
+if(js>60*1024||css>24*1024)throw Error(`Reader asset budget exceeded: JS ${js}, CSS ${css}`);
+const started=performance.now();const result=spawnSync(process.execPath,['node_modules/@playwright/test/cli.js','test'],{stdio:'inherit',timeout:180000});
+if(result.error)throw result.error;if(result.status!==0)throw Error(`Reader browser proof failed: ${result.status}`);
+console.log(`Reader proof passed in ${((performance.now()-started)/1000).toFixed(2)}s; JS ${js}B gzip, CSS ${css}B gzip.`);

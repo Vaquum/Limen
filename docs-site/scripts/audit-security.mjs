@@ -1,5 +1,6 @@
 import {spawnSync} from 'node:child_process';
 import path from 'node:path';
+import {mkdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
 // Tracked 2026-10-04: braces <=3.0.3 has no patched release. Repository-owned
@@ -31,6 +32,6 @@ export function inspectAudit(result){
   return count;
 }
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  try{const result=spawnSync('npm',['audit','--json'],{cwd:process.cwd(),encoding:'utf8'});const count=inspectAudit(result);console.log(count?`Tracked docs-site npm vulnerabilities: ${count}`:'No docs-site npm vulnerabilities found');}
+  try{const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');const result=spawnSync('npm',['audit','--json'],{cwd:site,encoding:'utf8',timeout:60000});const artifacts=path.resolve(site,'../.docs-evidence');mkdirSync(artifacts,{recursive:true});writeFileSync(path.join(artifacts,'npm-audit.json'),result.stdout||'');const count=inspectAudit(result);console.log(count?`Tracked docs-site npm vulnerabilities: ${count}`:'No docs-site npm vulnerabilities found');}
   catch(error){console.error(error.message);process.exitCode=1;}
 }

@@ -20,7 +20,7 @@ export function initNavigation(){
       for(const node of fragment.querySelectorAll('[id]'))node.id=names.get(node.id);
       for(const node of fragment.querySelectorAll('[href^="#"]')){const id=node.getAttribute('href').slice(1);if(names.has(id))node.setAttribute('href','#'+names.get(id));}
       const title=document.createElement('h1');title.textContent=parsed.querySelector('h1')?.textContent||'Reference';
-      body.replaceChildren(title,...fragment.childNodes);
+      const intro=parsed.querySelector('.hero-lead')?.cloneNode(true);if(intro)intro.className='reference-intro';body.replaceChildren(title,...(intro?[intro]:[]),...fragment.childNodes);
       body.querySelectorAll('[data-reference]').forEach(a=>a.removeAttribute('data-reference'));
       initCode(body);dialog.scrollTop=0;dialog.showModal();
       if(updateHistory)history.pushState({readerReference:true,readerOrigin:origin},'',link.href);camera.to(0);close.focus({preventScroll:true});

@@ -30,4 +30,4 @@ for(const source of evidence.sources){const target=path.join(output,'source',sou
 await fs.writeFile(path.join(output,'search.json'),JSON.stringify(pages.map(p=>({title:p.title,route:p.url,text:p.markdown.replace(/```[\s\S]*?```/g,'').replace(/<!--[^]*?-->/g,'').replace(/[#*`|]/g,'').replace(/\s+/g,' ').trim()}))));
 await fs.writeFile(path.join(output,'routes.json'),JSON.stringify(pages.map(p=>({source:p.source,url:p.url,part:p.part}))));
 await fs.writeFile(path.join(output,'sitemap.xml'),'<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(p=>`<url><loc>https://docs.vaquum.fi${p.url}</loc></url>`).join('')+'</urlset>');
-console.log(`Reader assembled ${pages.length} maintained sources for ${expectedHead.slice(0,8)} / Limen ${version}.`);
+console.log(`Reader assembled ${pages.filter(p=>p.source).length} maintained sources and ${pages.filter(p=>!p.source).length} generated indexes for ${expectedHead.slice(0,8)} / Limen ${version}.`);
