@@ -1776,6 +1776,10 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add validated reconstruction of explicitly selected recorded walk-forward folds as native Sensors, with source and partition witnesses, copied provenance and campaign timestamp guards.
 
+## [5.42.1] - 2026-10-19
+
+- Reuse each funded outcome candidate plan for its paired long/short labels and avoid unused ledger state frames and aggregate metrics while preserving complete funding execution.
+
 ## [5.43.0] - 2026-10-19
 
 - Add explicit recorded-fold Cohort selection, artifact-bound membership and compatible ordinary/fold binary aggregation with campaign guards.
