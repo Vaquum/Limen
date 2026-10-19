@@ -26,6 +26,8 @@ The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.
 
 The candidate first chapter binds exact source regions and retained observations to both projects. The scenario catalogue defines required executions; the evidence checker rejects missing, skipped or stale proof. The reader consumes the tested wheel, input bundle, source identities and current results. Browser checks exercise the real base path and Worker policy, including keyboard use, reduced motion, saved passages, code copying, reference return and mobile navigation. Retained screenshots record the candidate's rendered state.
 
+Integrity tests record native fitting and calibration inputs and forbid fitting after final selection is frozen. The archived CLI commands run in a separate process with the installed wheel. Native result files, checkpoints, round records, audits, final assessment rows and the installed dependency inventory remain available in the evidence archive.
+
 Most existing pages still need their examples classified and connected to the projects. Their source footers identify reference excerpts without claiming execution. The first complete chapter is a checkpoint; it does not complete the book. Keep the existing renderer and its source checks until the complete-book publication delivery replaces it.
 
 ## Validating the candidate reader

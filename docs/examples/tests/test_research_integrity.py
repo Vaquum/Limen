@@ -39,17 +39,17 @@ def test_recorded_resume_refuses_changed_source_and_geometry(python_scenarios, c
         compiled_scenarios.configuration('recovery', wrong)
 
     config = compiled_scenarios.configuration('walk_forward', FIXTURES)
-    config['sfd']['params']['C'] = [.5, 1.]
-    config['uel']['n_permutations'] = 2
+    config['sfd']['params']['C'] = [.1, .5, 1.]
+    config['uel']['n_permutations'] = 3
     bars = pl.read_parquet(FIXTURES / 'spot_1h_20240101_20241231.parquet', n_rows=384)
     directory = tmp_path / 'interrupted'
 
-    def stop_after_one(log, msq):
-        if log.height == 1:
+    def stop_after_two(log, msq):
+        if log.height == 2:
             signal.raise_signal(signal.SIGINT)
 
-    first = compiled_scenarios.execute(config, directory, bars=bars, callback=stop_after_one)
-    assert first.experiment_log.height == 1
+    first = compiled_scenarios.execute(config, directory, bars=bars, callback=stop_after_two)
+    assert first.experiment_log.height == 2
     before = files(directory)
 
     def forbidden(*args, **kwargs):

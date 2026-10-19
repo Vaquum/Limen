@@ -161,7 +161,7 @@ def walk_forward(data_dir, output):
     metadata = [fold_metadata(sensor) for sensor in sensors]
     with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
         records = [json.loads(line) for line in stream]
-    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_pnl_per_bar_bps', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
+    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
             'objective': research_project.completed_log(loop)['val_backtest_total_return'][0], 'records': records,
             'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
 # endregion walk_forward
