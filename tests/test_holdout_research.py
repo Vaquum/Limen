@@ -246,6 +246,13 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
     other = _project(tmp_path / 'other')
     with pytest.raises(ValueError, match='root hints disagree'):
         UniversalExperimentLoop(sfd=CompiledSFD(_configuration(other), project_root=other), project_root=root)
+    sidecar = root / 'manifests/holdout.sqlite3-wal'
+    sidecar.write_text('')
+    run_git(['add', '--force', 'manifests/holdout.sqlite3-wal'], cwd=root).check_returncode()
+    with pytest.raises(ValueError, match='must not be tracked'):
+        history.bind(root)
+    run_git(['rm', '--cached', '--', 'manifests/holdout.sqlite3-wal'], cwd=root).check_returncode()
+    sidecar.unlink()
     with history.connection(root / 'manifests/holdout-lease.sqlite3') as db:
         db.execute('PRAGMA journal_mode=WAL')
     with pytest.raises(ValueError, match='rollback-journal'):

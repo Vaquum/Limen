@@ -20,6 +20,7 @@ _LEASES: ContextVar[tuple[tuple[Path, bool], ...]] = ContextVar('holdout_leases'
 _HISTORY = 'manifests/holdout.sqlite3'
 _MARKER = 'manifests/holdout-project.json'
 _LEASE = 'manifests/holdout-lease.sqlite3'
+_SIDECARS = ('', '-journal', '-wal', '-shm')
 _SCHEMA = (
     'CREATE TABLE project (id TEXT PRIMARY KEY, revision INTEGER NOT NULL CHECK(revision>=1))',
     "CREATE TABLE reservations (id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES project(id), start_ns INTEGER NOT NULL, end_ns INTEGER NOT NULL CHECK(end_ns>start_ns), interval_seconds INTEGER NOT NULL CHECK(interval_seconds>0 AND 86400%interval_seconds=0), state TEXT NOT NULL CHECK(state IN ('active','withdrawn','released')), created_ns INTEGER NOT NULL, changed_ns INTEGER NOT NULL, created_revision INTEGER NOT NULL CHECK(created_revision>=1))",
@@ -69,14 +70,14 @@ def resolve_root(value: str | Path) -> Path:
 
 
 def _exclude(root: Path) -> None:
-    paths = [_HISTORY, _LEASE, 'manifests/holdout']
+    paths = [name + suffix for name in (_HISTORY, _LEASE) for suffix in _SIDECARS] + ['manifests/holdout']
     if _git(root, 'ls-files', '--', *paths):
         raise ValueError('Holdout history/evidence must not be tracked in Git')
     target = Path(_git(root, 'rev-parse', '--git-path', 'info/exclude'))
     target = target if target.is_absolute() else root / target
     old = target.read_text() if target.exists() else ''
     prefix = _git(root, 'rev-parse', '--show-prefix')
-    entries = [f'/{prefix}{name}{suffix}' for name in (_HISTORY, _LEASE) for suffix in ('', '-journal', '-wal', '-shm')]
+    entries = [f'/{prefix}{name}{suffix}' for name in (_HISTORY, _LEASE) for suffix in _SIDECARS]
     entries.append(f'/{prefix}manifests/holdout/')
     missing = [entry for entry in entries if entry not in old.splitlines()]
     if missing:
