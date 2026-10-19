@@ -135,7 +135,7 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
-        elif hasattr(item, '__dict__') or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
+        elif isinstance(getattr(item, '__dict__', None), dict) or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
             if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in type(item).__mro__):
                 raise ValueError('Holdout refuses opaque native prediction state')
             result = (kind, node(_attributes(item)))
