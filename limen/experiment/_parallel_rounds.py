@@ -7,7 +7,7 @@ import multiprocessing
 import os
 import signal
 from collections import deque
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from concurrent.futures import Future, ProcessPoolExecutor, TimeoutError as FutureTimeoutError
 from concurrent.futures.process import BrokenProcessPool
 from multiprocessing.connection import Connection
@@ -171,7 +171,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
         pool = ProcessPoolExecutor(max_workers=capacity,
                                    mp_context=multiprocessing.get_context('spawn'),
                                    initializer=worker_init,
-                                   initargs=(reference, sources, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), bool(attributes['_recording'] and cast(Mapping[str, bool], attributes['_recording'])['fold_details'])))
+                                   initargs=(reference, sources, cast(bool, attributes['_record_execution']), cast(bool, attributes['_record_model_outputs']), getattr(attributes.get('_walk_forward'), 'promotion', None)))
         exhausted = False
         try:
             launch = cast(Callable[[], None], getattr(pool, '_launch_processes', None))

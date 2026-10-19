@@ -122,7 +122,7 @@ def _average(records: list[dict[str, object]]) -> dict[str, object]:
 
 
 class WalkForwardRun:
-    def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path, *, promotion: bool = False) -> None:
+    def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path, *, promotion: bool | dict[str, object] = False) -> None:
         super().__init__()
         if not isinstance(manifest.split_walk_forward, WalkForwardConfig):
             raise ValueError('split_walk_forward requires its manifest configuration')

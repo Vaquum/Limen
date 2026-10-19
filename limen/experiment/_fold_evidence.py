@@ -45,9 +45,11 @@ def preparation(manifest: Manifest, params: Mapping[str, object]) -> dict[str, o
             'decoder_lookback': getattr(manifest, 'decoder_lookback', 1)}
 
 
-def start(manifest: Manifest, raw: pl.DataFrame, enabled: bool) -> dict[str, object] | None:
+def start(manifest: Manifest, raw: pl.DataFrame, enabled: bool | dict[str, object]) -> dict[str, object] | None:
     if not enabled:
         return None
+    if isinstance(enabled, dict):
+        return copy.deepcopy(enabled)
     try:
         config = manifest.data_source_config
         seconds = None if config is None else config.params.get('kline_size', config.params.get('klines_size'))

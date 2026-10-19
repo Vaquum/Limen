@@ -13,6 +13,7 @@ __all__: list[str] = []
 _NAMES = ('fit', 'validation', 'test')
 _T = TypeVar('_T')
 _SEGMENT_FIELDS = 2
+_MATRIX_DIMENSIONS = 2
 
 
 def validate_partition(value: object, limit: int, *, raw_rows: bool) -> None:
@@ -54,7 +55,7 @@ def _same_inputs(actual: object, expected: pl.DataFrame | pl.Series) -> bool:
         return actual.equals(expected)
     try:
         left, right = np.asarray(actual), np.asarray(expected)
-        if isinstance(expected, pl.Series) and left.ndim == _SEGMENT_FIELDS and left.shape[1] == 1:
+        if isinstance(expected, pl.Series) and left.ndim == _MATRIX_DIMENSIONS and left.shape[1] == 1:
             left = left[:, 0]
         numeric = np.issubdtype(left.dtype, np.number) and np.issubdtype(right.dtype, np.number)
         return bool(np.array_equal(left, right, equal_nan=numeric))

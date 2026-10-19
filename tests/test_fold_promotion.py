@@ -148,6 +148,16 @@ def test_extension_rows_require_recoverable_carriers(fold_campaigns, extension):
             assert result['raw']['fit']['row_digest'] != result['retained']['fit']['row_digest']
 
 
+def test_parallel_reuses_frozen_campaign_fingerprint(fold_campaigns):
+    from limen.experiment import _fold_evidence as evidence
+
+    item = fold_campaigns['parallel']
+    campaign = {key: value for key, value in item.metadata['fold_promotion'].items() if key != 'origin'}
+    with patch.object(evidence, 'source', side_effect=AssertionError('original source rehashed in worker')):
+        copied = evidence.start(item.sensor._get_manifest(), item.bars, campaign)
+    assert copied == campaign and copied is not campaign
+
+
 def test_fold_fingerprint_codec(fold_campaigns):
     frame = fold_campaigns['anchored'].history.head(2)
     assert fingerprint(frame) == '4d17b350e56611cd6cde9fb7059098f64a665df3b99098b45ca625ea993ae5bf'
