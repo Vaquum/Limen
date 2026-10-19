@@ -46,9 +46,9 @@ def assert_python_research(python_project):
         calls.append(model)
         return original_fit(model, *args, **kwargs)
     with patch.object(Pipeline, 'fit', new=observe):
-      for stop in range(13, 493):
-        prefix = cohort.predict_all(bars[1428:1428+stop])
-        np.testing.assert_allclose([point.prediction for point in prefix[12:]], [point.prediction for point in actual[:stop-12]], rtol=1e-12, atol=1e-12)
+        for stop in range(13, 493):
+            prefix = cohort.predict_all(bars[1428:1428+stop])
+            np.testing.assert_allclose([point.prediction for point in prefix[12:]], [point.prediction for point in actual[:stop-12]], rtol=1e-12, atol=1e-12)
     assert calls == []
     for sensor, (coefficients, mean) in zip(cohort.members, before, strict=True):
         np.testing.assert_array_equal(sensor.fitted_state.named_steps['ridge'].coef_, coefficients)

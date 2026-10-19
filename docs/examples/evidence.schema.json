@@ -13,7 +13,8 @@
     "sources",
     "displays",
     "validation",
-    "publication"
+    "publication",
+    "bundle"
   ],
   "properties": {
     "schema_version": {
@@ -384,6 +385,24 @@
           }
         }
       ]
+    },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     }
   }
 }
