@@ -146,9 +146,9 @@ Raises:
 
 ## Sensor
 
-A `Sensor` is the promoted form of a trained round.
+A `Sensor` wraps fitted state for inference. Trainer constructs compiled Sensors from saved YAML experiments; `Sensor.from_python` accepts caller-owned live Python state.
 
-Each sensor exposes:
+Each compiled Sensor exposes:
 
 - `permutation_id` — SHA-256 round ID from the experiment log; required for cohort binding
 - `manifest_id` — SHA-256 content hash of the YAML manifest, carried from `metadata.json` for traceability
@@ -166,24 +166,61 @@ print(sensor.round_params)
 bar_pred = sensor.predict(raw_klines)
 ```
 
-Sensors are also callable. `__call__` aliases `predict_all` and returns `list[BarPrediction]`, one entry per bar:
+Sensors are also callable. `__call__` aliases `predict_all` and returns `list[BarPrediction]`, one entry per prepared decision:
 
 ```python
 all_preds = sensor(raw_klines)  # list[BarPrediction]
 ```
 
+### Python construction
+
+`Sensor.from_python(*, fitted_state, params, infer, map_output, state_id, fitting_cutoff, selection_cutoff)` returns a native Sensor accepting arbitrary history objects. See the executable [recorded Python workflow](Universal-Experiment-Loop.md#direct-python-run); its fixture requires a repository checkout.
+
+The two caller functions have these contracts:
+
+```text
+infer(history, fitted_state, params) -> (metadata_frame, model_output)
+map_output(model_output) -> Sequence[(prediction, probability)]
+```
+
+`infer` owns preparation, prediction and any member aggregation. State stays by reference. String-keyed `params` is shallow-copied into a read-only mapping; `round_params` returns a shallow dict copy. Nested parameter values remain shared. Callers keep fitted state frozen and preparation causal; Sensor does not certify arbitrary Python methodology or call a fitting API.
+
+Require a nonblank caller `state_id` and timezone-aware cutoffs with `fitting_cutoff <= selection_cutoff`; both normalize to UTC. Fitting precedes the exclusive fitting cutoff; fitting and selection precede the exclusive selection cutoff. The fitting cutoff records provenance. Sensor masks decisions before `selection_cutoff` with `inside-training-window`; equality is eligible. Identity, cutoffs, `origin='python'` and `prediction_mode='python'` are read-only. `permutation_id`, `manifest_id` and `trade_contract` are None.
+
+Only decision metadata has a fixed schema:
+
+| Column | Contract |
+|---|---|
+| `datetime` | Required non-null, unique, increasing Polars UTC Datetime (ms/us/ns), exactly representable as a Python datetime |
+| `reason` | Optional String or all-null column: `warm-up`, `null-features` or None |
+| `available_at_ns` | Optional nullable Int64 or all-null column; non-null availability must not precede its decision timestamp |
+
+Missing optional values mean None; extra columns are ignored. Availability is a caller declaration retained on blocked and actionable rows. Every Python result has `trade_contract_digest=None`; no compiled identity or trade proof is inherited from composed members.
+
+The adapter returns exactly one explicit pair per metadata row, including unavailable rows. Use a Sequence, excluding strings/bytes, generators and ndarray matrices. An actionable prediction must be a finite `numbers.Real` excluding bool; integral values become Python int and other real values become float. Negative and greater-than-one predictions remain unchanged in meaning. Optional probability must independently be finite and within [0,1]. Arrays, Decimal and Boolean scalars are invalid. A malformed pair or invalid aligned value yields `sensor-error` with both numeric fields None, retaining datetime and availability. Declared unavailable rows also clear both numeric fields.
+
+Wrong construction types raise `TypeError`; invalid identities/cutoffs raise `ValueError`. Callback and adapter exceptions propagate. Invalid metadata or adapter cardinality raises `ValueError` without fabricated result rows. These Python rules leave compiled failure handling unchanged.
+
+`predict(history)` calls inference once and returns the final `predict_all(history)` result; empty metadata gives `[]` for batch and a warm-up result for single inference. Each call uses the full batch path: O(n) metadata/result work plus caller inference cost. Callers may trim history while retaining required context. The worked example removes warm-up and forward-label boundaries independently for partition metrics; live inference uses preceding completed context instead.
+
+Caller refitting creates a new fit. It provides no Trainer replay/`ReconstructionError` guarantee, compiled training identity or [protected final-holdout evidence](Final-Holdout.md). Native [Cohort](Cohort.md) rejects Python-origin Sensors; aggregate members in caller code with aligned decisions and preserved unavailable results. Python Sensor persistence/reconstruction is unsupported.
+
 ### `predict(raw_klines) -> BarPrediction`
 
-Takes a `pl.DataFrame` of raw klines with the same schema as the manifest data source. Returns a `BarPrediction` for the last bar.
+For compiled Sensors, takes a `pl.DataFrame` of raw klines with the same schema as the manifest data source. Returns a `BarPrediction` for the last bar. Python Sensors use the callback history contract above. Both paths return:
 
 ```python
 @dataclass
 class BarPrediction:
-    datetime: Any
+    datetime: object
     prediction: int | float | None
     probability: float | None
     reason: str | None
+    available_at_ns: int | None = None
+    trade_contract_digest: str | None = None
 ```
+
+`BarPrediction` remains importable from `limen.inference` and `limen.inference.sensor`; new pickles name its defining module, `limen.inference._python_sensor`.
 
 `reason` values:
 
@@ -191,21 +228,21 @@ class BarPrediction:
 |---|---|
 | `None` | valid prediction; use `prediction` and `probability` |
 | `'warm-up'` | not enough bars to satisfy indicator lookback |
-| `'inside-training-window'` | bar falls within the train/test split window |
+| `'inside-training-window'` | compiled guarded split window, or Python decision before selection cutoff |
 | `'null-features'` | mid-stream null feature value (data gap or transform anomaly) |
-| `'sensor-error'` | unexpected exception; prediction is not available |
+| `'sensor-error'` | compiled caught inference failure, or invalid aligned Python scalar/pair |
 
-`predict()` never raises for data or model failures — all non-prediction conditions are returned as `BarPrediction` with the corresponding `reason`. The one exception is `NotImplementedError`, which is raised if the manifest has `decoder_lookback > 1` (not yet supported).
+Compiled Sensors catch data/model failures after Manifest reconstruction and return `sensor-error`; malformed YAML still raises at reconstruction. `NotImplementedError` is raised if the manifest has `decoder_lookback > 1` (not yet supported). Python callback/adapter exceptions and malformed metadata/cardinality raise as described above.
 
 ### `predict_all(raw_klines) -> list[BarPrediction]`
 
-Returns one `BarPrediction` per bar in the post-bar-formation data. Warm-up bars and inside-window bars have `reason` set; valid bars have `prediction` and `probability` populated.
+Compiled Sensors return one `BarPrediction` per bar in the post-bar-formation data. Warm-up bars and inside-window bars have `reason` set. Python Sensors return one result per metadata row; probability is optional.
 
-On unexpected exceptions the method returns a list of `reason='sensor-error'` entries (one per input bar) rather than raising. The one exception is `NotImplementedError`, which is raised if the manifest has `decoder_lookback > 1` (not yet supported).
+Compiled caught failures return `sensor-error` entries (one per prepared bar, or input bar if preparation fails). Manifest reconstruction and unsupported decoder lookback still raise. Python failure behavior follows the construction contract above.
 
 ### What `predict()` expects
 
-Sensor callers pass raw klines, not `x_test`. The Sensor rebuilds the feature matrix internally from the stored manifest, fitted preprocessing params, and round params, then passes `x_test` to the trained reference model. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time.
+Compiled Sensor callers pass raw klines, not `x_test`. The Sensor rebuilds the feature matrix internally from the stored manifest, fitted preprocessing params, and round params, then passes `x_test` to the trained reference model. Calibrated models (those trained with `use_calibration: true`) store the fitted calibrator internally during the training evaluation step; subsequent `predict()` calls reuse it without needing `x_val` or `y_val`. The caller never needs to supply validation data at inference time. Compiled guards retain date-granularity comparisons; Python cutoffs compare complete UTC datetimes.
 
 ## What Trainer reads from disk
 

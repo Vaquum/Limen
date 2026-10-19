@@ -107,6 +107,33 @@ def _after_training(recorded):
     return recorded.filter(pl.col('datetime').dt.date().cast(pl.String) == '2025-01-08')
 
 
+@pytest.mark.parametrize('source_form', ['legacy', 'rounds'])
+def test_cohort_rejects_python_sensor(cohort_campaigns, source_form):
+    campaigns, recorded = cohort_campaigns
+    first = campaigns[0]
+    ids = first.ids[:2]
+    if source_form == 'legacy':
+        cohort = Cohort(experiment_log_path=str(first.directory), permutation_ids=ids)
+    else:
+        cohort = Cohort(rounds=[(first.directory, pid) for pid in ids])
+    raw = _after_training(recorded)
+    metadata = raw.head(1).select('datetime')
+    cutoff = metadata['datetime'][0]
+    python_sensor = Sensor.from_python(
+        fitted_state=first.sensors[1], params={},
+        infer=lambda history, state, params: (metadata, [(1.0, None)]),
+        map_output=lambda output: output, state_id='caller-composition',
+        fitting_cutoff=cutoff, selection_cutoff=cutoff,
+    )
+    message = 'Cohort cannot bind Python-origin Sensors; aggregate them in caller code.'
+    with pytest.raises(ValueError, match=f'^{message.replace(".", "[.]")}$'):
+        cohort.set_members([first.sensors[0], python_sensor])
+    assert cohort.cohort_id is None
+    for method in (cohort.predict, cohort.predict_all):
+        with pytest.raises(RuntimeError, match='no bound members'):
+            method(raw)
+
+
 def _bound(selection, members):
     cohort = Cohort(rounds=selection)
     cohort.set_members(members)

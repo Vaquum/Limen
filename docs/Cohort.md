@@ -3,6 +3,8 @@
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
 `Cohort` combines trained Sensors reconstructed from completed experiment artifacts. Select rounds from one experiment with the existing constructor/selectors, or explicitly select rounds across directories with `rounds`. Each Sensor retains its own fitted state and inference guards.
 
+`set_members` rejects `origin='python'` Sensors before binding in either source form. Their unrestricted numeric outputs require caller-owned aggregation; see [Python Sensor construction](Trainer.md#python-construction).
+
 ## What this page covers
 
 - what a Cohort is and where it sits in the Limen workflow
