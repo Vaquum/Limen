@@ -1,5 +1,7 @@
 import copy
+from contextlib import ExitStack
 import json
+import multiprocessing
 from pathlib import Path
 from unittest.mock import patch
 
@@ -33,6 +35,7 @@ def assessment_case(tmp_path_factory):
     for architecture in ('logreg', 'lightgbm'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
             current['sfd']['params']['C'] = [1.0, 0.5]
             current['uel']['n_permutations'] = 2
         else:
@@ -74,7 +77,17 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         assert sensor.predict(probe) == clone.predict(probe) == second.predict(probe)
     trained[0][0]._round_params['C'] = 999
     calls = []
-    with patch('limen.sfd.reference_architecture.logreg_binary.LogRegBinary.train', side_effect=lambda *args, **kwargs: calls.append('train')):
+    paths = ('limen.sfd.reference_architecture.logreg_binary.LogRegBinary.train', 'limen.sfd.reference_architecture.lightgbm_binary.LightGBMBinary.train',
+        'sklearn.linear_model.LogisticRegression.fit', 'lightgbm.LGBMClassifier.fit', 'sklearn.calibration.CalibratedClassifierCV.fit',
+        'sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform', 'limen.calibration.grid_threshold_optimizer',
+        'limen.sfd.reference_architecture.logreg_binary.fit_calibrator', 'limen.sfd.reference_architecture.lightgbm_binary.fit_calibrator')
+    with ExitStack() as stack:
+        for path in paths:
+            stack.enter_context(patch(path, side_effect=lambda *args, **kwargs: calls.append('fit')))
+        for sensor in trained[0] + trained[1]:
+            for value in sensor._fitted_params.values():
+                if type(value).__module__.startswith(('limen.scalers.', 'limen.targets.')):
+                    stack.enter_context(patch.object(type(value), '__init__', side_effect=lambda *args, **kwargs: calls.append('fitted-transform')))
         report = _report(frozen, assessment_case)
     assert calls == []
     rows = pl.read_parquet(root / report['rows_path'])
@@ -87,7 +100,21 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert _report(_freeze(trained[1][0]), assessment_case)['state'] == 'completed'
 
 
-def test_holdout_attempt_history(assessment_case, monkeypatch):
+def _attempt_worker(root, reservation, pipe):
+    history._BUSY_TIMEOUT_SECONDS = 0.2
+    attempts.migrate(root)
+    with history.admission(root):
+        declaration = attempts.reservation(root, reservation, None, '2024-01-06', '2024-01-04')
+        pipe.send('leased')
+        assert pipe.recv() == 'allocate'
+        attempt = attempts.allocate(root, declaration, {'context_start_ns': history.utc_day('2024-01-04'), 'start_ns': history.utc_day('2024-01-05'), 'end_ns': history.utc_day('2024-01-06')}, spec='structural', state='structural', scenarios='structural')
+        pipe.send(attempt['id'])
+        if pipe.recv() == 'fail':
+            attempts.finalize(root, attempt['id'], source=None, error={'stage': 'load', 'exception': 'ValueError', 'message': 'structural interruption', 'member_id': None, 'bar_ns': None})
+            pipe.send('failed')
+
+
+def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
     root, reservation, trained, _ = assessment_case
     binding = history.read_binding(root)
     assert binding.project_id
@@ -118,6 +145,49 @@ def test_holdout_attempt_history(assessment_case, monkeypatch):
     with pytest.raises(ValueError, match='not completed'):
         read_holdout_report(root, failed['id'])
     monkeypatch.setattr(history, '_BUSY_TIMEOUT_SECONDS', 0.2)
+    context = multiprocessing.get_context('fork')
+    pipes, workers = [], []
+    try:
+        for _ in range(2):
+            parent, child = context.Pipe()
+            worker = context.Process(target=_attempt_worker, args=(root, reservation, child))
+            worker.start()
+            assert parent.poll(5) and parent.recv() == 'leased'
+            pipes.append(parent)
+            workers.append(worker)
+        ids = []
+        for pipe in pipes:
+            pipe.send('allocate')
+            assert pipe.poll(5)
+            ids.append(pipe.recv())
+        pipes[1].send('fail')
+        assert pipes[1].poll(5) and pipes[1].recv() == 'failed'
+        workers[0].terminate()
+        for worker in workers:
+            worker.join(5)
+            assert not worker.is_alive()
+        with history.connection(root / history._HISTORY) as db:
+            entries = [dict(db.execute('SELECT * FROM attempts WHERE id=?', (value,)).fetchone()) for value in ids]
+        assert [entry['state'] for entry in entries] == ['started', 'failed']
+        assert entries[1]['assessment_index'] == entries[0]['assessment_index'] + 1
+        assert ids[0] in [entry['id'] for entry in json.loads(entries[1]['prior_json'])['attempts']]
+    finally:
+        for worker in workers:
+            if worker.is_alive():
+                worker.terminate()
+                worker.join(5)
+        for pipe in pipes:
+            pipe.close()
+    migration = _project(tmp_path / 'migration')
+    unused = reserve_holdout(migration, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    with history.connection(migration / history._HISTORY) as db:
+        before = dict(db.execute('SELECT * FROM reservations').fetchone())
+        assert db.execute('PRAGMA user_version').fetchone()[0] == 1
+    attempts.migrate(migration)
+    with history.connection(migration / history._HISTORY) as db:
+        assert dict(db.execute('SELECT * FROM reservations').fetchone()) == before
+        assert db.execute('PRAGMA user_version').fetchone()[0] == 2
+    withdraw_holdout(migration, unused)
 
 
 def test_holdout_report_accounting(assessment_case):

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 import json
 from pathlib import Path
 import sqlite3
@@ -12,6 +12,8 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_freeze import encoded
 
 _VERSION = 2
+_HISTORY = cast(str, vars(history)['_HISTORY'])
+_identity = cast(Callable[[Path, sqlite3.Connection], tuple[str, int]], vars(history)['_identity'])
 _SCHEMA = """CREATE TABLE attempts (
  id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES project(id),
  assessment_index INTEGER NOT NULL CHECK(assessment_index>=1),
@@ -27,8 +29,12 @@ _SCHEMA = """CREATE TABLE attempts (
 
 
 def migrate(root: Path) -> None:
-    with history.admission(root, exclusive=True), history.connection(root / history._HISTORY) as db:
-        _ = history._identity(root, db)
+    with history.admission(root), history.connection(root / _HISTORY) as db:
+        _ = _identity(root, db)
+        if db.execute('PRAGMA user_version').fetchone()[0] == _VERSION:
+            return
+    with history.admission(root, exclusive=True), history.connection(root / _HISTORY) as db:
+        _ = _identity(root, db)
         _ = db.execute('BEGIN IMMEDIATE')
         if db.execute('PRAGMA user_version').fetchone()[0] == 1:
             _ = db.execute(_SCHEMA)
@@ -39,7 +45,7 @@ def migrate(root: Path) -> None:
 
 def reservation(root: Path, reservation_id: str, start: str | None, end: str | None, context: str) -> dict[str, object]:
     binding = history.read_binding(root)
-    with history.connection(root / history._HISTORY) as db:
+    with history.connection(root / _HISTORY) as db:
         row = db.execute("SELECT * FROM reservations WHERE id=? AND project_id=? AND state!='withdrawn'", (history.identifier(reservation_id), binding.project_id)).fetchone()
         if row is None:
             raise ValueError('Holdout reservation is unknown or withdrawn')
@@ -64,9 +70,9 @@ def _prior(db: sqlite3.Connection, project: str, context: int, start: int, end: 
 
 
 def allocate(root: Path, declaration: Mapping[str, object], planned: dict[str, int], *, spec: str, state: str, scenarios: str) -> dict[str, object]:
-    with history.connection(root / history._HISTORY) as db:
+    with history.connection(root / _HISTORY) as db:
         _ = db.execute('BEGIN IMMEDIATE')
-        project, revision = history._identity(root, db)
+        project, revision = _identity(root, db)
         row = db.execute('SELECT state FROM reservations WHERE id=?', (declaration['id'],)).fetchone()
         if revision != declaration['revision'] or row is None or row['state'] != declaration['state']:
             raise ValueError('Holdout reservation changed before allocation')
@@ -82,7 +88,7 @@ def allocate(root: Path, declaration: Mapping[str, object], planned: dict[str, i
 
 def finalize(root: Path, attempt_id: str, *, source: object, artifacts: Mapping[str, object] | None = None,
              error: Mapping[str, object] | None = None, finished_ns: int | None = None) -> None:
-    with history.connection(root / history._HISTORY) as db:
+    with history.connection(root / _HISTORY) as db:
         _ = db.execute('BEGIN IMMEDIATE')
         row = db.execute("SELECT support_json FROM attempts WHERE id=? AND state='started'", (attempt_id,)).fetchone()
         if row is None:
@@ -98,8 +104,8 @@ def finalize(root: Path, attempt_id: str, *, source: object, artifacts: Mapping[
 
 
 def completed(root: Path, attempt_id: str) -> dict[str, object]:
-    with history.admission(root), history.connection(root / history._HISTORY) as db:
-        project, _ = history._identity(root, db)
+    with history.admission(root), history.connection(root / _HISTORY) as db:
+        project, _ = _identity(root, db)
         if db.execute('PRAGMA user_version').fetchone()[0] != _VERSION:
             raise ValueError(f'Holdout attempt {attempt_id} is unknown')
         row = db.execute("SELECT * FROM attempts WHERE id=? AND project_id=? AND state='completed'", (history.identifier(attempt_id), project)).fetchone()

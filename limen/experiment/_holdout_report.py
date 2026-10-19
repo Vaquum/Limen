@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 import json
 import math
@@ -10,12 +10,14 @@ import sqlite3
 from typing import TypedDict, cast
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
-from sklearn.metrics import roc_auc_score
+from sklearn import metrics as _metrics
 
 from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_freeze import encoded
 
+roc_auc_score = cast(Callable[[Sequence[int], Sequence[float]], float], vars(_metrics)['roc_auc_score'])
 _BINARY_CLASSES = 2
 
 class Metric(TypedDict):
@@ -46,7 +48,7 @@ def classification(labels: list[int | None], predictions: list[int], probabiliti
     return result
 
 
-def return_metrics(values: Mapping[str, float], net: np.ndarray, pos: np.ndarray) -> dict[str, Metric]:
+def return_metrics(values: Mapping[str, float], net: npt.NDArray[np.float64], pos: npt.NDArray[np.float64]) -> dict[str, Metric]:
     result: dict[str, Metric] = {}
     for key, value in values.items():
         support = int((net > 0).sum()) if key == 'avg_win_bps' else int((net < 0).sum()) if key == 'avg_loss_bps' else len(net)
@@ -62,7 +64,7 @@ _SCENARIO = pl.List(pl.Struct({'index': pl.Int64, **dict.fromkeys(('raw_position
 _COLUMNS = {'open_ns': pl.Int64, 'close_ns': pl.Int64, 'role': pl.String, 'source_row_sha256': pl.String,
             'members': _MEMBER, 'aggregate_prediction': pl.Int64, 'aggregate_probability': pl.Float64,
             'aggregate_reason': pl.String, 'label': pl.Int64, 'label_reason': pl.String, 'scenarios': _SCENARIO}
-_REPORT_KEYS = frozenset(('schema_version', 'attempt_id', 'assessment_index', 'state', 'created_ns', 'finished_ns', 'project_id', 'reservation', 'spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_column_map', 'source_schema', 'planned', 'prior', 'exposure', 'rows_path', 'rows_sha256', 'classification', 'scenarios'))
+_REPORT_KEYS: set[str] = set(('schema_version', 'attempt_id', 'assessment_index', 'state', 'created_ns', 'finished_ns', 'project_id', 'reservation', 'spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_column_map', 'source_schema', 'planned', 'prior', 'exposure', 'rows_path', 'rows_sha256', 'classification', 'scenarios'))
 
 
 def retained_rows(raw: pl.DataFrame, step: int, start: int, tape: list[dict[str, object]],
@@ -113,7 +115,7 @@ def _path(root: Path, value: object, attempt_id: str, filename: str) -> Path:
 def _sync_replace(temp: Path, target: Path) -> None:
     with temp.open('rb') as stream:
         os.fsync(stream.fileno())
-    temp.replace(target)
+    _ = temp.replace(target)
     directory = os.open(target.parent, os.O_RDONLY)
     try:
         os.fsync(directory)

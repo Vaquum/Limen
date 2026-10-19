@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Callable
 import json
 import logging
 import math
 from pathlib import Path
+from threading import get_ident
 import time
 from typing import cast
+from typing_extensions import override
 
 import polars as pl
 
@@ -15,11 +18,12 @@ from limen.cohort import Cohort
 from limen.experiment import _holdout_attempts as attempts
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_report as reports
-from limen.experiment._holdout_freeze import FrozenHoldoutSelection, digest, members, owned_copy, provenance, state_digest, unchanged
+from limen.experiment._holdout_freeze import FrozenHoldoutSelection, digest, members, owned_copy, provenance, state_digest, unchanged, frozen_parts
 from limen.experiment._holdout_source import SourceEvidence, load_admitted_source, source_spec
 from limen.experiment.manifest_core import MLManifest
 from limen.inference.sensor import BarPrediction, Sensor
 
+_aggregate = cast(Callable[[Cohort, list[BarPrediction]], BarPrediction], vars(Cohort)['_aggregate_bar_predictions'])
 
 class _Failures(logging.Handler):
     def __init__(self) -> None:
@@ -27,9 +31,12 @@ class _Failures(logging.Handler):
         self.member_id: str | None = None
         self.bar_ns: int | None = None
         self.message: str | None = None
+        self.thread = get_ident()
 
+    @override
     def emit(self, record: logging.LogRecord) -> None:
-        self.message = record.getMessage()
+        if record.thread == self.thread:
+            self.message = record.getMessage()
 
     def schema(self, message: str) -> None:
         self.message = message
@@ -47,7 +54,7 @@ def _metadata(selection: Sensor | Cohort, root: Path, declaration: dict[str, obj
         experiment = history.research_record(binding, cast(str, proof['experiment_record_id']))
         if trainer['state'] != 'completed' or trainer['role'] != 'trainer' or experiment['state'] != 'completed' or experiment['role'] != 'experiment' or trainer['round_id'] != proof['round_id'] or experiment['round_id'] != proof['round_id'] or json.loads(cast(str, trainer['provenance_json'])) != proof:
             raise ValueError('Holdout requires matching completed Trainer and source experiment records')
-        manifest = cast(MLManifest, member._manifest)
+        manifest = cast(MLManifest, vars(member)['_manifest'])
         source = source_spec(manifest, binding)
         identity = {key: value for key, value in source[1].items() if key not in ('start_date_limit', 'end_date_limit', 'row_count_limit', 'n_rows')}
         recorded = cast(dict[str, object], proof['source'])
@@ -87,7 +94,7 @@ def _tape(selection: Sensor | Cohort, raw: pl.DataFrame, start: int, failures: _
                 _valid(bar, timestamp)
                 bars.append(bar)
                 retained.append({'index': ordinal, 'id': failures.member_id, 'prediction': int(cast(int, bar.prediction)), 'probability': bar.probability, 'reason': bar.reason})
-            aggregate = bars[0] if type(selection) is Sensor else selection._aggregate_bar_predictions(bars)
+            aggregate = bars[0] if type(selection) is Sensor else _aggregate(cast(Cohort, selection), bars)
             _valid(aggregate, timestamp)
             result.append({'members': retained, 'prediction': int(cast(int, aggregate.prediction)), 'probability': aggregate.probability, 'reason': aggregate.reason})
         return result
@@ -114,16 +121,19 @@ def _execute(final: pl.DataFrame, tape: list[dict[str, object]], declarations: l
 def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | Path,
                          reservation_id: str, start: str | None = None, end: str | None = None) -> dict[str, object]:
     """Allocate durable exposure, then assess a causal tape from an owned fitted copy."""
-    if type(frozen) is not FrozenHoldoutSelection or not frozen._lock.acquire(blocking=False):
+    if type(frozen) is not FrozenHoldoutSelection:
+        raise ValueError('Holdout requires a frozen selection')
+    snapshot, frozen_spec, state_sha, spec_sha, lock = frozen_parts(frozen)
+    if not lock.acquire(blocking=False):
         raise ValueError('Holdout requires an idle frozen selection')
     try:
-        if digest(frozen._spec) != frozen._spec_digest or state_digest(frozen._snapshot[0]) != frozen._state_digest:
+        if digest(frozen_spec) != spec_sha or state_digest(snapshot[0]) != state_sha:
             raise ValueError('Frozen holdout specification/state changed')
-        selection = owned_copy(frozen._snapshot[0])
-        target = copy.deepcopy(frozen._snapshot[1])
+        selection = owned_copy(snapshot[0])
+        target = copy.deepcopy(snapshot[1])
         if target is not None:
             unchanged(target)
-        spec = copy.deepcopy(frozen._spec)
+        spec = copy.deepcopy(frozen_spec)
         root = history.resolve_root(project_root)
         attempts.migrate(root)
         with history.admission(root):
@@ -134,23 +144,23 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
             scenarios_sha = digest(declarations)
             failures = _Failures()
             for member, proof in zip(members(selection), proofs, strict=True):
-                manifest = cast(MLManifest, member._manifest)
+                manifest = cast(MLManifest, vars(member)['_manifest'])
                 _ = vars(manifest).pop('_holdout_binding', None)
                 vars(manifest)['_holdout_assessment_schemas'] = {'input': proof['input_schema'], 'model': proof['model_schema']}
                 vars(manifest)['_holdout_assessment_failure'] = failures.schema
-            attempt = attempts.allocate(root, declaration, planned, spec=frozen._spec_digest, state=frozen._state_digest, scenarios=scenarios_sha)
+            attempt = attempts.allocate(root, declaration, planned, spec=spec_sha, state=state_sha, scenarios=scenarios_sha)
             attempt_id, stage = cast(str, attempt['id']), 'load'
             source: SourceEvidence | None = None
             try:
                 interval = cast(int, declaration['interval_seconds'])
                 binding = history.ProjectBinding(root, cast(str, declaration['project_id']), cast(int, declaration['revision']), None, interval)
-                raw, source = load_admitted_source(cast(MLManifest, members(selection)[0]._manifest), binding, lower_ns=planned['context_start_ns'], upper_ns=planned['end_ns'], complete=True)
+                raw, source = load_admitted_source(cast(MLManifest, vars(members(selection)[0])['_manifest']), binding, lower_ns=planned['context_start_ns'], upper_ns=planned['end_ns'], complete=True)
                 stage = 'predict'
                 tape = _tape(selection, raw, planned['start_ns'], failures)
                 failures.member_id, failures.bar_ns = None, None
                 final = raw.filter(pl.col('datetime').dt.epoch('ns') >= planned['start_ns'])
                 stage = 'labels'
-                labels = cast(list[int | None], target.transform(final)[target.target_name].to_list()) if target is not None else [None] * final.height
+                labels: list[int | None] = cast(list[int | None], target.transform(final)[target.target_name].to_list()) if target is not None else [None] * final.height
                 stage = 'execute'
                 summaries, ledgers = _execute(final, tape, declarations)
                 stage = 'artifacts'
@@ -158,7 +168,7 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 finished = time.time_ns()
                 report: dict[str, object] = {'schema_version': 1, 'attempt_id': attempt_id, 'assessment_index': attempt['assessment_index'], 'state': 'completed',
                     'created_ns': attempt['created_ns'], 'finished_ns': finished, 'project_id': attempt['project_id'], 'reservation': {key: value for key, value in declaration.items() if key != 'project_id'},
-                    'spec': spec, 'spec_sha256': frozen._spec_digest, 'state_sha256': frozen._state_digest, 'scenarios_sha256': scenarios_sha,
+                    'spec': spec, 'spec_sha256': spec_sha, 'state_sha256': state_sha, 'scenarios_sha256': scenarios_sha,
                     'source': source, 'source_column_map': mapping, 'source_schema': [{'name': name, 'dtype': str(dtype)} for name, dtype in raw.schema.items()], 'planned': planned, 'prior': attempt['prior'],
                     'exposure': reports.exposure(declaration, cast(dict[str, object], attempt['prior']), proofs, planned['start_ns'], planned['end_ns']),
                     'classification': reports.classification(labels, [cast(int, row['prediction']) for row in tape], [cast(float | None, row['probability']) for row in tape]), 'scenarios': summaries}
@@ -175,4 +185,4 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                     raise ValueError(f'Holdout attempt {attempt_id}: {exc}; finalization failed: {finalization_error}') from exc
                 raise ValueError(f'Holdout attempt {attempt_id}: {exc}') from exc
     finally:
-        frozen._lock.release()
+        lock.release()

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Iterable, Mapping
 import copy
 from dataclasses import fields, is_dataclass
 from datetime import date, datetime
@@ -18,7 +18,7 @@ from typing import cast
 
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.linear_model import LogisticRegression
-from sklearn.utils.validation import check_is_fitted
+from sklearn.utils import validation as _validation
 
 from limen.cohort import Cohort
 from limen.experiment import _holdout_history as history
@@ -31,9 +31,10 @@ from limen.targets.next_bar_down import NextBarDownTarget
 from limen.targets.next_bar_up import NextBarUpTarget
 from limen.yaml.compiler import CompiledSFD
 
+check_is_fitted = cast(Callable[[object], None], vars(_validation)['check_is_fitted'])
 _TOKEN = object()
 _VOTE_THRESHOLD = 0.5
-_IMPLEMENTATIONS = {cls: {name: getattr(cls, name) for name in names} for cls, names in (
+_IMPLEMENTATIONS: dict[type[object], dict[str, object]] = {cls: {name: getattr(cls, name) for name in names} for cls, names in (
     (Sensor, ('predict', '_get_manifest', '_last_bar_inside_training_window')),
     (Cohort, ('_aggregate_bar_predictions', '_fallback_vote_threshold', '_validate_probability_range')),
     (LogRegBinary, ('predict',)), (LightGBMBinary, ('predict',)),
@@ -94,11 +95,11 @@ def digest(value: object) -> str:
 
 def scenario_declarations(values: list[Mapping[str, object]]) -> list[dict[str, object]]:
     keys = {'fee_bps', 'slip_bps', 'notional_rate', 'execution_lag_bars', 'take_profit_bps', 'stop_loss_bps'}
-    if not isinstance(values, list) or not values:
+    if not isinstance(cast(object, values), list) or not values:
         raise ValueError('Holdout requires a nonempty scenario list')
     result: list[dict[str, object]] = []
     for value in values:
-        if not isinstance(value, Mapping) or set(value) != keys:
+        if not isinstance(cast(object, value), Mapping) or set(value) != keys:
             raise ValueError('Holdout scenario requires exactly all six declared keys')
         row: dict[str, object] = {}
         for key, item in value.items():
@@ -125,17 +126,21 @@ def members(selection: Sensor | Cohort) -> list[Sensor]:
     if type(selection) is not Cohort:
         raise ValueError('Holdout accepts exact Sensor or Cohort only')
     unchanged(selection)
-    values = selection._members
-    if not values or len(values) != len(selection.member_ids) or selection.aggregation_mode not in ('majority_vote', 'probability_weighted') or selection._VOTE_THRESHOLD != _VOTE_THRESHOLD:
+    values = cast(list[Sensor], vars(selection)['_members'])
+    if not values or len(values) != len(selection.member_ids) or selection.aggregation_mode not in ('majority_vote', 'probability_weighted') or getattr(selection, '_VOTE_THRESHOLD', None) != _VOTE_THRESHOLD:
         raise ValueError('Unsupported holdout Cohort membership/aggregation')
     if [(item.manifest_id, item.permutation_id) for item in values] != selection.member_ids:
         raise ValueError('Holdout Cohort member bindings disagree')
     return values
 
 
+def _member_state(sensor: Sensor) -> tuple[object, ...]:
+    return tuple(vars(sensor)[key] for key in ('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'))
+
+
 def state_digest(selection: Sensor | Cohort) -> str:
-    state = tuple((item._yaml_reference, item._round_params, item._fitted_params, item._model, item._trade_contract) for item in members(selection))
-    aggregate = ('sensor',) if type(selection) is Sensor else (selection.aggregation_mode, selection.member_ids, selection._VOTE_THRESHOLD)
+    state = tuple(_member_state(item) for item in members(selection))
+    aggregate = ('sensor',) if type(selection) is Sensor else (cast(Cohort, selection).aggregation_mode, cast(Cohort, selection).member_ids, getattr(selection, '_VOTE_THRESHOLD', None))
     return sha256(pickle.dumps((state, aggregate), protocol=5)).hexdigest()
 
 
@@ -144,7 +149,7 @@ def manifest_projection(manifest: MLManifest) -> object:
 
 
 def provenance(sensor: Sensor) -> dict[str, object]:
-    value = sensor._fitted_params.get('_holdout')
+    value = cast(dict[str, object], vars(sensor)['_fitted_params']).get('_holdout')
     if not isinstance(value, dict):
         raise ValueError('Holdout requires Trainer ProvenanceV1, not legacy fitted state')
     proof = cast(dict[str, object], value)
@@ -159,7 +164,7 @@ def provenance(sensor: Sensor) -> dict[str, object]:
                 raise ValueError('Malformed holdout feature schema')
             if name == 'model_schema' and field['dtype'] not in ('Float32', 'Float64', 'Int8', 'Int16', 'Int32', 'Int64', 'UInt8', 'UInt16', 'UInt32', 'UInt64', 'Boolean'):
                 raise ValueError('Holdout model features must be numeric')
-        if len({field['name'] for field in cast(list[dict[str, object]], schema)}) != len(schema):
+        if len({field['name'] for field in cast(list[dict[str, object]], schema)}) != len(cast(list[object], schema)):
             raise ValueError('Duplicate holdout schema columns')
     return proof
 
@@ -168,7 +173,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     if type(sensor) is not Sensor or sensor.trade_contract is not None:
         raise ValueError('Holdout accepts ordinary exact binary Sensors only')
     unchanged(sensor)
-    wrapper = sensor._model
+    wrapper = cast(LogRegBinary | LightGBMBinary, vars(sensor)['_model'])
     if type(wrapper) not in (LogRegBinary, LightGBMBinary):
         raise ValueError('Holdout supports fitted LogRegBinary/LightGBMBinary only')
     unchanged(wrapper)
@@ -184,10 +189,10 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         if model.booster_.best_iteration > 0:
             raise ValueError('Holdout refuses positive native LightGBM best_iteration')
     check_is_fitted(model)
-    if list(getattr(model, 'classes_', [])) != [0, 1]:
+    if list(cast(Iterable[int], getattr(model, 'classes_', []))) != [0, 1]:
         raise ValueError('Holdout estimator classes must be [0,1]')
     config = wrapper.prediction_calibration_config
-    calibrator = wrapper._fitted_calibrator
+    calibrator = vars(wrapper).get('_fitted_calibrator')
     if config is not None:
         if calibrator is None:
             raise ValueError('Holdout refuses configured but unfitted calibration')
@@ -199,11 +204,11 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
             check_is_fitted(calibrator)
         else:
             raise ValueError('Holdout supports fitted sklearn calibration only')
-        threshold = wrapper._calibration_threshold
+        threshold = vars(wrapper).get('_calibration_threshold')
         if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not math.isfinite(float(threshold)):
             raise ValueError('Holdout requires a finite fitted threshold')
-    manifest = sensor._manifest
-    fresh = CompiledSFD(sensor._yaml_reference).manifest()
+    manifest = cast(MLManifest | None, vars(sensor)['_manifest'])
+    fresh = CompiledSFD(cast(dict[str, object], vars(sensor)['_yaml_reference'])).manifest()
     if type(fresh) is not MLManifest or (manifest is not None and (type(manifest) is not MLManifest or manifest_projection(manifest) != manifest_projection(fresh))):
         raise ValueError('Holdout cached manifest differs from the declared pipeline')
     effective = fresh if manifest is None else manifest
@@ -216,26 +221,20 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     if backtest is not None and (backtest.product is not None or backtest.execution_data_source is not None or backtest.funding is not None or backtest.prediction_mode != 'binary'):
         raise ValueError('Unsupported holdout execution mode')
     resolved = effective.prediction_calibration_config
-    if normalized(config) != normalized(resolved.resolve(sensor._round_params) if resolved is not None else None):
+    if normalized(config) != normalized(resolved.resolve(cast(dict[str, object], vars(sensor)['_round_params'])) if resolved is not None else None):
         raise ValueError('Holdout fitted calibration differs from declared configuration')
     proof = provenance(sensor)
     interval = proof.get('interval_seconds')
     if type(interval) is not int:
         raise ValueError('Holdout requires recorded native interval')
     source = source_spec(effective, history.ProjectBinding(Path.cwd(), None, 0, None, interval))
-    return {'yaml': normalized(sensor._yaml_reference), 'params': normalized(sensor._round_params), 'pipeline': manifest_projection(effective),
+    return {'yaml': normalized(cast(dict[str, object], vars(sensor)['_yaml_reference'])), 'params': normalized(cast(dict[str, object], vars(sensor)['_round_params'])), 'pipeline': manifest_projection(effective),
             'source': normalized(source), 'manifest_id': sensor.manifest_id, 'permutation_id': sensor.permutation_id,
             'provenance': normalized(proof), 'test_end': effective.split_dates[-1].isoformat()}
 
 
 class FrozenHoldoutSelection:
     __slots__ = ('_lock', '_snapshot', '_spec', '_spec_digest', '_state_digest')
-    _snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None]
-    _spec: dict[str, object]
-    _state_digest: str
-    _spec_digest: str
-    _lock: Lock
-
     def __new__(cls, token: object, /) -> FrozenHoldoutSelection:
         if token is not _TOKEN:
             raise TypeError('Use freeze_holdout_selection')
@@ -257,7 +256,7 @@ def _model_witness(value: object) -> object:
 
 
 def _copy_witness(selection: Sensor | Cohort) -> bytes:
-    return pickle.dumps(tuple((item._yaml_reference, item._round_params, item._fitted_params, _model_witness(item._model), item._trade_contract) for item in members(selection)), protocol=5)
+    return pickle.dumps(tuple((*_member_state(item)[:3], _model_witness(vars(item)['_model']), vars(item)['_trade_contract']) for item in members(selection)), protocol=5)
 
 
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
@@ -267,8 +266,8 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
         raise ValueError('Holdout fitted-state copy changed selected state')
     for original, member in zip(members(selection), members(result), strict=True):
         _ = validate_member(member)
-        if original._manifest is None:
-            member._manifest = CompiledSFD(member._yaml_reference).manifest()
+        if vars(original)['_manifest'] is None:
+            vars(member)['_manifest'] = CompiledSFD(cast(dict[str, object], vars(member)['_yaml_reference'])).manifest()
     return result
 
 
@@ -280,21 +279,25 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
     declarations = scenario_declarations(scenarios)
     specs = [validate_member(member) for member in members(selection)]
     if evaluation_target is not None:
-        if type(evaluation_target) not in (NextBarUpTarget, NextBarDownTarget) or set(vars(evaluation_target)) != {'target_name'} or not isinstance(evaluation_target.target_name, str):
+        if type(evaluation_target) not in (NextBarUpTarget, NextBarDownTarget) or set(vars(evaluation_target)) != {'target_name'} or not isinstance(cast(object, evaluation_target.target_name), str):
             raise ValueError('Holdout target must be an initialized exact next-bar binary target')
         unchanged(evaluation_target)
     versions: dict[str, object] = {'python': platform.python_version()}
-    for package in ('limen', 'numpy', 'polars', 'scikit-learn', 'lightgbm'):
+    for package in ('vaquum-limen', 'numpy', 'polars', 'scikit-learn', 'lightgbm'):
         try:
             versions[package] = version(package)
         except PackageNotFoundError:
             versions[package] = None
     result = FrozenHoldoutSelection(_TOKEN)
-    result._snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
-    result._spec = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
-                    'aggregation': 'sensor' if type(selection) is Sensor else selection.aggregation_mode,
+    snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
+    spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
+                    'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
-                    'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': vars(evaluation_target)}, 'versions': versions}
-    result._state_digest, result._spec_digest = state_digest(result._snapshot[0]), digest(result._spec)
-    result._lock = Lock()
+                    'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions}
+    for key, value in zip(('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock'), (snapshot, spec, state_digest(snapshot[0]), digest(spec), Lock()), strict=True):
+        object.__setattr__(result, key, value)
     return result
+
+
+def frozen_parts(handle: FrozenHoldoutSelection) -> tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock]:
+    return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock], tuple(object.__getattribute__(handle, key) for key in ('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock')))
