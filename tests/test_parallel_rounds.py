@@ -124,11 +124,11 @@ def run_loop(config, directory, *, workers=None, resume=False, callback=None, co
     return loop
 
 
-def records(directory, name='round_data.jsonl'):
+def records(directory, name='round_data.jsonl', *, raw=False):
     path = _storage.round_path(directory) if name == 'round_data.jsonl' else directory / name
     text = _storage.text(path) if name == 'round_data.jsonl' and path.exists() else path.read_text() if path.exists() else ''
     values = [json.loads(line) for line in text.splitlines()]
-    return [wire_record(value, restore=True) if 'parameter_encoding' in value else value for value in values]
+    return values if raw else [wire_record(value, restore=True) if 'parameter_encoding' in value else value for value in values]
 
 
 def _assert_same(actual, expected):
@@ -188,7 +188,7 @@ def assert_runs_equal(actual, expected):
                        rel_tol=1e-10, abs_tol=1e-12)
     left_records, right_records = records(actual), records(expected)
     for entry in [*left_records, *right_records]:
-        for key in ('parallel_plan', 'parallel_output', 'parameter_encoding'):
+        for key in ('parallel_plan', 'parallel_output', 'parameter_encoding', 'parallel_parameters'):
             entry.pop(key, None)
         if 'folds' in entry:
             for fold in entry['folds']:
@@ -729,7 +729,7 @@ def test_parallel_resume_rejects_changed_policy_and_broken_evidence(parallel_cam
                 saved[0]['trade_ledger'] = None
             (_storage.round_path(directory)).write_bytes(b''.join(gzip.compress((json.dumps(row) + '\n').encode(), compresslevel=1, mtime=0) for row in saved))
         if name != 'missing':
-            assert records(directory)
+            assert records(directory, raw=True)
         before = {path.name: path.read_bytes() for path in directory.iterdir() if path.is_file()}
         with pytest.raises(ValueError, match=r'worker|policy|round|evidence|record|prefix|occurrence|identity|ledger'):
             run_loop(config, directory, workers=2 if name == 'policy' else None, resume=True)

@@ -107,7 +107,7 @@ def validate_record(record: Mapping[str, object], context: Mapping[str, object],
     if (marker.get('version') != VERSION or type(count) is not int or count < 1
             or marker.get('kind') != contract.prediction_kind or marker.get('has_probabilities') is not contract.probabilities):
         raise ValueError('Cannot resume: missing or inconsistent parallel output evidence')
-    payload = {key: value for key, value in record.items() if key != 'parallel_output'}
+    payload = {key: value for key, value in record.items() if key not in ('parallel_output', 'parallel_parameters')}
     evidence = {key: value for key, value in marker.items() if key != 'digest'}
     if marker.get('digest') != digest((context, evidence, payload)):
         raise ValueError('Cannot resume parallel run with mismatched output digest')
@@ -174,7 +174,7 @@ def wire_record(record: Mapping[str, object], *, legacy: bool = False, restore: 
     if result.get('parameter_encoding') != VERSION:
         raise ValueError('Cannot resume: missing or inconsistent parallel evidence version')
     if restore:
-        node = result.pop('parallel_parameters', None)
+        node = result.get('parallel_parameters')
         native = decode(node)
         if encode(parameter_projection(encode(native))) != encode(result['round_params']):
             raise ValueError('Cannot resume parallel run with mismatched typed parameter evidence')
