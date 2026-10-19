@@ -39,7 +39,7 @@ def main():
     evidence.parent.mkdir(parents=True, exist_ok=True)
     evidence.write_text(json.dumps({'status': 'running'}) + '\n')
     subprocess.run([sys.executable, '-m', 'ruff', 'check', '--select', 'F,E9', str(EXAMPLES)], check=True, timeout=30)
-    type_command = [sys.executable, '-m', 'pyright', '--pythonpath', sys.executable, '--project', str(EXAMPLES / 'pyrightconfig.json')]
+    type_command = [sys.executable, '-m', 'pyright', '--pythonpath', sys.executable, '--project', str(EXAMPLES / 'research-types.json')]
     if arguments.diagnose:
         type_command.extend(['--verbose', '--dependencies'])
     subprocess.run(type_command, check=True, timeout=60)

@@ -32,7 +32,7 @@ Most existing pages still need their examples classified and connected to the pr
 
 ## Validating the candidate reader
 
-Use Python 3.12 and Node.js 20 or later. CI installs the hash-pinned research environment and the tools in `docs/examples/requirements-quality.txt`. Prepare runtime and build wheels before pytest. The proof creates a new environment, installs those wheels offline with hash checking, builds without isolated dependency resolution and installs the candidate wheel there. It imports no dependency from the invoking environment. Linux uses the research CI lock; macOS uses its separately resolved lock with the same version constraints. Both records identify the resolution target and actual interpreter.
+Use Python 3.10–3.13 and Node.js 20 or later. CI uses the policy-pinned Python 3.10 runtime and installs the hash-pinned research environment and the tools in `docs/examples/requirements-quality.txt`. The supplemental documentation type configuration is selected explicitly; it does not shadow the package's strict configuration. Prepare runtime and build wheels before pytest. The proof creates a new environment, installs those wheels offline with hash checking, builds without isolated dependency resolution and installs the candidate wheel there. It imports no dependency from the invoking environment. Linux uses the research CI lock; macOS uses its separately resolved lock with the same version constraints. Both records identify the resolution target and actual interpreter.
 
 From the repository root, after publishing the candidate PR:
 
@@ -212,7 +212,7 @@ Binding tests must request current-run execution evidence themselves. Running on
 The existing required `PR Checks Docs Site` context will own the comprehensive example proof and reader checks. Extend its job in this order:
 
 1. Identify the checked-out revision and source tree.
-2. Install Python 3.12 and the hashed research dependencies; build the candidate wheel and install it in the isolated execution environment.
+2. Install the policy-pinned Python 3.10 runtime and the hashed research dependencies; build the candidate wheel and install it in the isolated execution environment.
 3. Execute the canonical projects and semantic/binding tests under `docs/examples/tests/`, producing evidence for those exact inputs.
 4. Run Node's source, route, lint, dependency and reader checks against that same-job evidence.
 5. Build and browser-check the site, retaining the execution and browser artifacts.
