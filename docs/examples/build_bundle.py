@@ -49,6 +49,8 @@ def build(root: Path, output: Path) -> str:
                 entries[f'{interface}-research/{path.relative_to(root / f"docs/examples/{interface}-research")}'] = path.read_bytes()
     for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json'):
         entries[name] = (root / 'docs/examples' / name).read_bytes()
+    for path in (root / 'docs/examples/retained').glob('*.json'):
+        entries['retained/' + path.name] = path.read_bytes()
     for name, expected in INPUTS.items():
         data = (root / 'tests/fixtures' / name).read_bytes()
         if hashlib.sha256(data).hexdigest() != expected:

@@ -15,7 +15,7 @@ def test_archive_rejects_missing_project_schema_and_input(tmp_path):
     build(ROOT, source)
     with tarfile.open(source) as archive:
         entries = {item.name: archive_bytes(archive, item.name) for item in archive.getmembers()}
-    for missing in ('compiled-research/allocation.yaml', 'evidence.schema.json', 'inputs/btcusdt_funding_20240101_20240108.json'):
+    for missing in ('compiled-research/allocation.yaml', 'evidence.schema.json', 'retained/selection.json', 'inputs/btcusdt_funding_20240101_20240108.json'):
         changed = tmp_path / 'incomplete.tar.gz'
         with tarfile.open(changed, 'w:gz') as archive:
             for name, content in entries.items():

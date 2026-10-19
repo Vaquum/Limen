@@ -36,6 +36,7 @@ def unpack(bundle: Path, target: Path, root: Path):
                     'compiled-research/selection.yaml', 'evidence.schema.json', 'catalogue.json'}
         required |= {'inputs/' + name for name in INPUTS}
         required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
+        required |= {'retained/selection.json', 'retained/python-selection.json', 'retained/compiled-selection.json'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
         if len(names) != len(archive.getmembers()) or any(not member.isfile() for member in archive.getmembers()):
@@ -53,6 +54,7 @@ def unpack(bundle: Path, target: Path, root: Path):
     canonical.update({'requirements/research-env.txt': root / 'requirements/ci/research-env.txt',
                       'requirements/research-macos.txt': root / 'docs/examples/requirements-research-macos.txt',
                       'requirements/build.txt': root / 'docs/examples/requirements-build.txt'})
+    canonical.update({'retained/' + path.name: path for path in (root / 'docs/examples/retained').glob('*.json')})
     for name, path in canonical.items():
         if (target / name).read_bytes() != path.read_bytes():
             raise ValueError('Canonical bundle member differs: ' + name)
