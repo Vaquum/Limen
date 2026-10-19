@@ -152,13 +152,13 @@ def test_python_calibration_reuse(tmp_path, monkeypatch, mode, calibration):
         recorded = benchmark.filter(pl.col('time_ns').is_between(first, inputs.partition_end_ns))
         space = {'scale': [0.5]}
 
-        def prep(frame, params):
-            return {'train': frame.head(3), 'evaluation': frame.tail(5), 'scale': params['scale']}
+        def prep(frame, round_params):
+            return {'train': frame.head(3), 'evaluation': frame.tail(5), 'scale': round_params['scale']}
 
-        def model(data, params, inputs=inputs, policy=policy, hour=hour,
+        def model(data, round_params, inputs=inputs, policy=policy, hour=hour,
                   conditions=conditions, benchmark=benchmark, loaded=loaded):
             fitted = _CallerModel().fit(data['train'])
-            predictions = fitted.predict(data['evaluation'], mode, params['scale'])
+            predictions = fitted.predict(data['evaluation'], mode, round_params['scale'])
             original_bytes = predictions.to_numpy().tobytes()
             frozen = replace(inputs, signals=inputs.signals.with_columns(predictions))
             candidate = CostCandidate(frozen, policy, f'caller-owned:experiment-{hour}', conditions, benchmark)
