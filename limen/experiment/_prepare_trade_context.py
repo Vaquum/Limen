@@ -273,7 +273,7 @@ def validate_inference_contract(policy: TradePolicy | None, mode: str, contract:
 
 __all__ = ['FoldCompression', 'FoldFeatures', 'FoldPreparation', 'FoldScaler', 'PreparedFolds', 'PreparedTradeContext', 'attach_trade_context', 'finish_trade_result', 'normalize_observations', 'persist_ledger', 'prepare_trade_context', 'select_trade_rows', 'source_interval']
 
-def attach_outcomes(data: dict[str, object], labels: Sequence[OutcomeLabels], raw: pl.DataFrame | None, retained: pl.DataFrame, *, scale: FoldScaler, compress: FoldCompression, deterministic: bool, shims: FittedColumnShims | None = None, dropped: Sequence[str] = ()) -> None:
+def attach_outcomes(data: dict[str, object], labels: Sequence[OutcomeLabels], raw: pl.DataFrame | None, retained: pl.DataFrame, *, scale: FoldScaler, compress: FoldCompression, deterministic: bool, dropped: Sequence[str] = ()) -> None:
     from limen.experiment._fold_preparation import prepare_folds
     from limen.targets.trade_outcome import OutcomeLabels
 
@@ -283,5 +283,6 @@ def attach_outcomes(data: dict[str, object], labels: Sequence[OutcomeLabels], ra
     binding = contract_digest({'partitions': [contract_digest(export_trade_contract(context.policy, partition)) for partition in context.partitions]})
     data['_trade_labels'] = OutcomeLabels(pl.concat([label.rows for label in labels]), binding)
     fitted = cast(Mapping[str, object], data['_fitted_params'])
+    shims = cast('FittedColumnShims | None', fitted.get('_column_shims'))
     data['_fitted_params'] = {key: value for key, value in fitted.items() if not key.startswith('_target_cls_')}
     data['_fold_preparation'] = prepare_folds(raw, retained, context.model_rows[0], scale=scale, compress=compress, deterministic=deterministic, shims=shims, dropped=dropped)

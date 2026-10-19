@@ -1,4 +1,3 @@
-from limen.experiment._column_shims import FittedColumnShims
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
 from limen.backtest.trade_contract import TradePolicy
@@ -1123,10 +1122,9 @@ class MLManifest(Manifest):
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
         if outcome_target:
-            attach_outcomes(data_dict, private_labels, raw_features, split_data[0],
+            attach_outcomes(data_dict, private_labels, raw_features, split_data[0], dropped=columns_to_drop or (),
                 scale=partial(_apply_scaler, self, round_params=round_params), compress=partial(_apply_pca_compression, self, round_params=round_params),
-                deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms),
-                shims=cast(FittedColumnShims | None, all_fitted_params.get('_column_shims')), dropped=columns_to_drop or ())
+                deterministic=self.scaler is None and all(bool(getattr(entry.func, 'deterministic', False)) for entry in self.feature_transforms))
         return data_dict
 
     @override
