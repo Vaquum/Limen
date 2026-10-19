@@ -40,7 +40,13 @@ def freeze(inputs: object, policy: object, research_id: str,
         _ = history.text(value, key)
     if declared['clock'] != 'assumed_exchange_label':
         raise ValueError('Only the explicit retrospective assumed-exchange clock is available')
-    snapshot: dict[str, object] = copy.deepcopy({'inputs': inputs, 'policy': policy, 'research_id': name,
+    funding = policy.funding
+    if funding is not None:
+        funding = replace(funding, params=history.mapping(funding.params),
+                          calibration=history.mapping(funding.calibration) if funding.calibration is not None else None)
+    frozen_policy = replace(policy, funding=funding,
+                            barrier_spec=history.mapping(policy.barrier_spec) if policy.barrier_spec is not None else None)
+    snapshot: dict[str, object] = copy.deepcopy({'inputs': inputs, 'policy': frozen_policy, 'research_id': name,
                               'conditions': declared, 'benchmark': benchmark})
     _ = identity.digest(snapshot)
     return snapshot

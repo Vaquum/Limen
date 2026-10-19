@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import json
 import socket
-from types import SimpleNamespace
+from types import MappingProxyType, SimpleNamespace
 from dataclasses import replace
 from decimal import Decimal
 
@@ -63,7 +63,7 @@ def test_frozen_event_scenarios(tmp_path, monkeypatch, mode, funded, barrier, la
     policy = replace(policy, execution_lag_seconds=lag, **({barrier: 0.01} if barrier else {}))
     if funded:
         funding = FundingPolicy('limen.backtest.funding_adapter.funding_adapter', ADAPTER_VERSION,
-            {'rate': 0.001, 'rate_unit': 'decimal', 'settlement_interval_seconds': 60.0},
+            MappingProxyType({'rate': 0.001, 'rate_unit': 'decimal', 'settlement_interval_seconds': 60.0}),
             None, None, 'discrete', 3600.0, 'execution_proxy', 'USDC', 'scenario')
         events = prepare_funding(funding, None, inputs.partition_start_ns, inputs.partition_end_ns)
         inputs = replace(inputs, funding_events=events, sources=(*inputs.sources,
