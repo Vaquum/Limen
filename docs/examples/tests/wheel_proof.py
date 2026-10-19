@@ -4,7 +4,6 @@ import os
 from pathlib import Path
 import subprocess
 import shlex
-import sys
 import tarfile
 import venv
 import zipfile
