@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -50,3 +51,5 @@ def volatility_term_structure(
             '_term_structure_long_vol',
         ])
     )
+
+_parallel(volatility_term_structure, backend_imports=('polars',))

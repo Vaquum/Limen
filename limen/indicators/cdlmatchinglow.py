@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -18,8 +19,6 @@ def _cdlmatchinglow_impl(
     Compute Matching Low candlestick pattern.
 
     Args:
-        data (pl.DataFrame): Dataset with OHLC columns
-        open_col (str): Column name for open prices
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
@@ -97,3 +96,5 @@ def cdlmatchinglow(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdlmatchinglow, backend_imports=('numpy', 'polars'))

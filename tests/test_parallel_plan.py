@@ -181,6 +181,9 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     validate_resources(freeze_manifest(disabled, None), without_calibration | {'use_calibration': False, 'use_threshold': False})
     with pytest.raises(ValueError, match='feature_transforms.*unresolved parameter unused_window'):
         validate_resources(freeze_manifest(disabled, None), params | {'optional': True})
+    from limen.indicators.obv import obv
+    from limen.features.log_returns import log_returns
+    validate_resources(freeze_manifest(copy.deepcopy(plan.manifest).add_feature(obv).add_feature(log_returns), None), params)
     for jobs in (None, True, 0, -1, 2):
         with pytest.raises(ValueError, match='effective n_jobs=1'):
             validate_resources(plan, params | {'n_jobs': jobs})
@@ -214,7 +217,6 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     configuration = parallel_config()
     configuration['uel']['n_permutations'] = 2
     configuration['sfd']['params']['tuple_tag'] = [(1, 2), (3, 4)]
-    configuration['sfd']['params']['class_weight'] = [class_weights]
     configuration['uel'].pop('pruning_strategies')
     directory = tmp_path / 'recorded'
     loop = run_loop(configuration, directory, workers=2)

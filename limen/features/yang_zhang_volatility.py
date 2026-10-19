@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -61,3 +62,5 @@ def yang_zhang_volatility(
             '_yz_rs_variance',
         ])
     )
+
+_parallel(yang_zhang_volatility, backend_imports=('polars',))

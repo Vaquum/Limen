@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -28,3 +29,5 @@ def trend_strength(data: pl.DataFrame, fast_period: int = 20, slow_period: int =
         ])
         .drop(['sma_fast', 'sma_slow'])
     )
+
+_parallel(trend_strength, backend_imports=('polars',))

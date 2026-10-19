@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -18,3 +19,5 @@ def position_in_range(df: pl.DataFrame) -> pl.DataFrame:
     return df.with_columns([
         ((pl.col('close') - pl.col('low')) / (pl.col('high') - pl.col('low') + 1e-10)).alias('position_in_range')
     ])
+
+_parallel(position_in_range, backend_imports=('polars',))

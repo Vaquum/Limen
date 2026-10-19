@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -113,3 +114,5 @@ def cdlhikkake(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdlhikkake, backend_imports=('numpy', 'polars'))

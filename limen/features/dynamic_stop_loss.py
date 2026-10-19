@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -26,3 +27,5 @@ def dynamic_stop_loss(data: pl.DataFrame,
         .clip(base_stop_loss * clip_lower_mult, base_stop_loss * clip_upper_mult)
         .alias('dynamic_stop_loss')
     ])
+
+_parallel(dynamic_stop_loss, backend_imports=('polars',))

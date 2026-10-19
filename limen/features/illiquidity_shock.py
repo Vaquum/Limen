@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -14,9 +15,7 @@ def illiquidity_shock(
     Compute the current Amihud illiquidity level relative to its trailing baseline.
 
     Args:
-        data (pl.DataFrame): Klines dataset with price and volume columns
         window (int): Number of periods used for the trailing Amihud baseline
-        price_col (str): Column name used for close-to-close returns
         volume_col (str): Column name for traded volume
 
     Returns:
@@ -36,3 +35,5 @@ def illiquidity_shock(
         )
         .drop('_illiquidity_level')
     )
+
+_parallel(illiquidity_shock, backend_imports=('polars',))

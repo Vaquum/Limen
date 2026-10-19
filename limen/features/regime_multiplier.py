@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -28,3 +29,5 @@ def regime_multiplier(data: pl.DataFrame,
             .otherwise(pl.lit(regime_normal_volatility_multiplier))
             .alias('regime_multiplier')
     ])
+
+_parallel(regime_multiplier, backend_imports=('polars',))

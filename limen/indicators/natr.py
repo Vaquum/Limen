@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.indicators._atr import atr_from_true_range_expr
@@ -64,3 +65,5 @@ def natr(
     )
 
     return frame.with_columns(natr_expr).drop([NATR_TR_COL, NATR_ATR_COL])
+
+_parallel(natr, backend_imports=('limen.indicators._atr', 'polars'))

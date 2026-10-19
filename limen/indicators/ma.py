@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.indicators.dema import dema_from_values
@@ -146,3 +147,5 @@ def ma(
         raise ValueError(f"ma ma_type must be between 0 and 8, got {ma_type}")
 
     return frame.with_columns(expr.alias(out_col))
+
+_parallel(ma, backend_imports=('limen.indicators._ema', 'limen.indicators._hilbert', 'limen.indicators.dema', 'limen.indicators.ema', 'limen.indicators.kama', 'limen.indicators.mama', 'limen.indicators.sma', 'limen.indicators.t3', 'limen.indicators.tema', 'limen.indicators.trima', 'limen.indicators.wma', 'numpy', 'polars'))

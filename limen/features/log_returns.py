@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -17,3 +18,5 @@ def log_returns(data: pl.DataFrame, price_col: str = 'close') -> pl.DataFrame:
     return data.with_columns([
         (pl.col(price_col) / pl.col(price_col).shift(1)).log().alias('log_returns')
     ])
+
+_parallel(log_returns, backend_imports=('polars',))

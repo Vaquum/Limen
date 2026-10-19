@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -108,3 +109,5 @@ def cmo(
     ).alias(out_col)
 
     return frame.with_columns(cmo_expr)
+
+_parallel(cmo, backend_imports=('numpy', 'polars'))

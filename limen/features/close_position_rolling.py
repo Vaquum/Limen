@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -42,3 +43,5 @@ def close_position_rolling(
     )
 
     return data.with_columns(position.rolling_mean(window_size=window).alias(output_col))
+
+_parallel(close_position_rolling, backend_imports=('polars',))

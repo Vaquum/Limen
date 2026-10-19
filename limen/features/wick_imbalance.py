@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -31,3 +32,5 @@ def wick_imbalance(
     return data.with_columns(
         ((upper_wick - lower_wick) / ((pl.col(high_col) - pl.col(low_col)) + EPSILON)).alias('wick_imbalance')
     )
+
+_parallel(wick_imbalance, backend_imports=('polars',))

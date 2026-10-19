@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -46,3 +47,5 @@ def wick_proportion(
         .rolling_mean(window_size=window)
         .alias(output_col)
     )
+
+_parallel(wick_proportion, backend_imports=('polars',))

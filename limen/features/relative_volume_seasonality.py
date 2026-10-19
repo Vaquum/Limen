@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -51,3 +52,5 @@ def relative_volume_seasonality(
             '_seasonality_prev_count',
         ])
     )
+
+_parallel(relative_volume_seasonality, backend_imports=('polars',))

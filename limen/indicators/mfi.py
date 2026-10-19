@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -85,3 +86,5 @@ def mfi(
             '__mfi_neg_sum',
         ])
     )
+
+_parallel(mfi, backend_imports=('polars',))

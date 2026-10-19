@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -11,8 +12,6 @@ def medprice(
     Compute Median Price.
 
     Args:
-        data (pl.DataFrame): Dataset with high and low columns
-        high_col (str): Column name for high prices
         low_col (str): Column name for low prices
 
     Returns:
@@ -25,3 +24,5 @@ def medprice(
     ) / 2.0
 
     return data.with_columns(med_price.alias('medprice'))
+
+_parallel(medprice, backend_imports=('polars',))

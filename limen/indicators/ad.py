@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -36,3 +37,5 @@ def ad(
     )
 
     return data.with_columns(money_flow_volume.cum_sum().alias('ad'))
+
+_parallel(ad, backend_imports=('polars',))

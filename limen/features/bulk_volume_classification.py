@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from scipy.special import ndtr
 
@@ -19,7 +20,6 @@ def bulk_volume_classification(
     from price action alone, so no trade-side data is required.
 
     Args:
-        data (pl.DataFrame): Klines dataset with close and volume columns
         window (int): Rolling window for the return-volatility standardization
         close_col (str): Column name used for close-to-close log returns
         volume_col (str): Column name for total traded volume
@@ -58,3 +58,5 @@ def bulk_volume_classification(
 
 def _normal_cdf(series: pl.Series) -> pl.Series:
     return pl.Series(ndtr(series.to_numpy())).fill_nan(None)
+
+_parallel(bulk_volume_classification, backend_imports=('polars', 'scipy'))

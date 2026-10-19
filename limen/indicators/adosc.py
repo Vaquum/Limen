@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -69,3 +70,5 @@ def adosc(
         ])
         .drop(['__ad_mfv', '__ad', '__ad_ema_fast', '__ad_ema_slow'])
     )
+
+_parallel(adosc, backend_imports=('polars',))

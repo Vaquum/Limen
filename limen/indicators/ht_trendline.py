@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -254,3 +255,5 @@ def ht_trendline(
         return_dtype=pl.Float64,
     ).alias('ht_trendline')
     return frame.with_columns(trendline_expr)
+
+_parallel(ht_trendline, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))

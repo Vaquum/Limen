@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -43,3 +44,5 @@ def rogers_satchell_volatility(
         )
         .drop('_rogers_satchell_variance')
     )
+
+_parallel(rogers_satchell_volatility, backend_imports=('polars',))

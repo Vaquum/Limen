@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -38,3 +39,5 @@ def rejection_intensity(
     )
 
     return data.with_columns((rejection_component / (bar_range + EPSILON)).alias('rejection_intensity'))
+
+_parallel(rejection_intensity, backend_imports=('polars',))

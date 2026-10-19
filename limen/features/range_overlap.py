@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -29,3 +30,5 @@ def range_overlap(
     previous_range = pl.col(high_col).shift(1) - pl.col(low_col).shift(1)
 
     return data.with_columns((overlap / (previous_range + EPSILON)).alias('range_overlap'))
+
+_parallel(range_overlap, backend_imports=('polars',))

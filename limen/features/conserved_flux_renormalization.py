@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from datetime import datetime
 from typing import cast
 
@@ -128,3 +129,5 @@ def _per_scale_stats(trades: pl.DataFrame, *, base_window_s: int = 60, levels: i
         ent.append(float(cast(float, bins['entropy'].mean())))
 
     return np.array(rel_std), np.array(ent)
+
+_parallel(conserved_flux_renormalization, backend_imports=('numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -30,3 +31,5 @@ def ma_slope_regime(df: pl.DataFrame,
          .when(slope < -threshold).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_ma_slope')
     ])
+
+_parallel(ma_slope_regime, backend_imports=('polars',))

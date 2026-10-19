@@ -30,4 +30,4 @@ def kline_imbalance(data: pl.DataFrame, window: int = 14) -> pl.DataFrame:
         .drop('imbalance_raw')
     )
 
-_parallel(kline_imbalance)
+_parallel(kline_imbalance, backend_imports=('polars',))

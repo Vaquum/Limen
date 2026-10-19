@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -227,3 +228,5 @@ def ht_phasor(
             return_dtype=pl.Struct({'ht_phasor_inphase': pl.Float64, 'ht_phasor_quadrature': pl.Float64}),
         ).struct.field('*')
     )
+
+_parallel(ht_phasor, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))

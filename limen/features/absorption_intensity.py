@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -38,3 +39,5 @@ def absorption_intensity(
             * (1.0 - body_to_range_expr)
         ).alias('absorption_intensity')
     )
+
+_parallel(absorption_intensity, backend_imports=('polars',))

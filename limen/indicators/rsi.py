@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -88,3 +89,7 @@ def rsi(
     ).alias(out_col)
 
     return frame.with_columns(rsi_expr)
+
+_parallel(rsi_from_values, backend_imports=('numpy', 'polars'))
+
+_parallel(rsi, backend_imports=('numpy', 'polars'))

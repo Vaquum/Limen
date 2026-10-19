@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -151,3 +152,5 @@ def cdlmathold(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdlmathold, backend_imports=('numpy', 'polars'))

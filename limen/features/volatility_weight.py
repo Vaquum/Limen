@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.rolling_volatility import rolling_volatility
 
@@ -35,3 +36,5 @@ def volatility_weight(data: pl.DataFrame,
     ])
 
     return df.drop('returns_temp')
+
+_parallel(volatility_weight, backend_imports=('limen.indicators.rolling_volatility', 'polars'))

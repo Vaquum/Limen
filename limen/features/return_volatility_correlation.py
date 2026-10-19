@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -41,3 +42,5 @@ def return_volatility_correlation(
             window_size=window,
         ).alias(output_col)
     )
+
+_parallel(return_volatility_correlation, backend_imports=('polars',))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -28,3 +29,5 @@ def wclprice(
     ) / 4.0
 
     return data.with_columns(wcl_price.alias('wclprice'))
+
+_parallel(wclprice, backend_imports=('polars',))

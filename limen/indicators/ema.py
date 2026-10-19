@@ -58,4 +58,6 @@ def ema(
 
     return frame.with_columns(ema_expr)
 
-_parallel(ema)
+_parallel(ema, backend_imports=('limen.indicators._ema', 'numpy', 'polars'))
+
+_parallel(ema_from_values, backend_imports=('limen.indicators._ema', 'numpy', 'polars'))

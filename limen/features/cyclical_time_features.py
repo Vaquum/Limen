@@ -61,4 +61,4 @@ def cyclical_time_features(df: pl.DataFrame) -> pl.DataFrame:
         (((pl.col('datetime').dt.quarter().cast(pl.Float64) - ISO_WEEKDAY_OFFSET) * QUARTER_ANGLE).cos()).alias('quarter_cos'),
     ])
 
-_parallel(cyclical_time_features)
+_parallel(cyclical_time_features, backend_imports=('polars',))

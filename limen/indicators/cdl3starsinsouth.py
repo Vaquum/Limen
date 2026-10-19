@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -173,3 +174,5 @@ def cdl3starsinsouth(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdl3starsinsouth, backend_imports=('numpy', 'polars'))

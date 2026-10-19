@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -40,3 +41,5 @@ def trade_imbalance(
             pl.col(volume_col).rolling_sum(window_size=window),
         ).alias(output_col)
     )
+
+_parallel(trade_imbalance, backend_imports=('polars',))

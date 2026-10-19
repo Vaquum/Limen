@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -41,3 +42,5 @@ def stochastic_k_abs(
     stoch_k = _safe_divide(pl.col(close_col) - rolling_low, rolling_high - rolling_low)
 
     return data.with_columns((stoch_k - 0.5).abs().alias(output_col))
+
+_parallel(stochastic_k_abs, backend_imports=('polars',))

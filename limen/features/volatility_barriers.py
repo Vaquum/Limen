@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -41,3 +42,5 @@ def volatility_barriers(data: pl.DataFrame, *, span: int = 24, regime_span: int 
 
 def _positive(value: object) -> bool:
     return not isinstance(value, bool) and isinstance(value, (int, float)) and math.isfinite(value) and value > 0
+
+_parallel(volatility_barriers, backend_imports=('polars',))

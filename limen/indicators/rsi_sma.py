@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -10,7 +11,6 @@ def rsi_sma(data: pl.DataFrame,
     NOTE: Different from wilder_rsi which uses exponential smoothing.
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Number of periods for RSI calculation
 
     Returns:
@@ -33,5 +33,6 @@ def rsi_sma(data: pl.DataFrame,
         .with_columns([
             (100 - (100 / (1 + pl.col('avg_gain') / (pl.col('avg_loss') + 1e-10)))).alias(f"rsi_sma_{period}")
         ])
-        .drop(['delta', 'gain', 'loss', 'avg_gain', 'avg_loss'])
-    )
+        .drop(['delta', 'gain', 'loss', 'avg_gain', 'avg_loss']))
+
+_parallel(rsi_sma, backend_imports=('polars',))

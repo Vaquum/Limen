@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -102,3 +103,5 @@ def cdlpiercing(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdlpiercing, backend_imports=('numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 import numpy as np
 
@@ -45,3 +46,5 @@ def active_lines(data: pl.DataFrame,
     return data.with_columns([pl.Series('active_lines', active)])
 
 
+
+_parallel(active_lines, backend_imports=('numpy', 'polars'))

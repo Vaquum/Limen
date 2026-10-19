@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -103,3 +104,5 @@ def macdfix(
     ).alias('__macdfix_struct')
 
     return data.with_columns(macdfix_expr).unnest('__macdfix_struct')
+
+_parallel(macdfix, backend_imports=('limen.indicators._ema', 'numpy', 'polars'))

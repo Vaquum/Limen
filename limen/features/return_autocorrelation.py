@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -26,3 +27,5 @@ def return_autocorrelation(
     return data.with_columns(
         pl.rolling_corr(returns, returns.shift(1), window_size=window).alias(output_col)
     )
+
+_parallel(return_autocorrelation, backend_imports=('polars',))

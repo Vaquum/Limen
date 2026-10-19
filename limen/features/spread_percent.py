@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -19,3 +20,5 @@ def spread_percent(data: pl.DataFrame) -> pl.DataFrame:
         ((pl.col('high') - pl.col('low')) / (pl.col('close') + EPSILON))
         .alias('spread_percent')
     ])
+
+_parallel(spread_percent, backend_imports=('polars',))

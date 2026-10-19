@@ -43,4 +43,4 @@ def vwap(data: pl.DataFrame,
         .drop(['__date', '__cum_pv', '__cum_vol'])
     )
 
-_parallel(vwap)
+_parallel(vwap, backend_imports=('polars',))

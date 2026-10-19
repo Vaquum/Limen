@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -21,3 +22,5 @@ def price_change_pct(data: pl.DataFrame,
             pl.col('close').shift(period) * 100
         ).alias(f"price_change_pct_{period}")
     ])
+
+_parallel(price_change_pct, backend_imports=('polars',))

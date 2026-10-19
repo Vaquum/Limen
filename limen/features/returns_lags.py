@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.features.lagged_features import lag_range
 
@@ -24,3 +25,5 @@ def returns_lags(data: pl.DataFrame, max_lag: int = 24, returns_col: str = 'retu
 
     # Use lag_range to generate all lag features at once
     return lag_range(data, returns_col, 1, max_lag)
+
+_parallel(returns_lags, backend_imports=('limen.features.lagged_features', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.sma import sma
 from limen.features.trend_strength import trend_strength
@@ -56,3 +57,5 @@ def market_regime(df: pl.DataFrame, lookback: int = 48, short_sma: int = 20, lon
     df = df.drop('returns_temp')
 
     return df
+
+_parallel(market_regime, backend_imports=('limen.features.trend_strength', 'limen.features.volume_regime', 'limen.indicators.sma', 'numpy', 'polars'))

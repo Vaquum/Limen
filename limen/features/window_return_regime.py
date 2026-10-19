@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.window_return import window_return
 
@@ -28,3 +29,5 @@ def window_return_regime(df: pl.DataFrame,
          .when(pl.col(ret_col) <= r_lo).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_window_return')
     ])
+
+_parallel(window_return_regime, backend_imports=('limen.indicators.window_return', 'polars'))

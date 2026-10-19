@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.features.bulk_volume_classification import bulk_volume_classification
@@ -56,3 +57,5 @@ def order_flow_imbalance(
         .otherwise(None)
         .alias('order_flow_imbalance')
     )
+
+_parallel(order_flow_imbalance, backend_imports=('limen.features.bulk_volume_classification', 'polars', 'scipy'))

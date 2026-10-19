@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -37,3 +38,5 @@ def parkinson_vol_of_vol(
         .rolling_std(window_size=window)
         .alias(output_col)
     )
+
+_parallel(parkinson_vol_of_vol, backend_imports=('polars',))

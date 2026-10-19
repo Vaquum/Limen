@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -34,3 +35,5 @@ def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
         (((pl.col('datetime').dt.month() - 1) // 6) + 1).alias('half_of_year'),
         (weekday >= WEEKEND_START_WEEKDAY).cast(pl.Int8).alias('is_weekend'),
     ])
+
+_parallel(calendar_time_features, backend_imports=('polars',))

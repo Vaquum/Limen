@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -40,3 +41,5 @@ def bollinger_bands(
              .alias(lower_col),
         ])
     )
+
+_parallel(bollinger_bands, backend_imports=('polars',))

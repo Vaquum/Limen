@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -44,3 +45,5 @@ def trade_size_ratio(
             trade_size.rolling_mean(window_size=long_window),
         ).alias(output_col)
     )
+
+_parallel(trade_size_ratio, backend_imports=('polars',))

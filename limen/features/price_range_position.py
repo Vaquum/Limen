@@ -24,4 +24,4 @@ def price_range_position(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
         .alias('price_range_position')
     ])
 
-_parallel(price_range_position)
+_parallel(price_range_position, backend_imports=('polars',))

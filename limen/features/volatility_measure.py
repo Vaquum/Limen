@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -17,3 +18,5 @@ def volatility_measure(data: pl.DataFrame) -> pl.DataFrame:
         ((pl.col('rolling_volatility') + pl.col('atr_percent_sma')) / 2)
         .alias('volatility_measure')
     ])
+
+_parallel(volatility_measure, backend_imports=('polars',))

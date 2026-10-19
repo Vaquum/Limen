@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -75,3 +76,5 @@ def trix(
     ).alias(out_col)
 
     return frame.with_columns(trix_expr)
+
+_parallel(trix, backend_imports=('limen.indicators._ema', 'numpy', 'polars'))

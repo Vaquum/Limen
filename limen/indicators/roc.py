@@ -36,4 +36,4 @@ def roc(
     )
     return data.with_columns(roc_expr)
 
-_parallel(roc)
+_parallel(roc, backend_imports=('polars',))

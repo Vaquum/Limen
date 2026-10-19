@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -13,8 +14,6 @@ def return_per_dollar_volume(
     Compute signed return per traded dollar as a simple impact-efficiency proxy.
 
     Args:
-        data (pl.DataFrame): Klines dataset with price and volume columns
-        price_col (str): Column name used for close-to-close returns
         volume_col (str): Column name for traded volume
 
     Returns:
@@ -26,3 +25,5 @@ def return_per_dollar_volume(
     return data.with_columns(
         (pl.col(price_col).pct_change() / (dollar_volume_expr + EPSILON)).alias('return_per_dollar_volume')
     )
+
+_parallel(return_per_dollar_volume, backend_imports=('polars',))

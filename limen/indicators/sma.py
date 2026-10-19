@@ -78,4 +78,6 @@ def sma(
         ]
     )
 
-_parallel(sma)
+_parallel(sma, backend_imports=('numpy', 'polars'))
+
+_parallel(sma_from_values, backend_imports=('numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -270,3 +271,5 @@ def ht_sine(
             return_dtype=pl.Struct({'ht_sine': pl.Float64, 'ht_sine_lead': pl.Float64}),
         ).struct.field('*')
     )
+
+_parallel(ht_sine, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))

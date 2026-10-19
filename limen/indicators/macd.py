@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -105,3 +106,5 @@ def macd(
     ).alias('__macd_struct')
 
     return data.with_columns(macd_expr).unnest('__macd_struct')
+
+_parallel(macd, backend_imports=('limen.indicators._ema', 'numpy', 'polars'))

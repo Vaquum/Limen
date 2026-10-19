@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -55,3 +56,5 @@ def realized_kurtosis(
             '_kurtosis_fourth_central',
         ])
     )
+
+_parallel(realized_kurtosis, backend_imports=('polars',))

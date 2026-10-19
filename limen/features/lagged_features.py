@@ -107,6 +107,10 @@ def lag_column(data: pl.DataFrame,
 
     return result.rename({f'{col}_lag_{lag}': alias}) if alias is not None else result
 
-_parallel(lag_range)
+_parallel(lag_range, backend_imports=('polars',))
 
-_parallel(lag_range_cols)
+_parallel(lag_range_cols, backend_imports=('polars',))
+
+_parallel(lag_columns, backend_imports=('polars',))
+
+_parallel(lag_column, backend_imports=('polars',))

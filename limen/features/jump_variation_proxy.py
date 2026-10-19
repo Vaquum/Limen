@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -48,3 +49,5 @@ def jump_variation_proxy(
             '_jump_bipower_variation',
         ])
     )
+
+_parallel(jump_variation_proxy, backend_imports=('polars',))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -39,3 +40,5 @@ def liquidity_range(
         .rolling_mean(window_size=window)
         .alias(output_col)
     )
+
+_parallel(liquidity_range, backend_imports=('polars',))

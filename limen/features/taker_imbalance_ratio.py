@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -41,3 +42,5 @@ def taker_imbalance_ratio(
         .rolling_mean(window_size=window)
         .alias(output_col)
     )
+
+_parallel(taker_imbalance_ratio, backend_imports=('polars',))

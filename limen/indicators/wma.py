@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -67,8 +68,6 @@ def wma(
     Compute Weighted Moving Average (WMA).
 
     Args:
-        data (pl.DataFrame): Dataset with input price column
-        price_col (str): Column name for input price
         period (int): Number of periods
 
     Returns:
@@ -91,3 +90,7 @@ def wma(
     ).alias(out_col)
 
     return frame.with_columns(wma_expr)
+
+_parallel(wma_from_values, backend_imports=('numpy', 'polars'))
+
+_parallel(wma, backend_imports=('numpy', 'polars'))

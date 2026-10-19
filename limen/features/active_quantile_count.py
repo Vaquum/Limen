@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 import numpy as np
 
@@ -44,3 +45,5 @@ def active_quantile_count(data: pl.DataFrame,
     return data.with_columns([pl.Series('active_quantile_count', active)])
 
 
+
+_parallel(active_quantile_count, backend_imports=('numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -191,3 +192,5 @@ def macdext(
     ).alias('__macdext_struct')
 
     return data.with_columns(macdext_expr).unnest('__macdext_struct')
+
+_parallel(macdext, backend_imports=('limen.indicators._ema', 'limen.indicators._hilbert', 'limen.indicators.dema', 'limen.indicators.ema', 'limen.indicators.kama', 'limen.indicators.ma', 'limen.indicators.mama', 'limen.indicators.sma', 'limen.indicators.t3', 'limen.indicators.tema', 'limen.indicators.trima', 'limen.indicators.wma', 'numpy', 'polars'))

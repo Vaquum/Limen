@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 import numpy as np
 
@@ -41,3 +42,5 @@ def quantile_line_density(data: pl.DataFrame,
     return data.with_columns([pl.Series(out_col, density)])
 
 
+
+_parallel(quantile_line_density, backend_imports=('numpy', 'polars'))

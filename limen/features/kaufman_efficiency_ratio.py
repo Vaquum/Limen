@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -40,3 +41,5 @@ def kaufman_efficiency_ratio(
     )
 
     return data.with_columns(_safe_divide(displacement, path_length).alias(output_col))
+
+_parallel(kaufman_efficiency_ratio, backend_imports=('polars',))

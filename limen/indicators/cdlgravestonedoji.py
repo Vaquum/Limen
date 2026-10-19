@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -116,3 +117,5 @@ def cdlgravestonedoji(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdlgravestonedoji, backend_imports=('numpy', 'polars'))

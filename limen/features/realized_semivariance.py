@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -40,3 +41,5 @@ def realized_semivariance(
         ])
         .drop('_semivariance_returns')
     )
+
+_parallel(realized_semivariance, backend_imports=('polars',))

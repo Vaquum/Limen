@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from typing import Literal
 
@@ -11,7 +12,6 @@ def price_vs_band_regime(df: pl.DataFrame,
     Compute regime by comparing 'close' to center ± k × band width over a rolling window.
 
     Args:
-        df (pl.DataFrame): Klines dataset with 'close' column
         period (int): Rolling period for center and band width
         band (Literal['std', 'dev_std']): Band width type to use
         k (float): Band multiplier applied to the width
@@ -36,3 +36,5 @@ def price_vs_band_regime(df: pl.DataFrame,
          .when(pl.col('close') < lower).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_price_band')
     ])
+
+_parallel(price_vs_band_regime, backend_imports=('polars',))

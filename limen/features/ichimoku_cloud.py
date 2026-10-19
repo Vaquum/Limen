@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -13,7 +14,6 @@ def ichimoku_cloud(
     Compute Ichimoku Cloud components for trend and momentum analysis.
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         tenkan_period (int): Lookback period for Tenkan-sen
         kijun_period (int): Lookback period for Kijun-sen
         senkou_b_period (int): Lookback period for Senkou Span B
@@ -43,5 +43,6 @@ def ichimoku_cloud(
         )
         .with_columns(
             pl.col('close').shift(displacement).alias('chikou')
-        )
-    )
+        ))
+
+_parallel(ichimoku_cloud, backend_imports=('polars',))

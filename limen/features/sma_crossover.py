@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -47,3 +48,5 @@ def sma_crossover(
         ])
         .drop(['sma_short', 'sma_long', 'sma_relation'])
     )
+
+_parallel(sma_crossover, backend_imports=('polars',))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 import numpy as np
 
@@ -41,3 +42,5 @@ def hours_since_quantile_line(data: pl.DataFrame,
             hours_since[i] = float(min(i - ends[ptr], lookback_hours))
 
     return data.with_columns([pl.Series('hours_since_quantile_line', hours_since)])
+
+_parallel(hours_since_quantile_line, backend_imports=('numpy', 'polars'))

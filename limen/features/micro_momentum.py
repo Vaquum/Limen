@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -17,3 +18,5 @@ def micro_momentum(data: pl.DataFrame, period: int = 3) -> pl.DataFrame:
     return data.with_columns([
         pl.col('close').pct_change(period).alias('micro_momentum')
     ])
+
+_parallel(micro_momentum, backend_imports=('polars',))

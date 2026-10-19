@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import polars as pl
 
@@ -119,3 +120,5 @@ def cdl3whitesoldiers(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(cdl3whitesoldiers, backend_imports=('limen.indicators.cdladvancedblock', 'numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.sma import sma
 
@@ -32,3 +33,5 @@ def volume_trend(data: pl.DataFrame, short_period: int = 12, long_period: int = 
         (pl.col(short_sma_col) / (pl.col(long_sma_col) + EPSILON))
         .alias('volume_trend')
     ])
+
+_parallel(volume_trend, backend_imports=('limen.indicators.sma', 'numpy', 'polars'))

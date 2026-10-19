@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -35,3 +36,5 @@ def momentum_confirmation(df: pl.DataFrame,
         .alias('momentum_score')
     ])
 
+
+_parallel(momentum_confirmation, backend_imports=('polars',))

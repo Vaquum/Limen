@@ -41,4 +41,4 @@ def parkinson_volatility(
         .drop('_parkinson_log_range_sq')
     )
 
-_parallel(parkinson_volatility)
+_parallel(parkinson_volatility, backend_imports=('polars',))

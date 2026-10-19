@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -35,3 +36,5 @@ def maker_liquidity_share(
     return data.with_columns(
         _safe_divide(pl.col(maker_liquidity_col), pl.col(liquidity_col)).alias(output_col)
     )
+
+_parallel(maker_liquidity_share, backend_imports=('polars',))

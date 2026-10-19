@@ -165,7 +165,6 @@ def find_min_d(data: pl.DataFrame,
     smallest d where the series is stationary.
 
     Args:
-        data (pl.DataFrame): Input data containing the column to test
         col (str): Column name to differentiate and test
         d_start (float): Starting differentiation order
         d_end (float): Maximum differentiation order
@@ -201,4 +200,6 @@ def find_min_d(data: pl.DataFrame,
 
     return d_end
 
-_parallel(fractional_diff)
+_parallel(fractional_diff, backend_imports=('limen.utils.adf_test', 'numpy', 'polars', 'statsmodels'))
+
+_parallel(find_min_d, backend_imports=('limen.utils.adf_test', 'numpy', 'polars', 'statsmodels'))

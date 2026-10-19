@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -26,3 +27,5 @@ def dynamic_target(data: pl.DataFrame,
         .clip(base_min_breakout * clip_lower_mult, base_min_breakout * clip_upper_mult)
         .alias('dynamic_target')
     ])
+
+_parallel(dynamic_target, backend_imports=('polars',))

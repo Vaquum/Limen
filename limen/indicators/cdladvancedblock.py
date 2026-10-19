@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -144,3 +145,7 @@ def cdladvancedblock(
             return_dtype=pl.Int32,
         ).alias(out_col)
     )
+
+_parallel(candle_totals, backend_imports=('numpy', 'polars'))
+
+_parallel(cdladvancedblock, backend_imports=('numpy', 'polars'))

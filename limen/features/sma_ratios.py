@@ -38,4 +38,4 @@ def sma_ratios(data: pl.DataFrame, periods: list[int] | None = None, price_col: 
 
     return df
 
-_parallel(sma_ratios)
+_parallel(sma_ratios, backend_imports=('limen.indicators.sma', 'numpy', 'polars'))

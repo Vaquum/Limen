@@ -238,4 +238,4 @@ def dollar_bar_crash_reversal(
 
     return result.collect() if eager else result
 
-_parallel(dollar_bar_crash_reversal)
+_parallel(dollar_bar_crash_reversal, backend_imports=('polars',))

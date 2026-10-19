@@ -52,4 +52,4 @@ def volatility_ratio(
         ).alias(output_col)
     )
 
-_parallel(volatility_ratio)
+_parallel(volatility_ratio, backend_imports=('polars',))

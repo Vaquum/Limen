@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -52,3 +53,5 @@ def realized_skewness(
             '_skew_third_central',
         ])
     )
+
+_parallel(realized_skewness, backend_imports=('polars',))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -309,7 +310,6 @@ def ht_trendmode(
     Compute Hilbert Transform - Trend vs Cycle Mode.
 
     Args:
-        data (pl.DataFrame): Dataset with input price column
         price_col (str): Column name for input price
 
     Returns:
@@ -326,3 +326,5 @@ def ht_trendmode(
             return_dtype=pl.Float64,
         ).alias('ht_trendmode')
     )
+
+_parallel(ht_trendmode, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))

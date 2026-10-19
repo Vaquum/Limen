@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -9,7 +10,6 @@ def sma_deviation_std(data: pl.DataFrame,
     Compute rolling standard deviation of the detrended price relative to SMA(period).
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'close' column
         period (int): Period for the SMA
         window (int): Rolling window for std of (close - SMA(period))
 
@@ -34,3 +34,5 @@ def sma_deviation_std(data: pl.DataFrame,
         ])
         .drop([sma_col, dev_col])
     )
+
+_parallel(sma_deviation_std, backend_imports=('polars',))

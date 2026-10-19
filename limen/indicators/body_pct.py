@@ -18,4 +18,4 @@ def body_pct(data: pl.DataFrame) -> pl.DataFrame:
 
     return data.with_columns(((pl.col('close') - pl.col('open')) / (pl.col('open') + EPSILON)).alias('body_pct'))
 
-_parallel(body_pct)
+_parallel(body_pct, backend_imports=('polars',))

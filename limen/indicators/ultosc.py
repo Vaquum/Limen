@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -151,3 +152,5 @@ def ultosc(
     ).alias(out_col)
 
     return frame.with_columns(ultosc_expr)
+
+_parallel(ultosc, backend_imports=('numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.features.lagged_features import lag_range
 
@@ -153,3 +154,5 @@ def breakout_features(data: pl.DataFrame,
          + ['long_roll_mean','long_roll_std', 'short_roll_mean', 'short_roll_std', f"roc_long{roc_suffix}", f"roc_short{roc_suffix}", target]
 
     return df.drop_nulls(subset=cols)
+
+_parallel(breakout_features, backend_imports=('limen.features.lagged_features', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.indicators.ma import ma
@@ -106,3 +107,5 @@ def bbands(
             lower_expr.alias('bbands_lower'),
         ]
     ).drop([middle_col, '__bbands_stddev'])
+
+_parallel(bbands, backend_imports=('limen.indicators._ema', 'limen.indicators._hilbert', 'limen.indicators.dema', 'limen.indicators.ema', 'limen.indicators.kama', 'limen.indicators.ma', 'limen.indicators.mama', 'limen.indicators.sma', 'limen.indicators.t3', 'limen.indicators.tema', 'limen.indicators.trima', 'limen.indicators.wma', 'numpy', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -156,3 +157,7 @@ def t3(
         return_dtype=pl.Float64,
     ).alias(out_col)
     return frame.with_columns(t3_expr)
+
+_parallel(t3_from_values, backend_imports=('numpy', 'polars'))
+
+_parallel(t3, backend_imports=('numpy', 'polars'))

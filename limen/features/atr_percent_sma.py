@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -35,3 +36,5 @@ def atr_percent_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
         ])
         .drop(['prev_close', 'high_low', 'high_close', 'low_close', 'true_range', 'atr'])
     )
+
+_parallel(atr_percent_sma, backend_imports=('polars',))

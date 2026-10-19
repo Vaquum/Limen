@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -31,3 +32,5 @@ def avgprice(
     ) / 4.0
 
     return data.with_columns(avg_price.alias('avgprice'))
+
+_parallel(avgprice, backend_imports=('polars',))

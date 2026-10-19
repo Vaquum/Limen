@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -28,3 +29,5 @@ def typprice(
     ) / 3.0
 
     return data.with_columns(typ_price.alias('typprice'))
+
+_parallel(typprice, backend_imports=('polars',))

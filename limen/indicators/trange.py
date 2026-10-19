@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 TRANGE_LOOKBACK = 1
@@ -14,7 +15,6 @@ def trange(
     Compute True Range (TRANGE).
 
     Args:
-        data (pl.DataFrame): Klines dataset with high/low/close columns
         high_col (str): Column name for high prices
         low_col (str): Column name for low prices
         close_col (str): Column name for close prices
@@ -35,3 +35,5 @@ def trange(
         .otherwise(true_range)
         .alias('trange')
     )
+
+_parallel(trange, backend_imports=('polars',))

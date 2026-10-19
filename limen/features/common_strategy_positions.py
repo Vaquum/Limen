@@ -38,4 +38,4 @@ def common_strategy_positions(
         streamable=False,
     )
 
-_parallel(common_strategy_positions)
+_parallel(common_strategy_positions, backend_imports=('limen.indicators._ema', 'limen.indicators.bollinger_bands', 'limen.indicators.ema', 'limen.indicators.macd', 'limen.indicators.rsi', 'limen.indicators.sma', 'limen.sfd.rule_based.common_strategies', 'numpy', 'polars'))

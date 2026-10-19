@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -13,7 +14,6 @@ def rocr100(
     Compute Rate of Change Ratio 100 scale (ROCR100): (price / prev_price) * 100.
 
     Args:
-        data (pl.DataFrame): Dataset with input price column
         price_col (str): Column name for input price
         period (int): Number of periods (1..100000)
 
@@ -35,3 +35,5 @@ def rocr100(
         .alias(out_col)
     )
     return data.with_columns(rocr100_expr)
+
+_parallel(rocr100, backend_imports=('polars',))

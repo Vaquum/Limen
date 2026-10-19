@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -12,9 +13,7 @@ def is_us_open_hour(
     Mark rows whose hour matches the configured US open hour.
 
     Args:
-        data (pl.DataFrame): Dataset with a datetime-like column
         hour (int): Hour to mark
-        datetime_col (str): Column name for timestamps
         output_col (str): Output column name
 
     Returns:
@@ -24,3 +23,5 @@ def is_us_open_hour(
     return data.with_columns(
         (pl.col(datetime_col).dt.hour() == hour).cast(pl.Int8).alias(output_col)
     )
+
+_parallel(is_us_open_hour, backend_imports=('polars',))

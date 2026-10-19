@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.indicators.sma import sma
 
@@ -29,3 +30,5 @@ def volume_weight(data: pl.DataFrame,
         (pl.col('volume') / (pl.col('volume_ma') + EPSILON)).clip(volume_weight_min, volume_weight_max).alias('volume_weight')
     ])
 
+
+_parallel(volume_weight, backend_imports=('limen.indicators.sma', 'numpy', 'polars'))

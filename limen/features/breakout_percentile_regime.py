@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.features.price_range_position import price_range_position
@@ -29,3 +30,5 @@ def breakout_percentile_regime(df: pl.DataFrame,
          .when(pos <= p_lo).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_breakout_pct')
     ])
+
+_parallel(breakout_percentile_regime, backend_imports=('limen.features.price_range_position', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -220,3 +221,5 @@ def ht_dcperiod(
             return_dtype=pl.Float64,
         ).alias('ht_dcperiod')
     )
+
+_parallel(ht_dcperiod, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))

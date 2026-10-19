@@ -22,4 +22,4 @@ def rolling_volatility(data: pl.DataFrame,
             f"{column}_volatility_{window}")
     ])
 
-_parallel(rolling_volatility)
+_parallel(rolling_volatility, backend_imports=('polars',))

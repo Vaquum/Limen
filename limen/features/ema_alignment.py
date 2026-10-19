@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -7,7 +8,6 @@ def ema_alignment(data: pl.DataFrame, ema_span: int = 21, power: float = 2.0) ->
     Compute EMA alignment score with power transformation.
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'close' column
         ema_span (int): Span for EMA calculation
         power (float): Power for alignment transformation
 
@@ -23,6 +23,7 @@ def ema_alignment(data: pl.DataFrame, ema_span: int = 21, power: float = 2.0) ->
         (1 - (pl.col('close') - pl.col('ema')).abs() / pl.col('ema'))
         .clip(0, 1)
         .pow(power)
-        .alias('ema_alignment')
-    ])
+        .alias('ema_alignment')])
 
+
+_parallel(ema_alignment, backend_imports=('polars',))

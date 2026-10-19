@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -53,3 +54,5 @@ def relative_volatility_seasonality(
             '_seasonality_prev_count',
         ])
     )
+
+_parallel(relative_volatility_seasonality, backend_imports=('polars',))

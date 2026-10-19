@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -60,3 +61,5 @@ def close_ma_distance_atr(
     return data.with_columns(
         _safe_divide(pl.col(close_col) - moving_average, smoothed_range).alias(output_col)
     )
+
+_parallel(close_ma_distance_atr, backend_imports=('polars',))

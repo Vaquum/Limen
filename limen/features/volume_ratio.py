@@ -27,4 +27,4 @@ def volume_ratio(data: pl.DataFrame, period: int = 20) -> pl.DataFrame:
         .alias('volume_ratio')
     ])
 
-_parallel(volume_ratio)
+_parallel(volume_ratio, backend_imports=('limen.indicators.sma', 'numpy', 'polars'))

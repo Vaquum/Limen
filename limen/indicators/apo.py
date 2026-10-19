@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.indicators.ma import ma
@@ -20,7 +21,6 @@ def apo(
     Compute Absolute Price Oscillator (APO).
 
     Args:
-        data (pl.DataFrame): Dataset with input price column
         price_col (str): Column name for input price
         fast_period (int): Number of periods for fast MA (2..100000)
         slow_period (int): Number of periods for slow MA (2..100000, must be greater than fast_period)
@@ -59,3 +59,5 @@ def apo(
     return frame.with_columns(
         (pl.col(fast_col) - pl.col(slow_col)).alias(out_col)
     ).drop([fast_col, slow_col])
+
+_parallel(apo, backend_imports=('limen.indicators._ema', 'limen.indicators._hilbert', 'limen.indicators.dema', 'limen.indicators.ema', 'limen.indicators.kama', 'limen.indicators.ma', 'limen.indicators.mama', 'limen.indicators.sma', 'limen.indicators.t3', 'limen.indicators.tema', 'limen.indicators.trima', 'limen.indicators.wma', 'numpy', 'polars'))

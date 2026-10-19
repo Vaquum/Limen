@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -28,3 +29,5 @@ def amihud_illiquidity(
             pl.col(price_col).pct_change().abs() / (dollar_volume_expr + EPSILON)
         ).alias('amihud_illiquidity')
     )
+
+_parallel(amihud_illiquidity, backend_imports=('polars',))

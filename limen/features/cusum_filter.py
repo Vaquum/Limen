@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import numpy as np
@@ -67,3 +68,5 @@ def _cusum_events(close: npt.NDArray[np.float64], threshold: float) -> npt.NDArr
             events[i] = 1
 
     return events
+
+_parallel(cusum_filter, backend_imports=('numpy', 'polars'))

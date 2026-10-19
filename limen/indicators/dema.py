@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -68,3 +69,7 @@ def dema(
     ).alias(out_col)
 
     return frame.with_columns(dema_expr)
+
+_parallel(dema_from_values, backend_imports=('limen.indicators._ema', 'limen.indicators.ema', 'numpy', 'polars'))
+
+_parallel(dema, backend_imports=('limen.indicators._ema', 'limen.indicators.ema', 'numpy', 'polars'))

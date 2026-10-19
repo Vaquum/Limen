@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -132,3 +133,7 @@ def kama(
         return_dtype=pl.Float64,
     ).alias(out_col)
     return frame.with_columns(kama_expr)
+
+_parallel(kama_from_values, backend_imports=('numpy', 'polars'))
+
+_parallel(kama, backend_imports=('numpy', 'polars'))

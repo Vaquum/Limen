@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -34,3 +35,5 @@ def feature_aliases(df: pl.DataFrame,
         ])
 
     return df
+
+_parallel(feature_aliases, backend_imports=('polars',))

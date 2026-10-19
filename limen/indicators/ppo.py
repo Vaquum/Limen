@@ -71,4 +71,4 @@ def ppo(
 
     return frame.with_columns(ppo_expr).drop([fast_col, slow_col])
 
-_parallel(ppo)
+_parallel(ppo, backend_imports=('limen.indicators._ema', 'limen.indicators._hilbert', 'limen.indicators.dema', 'limen.indicators.ema', 'limen.indicators.kama', 'limen.indicators.ma', 'limen.indicators.mama', 'limen.indicators.sma', 'limen.indicators.t3', 'limen.indicators.tema', 'limen.indicators.trima', 'limen.indicators.wma', 'numpy', 'polars'))

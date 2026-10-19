@@ -20,4 +20,4 @@ def window_return(data: pl.DataFrame,
 
     return data.with_columns(((pl.col('close') / pl.col('close').shift(period)) - 1.0).alias(col))
 
-_parallel(window_return)
+_parallel(window_return, backend_imports=('polars',))

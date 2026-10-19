@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -41,3 +42,5 @@ def narrow_range(
             output_col
         )
     )
+
+_parallel(narrow_range, backend_imports=('polars',))

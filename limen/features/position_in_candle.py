@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 # Constants
@@ -21,3 +22,5 @@ def position_in_candle(data: pl.DataFrame) -> pl.DataFrame:
          (pl.col('high') - pl.col('low') + EPSILON))
         .alias('position_in_candle')
     ])
+
+_parallel(position_in_candle, backend_imports=('polars',))

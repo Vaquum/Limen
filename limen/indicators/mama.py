@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -261,3 +262,7 @@ def mama(
             return_dtype=pl.Struct({'mama': pl.Float64, 'fama': pl.Float64}),
         ).struct.field('*')
     )
+
+_parallel(mama_from_values, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))
+
+_parallel(mama, backend_imports=('limen.indicators._hilbert', 'numpy', 'polars'))

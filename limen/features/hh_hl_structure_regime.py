@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -29,3 +30,5 @@ def hh_hl_structure_regime(df: pl.DataFrame,
          .when(score <= -score_threshold).then(pl.lit('Down'))
          .otherwise(pl.lit('Flat')).alias('regime_hh_hl')
     ])
+
+_parallel(hh_hl_structure_regime, backend_imports=('polars',))

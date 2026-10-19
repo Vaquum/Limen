@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -27,3 +28,5 @@ def volume_regime(data: pl.DataFrame, lookback: int = 48) -> pl.DataFrame:
         ])
         .drop(['volume_avg', 'volume_recent'])
     )
+
+_parallel(volume_regime, backend_imports=('polars',))

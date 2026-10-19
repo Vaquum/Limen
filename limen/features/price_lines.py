@@ -174,4 +174,8 @@ def line_active_count(long: LineArrays, short: LineArrays, n_rows: int) -> npt.N
     return (np.searchsorted(starts, positions, side='right')
             - np.searchsorted(stops, positions, side='right'))
 
-_parallel(price_lines)
+_parallel(price_lines, backend_imports=('limen.utils._computation_cache', 'limen.utils._line_arrays', 'limen.utils.find_price_lines', 'numpy', 'polars'))
+
+_parallel(line_recency, backend_imports=('limen.utils._computation_cache', 'limen.utils._line_arrays', 'limen.utils.find_price_lines', 'numpy', 'polars'))
+
+_parallel(line_active_count, backend_imports=('limen.utils._computation_cache', 'limen.utils._line_arrays', 'limen.utils.find_price_lines', 'numpy', 'polars'))

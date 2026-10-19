@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 
 import polars as pl
@@ -44,3 +45,5 @@ def volatility_spike(
     variance = _parkinson_variance(high_col, low_col)
 
     return data.with_columns(_safe_divide(variance, variance.shift(window)).alias(output_col))
+
+_parallel(volatility_spike, backend_imports=('polars',))

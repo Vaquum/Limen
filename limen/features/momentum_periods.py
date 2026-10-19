@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 DEFAULT_MOMENTUM_PERIODS = [12, 24, 48]
@@ -9,7 +10,6 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price
     Compute momentum over multiple time periods.
 
     Args:
-        data (pl.DataFrame): Dataset with price column
         periods (list): Non-negative periods for momentum calculation
         price_col (str): Name of the price column (default: 'close')
 
@@ -25,3 +25,5 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None = None, price
     ]
 
     return data.with_columns(momentum_expressions)
+
+_parallel(momentum_periods, backend_imports=('polars',))

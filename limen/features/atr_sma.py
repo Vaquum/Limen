@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -9,7 +10,6 @@ def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
     NOTE: Different from standard ATR which uses Wilder's smoothing.
 
     Args:
-        data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
         period (int): Number of periods for ATR calculation
 
     Returns:
@@ -34,3 +34,5 @@ def atr_sma(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
         ])
         .drop(['prev_close', 'high_low', 'high_close', 'low_close', 'true_range'])
     )
+
+_parallel(atr_sma, backend_imports=('polars',))

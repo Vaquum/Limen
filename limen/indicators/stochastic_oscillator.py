@@ -48,4 +48,4 @@ def stochastic_oscillator(
         .drop([highest_col, lowest_col])
     )
 
-_parallel(stochastic_oscillator)
+_parallel(stochastic_oscillator, backend_imports=('polars',))

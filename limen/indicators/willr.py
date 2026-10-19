@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 CMP_N_100000 = 100000
@@ -46,3 +47,5 @@ def willr(
     )
 
     return data.with_columns(willr_expr)
+
+_parallel(willr, backend_imports=('polars',))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -37,3 +38,5 @@ def liquidity_drop(
     return data.with_columns(
         _safe_divide(liquidity, liquidity.shift(window)).alias(output_col)
     )
+
+_parallel(liquidity_drop, backend_imports=('polars',))

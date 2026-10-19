@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -20,3 +21,5 @@ def dollar_volume(
     '''
 
     return data.with_columns((pl.col(price_col) * pl.col(volume_col)).alias('dollar_volume'))
+
+_parallel(dollar_volume, backend_imports=('polars',))

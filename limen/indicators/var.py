@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -91,3 +92,5 @@ def var(
             return_dtype=pl.Float64,
         ).alias(out_col)
     )
+
+_parallel(var, backend_imports=('numpy', 'polars'))

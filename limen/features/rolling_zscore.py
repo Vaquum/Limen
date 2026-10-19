@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from typing import Literal
 
 import polars as pl
@@ -19,11 +20,9 @@ def rolling_zscore(
     Compute a rolling z-score for a transformed input column.
 
     Args:
-        data (pl.DataFrame): Dataset containing the source column
         column (str): Source column name
         window (int): Number of periods for the rolling mean and standard deviation
         transform (ZscoreTransform): Optional source transform before standardization
-        output_col (str | None): Output column name; defaults to `{column}_zscore_{window}`
 
     Returns:
         pl.DataFrame: The input data with the rolling z-score column appended
@@ -50,3 +49,5 @@ def rolling_zscore(
         .otherwise((x - mean) / std)
         .alias(name)
     )
+
+_parallel(rolling_zscore, backend_imports=('polars',))

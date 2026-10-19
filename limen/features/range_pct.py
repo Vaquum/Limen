@@ -18,4 +18,4 @@ def range_pct(data: pl.DataFrame) -> pl.DataFrame:
 
     return data.with_columns(((pl.col('high') - pl.col('low')) / (pl.col('close') + EPSILON)).alias('range_pct'))
 
-_parallel(range_pct)
+_parallel(range_pct, backend_imports=('polars',))

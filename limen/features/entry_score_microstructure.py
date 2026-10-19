@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 from limen.features.position_in_candle import position_in_candle
 from limen.features.micro_momentum import micro_momentum
@@ -92,3 +93,5 @@ def entry_score_microstructure(data: pl.DataFrame,
     ])
 
     return df.drop(['entry_score_base'])
+
+_parallel(entry_score_microstructure, backend_imports=('limen.features.micro_momentum', 'limen.features.position_in_candle', 'limen.features.spread_percent', 'limen.features.volume_spike', 'polars'))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -66,9 +67,10 @@ def linearreg(
             lambda s: pl.Series(
                 _linearreg_from_values(
                     s.to_numpy().astype(float, copy=False),
-                    period,
-                )
-            ),
+                    period,)),
             return_dtype=pl.Float64,
-        ).alias(out_col)
-    )
+        ).alias(out_col))
+
+_parallel(linearreg_components, backend_imports=('numpy', 'polars'))
+
+_parallel(linearreg, backend_imports=('numpy', 'polars'))

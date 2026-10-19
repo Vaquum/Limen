@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -32,3 +33,5 @@ def volatility_of_volatility(
         )
         .drop(['_vol_of_vol_returns', '_vol_of_vol_base'])
     )
+
+_parallel(volatility_of_volatility, backend_imports=('polars',))

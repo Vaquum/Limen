@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -54,3 +55,5 @@ def time_to_funding(
     hours_to_next = (interval_hours - hours_since) % interval_hours
 
     return data.with_columns(hours_to_next.alias(output_col))
+
+_parallel(time_to_funding, backend_imports=('polars',))

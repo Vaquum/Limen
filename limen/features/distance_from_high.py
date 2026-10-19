@@ -20,4 +20,4 @@ def distance_from_high(data: pl.DataFrame, period: int = 24) -> pl.DataFrame:
         .alias('distance_from_high')
     ])
 
-_parallel(distance_from_high)
+_parallel(distance_from_high, backend_imports=('polars',))

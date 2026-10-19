@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -30,3 +31,5 @@ def obv(
     return data.with_columns(
         (pl.col(volume_col).cast(pl.Float64).first() + signed_volume.cum_sum()).alias('obv')
     )
+
+_parallel(obv, backend_imports=('polars',))

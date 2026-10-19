@@ -244,4 +244,4 @@ def _causal_columns(long: LineArrays, short: LineArrays, n_rows: int, quantile: 
             bias[row] = signed[height_keep].sum() / max(total, 1e-12)
     return recency, density, momentum, average, bias
 
-_parallel(quantile_price_lines)
+_parallel(quantile_price_lines, backend_imports=('limen.features.price_lines', 'limen.utils._computation_cache', 'limen.utils._line_arrays', 'limen.utils.find_price_lines', 'numpy', 'polars'))

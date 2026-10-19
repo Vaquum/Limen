@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -29,3 +30,5 @@ def body_to_range(
         ((pl.col(close_col) - pl.col(open_col)).abs() / ((pl.col(high_col) - pl.col(low_col)) + EPSILON))
         .alias('body_to_range')
     )
+
+_parallel(body_to_range, backend_imports=('polars',))

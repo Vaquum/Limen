@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 EPSILON = 1e-10
@@ -19,3 +20,5 @@ def close_to_extremes(data: pl.DataFrame) -> pl.DataFrame:
         ((pl.col('close') - pl.col('high')) / (pl.col('high') + EPSILON)).alias('close_to_high'),
         ((pl.col('close') - pl.col('low')) / (pl.col('low') + EPSILON)).alias('close_to_low')
     ])
+
+_parallel(close_to_extremes, backend_imports=('polars',))

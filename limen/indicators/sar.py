@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -156,3 +157,5 @@ def sar(
     ).alias('sar')
 
     return frame.with_columns(sar_expr)
+
+_parallel(sar, backend_imports=('numpy', 'polars'))

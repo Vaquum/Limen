@@ -38,4 +38,4 @@ def wilder_rsi(data: pl.DataFrame,
         ).alias(out_col)
     )
 
-_parallel(wilder_rsi)
+_parallel(wilder_rsi, backend_imports=('limen.indicators.rsi', 'numpy', 'polars'))

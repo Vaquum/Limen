@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -32,3 +33,5 @@ def mom(
         .alias(out_col)
     )
     return data.with_columns(mom_expr)
+
+_parallel(mom, backend_imports=('polars',))

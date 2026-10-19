@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 from collections.abc import Sequence
 
 import polars as pl
@@ -26,3 +27,5 @@ def is_funding_hour(
     return data.with_columns(
         pl.col(datetime_col).dt.hour().is_in(list(hours)).cast(pl.Int8).alias(output_col)
     )
+
+_parallel(is_funding_hour, backend_imports=('polars',))

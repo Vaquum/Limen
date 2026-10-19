@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 import numpy as np
 
@@ -41,3 +42,5 @@ def hours_since_big_move(data: pl.DataFrame,
             recency[idx] = float(min(idx - ended[ptr], lookback_hours))
 
     return data.with_columns([pl.Series('hours_since_big_move', recency)])
+
+_parallel(hours_since_big_move, backend_imports=('numpy', 'polars'))

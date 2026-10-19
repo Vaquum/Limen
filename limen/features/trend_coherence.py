@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -30,3 +31,5 @@ def trend_coherence(
     return data.with_columns(
         ((short_sign + medium_sign + long_sign) / 3.0).alias('trend_coherence')
     )
+
+_parallel(trend_coherence, backend_imports=('polars',))

@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -20,3 +21,5 @@ def momentum_weight(data: pl.DataFrame, period: int = 12, weight_multiplier: flo
         ((pl.col('close').pct_change(period) > 0).cast(pl.Float64) * weight_multiplier + base_weight)
         .alias('momentum_weight')
     ])
+
+_parallel(momentum_weight, backend_imports=('polars',))

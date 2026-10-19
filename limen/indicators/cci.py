@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import numpy as np
 import numpy.typing as npt
 import polars as pl
@@ -76,3 +77,5 @@ def cci(
     ).alias(out_col)
 
     return frame.with_columns(cci_expr)
+
+_parallel(cci, backend_imports=('numpy', 'polars'))

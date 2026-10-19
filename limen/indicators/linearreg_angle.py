@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import math
 import numpy as np
 import numpy.typing as npt
@@ -56,3 +57,5 @@ def linearreg_angle(
             return_dtype=pl.Float64,
         ).alias(out_col)
     )
+
+_parallel(linearreg_angle, backend_imports=('limen.indicators.linearreg', 'numpy', 'polars'))

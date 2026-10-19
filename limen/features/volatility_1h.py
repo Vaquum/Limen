@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -16,3 +17,5 @@ def volatility_1h(df: pl.DataFrame, volatility_column: str = 'returns_volatility
     return df.with_columns([
         pl.col(volatility_column).alias('volatility_1h')
     ])
+
+_parallel(volatility_1h, backend_imports=('polars',))

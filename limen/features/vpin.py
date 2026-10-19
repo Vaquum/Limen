@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 from limen.features.bulk_volume_classification import bulk_volume_classification
@@ -55,3 +56,5 @@ def vpin(
         .otherwise(None)
         .alias('vpin')
     )
+
+_parallel(vpin, backend_imports=('limen.features.bulk_volume_classification', 'polars', 'scipy'))

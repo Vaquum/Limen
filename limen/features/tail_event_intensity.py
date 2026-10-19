@@ -1,3 +1,4 @@
+from limen._parallel_contract import attach as _parallel
 import polars as pl
 
 
@@ -35,3 +36,5 @@ def tail_event_intensity(
         )
         .drop(['_tail_returns', '_tail_baseline_std'])
     )
+
+_parallel(tail_event_intensity, backend_imports=('polars',))
