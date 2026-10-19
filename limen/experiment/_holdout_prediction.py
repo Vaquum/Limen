@@ -12,7 +12,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_functions
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_functions, object_array
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -44,7 +44,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     seen: set[int] = set()
 
     def collect(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (isinstance(value, np.ndarray) and not value.dtype.hasobject):
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (isinstance(cast(object, value), np.ndarray) and not object_array(value)):
             return
         if id(value) in seen:
             return

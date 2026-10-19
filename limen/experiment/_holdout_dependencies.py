@@ -13,12 +13,13 @@ import logging
 import pickle
 import sys
 from types import CodeType, ModuleType
-from typing import cast
+from typing import TypeGuard, cast
 
 import numpy as np
+import numpy.typing as npt
 import polars as pl
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_functions', 'restore_iterations']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_functions', 'object_array', 'restore_iterations']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -44,18 +45,22 @@ def _booster(value: object) -> bool:
     return type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster'
 
 
+def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
+    return isinstance(value, np.ndarray) and cast(npt.NDArray[np.generic], value).dtype.hasobject
+
+
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(value).values())
+        return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(cast(object, value)).values())
     if isinstance(value, (tuple, list, set, frozenset)):
-        return (*cast(Collection[object], value), *_attributes(value).values())
-    if isinstance(value, np.ndarray) and value.dtype.hasobject:
-        return (value.tolist(), *_attributes(value).values())
+        return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
+    if object_array(value):
+        return (value.tolist(), *_attributes(cast(object, value)).values())
     if isinstance(value, (type, ModuleType, np.ndarray, pl.DataFrame, pl.Series)) or inspect.isroutine(value) or _booster(value):
         return ()
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, vars(value))
-    return tuple(_attributes(value).values())
+    return tuple(_attributes(cast(object, value)).values())
 
 
 def _attributes(value: object) -> dict[str, object]:
@@ -90,7 +95,7 @@ def fitted_witness(value: object) -> bytes:
 
     def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
-        attributes = _attributes(item) if isinstance(item, (Mapping, tuple, list, set, frozenset, np.ndarray)) else {}
+        attributes = _attributes(item) if isinstance(cast(object, item), (Mapping, tuple, list, set, frozenset, np.ndarray)) else {}
         state = node(attributes) if attributes else None
         if _booster(item):
             from lightgbm import Booster
@@ -117,7 +122,7 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, tuple(node(part) for part in cast(Sequence[object], item)), state)
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(sorted((node(part) for part in cast(Collection[object], item)), key=pickle.dumps)), state)
-        elif isinstance(item, np.ndarray) and item.dtype.hasobject:
+        elif object_array(item):
             result = (kind, item.shape, item.dtype.descr, node(item.tolist()), state)
         elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
@@ -240,7 +245,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value):
             evidence.append(fitted_witness(value))
-        elif isinstance(value, np.ndarray) and value.dtype.hasobject:
+        elif object_array(value):
             visit(value.tolist())
         elif not isinstance(value, (ModuleType, np.ndarray, pl.DataFrame, pl.Series)) and not _booster(value):
             objects.append(value)
