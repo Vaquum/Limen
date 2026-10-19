@@ -11,7 +11,7 @@ import polars as pl
 
 from limen.metrics import deflated_sharpe_ratio, probability_of_backtest_overfitting
 from limen.experiment._recording import validate_recorded_pbo
-from limen.experiment._acceptance_settings import read_acceptance as read_acceptance, report_settings, partition_geometry, require_partition
+from limen.experiment._acceptance_settings import read_acceptance, report_settings, partition_geometry, require_partition
 
 __all__ = ['acceptance_report', 'read_acceptance']
 

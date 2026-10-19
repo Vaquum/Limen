@@ -420,7 +420,7 @@ def pbo_runs(acceptance_runs, tmp_path_factory):
         path = tmp_path_factory.mktemp(f'pbo_{kind}')
         if kind == 'native':
             manifest = build_manifest(config)
-            sfd = SimpleNamespace(__name__=__name__, params=lambda: config['sfd']['params'], manifest=lambda: manifest)
+            sfd = SimpleNamespace(__name__=__name__, params=lambda declaration=config: declaration['sfd']['params'], manifest=lambda frozen=manifest: frozen)
         else:
             sfd = CompiledSFD(config)
         loop = UniversalExperimentLoop(sfd=sfd, data=pl.read_parquet(_FIXTURE) if kind != 'indivisible' else _bars(),
@@ -546,7 +546,7 @@ def test_pbo_configuration_reports(acceptance_runs, pbo_runs, tmp_path):
 def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
     from limen.cli.commands.resume import run_resume
 
-    loop, config, path = pbo_runs['compiled_only']
+    _, config, path = pbo_runs['compiled_only']
     metadata = json.loads((path / 'metadata.json').read_text())
     assert metadata['yaml_reference'] == config
     for acceptance in (None, {'max_pbo': 0.9}):
@@ -564,13 +564,13 @@ def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
         changed = copy.deepcopy(config)
         changed['sfd']['manifest']['acceptance']['pbo_blocks'] = 2
         other = _loop(changed, pl.read_parquet(_FIXTURE), path)
-        with pytest.raises(ValueError, match='different acceptance.pbo_blocks'):
+        with pytest.raises(ValueError, match=r'different acceptance\.pbo_blocks'):
             other.run('walk_forward', resume=True, workers=workers, progress_bar=False)
         assert _artifact_snapshot(path) == before
     native_loop, _, native_path = pbo_runs['native']
     native_before = _artifact_snapshot(native_path)
     native_loop.manifest.set_acceptance(pbo_blocks=2)
-    with pytest.raises(ValueError, match='different acceptance.pbo_blocks'):
+    with pytest.raises(ValueError, match=r'different acceptance\.pbo_blocks'):
         _run(native_loop, resume=True)
     assert _artifact_snapshot(native_path) == native_before
     native_loop.manifest.set_acceptance(pbo_blocks=8)
@@ -608,7 +608,7 @@ def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
     (tmp_path / 'metadata.json').write_text(json.dumps(legacy))
     for settings in ({'pbo_blocks': 2}, {'max_pbo': 0.5}):
         snapshot = _artifact_snapshot(tmp_path)
-        with pytest.raises(ValueError, match='recording.alignment'):
+        with pytest.raises(ValueError, match=r'recording\.alignment'):
             acceptance_report(tmp_path, acceptance=settings)
         assert _artifact_snapshot(tmp_path) == snapshot
     assert acceptance_report(tmp_path)['n_blocks'] == 2

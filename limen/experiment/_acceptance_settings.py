@@ -9,6 +9,7 @@ __all__: list[str] = []
 
 _THRESHOLDS = {'min_deflated_sharpe_probability', 'max_pbo'}
 _COUNTS = (2, 4, 6, 8)
+_MINIMUM_BLOCK_BARS = 2
 
 
 def pbo_blocks(settings: Mapping[str, object] | None) -> int:
@@ -103,12 +104,12 @@ def report_settings(directory: Path, acceptance: Mapping[str, float] | None) -> 
 
 def partition_geometry(n_bars: int | None, count: int) -> dict[str, object]:
     combinations = math.comb(count, count // 2)
-    valid = n_bars is not None and n_bars % count == 0 and n_bars // count >= 2
+    valid = n_bars is not None and n_bars % count == 0 and n_bars // count >= _MINIMUM_BLOCK_BARS
     return {'pbo_combinations': combinations, 'pbo_resolution': 1 / combinations,
             'pbo_block_bars': n_bars // count if valid and n_bars is not None else None}
 
 
 def require_partition(n_bars: int, count: int) -> None:
     if partition_geometry(n_bars, count)['pbo_block_bars'] is None:
-        supported = [value for value in _COUNTS if n_bars % value == 0 and n_bars // value >= 2]
+        supported = [value for value in _COUNTS if n_bars % value == 0 and n_bars // value >= _MINIMUM_BLOCK_BARS]
         raise ValueError(f'PBO requires equal blocks with at least two bars: n_bars={n_bars}, n_blocks={count}; supported counts: {supported or "none"}')
