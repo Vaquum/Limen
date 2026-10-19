@@ -304,7 +304,7 @@ def test_report_end_to_end(acceptance_runs):
     expected_keys = {
         'n_trials', 'n_bars', 'n_blocks', 'winner_trial', 'winner_sharpe',
         'trial_sharpe_variance', 'deflated_sharpe_probability', 'pbo',
-        'thresholds', 'verdicts', 'errors',
+        'thresholds', 'verdicts', 'errors', 'pbo_combinations', 'pbo_block_bars', 'pbo_resolution',
     }
     for loop, config, path in acceptance_runs:
         report = json.loads((path / 'acceptance_report.json').read_text())
@@ -431,6 +431,9 @@ def pbo_runs(acceptance_runs, tmp_path_factory):
 
 
 def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
+    from click.testing import CliRunner
+    import yaml
+    from limen.cli.main import cli
     from limen.experiment import UniversalExperimentLoop
     from limen.experiment.acceptance_report import read_acceptance
     from limen.yaml import build_search_strategy
@@ -440,6 +443,9 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         config = copy.deepcopy(base)
         config['sfd']['manifest']['acceptance'] = {'pbo_blocks': count}
         assert validate(config).valid
+        yaml_path = tmp_path / 'valid.yaml'
+        yaml_path.write_text(yaml.safe_dump(config))
+        assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code == 0
         assert Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=count).acceptance == {'pbo_blocks': count}
         assert type(read_acceptance({'pbo_blocks': count})['pbo_blocks']) is int
         for policy in ({}, {'alignment': True}, {'fold_details': True}):
@@ -448,7 +454,12 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
     for value in (True, False, 0, -2, 1, 3, 9, 10, 8.0, '8', '{blocks}', 10**1000):
         config = copy.deepcopy(base)
         config['sfd']['manifest']['acceptance'] = {'pbo_blocks': value}
-        assert not validate(config).valid
+        validation = validate(config)
+        assert not validation.valid
+        assert any(error.path == 'sfd.manifest.acceptance' for error in validation.errors)
+        yaml_path = tmp_path / 'invalid.yaml'
+        yaml_path.write_text(yaml.safe_dump(config))
+        assert CliRunner().invoke(cli, ['validate', str(yaml_path)]).exit_code != 0
         with pytest.raises(ValueError, match='pbo_blocks'):
             Manifest().set_split_walk_forward(**_GEOMETRY).set_acceptance(pbo_blocks=value)
     config = copy.deepcopy(pbo_runs['compiled_only'][1])
@@ -501,6 +512,8 @@ def test_pbo_configuration_reports(acceptance_runs, pbo_runs, tmp_path):
     default = json.loads((default_path / 'acceptance_report.json').read_text())
     path = pbo_runs['compiled_only'][2]
     report = json.loads((path / 'acceptance_report.json').read_text())
+    with pytest.raises(ValueError, match='acceptance'):
+        acceptance_report(path, acceptance={})
     frame = pl.read_parquet(path / 'trial_returns.parquet')
     matrix = np.stack([group['net_return'].to_numpy() for group in frame.partition_by('trial', maintain_order=True)])
     assert report['pbo'] == _reference_pbo(matrix, 8) == probability_of_backtest_overfitting(matrix, n_blocks=8) == 6 / 7
@@ -582,6 +595,7 @@ def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
     (tmp_path / 'round_data.jsonl').write_text(_storage.text(_storage.round_path(source)))
     legacy = json.loads((tmp_path / 'metadata.json').read_text())
     legacy.pop('pbo_blocks')
+    legacy.pop('round_storage')
     (tmp_path / 'metadata.json').write_text(json.dumps(legacy))
     assert acceptance_report(tmp_path)['n_blocks'] == 2
     (tmp_path / 'metadata.json').unlink()

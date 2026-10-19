@@ -112,6 +112,9 @@ def _score(directory: Path, values: npt.NDArray[np.float64], trials: list[str], 
 def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None = None) -> dict[str, object] | None:
     if not (path := directory / 'trial_returns.parquet').exists():
         return None
+    if acceptance is not None:
+        _ = read_acceptance(acceptance)
+    _ = _storage.round_path(directory)
     settings, count = report_settings(directory, acceptance)
     validate_recorded_pbo(directory, settings)
     thresholds = {key: value for key, value in settings.items() if key != 'pbo_blocks'}
