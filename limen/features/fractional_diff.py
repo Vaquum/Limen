@@ -200,6 +200,6 @@ def find_min_d(data: pl.DataFrame,
 
     return d_end
 
-_parallel(fractional_diff, backend_imports=('limen.utils.adf_test', 'numpy', 'polars', 'statsmodels'))
+_parallel(fractional_diff, backend_imports=('numpy', 'polars'))
 
 _parallel(find_min_d, backend_imports=('limen.utils.adf_test', 'numpy', 'polars', 'statsmodels'))

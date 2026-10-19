@@ -196,4 +196,4 @@ def dlinear_regressor(data: dict[str, Any],
     result['_model'] = model
     return result
 
-_parallel(dlinear_regressor, 'deterministic_stage', parameter_keys=(), backend_imports=('sklearn',), prediction_kind='continuous', probabilities=False)
+_parallel(dlinear_regressor, 'deterministic_stage', parameter_keys=(), prediction_kind='continuous', probabilities=False, backend_imports=('numpy', 'sklearn'))

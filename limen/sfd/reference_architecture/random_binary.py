@@ -110,4 +110,4 @@ def random_binary(data: dict[str, Any],
     result['_model'] = model
     return result
 
-_parallel(random_binary, 'seeded_stage', parameter_keys=(), backend_imports=(), prediction_kind='binary', probabilities=False)
+_parallel(random_binary, 'seeded_stage', parameter_keys=(), prediction_kind='binary', probabilities=False, backend_imports=('numpy',))

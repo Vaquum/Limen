@@ -99,4 +99,4 @@ def inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame:
 
     return df.with_columns(exprs)
 
-_parallel(RobustScaler)
+_parallel(RobustScaler, backend_imports=('polars',))

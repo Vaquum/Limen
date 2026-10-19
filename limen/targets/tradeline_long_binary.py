@@ -121,4 +121,4 @@ class TradelineLongBinaryTarget:
             .alias(self.target_name)
         )
 
-_parallel(TradelineLongBinaryTarget)
+_parallel(TradelineLongBinaryTarget, backend_imports=('numpy', 'polars'))

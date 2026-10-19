@@ -99,4 +99,4 @@ def ridge_regressor(data: dict[str, object],
     result['_model'] = model
     return result
 
-_parallel(ridge_regressor, 'sklearn_stage', parameter_keys=(), backend_imports=('sklearn',), prediction_kind='continuous', probabilities=False)
+_parallel(ridge_regressor, 'sklearn_stage', parameter_keys=(), prediction_kind='continuous', probabilities=False, backend_imports=('numpy', 'scipy', 'sklearn'))

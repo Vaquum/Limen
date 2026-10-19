@@ -128,4 +128,4 @@ class TripleBarrierTarget:
         valid = (volatility > 0.0) & (touched | horizon_available)
         return label, valid
 
-_parallel(TripleBarrierTarget)
+_parallel(TripleBarrierTarget, backend_imports=('numpy', 'polars'))

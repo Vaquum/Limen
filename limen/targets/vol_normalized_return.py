@@ -170,4 +170,4 @@ class VolNormalizedReturnTarget:
             return None
         return float(cast(float, pl.Series(finite_ratios).median()))
 
-_parallel(VolNormalizedReturnTarget)
+_parallel(VolNormalizedReturnTarget, backend_imports=('polars',))

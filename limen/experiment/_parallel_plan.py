@@ -113,6 +113,8 @@ def components(manifest: Manifest) -> list[tuple[str, object]]:
     result.extend((f'feature_transforms.{i}', entry.func) for i, entry in enumerate(manifest.feature_transforms))
     if manifest.target_class_config is not None:
         result.append(('target', manifest.target_class_config.target_class))
+        result.extend((f'target.{name}', getattr(manifest.target_class_config.target_class, method))
+                      for name, method in (('fit', '__init__'), ('transform', 'transform')))
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, transform, _ = manifest.scaler
@@ -146,7 +148,8 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     frozen = cast(Manifest, _normalize(manifest))
     if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
-    stages = tuple(FrozenStage(path, component, _contract(component, path)) for path, component in components(frozen))
+    stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
+                   for path, component in components(frozen))
     for stage in stages:
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):
@@ -169,7 +172,7 @@ def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1,
     state = vars(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) and hasattr(owner, '__dict__') else {}
     result = cast(dict[str, object], dict(state)) | dict(params)
     for i, (key, value) in enumerate(signature.parameters.items()):
-        if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL):
+        if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or (path.startswith('target') and key == 'context'):
             continue
         if key not in result:
             if value.default is inspect.Parameter.empty:
@@ -206,6 +209,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
     if target is not None:
         result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2)
         result['target']['transform_params'] = _configured('target.transform', target.target_class.transform, target.transform_params, params, skip=2)
+        result.update({'target.fit': result['target'], 'target.transform': result['target']})
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, _, arguments = manifest.scaler
@@ -219,11 +223,13 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
                     for j, cls in enumerate(classes):
                         result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config) if cls is selected else {}
         if manifest.data_dict_extension is not None:
-            result['data_dict_extension'] = dict(params)
+            result['data_dict_extension'] = {'round_params': dict(params)}
         if manifest.ablation_config is not None:
             seed = params.get(manifest.ablation_config.seed_key)
             result['ablation'] = {'random_state': 0 if seed is None else seed}
-        result.update(pca={'svd_solver': 'full'}, feature_shims=dict(params))
+        from limen.experiment import _column_shims
+        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], vars(_column_shims)['_resolved'])
+        result.update(pca={'svd_solver': 'full'}, feature_shims={'specs': resolve_shims(manifest.feature_shims, params), 'round_params': dict(params)})
         calibration = manifest.prediction_calibration_config
         if calibration is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
             config = calibration.resolve(dict(params))

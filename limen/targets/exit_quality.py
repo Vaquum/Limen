@@ -64,4 +64,4 @@ class ExitQualityTarget:
                 .alias(self.target_name)
         ).drop(['exit_reason', 'exit_net_return'])
 
-_parallel(ExitQualityTarget)
+_parallel(ExitQualityTarget, backend_imports=('polars',))

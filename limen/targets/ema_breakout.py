@@ -50,4 +50,4 @@ class EmaBreakoutTarget:
 
         return data.with_columns(label_expr.alias(self.target_name))
 
-_parallel(EmaBreakoutTarget)
+_parallel(EmaBreakoutTarget, backend_imports=('polars',))

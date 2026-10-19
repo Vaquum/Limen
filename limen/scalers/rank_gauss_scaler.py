@@ -129,4 +129,4 @@ def inverse_transform(df: pl.DataFrame, scaler: RankGaussScaler) -> pl.DataFrame
 
     return df.with_columns(restored_cols)
 
-_parallel(RankGaussScaler)
+_parallel(RankGaussScaler, backend_imports=('numpy', 'polars', 'scipy'))

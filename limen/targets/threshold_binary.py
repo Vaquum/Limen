@@ -48,4 +48,4 @@ class ThresholdBinaryTarget:
                 .alias(self.target_name)
         )
 
-_parallel(ThresholdBinaryTarget)
+_parallel(ThresholdBinaryTarget, backend_imports=('polars',))

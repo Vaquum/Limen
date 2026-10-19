@@ -111,4 +111,4 @@ class ForwardVolNormalizedReturnTarget(VolNormalizedReturnTarget):
             .drop(temp_cols)
         )
 
-_parallel(ForwardVolNormalizedReturnTarget)
+_parallel(ForwardVolNormalizedReturnTarget, backend_imports=('polars',))

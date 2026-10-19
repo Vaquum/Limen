@@ -249,4 +249,4 @@ def logreg_binary(data: dict[str, Any],
     result['_model'] = model
     return result
 
-_parallel(logreg_binary, 'sklearn_stage', parameter_keys=('n_jobs', 'random_state'), backend_imports=('sklearn',), prediction_kind='binary', probabilities=True)
+_parallel(logreg_binary, 'sklearn_stage', parameter_keys=('n_jobs', 'random_state'), prediction_kind='binary', probabilities=True, backend_imports=('numpy', 'scipy', 'sklearn'))

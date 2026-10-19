@@ -41,4 +41,4 @@ class RandomBinaryTarget:
         labels = self._rng.integers(0, 2, size=data.height, dtype=np.uint8)
         return data.with_columns(pl.Series(self.target_name, labels, dtype=pl.UInt8))
 
-_parallel(RandomBinaryTarget, 'seeded_stage')
+_parallel(RandomBinaryTarget, 'seeded_stage', backend_imports=('numpy', 'polars'))

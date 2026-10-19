@@ -41,4 +41,4 @@ class NextReturnTarget:
                 .alias(self.target_name)
         )
 
-_parallel(NextReturnTarget)
+_parallel(NextReturnTarget, backend_imports=('polars',))

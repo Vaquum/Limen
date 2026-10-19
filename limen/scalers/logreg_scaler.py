@@ -137,4 +137,4 @@ def inverse_transform(df: pl.DataFrame, scaler: LogRegScaler) -> pl.DataFrame:
 
     return df.with_columns(exprs)
 
-_parallel(LogRegScaler)
+_parallel(LogRegScaler, backend_imports=('polars',))

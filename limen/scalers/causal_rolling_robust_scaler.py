@@ -131,4 +131,4 @@ class CausalRollingRobustScaler:
 
         return df.with_columns(exprs)
 
-_parallel(CausalRollingRobustScaler)
+_parallel(CausalRollingRobustScaler, backend_imports=('polars',))

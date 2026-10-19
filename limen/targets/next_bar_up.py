@@ -38,4 +38,4 @@ class NextBarUpTarget:
                 .alias(self.target_name)
         )
 
-_parallel(NextBarUpTarget)
+_parallel(NextBarUpTarget, backend_imports=('polars',))

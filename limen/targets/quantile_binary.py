@@ -50,4 +50,4 @@ class QuantileBinaryTarget:
                 .alias(self.target_name)
         )
 
-_parallel(QuantileBinaryTarget)
+_parallel(QuantileBinaryTarget, backend_imports=('polars',))

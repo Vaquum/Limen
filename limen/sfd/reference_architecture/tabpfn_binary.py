@@ -177,4 +177,4 @@ def tabpfn_binary(data: dict[str, Any],
     result['_model'] = model
     return result
 
-_parallel(tabpfn_binary, 'unfrozen_stage', parameter_keys=(), backend_imports=(), prediction_kind='binary', probabilities=True)
+_parallel(tabpfn_binary, 'unfrozen_stage', parameter_keys=(), prediction_kind='binary', probabilities=True, backend_imports=('numpy',))

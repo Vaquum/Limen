@@ -129,4 +129,4 @@ def xgboost_regressor(data: dict[str, Any],
     result['_model'] = model
     return result
 
-_parallel(xgboost_regressor, 'xgboost_stage', parameter_keys=('n_jobs', 'random_state'), backend_imports=('xgboost',), prediction_kind='continuous', probabilities=False)
+_parallel(xgboost_regressor, 'xgboost_stage', parameter_keys=('n_jobs', 'random_state'), prediction_kind='continuous', probabilities=False, backend_imports=('numpy', 'scipy', 'xgboost'))

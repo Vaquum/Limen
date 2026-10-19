@@ -45,4 +45,4 @@ class ForwardBreakoutTarget:
             (forward_return >= threshold).cast(pl.UInt8).shift(shift).alias(self.target_name)
         )
 
-_parallel(ForwardBreakoutTarget)
+_parallel(ForwardBreakoutTarget, backend_imports=('polars',))

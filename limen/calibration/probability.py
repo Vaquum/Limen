@@ -42,4 +42,4 @@ def sklearn_probability_calibrator(clf: Any,
 
     return _calibrated_classifier_cv(clf, method).fit(x_val, y_val)
 
-_parallel(sklearn_probability_calibrator, backend_imports=('sklearn',))
+_parallel(sklearn_probability_calibrator, backend_imports=('numpy', 'polars', 'scipy', 'sklearn'))

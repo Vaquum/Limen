@@ -213,6 +213,10 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
             validate_resources(seeded, params | {'target_seed': seed})
     with pytest.raises(ValueError, match='target: fixed integer seed'):
         validate_domain(seeded, {key: [value] for key, value in params.items()}, {'target_seed': None})
+    omitted = copy.deepcopy(plan.manifest).with_target_label('noise', RandomBinaryTarget)
+    with pytest.raises(ValueError, match='target: fixed integer seed'):
+        validate_resources(freeze_manifest(omitted, None), params)
+    _assert_dispatch_refusal(plan, seeded, params)
     from tests.test_parallel_rounds import parallel_config, records, run_loop
     configuration = parallel_config()
     configuration['uel']['n_permutations'] = 2
@@ -258,7 +262,56 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     from limen.experiment.checkpoint_manager import CheckpointManager
     checkpoint = CheckpointManager().load(directory)
     assert checkpoint['domain_state']['tuple_tag'] == [(1, 2), (3, 4)]
+    _assert_recovery_faults(configuration, directory, tmp_path)
     _assert_native_output_forms()
+
+
+def _assert_dispatch_refusal(plan, seeded, params):
+    from tests.test_parallel_rounds import recorded_source
+    from limen.experiment import _parallel_worker as worker
+    from limen.experiment.manifest_core import MLManifest
+    from limen.sfd.reference_architecture import tabpfn_binary as tabpfn_module
+    def no_preparation(*_args, **_kwargs):
+        raise AssertionError('unsafe candidate reached preparation or optional backend')
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(MLManifest, 'prepare_data', no_preparation)
+        patch.setattr(worker, '_worker_sources', worker.FrozenRoundSources(recorded_source(), None, None))
+        for selected, candidate, error in ((plan, params | {'n_jobs': None}, 'effective n_jobs=1'),
+                                          (seeded, params | {'target_seed': None}, 'fixed integer seed')):
+            patch.setattr(worker, '_worker_plan', selected)
+            with pytest.raises(RuntimeError, match=error):
+                worker.evaluate_round(candidate | {'_id': 'refused-control', '_round_index': 0})
+        tab_config, errors = parse(Path('limen/yaml/templates/tabpfn_binary.yaml').read_text())
+        assert not errors
+        tab_plan = freeze_manifest(build_manifest(tab_config), tab_config)
+        patch.setattr(tabpfn_module, 'require_optional', no_preparation)
+        tab_params = {key: values[0] for key, values in tab_config['sfd']['params'].items()}
+        with pytest.raises(ValueError, match='architecture: unfrozen external state'):
+            validate_resources(tab_plan, tab_params)
+
+
+def _assert_recovery_faults(configuration, directory, temporary):
+    from tests.test_parallel_rounds import run_loop
+    for fault in ('missing_plan', 'version', 'marker', 'worker', 'resource'):
+        rejected = temporary / fault
+        shutil.copytree(directory, rejected)
+        path = rejected / 'metadata.json'
+        metadata = json.loads(path.read_text())
+        if fault == 'missing_plan':
+            metadata.pop('parallel_plan')
+        elif fault == 'version':
+            metadata['limen_version'] = 'unknown'
+        elif fault == 'worker':
+            metadata['worker_native_threads'] = 2
+        elif fault == 'marker':
+            metadata['parallel_plan']['version'] = True
+        else:
+            metadata['parallel_plan']['resource_digest'] = 'changed-control'
+        path.write_text(json.dumps(metadata))
+        before = {str(item.relative_to(rejected)): item.read_bytes() for item in rejected.rglob('*') if item.is_file()}
+        with pytest.raises(ValueError, match='identity|version|policy'):
+            run_loop(configuration, rejected, resume=True)
+        assert {str(item.relative_to(rejected)): item.read_bytes() for item in rejected.rglob('*') if item.is_file()} == before
 
 
 def _assert_native_output_forms():
@@ -283,10 +336,11 @@ def _assert_native_output_forms():
     exposure.set_backtest_config(prediction_mode='target_exposure', product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0), max_holding_seconds=7200)
     cases = [(continuous, {'alpha': 0.1, 'solver': 'svd'}, 'continuous'),
              (rule, {key: values[0] for key, values in rule_config['sfd']['params'].items()}, 'binary'),
-             (exposure, {'seed': 42, 'folds': 3, 'min_train_samples': 20, 'sizing_params': {'solver': 'svd'}}, 'target_exposure')]
+             (exposure, {'seed': 42, 'folds': 3, 'min_train_samples': 20, 'sizing_params': {'solver': 'svd'}}, 'target_exposure'),
+             (copy.deepcopy(exposure), {'seed': 42, 'folds': 3, 'min_train_samples': 20, 'sizing_params': {'solver': 'svd'}, 'conditional_size': True}, 'target_exposure')]
     for manifest, params, kind in cases:
-        assert digest(decode(encode(manifest))) == digest(manifest)
         plan = freeze_manifest(manifest, None)
+        assert digest(decode(encode(plan.manifest))) == digest(plan.manifest)
         validate_resources(plan, params)
         vars(manifest)['_parallel_evidence'] = True
         with threadpool_limits(1):

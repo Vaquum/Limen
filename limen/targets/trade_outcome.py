@@ -169,4 +169,4 @@ class TradeOutcomeTarget:
 
 __all__ = ['OutcomeLabels', 'TradeOutcomeTarget', 'TradeTargetContext']
 
-_parallel(TradeOutcomeTarget)
+_parallel(TradeOutcomeTarget, backend_imports=('polars',))

@@ -41,4 +41,4 @@ class IdentityTarget:
             )
         return data
 
-_parallel(IdentityTarget)
+_parallel(IdentityTarget, backend_imports=('polars',))

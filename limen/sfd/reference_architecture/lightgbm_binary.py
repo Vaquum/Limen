@@ -258,4 +258,4 @@ def lightgbm_binary(data: dict[str, Any],
     result['_model'] = model
     return result
 
-_parallel(lightgbm_binary, 'lightgbm_stage', parameter_keys=('n_jobs', 'random_state'), backend_imports=('lightgbm',), prediction_kind='binary', probabilities=True)
+_parallel(lightgbm_binary, 'lightgbm_stage', parameter_keys=('n_jobs', 'random_state'), prediction_kind='binary', probabilities=True, backend_imports=('lightgbm', 'numpy', 'scipy'))

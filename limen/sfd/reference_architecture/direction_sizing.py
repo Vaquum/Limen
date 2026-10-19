@@ -252,6 +252,6 @@ def direction_sizing(data: dict[str, object], *, direction_factory: ComponentFac
 direction_sizing.__dict__['requires_trade_outcomes'] = True
 __all__ = ['ComponentEstimator', 'ComponentFactory', 'DirectionSizingModel', 'FoldFeatures', 'FoldPreparation', 'direction_sizing']
 
-_parallel(direction_sizing, 'composed_stage', parameter_keys=('seed',), backend_imports=('sklearn',), prediction_kind='target_exposure', probabilities=False)
-_parallel(_direction_factory, 'sklearn_stage', backend_imports=('sklearn',))
-_parallel(_sizing_factory, 'sklearn_stage', backend_imports=('sklearn',))
+_parallel(direction_sizing, 'composed_stage', parameter_keys=('seed',), prediction_kind='target_exposure', probabilities=False, backend_imports=('numpy', 'polars', 'scipy', 'sklearn'))
+_parallel(_direction_factory, 'sklearn_stage', backend_imports=('numpy', 'polars', 'scipy', 'sklearn'))
+_parallel(_sizing_factory, 'sklearn_stage', backend_imports=('numpy', 'polars', 'scipy', 'sklearn'))

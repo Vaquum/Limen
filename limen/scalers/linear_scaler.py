@@ -200,4 +200,4 @@ def inverse_transform(df: pl.DataFrame, scaler: LinearScaler) -> pl.DataFrame:
 
     return df.with_columns(exprs)
 
-_parallel(LinearScaler)
+_parallel(LinearScaler, backend_imports=('polars',))

@@ -54,4 +54,4 @@ class RiskRewardRatioTarget:
                 .alias(self.target_name)
         ).drop(['capturable_breakout', 'max_drawdown'])
 
-_parallel(RiskRewardRatioTarget)
+_parallel(RiskRewardRatioTarget, backend_imports=('polars',))

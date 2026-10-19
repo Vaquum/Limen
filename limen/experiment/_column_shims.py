@@ -234,4 +234,4 @@ def prepare_column_shims(
         )
     return data.fill_nan(None)
 
-_parallel(apply_column_shims)
+_parallel(apply_column_shims, backend_imports=('limen.experiment._shim_fractional_diff', 'limen.features.fractional_diff', 'limen.utils.adf_test', 'numpy', 'polars'))
