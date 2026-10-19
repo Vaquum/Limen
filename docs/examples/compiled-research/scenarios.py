@@ -85,7 +85,7 @@ def walk_forward(data_dir, output):
     sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
     cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
     cohort.set_members(sensors)
-    return {'rounds': loop.experiment_log.height, 'folds': loop.fold_results.select('fold', 'id', 'pnl_per_bar_bps_test').to_dicts(), 'member_folds': [sensor.fold for sensor in sensors], 'fitting_cutoffs': [sensor.fitting_cutoff.isoformat() for sensor in sensors], 'selection_cutoffs': [sensor.selection_cutoff.isoformat() for sensor in sensors], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+    return {'rounds': loop.experiment_log.height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_pnl_per_bar_bps').to_dicts(), 'member_folds': [sensor.fold for sensor in sensors], 'fitting_cutoffs': [sensor.fitting_cutoff.isoformat() for sensor in sensors], 'selection_cutoffs': [sensor.selection_cutoff.isoformat() for sensor in sensors], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
 # endregion walk_forward
 
 
