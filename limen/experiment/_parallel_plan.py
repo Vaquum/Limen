@@ -29,7 +29,8 @@ class ScalerFactory:
 
     def __call__(self, data: pl.DataFrame, **params: object) -> object:
         function = cast(Callable[..., object], self.selected(params))
-        return function(data, **self.static_params, **{key: value for key, value in params.items() if key != 'scaler_type'})
+        extras = {key: value for key, value in params.items() if self.dynamic_selector is None or key != 'scaler_type'}
+        return function(data, **self.static_params, **extras)
 
 
 attach(ScalerFactory)
@@ -96,6 +97,10 @@ def _contract(component: object, path: str) -> ParallelRoundContract:
 
 def components(manifest: Manifest) -> list[tuple[str, object]]:
     result: list[tuple[str, object]] = [('architecture', manifest.architecture_function)]
+    if manifest.architecture_function is not None:
+        for name, parameter in inspect.signature(manifest.architecture_function).parameters.items():
+            if name.endswith('_factory') and callable(parameter.default):
+                result.append((f'architecture.{name}', parameter.default))
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         if step is not None:
@@ -140,7 +145,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     # Force transport validation even when a stage validator consumes no parameters.
     _ = encode(frozen)
     imports = sorted({name for stage in stages for name in stage.contract.backend_imports})
-    resources = ([stage.contract for stage in stages], [module_identity(name) for name in imports],
+    resources = (stages, [module_identity(name) for name in imports],
                  module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})
     return FrozenManifestPlan(frozen, stages, digest(frozen), digest(resources))
 
@@ -161,6 +166,10 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
     from limen.experiment._prepare_trade_context import resolve_component_kwargs
     resolve_component_kwargs(manifest.architecture_function, {}, resolved, params)
     result = {'architecture': resolved}
+    for role in ('direction', 'sizing'):
+        key = f'{role}_factory'
+        if key in resolved:
+            result[f'architecture.{key}'] = _defaults(resolved[key], dict(cast(Mapping[str, object], resolved.get(f'{role}_params') or {})) | {'seed': resolved.get('seed')}, skip=0)
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         if step is not None:

@@ -68,9 +68,7 @@ def fractional_diff(data: pl.DataFrame,
     NOTE: AFML recommends applying to log-transformed prices for best results.
 
     Args:
-        data (pl.DataFrame): Input data
         d (float): Finite, non-negative order (0 = identity copy, 1 = standard diff)
-        cols (list[str] | None): Columns to differentiate (required)
         threshold (float): Finite, positive weight truncation threshold per AFML standard
 
     Returns:

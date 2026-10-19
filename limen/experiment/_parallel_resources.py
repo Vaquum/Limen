@@ -7,8 +7,7 @@ from string import Formatter
 from limen.experiment.manifest_core import DataSourceConfig
 from typing import cast
 
-from limen._parallel_contract import ParallelRoundContract
-from limen.experiment._parallel_encoding import reference, encode
+from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_plan import FrozenManifestPlan, configurations
 
 
@@ -23,8 +22,9 @@ def deterministic_stage(params: Mapping[str, object]) -> None:
 
 def seeded_stage(params: Mapping[str, object]) -> None:
     deterministic_stage(params)
-    if type(params.get('random_state')) is not int:
-        raise ValueError('fixed integer seed required for random_state')
+    key = 'random_state' if 'random_state' in params else 'seed'
+    if type(params.get(key)) is not int:
+        raise ValueError(f'fixed integer seed required for {key}')
 
 
 def sklearn_stage(params: Mapping[str, object]) -> None:
@@ -55,14 +55,6 @@ def composed_stage(params: Mapping[str, object]) -> None:
     seed = params.get('seed')
     if type(seed) is not int:
         raise ValueError('fixed integer seed required for seed')
-    for role in ('direction', 'sizing'):
-        factory = params[f'{role}_factory']
-        contract = getattr(factory, '__parallel_round_contract__', None)
-        if not isinstance(contract, ParallelRoundContract):
-            raise ValueError(f'{role}_factory: missing independence contract')
-        _ = reference(factory)
-        config = cast(Mapping[str, object], params.get(f'{role}_params') or {})
-        contract.validate(dict(config) | {'seed': seed, 'random_state': seed})
 
 
 def unfrozen_stage(_params: Mapping[str, object]) -> None:
@@ -72,6 +64,8 @@ def unfrozen_stage(_params: Mapping[str, object]) -> None:
 def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -> None:
     configs = configurations(plan.manifest, params)
     for stage in plan.stages:
+        if stage.path.startswith('architecture.') and configs['architecture'].get(stage.path.split('.', 1)[1]) is not stage.component:
+            raise ValueError(f'Parallel stage {stage.path}: frozen independence contract differs')
         config = configs[stage.path]
         for key in stage.contract.parameter_keys:
             if key not in config:
