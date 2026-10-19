@@ -121,13 +121,21 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
     values: list[object] = [Sensor.predict, Sensor._get_manifest, Sensor._last_bar_inside_training_window]
     if type(selection) is Cohort:
         values.extend((Cohort._aggregate_bar_predictions, Cohort._validate_probability_range, Cohort._fallback_vote_threshold))
+    excluded: list[object] = []
     for member in members(selection):
         values.extend(_member_state(member)[:4])
         manifest = cast(MLManifest, vars(member)['_manifest'])
         values.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
-        values.extend(getattr(manifest, field.name) for field in fields(manifest) if field.name not in ('data_source_config', 'test_data_source_config'))
+        # Fitting factories are represented in the frozen spec; final inference uses their owned results.
+        values.extend(getattr(manifest, field.name) for field in fields(manifest) if field.name not in ('data_source_config', 'test_data_source_config', 'architecture_function', 'prediction_calibration_config', 'scaler'))
+        if manifest.scaler is not None:
+            values.extend(manifest.scaler[1:])
+        for config in (manifest.prediction_calibration_config, getattr(vars(member)['_model'], 'prediction_calibration_config', None)):
+            if config is not None:
+                excluded.append(config)
+                values.extend((config.calibration_params, config.threshold_params))
     # Owned Sensors already hold the validated Manifest; its construction branch cannot run.
-    return dependency_digest(values, resolved=(Sensor._get_manifest,))
+    return dependency_digest(values, exclude=excluded, resolved=(Sensor._get_manifest,))
 
 
 def manifest_projection(manifest: MLManifest) -> object:

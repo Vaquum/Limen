@@ -3,9 +3,10 @@ from __future__ import annotations
 from collections.abc import Iterator
 from contextlib import contextmanager
 import inspect
+from functools import partial
 import random
 import sys
-from types import FrameType
+from types import CodeType, FrameType
 
 import numpy as np
 import polars as pl
@@ -21,6 +22,20 @@ def _roots(sensor: Sensor) -> list[object]:
     return [vars(sensor)['_model'], vars(sensor)['_fitted_params']]
 
 
+def _call_codes(value: object) -> tuple[CodeType, ...]:
+    if isinstance(value, partial):
+        return _call_codes(value.func)
+    if isinstance(value, type):
+        return (*_call_codes(value.__init__), *_call_codes(value.__new__), *_call_codes(type(value).__call__))
+    method = inspect.unwrap(value) if callable(value) else value
+    if inspect.ismethod(method):
+        method = method.__func__
+    if inspect.isfunction(method):
+        return (method.__code__,)
+    call = inspect.getattr_static(type(method), '__call__', None)
+    return (call.__code__,) if inspect.isfunction(call) else ()
+
+
 @contextmanager
 def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     forbidden: set[object] = set()
@@ -34,18 +49,12 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
         seen.add(id(value))
         for name in _EFFECTS:
             method = getattr(value, name, None)
-            if callable(method):
-                method = inspect.unwrap(method)
-                if inspect.ismethod(method):
-                    method = method.__func__
-                if inspect.isfunction(method):
-                    forbidden.add(method.__code__)
+            forbidden.update(_call_codes(method))
         config = getattr(value, 'prediction_calibration_config', None)
         if config is not None:
             for name in ('calibration_func', 'threshold_func'):
                 method = getattr(config, name, None)
-                if inspect.isfunction(method):
-                    forbidden.add(method.__code__)
+                forbidden.update(_call_codes(method))
         for part in children(value):
             collect(part)
 

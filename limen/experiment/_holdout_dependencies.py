@@ -268,5 +268,5 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
     return functions, evidence
 
 
-def dependency_digest(values: Sequence[object], *, resolved: Sequence[object] = ()) -> str:
-    return sha256(pickle.dumps(inference_functions(values, resolved=resolved)[1], protocol=5)).hexdigest()
+def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> str:
+    return sha256(pickle.dumps(inference_functions(values, exclude=exclude, resolved=resolved)[1], protocol=5)).hexdigest()
