@@ -70,12 +70,12 @@ def readonly_prediction(sensors: list[Sensor], calls: set[CodeType] | None = Non
     sys.setprofile(profile)
     try:
         yield
+    finally:
+        sys.setprofile(previous)
         if violation:
             raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
         if fitted_witness(np.random.get_state()) != numpy_state or random.getstate() != python_state:
             raise ValueError('Holdout inference consumed randomness')
-    finally:
-        sys.setprofile(previous)
 
 
 def _probe_output(sensor: Sensor) -> object:

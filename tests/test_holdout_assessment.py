@@ -333,7 +333,15 @@ def test_holdout_attempt_history(assessment_case, monkeypatch, tmp_path):
     def changed_schema(*args):
         frame, fitted = scale(*args)
         return frame.with_columns(pl.col(pl.Float64).cast(pl.Float32)), fitted
-    with patch.object(manifest_core, '_apply_scaler', side_effect=changed_schema), pytest.raises(ValueError, match='schema mismatch'):
+    with patch.object(manifest_core, '_apply_scaler', side_effect=changed_schema), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, assessment_case)
+        assert loader.call_count == 0
+    original_tape = assessment._tape
+    def changed_after_allocation(*args):
+        with patch.object(manifest_core, '_apply_scaler', side_effect=changed_schema):
+            return original_tape(*args)
+    with patch.object(assessment, '_tape', side_effect=changed_after_allocation), pytest.raises(ValueError, match='schema mismatch'):
         _report(frozen, assessment_case)
     with history.connection(root / history._HISTORY) as db:
         error = json.loads(db.execute('SELECT error_json FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()[0])
@@ -514,6 +522,11 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             return result
     frozen = _freeze(assessment_case[2][0][0])
     with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, assessment_case)
+        assert loader.call_count == 0
+    import limen.inference.sensor as sensor_module
+    with patch.object(sensor_module, '_extract_scalar', lambda value: 0), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(frozen, assessment_case)
         assert loader.call_count == 0
