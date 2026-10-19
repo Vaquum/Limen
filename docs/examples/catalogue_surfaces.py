@@ -23,6 +23,8 @@ def assignment(tree: ast.Module, name: str) -> ast.expr:
 def topic(module):
     if module == 'limen.backtest.observed_costs':
         return 'observed_costs'
+    if module == 'limen.sfd.reference_architecture.meta_allocation':
+        return 'allocation'
     if module.startswith('limen.cli') or module == 'limen.yaml':
         return 'command_line'
     if module.startswith('limen.experiment.reducer'):
@@ -49,16 +51,19 @@ def inventory(root: Path):
         declarations = [node for node in tree.body if isinstance(node, (ast.Assign, ast.AnnAssign)) and any(isinstance(target, ast.Name) and target.id == '__all__' for target in (node.targets if isinstance(node, ast.Assign) else [node.target]))]
         if not declarations:
             continue
+        names = sorted(ast.literal_eval(assignment(tree, '__all__')))
+        if not names:
+            continue
         module = '.'.join((source.parent if source.name == '__init__.py' else source.with_suffix('')).relative_to(root).parts)
         interfaces = (['python'] if module == 'limen.backtest.observed_costs' else ['compiled']
-                      if module.startswith(('limen.cli', 'limen.yaml', 'limen.sfd.foundational_sfd')) or module == 'limen.sfd' else ['python', 'compiled'])
+                      if module.startswith(('limen.cli', 'limen.yaml', 'limen.sfd.foundational_sfd', 'limen.sfd.reference_architecture.meta_allocation', 'limen.sfd.reference_architecture.direction_sizing', 'limen.targets.trade_outcome')) or module == 'limen.sfd' else ['python', 'compiled'])
         reference = next(directory / 'README.md' for directory in source.parents if (directory / 'README.md').is_file())
         if module == 'limen':
             reference = root / 'README.md'
         elif module == 'limen.backtest.observed_costs':
             reference = root / 'docs/Backtest.md'
         exports[module] = context(interfaces, topic(module)) | {'source': str(source.relative_to(root)), 'entry_point': module,
-                                                             'names': sorted(ast.literal_eval(assignment(tree, '__all__'))), 'reference': str(reference.relative_to(root))}
+                                                             'names': names, 'reference': str(reference.relative_to(root))}
         overrides = {'limen': ['MLManifest', 'Manifest', 'ReconstructionError', 'RuleBasedManifest', 'Trainer', 'sfd'],
                      'limen.experiment': ['CalibrationConfig', 'MLManifest', 'Manifest', 'RuleBasedManifest'],
                      'limen.inference': ['ReconstructionError', 'Trainer'],

@@ -57,6 +57,8 @@ sfd:
         - open
         - close
         probability_threshold: 0.1
+        max_size: 0.8
+        risk_budget_fraction: 0.002
   params:
     risk_span:
     - 6
@@ -68,3 +70,8 @@ uel:
   output_format: csv
   checkpoint_interval: 1
   prep_each_round: true
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true

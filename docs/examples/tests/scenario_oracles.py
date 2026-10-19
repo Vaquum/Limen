@@ -231,6 +231,52 @@ def verify(interface, name, result, output, inputs):
     elif name == 'allocation':
         assert interface == 'compiled' and result['rounds'] == 2
         assert all(row['allocation_training_completed'] >= 2 for row in result['results'])
+        assert set(result['cases']) == {'rule', 'ml', 'funded', 'unfunded'}
+        raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
+        for name, case in result['cases'].items():
+            assert case['primary'] == case['plain_primary'] and case['exposure'] == case['repeated']
+            assert len(case['exposure']) == len(case['primary']) == len(case['row_ids'])
+            assert case['binding']['batch_digests']['test'] == case['batch_digest']
+            assert case['binding']['primary']['reference'].endswith('.logreg_binary' if name == 'ml' else '.rule_based')
+            policy = case['contract']['policy']
+            parameters = case['binding']['allocation_params']
+            held, previous = 0., 0.
+            for decision, exposure, probability, gain, stop in zip(case['primary'], case['exposure'], case['take_probability'], case['signed_return'], case['stops'], strict=True):
+                if decision == 0:
+                    held = 0.
+                elif previous == 0:
+                    risk = parameters['risk_budget_fraction'] / ((stop + 2*policy['fee_bps'] + 2*policy['slip_bps']) / 10000)
+                    held = min(parameters['max_size'], policy['max_exposure'], max(0., gain/parameters.get('return_scale', .01)), risk) if probability >= parameters['probability_threshold'] else 0.
+                    held = 0. if held <= policy['flat_threshold'] else held
+                assert exposure == pytest.approx(held, abs=1e-12)
+                previous = decision
+            training = pl.read_parquet(output / name / 'training.parquet')
+            complete = training.filter(pl.col('available'))
+            assert complete.height == case['completed'] >= 2 and training['opportunity_id'].n_unique() == training.height
+            np.testing.assert_allclose(complete['net_return_on_entry_notional'], complete['net_pnl']/complete['entry_notional'])
+            binding = case['binding']['training']
+            for fold in binding['folds']:
+                rows = complete.filter(pl.col('opening_block') == fold['block'])
+                assert rows['label_available_ns'].lt(fold['end_ns']).all()
+                assert rows['decision_available_at_ns'].ge(fold['start_ns']).all()
+                if name == 'ml':
+                    assert fold['fit_prefix_rows'] < case['training_rows']
+            window = case['training_window']
+            source = raw.filter(pl.col('datetime').is_between(datetime.fromisoformat(window['train_start']), datetime.fromisoformat(window['train_end']), closed='left'))
+            assert source.height == case['training_rows']
+            checksum = hashlib.sha256(str(source.schema).encode() + source.hash_rows(seed=0).to_numpy().tobytes()).hexdigest()
+            assert checksum == binding['raw_train']
+            if name == 'ml':
+                probe = case['prefix']
+                assert probe['prefix_rows'] == binding['folds'][0]['fit_prefix_rows']
+                digest = hashlib.sha256(json.dumps({'predictions': probe['predictions']}, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+                assert digest == binding['folds'][0]['primary_digest']
+        funded, unfunded = [pl.read_parquet(output / name / 'training.parquet').filter(pl.col('available')) for name in ('funded', 'unfunded')]
+        assert funded['opportunity_id'].to_list() == unfunded['opportunity_id'].to_list()
+        assert funded['net_pnl'].ne(unfunded['net_pnl']).any()
+        payments = pl.read_parquet(output / 'funded/funding.parquet')
+        assert payments.height > 0
+        np.testing.assert_allclose(payments['cash_delta'], -payments['quantity']*payments['rate_decimal']*payments['valuation_price'])
     elif name == 'command_line':
         assert interface == 'compiled'
         commands = [item['args'][0] for item in result['commands']]

@@ -258,96 +258,6 @@
         ],
         "reference": "limen/backtest/README.md"
       },
-      "limen.backtest._cost_comparison": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/execution",
-          "compiled/execution"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/backtest/_cost_comparison.py",
-        "entry_point": "limen.backtest._cost_comparison",
-        "names": [],
-        "reference": "limen/backtest/README.md"
-      },
-      "limen.backtest._cost_history": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/execution",
-          "compiled/execution"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/backtest/_cost_history.py",
-        "entry_point": "limen.backtest._cost_history",
-        "names": [],
-        "reference": "limen/backtest/README.md"
-      },
-      "limen.backtest._cost_identity": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/execution",
-          "compiled/execution"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/backtest/_cost_identity.py",
-        "entry_point": "limen.backtest._cost_identity",
-        "names": [],
-        "reference": "limen/backtest/README.md"
-      },
-      "limen.backtest._cost_statistics": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/execution",
-          "compiled/execution"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/backtest/_cost_statistics.py",
-        "entry_point": "limen.backtest._cost_statistics",
-        "names": [],
-        "reference": "limen/backtest/README.md"
-      },
-      "limen.backtest._event_clock": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/execution",
-          "compiled/execution"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/backtest/_event_clock.py",
-        "entry_point": "limen.backtest._event_clock",
-        "names": [],
-        "reference": "limen/backtest/README.md"
-      },
-      "limen.backtest._event_plan": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/execution",
-          "compiled/execution"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/backtest/_event_plan.py",
-        "entry_point": "limen.backtest._event_plan",
-        "names": [],
-        "reference": "limen/backtest/README.md"
-      },
       "limen.backtest._long_flat_tp_sl": {
         "interfaces": [
           "python",
@@ -845,51 +755,6 @@
           ]
         }
       },
-      "limen.experiment._acceptance_settings": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_acceptance_settings.py",
-        "entry_point": "limen.experiment._acceptance_settings",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._allocation": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_allocation.py",
-        "entry_point": "limen.experiment._allocation",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._allocation_folds": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_allocation_folds.py",
-        "entry_point": "limen.experiment._allocation_folds",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
       "limen.experiment._backtest_provenance": {
         "interfaces": [
           "python",
@@ -936,21 +801,6 @@
         ],
         "reference": "limen/experiment/README.md"
       },
-      "limen.experiment._dynamic_barriers": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_dynamic_barriers.py",
-        "entry_point": "limen.experiment._dynamic_barriers",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
       "limen.experiment._factorized_prep": {
         "interfaces": [
           "python",
@@ -969,21 +819,6 @@
         ],
         "reference": "limen/experiment/README.md"
       },
-      "limen.experiment._family_evidence": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_family_evidence.py",
-        "entry_point": "limen.experiment._family_evidence",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
       "limen.experiment._fixed_trade_sources": {
         "interfaces": [
           "python",
@@ -999,51 +834,6 @@
         "names": [
           "fixed_trade_sources"
         ],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._fold_evidence": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_fold_evidence.py",
-        "entry_point": "limen.experiment._fold_evidence",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._fold_fingerprint": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_fold_fingerprint.py",
-        "entry_point": "limen.experiment._fold_fingerprint",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._fold_partitions": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_fold_partitions.py",
-        "entry_point": "limen.experiment._fold_partitions",
-        "names": [],
         "reference": "limen/experiment/README.md"
       },
       "limen.experiment._fold_preparation": {
@@ -1148,21 +938,6 @@
         ],
         "reference": "limen/experiment/README.md"
       },
-      "limen.experiment._parallel_sources": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_parallel_sources.py",
-        "entry_point": "limen.experiment._parallel_sources",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
       "limen.experiment._parallel_worker": {
         "interfaces": [
           "python",
@@ -1232,21 +1007,6 @@
         ],
         "reference": "limen/experiment/README.md"
       },
-      "limen.experiment._recording": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_recording.py",
-        "entry_point": "limen.experiment._recording",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
       "limen.experiment._resolve_backtest_config": {
         "interfaces": [
           "python",
@@ -1292,36 +1052,6 @@
           "resolve_number",
           "resolve_trade_policy"
         ],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._round_signals": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_round_signals.py",
-        "entry_point": "limen.experiment._round_signals",
-        "names": [],
-        "reference": "limen/experiment/README.md"
-      },
-      "limen.experiment._round_storage": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/experiment/_round_storage.py",
-        "entry_point": "limen.experiment._round_storage",
-        "names": [],
         "reference": "limen/experiment/README.md"
       },
       "limen.experiment._shim_fractional_diff": {
@@ -1987,51 +1717,6 @@
           ]
         }
       },
-      "limen.inference._fold_metrics": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/inference/_fold_metrics.py",
-        "entry_point": "limen.inference._fold_metrics",
-        "names": [],
-        "reference": "limen/inference/README.md"
-      },
-      "limen.inference._fold_sensor": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/inference/_fold_sensor.py",
-        "entry_point": "limen.inference._fold_sensor",
-        "names": [],
-        "reference": "limen/inference/README.md"
-      },
-      "limen.inference._fold_trainer": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/inference/_fold_trainer.py",
-        "entry_point": "limen.inference._fold_trainer",
-        "names": [],
-        "reference": "limen/inference/README.md"
-      },
       "limen.inference._python_sensor": {
         "interfaces": [
           "python",
@@ -2432,11 +2117,9 @@
       },
       "limen.sfd.reference_architecture.direction_sizing": {
         "interfaces": [
-          "python",
           "compiled"
         ],
         "project_context": [
-          "python/search",
           "compiled/search"
         ],
         "proof": "public-signature-inventory",
@@ -2454,12 +2137,10 @@
       },
       "limen.sfd.reference_architecture.meta_allocation": {
         "interfaces": [
-          "python",
           "compiled"
         ],
         "project_context": [
-          "python/search",
-          "compiled/search"
+          "compiled/allocation"
         ],
         "proof": "public-signature-inventory",
         "source": "limen/sfd/reference_architecture/meta_allocation.py",
@@ -2584,11 +2265,9 @@
       },
       "limen.targets.trade_outcome": {
         "interfaces": [
-          "python",
           "compiled"
         ],
         "project_context": [
-          "python/selection",
           "compiled/selection"
         ],
         "proof": "public-signature-inventory",
@@ -2649,36 +2328,6 @@
           "format_report_section",
           "safe_ovr_auc"
         ],
-        "reference": "limen/utils/README.md"
-      },
-      "limen.utils._computation_cache": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/utils/_computation_cache.py",
-        "entry_point": "limen.utils._computation_cache",
-        "names": [],
-        "reference": "limen/utils/README.md"
-      },
-      "limen.utils._line_arrays": {
-        "interfaces": [
-          "python",
-          "compiled"
-        ],
-        "project_context": [
-          "python/selection",
-          "compiled/selection"
-        ],
-        "proof": "public-signature-inventory",
-        "source": "limen/utils/_line_arrays.py",
-        "entry_point": "limen.utils._line_arrays",
-        "names": [],
         "reference": "limen/utils/README.md"
       },
       "limen.utils.find_price_lines": {
@@ -3320,9 +2969,9 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "hourly: January 2\u201319 2024",
+      "recorded_window": "hourly: January 2\u201319 2024; paired recorded funding January 1\u20138 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Completed-opportunity training is present; this scenario claims batch research, not live promotion or resumed allocation."
+      "assertions": "Original rule/learned primary predictions, independent prefix-fit digests, completed-outcome purging, per-opportunity risk caps and exact source bindings; paired recorded funding effects; batch research only."
     },
     "compiled/command_line": {
       "interface": "compiled",

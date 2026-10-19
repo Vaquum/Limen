@@ -18,6 +18,7 @@ from limen.yaml import CompiledSFD, build_search_strategy, validate
 from limen.yaml.compiler import build_pruning_strategies
 
 import research as research_project
+from allocation_research import allocation_case, prefix_probe
 from recorded_inputs import FUNDING, HASHES, funding_history, trade_profile
 
 INPUTS = {
@@ -224,7 +225,24 @@ def allocation(data_dir, output):
     config = configuration('allocation', data_dir)
     loop = execute(config, output / 'experiment')
     columns = ['risk_span', 'allocation_training_completed', 'allocation_training_unavailable', 'backtest_total_return', 'backtest_completed_trades']
-    return {'rounds': research_project.completed_log(loop).height, 'results': research_project.completed_log(loop).select(columns).to_dicts(), 'promotion': 'batch research only; no live Sensor promotion or resumed allocation claim'}
+    cases = {}
+    for name in ('rule', 'ml', 'funded', 'unfunded'):
+        config = configuration('allocation_ml' if name == 'ml' else 'allocation_funded' if name in ('funded', 'unfunded') else 'allocation', data_dir)
+        if name in ('funded', 'unfunded'):
+            history = funding_history(data_dir)
+            source = output / 'recorded-funding.parquet'
+            history.write_parquet(source)
+            backtest = config['sfd']['manifest']['backtest']
+            backtest['funding']['data_source']['params']['file_path_or_url'] = str(source.resolve())
+            if name == 'unfunded':
+                del backtest['funding']
+        report, model, primary = allocation_case(config, output / name)
+        if name == 'ml':
+            params = {key: values[0] for key, values in config['sfd']['params'].items()}
+            report['prefix'] = prefix_probe(model, primary, params)
+        cases[name] = report
+    return {'rounds': research_project.completed_log(loop).height, 'results': research_project.completed_log(loop).select(columns).to_dicts(),
+            'cases': cases, 'promotion': 'batch research only; no live Sensor promotion or resumed allocation claim'}
 # endregion allocation
 
 

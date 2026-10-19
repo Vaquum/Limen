@@ -31,9 +31,12 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 | `calibration` | Compare all four calibration/threshold modes and disclose validation reuse. |
 | `execution` | Execute recorded observations under explicit costs, product rules and causal clocks. |
 | `bars` | Form volume, trade and liquidity bars; omit an incomplete final bar. |
+| `allocation` | Preserve rule and learned primaries, fit completed opportunities and cap each opening exposure under recorded execution costs. |
 | `command_line` | Validate, profile, store, fork, run and resume a recorded campaign; back it up and restore it through a local Git remote. |
 
 Factorized search uses the admitted deterministic LightGBM grid with independent fee and tree-count axes. The ordinary search modes use logistic regression; these are different declared comparisons. The walk-forward scenario reconstructs qualified folds and binds their complete identities into a Cohort. `allocation` adds batch meta-allocation with completed-opportunity training; it makes no live-promotion or recovery claim.
+
+Allocation compares an unchanged rule primary and an unchanged logistic primary with their composed exposures. A separate prefix fit checks the learned primary's recorded out-of-fold identity. Training rows retain completion times, unavailable outcomes and exact source bindings. Each opportunity keeps its opening allocation until primary flat; the risk cap includes the declared stop and round-trip fee/slippage allowance. Paired January 1–8 cases isolate recorded funding on the same opportunity identities. These are batch research results; the allowance does not bound loss through a price gap.
 
 `adaptive.yaml` adds a separate grid with a three-round resource limit declared through the budget reducer. The driver compiles its pruning configuration. The audit records the queue intervention, and the checkpoint retains the completed and remaining counts. The four-candidate traversal comparisons retain their original budgets.
 
