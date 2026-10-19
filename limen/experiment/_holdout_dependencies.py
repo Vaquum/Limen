@@ -56,9 +56,7 @@ def children(value: object) -> tuple[object, ...]:
         return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (value.tolist(), *_attributes(cast(object, value)).values())
-    if isinstance(value, np.ndarray):
-        return tuple(_attributes(cast(object, value)).values())
-    if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or inspect.isroutine(value) or _booster(value):
+    if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value):
         return ()
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, vars(value))
@@ -210,7 +208,8 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
                     binding = None
                 if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
-                for item in tuple(references.get(name, ())):
+                for candidate in tuple(references.get(name, ())):
+                    item = cast(object, candidate)
                     following = index + 1
                     for attribute in instructions[following:]:
                         if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD') or not hasattr(item, str(attribute.argval)):

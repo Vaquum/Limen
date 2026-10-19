@@ -811,7 +811,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             return later_probabilities(values)
         def predict(self, data):
             result = super().predict(data)
-            result['_probs'] = getattr(self, 'adjust')(result['_probs'])
+            method_name = 'adjust'
+            result['_probs'] = getattr(self, method_name)(result['_probs'])
             return result
     class Derived(Reflective):
         def predict(self, data):
