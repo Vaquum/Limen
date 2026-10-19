@@ -53,7 +53,7 @@ def _yaml():
         'sfd': {'manifest': {
             'type': 'rule_based', 'data_source': {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(FIXTURE.resolve())}},
             'split_dates': {'train_start': '2024-01-02', 'train_end': '2024-01-03', 'val_start': '2024-01-04', 'val_end': '2024-01-05', 'test_start': '2024-01-05', 'test_end': '2024-01-06'},
-            'strategy': {'conditions': [{'id': 'entry', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], 'entry': 'entry'},
+            'strategy': {'conditions': [{'id': 'entry', 'name': 'Recorded close above open', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], 'entry': 'entry'},
             'reference_architecture': 'limen.sfd.reference_architecture.rule_based.rule_based',
             'backtest': {'product': {'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC', 'quote_currency': 'USDT', 'quantity_step': 0.00001, 'min_notional': 5},
                          'source_interval_seconds': 3600, 'fee_bps': 10, 'slip_bps': 5,
