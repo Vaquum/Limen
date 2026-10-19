@@ -74,21 +74,17 @@ def _attributes(value: object) -> dict[str, object]:
 
 
 def fitted_witness(value: object) -> bytes:
-    seen: dict[int, int] = {}
-    retained: list[object] = []
+    seen: dict[int, tuple[int, object]] = {}
 
     def node(item: object) -> object:
         if item is None or type(item) in (str, bool, int, float, bytes):
             result = item
-        elif isinstance(item, ModuleType):
-            result = ('module', item.__name__)
-        elif isinstance(item, type):
-            result = ('class', item.__module__, item.__qualname__)
+        elif isinstance(item, (ModuleType, type)):
+            result = ('module', item.__name__) if isinstance(item, ModuleType) else ('class', item.__module__, item.__qualname__)
         elif id(item) in seen:
-            result = ('ref', seen[id(item)])
+            result = ('ref', seen[id(item)][0])
         else:
-            seen[id(item)] = len(seen)
-            retained.append(item)
+            seen[id(item)] = (len(seen), item)
             result = structure(item)
         return result
 
@@ -139,9 +135,7 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     seen: set[int] = set()
 
     def visit(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)):
-            return
-        if id(value) in seen:
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)) or id(value) in seen:
             return
         seen.add(id(value))
         if _booster(value):
@@ -278,8 +272,6 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             if inspect.isfunction(method):
                 evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
                 visit(method)
-                if not fitting_call(method.__module__, method.__qualname__):
-                    pending.extend(method.__code__.co_names)
             elif method is not None and not inspect.isdatadescriptor(method):
                 evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
                 visit(method)
