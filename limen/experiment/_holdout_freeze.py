@@ -229,7 +229,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
 
 
 class FrozenHoldoutSelection:
-    __slots__ = ('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock')
+    __slots__ = ('_lock', '_snapshot', '_spec', '_spec_digest', '_state_digest')
     _snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None]
     _spec: dict[str, object]
     _state_digest: str
