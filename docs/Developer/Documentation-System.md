@@ -24,7 +24,7 @@ The book contract is the agreed target. It does not imply that the reader, compr
 
 The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.mjs` maps maintained sources into Overview, Guides, Reference, Developer and Packages. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the static build. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
 
-Most existing examples do not yet have execution, output and publication provenance. Browser, accessibility, visual and performance acceptance must become reproducible evidence in the reader delivery. Keep these gaps explicit until the corresponding checks exist and pass. The first complete chapter is a checkpoint; it does not complete the book.
+Most existing examples do not yet have execution, output and publication provenance. Browser, accessibility, visual and performance acceptance must become reproducible evidence in the reader delivery. Keep these gaps explicit until the corresponding checks exist and pass. The first complete chapter is a checkpoint; it does not complete the book. Until each delivery lands, contributors use the existing renderer, route map and source checks. New execution, binding, browser and publication obligations apply to the delivery that introduces them and subsequent changes; they are not claims about existing pages.
 
 Two deployment defects also remain open in the current source and build:
 
@@ -132,13 +132,13 @@ Classify every Python, YAML, JSON and Bash fence. Its role determines the proof 
 | Command | Current arguments and dependency/working-directory context; execute commands used to establish a workflow claim. |
 | Observed output | Retained bytes from an identified successful execution and its declared comparison rules. |
 
-Keep standalone Python parseable; identify non-standalone fragments explicitly. Informational fences do not escape source checking or establish execution. Runnable examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
+Keep standalone Python parseable; identify non-standalone fragments explicitly. Preserve plain language info strings when adding role markers: `python`, `python-fragment`, `yaml`, `json`, `bash`, `sh`, `text` and unlabelled display fences must be accounted for. Put binding metadata outside the fence, or update its parser and migration in the same change. `python-fragment` remains a partial fragment; `bash` and `sh` carry commands; `text` may carry observed output or non-executable reference text. Language alone does not distinguish signatures from executable Python. Existing fences remain under the current checks until the book migration classifies the complete corpus. Informational fences do not escape source checking or establish execution. Runnable examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
 
 Authored and displayed executable excerpts must equal their canonical source regions. Tests execute that source, compare the excerpts and reject a missing region, duplicate identity, wrong interface, stale binding or changed display. Test deliberate divergence so the guarantee itself has evidence.
 
 Assertions must establish the promised behavior. Depending on the claim, this includes chronological separation, fitting and selection cutoffs, comparable evaluation rows, independent cost/timing calculations, retained fitted state, reconstruction, availability, causal prefixes and meaningful failure behavior. Successful process exit alone is insufficient.
 
-Retained output displayed in the book must match its evidence record exactly. Re-executed numerical values use declared per-metric tolerances and deterministic settings in the recorded environment. Record timestamps, attempt identities and timing measurements as run evidence; do not require fresh executions to reproduce a previous run's incidental identifiers. Explain why a reader's environment can produce different digits and what invariant must still hold.
+Retained output displayed in the book must match its evidence record exactly. Retain a named, immutable output record for display; each fresh execution compares its semantic results with that record under declared per-metric tolerances and deterministic settings. In-tolerance numerical drift alone does not require editing displayed output. A changed claim, failed invariant or exceeded tolerance requires inspection and, where warranted, a regenerated record and synchronized prose. Record timestamps, attempt identities and timing measurements as run evidence; do not require fresh executions to reproduce a previous run's incidental identifiers. Explain why a reader's environment can produce different digits and what invariant must still hold.
 
 ## Source and current validation
 
@@ -152,7 +152,9 @@ Every displayed example exposes its immutable source identity and separate curre
 
 Limen owns the versioned schema and checker under `docs/examples/`. The reader consumes their presentation data. It must not invent a merged PR, infer a passed test from a code fence or attach an old successful result to a changed package.
 
-Generate source footers from actual Git and merged-PR history during the build. Do not commit a source file's own final commit hash into that file. A candidate preview identifies unmerged source explicitly. Production requires the real merged changing PR and passing validation for the package and tree being published.
+Resolve a production file’s latest changing commit along the first-parent history of the published main revision, comparing each commit with its first parent. Associate that commit with the merged PR whose base is this repository’s main branch. Branch synchronization merges do not establish publication provenance. A file with no verifiable merged changing PR has unavailable provenance and cannot receive a successful production footer.
+
+Generate source footers from actual Git and merged-PR history during the build. Do not commit a source file's own final commit hash into that file. A candidate preview identifies unmerged source explicitly. Candidate evidence records the PR head, tested merge commit and executed tree separately; the checkout used by a pull-request workflow may be the test merge rather than the head. Production records the published main commit/tag and actual released wheel digest. Production requires the real merged changing PR and passing validation for the package and tree being published.
 
 Keep the source commit/PR visible with each example. Make the complete project, input, environment, test and retained output evidence reachable from it without an authenticated browser session.
 
@@ -179,7 +181,9 @@ The existing required `PR Checks Docs Site` context will own the comprehensive e
 4. Run Node's source, route, lint, dependency and reader checks against that same-job evidence.
 5. Build and browser-check the site, retaining the execution and browser artifacts.
 
-Missing, failed, skipped required proof or wrong-revision evidence fails the check. Do not pass evidence through an independent workflow that can race the build. Include the browser runner, Chromium and system dependencies in the locked/provisioned toolchain. Audit the complete shipped dependency graph through Limen's lockfile.
+Missing, failed, skipped required proof or wrong-revision evidence fails the check. Do not pass evidence through an independent workflow that can race the build. Record the dependency lock digest and its resolution target as well as the actual interpreter patch version, platform and runner image. Installing a lock resolved for Python 3.10 under Python 3.12 does not make it a Python 3.12 resolution. Include the browser runner, Chromium and system dependencies in the locked/provisioned toolchain. Audit the complete shipped dependency graph through Limen's lockfile.
+
+The book tests provide documentation evidence. They do not replace a public research slice’s ordinary `tests/` proof required by the Interface Contract. Documentation maintenance may cite the required Docs Site check where a governance declaration needs a check reference.
 
 Keep comprehensive docs execution outside default `tests.run` discovery. The package's required test, coverage and 240-second runtime obligations remain unchanged. The measured suite executes on Python 3.12; separate runtime and coverage jobs use Python 3.10 to read its artifacts. The initial `fb5dc4f2` baseline measured 252.659 seconds against 240 seconds. Isolating new docs work does not repair or waive that failure, nor establish the health of a later revision; judge the actual candidate's checks.
 
@@ -225,7 +229,7 @@ Code controls preserve exact source when copying, exclude line-number gutters, r
 
 ## Routes, security and discovery
 
-During this prelaunch restructuring, routes and anchors may change deliberately. Blanket redirects are not required. Migrate internal links and ensure source links, anchors, navigation, search, canonical metadata and sitemap all use the same map. Once a route is intentionally retained, it must resolve to its declared content.
+During this prelaunch restructuring, routes and anchors may change deliberately. Blanket redirects are not required under the operator’s explicit decision for this restructuring. The publication delivery must enumerate links already shipped in README/package metadata and record their retained, redirected or deliberately retired destinations; absolute links to the documentation origin belong in the same route-map checks. This contract slice changes no routes. Migrate internal links and ensure source links, anchors, navigation, search, canonical metadata and sitemap all use the same map. Once a route is intentionally retained, it must resolve to its declared content.
 
 Maintain one canonical origin and product base path. Limen owns `/limen/`; shared-host routing, root resources, robots and sitemap ownership must be explicit. A product adapter must not take over another product's prefix. Prove status codes, redirects and errors through the real deployment adapter.
 
