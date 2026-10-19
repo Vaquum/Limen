@@ -11,8 +11,8 @@ export function initNavigation(){
   const camera=spring(x=>{dialog.style.transform=`translateX(${x}px)`;dialog.querySelector('.return-rule').style.opacity=String(1-x/Math.max(innerWidth,1)*.5);},innerWidth);
   async function show(link,{updateHistory=true,originOverride=null,referenceURL=link.href}={}){
     const attempt=++token;opener=link;
-    origin=originOverride||{url:location.href,place:position(),focus:link.id,scroll:scrollY,width:innerWidth};
-    if(updateHistory)history.replaceState({...history.state,readerPlace:origin.place},'',location.href);
+    origin=originOverride||{url:location.href,entry:crypto.randomUUID(),place:position(),focus:link.id,scroll:scrollY,width:innerWidth};
+    if(updateHistory)history.replaceState({...history.state,readerPlace:origin.place,readerEntry:origin.entry},'',location.href);
     try{
       const response=await fetch(referenceURL);if(!response.ok)throw Error(`Reference returned ${response.status}`);
       const parsed=new DOMParser().parseFromString(await response.text(),'text/html');const main=parsed.querySelector('main article');
@@ -29,7 +29,12 @@ export function initNavigation(){
     }catch(error){announce('The reference could not be opened. Follow its link to retry.');console.error(error);}
   }
   function hide(){++token;if(!dialog.open)return;
-    camera.to(innerWidth,()=>{dialog.close();if(origin){if(origin.width===innerWidth)scrollTo({top:origin.scroll,behavior:'instant'});else restore(origin.place);history.replaceState({...history.state,readerPlace:null},'',location.href);opener?.focus({preventScroll:true});}});
+    camera.to(innerWidth,()=>{dialog.close();if(origin){
+      if(origin.entry&&history.state?.readerEntry===origin.entry){
+        if(origin.width===innerWidth)scrollTo({top:origin.scroll,behavior:'instant'});else restore(origin.place);
+        history.replaceState({...history.state,readerPlace:null},'',location.href);opener?.focus({preventScroll:true});
+      }else document.getElementById(decodeURIComponent(location.hash.slice(1)))?.focus({preventScroll:true});
+    }});
   }
   document.addEventListener('click',event=>{
     const fragment=event.target.closest('a[data-reference-fragment]');

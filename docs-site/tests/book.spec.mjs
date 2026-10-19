@@ -67,13 +67,28 @@ test('reference fragments retain the panel and canonical history',async({page})=
 
 test('Forward interrupts a reference return without closing the reopened panel',async({page})=>{
   await page.emulateMedia({reducedMotion:'no-preference'});await open(page);const chapter=page.url();
+  let release,requested;const allowed=new Promise(resolve=>{release=resolve;}),received=new Promise(resolve=>{requested=resolve;});
+  await page.route('**/reference/trainer/**',async route=>{requested();await allowed;await route.continue();});
   await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
-  const reference=page.url();const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
+  await received;release();const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();const reference=page.url();
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(chapter);
   await page.evaluate(()=>history.forward());await expect(page).toHaveURL(reference);
   // Native pointer input settles the current motion without waiting for its animation.
   await dialog.dispatchEvent('pointerdown');await expect(dialog).toBeVisible();await expect(page).toHaveURL(reference);
   await page.keyboard.press('Escape');await expect(page).toHaveURL(chapter);await expect(dialog).not.toBeVisible();
+});
+
+test('further Back navigation keeps the chapter passage chosen in history',async({page})=>{
+  await page.emulateMedia({reducedMotion:'no-preference'});await open(page);
+  await page.goto('/limen/#choose-who-owns-the-experiment');const earlier=page.url();
+  await page.goto('/limen/#adopt-the-compiled-pipeline');const origin=page.url();
+  await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
+  const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
+  await page.evaluate(()=>history.back());await expect(page).toHaveURL(origin);
+  await page.evaluate(()=>history.back());await expect(page).toHaveURL(earlier);
+  await dialog.dispatchEvent('pointerdown');await expect(dialog).not.toBeVisible();
+  await expect(page.locator('#choose-who-owns-the-experiment')).toBeInViewport();
+  await expect(page.locator('#choose-who-owns-the-experiment')).toBeFocused();
 });
 
 test('search and keyboard reach the same reference',async({page})=>{
