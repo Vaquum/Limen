@@ -4,6 +4,7 @@ import json
 import signal
 from dataclasses import replace
 from types import SimpleNamespace
+from zipfile import ZipFile
 
 import numpy as np
 import polars as pl
@@ -25,6 +26,8 @@ from limen.metrics.balanced_metric import balanced_metric
 
 import research as project
 from recorded_inputs import FUNDING, HASHES, funding_history, trade_profile
+from cost_research import run_cost_experiment
+from limen.backtest.observed_costs import CostCalibration
 
 INPUTS = {
     'spot_1h_20240101_20241231.parquet': 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72',
@@ -240,7 +243,34 @@ def bars(data_dir, output):
 # endregion bars
 
 
-SCENARIOS = {'search': search, 'recovery': recovery, 'walk_forward': walk_forward, 'holdout': holdout, 'calibration': calibration, 'execution': execution, 'bars': bars}
+# region observed_costs
+def observed_costs(data_dir, output):
+    fixture = data_dir / 'observed_costs'
+    expected = {'history.zip': 'df4d7776172df459ec297cbcfe8e72a4748a51ab626e3c990deec83415102093',
+                'benchmark.json': 'b71011697713417b21302e670abf78c0bff739ec9135c7012db02fa3b2d6ccf8'}
+    for name, digest in expected.items():
+        if hashlib.sha256((fixture / name).read_bytes()).hexdigest() != digest:
+            raise ValueError('Recorded execution-cost input differs: ' + name)
+    with ZipFile(fixture / 'history.zip') as archive:
+        history = output / 'history.json'
+        history.write_bytes(archive.read('admitted.json'))
+    calibration = CostCalibration.from_history(history, cutoff_ns=1785810791000000000)
+    artifact, specification = output / 'calibration.json', output / 'research-specification.json'
+    calibration.write(artifact)
+    specification.write_text(json.dumps({'calibration_digest': calibration.digest}))
+    reports = []
+    for mode in ('binary', 'target_exposure'):
+        for hour in (1, 2):
+            experiment, comparison = run_cost_experiment(artifact, specification, fixture / 'benchmark.json',
+                                                       output / f'{mode}-{hour}', mode=mode, hour=hour)
+            reports.append({'mode': mode, 'hour': hour, 'rounds': project.completed_log(experiment).height,
+                            'comparison': comparison.report()})
+    return {'calibration': calibration.report(), 'runs': reports,
+            'historical_delivery': 'unknown; retrospective stress only'}
+# endregion observed_costs
+
+
+SCENARIOS = {'search': search, 'recovery': recovery, 'walk_forward': walk_forward, 'holdout': holdout, 'calibration': calibration, 'execution': execution, 'bars': bars, 'observed_costs': observed_costs}
 
 
 def run(name, data_dir, output):

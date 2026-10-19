@@ -36,12 +36,24 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
         canonical = region(path, name)
         if canonical != excerpt + '\n':
             raise ValueError(f'Documentation differs from executable source: {identity}')
-        if interface not in ('python', 'compiled') or f'/{interface}-research/' not in source:
+        shared = json.loads((root / 'docs/examples/catalogue.json').read_text())['shared_sources']
+        if interface not in ('python', 'compiled') or (f'/{interface}-research/' not in source and interface not in shared.get(source, [])):
             raise ValueError(f'Wrong research interface: {identity}')
         found.append({'id': identity, 'path': source, 'region': name, 'scenario': scenario,
                       'interface': interface, 'sha256': digest(canonical.encode())})
     if len(found) != text.count('role=executed') or len({item['id'] for item in found}) != len(found):
         raise ValueError('Missing or duplicate executable bindings')
+    return found
+
+
+def maintained_documents(root: Path) -> list[Path]:
+    return sorted({root / 'README.md', *(root / 'docs').rglob('*.md'), *(root / 'limen').rglob('README.md')})
+
+
+def all_bindings(root: Path) -> list[dict[str, str]]:
+    found = [item for document in maintained_documents(root) for item in bindings(root, document)]
+    if len({item['id'] for item in found}) != len(found):
+        raise ValueError('Duplicate executable binding across maintained documents')
     return found
 
 
@@ -199,7 +211,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:
         raise ValueError('Retained display identity was replaced by a current run')
-    for binding in output_bindings(root, root / 'docs/Research-Book.md'):
+    for binding in [item for document in maintained_documents(root) for item in output_bindings(root, document)]:
         display = displays[binding['id']]
         if (display['path'], display['sha256']) != (binding['path'], binding['sha256']) or display['environment_sha256'] != digest(json.dumps(retained['environment'], sort_keys=True).encode()):
             raise ValueError('Observed output identity differs')
@@ -225,7 +237,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             raise ValueError('Source provenance was substituted')
         if source['region'] == '__file__' and source['sha256'] != expected['sha256']:
             raise ValueError('Source file identity differs')
-    for binding in bindings(root, root / 'docs/Research-Book.md'):
+    for binding in all_bindings(root):
         source = next((item for item in record['sources'] if item['path'] == binding['path'] and item['region'] == binding['region']), None)
         if source is None or source['sha256'] != binding['sha256']:
             raise ValueError('Stale executable binding')

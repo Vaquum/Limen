@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from check_evidence import bindings, validate_shape
+from check_evidence import all_bindings, bindings, validate_shape
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -14,6 +14,7 @@ def test_exact_bindings_and_coverage(research_proof):
     assert {(item['interface'], item['scenario']) for item in found} == {('python', 'selection'), ('compiled', 'selection')}
     assert research_proof['python']['rounds'] == 4
     assert research_proof['compiled']['rounds'] == 2
+    assert ('python', 'observed_costs') in {(item['interface'], item['scenario']) for item in all_bindings(ROOT)}
 
 
 def test_divergent_authored_source_fails(tmp_path):
@@ -41,10 +42,10 @@ def test_unknown_evidence_identity_fails():
 def test_missing_catalogue_scenario_fails():
     from check_evidence import validate_scenarios
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
-    assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation', 'command_line'}
+    assert set(catalogue['required_scenarios']) == {'selection', 'search', 'recovery', 'walk_forward', 'holdout', 'calibration', 'execution', 'bars', 'allocation', 'command_line', 'observed_costs'}
     assert catalogue['required_scenarios']['allocation'] == ['compiled']
     records = [{'interface': interface, 'id': scenario, 'status': 'passed', 'tests': ['semantic oracle'], 'assertions': ['result']} for scenario, interfaces in catalogue['required_scenarios'].items() for interface in interfaces]
-    assert len(records) == 18
+    assert len(records) == 19
     validate_scenarios(records, catalogue)
     for changed in (records[:-1], records + [records[0]]):
         with pytest.raises(ValueError, match='incomplete or duplicated'):
@@ -95,10 +96,13 @@ def test_public_surface_catalogue_matches_current_source():
     from catalogue_surfaces import validate_surface_catalogue
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
     validate_surface_catalogue(ROOT, catalogue)
-    for kind in ('export', 'registry', 'manifest', 'execution'):
+    assert catalogue['surfaces']['public_exports']['limen.backtest.observed_costs']['interfaces'] == ['python']
+    for kind in ('export', 'leaf', 'registry', 'manifest', 'execution'):
         changed = copy.deepcopy(catalogue)
         if kind == 'export':
             changed['surfaces']['public_exports']['limen.scalers']['names'].pop()
+        elif kind == 'leaf':
+            del changed['surfaces']['public_exports']['limen.backtest.observed_costs']
         elif kind == 'registry':
             changed['surfaces']['registries']['reducers']['names'].pop()
         elif kind == 'manifest':

@@ -196,6 +196,38 @@ def verify(interface, name, result, output, inputs):
         for row in profile['bars']:
             assert row['vwap'] * row['volume'] == pytest.approx(row['value_sum'])
             assert all(math.isfinite(row[column]) and row[column] >= 0 for column in ('flux_rel_std_mean', 'flux_rel_std_var', 'entropy_mean', 'entropy_var', 'Δflux_rms', 'Δentropy_rms'))
+    elif name == 'observed_costs':
+        assert interface == 'python'
+        calibration = result['calibration']
+        assert calibration['support']['selected_legs'] == calibration['support']['admitted_legs'] == 363
+        assert calibration['support']['low_effective_support_sides'] == ['sell']
+        assert calibration['clocks']['historical_delivery'] == 'unknown'
+        assert {(row['mode'], row['hour']) for row in result['runs']} == {(mode, hour) for mode in ('binary', 'target_exposure') for hour in (1, 2)}
+        benchmark = json.loads((inputs / 'observed_costs/benchmark.json').read_text())
+        digests = []
+        for row in result['runs']:
+            comparison = row['comparison']
+            assert row['rounds'] == 1 and comparison['calibration_digest'] == calibration['digest']
+            candidate = comparison['candidates']['caller']
+            digests.append((candidate['input_digest'], candidate['application_digest']))
+            original, calibrated = [candidate['scenarios'][name] for name in ('original', 'calibrated')]
+            assert calibrated['disposition'] == 'retrospective_low_effective_support'
+            assert 'time_extrapolation' in calibrated['support']['flags']
+            policies = [scenario['contract']['trade_contract']['policy'].copy() for scenario in (original, calibrated)]
+            assert policies[0].pop('slip_bps') == 5.0
+            assert policies[1].pop('slip_bps') == pytest.approx(float(calibration['estimates']['slip_bps']))
+            assert policies[0] == policies[1] and policies[0]['fee_bps'] == 5.0
+            assert policies[0]['prediction_mode'] == row['mode']
+            for scenario in (original, calibrated):
+                ledger = scenario['ledger']
+                assert ledger['fills'] and scenario['metrics']['completed_trades'] > 0
+                for fill in ledger['fills']:
+                    recorded = next(point for point in benchmark if point['row_id'] == fill['evidence_row_id'])
+                    assert fill['reference_price'] == recorded['price'] and fill['time_ns'] == recorded['time_ns']
+                    assert fill['fee'] == pytest.approx(abs(fill['quantity_delta'] * fill['fill_price']) * .0005)
+            saved = json.loads((output / f"{row['mode']}-{row['hour']}/comparison.json").read_text())
+            assert saved['digest'] == comparison['digest']
+        assert len(set(digests)) == 4
     elif name == 'allocation':
         assert interface == 'compiled' and result['rounds'] == 2
         assert all(row['allocation_training_completed'] >= 2 for row in result['results'])

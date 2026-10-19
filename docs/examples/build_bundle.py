@@ -12,6 +12,11 @@ INPUTS = {
     'spot_15m_20250101_20250531.parquet': 'eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a',
     'btcusdt_funding_20240101_20240108.json': '4352c58c5467ba48b5d13039052085e3bd59c089d6e1455bf99f4063279c3df2',
     'binance_trades_btcusdt_2025-05-23_90s.zip': 'ecc0d2c54aad5c69bba510fe0453d91b288f23579e568d665c06ecfae49757b5',
+    'observed_costs/benchmark.json': 'b71011697713417b21302e670abf78c0bff739ec9135c7012db02fa3b2d6ccf8',
+    'observed_costs/history.zip': 'df4d7776172df459ec297cbcfe8e72a4748a51ab626e3c990deec83415102093',
+    'observed_costs/license.json': '23484080def908bce03a3ad470c783ad4e7aea821b4275f16a132eec737f69d7',
+    'observed_costs/provenance.json': 'e533eee80a6e90fd8d30936795a3fbbcb25b9d7080d57e8f11880f5ed3765e98',
+    'observed_costs/reproduce.py': '3fa7c01d291c119b03fa1040673904b06ffb8d3e00f81eb3daa55b13a1f2adf0',
 }
 
 

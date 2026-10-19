@@ -26,6 +26,8 @@ The execution scenario compares cash spot with a linear perpetual using the reco
 
 Search also runs a separate resource-controlled grid. `BudgetReducer(max_permutations=3)` reduces a four-candidate budget to three completed rounds through the shared feedback controller. Its audit and checkpoint retain the intervention and remaining queue state. This changes the amount of research performed; it is not evidence that the reduced search selects a better model.
 
+The observed-cost scenario creates one immutable calibration from the recorded Chainticks population and pins its digest separately. Four caller-owned fits compare original and calibrated ledgers across two hours and both binary and signed exposure. Prices are recorded midpoints encoded as points; capital and strategy exposure are software scenarios. The calibration archive postdates evaluation, historical delivery is unknown and sell support is concentrated. These are retrospective stress results. The bundle retains the source attribution, CC BY 4.0 license and reproduction files. The [Backtest reference](../../Backtest.md#frozen-candidates-in-custom-python-research) uses the exact same model source.
+
 | Scenario | Decision and output |
 |---|---|
 | `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |
@@ -34,6 +36,7 @@ Search also runs a separate resource-controlled grid. `BudgetReducer(max_permuta
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |
 | `calibration` | Compare all four calibration/threshold modes and disclose validation reuse. |
 | `execution` | Execute recorded observations under explicit costs, product rules and causal clocks. |
+| `observed_costs` | Pin recorded execution-cost evidence; compare frozen caller candidates without transferring account fees. |
 | `bars` | Form volume, trade and liquidity bars; omit an incomplete final bar. |
 
 Python recovery restores search/results, not arbitrary model weights. Continue inference with the evaluated objects returned in memory, or own the persistence and identity contract yourself.

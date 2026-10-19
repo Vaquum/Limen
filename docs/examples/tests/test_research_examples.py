@@ -80,6 +80,46 @@ def test_compiled_research(research_proof):
     assert research_proof['compiled']['rounds'] == 2
 
 
+def test_observed_costs_preserve_caller_fits(cost_model, tmp_path, monkeypatch):
+    import json
+    from zipfile import ZipFile
+    from limen.backtest.observed_costs import CostCalibration
+    fixture = ROOT / 'tests/fixtures/observed_costs'
+    history = tmp_path / 'history.json'
+    with ZipFile(fixture / 'history.zip') as archive:
+        history.write_bytes(archive.read('admitted.json'))
+    calibration = CostCalibration.from_history(history, cutoff_ns=1785810791000000000)
+    artifact, specification = tmp_path / 'calibration.json', tmp_path / 'specification.json'
+    calibration.write(artifact)
+    specification.write_text(json.dumps({'calibration_digest': calibration.digest}))
+    fits, predictions = [], []
+    original_fit, original_predict = cost_model.CallerModel.fit, cost_model.CallerModel.predict
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError('A frozen caller fit or pinned calibration was re-estimated')
+
+    def fit(model, training):
+        fits.append(model)
+        return original_fit(model, training)
+
+    def predict(model, evaluation, mode, scale):
+        values = original_predict(model, evaluation, mode, scale)
+        predictions.append((values, values.to_numpy().tobytes()))
+        monkeypatch.setattr(model, 'fit', forbidden)
+        return values
+
+    monkeypatch.setattr(CostCalibration, 'from_history', forbidden)
+    monkeypatch.setattr(cost_model.CallerModel, 'fit', fit)
+    monkeypatch.setattr(cost_model.CallerModel, 'predict', predict)
+    for mode in ('binary', 'target_exposure'):
+        for hour in (1, 2):
+            experiment, comparison = cost_model.run_cost_experiment(artifact, specification, fixture / 'benchmark.json', tmp_path / f'{mode}-{hour}', mode=mode, hour=hour)
+            assert experiment.manifest is None and experiment.experiment_log.height == 1
+            assert comparison.report()['calibration_digest'] == calibration.digest
+    assert len(fits) == len({id(model) for model in fits}) == len(predictions) == 4
+    assert all(values.to_numpy().tobytes() == before for values, before in predictions)
+
+
 CATALOGUE = __import__('json').loads((ROOT / 'docs/examples/catalogue.json').read_text())
 
 
