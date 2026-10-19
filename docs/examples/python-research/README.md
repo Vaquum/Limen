@@ -12,7 +12,7 @@ Install the matching `vaquum-limen[data]` distribution. From the example bundle 
 python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
 ```
 
-In a repository checkout, the corresponding recorded inputs are in `tests/fixtures/`; set `--data-dir` to that directory and keep generated output outside the source tree. The command checks the file digest before research. It emits `summary.json`; the Compiled project also retains its run definition, results and reconstruction artifacts.
+From a repository checkout, work in `docs/examples/`, use `--data-dir ../../tests/fixtures` and put generated output under `../../.docs-evidence/`. The command checks the recorded file digest before research. It writes `research.csv` and `summary.json`. The evaluated models and Sensors remain in caller-owned memory during the run; those two files do not restore fitted state. Import `run_research` to continue using the returned Cohort and retained models in the same Python process.
 
 ## Scope
 

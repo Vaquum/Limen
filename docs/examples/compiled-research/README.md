@@ -12,7 +12,7 @@ Install the matching `vaquum-limen[data]` distribution. From the example bundle 
 python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
 ```
 
-In a repository checkout, the corresponding recorded inputs are in `tests/fixtures/`; set `--data-dir` to that directory and keep generated output outside the source tree. The command checks the file digest before research. It emits `summary.json`; the Compiled project also retains its run definition, results and reconstruction artifacts.
+From a repository checkout, work in `docs/examples/`, use `--data-dir ../../tests/fixtures` and put generated output under `../../.docs-evidence/`. The command checks the recorded file digest before research. It writes `summary.json`, `results.csv`, `metadata.json` and the compressed round artifacts. Trainer reconstructs the selected round from those artifacts and validates the replayed metrics; it does not restore saved model weights.
 
 ## Scope
 
