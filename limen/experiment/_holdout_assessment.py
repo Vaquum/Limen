@@ -171,6 +171,7 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 try:
                     attempts.finalize(root, attempt_id, source=source, error=error)
                 except Exception as finalization_error:
+                    logging.getLogger(__name__).exception('Holdout attempt %s finalization failed', attempt_id)
                     raise ValueError(f'Holdout attempt {attempt_id}: {exc}; finalization failed: {finalization_error}') from exc
                 raise ValueError(f'Holdout attempt {attempt_id}: {exc}') from exc
     finally:

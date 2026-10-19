@@ -11,6 +11,7 @@ from uuid import uuid4
 from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_freeze import encoded
 
+_VERSION = 2
 _SCHEMA = """CREATE TABLE attempts (
  id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES project(id),
  assessment_index INTEGER NOT NULL CHECK(assessment_index>=1),
@@ -99,7 +100,7 @@ def finalize(root: Path, attempt_id: str, *, source: object, artifacts: Mapping[
 def completed(root: Path, attempt_id: str) -> dict[str, object]:
     with history.admission(root), history.connection(root / history._HISTORY) as db:
         project, _ = history._identity(root, db)
-        if db.execute('PRAGMA user_version').fetchone()[0] != 2:
+        if db.execute('PRAGMA user_version').fetchone()[0] != _VERSION:
             raise ValueError(f'Holdout attempt {attempt_id} is unknown')
         row = db.execute("SELECT * FROM attempts WHERE id=? AND project_id=? AND state='completed'", (history.identifier(attempt_id), project)).fetchone()
         if row is None:

@@ -63,7 +63,7 @@ def _assessment_schema(manifest: object, frame: pl.DataFrame, stage: str) -> pl.
     actual = {name: str(dtype) for name, dtype in frame.schema.items() if name not in excluded}
     if actual != {field['name']: field['dtype'] for field in expected}:
         message = f'Holdout {stage} schema mismatch: expected {expected}, received {actual}'
-        record = cast(Callable[[str], None], getattr(manifest, '_holdout_assessment_failure'))
+        record = cast(Callable[[str], None], vars(manifest)['_holdout_assessment_failure'])
         record(message)
         raise ValueError(message)
     return frame.select([name for name in frame.columns if name in excluded] + [field['name'] for field in expected])

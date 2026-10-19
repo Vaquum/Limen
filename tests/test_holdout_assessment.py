@@ -12,7 +12,7 @@ from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _holdout_attempts as attempts
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_report as reports
-from limen.experiment._holdout_freeze import members, owned_copy
+from limen.experiment._holdout_freeze import owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
 from limen.targets.next_bar_up import NextBarUpTarget
@@ -99,9 +99,8 @@ def test_holdout_attempt_history(assessment_case, monkeypatch):
         with pytest.raises(ValueError, match='contained'):
             final_holdout_report(frozen, project_root=root, reservation_id=reservation, start='2024-01-03')
         assert loader.call_count == 0
-    with patch('limen.experiment._holdout_assessment.load_admitted_source', side_effect=ValueError('recorded source unavailable')):
-        with pytest.raises(ValueError, match='Holdout attempt') as error:
-            _report(frozen, assessment_case)
+    with patch('limen.experiment._holdout_assessment.load_admitted_source', side_effect=ValueError('recorded source unavailable')), pytest.raises(ValueError, match='Holdout attempt') as error:
+        _report(frozen, assessment_case)
     with history.connection(root / history._HISTORY) as db:
         row = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
         assert row['state'] == 'failed' and row['id'] in str(error.value)
@@ -111,9 +110,8 @@ def test_holdout_attempt_history(assessment_case, monkeypatch):
         withdraw_holdout(root, reservation)
     report = _report(frozen, assessment_case)
     assert row['id'] in [entry['id'] for entry in report['prior']['attempts']]
-    with patch.object(reports, '_sync_replace', side_effect=OSError('disk write failed')):
-        with pytest.raises(ValueError, match='disk write failed'):
-            _report(frozen, assessment_case)
+    with patch.object(reports, '_sync_replace', side_effect=OSError('disk write failed')), pytest.raises(ValueError, match='disk write failed'):
+        _report(frozen, assessment_case)
     with history.connection(root / history._HISTORY) as db:
         failed = db.execute('SELECT id,state FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
         assert failed['state'] == 'failed'

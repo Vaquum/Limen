@@ -16,6 +16,7 @@ from sklearn.metrics import roc_auc_score
 from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_freeze import encoded
 
+_BINARY_CLASSES = 2
 
 class Metric(TypedDict):
     value: float | None
@@ -40,7 +41,7 @@ def classification(labels: list[int | None], predictions: list[int], probabiliti
                    'fpr': (sum(label == 0 and pred == 1 for label, pred in valid), sum(label == 0 for label, _ in valid))}
     result = {key: metric(num / den if den else None, n, reason=None if den else 'zero-denominator' if n else 'no-labels', numerator=float(num), denominator=den) for key, (num, den) in populations.items()}
     pairs = [(label, prob) for label, prob in zip(labels, probabilities, strict=True) if label is not None and prob is not None]
-    reason = 'no-labels' if not n else 'no-probability' if not pairs else 'one-class' if len({label for label, _ in pairs}) < 2 else None
+    reason = 'no-labels' if not n else 'no-probability' if not pairs else 'one-class' if len({label for label, _ in pairs}) < _BINARY_CLASSES else None
     result['auc'] = metric(float(roc_auc_score([label for label, _ in pairs], [prob for _, prob in pairs])) if reason is None else None, len(pairs), reason=reason)
     return result
 
@@ -57,7 +58,7 @@ def return_metrics(values: Mapping[str, float], net: np.ndarray, pos: np.ndarray
 
 
 _MEMBER = pl.List(pl.Struct({'index': pl.Int64, 'id': pl.String, 'prediction': pl.Int64, 'probability': pl.Float64, 'reason': pl.String}))
-_SCENARIO = pl.List(pl.Struct({'index': pl.Int64, **{name: pl.Float64 for name in ('raw_position', 'raw_gross', 'raw_net', 'raw_cost', 'deployed_position', 'deployed_gross', 'deployed_net', 'deployed_cost')}}))
+_SCENARIO = pl.List(pl.Struct({'index': pl.Int64, **dict.fromkeys(('raw_position', 'raw_gross', 'raw_net', 'raw_cost', 'deployed_position', 'deployed_gross', 'deployed_net', 'deployed_cost'), pl.Float64)}))
 _COLUMNS = {'open_ns': pl.Int64, 'close_ns': pl.Int64, 'role': pl.String, 'source_row_sha256': pl.String,
             'members': _MEMBER, 'aggregate_prediction': pl.Int64, 'aggregate_probability': pl.Float64,
             'aggregate_reason': pl.String, 'label': pl.Int64, 'label_reason': pl.String, 'scenarios': _SCENARIO}

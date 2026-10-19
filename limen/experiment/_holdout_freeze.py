@@ -32,6 +32,7 @@ from limen.targets.next_bar_up import NextBarUpTarget
 from limen.yaml.compiler import CompiledSFD
 
 _TOKEN = object()
+_VOTE_THRESHOLD = 0.5
 _IMPLEMENTATIONS = {cls: {name: getattr(cls, name) for name in names} for cls, names in (
     (Sensor, ('predict', '_get_manifest', '_last_bar_inside_training_window')),
     (Cohort, ('_aggregate_bar_predictions', '_fallback_vote_threshold', '_validate_probability_range')),
@@ -49,35 +50,38 @@ def unchanged(value: object) -> None:
 
 
 def normalized(value: object) -> object:
+    result: object
     if value is None or type(value) in (str, bool, int):
-        return value
-    if isinstance(value, numbers.Real):
+        result = value
+    elif isinstance(value, numbers.Real):
         result = float(value)
         if not math.isfinite(result):
             raise ValueError('Holdout specification must be finite')
-        return result
-    if isinstance(value, (date, datetime)):
-        return value.isoformat()
-    if isinstance(value, Mapping):
+    elif isinstance(value, (date, datetime)):
+        result = value.isoformat()
+    elif isinstance(value, Mapping):
         items = cast(Mapping[object, object], value)
         if not all(isinstance(key, str) for key in items):
             raise ValueError('Holdout specification requires string keys')
-        return {str(key): normalized(item) for key, item in items.items()}
-    if isinstance(value, (list, tuple)):
-        return [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
-    if inspect.ismethod(value):
-        return normalized(value.__func__)
-    if inspect.isfunction(value) or isinstance(value, type):
+        result = {str(key): normalized(item) for key, item in items.items()}
+    elif isinstance(value, (list, tuple)):
+        result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
+    elif inspect.ismethod(value):
+        result = normalized(value.__func__)
+    elif inspect.isfunction(value) or isinstance(value, type):
         if not value.__module__.startswith(('limen.', 'sklearn.')):
             raise ValueError('Holdout specification refuses custom callables')
         name = f'{value.__module__}.{value.__qualname__}'
         if inspect.isfunction(value) and value.__closure__:
-            return {'callable': name, 'defaults': normalized(value.__defaults__),
+            result = {'callable': name, 'defaults': normalized(value.__defaults__),
                     'closure': {key: normalized(cell.cell_contents) for key, cell in zip(value.__code__.co_freevars, value.__closure__, strict=True)}}
-        return name
-    if is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
-        return {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
-    raise ValueError(f'Unsupported holdout specification value: {type(value).__name__}')
+        else:
+            result = name
+    elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
+        result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
+    else:
+        raise ValueError(f'Unsupported holdout specification value: {type(value).__name__}')
+    return result
 
 
 def encoded(value: object) -> bytes:
@@ -122,7 +126,7 @@ def members(selection: Sensor | Cohort) -> list[Sensor]:
         raise ValueError('Holdout accepts exact Sensor or Cohort only')
     unchanged(selection)
     values = selection._members
-    if not values or len(values) != len(selection.member_ids) or selection.aggregation_mode not in ('majority_vote', 'probability_weighted') or selection._VOTE_THRESHOLD != 0.5:
+    if not values or len(values) != len(selection.member_ids) or selection.aggregation_mode not in ('majority_vote', 'probability_weighted') or selection._VOTE_THRESHOLD != _VOTE_THRESHOLD:
         raise ValueError('Unsupported holdout Cohort membership/aggregation')
     if [(item.manifest_id, item.permutation_id) for item in values] != selection.member_ids:
         raise ValueError('Holdout Cohort member bindings disagree')
@@ -182,8 +186,8 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     check_is_fitted(model)
     if list(getattr(model, 'classes_', [])) != [0, 1]:
         raise ValueError('Holdout estimator classes must be [0,1]')
-    config = getattr(wrapper, 'prediction_calibration_config')
-    calibrator = getattr(wrapper, '_fitted_calibrator')
+    config = wrapper.prediction_calibration_config
+    calibrator = wrapper._fitted_calibrator
     if config is not None:
         if calibrator is None:
             raise ValueError('Holdout refuses configured but unfitted calibration')
@@ -195,7 +199,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
             check_is_fitted(calibrator)
         else:
             raise ValueError('Holdout supports fitted sklearn calibration only')
-        threshold = getattr(wrapper, '_calibration_threshold')
+        threshold = wrapper._calibration_threshold
         if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not math.isfinite(float(threshold)):
             raise ValueError('Holdout requires a finite fitted threshold')
     manifest = sensor._manifest
@@ -238,10 +242,28 @@ class FrozenHoldoutSelection:
         return super().__new__(cls)
 
 
+def _model_witness(value: object) -> object:
+    if isinstance(value, Mapping):
+        return {key: _model_witness(item) for key, item in cast(Mapping[str, object], value).items()}
+    if isinstance(value, (tuple, list)):
+        return tuple(_model_witness(item) for item in cast(tuple[object, ...] | list[object], value))
+    if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
+        from lightgbm import Booster
+        booster = cast(Booster, value)
+        return (booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), max(0, booster.best_iteration))
+    if type(value).__module__.startswith(('sklearn.', 'lightgbm.', 'limen.sfd.reference_architecture.')) and hasattr(value, '__dict__'):
+        return (type(value).__module__, type(value).__qualname__, _model_witness(vars(value)))
+    return value
+
+
+def _copy_witness(selection: Sensor | Cohort) -> bytes:
+    return pickle.dumps(tuple((item._yaml_reference, item._round_params, item._fitted_params, _model_witness(item._model), item._trade_contract) for item in members(selection)), protocol=5)
+
+
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
-    before = state_digest(selection)
+    before = _copy_witness(selection)
     result = copy.deepcopy(selection)
-    if state_digest(result) != before:
+    if _copy_witness(result) != before:
         raise ValueError('Holdout fitted-state copy changed selected state')
     for original, member in zip(members(selection), members(result), strict=True):
         _ = validate_member(member)

@@ -16,6 +16,7 @@ from uuid import UUID, uuid4
 
 _BUSY_TIMEOUT_SECONDS = 5.0
 _UUID_VERSION = 4
+_ATTEMPT_VERSION = 2
 _LEASES: ContextVar[tuple[tuple[Path, bool], ...]] = ContextVar('holdout_leases', default=())
 _HISTORY = 'manifests/holdout.sqlite3'
 _MARKER = 'manifests/holdout-project.json'
@@ -243,7 +244,7 @@ def _retire(root_value: str | Path, reservation_id: str, state: str) -> None:
                 raise ValueError('Holdout is unknown or no longer active')
             if state == 'withdrawn' and db.execute('SELECT 1 FROM research WHERE revision>=?', (row['created_revision'],)).fetchone():
                 raise ValueError('A used holdout cannot be withdrawn; release it explicitly')
-            if state == 'withdrawn' and db.execute('PRAGMA user_version').fetchone()[0] == 2 and db.execute('SELECT 1 FROM attempts WHERE revision>=?', (row['created_revision'],)).fetchone():
+            if state == 'withdrawn' and db.execute('PRAGMA user_version').fetchone()[0] == _ATTEMPT_VERSION and db.execute('SELECT 1 FROM attempts WHERE revision>=?', (row['created_revision'],)).fetchone():
                 raise ValueError('A used holdout cannot be withdrawn; release it explicitly')
             _ = db.execute('UPDATE reservations SET state=?,changed_ns=? WHERE id=?', (state, time.time_ns(), reservation_id))
             _ = db.execute('UPDATE project SET revision=revision+1')
