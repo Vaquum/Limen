@@ -60,7 +60,7 @@ def children(value: object) -> tuple[object, ...]:
         return ()
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, vars(value))
-    return tuple(_attributes(cast(object, value)).values())
+    return tuple(_attributes(value).values())
 
 
 def _attributes(value: object) -> dict[str, object]:
@@ -95,7 +95,7 @@ def fitted_witness(value: object) -> bytes:
 
     def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
-        attributes = _attributes(item) if isinstance(cast(object, item), (Mapping, tuple, list, set, frozenset, np.ndarray)) else {}
+        attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, np.ndarray)) else {}
         state = node(attributes) if attributes else None
         if _booster(item):
             from lightgbm import Booster
