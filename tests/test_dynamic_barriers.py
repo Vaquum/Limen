@@ -227,6 +227,7 @@ def test_generic_interval_metadata_survives_promotion():
     data = manifest.prepare_data(raw, {})
     model = RandomBinary().train(data)
     sensor = Sensor(config, model, data['_fitted_params'], {})
-    predicted = sensor.predict_all(raw)
+    future = pl.read_parquet(FIXTURE, n_rows=168)
+    predicted = sensor.predict_all(future)
     assert predicted[-1].reason is None
-    assert predicted[-1].available_at_ns == int(raw['datetime'].dt.epoch('ns')[-1]) + 3600_000_000_000
+    assert predicted[-1].available_at_ns == int(future['datetime'].dt.epoch('ns')[-1]) + 3600_000_000_000
