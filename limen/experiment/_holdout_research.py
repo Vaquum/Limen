@@ -104,7 +104,7 @@ def _base(op: _Operation) -> dict[str, object]:
     return {'schema_version': 1, 'project_id': op.binding.project_id, 'reservation_revision': op.binding.revision,
             'cutoff_ns': op.binding.cutoff_ns, 'interval_seconds': op.binding.interval_seconds,
             'research_record_id': op.record_id, 'role': op.role, 'experiment_record_id': op.parent_id,
-            'round_id': None, 'source': None, 'selector': None, 'selected': empty,
+            'round_id': getattr(op.manifest, '_holdout_round_id', None), 'source': None, 'selector': None, 'selected': empty,
             'split_mode': 'dates' if getattr(op.manifest, 'split_dates', None) is not None else 'ratio',
             'splits': {key: empty.copy() for key in ('train', 'validation', 'test')},
             'input_schema': None, 'model_schema': None, 'schema_reason': 'admission-without-fitted-model', 'earlier_exposure': 'unknown'}
@@ -240,10 +240,10 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
     with operation(manifest, 'experiment'):
         frame = data if data is not None else manifest.fetch_test_data() if test_mode and manifest.test_data_source_config is not None else manifest.fetch_data()
         frame = admit(manifest, frame)
-    def prep(raw: pl.DataFrame, round_params: dict[str, object] | None = None) -> dict[str, object]:
-        return manifest.prepare_data(raw, round_params or {})
-    def model(raw: dict[str, object], round_params: dict[str, object] | None) -> dict[str, object]:
-        return manifest.run_model(raw, round_params or {})
+    def prep(data: pl.DataFrame, round_params: dict[str, object] | None = None) -> dict[str, object]:
+        return manifest.prepare_data(data, round_params or {})
+    def model(data: dict[str, object], round_params: dict[str, object] | None) -> dict[str, object]:
+        return manifest.run_model(data, round_params or {})
     return manifest, frame, prep, model
 
 
@@ -303,6 +303,7 @@ def trainer_round(manifest: object, expected: Mapping[str, object]) -> None:
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return
+    vars(manifest)['_holdout_round_id'] = expected.get('round_id')
     recorded = expected.get('holdout')
     if isinstance(recorded, Mapping):
         recorded = cast(Mapping[str, object], recorded)
@@ -339,3 +340,14 @@ def replay_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenat
                     raise ValueError('Holdout replay data geometry changed; do not shorten retained returns')
             return func(host, *args, **kwargs)
     return guarded
+
+
+def bind_round(manifest: object, provenance: Mapping[str, object], round_id: str) -> dict[str, object]:
+    binding = binding_of(manifest)
+    if binding is None or binding.cutoff_ns is None:
+        raise ValueError('Round provenance requires active holdout binding')
+    value = copy.deepcopy(dict(provenance))
+    value['round_id'] = round_id
+    value['research_record_id'] = start_research(binding, 'experiment')
+    finish_research(binding, str(value['research_record_id']), value)
+    return value

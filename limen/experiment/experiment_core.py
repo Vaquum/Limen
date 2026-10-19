@@ -1098,6 +1098,8 @@ class UniversalExperimentLoop:
             },
         }
 
+        if 'holdout' in entry:
+            entry['holdout'] = _holdout.bind_round(self.manifest, cast(Mapping[str, object], entry['holdout']), round_id)
         if 'learning_binding' in alignment:
             entry['learning_binding'] = {'round_id': round_id, 'manifest_id': canonical_manifest_id(self._yaml_reference) if self._yaml_reference is not None else None, 'model': alignment['learning_binding']}
 

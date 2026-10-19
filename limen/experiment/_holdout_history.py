@@ -273,7 +273,10 @@ def finish_research(binding: ProjectBinding, record_id: str, provenance: Mapping
     with admission(binding.root), connection(binding.root / _HISTORY) as db:
         check_binding(binding)
         _ = db.execute('BEGIN IMMEDIATE')
-        result = db.execute("UPDATE research SET state=?,provenance_json=?,finished_ns=?,error=? WHERE id=? AND project_id=? AND revision=? AND state='started'", ('failed' if error is not None else 'completed', json.dumps(dict(provenance), sort_keys=True, allow_nan=False), time.time_ns(), error, record_id, binding.project_id, binding.revision))
+        round_id = provenance.get('round_id')
+        if round_id is not None and not isinstance(round_id, str):
+            raise ValueError('Holdout round identity must be a string')
+        result = db.execute("UPDATE research SET state=?,round_id=?,provenance_json=?,finished_ns=?,error=? WHERE id=? AND project_id=? AND revision=? AND state='started'", ('failed' if error is not None else 'completed', round_id, json.dumps(dict(provenance), sort_keys=True, allow_nan=False), time.time_ns(), error, record_id, binding.project_id, binding.revision))
         if result.rowcount != 1:
             raise ValueError('Holdout research record is unknown, stale or already finalized')
         db.commit()

@@ -132,6 +132,8 @@ def test_holdout_research_provenance(tmp_path):
     assert len(rounds) == 1
     provenance = rounds[0]['holdout']
     assert provenance['project_id'] == metadata['holdout']['project_id']
+    assert provenance['round_id'] == rounds[0]['round_id']
+    assert history.research_record(history.bind(root), provenance['research_record_id'])['round_id'] == rounds[0]['round_id']
     assert provenance['source']['materialized']['rows'] > provenance['source']['admitted']['rows'] == 96
     assert provenance['source']['kind'] == 'local_file'
     assert provenance['input_schema'] and provenance['model_schema']
@@ -157,7 +159,7 @@ def test_holdout_research_provenance(tmp_path):
     rule['sfd']['params'] = {'sharpe_std_threshold': [0.5]}
     rule_compiled = CompiledSFD(rule, project_root=root)
     native = UniversalExperimentLoop(sfd=rule_compiled, project_root=root)
-    native.run('rule', n_permutations=1, progress_bar=False)
+    native.run('rule', n_permutations=1, progress_bar=False, prep_each_round=True)
     rule_data = rule_compiled.manifest().prepare_data(native.data, {'sharpe_std_threshold': 0.5})
     assert rule_data['holdout']['schema_reason'] == 'rule-based-no-fitted-model'
     assert rule_data['holdout']['input_schema'] is None
@@ -190,7 +192,7 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
     ordinary.mkdir()
     (ordinary / 'limen.toml').write_text('[project]\nname="ordinary"\n')
     assert history.bind(ordinary) is None
-    context = multiprocessing.get_context('spawn')
+    context = multiprocessing.get_context('fork' if 'fork' in multiprocessing.get_all_start_methods() else 'spawn')
     parent, child = context.Pipe()
     process = context.Process(target=_lease_worker, args=(str(root), child))
     process.start()
@@ -229,7 +231,7 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
         with pytest.raises(ValueError, match='refuses'):
             new.run('unsupported', n_permutations=1, progress_bar=False, **kwargs)
     new.data = pl.read_parquet(_FIXTURE).head(168)
-    new.run('mutated-frame', n_permutations=1, progress_bar=False)
+    new.run('mutated-frame', n_permutations=1, progress_bar=False, prep_each_round=True)
     assert new.data.height == 96
     # A file-location hint binds even when CLI is launched outside the project.
     monkeypatch.chdir(tmp_path)
