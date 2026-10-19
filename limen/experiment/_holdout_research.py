@@ -15,7 +15,7 @@ import sys
 import polars as pl
 
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
-from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, bounds, frame_evidence, load_admitted_source, source_spec
+from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, bounds, frame_evidence, load_admitted_source, source_spec
 
 class ResearchManifest(SourceManifest, Protocol):
     @property
@@ -157,14 +157,14 @@ def fetch(manifest: ResearchManifest, resolve: Callable[[], pl.DataFrame]) -> pl
         return frame
 
 
-def admit(manifest: object, raw: pl.DataFrame) -> pl.DataFrame:
+def admit(manifest: object, raw: pl.DataFrame, *, force_caller: bool = False) -> pl.DataFrame:
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return raw
     check_binding(binding)
     frame, evidence = frame_evidence(raw, binding)
     previous = cast(SourceEvidence | None, getattr(manifest, '_holdout_source', None))
-    if previous is not None and previous['admitted_sha256'] == evidence['admitted_sha256']:
+    if not force_caller and previous is not None and previous['admitted_sha256'] == evidence['admitted_sha256']:
         evidence = previous
     op = _CURRENT.get()
     if op is not None and op.manifest is manifest:
@@ -239,7 +239,9 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
         raise ValueError('UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.')
     with operation(manifest, 'experiment'):
         frame = data if data is not None else manifest.fetch_test_data() if test_mode and manifest.test_data_source_config is not None else manifest.fetch_data()
-        frame = admit(manifest, frame)
+        frame = admit(manifest, frame, force_caller=data is not None)
+        if binding is not None and binding.cutoff_ns is not None:
+            vars(host)['_holdout_frame'] = frame
     def prep(data: pl.DataFrame, round_params: dict[str, object] | None = None) -> dict[str, object]:
         return manifest.prepare_data(data, round_params or {})
     def model(data: dict[str, object], round_params: dict[str, object] | None) -> dict[str, object]:
@@ -272,7 +274,8 @@ def run_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_
                 attrs = cast(dict[str, object], vars(host))
                 if (attrs.get('prep'), attrs.get('model')) != attrs.get('_manifest_functions'):
                     raise ValueError('Holdout research refuses replaced preparation/model functions')
-                attrs['data'] = admit(manifest, cast(pl.DataFrame, attrs['data']))
+                attrs['data'] = admit(manifest, cast(pl.DataFrame, attrs['data']), force_caller=attrs['data'] is not attrs.get('_holdout_frame'))
+                attrs['_holdout_frame'] = attrs['data']
             return func(host, *args, **kwargs)
     return guarded
 
@@ -296,7 +299,10 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
             ('cutoff_ns', binding.cutoff_ns), ('interval_seconds', binding.interval_seconds))):
             raise ValueError('Holdout Trainer metadata binding/revision changed')
     with operation(manifest, 'trainer'):
-        return admit(manifest, data if data is not None else manifest.fetch_data())
+        frame = admit(manifest, data if data is not None else manifest.fetch_data(), force_caller=data is not None)
+        if binding is not None and binding.cutoff_ns is not None:
+            attrs['_holdout_training_frame'] = frame
+        return frame
 
 
 def trainer_round(manifest: object, expected: Mapping[str, object]) -> None:
@@ -320,7 +326,9 @@ def train_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
         manifest = cast(dict[str, object], vars(host))['_manifest']
         with operation(manifest, 'trainer'):
             attrs = cast(dict[str, object], vars(host))
-            attrs['_data'] = admit(manifest, cast(pl.DataFrame, attrs['_data']))
+            attrs['_data'] = admit(manifest, cast(pl.DataFrame, attrs['_data']), force_caller=attrs['_data'] is not attrs.get('_holdout_training_frame'))
+            if binding_of(manifest) is not None:
+                attrs['_holdout_training_frame'] = attrs['_data']
             return func(host, *args, **kwargs)
     return guarded
 
@@ -383,3 +391,13 @@ def prepare_walk_forward(host: object, raw: pl.DataFrame, round_params: Mapping[
     preflight = cast(Callable[..., None], getattr(host, '_preflight', None))
     preflight(raw, require_validation=requires_validation(manifest, params))
     return {'_walk_forward_params': params, '_walk_forward_raw': raw}
+
+
+def selected_input(manifest: object, raw: pl.DataFrame) -> pl.DataFrame:
+    binding = binding_of(manifest)
+    if binding is None or binding.cutoff_ns is None or binding.interval_seconds is None:
+        return raw
+    admitted = admit_frame(raw, interval=binding.interval_seconds, lower_ns=None, upper_ns=binding.cutoff_ns)
+    if admitted.height != raw.height:
+        raise ValueError('Holdout selector returned observations outside the research prefix')
+    return admitted

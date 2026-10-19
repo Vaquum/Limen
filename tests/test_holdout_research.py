@@ -78,10 +78,12 @@ def test_holdout_reservation_and_research_exclusion(tmp_path):
     assert UniversalExperimentLoop(sfd=native, data=raw, project_root=root).data.equals(loop.data)
     seen = []
     manifest = compiled.manifest()
-    manifest.set_pre_split_data_selector(lambda frame: seen.append(frame.height) or frame)
+    manifest.set_pre_split_data_selector(lambda frame: seen.append(frame.height) or frame.slice(1))
     prepared = manifest.prepare_data(raw, {key: values[0] for key, values in compiled.params().items()})
     assert seen == [96]
-    assert prepared['holdout']['selected']['rows'] == 96
+    assert prepared['holdout']['selected']['rows'] == 95
+    assert prepared['holdout']['source']['admitted']['rows'] == 96
+    assert prepared['holdout']['source']['kind'] == 'caller_frame'
     with pytest.raises(ValueError, match='used holdout'):
         withdraw_holdout(root, first)
     with pytest.raises(ValueError, match='intersects'):
@@ -247,3 +249,9 @@ def test_holdout_revision_admission(tmp_path, monkeypatch):
     (root / 'manifests/holdout.sqlite3').unlink()
     with pytest.raises(ValueError, match='history is missing'):
         history.bind(root)
+
+    retry = CompiledSFD(config, project_root=root)
+    for _ in range(2):
+        with pytest.raises(ValueError, match='history is missing'):
+            retry.manifest()
+        assert retry._manifest_cache is None

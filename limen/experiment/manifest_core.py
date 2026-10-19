@@ -650,7 +650,7 @@ class Manifest:
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
             resolved = _resolve_params(base_params, round_params)
-            raw_data = func(raw_data, **resolved)
+            raw_data = _holdout.selected_input(self, func(raw_data, **resolved))
 
         # compute_test_bars consumes only split_data[2], so materialising all
         # three windows here would do 2x wasted filter work on the date path
@@ -1895,9 +1895,8 @@ def _run_prepare_setup(
     if manifest.pre_split_data_selector:
         func, base_params = manifest.pre_split_data_selector
         resolved = _resolve_params(base_params, round_params)
-        raw_data = func(raw_data, **resolved)
+        raw_data = _holdout.selected_input(manifest, func(raw_data, **resolved))
 
-    raw_data = _holdout.admit(manifest, raw_data)
     raw_splits = _resolve_split(manifest, raw_data, require_validation=_requires_fold_validation(manifest, round_params))
     _holdout.selected(manifest, raw_data, raw_splits, round_params, resolved)
 
