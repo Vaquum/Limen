@@ -353,6 +353,30 @@ def test_family_signed_cost_variations_and_recording_omissions(family_runs, sign
     assert all('signal availability' in trial['unavailable'] for trial in omitted['trials'] if trial['directory'] == str(projected))
 
 
+def test_family_execution_witness_and_nondefault_blocks(family_runs, signed_run, tmp_path):
+    project, _, _, _ = family_runs
+    config = json.loads((signed_run / 'metadata.json').read_text())['yaml_reference']
+    config['sfd']['manifest']['split_walk_forward']['test_bars'] = 49
+    longer = tmp_path / 'signed_96_bars'
+    _experiment(config, _bars(), longer, project)
+    group = family_acceptance_report([longer], project_root=project, n_blocks=4)['comparisons'][0]
+    assert group['n_bars'] == 96 and group['n_blocks'] == 4
+    assert group['pbo'] == probability_of_backtest_overfitting(np.stack(list(_tracks(longer).values())), n_blocks=4)
+    assert len(family_acceptance_report([signed_run, longer], project_root=project)['comparisons']) == 2
+    damaged = _copy_run(signed_run, tmp_path / 'bad_contract')
+    records = _records(damaged)
+    records[0]['folds'][0]['trade_contract']['rule_version'] += '-tampered'
+    _write_records(damaged, records)
+    with pytest.raises(ValueError, match='contract digest mismatch'):
+        family_acceptance_report([damaged], project_root=project)
+    config = _config()
+    config['sfd']['manifest']['backtest'].update(take_profit_bps=50.0, stop_loss_bps=50.0)
+    barriers = tmp_path / 'barriers'
+    _experiment(config, _bars(), barriers, project)
+    blocked = family_acceptance_report([barriers], project_root=project)['comparisons'][0]
+    assert blocked['pbo'] is None and 'open/high/low' in blocked['errors']['pbo']
+
+
 def test_family_report_order_and_timestamp_dispositions(family_runs, tmp_path):
     project, paths, _, _ = family_runs
     unknown = _copy_run(paths[0], tmp_path / 'unknown_start')
