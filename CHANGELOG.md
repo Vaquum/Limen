@@ -1815,6 +1815,10 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 
 - Add immutable recorded-fill price-cost calibration with explicit evidence limits and preserved account fees.
 
-## [5.45.1] - 2026-10-20
+## [5.45.1] - 2026-10-19
+
+- Reject non-finite fractional-difference parameters and recurrence weights while preserving finite calculations.
+
+## [5.45.2] - 2026-10-20
 
 Infer nullable allocation opportunity fields across all observed labels so late censored opportunities retain their text reason after the first 100 rows; preserve strict conversion and causal supervision.
