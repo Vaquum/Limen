@@ -19,6 +19,12 @@ def _mapping(value: object) -> Mapping[str, object]:
     return cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
 
 
+def _required_mapping(value: object) -> Mapping[str, object]:
+    if not isinstance(value, Mapping):
+        raise ValueError('Backtest declaration requires nested mappings')
+    return cast(Mapping[str, object], value)
+
+
 def check_backtest_spec(yaml_dict: Mapping[str, object], errors: list[YAMLError]) -> None:
     sfd = _mapping(yaml_dict.get('sfd'))
     backtest = _mapping(_mapping(sfd.get('manifest')).get('backtest'))
@@ -128,22 +134,23 @@ def apply_backtest(manifest: Manifest, declaration: Mapping[str, object]) -> Non
     from limen.experiment._resolve_trade_policy import BACKTEST_FIELDS
     from limen.yaml.resolver import resolve
 
-    backtest = _mapping(declaration.get('backtest'))
-    if not backtest:
+    value = declaration.get('backtest')
+    if not value:
         return
+    backtest = _required_mapping(value)
     kwargs = {key: backtest[key] for key in BACKTEST_FIELDS if key in backtest}
     if kwargs.get('product') is not None:
-        kwargs['product'] = cast(Callable[..., object], ProductConfig)(**_mapping(kwargs['product']))
+        kwargs['product'] = cast(Callable[..., object], ProductConfig)(**_required_mapping(kwargs['product']))
     for key in ('execution_data_source', 'barrier_features'):
         if kwargs.get(key) is not None:
-            source = _mapping(kwargs[key])
-            kwargs[key] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_mapping(source.get('params'))))
+            source = _required_mapping(kwargs[key])
+            kwargs[key] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_required_mapping(source.get('params', {}))))
     if kwargs.get('funding') is not None:
-        funding = dict(_mapping(kwargs['funding']))
+        funding = dict(_required_mapping(kwargs['funding']))
         if 'adapter' in funding:
             funding['adapter'] = resolve(cast(str, funding['adapter']))
         if funding.get('data_source') is not None:
-            source = _mapping(funding['data_source'])
-            funding['data_source'] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_mapping(source.get('params'))))
+            source = _required_mapping(funding['data_source'])
+            funding['data_source'] = DataSourceConfig(resolve(cast(str, source['method'])), dict(_required_mapping(source.get('params', {}))))
         kwargs['funding'] = cast(Callable[..., object], FundingConfig)(**funding)
     _ = cast(Callable[..., object], manifest.set_backtest_config)(**kwargs)
