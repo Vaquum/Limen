@@ -44,8 +44,9 @@ def normalized(value: object) -> object:
     elif isinstance(value, (list, tuple)):
         result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
     elif inspect.ismethod(value) or inspect.isfunction(value) or isinstance(value, (type, partial)):
-        result = {'callable': f'{getattr(value, "__module__", type(value).__module__)}.{getattr(value, "__qualname__", type(value).__qualname__)}',
-                  'implementation': sha256(fitted_witness(value)).hexdigest()}
+        callable_value = cast(object, value)
+        result = {'callable': f'{getattr(callable_value, "__module__", type(callable_value).__module__)}.{getattr(callable_value, "__qualname__", type(callable_value).__qualname__)}',
+                  'implementation': sha256(fitted_witness(callable_value)).hexdigest()}
     elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
         result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
     else:

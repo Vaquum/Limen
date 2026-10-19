@@ -7,12 +7,14 @@ from functools import partial
 import random
 import sys
 from types import CodeType, FrameType
+from typing import cast
 
 import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_functions
 from limen.inference.sensor import Sensor
+from limen.experiment.manifest_core import MLManifest
 
 __all__ = ['readonly_prediction', 'validate_prediction']
 _EFFECTS = FITTING_METHODS
@@ -32,7 +34,7 @@ def _call_codes(value: object) -> tuple[CodeType, ...]:
         method = method.__func__
     if inspect.isfunction(method):
         return (method.__code__,)
-    call = inspect.getattr_static(type(method), '__call__', None)
+    call = inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
     return (call.__code__,) if inspect.isfunction(call) else ()
 
 
@@ -67,12 +69,12 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
-        fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y'), [0, 1])
+        fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
         if event == 'call' and not fixed_labels and (frame.f_code in forbidden or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = True
             raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
         if previous is not None:
-            previous(frame, event, arg)
+            _ = previous(frame, event, arg)
 
     sys.setprofile(profile)
     try:
@@ -89,7 +91,7 @@ def _probe_output(sensor: Sensor) -> object:
     raw = vars(sensor)['_fitted_params'].get('_holdout_probe')
     if not isinstance(raw, pl.DataFrame) or raw.is_empty():
         raise ValueError('Holdout requires recorded Trainer inference geometry')
-    manifest = sensor._get_manifest()
+    manifest = cast(MLManifest, getattr(sensor, '_get_manifest')())
     guarded = manifest.test_predict_guard
     manifest.test_predict_guard = False
     try:

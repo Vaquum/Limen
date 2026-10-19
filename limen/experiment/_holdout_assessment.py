@@ -180,12 +180,12 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 binding = history.ProjectBinding(root, cast(str, declaration['project_id']), cast(int, declaration['revision']), None, interval)
                 raw, source = load_admitted_source(cast(MLManifest, vars(members(selection)[0])['_manifest']), binding, lower_ns=planned['context_start_ns'], upper_ns=planned['end_ns'], complete=True)
                 stage = 'predict'
-                before = state_digest(selection)
-                dependencies = prediction_dependencies(selection)
+                if prediction_dependencies(selection) != frozen_spec['prediction_dependencies']:
+                    raise ValueError('Holdout inference changed prediction dependencies during loading')
                 tape = _tape(selection, raw, planned['start_ns'], failures)
-                if state_digest(selection) != before:
+                if state_digest(selection) != state_sha:
                     raise ValueError('Holdout inference changed fitted state')
-                if prediction_dependencies(selection) != dependencies:
+                if prediction_dependencies(selection) != frozen_spec['prediction_dependencies']:
                     raise ValueError('Holdout inference changed prediction dependencies')
                 failures.member_id, failures.bar_ns = None, None
                 final = raw.filter(pl.col('datetime').dt.epoch('ns') >= planned['start_ns'])

@@ -118,9 +118,9 @@ def state_digest(selection: Sensor | Cohort) -> str:
 
 
 def prediction_dependencies(selection: Sensor | Cohort) -> str:
-    values: list[object] = [Sensor.predict, Sensor._get_manifest, Sensor._last_bar_inside_training_window]
+    values: list[object] = [getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window')]
     if type(selection) is Cohort:
-        values.extend((Cohort._aggregate_bar_predictions, Cohort._validate_probability_range, Cohort._fallback_vote_threshold))
+        values.extend(getattr(Cohort, name) for name in ('_aggregate_bar_predictions', '_validate_probability_range', '_fallback_vote_threshold'))
     excluded: list[object] = []
     for member in members(selection):
         values.extend(_member_state(member)[:4])
@@ -135,7 +135,7 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
                 excluded.append(config)
                 values.extend((config.calibration_params, config.threshold_params))
     # Owned Sensors already hold the validated Manifest; its construction branch cannot run.
-    return dependency_digest(values, exclude=excluded, resolved=(Sensor._get_manifest,))
+    return dependency_digest(values, exclude=excluded, resolved=(getattr(Sensor, '_get_manifest'),))
 
 
 def manifest_projection(manifest: MLManifest) -> object:
@@ -174,7 +174,7 @@ def _fitted_value(value: object) -> None:
         unchanged(value)
         if isinstance(value, BaseEstimator) and callable(getattr(value, 'fit', None)):
             check_is_fitted(value)
-    _ = fitted_witness(value)
+    _ = fitted_witness(cast(object, value))
 
 
 def validate_member(sensor: Sensor) -> dict[str, object]:
@@ -190,7 +190,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     if model is not None:
         _fitted_value(model)
         classes = getattr(model, 'classes_', None)
-        native = getattr(type(wrapper), 'predict', None) in (LogRegBinary.predict, LightGBMBinary.predict)
+        native = getattr(cast(type[object], type(wrapper)), 'predict', None) in (LogRegBinary.predict, LightGBMBinary.predict)
         if config is None and native and classes is not None and list(classes) != [0, 1]:
             raise ValueError('Holdout estimator classes must be [0,1]')
     calibrator = getattr(wrapper, '_fitted_calibrator', None)
@@ -198,7 +198,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         if calibrator is None or not callable(getattr(calibrator, 'predict_proba', None)):
             raise ValueError('Holdout refuses configured but unfitted calibration')
         _fitted_value(calibrator)
-        if isinstance(calibrator, CalibratedClassifierCV) and not calibrator.calibrated_classifiers_:
+        if isinstance(calibrator, CalibratedClassifierCV) and not vars(calibrator)['calibrated_classifiers_']:
             raise ValueError('Holdout refuses unfitted calibration')
         threshold = getattr(wrapper, '_calibration_threshold', None)
         if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not math.isfinite(float(threshold)):

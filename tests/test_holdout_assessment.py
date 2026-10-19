@@ -47,6 +47,13 @@ class InferenceOffset:
         return np.clip(values + self.offset, 0, 1)
 
 
+def alternate_offset(self):
+    self.offset = _LATE_RULES['offset'] + 0.2
+
+
+_OFFSET_REGISTRY = {'alternate': alternate_offset, 'offset': InferenceOffset}
+
+
 class _SourceCache:
     def __deepcopy__(self, memo):
         raise AssertionError('Source/log caches must not be traversed before allocation')
@@ -636,10 +643,18 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                         def adjust(self, values):
                             return np.clip(values + self.offset, 0, 1)
                     result['_probs'] = LocalOffset().adjust(result['_probs'])
+                elif self.helper_class == 'import':
+                    import tests.test_holdout_assessment
+                    result['_probs'] = tests.test_holdout_assessment.later_probabilities(result['_probs'])
+                elif self.helper_class == 'alias':
+                    import tests.test_holdout_assessment as helpers
+                    result['_probs'] = helpers.later_probabilities(result['_probs'])
+                elif self.helper_class == 'registry':
+                    result['_probs'] = _OFFSET_REGISTRY['offset']().adjust(result['_probs'])
                 else:
                     result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
             return result
-    for helper_class in (False, True, 'local'):
+    for helper_class in (False, True, 'local', 'import', 'alias', 'registry'):
         branched = copy.deepcopy(assessment_case[2][0][0])
         branched._model.__class__ = Branch
         branched._model.research_x = late._model.research_x.copy()
@@ -649,11 +664,24 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(branch_handle, assessment_case)
             assert loader.call_count == 0
-        if helper_class is True:
-            with patch.object(InferenceOffset, '__init__', lambda self: setattr(self, 'offset', 0.2)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        if helper_class is True or helper_class == 'registry':
+            with patch.object(InferenceOffset, '__init__', _OFFSET_REGISTRY['alternate']), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(branch_handle, assessment_case)
                 assert loader.call_count == 0
+    original_loader = assessment.load_admitted_source
+    def changed_during_loading(*args, **kwargs):
+        result = original_loader(*args, **kwargs)
+        _LATE_RULES['offset'] = 0.1
+        return result
+    with patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=changed_during_loading), patch.object(assessment, '_tape', side_effect=AssertionError('changed predictions')) as tape:
+        with pytest.raises(ValueError, match='changed prediction dependencies during loading') as failed:
+            _report(branch_handle, assessment_case)
+        assert tape.call_count == 0
+    with history.connection(assessment_case[0] / history._HISTORY) as db:
+        record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+        assert record['state'] == 'failed' and record['id'] in str(failed.value)
+        assert json.loads(record['error_json'])['stage'] == 'predict'
     changed = copy.deepcopy(assessment_case[2][0][0])
     changed._model.model = LogisticRegression()
     with pytest.raises(ValueError, match='not fitted'):

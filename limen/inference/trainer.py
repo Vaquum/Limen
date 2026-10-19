@@ -1,4 +1,5 @@
 import limen.experiment._holdout_research as _holdout
+from limen.experiment.manifest_core import MLManifest
 from limen.inference._trainer_records import load_round_data, load_original_log
 from limen.experiment._recording import project_record
 import json
@@ -240,9 +241,9 @@ class Trainer:
             )
             if '_holdout' in fitted_params and self._manifest.split_dates is not None:
                 admitted = self._data.filter(pl.col('datetime') < self._manifest.split_dates[-1])
-                _, warmup = self._manifest.sensor_input_prep(admitted, fitted_params, round_params)
+                _, warmup = cast(MLManifest, self._manifest).sensor_input_prep(admitted, fitted_params, round_params)
                 context = max((getattr(value, 'context_rows', 0) for value in fitted_params.values()), default=0)
-                sensor._fitted_params['_holdout_probe'] = admitted.tail(warmup + context + 2)
+                vars(sensor)['_fitted_params']['_holdout_probe'] = admitted.tail(warmup + context + 2)
             sensors.append(sensor)
 
             logger.info('Trained sensor for permutation %s', pid)

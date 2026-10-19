@@ -25,7 +25,7 @@ FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fi
 def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
             or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
-            or (module.startswith('limen.scalers.') and name.endswith('.__init__')))
+            or (module.startswith(('limen.scalers.', 'limen.targets.')) and name.endswith('.__init__')))
 
 
 @lru_cache(maxsize=2048)
@@ -191,18 +191,22 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             references = dict(value.__globals__)
             references.update(zip(value.__code__.co_freevars, (cell.cell_contents for cell in value.__closure__ or ()), strict=True))
             imported: ModuleType | None = None
+            chained_import = False
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD'):
                     attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
-                    imported = sys.modules.get(name)
+                    chained_import = instructions[index - 1].argval is None
+                    imported = sys.modules.get(name.split('.')[0] if chained_import else name)
                     if imported is None:
                         raise ValueError(f'Holdout prediction import lacks loaded evidence: {name}')
                     binding = imported
                 elif instruction.opname == 'IMPORT_FROM' and imported is not None:
                     binding = getattr(imported, name)
+                    if chained_import and isinstance(binding, ModuleType):
+                        imported = binding
                 elif instruction.opname == 'STORE_FAST' and binding is not None:
                     references[name], binding = binding, None
                 if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_DEREF', 'LOAD_FAST') or name not in references:
@@ -251,6 +255,7 @@ def inference_functions(values: Sequence[object], *, exclude: Sequence[object] =
             if isinstance(method, (staticmethod, classmethod)):
                 method = method.__func__
             if inspect.isfunction(method):
+                evidence.append((cls.__module__, cls.__qualname__, name, fitted_witness(method)))
                 visit(method)
                 if not fitting_call(method.__module__, method.__qualname__):
                     pending.extend(method.__code__.co_names)
