@@ -68,6 +68,22 @@ def test_prefix_refits_and_completed_outcome_purging():
         opened = completed.filter(pl.col('opening_block') == block['block'])
         assert opened['label_available_ns'].le(block['end_ns']).all()
         assert block['fit_prefix_rows'] < context.raw_train.height
+    from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
+    indices = np.array_split(np.arange(context.raw_train.height), 3)[1]
+    start, end = int(indices[0]), int(indices[-1]) + 1
+    prefix = context.raw_train.head(start - 1)
+    original = deepcopy(context.manifest)
+    original.backtest_config = None
+    original.split_dates = None
+    original.split_config = (int(prefix.height * 0.8), int(prefix.height * 0.2), 0)
+    independent = original.prepare_data(prefix, dict(context.round_params))
+    fitted = LightGBMBinary().train(independent, **original.resolve_model_kwargs(dict(context.round_params)))
+    inference, _ = original.sensor_input_prep(context.raw_train.head(end), independent['_fitted_params'], dict(context.round_params))
+    inference = inference.filter(pl.col('datetime').is_between(context.raw_train['datetime'][start], context.raw_train['datetime'][end - 1])).select(independent['x_train'].columns).drop_nulls()
+    predictions = fitted.predict({'x_test': inference})['_preds']
+    from limen.backtest.trade_contract import contract_digest
+    assert labels.binding['folds'][0]['primary_digest'] == contract_digest({'predictions': predictions.astype(float).tolist()})
+    assert labels.binding['folds'][0]['member_count'] == len(indices)
     assert labels.rows['opportunity_id'].n_unique() == labels.rows.height
     np.testing.assert_allclose(completed['net_return_on_entry_notional'], completed['net_pnl'] / completed['entry_notional'])
     assert completed['net_return_on_entry_notional'].gt(0).any()
@@ -152,6 +168,21 @@ def test_recording_omissions_and_membership_digests():
     assert data['_alignment']['model_outputs']['architecture'] == 'meta_allocation'
     assert 'allocation_training' in data['_alignment']['trade_ledger']
     recorded = {'trade_ledger': data['_alignment']['trade_ledger'], 'model_outputs': data['_alignment']['model_outputs']}
-    omitted = project_record(recorded, {'trade_ledger': False})
+    omitted = project_record(recorded, {'predictions': True, 'alignment': True, 'trade_ledger': False, 'fold_details': True})
     assert 'trade_ledger' not in omitted
     assert model.learning_binding['mapping_version'] == 'primary_opportunity_signed_net_notional_v1'
+
+
+def test_crash_reversal_declared_clock_preserves_nonterminal_prefixes():
+    from tests.test_dollar_bar_crash_reversal import _fixture, _candidate
+    from limen.features import dollar_bar_crash_reversal
+    raw = _fixture()
+    configured = dollar_bar_crash_reversal(raw, -575, -0.5, 60, bar_interval_seconds=900)
+    column = 'dollar_bar_crash_reversal_position'
+    assert configured[column].head(raw.height - 1).equals(_candidate(raw)[column].head(raw.height - 1))
+    assert configured[column].sum() >= 220
+    for end in (raw.height // 3, raw.height // 2, raw.height - 1):
+        prefix = dollar_bar_crash_reversal(raw.head(end), -575, -0.5, 60, bar_interval_seconds=900)
+        assert prefix[column].equals(configured[column].head(end))
+    with pytest.raises(ValueError, match='verified regular'):
+        dollar_bar_crash_reversal(raw, -575, -0.5, 60, bar_interval_seconds=3600)

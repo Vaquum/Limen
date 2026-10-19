@@ -8,7 +8,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.backtest.trade_contract import JsonValue, TradeInputs, json_value, source_binding
+from limen.backtest.trade_contract import JsonValue, TradeInputs, contract_digest, json_value, source_binding
 from limen.backtest.trade_execution import trade_execution
 from limen.experiment._allocation import AllocationContext, OpportunityLabels
 from limen.experiment._prepare_trade_context import normalize_observations
@@ -102,7 +102,8 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
         membership = frame['datetime'].dt.epoch('ns').to_list()
         bindings.append({'block': block_id, 'start_ns': block_start, 'end_ns': block_end,
                          'fit_prefix_rows': start - 1 if isinstance(manifest, MLManifest) else 0,
-                         'target': target_binding, 'members': json_value(membership),
+                         'target': target_binding, 'member_count': len(membership), 'membership_digest': contract_digest({'members': membership}),
+                         'primary_digest': contract_digest({'predictions': decisions.tolist()}),
                          'features': source_binding(meta, f'fold:{block_id}', block_start, block_end, 1, 'causal_oof_primary_features').checksum})
         for local, decision in enumerate(decisions):
             if decision == 0:
@@ -121,7 +122,7 @@ def training_opportunities(context: AllocationContext, *, folds: int, validation
     rows = pl.DataFrame(labels)
     feature_frame = pl.concat(features)
     return OpportunityLabels(rows, feature_frame, {'folds': bindings, 'candidate_exposure': min(1, context.policy.max_exposure),
-        'ordered_completion': json_value(rows.select('opportunity_id', 'decision_row_id', 'label_available_ns').to_dicts()),
+        'ordered_completion': contract_digest({'rows': json_value(rows.select('opportunity_id', 'decision_row_id', 'label_available_ns').to_dicts())}),
         'economics': json_value(context.policy), 'raw_train': source_binding(raw, 'original_train', int(prices['start_ns'][0]), int(prices['available_at_ns'][-1]), 1, 'original_training_source').checksum})
 
 

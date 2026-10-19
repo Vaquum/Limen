@@ -148,6 +148,7 @@ class MetaAllocationModel(ReferenceModel):
                                     'allocation_training_completed': int(self.training_rows['available'].sum()),
                                     'allocation_training_unavailable': int((~self.training_rows['available']).sum())}
         alignment = cast(dict[str, object], data['_alignment'])
+        alignment.pop('model_outputs', None)
         if data.get('_record_model_outputs'):
             alignment['model_outputs'] = {'architecture': 'meta_allocation', 'primary': json_value({key: np.asarray(value).tolist() for key, value in cast(Mapping[str, object], output['primary']).items()}),
                                           'take_probability': json_value(np.asarray(output['take_probability']).tolist()),
