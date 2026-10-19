@@ -1,526 +1,268 @@
 # Documentation system contract
 
-This page defines the documentation product proven in Limen and the contract for reproducing it in other production repositories. It separates the portable system from Limen-specific content so repositories share standards, composition, behavior, and visual language without inheriting Limen claims.
+Limen's documentation is a research book built around two complete, executable projects: Python Research and Compiled Research. Chapters develop those projects; Reference and Developer provide the detail needed to use and maintain them.
 
-`MUST`, `SHOULD`, and `MAY` identify required, recommended, and optional parts of the portable contract. A requirement listed as a current gap is not yet a Limen guarantee and blocks extraction of the shared system.
+This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md#research-interface-contract) establishes the research interfaces. Documentation must describe their current behavior and make the evidence behind its examples inspectable.
 
 ## Prerequisites
 
-- a Limen repository checkout with the existing project `.venv`
-- Python development and data dependencies for the semantic documentation gate
-- Node.js 20 or later
-- docs-site dependencies installed from the committed lockfile with `npm ci`
+- a Limen checkout and its Python development environment
+- the dependencies required by each example being changed
+- Node.js 20 or later and `npm ci` in `docs-site`
 
-The equivalent fresh Python installation is `.[dev,data]`. CI installs the hashed research environment from `requirements/ci/research-env.txt` and then installs Limen without dependency resolution.
+For the existing source checks, a fresh Python installation is `.[dev,data]`. Research CI uses the hashed dependencies in `requirements/ci/research-env.txt`. Record the interpreter, platform and dependency versions used for execution; a local installation within the package's supported ranges is not the same environment as the Linux CI lock.
 
-## Quality bar
+## Implementation status
 
-Documentation is release-ready only when it is:
+The book contract is the agreed target. It does not imply that the reader, comprehensive projects or publication checks already exist.
 
-- correct against current source, exports, templates, workflows, and runtime behavior
-- complete across the maintained public Markdown corpus
-- coherent from product entry through workflows, reference, maintenance, and package boundaries
-- runnable in the dependency environment each example declares
-- consistent in terminology, units, page roles, links, composition, and visual treatment
-- accessible and usable across keyboard, desktop, mobile, light, and dark contexts
-- secure and discoverable through correct headers, canonical metadata, sitemap, and robots behavior
-- mechanically protected in proportion to the claim through tests, lint, link checking, and the rendered-site build
+| Delivery | Responsibility |
+|---|---|
+| [Contract](https://github.com/Vaquum/Limen/issues/1051) | Define the book, its example and evidence obligations, and the transition from current documentation. |
+| [Reader and projects](https://github.com/Vaquum/Limen/issues/1052) | Build the reader inside Limen, both comprehensive projects, their semantic tests and bindings, and the first complete chapter. |
+| [Complete book and publication](https://github.com/Vaquum/Limen/issues/1047) | Complete the maintained corpus and reference coverage, prove released-package reproduction, activate validated publication and retain rollback. |
 
-## Portability boundary
+The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.mjs` maps maintained sources into Overview, Guides, Reference, Developer and Packages. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the static build. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
 
-The reference has two layers.
+Most existing examples do not yet have execution, output and publication provenance. Browser, accessibility, visual and performance acceptance must become reproducible evidence in the reader delivery. Keep these gaps explicit until the corresponding checks exist and pass. The first complete chapter is a checkpoint; it does not complete the book.
 
-| Layer | Owns | Must not own |
+## Ownership
+
+Limen owns the reader implementation, content, examples, semantic tests, evidence format and publication adapters. Implement them in this repository. The design system is a visual reference. The existing `mikkokotila-com` and `eightchord-com/reader` implementations are references for reading, code and navigation behavior; identify the revision and ownership of any source actually reused.
+
+Keep rendering, product content and research proof separate within Limen. Content supplies identity, routes, chapter order and example bindings. The reader presents them. The execution checks establish what ran and what it returned. Presentation must not manufacture or certify research evidence.
+
+Later reuse across Vaquum products follows the proved Limen implementation. This delivery requires no new shared package, private-repository build dependency or change in the reference repositories. Extraction and other-product adoption are subsequent work.
+
+## Research interfaces
+
+Use the README's names and distinction throughout the book.
+
+| Interface | Research responsibility | Inference handoff |
 |---|---|---|
-| Shared documentation system | information architecture, page composition, source-to-route invariants, visual tokens, interaction behavior, quality gates, parity evidence, rollout, and drift control | product names, product claims, product routes, repository coordinates, package inventories, risk wording, or narrative sequence |
-| Product profile | product identity, tagline, repository URL, site origin and base path, source inventory and routes, canonical terminology, product narrative, dependencies, examples, risk boundary, and ownership | shared rendering logic, shared CSS behavior, shared acceptance rules, or duplicated copies of the shared system |
+| Python Research | Callers own their data, preparation, models, backtesting and selection in ordinary Python. Custom SFD `params`, `prep` and `model` functions use UEL with caller-controlled search through MSQ. | Wrap evaluated fitted state with `Sensor.from_model` or `Sensor.from_python`; compose selected Sensors with `Cohort.from_python`. |
+| Compiled Research | Callers adopt the `Manifest` contract through `MLManifest`, `RuleBasedManifest`, `CompiledSFD` or the CLI. Limen applies the configured pipeline checks and records their evidence. | Reconstruct selected recorded rounds or qualified folds through Trainer and bind compatible Sensors into a Cohort. |
 
-The current Limen implementation is the reference behavior, not yet a reusable package boundary. Product-specific values remain distributed across `docs-site/product-docs.json`, `docs-site/docusaurus.config.js`, `docs-site/scripts/assemble-docs.mjs`, `docs-site/src/css/custom.css`, `docs-site/src/worker.js`, and `docs-site/wrangler.jsonc`. Extraction happens only after Limen passes the parity protocol and the remaining gaps in this page are closed.
+Calling a Manifest from Python remains Compiled Research. UEL, MSQ, indicators, features, targets and scalers are shared machinery; their presence does not identify an interface.
 
-A shared package or preset is portable only when:
+Show both interfaces wherever the subject applies to both. Explain who owns each preparation, evaluation or evidence boundary. Caller-supplied Python declarations do not create compiled provenance. A compiled check does not prove arbitrary feature causality, data correctness or future performance.
 
-- its configuration schema can express every product-specific value
-- its fixtures contain no `Limen`, `Vaquum`, `Vaquum/Limen`, `/limen/`, or Limen source-path literals
-- a product can upgrade the shared version without copying or editing shared files
-- product profiles cannot disable required gates without an approved, time-bounded exception
-- one build path remains after migration; the old path is removed after rollback expiry
+An implementation limitation must remain an implementation limitation. Do not rename it methodological inapplicability. If a documented claim exposes a research defect, keep the claim incomplete and route a separately scoped repair; documentation changes must not silently alter the research contract.
 
-## Limen reference profile
+## The book and its appendices
 
-This profile is the frozen interpretation of the current Limen case. Other repositories replace these values; they do not generalize them into the shared layer.
+The main book carries one research question from recorded observations to selected, reusable Sensors and Cohorts. Guides become part of that explanation. Keep Reference and Developer available for direct lookup and link to them at the point where detail becomes useful.
 
-| Property | Limen value |
+| Part | Reader task |
 |---|---|
-| Product | `Limen` |
-| Product repository | `https://github.com/Vaquum/Limen` |
-| Site origin | `https://docs.vaquum.fi` |
-| Base path | `/limen/` |
-| Edit branch | `main` |
-| Maintained Markdown sources | 69: root product home, 42 files under `/docs`, and 26 package `README.md` files under `/limen` |
-| Rendered sitemap URLs | 76: 69 maintained pages, 6 generated category indexes, and search |
-| Top-level sections | Overview, Guides, Reference, Developer, Packages |
-| Site generator | Docusaurus 3, locked by `docs-site/package-lock.json` |
-| Hosting | Cloudflare Worker with static assets |
-| Local search | `@easyops-cn/docusaurus-search-local` |
-| Theme | Vaquum light/dark design in `docs-site/src/css/custom.css` |
-| Source-to-route authority | `docs-site/scripts/assemble-docs.mjs` |
+| Book | Understand the research decisions, run the projects, inspect their results and continue to the next decision. |
+| Reference | Find names, signatures, parameters, defaults, units, outputs, errors, supported combinations and optional dependencies. |
+| Developer | Change, test, release, deploy and maintain Limen and the evidence behind the projects. |
 
-These counts are acceptance baselines, not universal targets. A repository may have a different corpus size while preserving the same ownership model, five-section architecture, page contracts, rendering behavior, and gates.
+Package READMEs retain their ownership, public entry points and adjacent boundaries. Place their navigation with the reference material rather than requiring a separate top-level section.
 
-## Source ownership
+Maintain one explicit source-to-route map. Every maintained source has exactly one canonical page and route. Generated contents, indexes and search results route to those pages. Count the actual corpus: root `README.md`, maintained Markdown under `docs/`, and package READMEs under `limen/`. A fixed page count is not a completeness test.
 
-- [README.md](../../README.md) is the product home and first-success path.
-- [docs/README.md](../README.md) is the public task router.
-- `/docs` owns public concepts, workflows, guides, and reference.
-- `/docs/Developer` owns contributor and maintainer guidance.
-- `README.md` files under `/limen` explain package ownership, boundaries, and entry points; they route to canonical docs rather than duplicating them.
-- `docs-site/scripts/assemble-docs.mjs` is the complete source-to-route map for the hosted site.
-- `.generated`, `.docusaurus`, and `build` are derived outputs and MUST NOT be hand-authored or committed.
+Every maintained page connects to one or both example projects. A research page uses the relevant source, scenario or result. A developer page connects through maintaining, proving or releasing those projects. A contributor-only task does not need an artificial research snippet. Shared applicable capabilities show both interfaces; a tag or repeated boilerplate link alone does not establish coverage.
 
-Author a claim once whenever practical. Secondary pages summarize and link to the canonical explanation.
+### Chapter composition
 
-## Information architecture
+Begin with the decision the reader needs to make. Explain its meaning and consequences in connected prose, then develop the relevant part of the projects. Show what the execution returned, explain the result's limits and lead into the next decision.
 
-The site presents five top-level sections:
+Keep prerequisites, inputs, commands, outputs and failure boundaries close to the example they qualify. Link a partial excerpt to its complete project and required earlier state. Use headings for the explanation's structure; do not turn every chapter into the same checklist.
 
-| Section | Responsibility |
+### Reference and developer composition
+
+A reference page names its public surface, import pattern and applicable interfaces before giving signatures, defaults, units, returns and errors. Its concrete examples come from the projects. Preserve depth for registries, Manifest fields, CLI commands, model families and inference contracts.
+
+A developer page states its authority, prerequisites, owned surfaces, executable process, required evidence and failure conditions. Keep build and deployment mechanics in this appendix. They belong in the main book only when they affect a reader's research decision.
+
+## Writing
+
+The README's language must remain coherent across the whole system.
+
+- Lead with current behavior and the reader's decision.
+- Use ordinary English and exact domain terms. Prefer concrete verbs and one claim per sentence.
+- Keep Python Research and Compiled Research equally explicit. Do not present YAML or the CLI as the universal first path.
+- Explain the methodology, observable result and responsibility boundary together.
+- Use exact public names, commands, paths, values, units and return fields where they carry meaning.
+- Introduce an optional dependency before the first example that needs it.
+- Keep measurements tied to their data and environment. Do not turn them into performance promises.
+- Distinguish implemented, historical, planned and unproved behavior.
+- Author each explanation once; summarize and link from adjacent pages.
+- Use relative links between maintained source documents.
+- Omit praise, intensifiers, ornamental transitions and claims of capability unsupported by source and execution.
+
+The book may be extensive. Each paragraph, table, example and visual must earn its place through the information it carries.
+
+## Two executable projects
+
+Maintain the canonical projects under `docs/examples/python-research/` and `docs/examples/compiled-research/`. They are complete public-interface programs, with documented installation, recorded inputs, entry points and observable outputs. They are not a new research language.
+
+Use named scenarios for choices that cannot coexist in one run. The main path remains readable; scenarios provide the breadth needed for the interface. The coverage catalogue must account for public exports, registries, Manifest fields, CLI commands, supported families and combinations, and the pages explaining them. Preserve the existing public-export, reference and embedded-version checks alongside this catalogue until equivalent protection is demonstrated.
+
+The Python project must show caller-owned preparation, fitting, backtesting, search and selection, followed by reuse of the evaluated fitted state. The Compiled project must show the declared pipeline, validation and execution, recorded results, reconstruction and compatible cohort binding. Include supported recovery, walk-forward, holdout, calibration and execution scenarios where their data and evidence are available. Distinguish caller-owned assessment from guarded project holdout, and ordinary members from qualified recorded folds.
+
+Use recorded data only. Declare each input's origin, SHA-256 digest, relevant time range, row selection and availability clocks. A missing recorded input or optional environment is an unproved boundary, not permission to invent data or output. Real TabPFN model validation remains unproved while the execution tracked in [#628](https://github.com/Vaquum/Limen/issues/628) is absent; a skipped test cannot support a successful-run claim.
+
+### Acquisition and execution
+
+Publish a version-pinned bundle containing the projects and recorded inputs. Document the matching released package, extras, working directory and exact entry-point commands. Examples and fixtures are not assumed to be inside the installed wheel.
+
+Tests run those commands and sources unchanged. Accept recorded-input paths as documented arguments or resolve them from a documented working directory. Do not rewrite a manifest, replace a model or monkeypatch a data loader to create an undisclosed test version. Assertions and observation of fitting are permitted; substituting different research behavior is not.
+
+Prove the installation outside the source checkout. Verify the imported distribution and location, package version, input digests, path behavior and meaningful results. Candidate checks execute the candidate wheel. Production validation executes the actual released wheel; an editable installation plus a version-availability lookup does not establish that result.
+
+## Examples and their bindings
+
+Classify every Python, YAML, JSON and Bash fence. Its role determines the proof it needs.
+
+| Role | Obligation |
 |---|---|
-| Overview | product boundary, system story, task routing, and roadmap |
-| Guides | end-to-end jobs and operational workflows |
-| Reference | interfaces, schemas, defaults, outputs, and edge cases |
-| Developer | contribution, documentation, release, packaging, security, and maintenance |
-| Packages | module ownership, public entry points, and nested package boundaries |
+| Executable project excerpt | Exact named region of canonical project source, with scenario, prerequisites and executing semantic tests. |
+| API signature | Current public source and signature; clearly presented as reference, not a runnable workflow. |
+| Partial fragment | Explicit earlier state and full-project route; no claim that the fragment runs alone. If it comes from an executed project, retain that binding. |
+| Command | Current arguments and dependency/working-directory context; execute commands used to establish a workflow claim. |
+| Observed output | Retained bytes from an identified successful execution and its declared comparison rules. |
 
-Top-level categories are collapsed by default. Nested package READMEs live under a collapsed Internal packages group so full corpus coverage does not flatten the sidebar.
+Keep standalone Python parseable; identify non-standalone fragments explicitly. Informational fences do not escape source checking or establish execution. Runnable examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
 
-Every maintained source MUST map to exactly one destination and stable public route. Every route MUST have one primary page role. Category indexes are generated navigation surfaces, not alternate canonical explanations.
+Authored and displayed executable excerpts must equal their canonical source regions. Tests execute that source, compare the excerpts and reject a missing region, duplicate identity, wrong interface, stale binding or changed display. Test deliberate divergence so the guarantee itself has evidence.
 
-## Narrative spine
+Assertions must establish the promised behavior. Depending on the claim, this includes chronological separation, fitting and selection cutoffs, comparable evaluation rows, independent cost/timing calculations, retained fitted state, reconstruction, availability, causal prefixes and meaningful failure behavior. Successful process exit alone is insufficient.
 
-Major Limen pages agree on this product-specific sequence:
+Retained output displayed in the book must match its evidence record exactly. Re-executed numerical values use declared per-metric tolerances and deterministic settings in the recorded environment. Record timestamps, attempt identities and timing measurements as run evidence; do not require fresh executions to reproduce a previous run's incidental identifiers. Explain why a reader's environment can produce different digits and what invariant must still hold.
 
-1. `HistoricalData` or an external compatible frame supplies Bitcoin market data.
-2. Optional data bars, indicators, features, transforms, scalers, and targets define the research surface.
-3. A YAML manifest is the default operator-facing experiment definition.
-4. The CLI validates, profiles, dry-runs, and runs that manifest.
-5. CLI and Python/SFD execution both use Universal Experiment Loop with MSQ. Python callers supply a search strategy; persistence and adaptive feedback are optional. Legacy execution belongs in compatibility reference material.
-6. Log, benchmark, and backtest surfaces explain experiment outcomes.
-7. Trainer replays selected rounds with their original manifest configuration, validates metrics, and returns Sensors.
-8. Cohort binds selected Sensors into a multi-member inference surface.
-9. Trade decisioning and execution occur outside Limen.
+## Source and current validation
 
-Every adopting repository MUST define its own sequence in its product profile. Shared templates may require a narrative spine but MUST NOT supply Limen's sequence.
+Every displayed example exposes its immutable source identity and separate current validation. A source hash does not prove compatibility with a later package.
 
-## Page composition
-
-Composition is the required order of information, not a demand for identical headings. A page may omit a non-applicable element only when the omission is explicit.
-
-### Product home
-
-1. product identity and one-sentence value
-2. owned and excluded product boundary
-3. current capabilities
-4. minimum install and first successful workflow
-5. observable outputs or artifacts
-6. risk boundary
-7. routes by reader task
-8. contribution, support, security, citation, and license
-
-### Docs hub
-
-1. product in one page
-2. start routes grouped by reader job
-3. product narrative sequence
-4. complete top-level docs map
-5. owned and excluded product boundary
-6. explicit next routes
-
-### Guide
-
-1. job, outcome, and current scope
-2. prerequisites or an explicit statement that none are required
-3. ordered procedure with at least one concrete command or example
-4. expected output, artifact, or observable result
-5. failure boundaries and material edge cases
-6. next task
-
-### Reference
-
-1. covered surface and abstraction boundary
-2. public names and import pattern
-3. signatures, parameters, defaults, returns, units, and side effects
-4. minimum concrete example
-5. edge cases, errors, and optional dependencies
-6. relationship to adjacent surfaces
-7. next reference or workflow
-
-### Developer page
-
-1. purpose and authority
-2. prerequisites
-3. scope and ownership boundaries
-4. executable process or checklist
-5. required proof and failure conditions
-6. review or maintenance boundary
-7. related maintainer routes
-
-### Package README
-
-1. package path and one-sentence responsibility
-2. canonical public docs
-3. what the package owns and does not own
-4. source-true public entry points
-5. adjacent packages and optional dependencies
-6. compact source-tree orientation when it materially helps navigation
-7. operational caveats
-8. next routes
-
-## Visual system
-
-`docs-site/src/css/custom.css` is the visual authority. Adopting repositories MUST consume the same shared tokens and component rules; product-specific branding enters through an explicit profile or documented token override.
-
-### Color tokens
-
-| Token | Light | Dark | Role |
-|---|---|---|---|
-| `--vaquum-paper` | `#F8F8F8` | `#121212` | page and navigation background |
-| `--vaquum-paper-2` | `#F3F3F3` | `#231F20` | active, code, and secondary surface |
-| `--vaquum-ink-deep` | `#121212` | `#F8F8F8` | headings and strongest text |
-| `--vaquum-ink` | `#231F20` | `#F3F3F3` | body and link text |
-| `--vaquum-ink-soft` | `#444444` | `#D3D3D3` | secondary text |
-| `--vaquum-ink-mute` | `#808080` | `#808080` | tertiary labels |
-| `--vaquum-rule` | `#D3D3D3` | `#444444` | dividers and borders |
-| `--vaquum-accent` | `#DC65A6` | `#EAA3C8` | active and hover state |
-| `--vaquum-coral` | `#F16068` | `#F16068` | code strings |
-| `--vaquum-lime` | `#DDD941` | `#DDD941` | success |
-| `--vaquum-cyan` | `#C4E8F4` | `#C4E8F4` | information and code constants |
-
-### Typography and geometry
-
-| Element | Contract |
+| Record | Required identity |
 |---|---|
-| Body | IBM Plex Sans intent, `17px`, `1.55` line height |
-| Monospace | IBM Plex Mono intent, `14.5px`, `1.65` line height |
-| Reading column | `680px` maximum |
-| H1 | `44px`, weight `600`, `1.1` line height, maximum `28ch` |
-| Intro after H1 | `19px`, maximum `52ch` |
-| H2 | `13px`, weight `600`, uppercase, `0.08em` tracking, top rule |
-| H3 and H4 | `13px`, weight `600`, uppercase, `0.08em` tracking |
-| Navigation and sidebar | `13px` |
-| Breadcrumb and pagination label | `11px`, uppercase, `0.14em` tracking |
-| Navbar | `56px` high |
-| Desktop sidebar | `320px` wide |
-| Corners and shadows | zero radius, no shadow |
-| Code block | secondary surface with a `3px` accent left rule |
+| Source | Source file and region, content digest, immutable commit, and the latest merged PR changing that file. |
+| Validation | Executed source tree, package version and wheel digest, interpreter/platform/dependency identity, recorded-input digests, scenario and test identities, assertions, observed output and comparison rules. |
+| Publication | Merged release/tree, successful validation identity, retained bundle digests and the deployed build. |
 
-The responsive breakpoint is `996px`. Below it, desktop sidebars disappear, the navigation toggle appears, content padding becomes `24px 16px 64px`, and tables scroll horizontally rather than forcing viewport overflow.
+Limen owns the versioned schema and checker under `docs/examples/`. The reader consumes their presentation data. It must not invent a merged PR, infer a passed test from a code fence or attach an old successful result to a changed package.
 
-### Interaction contract
+Generate source footers from actual Git and merged-PR history during the build. Do not commit a source file's own final commit hash into that file. A candidate preview identifies unmerged source explicitly. Production requires the real merged changing PR and passing validation for the package and tree being published.
 
-- Navbar order is Home, Overview, Guides, Reference, Developer, Packages, then GitHub.
-- Light, dark, and system theme choices are supported.
-- Search is local, keyboard reachable, and links to a complete search page.
-- Top-level categories start collapsed; the current section expands.
-- The desktop docs sidebar is hideable.
-- Mobile uses a navigation drawer and collapsible on-page table of contents.
-- Breadcrumbs, heading anchors, previous/next pagination, copy-code controls, and a skip-to-content link remain available.
-- Every page's edit link targets its real source under repository `/edit/main/`.
-- Blog and standalone pages are disabled; documentation owns the root route.
+Keep the source commit/PR visible with each example. Make the complete project, input, environment, test and retained output evidence reachable from it without an authenticated browser session.
 
-The IBM Plex faces are the intended typography. The current production CSP does not allow the external Google Fonts import or font origin, so a system fallback may render in production. This is a known pre-extraction defect, not an allowed design variation.
+## Changing examples or research behavior
 
-## Writing rules
+A change to project code, preparation, numerical behavior or displayed results requires the corresponding documentation, bindings and semantic proof to change together.
 
-- Lead with current behavior and reader impact.
-- Give each page one primary role and one primary audience task.
-- Prefer exact commands, paths, values, units, signatures, return fields, and observable results over abstractions.
-- Use American English for shared prose: `artifact`, `behavior`, `optimization`.
-- Use canonical component capitalization: `Single-File Decoder`, `Reference Architecture`, `HistoricalData`, `Universal Experiment Loop`.
-- Use `python` fences only for standalone parseable code. Use `python-fragment` for fluent-chain fragments or partial code.
-- State required extras before the first example that imports an optional dependency.
-- Do not present local measurements as stable API guarantees.
-- Do not describe planned, historical, or external behavior as current product behavior.
-- Use relative links between maintained source documents so assembly can rewrite them.
-- End task-oriented pages with an explicit next route.
+1. Identify affected projects, scenarios, source regions, pages and results in the coverage catalogue.
+2. Include their paths in the slice's Surfaces before implementation.
+3. Change the canonical source and synchronized excerpts; regenerate observed results through execution.
+4. Run the required proof in its declared environment and inspect the changed assertions and results.
+5. Publish only evidence for the exact candidate or release being judged.
+6. Follow the repository's version, CHANGELOG and citation requirements even when the visible change is documentation.
 
-## Source-backed claims
+Binding tests must request current-run execution evidence themselves. Running one test in isolation cannot depend on another test having already populated a file. Comparing authored output with a stale committed output alone does not establish freshness.
 
-Use the narrowest authoritative source:
+## Build and evidence flow
 
-| Claim | Limen authority |
+The existing required `PR Checks Docs Site` context will own the comprehensive example proof and reader checks. Extend its job in this order:
+
+1. Identify the checked-out revision/tree and build the candidate wheel.
+2. Install Python 3.12 and the hashed research dependencies; install the candidate wheel in the isolated execution environment.
+3. Execute the canonical projects and semantic/binding tests under `docs/examples/tests/`, producing evidence for those exact inputs.
+4. Run Node's source, route, lint, dependency and reader checks against that same-job evidence.
+5. Build and browser-check the site, retaining the execution and browser artifacts.
+
+Missing, failed, skipped required proof or wrong-revision evidence fails the check. Do not pass evidence through an independent workflow that can race the build. Include the browser runner, Chromium and system dependencies in the locked/provisioned toolchain. Audit the complete shipped dependency graph through Limen's lockfile.
+
+Keep comprehensive docs execution outside default `tests.run` discovery. The package's required test, coverage and 240-second runtime obligations remain unchanged. The measured suite executes on Python 3.12; separate runtime and coverage jobs use Python 3.10 to read its artifacts. The initial `fb5dc4f2` baseline measured 252.659 seconds against 240 seconds. Isolating new docs work does not repair or waive that failure, nor establish the health of a later revision; judge the actual candidate's checks.
+
+## Visual and motion contract
+
+The selected authority is the experience style guide at `http://127.0.0.1:4328/`, inspected from reference revision `f683f91`. It supplies the visual language, not an implementation destination or build dependency. The reader delivery must commit screenshots and a token, typography, geometry and motion snapshot in Limen so the local server and mutable reference branch are not continuing dependencies.
+
+### Color and type
+
+| Role | Value |
 |---|---|
-| import or export | package `__init__.py` and an import smoke test |
-| callable arguments or defaults | current function or class signature |
-| YAML field or template | schema, rules, compiler, and bundled template |
-| reducer or scaler name | current registry |
-| result field or artifact | implementation and focused test |
-| package dependency | `pyproject.toml` and locked CI environment |
-| release behavior | current workflow and script |
-| hosted route | assembler map and Docusaurus build |
-| visual value | `docs-site/src/css/custom.css` |
-| deploy behavior or header | `docs-site/src/worker.js`, `docs-site/wrangler.jsonc`, and a production HTTP response |
+| Navy / raised navy | `#142038` / `#1B2A49` |
+| Stock / sheet | `#F4F2EC` / `#FBFAF6` |
+| White / ink | `#F7F6F2` / `#0E1A2B` |
+| Muted / silver | `#5E6977` / `#AAB3BD` |
+| Gold / gold ink | `#DFB967` / `#805A1B` |
+| Syntax blue / green | `#AFCBE3` / `#D1DCC6` |
+| Profile labels | `#8F9AA7` |
 
-When prose and source disagree, fix the prose or explicitly route a separate behavior defect. Documentation work MUST NOT silently change runtime contracts.
+Self-host Archivo Variable and IBM Plex Mono under the site's CSP. Display uses Archivo weight 200, width 125%, `.04em` tracking and `.95` line height. Prose uses Archivo weight 400, normal width, `17px` with `1.6` line height and a reading measure up to `60ch`. Code uses Plex Mono weight 400, `14px / 22px`, exact indentation and disabled ligatures. Labels use Plex Mono at `11px`, weight 500 and `.14em` tracking.
 
-## Examples
+The composition uses a centered field up to `1320px`, `20px` side gutters, an `8px` base unit, fine rules and square corners. A five-to-seven split places explanation beside evidence where the content calls for it. Stack the split at the reference's `1024px` boundary and adapt the inspector at `640px`; prove the book's actual navigation and overflow at those sizes.
 
-Examples satisfy the level they imply:
+The fixed navy/paper composition replaces the old light/dark/system theme-switch requirement. Test the same composition under both OS color preferences and forced colors. Preserve readable text, syntax, selection and visible focus rather than relying on a theme preference to supply contrast.
 
-- syntax examples parse
-- import examples import in the declared extras environment
-- command examples use current argument order and names
-- runnable workflows complete against a bounded fixture or isolated environment
-- output examples contain only fields the implementation can produce in that mode
-- copied examples state destructive, costly, networked, or long-running effects before execution
+### Motion and reading
 
-Base `Manifest` is an abstract interface whose `prepare_data()` raises `NotImplementedError`; runnable examples instantiate `MLManifest` or `RuleBasedManifest`.
+Motion must explain continuity between the selected object, its detail and the reader's return. Keep values and identities stable through the transition. Use subtle parallax only where it makes that relationship clearer. Long-form prose and code remain stable while being read.
 
-## Links and route policy
+The reference uses one damped spring with stiffness 180 and damping 20; retargeting preserves position and velocity. Its selected entry/return timings are 2400/1600 ms and local transitions use 220 ms. Apply these values to the corresponding interaction, not indiscriminately to every control. Wheel, touch and navigation input interrupt camera travel. Scrolling alone must not open an unrelated continuation.
 
-- Local links and fragments resolve in source and in the assembled site.
-- Public links use the canonical route shape without an optional trailing slash.
-- Every assembled page receives a `custom_edit_url` targeting its real source.
-- Repository files not mapped as docs may link to GitHub; maintained documentation is assembled instead of silently falling back to a blob link.
-- Published routes are stable API. A changed or removed route requires an explicit redirect, link migration, sitemap update, and parity exception.
-- External links require automated status checking before cross-repository rollout; current Limen gates validate local links and anchors only.
+Reduced motion reaches the same content, selection and focus directly. Keyboard controls expose the same information as pointer controls. The reference's visible focus is `2px` with a `3px` offset. Static prose, source and navigation remain readable without JavaScript.
 
-## Assembly and configuration
+## Navigation and saved position
 
-| Surface | Responsibility | Portability status |
-|---|---|---|
-| `docs-site/product-docs.json` | product identity, tagline, version label, base path, section names, repository URL | partial product profile |
-| `docs-site/scripts/assemble-docs.mjs` | complete source map, routes, category metadata, front matter, link rewriting | shared algorithm with Limen-specific map and URLs still embedded |
-| `docs-site/docusaurus.config.js` | generator, metadata, search, navigation, footer, syntax highlighting, theme loading | shared configuration with some Limen and Vaquum literals |
-| `docs-site/sidebars.js` | autogenerated navigation | shared |
-| `docs-site/src/css/custom.css` | visual tokens, typography, components, responsive behavior | candidate shared theme |
-| `docs-site/package.json` and lockfile | commands and deterministic JavaScript dependency graph | candidate shared toolchain |
-| `docs-site/src/worker.js` | base-path routing and security headers | shared behavior with Limen path embedded |
-| `docs-site/wrangler.jsonc` | Cloudflare project, assets, domain, compatibility date | product deployment profile |
-| `tests/test_docs_surface.py` | source inventory, semantics, links, anchors, examples, versions, exports | shared test framework with Limen assertions |
-| `.github/workflows/pr_checks_docs_site.yml` | dependency install, audit, and required site check | candidate shared CI |
+The reader must support sequential reading, direct reference lookup, search and movement between applicable Python and Compiled explanations. Keep global parts, chapter contents and current passage distinct. Source edit links target real maintained files.
 
-`docs-site/scripts/assemble-docs.mjs`:
+A reference excursion preserves its originating chapter, passage, interface and keyboard focus. Returning must restore those, not merely reopen the chapter at its top. Browser history and explicit return controls must agree.
 
-1. removes and recreates the generated docs directory
-2. maps every maintained source to one destination and route
-3. writes source-aware front matter and edit URLs
-4. rewrites relative documentation links to assembled destinations
-5. preserves repository links only for non-doc files
-6. normalizes source Markdown for MDX
-7. creates collapsed category metadata
+Saved reading position is local and scoped by product and content identity. Prove save/reload, isolation between products on one origin, and changed or removed passages. A stale position must not silently restore into unrelated text. Deep links retain their own target. Notes, annotations, accounts and reader analytics are outside this delivery.
 
-The source inventory test fails if a maintained Markdown source is added without a route or if the map references a missing source.
+Code controls preserve exact source when copying, exclude line-number gutters, retain indentation and expose language, full source and provenance. Long code and tables must remain usable on a phone without horizontal page overflow.
 
-## Delivery, security, and discovery
+## Routes, security and discovery
 
-The production contract includes:
+During this prelaunch restructuring, routes and anchors may change deliberately. Blanket redirects are not required. Migrate internal links and ensure source links, anchors, navigation, search, canonical metadata and sitemap all use the same map. Once a route is intentionally retained, it must resolve to its declared content.
 
-- one canonical origin and normalized base path
-- canonical and language-alternate metadata for every rendered page
-- Open Graph and Twitter summary metadata from the product profile
-- a sitemap containing every public page and generated category index
-- root and bare-base redirects to the canonical product path
-- HSTS, CSP, permissions, referrer, content-type, and frame headers on assets, redirects, and errors
-- a `404` response outside the owned base path
-- a valid robots resource that points crawlers to the canonical sitemap
+Maintain one canonical origin and product base path. Limen owns `/limen/`; shared-host routing, root resources, robots and sitemap ownership must be explicit. A product adapter must not take over another product's prefix. Prove status codes, redirects and errors through the real deployment adapter.
 
-The current Worker redirects `/robots.txt` to `/limen/robots.txt`, but the built site does not provide that target. The resulting `404` is a known pre-extraction defect.
+Preserve HSTS, CSP, permissions, referrer, content-type and frame protections. Build metadata and local search from the canonical content map. Verify every public route, sitemap/robots agreement, source edit target and emitted asset. Check external destinations separately from local links; do not claim that local link validation establishes external availability.
 
-## Verification matrix
+## Publication and rollback
 
-| Concern | Current Limen mechanism | Status before extraction |
-|---|---|---|
-| maintained source inventory and one-to-one routing | `tests/test_docs_surface.py` | automated |
-| source-linked semantic assertions | `tests/test_docs_surface.py` | automated |
-| local links and anchors | `tests/test_docs_surface.py` plus Docusaurus broken-link failure | automated |
-| Python, YAML, JSON, and Bash fence syntax | `tests/test_docs_surface.py` | automated |
-| release and embedded version consistency | `tests/test_docs_surface.py` | automated |
-| Markdown style | `npm run lint` | automated |
-| assembly and production build | `npm run check` | automated |
-| JavaScript production dependency advisories | `npm run security:audit` in Docs Site Checks | automated |
-| full product regressions | `python -m tests.run` | automated |
-| clean first-run installation | required when onboarding or dependency claims change | conditional proof |
-| desktop/mobile and light/dark rendering | manual rendered-site inspection | must become reproducible evidence |
-| local search, navigation, edit links, and copy controls | manual browser inspection | must become reproducible evidence |
-| production redirects, headers, sitemap, and robots | manual HTTP inspection | robots defect open |
-| external URL health | none | adoption blocker |
-| accessibility audit | none beyond semantic build output and manual inspection | adoption blocker |
-| visual regression | none beyond manual screenshots | adoption blocker |
-| performance budget | none | adoption blocker |
+The existing Cloudflare Git-integrated build runs independently of GitHub checks. Keep it through the reader checkpoint. Before merging the first removal of the production renderer, prepare and activate its replacement, record the actual cutover and disable the independent deployment path. Required credentials or dashboard actions must be resolved at that concrete deployment boundary.
 
-The portable system MUST automate the four adoption blockers before it is declared reusable. Other repositories MUST NOT weaken those gates while claiming the same standard.
+Production publication follows successful package publication. Resolve the merged release and available wheel, obtain the pinned example/input bundle, and execute the documented commands against that wheel outside the source checkout. Build the site from the resulting exact-release evidence. A push to `main` alone is not publication approval.
 
-## Required commands
+Assemble evidence and attach bundles through deterministic code, independently of release-note prose. Retain content-addressed source, input, output, validation and site bundles as public GitHub Release assets and static evidence. Actions artifacts may supplement diagnostics but are not sufficient for anonymous durable access. Verify bundle identities rather than assuming a filename is immutable.
 
-From the repository root:
+Prove anonymous HTTP retrieval and digests for the advertised source, results, validation and rollback artifacts. Exercise pending or failed proof, wrong revisions, PR-versus-merged identities and missing or failed package publication. These conditions must retain the previous validated deployment. A unit test of a JSON record alone cannot prove ordering between release, execution and deployment.
+
+Retain the previous validated site and its evidence through cutover and post-deployment smoke checks. Verify the candidate preview before activation and the deployed routes, headers, assets and proof afterward. Remove the replaced build path after acceptance; do not leave permanent competing production renderers.
+
+## Verification and completion
+
+For the current renderer, run the existing commands after publishing the useful first commit and non-draft PR, following repository workflow:
 
 ```bash
-.venv/bin/python -m pytest -q tests/test_docs_surface.py
-.venv/bin/python -m tests.run
+python -m pytest tests/test_docs_surface.py -q
+npm --prefix docs-site run security:audit
+npm --prefix docs-site run check
 ```
 
-From `docs-site`:
+These commands prove their current scope. They do not establish the future reader, comprehensive examples or evidence-bound production.
 
-```bash
-npm ci
-npm run security:audit
-npm run check
-```
+The reader delivery adds executing project/binding tests under `docs/examples/tests/` and browser/build checks under `docs-site/`. The final delivery applies them to the complete corpus and actual publication. Keep every existing required package, security, typing, coverage, runtime, install and packaging check effective.
 
-`npm run check` runs Markdown lint, assembles the corpus, and builds Docusaurus with broken-link failures enabled. The Python docs test owns source-linked semantic inventories, versions, local links and anchors, fence parsing, and abstract-example guards.
+The acceptance matrix covers:
 
-For a changed first-run path, also prove the documented install in a fresh environment. For layout, navigation, search, theme, or shared-system changes, execute the full parity protocol.
+- both complete projects, supported scenarios, documented acquisition and meaningful results
+- every maintained page and applicable public capability, retaining reference depth
+- exact source/display/output bindings and deliberate divergence failures
+- merged-source identity and separate current package/environment/input/test evidence
+- desktop and phone, both OS color preferences, forced colors, keyboard and reduced motion
+- no-JavaScript reading, search, navigation, code copy, reference return and persisted-position safety
+- representative Book, Reference, Developer and package pages against the retained visual reference
+- declared static asset and runtime budgets, measured on the real reader and enforced against regression
+- real publication ordering, anonymous evidence retrieval and retained rollback
 
-## Parity protocol
-
-Parity preserves intended behavior, composition, and appearance. It does not preserve documented defects, security weaknesses, broken routes, or inaccessible behavior.
-
-### Freeze the baseline
-
-Record:
-
-- baseline commit SHA and production URL
-- lockfiles and tool versions
-- maintained source inventory and source-to-route map
-- sitemap URL set and HTTP status
-- navbar, sidebar, footer, edit-link, search, and theme behavior
-- CSS token and computed-layout values
-- security headers, redirects, canonical metadata, and error responses
-- representative screenshots
-- every known defect and whether the candidate fixes, defers, or excludes it
-
-Build the baseline before editing and retain it through acceptance:
-
-```bash
-cd docs-site
-npm ci
-npm run check
-BASELINE_DIR="$(mktemp -d)"
-cp -R build "$BASELINE_DIR/build"
-```
-
-### Build the candidate
-
-Build with the same runtime, lockfile, environment variables, origin, and base path:
-
-```bash
-cd docs-site
-npm run check
-```
-
-### Compare exact invariants
-
-The following require equality unless the change has an approved expected-difference entry:
-
-- maintained source set
-- source-to-route mapping and public route set
-- navbar, category order, sidebar behavior, footer, pagination, and edit targets
-- search availability and representative result destinations
-- metadata, canonical URLs, sitemap membership, headers, and status codes
-- shared tokens, component geometry, responsive breakpoint, and theme behavior
-- all non-target page content and screenshots
-
-Compare HTML route filenames separately from content-hashed assets:
-
-```bash
-diff -u \
-  <(cd "$BASELINE_DIR/build" && find . -type f -name '*.html' | sort) \
-  <(cd build && find . -type f -name '*.html' | sort)
-```
-
-### Compare representative pages
-
-The minimum matrix covers product home, one generated section index, one guide with code and a table, one reference page, one developer page, and one package README at:
-
-- desktop `1440x900`, light
-- desktop `1440x900`, dark
-- mobile `390x844`, light
-- mobile `390x844`, dark
-
-For each state, compare the screenshot and rendered DOM. Confirm H1, intro, content width, typography, token colors, navbar height, sidebar state, table overflow, focus behavior, search, edit link, and absence of horizontal page overflow.
-
-### Declare expected differences
-
-Every intentional delta is listed in the slice or PR before acceptance with:
-
-- affected route, viewport, and theme
-- old and new behavior
-- source of authority for the change
-- screenshot or command evidence
-- rollback effect
-
-Unlisted differences fail parity. For this contract rewrite, only `/developer/documentation-system` content, its generated card summary on `/developer`, and the chunks or search index derived from that content may differ.
-
-### Accept and retain rollback
-
-Acceptance requires:
-
-- all required commands green on the exact candidate
-- zero unlisted route, interaction, metadata, console, or visual differences
-- known defects fixed or linked to an explicit later slice; none silently accepted as parity
-- candidate preview reviewed before production cutover
-- previous production artifact retained until post-cutover smoke checks pass
-
-## Rollout protocol
-
-1. **Prove Limen.** Close the current font/CSP, robots, external-link, accessibility, visual-regression, and performance-gate gaps. Re-run the full parity matrix against the frozen Limen baseline.
-2. **Extract the shared system.** Move shared theme, generator configuration, assembly algorithm, tests, and CI into one versioned package or preset. Move every product literal into a validated profile.
-3. **Validate portability.** Run fixture builds for at least two deliberately different product profiles. The shared package must contain no Limen literals and must fail invalid or incomplete profiles.
-4. **Pilot one unlike repository.** Choose a production repository with different source layout or package boundaries. Build behind a preview URL, map its content to the five-section architecture, and compare its old and candidate sites.
-5. **Cut over the pilot.** Require its semantic, route, interaction, accessibility, security, performance, and visual gates. Retain the old artifact for rollback, then remove the old build path after the agreed expiry.
-6. **Roll out sequentially.** Adopt the same pinned shared version in remaining repositories. Each repository supplies only its product profile, content map, source-backed semantic tests, and approved brand overrides.
-7. **Operate centrally.** Release shared-system changes with compatibility notes and fixture proof. Upgrade repositories through dependency updates, never copied patches.
-
-No repository enters rollout until Limen passes its blockers and the extracted shared layer contains no product-specific constants. No parallel permanent documentation implementation is allowed.
-
-## Versioning and drift control
-
-The shared system version and each product's content version are independent.
-
-- Patch: compatible bug fix, gate repair, or token correction without route or profile-schema change.
-- Minor: backward-compatible component, page contract, gate, or optional profile capability.
-- Major: incompatible profile schema, information architecture, route policy, token contract, or required gate.
-
-Every shared release includes:
-
-- exact dependency and runtime support
-- profile-schema compatibility
-- changed page, visual, interaction, and gate contracts
-- migration and rollback steps
-- fixture and parity evidence
-
-Product repositories pin an exact shared version and use automated dependency updates. A local override requires an owner, reason, linked issue, expiry, and proof that required accessibility, security, route, and quality behavior remains intact. Expired overrides fail CI.
-
-## Known gaps before extraction
-
-Limen is not yet ready to be published as the shared system because:
-
-- the intended IBM Plex external font import conflicts with the production CSP
-- `/limen/robots.txt` returns `404`
-- external links are not mechanically checked
-- accessibility is not audited by an automated required gate
-- screenshots are not captured and compared by a reproducible visual-regression gate
-- no performance budget blocks regression
-- product-specific values remain embedded outside `docs-site/product-docs.json`
-
-These are implementation slices with their own task types and proof. They MUST be fixed in Limen and revalidated side by side before extraction.
-
-## Review checklist
-
-- Does every changed claim name or imply a current authoritative source?
-- Does each page keep one role and the required composition for that role?
-- Are product-specific claims confined to the product profile and content?
-- Are prerequisites, outputs, failure boundaries, and next routes explicit?
-- Do equivalent terms, units, examples, routes, and risk boundaries agree?
-- Is every maintained source assembled exactly once?
-- Do edit links target real source files?
-- Are local and external links healthy?
-- Do desktop/mobile and light/dark states match the shared visual contract?
-- Are keyboard navigation, focus, contrast, landmarks, tables, and code usable?
-- Are canonical metadata, sitemap, robots, redirects, headers, and errors correct?
-- Do semantic tests, Markdown lint, security audit, and site build pass?
-- Is every expected parity delta declared and every unexpected delta resolved?
-- Is rollback available until post-cutover smoke checks pass?
+Record the first complete chapter's commit, preview URL and evidence bundle. It must show both research interfaces, real output/provenance, sequential navigation and a reference excursion with return. Keep the parent delivery open until the complete book, reference/developer corpus and publication meet the same contract.
 
 ## Read next
 
@@ -528,4 +270,5 @@ These are implementation slices with their own task types and proof. They MUST b
 - [Developer home](README.md)
 - [Writing docstrings](Writing-Docstrings.md)
 - [Packaging](Packaging.md)
+- [Release policy](Release-Policy.md)
 - [Security assurance case](Security-Assurance-Case.md)

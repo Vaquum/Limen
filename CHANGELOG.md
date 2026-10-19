@@ -1783,3 +1783,8 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.43.0] - 2026-10-19
 
 - Add explicit recorded-fold Cohort selection, artifact-bound membership and compatible ordinary/fold binary aggregation with campaign guards.
+
+## [5.43.1] - 2026-10-19
+
+- Define Limen's executable research book contract: two comprehensive tested projects, exact source/output bindings, merged-source and current-validation evidence, the owned reader, and complete reference/developer coverage.
+- Align the documentation task router with Python Research and Compiled Research while retaining the current production renderer.
