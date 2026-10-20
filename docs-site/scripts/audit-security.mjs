@@ -3,9 +3,6 @@ import path from 'node:path';
 import {mkdirSync,writeFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 
-// Tracked 2026-10-04: braces <=3.0.3 has no patched release. Repository-owned
-// patterns produce static output. Retire when a patched release resolves.
-const TRACKED_ADVISORIES=new Set(['https://github.com/advisories/GHSA-vfj7-8cjw-p6xm']);
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
 export function inspectAudit(result){
   if(result.error||result.signal||![0,1].includes(result.status))throw Error(`npm audit failed: ${result.error?.message||result.signal||result.stderr||result.status}`);
@@ -27,11 +24,31 @@ export function inspectAudit(result){
     return urls;
   }
   const untracked=[];
-  for(const name of Object.keys(entries)){const urls=advisories(name);if(!urls.size)throw Error(`No advisory identity: ${name}`);for(const url of urls)if(!TRACKED_ADVISORIES.has(url))untracked.push(`${name}: ${url}`);}
+  for(const name of Object.keys(entries)){const urls=advisories(name);if(!urls.size)throw Error(`No advisory identity: ${name}`);for(const url of urls)untracked.push(`${name}: ${url}`);}
   if(untracked.length)throw Error(`Untracked docs-site npm vulnerabilities: ${untracked.join(', ')}`);
   return count;
 }
+function gatewayStatus(result){
+  if(result.error||result.signal||result.status!==1||typeof result.stdout!=='string'||!result.stdout.trim())return false;
+  const report=JSON.parse(result.stdout);
+  if(!object(report)||Object.hasOwn(report,'auditReportVersion')||Object.hasOwn(report,'vulnerabilities'))return false;
+  return [502,503,504].includes(report.statusCode)&&report.method==='POST'&&typeof report.uri==='string'&&report.uri.startsWith('https://registry.npmjs.org/-/npm/v1/security/')?report.statusCode:false;
+}
+export async function auditDependencies(directory,output,{stem='npm-audit',execute=spawnSync,delay=ms=>new Promise(resolve=>setTimeout(resolve,ms))}={}){
+  mkdirSync(output,{recursive:true});
+  for(let attempt=1;attempt<=3;attempt++){
+    const result=execute('npm',['audit','--json'],{cwd:directory,encoding:'utf8',timeout:60000});
+    writeFileSync(path.join(output,stem+'-attempt-'+attempt+'.json'),result.stdout||'');
+    writeFileSync(path.join(output,stem+'.json'),result.stdout||'');
+    const status=gatewayStatus(result);
+    if(status){
+      console.error(`npm audit registry returned HTTP ${status}; attempt ${attempt}/3.`);
+      if(attempt<3){await delay(attempt*1000);continue;}
+    }
+    return inspectAudit(result);
+  }
+}
 if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url)){
-  try{const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');const result=spawnSync('npm',['audit','--json'],{cwd:site,encoding:'utf8',timeout:60000});const artifacts=path.resolve(site,'../.docs-evidence');mkdirSync(artifacts,{recursive:true});writeFileSync(path.join(artifacts,'npm-audit.json'),result.stdout||'');const count=inspectAudit(result);console.log(count?`Tracked docs-site npm vulnerabilities: ${count}`:'No docs-site npm vulnerabilities found');}
+  try{const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');await auditDependencies(site,path.resolve(site,'../.docs-evidence'));console.log('No docs-site npm vulnerabilities found');}
   catch(error){console.error(error.message);process.exitCode=1;}
 }

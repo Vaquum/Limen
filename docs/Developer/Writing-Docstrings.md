@@ -2,6 +2,8 @@
 
 This page defines Limen's current docstring expectations for public code.
 
+The [Python project](../examples/python-research/README.md) owns its momentum calculation and inference meaning. The [Compiled project](../examples/compiled-research/README.md) relies on package-defined ROC, target, scaler and replay contracts. Document each callable at the boundary it actually owns.
+
 This page applies when a public function, class, or method changes. The goal is code-true guidance that lets future contributors and users answer basic questions without opening the implementation.
 
 ## Prerequisites
@@ -22,22 +24,15 @@ If behavior changed, the docstring should change with it.
 
 ## House style
 
-Follow the style already used across Limen:
+Follow the current callable and its behavior. For example, the Compiled project consumes ROC; its source-bound signature is:
 
+<!-- reference: docstrings-roc source=limen/indicators/roc.py region=signature:roc role=signature -->
 ```python
-def example(data: pl.DataFrame, period: int = 14) -> pl.DataFrame:
-
-    '''
-    Short summary of what the function does.
-
-    Args:
-        data (pl.DataFrame): Input data
-        period (int): Main configuration parameter
-
-    Returns:
-        pl.DataFrame: Output description
-    '''
+def roc(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataFrame:
+    ...
 ```
+
+Read the [ROC implementation and docstring](https://github.com/Vaquum/Limen/blob/main/limen/indicators/roc.py) for its input columns, output naming and warm-up behavior. The Python project owns its momentum function; do not present that caller decision as a package guarantee.
 
 Current expectations:
 

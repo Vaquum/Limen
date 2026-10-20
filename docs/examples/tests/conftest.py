@@ -78,7 +78,9 @@ def research_proof(python_project, compiled_project, tmp_path_factory, request):
     # A caller's checkout must not replace the installed wheel in project runs.
     with pytest.MonkeyPatch.context() as environment:
         environment.setenv('PYTHONPATH', str(ROOT))
-        wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'))
+        wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'),
+                                       released_wheel=request.config.getoption('--released-wheel'),
+                                       released_bundle=request.config.getoption('--released-bundle'))
     request.config.stash[PROOF] = wheel
     return {'python': {'rounds': python_project[2][1].experiment_log.height},
             'compiled': {'rounds': compiled_project[2][0].experiment_log.height},
@@ -91,6 +93,8 @@ REPORTS = []
 
 def pytest_addoption(parser):
     parser.addoption('--docs-evidence', default=str(ROOT / '.docs-evidence/current.json'))
+    parser.addoption('--released-wheel', type=Path, help='Receipt from released_wheel.py; execute that published wheel instead of building a candidate.')
+    parser.addoption('--released-bundle', type=Path, help='Anonymous Release download; its exact bytes must equal the current pinned project/input archive.')
 
 
 def pytest_sessionstart(session):
@@ -114,7 +118,7 @@ def pytest_sessionfinish(session, exitstatus):
     import os
     import platform
     import subprocess
-    from check_evidence import all_bindings, digest, validate_evidence
+    from check_evidence import all_bindings, all_reference_bindings, digest, validate_evidence
     from build_bundle import INPUTS
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
     details = catalogue['scenario_details']
@@ -138,8 +142,8 @@ def pytest_sessionfinish(session, exitstatus):
     validate_provenance(ROOT, provenance)
     files = {item['path']: item for item in provenance['files']}
     sources = [item | {'region': '__file__'} for item in provenance['files']]
-    excerpts = {(item['path'], item['region']): item for item in all_bindings(ROOT)}
-    sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values()]
+    excerpts = {(item['path'], item['region']): item for item in [*all_bindings(ROOT), *all_reference_bindings(ROOT)]}
+    sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values() if item['region'] != '__file__']
     record = {
         'schema_version': 1, 'mode': 'candidate',
         'revision': {'head': head, 'tested_commit': tested, 'tree': tree, 'dirty': bool(git('status', '--porcelain', '--untracked-files=normal'))},
@@ -150,7 +154,7 @@ def pytest_sessionfinish(session, exitstatus):
         'inputs': [{'path': 'tests/fixtures/' + name, 'sha256': value, 'window': 'pinned input or attribution/reproduction file; scenario windows are in the catalogue'} for name, value in INPUTS.items()],
         'sources': sources, 'displays': [],
         'validation': {'catalogue_sha256': digest((ROOT / 'docs/examples/catalogue.json').read_bytes()), 'status': 'passed', 'scenarios': [
-            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [details[interface + '/' + scenario]['test'] + '[' + interface + '-' + scenario + ']', *details[interface + '/' + scenario].get('extra_tests', [])], 'assertions': [details[interface + '/' + scenario]['assertions'], 'actual candidate wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
+            {'id': scenario, 'interface': interface, 'command': item['command'], 'tests': [details[interface + '/' + scenario]['test'] + '[' + interface + '-' + scenario + ']', *details[interface + '/' + scenario].get('extra_tests', [])], 'assertions': [details[interface + '/' + scenario]['assertions'], 'actual validated wheel imported outside checkout', 'unchanged archived project CLI', 'complete wheel Python source equals the tested tree'], 'output_path': item['output_path'], 'output_sha256': item['output_sha256'], 'status': 'passed'} for (interface, scenario), item in wheel['scenario_reports'].items()]},
         'publication': None,
     }
     record['displays'] = json.loads((ROOT / 'docs/examples/retained/selection.json').read_text())['displays']

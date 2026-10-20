@@ -1,6 +1,6 @@
 # Targets
 
-Target classes in Limen define how the target column is built during the manifest preparation pipeline. A target class is fitted once on the training split, then applied to validation and test without refitting.
+A target defines the observation a model learns to predict. Python Research builds labels in caller-owned preparation. Compiled Research fits a target class on training observations and applies its stored state to later splits.
 
 Use this page to choose a target class, understand the convention each class must follow, or see what columns each class adds.
 
@@ -16,20 +16,36 @@ The manifest pipeline is split-first:
 
 This ensures that any statistics derived from the training data (such as quantile cutoffs) do not leak into validation or test.
 
-## Using A Target Class
+## One outcome, one preparation boundary
 
+The [Python project](examples/python-research/README.md) predicts next-bar open-to-close return. Its preparation function runs separately inside each split. The negative shift creates the future outcome used for fitting and validation; that outcome is excluded from inference features.
+
+<!-- example: targets-python-next-return source=docs/examples/python-research/research.py region=next_return_target scenario=selection interface=python role=executed -->
 ```python
-from limen.targets import QuantileBinaryTarget
-
-manifest.with_target_label(
-    'quantile_flag',
-    QuantileBinaryTarget,
-    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
-    transform_params={'shift': 'shift'},
-)
+def prepare_split(bars, round_params):
+    return features(bars, round_params["window"]).with_columns(
+        (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
+        .alias("next_return")
+    ).slice(12).drop_nulls(["momentum", "next_return"])
 ```
 
-`fit_params` are forwarded to `__init__` on the training split. `transform_params` are forwarded to `transform()` on every split. Both support round-param references such that `'q'` resolves to the current round's `q` value.
+The [Compiled project](examples/compiled-research/README.md) predicts whether the next momentum observation exceeds a training-fitted quantile. Its Manifest declares the class and the constructor and transform arguments:
+
+<!-- example: targets-compiled-quantile source=docs/examples/compiled-research/selection.yaml region=fitted_target scenario=selection interface=compiled role=executed -->
+```yaml
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+```
+
+`fit_params` go to the target constructor on the training split; `transform_params` go to `transform()` on each split. Values can refer to declared round parameters. A Manifest built through Python remains Compiled Research. Python Research can call the same target classes directly, provided its preparation owns the fitting and split boundaries.
+
+The reference below gives current package signatures and the behavior of each alternative. Constructor and transform signatures describe the API; they do not claim that every target participates in the two selection runs. Data-dependent targets still require their stated columns, fitting observations and execution economics.
 
 ## Choosing A Target Class
 
@@ -56,19 +72,18 @@ manifest.with_target_label(
 
 ### `QuantileBinaryTarget`
 
+<!-- reference: target-quantile-binary-target-constructor source=limen/targets/quantile_binary.py region=signature:QuantileBinaryTarget.__init__ role=signature -->
 ```python
-QuantileBinaryTarget(train_data, target_name, source_column, quantile)
+def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: str, quantile: float) -> None:
+    ...
 ```
 
 Fits a quantile cutoff on the training split. Labels a bar as positive if the source column exceeds the `(1 - quantile)` quantile of the training distribution.
 
-```python-fragment
-.with_target_label(
-    'quantile_flag',
-    QuantileBinaryTarget,
-    fit_params={'source_column': 'roc_4', 'quantile': 0.35},
-    transform_params={'shift': -1},
-)
+<!-- reference: target-quantile-binary-target-transform source=limen/targets/quantile_binary.py region=signature:QuantileBinaryTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, shift: int=0) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -79,19 +94,18 @@ Fits a quantile cutoff on the training split. Labels a bar as positive if the so
 
 ### `TradelineLongBinaryTarget`
 
+<!-- reference: target-tradeline-long-binary-target-constructor source=limen/targets/tradeline_long_binary.py region=signature:TradelineLongBinaryTarget.__init__ role=signature -->
 ```python
-TradelineLongBinaryTarget(train_data, target_name, max_duration_hours, min_height_pct, long_threshold_percentile)
+def __init__(self, train_data: pl.DataFrame, target_name: str, max_duration_hours: int, min_height_pct: float, long_threshold_percentile: float) -> None:
+    ...
 ```
 
 Fits the breakout threshold on the training split: detects price lines on `close` (`limen.utils.find_price_lines`) and stores the `long_threshold_percentile` percentile of long-line heights. Raises when the training split yields no long lines. The transform labels a bar `1` when the maximum close over `[t, t + lookahead_hours]` reaches the threshold AND the point return at `+confirmation_hours` or at `+lookahead_hours` also exceeds it — the move must stick, not just spike. Rows without a full forward window become null and fall to the pipeline's `drop_nulls`.
 
-```python-fragment
-.with_target_label(
-    'tradeline_long',
-    TradelineLongBinaryTarget,
-    fit_params={'max_duration_hours': 48, 'min_height_pct': 0.003, 'long_threshold_percentile': 75},
-    transform_params={'lookahead_hours': 48, 'confirmation_hours': 24},
-)
+<!-- reference: target-tradeline-long-binary-target-transform source=limen/targets/tradeline_long_binary.py region=signature:TradelineLongBinaryTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, lookahead_hours: int=DEFAULT_LOOKAHEAD_HOURS, confirmation_hours: int=DEFAULT_CONFIRMATION_HOURS) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -104,19 +118,18 @@ Fits the breakout threshold on the training split: detects price lines on `close
 
 ### `ThresholdBinaryTarget`
 
+<!-- reference: target-threshold-binary-target-constructor source=limen/targets/threshold_binary.py region=signature:ThresholdBinaryTarget.__init__ role=signature -->
 ```python
-ThresholdBinaryTarget(train_data, target_name, source_column, threshold)
+def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: str, threshold: float) -> None:
+    ...
 ```
 
 Labels a bar as positive if the source column exceeds a fixed threshold. No fitting step — the threshold is specified directly.
 
-```python-fragment
-.with_target_label(
-    'above_zero',
-    ThresholdBinaryTarget,
-    fit_params={'source_column': 'roc_4', 'threshold': 0.0},
-    transform_params={'shift': -1},
-)
+<!-- reference: target-threshold-binary-target-transform source=limen/targets/threshold_binary.py region=signature:ThresholdBinaryTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, shift: int=-1) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -127,18 +140,18 @@ Labels a bar as positive if the source column exceeds a fixed threshold. No fitt
 
 ### `ForwardBreakoutTarget`
 
+<!-- reference: target-forward-breakout-target-constructor source=limen/targets/forward_breakout.py region=signature:ForwardBreakoutTarget.__init__ role=signature -->
 ```python
-ForwardBreakoutTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Labels a bar as positive if the close price rises by at least `threshold` over the next `forward_periods` bars. No fitting step.
 
-```python-fragment
-.with_target_label(
-    'breakout',
-    ForwardBreakoutTarget,
-    transform_params={'forward_periods': 24, 'threshold': 0.02, 'shift': -1},
-)
+<!-- reference: target-forward-breakout-target-transform source=limen/targets/forward_breakout.py region=signature:ForwardBreakoutTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: float=0.02, shift: int=-1) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -149,18 +162,18 @@ Labels a bar as positive if the close price rises by at least `threshold` over t
 
 ### `EmaBreakoutTarget`
 
+<!-- reference: target-ema-breakout-target-constructor source=limen/targets/ema_breakout.py region=signature:EmaBreakoutTarget.__init__ role=signature -->
 ```python
-EmaBreakoutTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Labels a bar as positive if the price `breakout_horizon` bars ahead exceeds the EMA of `target_col` by at least `breakout_delta`. No fitting step.
 
-```python-fragment
-.with_target_label(
-    'breakout_ema',
-    EmaBreakoutTarget,
-    transform_params={'target_col': 'close', 'ema_span': 30, 'breakout_delta': 0.2, 'breakout_horizon': 3},
-)
+<!-- reference: target-ema-breakout-target-transform source=limen/targets/ema_breakout.py region=signature:EmaBreakoutTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, target_col: str='close', ema_span: int=30, breakout_delta: float=0.2, breakout_horizon: int=3) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -172,18 +185,18 @@ Labels a bar as positive if the price `breakout_horizon` bars ahead exceeds the 
 
 ### `NextReturnTarget`
 
+<!-- reference: target-next-return-target-constructor source=limen/targets/next_return.py region=signature:NextReturnTarget.__init__ role=signature -->
 ```python
-NextReturnTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Produces a continuous target as the percentage return over the next N bars. Use with regression architectures such as `xgboost_regressor`. No fitting step.
 
-```python-fragment
-.with_target_label(
-    'next_return',
-    NextReturnTarget,
-    transform_params={'periods': 1, 'scale': 100.0},
-)
+<!-- reference: target-next-return-target-transform source=limen/targets/next_return.py region=signature:NextReturnTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, periods: int=1, scale: float=100.0) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -193,48 +206,56 @@ Produces a continuous target as the percentage return over the next N bars. Use 
 
 ### `NextBarUpTarget`
 
+<!-- reference: target-next-bar-up-target-constructor source=limen/targets/next_bar_up.py region=signature:NextBarUpTarget.__init__ role=signature -->
 ```python
-NextBarUpTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Produces a binary target named `next_bar_up`: `1` when the next close is higher than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by manifest preparation.
 
-```python-fragment
-.with_target_label('next_bar_up', NextBarUpTarget)
+<!-- reference: target-next-bar-up-target-transform source=limen/targets/next_bar_up.py region=signature:NextBarUpTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 No parameters.
 
 ### `NextBarDownTarget`
 
+<!-- reference: target-next-bar-down-target-constructor source=limen/targets/next_bar_down.py region=signature:NextBarDownTarget.__init__ role=signature -->
 ```python
-NextBarDownTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Produces a binary target named `next_bar_down`: `1` when the next close is lower than the current close, `0` otherwise. The final row in each split has no next bar, so it is null and is dropped by manifest preparation.
 
-```python-fragment
-.with_target_label('next_bar_down', NextBarDownTarget)
+<!-- reference: target-next-bar-down-target-transform source=limen/targets/next_bar_down.py region=signature:NextBarDownTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 No parameters.
 
 ### `VolNormalizedReturnTarget`
 
+<!-- reference: target-vol-normalized-return-target-constructor source=limen/targets/vol_normalized_return.py region=signature:VolNormalizedReturnTarget.__init__ role=signature -->
 ```python
-VolNormalizedReturnTarget(train_data, target_name, high_col='high', low_col='low', open_col='open', close_col='close', halflife=50, min_periods=150)
+def __init__(self, train_data: pl.DataFrame, target_name: str, high_col: str='high', low_col: str='low', open_col: str='open', close_col: str='close', halflife: int=50, min_periods: int=150) -> None:
+    ...
 ```
 
 Produces a continuous target named `vol_normalized_return`. The target is `log(close / close.shift(1)) / sigma.shift(1)`, where `sigma` is the EWMA Parkinson volatility from `(log(high / low) ** 2) / (4 * ln(2))`. The one-bar sigma shift prevents the current bar range from entering the current return label.
 
 Dirty OHLC rows are dropped before target construction when `high < max(open, close)` or `low > min(open, close)`. Zero volatility is converted to null, not epsilon.
 
-```python-fragment
-.with_target_label(
-    'vol_normalized_return',
-    VolNormalizedReturnTarget,
-    fit_params={'halflife': 50, 'min_periods': 150},
-)
+<!-- reference: target-vol-normalized-return-target-transform source=limen/targets/vol_normalized_return.py region=signature:VolNormalizedReturnTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -250,18 +271,19 @@ The training split must pass the Parkinson-to-close volatility sanity gate: medi
 
 ### `ForwardVolNormalizedReturnTarget`
 
+<!-- reference: target-forward-vol-normalized-return-target-constructor source=limen/targets/forward_vol_normalized_return.py region=signature:ForwardVolNormalizedReturnTarget.__init__ role=signature -->
 ```python
-ForwardVolNormalizedReturnTarget(train_data, target_name, periods=1, absolute=False, halflife=50, min_periods=150, high_col='high', low_col='low', open_col='open', close_col='close')
+def __init__(self, train_data: pl.DataFrame, target_name: str, periods: int=1, absolute: bool=False, halflife: int=50, min_periods: int=150, high_col: str='high', low_col: str='low', open_col: str='open', close_col: str='close') -> None:
+    ...
 ```
 
 Produces a continuous predictive label as `log(close.shift(-periods) / close) / sigma`, where `sigma` is the current EWMA Parkinson volatility. Set `absolute=True` to normalize absolute forward movement instead of signed direction.
 
-```python-fragment
-.with_target_label(
-    'forward_vol_normalized_return',
-    ForwardVolNormalizedReturnTarget,
-    fit_params={'periods': 1, 'halflife': 50, 'min_periods': 150},
-)
+<!-- reference: target-forward-vol-normalized-return-target-transform source=limen/targets/forward_vol_normalized_return.py region=signature:ForwardVolNormalizedReturnTarget.transform role=signature -->
+```python
+@override
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -279,8 +301,10 @@ The class reuses the same dirty-bar filter and Parkinson-to-close volatility san
 
 ### `TripleBarrierTarget`
 
+<!-- reference: target-triple-barrier-target-constructor source=limen/targets/triple_barrier.py region=signature:TripleBarrierTarget.__init__ role=signature -->
 ```python
-TripleBarrierTarget(train_data, target_name, upper_multiple=1.0, lower_multiple=1.0, max_horizon=10, span=100, min_periods=100, close_col='close')
+def __init__(self, train_data: pl.DataFrame, target_name: str, upper_multiple: float=1.0, lower_multiple: float=1.0, max_horizon: int=10, span: int=100, min_periods: int=100, close_col: str='close') -> None:
+    ...
 ```
 
 Produces a ternary label from Lopez de Prado's triple-barrier method. For each bar, the forward close path is followed for up to `max_horizon` bars and labelled by the first barrier it touches: `1` if the upper (profit-taking) barrier is touched first, `-1` if the lower (stop-loss) barrier is touched first, and `0` if neither is touched within `max_horizon` bars (the vertical barrier). No fitting step.
@@ -289,12 +313,10 @@ The horizontal barriers are volatility multiples — `+upper_multiple * sigma` a
 
 A bar is null during the volatility warmup (`min_periods`), when its volatility is zero, and when the vertical barrier would extend past the available data and no barrier is touched within the truncated window. Manifest preparation drops null target rows. Size `min_periods` (and `span`) against the smallest split: a split shorter than the volatility warmup is entirely null and is dropped, leaving no labelled rows for that split.
 
-```python-fragment
-.with_target_label(
-    'triple_barrier',
-    TripleBarrierTarget,
-    fit_params={'upper_multiple': 2.0, 'lower_multiple': 2.0, 'max_horizon': 24, 'span': 100, 'min_periods': 100},
-)
+<!-- reference: target-triple-barrier-target-transform source=limen/targets/triple_barrier.py region=signature:TripleBarrierTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -308,32 +330,36 @@ A bar is null during the volatility warmup (`min_periods`), when its volatility 
 
 ### `RiskRewardRatioTarget`
 
+<!-- reference: target-risk-reward-ratio-target-constructor source=limen/targets/risk_reward_ratio.py region=signature:RiskRewardRatioTarget.__init__ role=signature -->
 ```python
-RiskRewardRatioTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Computes `capturable_breakout / (|max_drawdown| + 0.001)` per row. Expects both columns to be available on every split. No fitting step. No Limen indicator or feature produces `capturable_breakout` or `max_drawdown` — they must be user-supplied in the input data, and `transform` raises `ValueError` when they are absent.
 
-```python-fragment
-.with_target_label('rr_ratio', RiskRewardRatioTarget)
+<!-- reference: target-risk-reward-ratio-target-transform source=limen/targets/risk_reward_ratio.py region=signature:RiskRewardRatioTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 No parameters.
 
 ### `ExitQualityTarget`
 
+<!-- reference: target-exit-quality-target-constructor source=limen/targets/exit_quality.py region=signature:ExitQualityTarget.__init__ role=signature -->
 ```python
-ExitQualityTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 Scores closed trades as high, low, or medium based on `exit_reason` and `exit_net_return`. Expects both columns to be available on every split. No fitting step. No Limen indicator or feature produces `exit_reason` or `exit_net_return` — they must be user-supplied in the input data, and `transform` raises `ValueError` when they are absent.
 
-```python-fragment
-.with_target_label(
-    'exit_quality',
-    ExitQualityTarget,
-    transform_params={'exit_quality_high': 1.0, 'exit_quality_low': 0.2, 'exit_quality_medium': 0.5},
-)
+<!-- reference: target-exit-quality-target-transform source=limen/targets/exit_quality.py region=signature:ExitQualityTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, exit_quality_high: float=1.0, exit_quality_low: float=0.2, exit_quality_medium: float=0.5) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Type | Description |
@@ -344,28 +370,36 @@ Scores closed trades as high, low, or medium based on `exit_reason` and `exit_ne
 
 ### `RandomBinaryTarget`
 
+<!-- reference: target-random-binary-target-constructor source=limen/targets/random_binary.py region=signature:RandomBinaryTarget.__init__ role=signature -->
 ```python
-RandomBinaryTarget(train_data, target_name, random_state=None)
+def __init__(self, train_data: pl.DataFrame, target_name: str, random_state: int | None=None) -> None:
+    ...
 ```
 
 Produces uniformly random binary labels. No fitting step. Use as a noise benchmark to verify that a trained model outperforms chance.
 
-```python-fragment
-.with_target_label('outcome', RandomBinaryTarget)
+<!-- reference: target-random-binary-target-transform source=limen/targets/random_binary.py region=signature:RandomBinaryTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 `random_state` is optional. Pass an integer for reproducible labels across equal split sizes and call order; `None` uses an unseeded generator.
 
 ### `IdentityTarget`
 
+<!-- reference: target-identity-target-constructor source=limen/targets/identity.py region=signature:IdentityTarget.__init__ role=signature -->
 ```python
-IdentityTarget(train_data, target_name)
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
 ```
 
 For when the target column is already present in the data. Validates that the column exists on the training split and on every subsequent split. The data is returned unchanged; no new column is added.
 
-```python-fragment
-.with_target_label('label', IdentityTarget)
+<!-- reference: target-identity-target-transform source=limen/targets/identity.py region=signature:IdentityTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 No parameters.
@@ -374,11 +408,16 @@ No parameters.
 
 `TradeOutcomeTarget` requires configured execution economics and a linear perpetual product supporting both sides. The manifest injects `TradeTargetContext` into construction and every transform; callers do not build it during normal manifest use.
 
-```python-fragment
-.with_target_label(
-    'outcome', TradeOutcomeTarget,
-    fit_params={'side': 'long', 'output': 'net_return', 'candidate_exposure': 1.0},
-)
+<!-- reference: target-trade-outcome-constructor source=limen/targets/trade_outcome.py region=signature:TradeOutcomeTarget.__init__ role=signature -->
+```python
+def __init__(self, train_data: pl.DataFrame, target_name: str, *, trade_context: TradeTargetContext, side: Literal['long', 'short']='long', output: Literal['binary', 'net_return']='binary', candidate_exposure: float=1.0) -> None:
+    ...
+```
+
+<!-- reference: target-trade-outcome-transform source=limen/targets/trade_outcome.py region=signature:TradeOutcomeTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame, *, trade_context: TradeTargetContext, **transform_params: object) -> pl.DataFrame:
+    ...
 ```
 
 Each feature-valid bar starts independent long and short candidates with fixed candidate exposure. Entry, TP/SL, elapsed exits, costs, rounding and funding use the [shared execution contract](Backtest.md#signed-exposure-elapsed-exits-and-funding). Returns equal completed net PnL divided by pre-entry equity; binary output is strictly positive return. Zero is unprofitable. At least one exit rule is required.
@@ -391,20 +430,18 @@ Unknown target parameters, mismatched contracts and missing economics fail befor
 
 ## Writing A Custom Target Class
 
-A target class must follow this convention:
+A custom target accepts training data and the target column name at construction, then exposes `transform(data, **transform_params)`. Fit any learned state in the constructor and reuse it in `transform`. `NextBarUpTarget` gives the minimal concrete package interface:
 
+<!-- reference: target-custom-constructor source=limen/targets/next_bar_up.py region=signature:NextBarUpTarget.__init__ role=signature -->
 ```python
-class MyTarget:
-    source_columns: list[str] = []
+def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
+    ...
+```
 
-    def __init__(self, train_data: pl.DataFrame, target_name: str, **fit_params) -> None:
-        self.target_name = target_name
-        # fit on train_data here if needed
-
-    def transform(self, data: pl.DataFrame, **transform_params) -> pl.DataFrame:
-        return data.with_columns(
-            (pl.col('close').shift(-1) > pl.col('close')).cast(pl.Int8).alias(self.target_name)
-        )
+<!-- reference: target-custom-transform source=limen/targets/next_bar_up.py region=signature:NextBarUpTarget.transform role=signature -->
+```python
+def transform(self, data: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
 There is no base class to inherit from — the convention is enforced structurally, the same way scalers work. Any class that accepts `(train_data, target_name, **fit_params)` in `__init__` and exposes `transform(data, **transform_params) -> pl.DataFrame` is a valid target class.

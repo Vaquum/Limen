@@ -6,6 +6,10 @@
 
 - [Trainer](../../docs/Trainer.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) promotes evaluated fitted objects without fitting them again. The [Compiled project](../../docs/examples/compiled-research/README.md) reconstructs selected recorded rounds and qualified folds through Trainer. The Sensor and Cohort references distinguish retained fitted state from reconstruction under a recorded definition.
+
 ## What this package owns
 
 Owns the reconstruction-and-inference path: replaying a selected permutation from a completed experiment, validating it against the original log, and wrapping it as a live `Sensor`.
@@ -29,13 +33,28 @@ Does **not** own experiment search execution (owned by `limen.experiment`) or th
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `trainer.py` | Trainer: reconstruct and validate a permutation |
+| `sensor.py` | Sensor entry points and BarPrediction re-export |
+| `_python_sensor.py` | Python construction contract and shared result |
+| `_sensor_from_model.py` | Fitted-model defaults and optional hooks |
+| `errors.py` | ReconstructionError |
+
+<!-- reference: package-inference-layout source=limen/inference/README.md region=layout:package role=layout -->
 ```text
 inference/
-├── trainer.py   # Trainer: reconstruct and validate a permutation
-├── sensor.py    # Sensor entry points and BarPrediction re-export
-├── _python_sensor.py  # Python construction contract and shared result
-├── _sensor_from_model.py  # Fitted-model defaults and optional hooks
-└── errors.py    # ReconstructionError
+├── README.md
+├── __init__.py
+├── _fold_metrics.py
+├── _fold_sensor.py
+├── _fold_trainer.py
+├── _python_sensor.py
+├── _sensor_from_model.py
+├── _trainer_records.py
+├── errors.py
+├── sensor.py
+└── trainer.py
 ```
 
 ## Things to know

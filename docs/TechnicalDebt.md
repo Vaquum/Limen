@@ -5,7 +5,7 @@
 - the current implementation, tests, and issue history for the affected surface
 - evidence that the limitation remains present and materially relevant
 
-Known technical debt in shipped Limen code. Each item includes origin PR, severity, and migration path.
+Record intentionally accepted limitations in shipped code, with their origin, severity and migration path. The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) expose different persistence boundaries: retaining caller-owned fitted objects and reconstructing a recorded Manifest are different contracts. A documented boundary alone is not an accepted defect; use this register when a specific limitation is intentionally carried.
 
 ## Register Rules
 

@@ -70,56 +70,44 @@ Aggregate rows until cumulative trade count reaches `trade_threshold`.
 
 Aggregate rows until cumulative liquidity reaches `liquidity_threshold`.
 
-## Manifest usage
+## Form bars in either project
 
-Bar formation is configured through `Manifest.set_bar_formation()` and is applied separately inside each split. That matters because Limen's manifest pipeline is split-first by design.
+The [Python project's](examples/python-research/README.md) `bars` scenario forms each of the three supported bar types from 384 recorded hourly rows. It derives a diagnostic threshold from that bounded population, writes the complete bars, and records the omitted incomplete tail. This is a bar-formation diagnostic; a model comparison must still choose fitting and assessment populations separately.
 
+<!-- example: bars-python-formation source=docs/examples/python-research/scenarios.py region=bars scenario=bars interface=python role=executed -->
 ```python
-from limen.data import HistoricalData
-from limen.data.utils import compute_data_bars
-from limen.experiment import MLManifest
-
-def params():
-    return {
-        'bar_type': ['base', 'volume', 'trade'],
-        'volume_threshold': [50_000, 100_000],
-        'trade_threshold': [2_000, 5_000],
-    }
-
-def manifest():
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-        )
-        .set_test_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 7200, 'row_count_limit': 5000},
-        )
-        .set_bar_formation(
-            compute_data_bars,
-            bar_type='bar_type',
-            volume_threshold='volume_threshold',
-            trade_threshold='trade_threshold',
-        )
-        .set_required_bar_columns([
-            'datetime',
-            'open',
-            'high',
-            'low',
-            'close',
-            'volume',
-            'no_of_trades',
-            'liquidity_sum',
-        ])
-    )
+def bars(data_dir, output):
+    raw = recorded(data_dir, 'spot_1h_20240101_20241231.parquet', 384)
+    results = []
+    for kind, parameter, column in [('volume', 'volume_threshold', 'volume'), ('trade', 'trade_threshold', 'no_of_trades'), ('liquidity', 'liquidity_threshold', 'liquidity_sum')]:
+        median = raw[column].median()
+        if not isinstance(median, (int, float)):
+            raise ValueError('Bar formation requires a numeric recorded threshold source')
+        threshold = float(median) * 4
+        if kind == 'trade':
+            threshold = int(threshold)
+        formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})
+        formed.write_parquet(output / (kind + '.parquet'))
+        results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1]})
+    return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output)}
 ```
 
-Two important details:
+The [Compiled project's](examples/compiled-research/README.md) `bars` scenario runs three declared parameter choices. Its Manifest forms bars separately after each chronological split:
 
-- `bar_type` must be present in `round_params` when the bar step switches between bar modes.
-- `set_required_bar_columns()` is an assertion layer. It verifies that the bar step still leaves the downstream columns required by the experiment.
+<!-- example: bars-compiled-formation source=docs/examples/compiled-research/bars.yaml region=bar_formation scenario=bars interface=compiled role=executed -->
+```yaml
+    bar_formation:
+      func: limen.data.utils.compute_data_bars
+      params:
+        bar_type: '{bar_type}'
+        volume_threshold: '{volume_threshold}'
+        trade_threshold: '{trade_threshold}'
+        liquidity_threshold: '{liquidity_threshold}'
+```
+
+The complete configuration declares `bar_type` as volume, trade or liquidity, with volume threshold `1000.0`, trade threshold `100000`, and liquidity threshold `10000000.0`. The scenario tests verify all three completed rounds; the Python diagnostic independently checks complete-bar boundaries and conserved volume. Both also process the same short recorded trade slice for [CFR](Conserved-Flux-Renormalization.md), without claiming it supplies a full ML population.
+
+`Manifest.set_bar_formation()` attaches the bar step. `set_required_bar_columns()` asserts that the resulting frame retains the columns required downstream. Parameter references in the bar declaration must resolve from the current round.
 
 ## `compute_data_bars()`
 

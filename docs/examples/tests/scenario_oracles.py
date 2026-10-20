@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from itertools import combinations
+from statistics import NormalDist
 import hashlib
 import json
 import math
@@ -62,8 +64,109 @@ def execution_clocks(context, ledger, raw):
             assert fill['reference_price'] == row['close']
 
 
+def verify_feedback(interface, feedback, inputs):
+    bars = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    assert len(feedback['rows']) == feedback['yielded'] == 3 and feedback['remaining'] == 0
+    assert all(row['errors'] == [] and row['suggestions'] == [] for row in feedback['audit'])
+    first = feedback['audit'][0]['interventions']
+    assert [item['source'] for item in first] == ['BudgetReducer', 'intra_callback', 'intervention_file']
+    assert [item.get('op', item.get('operation')) for item in first] == ['trim', 'keep_is', 'inject_value']
+    assert sum(item['source'] == 'intervention_file' for cycle in feedback['audit'] for item in cycle['interventions']) == 1
+    assert first[0]['target_count'] == 3
+    parameter, injected = ('alpha', 2.) if interface == 'python' else ('C', 7.5)
+    assert first[1]['param'] == first[2]['param'] == parameter
+    assert first[1]['value'] == .1 and first[2]['value'] == injected
+    assert feedback['domain'][parameter] == [.1, injected]
+    assert feedback['rows'][-1][parameter] == injected
+    if interface == 'python':
+        assert [(row['window'], row['alpha']) for row in feedback['rows']] == [(4, .1), (4, 1.), (4, 2.)]
+        for row in feedback['rows']:
+            assert row['validation_net_return'] == pytest.approx(ridge_score(bars, row['window'], row['alpha']), rel=1e-10, abs=1e-12)
+    else:
+        assert [row['C'] for row in feedback['rows']] == [.1, .5, 7.5]
+        training = bars.filter(pl.col('datetime') < datetime(2024, 1, 15, tzinfo=timezone.utc))['close'].to_numpy()
+        cutoff = float(np.median((training[1:] / training[:-1] - 1) * 100))
+        labels = bars.with_columns((((pl.col('close').shift(-1) / pl.col('close') - 1) * 100) > cutoff).cast(pl.UInt8).alias('label'))
+        feedback_records = {record['round_id']: record for record in feedback['records']}
+        assert set(feedback_records) == set(feedback['predictions']) == {row['id'] for row in feedback['rows']}
+        for row in feedback['rows']:
+            alignment = feedback_records[row['id']]['alignment']
+            expected = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))['label'].to_numpy()
+            predictions = np.asarray(feedback['predictions'][row['id']])
+            assert predictions.size == expected.size > 0
+            assert row['accuracy'] == pytest.approx(float(np.mean(predictions == expected)))
+
+
+def verify_acceptance(result, output, inputs):
+    report = result['report']
+    assert result['rounds'] == report['n_trials'] == 2
+    for name, digest in result['artifacts'].items():
+        assert hashlib.sha256((output / name).read_bytes()).hexdigest() == digest
+    assert json.loads((output / 'acceptance_report.json').read_text()) == report
+    frame = pl.read_parquet(output / 'trial_returns.parquet')
+    trials = frame['trial'].unique(maintain_order=True).to_list()
+    tracks = []
+    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
+        records = {item['round_id']: item for item in map(json.loads, stream)}
+    source = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
+    assert source.height == 8784 and set(records) == set(trials)
+    dates_by_trial = []
+    for trial in trials:
+        rows = frame.filter(pl.col('trial') == trial).sort('bar')
+        assert rows['bar'].to_list() == list(range(96))
+        track = rows['net_return'].to_numpy()
+        folds = records[trial]['folds']
+        assert len(folds) == 2
+        np.testing.assert_array_equal(track, [value for fold in folds for value in fold['net_returns']])
+        dates = [value for fold in folds for value in fold['alignment']['test_datetimes']]
+        assert len(dates) == len(set(dates)) == 96
+        assert dates == sorted(dates)
+        assert set(dates) <= {value.isoformat() for value in source['datetime']}
+        dates_by_trial.append(dates)
+        tracks.append(track)
+    assert dates_by_trial[0] == dates_by_trial[1]
+    matrix = np.stack(tracks)
+    sharpes = matrix.mean(axis=1) / matrix.std(axis=1, ddof=1)
+    winner = int(np.argmax(sharpes))
+    variance = float(sharpes.var(ddof=1))
+    track = matrix[winner]
+    centered = track - track.mean()
+    standardized = centered / np.sqrt(np.mean(centered ** 2))
+    skew, kurtosis = float(np.mean(standardized ** 3)), float(np.mean(standardized ** 4))
+    normal, gamma = NormalDist(), 0.5772156649015329
+    benchmark = math.sqrt(variance) * ((1-gamma)*normal.inv_cdf(1-1/len(trials)) + gamma*normal.inv_cdf(1-1/(len(trials)*math.e)))
+    corrected = 1-skew*sharpes[winner]+(kurtosis-1)*sharpes[winner]**2/4
+    probability = normal.cdf((sharpes[winner]-benchmark)*math.sqrt((len(track)-1)/corrected))
+    blocks = np.split(np.arange(matrix.shape[1]), 2)
+    losses = []
+    for selected in combinations(range(2), 1):
+        training = matrix[:, np.concatenate([blocks[index] for index in selected])]
+        held = matrix[:, np.concatenate([blocks[index] for index in range(2) if index not in selected])]
+        chosen = int(np.argmax(training.mean(axis=1) / training.std(axis=1, ddof=1)))
+        scores = held.mean(axis=1) / held.std(axis=1, ddof=1)
+        rank = np.count_nonzero(scores < scores[chosen]) + (np.count_nonzero(scores == scores[chosen])+1)/2
+        losses.append(rank/(len(trials)+1) <= .5)
+    pbo = sum(losses)/len(losses)
+    assert report['n_bars'] == 96 and report['n_blocks'] == 2 and report['pbo_block_bars'] == 48
+    assert report['pbo_combinations'] == 2 and report['pbo_resolution'] == .5
+    assert report['winner_trial'] == trials[winner]
+    assert report['winner_sharpe'] == pytest.approx(float(sharpes[winner]), abs=1e-14)
+    assert report['trial_sharpe_variance'] == pytest.approx(variance, abs=1e-14)
+    assert report['deflated_sharpe_probability'] == pytest.approx(probability, abs=1e-14)
+    assert report['pbo'] == pbo and report['errors'] == {}
+    assert report['thresholds'] == {'min_deflated_sharpe_probability': .95, 'max_pbo': .2}
+    assert report['verdicts'] == {'min_deflated_sharpe_probability': probability >= .95, 'max_pbo': pbo <= .2}
+    markdown = (output / 'acceptance_report.md').read_text()
+    assert f'Deflated Sharpe probability: {report["deflated_sharpe_probability"]}' in markdown
+    assert f'PBO: {report["pbo"]}' in markdown
+    for name, passed in report['verdicts'].items():
+        assert f'{name} ({report["thresholds"][name]}): {"pass" if passed else "fail"}' in markdown
+
+
 def verify(interface, name, result, output, inputs):
     if name == 'search':
+        verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
+        verify_common_baselines(interface, result['common_baselines'], output / 'common-baselines', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
         assert set(result['runs']) == expected
         identities = []
@@ -92,6 +195,7 @@ def verify(interface, name, result, output, inputs):
             else:
                 original = next(item for item in result['runs']['grid'] if item['C'] == row['C'])
                 assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
+        verify_feedback(interface, result['feedback'], inputs)
         if interface == 'compiled':
             assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')
@@ -152,6 +256,7 @@ def verify(interface, name, result, output, inputs):
                 assert fold['test_open'] == test['open'].to_list() and fold['test_close'] == test['close'].to_list()
                 assert fold['available_at_ns'] == (test['datetime'].dt.epoch('ns')+3_600_000_000_000).to_list()
         else:
+            verify_acceptance(result['acceptance'], output / 'acceptance', inputs)
             assert result['rounds'] == 1 and len(result['folds']) == 2
             assert result['member_folds'] == [0, 1]
             assert len(result['member_ids']) == 2 and all(len(item) == 4 for item in result['member_ids'])
@@ -432,3 +537,151 @@ def verify(interface, name, result, output, inputs):
             assert hashlib.sha256((restored / name).read_bytes()).hexdigest() == expected
     else:
         raise AssertionError('Unproved scenario: ' + name)
+
+
+def verify_preparation(interface, result, output, inputs):
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    assert result['partition_rows'] == [864, 288, 288]
+    assert result['carried_context'] is (interface == 'compiled')
+    assert result['fixed_d'] == .4 and result['weight_threshold'] == .05
+    assert [case['name'] for case in result['cases']] == ['baseline', 'compressed']
+    if interface == 'python':
+        assert result['adf_grid_result'] in (0., .2, .4)
+        assert 0 <= result['adf_p_value'] <= 1
+        assert result['adf_stationary'] is (result['adf_p_value'] <= .05)
+    weights = [1.]
+    while True:
+        candidate = -weights[-1] * (.4-len(weights)+1) / len(weights)
+        if abs(candidate) < .05:
+            break
+        weights.append(candidate)
+    for case in result['cases']:
+        compressed = case['name'] == 'compressed'
+        columns = ['close', 'roc_3', 'close_fracdiff'] if compressed else ['close', 'roc_3', 'roc_12', 'close_fracdiff']
+        assert case['features'] == columns and case['dropped'] == (['roc_12'] if compressed else [])
+        frames = [pl.read_parquet(output / case['name'] / (split + '.parquet')) for split in ('train', 'val', 'test')]
+        assert [frame.height for frame in frames] == case['rows']
+        assert all(frame.height > 200 for frame in frames)
+        expected_surfaces = []
+        fit_population = None
+        for split, (start, end), frame in zip(('train', 'val', 'test'), ((0, 864), (864, 1152), (1152, 1440)), frames, strict=True):
+            context = (8 if compressed else 12) if interface == 'compiled' and split != 'train' else 0
+            source = raw[start-context:end]
+            close = source['close'].to_numpy()
+            clock = source['datetime'].dt.epoch('ns').to_list()
+            indices = [clock.index(value) for value in frame['datetime'].dt.epoch('ns').to_list()]
+            assert indices == sorted(set(indices))
+            assert all(start <= start-context+index < end for index in indices)
+            feature_values = {'close': close, 'roc_3': np.r_[np.full(3, np.nan), (close[3:]/close[:-3]-1)*100],
+                              'roc_12': np.r_[np.full(12, np.nan), (close[12:]/close[:-12]-1)*100]}
+            feature_values['close_fracdiff'] = np.r_[np.full(len(weights)-1, np.nan), np.convolve(close, weights, mode='valid')]
+            unscaled = np.column_stack([feature_values[column][indices] for column in columns])
+            assert np.isfinite(unscaled).all()
+            scaled = (unscaled-np.array([case['medians'][column] for column in columns])) / np.array([case['iqrs'][column] for column in columns])
+            expected_surfaces.append(scaled)
+            expected_matrix = (scaled-np.asarray(case['pca_mean'])) @ np.asarray(case['components']).T if compressed else scaled
+            actual_columns = ['pc_0', 'pc_1'] if compressed else columns
+            assert frame.columns == [*actual_columns, 'datetime', 'label'] or frame.columns == ['datetime', *actual_columns, 'label']
+            np.testing.assert_allclose(frame.select(actual_columns).to_numpy(), expected_matrix, rtol=1e-10, atol=1e-9)
+            returns = close[1:]/close[:-1]-1
+            labels = []
+            for index in indices:
+                assert index >= 8
+                decay = (1-2/9)**np.arange(index-1, -1, -1)
+                mean = np.average(returns[:index], weights=decay)
+                variance = np.average((returns[:index]-mean)**2, weights=decay) / (1-np.sum(decay**2)/np.sum(decay)**2)
+                sigma = math.sqrt(variance)
+                label = None
+                for ahead in range(1, min(3, len(close)-1-index)+1):
+                    move = close[index+ahead]/close[index]-1
+                    if move >= 1.5*sigma:
+                        label = 1
+                        break
+                    if move <= -sigma:
+                        label = -1
+                        break
+                if label is None and index+3 < len(close):
+                    label = 0
+                labels.append(label)
+            assert labels == frame['label'].to_list(), 'Labels differ from the independently scanned forward-close geometry'
+            if split == 'train':
+                fit_indices = range(indices[0], len(close)) if interface == 'compiled' else indices
+                fit_population = np.column_stack([feature_values[column][list(fit_indices)] for column in columns])
+        assert fit_population is not None
+        for index, column in enumerate(columns):
+            values = fit_population[:, index]
+            assert case['medians'][column] == pytest.approx(float(np.median(values)), rel=1e-12)
+            lo, hi = np.quantile(values, [.25, .75], method='nearest')
+            assert case['iqrs'][column] == pytest.approx(float(hi-lo) if hi != lo else 1., rel=1e-12)
+        if compressed:
+            components = np.asarray(case['components'])
+            np.testing.assert_allclose(case['pca_mean'], expected_surfaces[0].mean(axis=0), rtol=1e-10, atol=1e-10)
+            _, _, vectors = np.linalg.svd(expected_surfaces[0]-expected_surfaces[0].mean(axis=0), full_matrices=False)
+            np.testing.assert_allclose(components.T@components, vectors[:2].T@vectors[:2], rtol=1e-9, atol=1e-9)
+        x_train = frames[0].drop('datetime', 'label').to_numpy()
+        x_test = frames[2].drop('datetime', 'label').to_numpy()
+        y = frames[0]['label'].to_numpy()
+        centered = x_train-x_train.mean(axis=0)
+        coefficients = np.linalg.solve(centered.T@centered+np.eye(centered.shape[1]), centered.T@(y-y.mean()))
+        predicted = (x_test-x_train.mean(axis=0))@coefficients+y.mean()
+        np.testing.assert_allclose(case['predictions'], predicted, rtol=1e-9, atol=1e-10)
+        assert case['rmse'] == pytest.approx(float(np.sqrt(np.mean((predicted-frames[2]['label'].to_numpy())**2))), rel=1e-10)
+
+
+def verify_common_baselines(interface, result, output, inputs):
+    from limen.sfd.rule_based.common_strategies import strategy_signals
+    names = {'buy_and_hold', 'sma_cross', 'ema_cross', 'macd', 'rsi_mean_reversion',
+             'bollinger_mean_reversion', 'donchian_breakout', 'time_series_momentum'}
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
+    bars = raw[raw.height*8//11 + raw.height//11:]
+    assert bars.height == 1598 and len(result['rows']) == len(names) == 8
+    assert {row['strategy'] for row in result['rows']} == names
+    close, opening = bars['close'].to_numpy(), bars['open'].to_numpy()
+    for row in result['rows']:
+        name = row['strategy']
+        signals = strategy_signals(bars, name)
+        assert len(signals) == bars.height and signals.dtype == np.int8 and set(signals) <= {0, 1}
+        for stop in (201, 401, 801, bars.height-1):
+            np.testing.assert_array_equal(strategy_signals(bars[:stop], name), signals[:stop])
+        if name == 'buy_and_hold':
+            np.testing.assert_array_equal(signals, np.ones(bars.height))
+        elif name == 'sma_cross':
+            expected = np.zeros(bars.height)
+            for i in range(199, bars.height):
+                expected[i] = np.mean(close[i-49:i+1]) > np.mean(close[i-199:i+1])
+            np.testing.assert_array_equal(signals, expected)
+        elif name == 'time_series_momentum':
+            np.testing.assert_array_equal(signals, np.r_[np.zeros(20), close[20:] > close[:-20]])
+        if interface == 'python':
+            assert result['split_rows'] == [6388, 798, 1598] and result['round_trip_bps'] == 2.
+            expected = signals[:-1]*(close[1:]/opening[1:]-1-.0002)
+            np.testing.assert_allclose(row['net'], expected, rtol=1e-12, atol=1e-12)
+            assert row['mean_net_return'] == pytest.approx(float(expected.mean()), rel=1e-12, abs=1e-12)
+            retained = pl.read_parquet(output / (name + '.parquet'))
+            assert retained['datetime'].equals(bars['datetime'])
+            assert retained['desired_position'].to_list() == row['signals'] == signals.tolist()
+        else:
+            assert result['source_rows'] == 8784 and result['fee_bps'] == 10. and result['slip_bps'] == 5.
+            track = result['tracks'][name]
+            position = np.r_[0, signals[:-1]].astype(bool)
+            expected_gross, expected_net = np.zeros(bars.height), np.zeros(bars.height)
+            previous_equity, entry = 1., None
+            trades = 0
+            for index, held in enumerate(position):
+                if not held:
+                    entry, previous_equity = None, 1.
+                    continue
+                if entry is None:
+                    entry = close[index-1]
+                    trades += 1
+                expected_gross[index] = close[index]/close[index-1]-1
+                marked = close[index]/(entry*(1+.0005))
+                exiting = index == bars.height-1 or not position[index+1]
+                equity = marked*(1-.001)*(1-.0005)-.001 if exiting else marked-.001
+                expected_net[index] = equity/previous_equity-1
+                previous_equity = equity
+            np.testing.assert_array_equal(track['pos'], position.astype(float))
+            np.testing.assert_allclose(track['gross'], expected_gross, rtol=1e-11, atol=1e-12)
+            np.testing.assert_allclose(track['net'], expected_net, rtol=1e-11, atol=1e-12)
+            assert row['num_executed_trades_test'] == trades
+            assert row['pnl_per_bar_bps_test'] == pytest.approx(float(expected_net.mean()*10000), abs=1e-9)

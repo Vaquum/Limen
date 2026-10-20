@@ -6,6 +6,10 @@
 
 - [Reference Architecture](../../../docs/Reference-Architecture.md)
 
+## In the research projects
+
+The [Python project](../../../docs/examples/python-research/README.md) fits its ordinary caller-owned Ridge pipeline. The [Compiled project](../../../docs/examples/compiled-research/README.md) `search` scenario runs the declared CPU model comparisons, retains their metrics and reconstructs eligible selected rounds. The architecture reference describes the prepared-data and output contracts.
+
 ## What this package owns
 
 Owns the reference model classes (and their function forms) that implement fit/predict for each decoder family, without the packaged data pipeline.
@@ -33,17 +37,28 @@ Does **not** own the experiment shape or manifest (owned by the matching `limen.
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `base.py` | ReferenceModel base class |
+| `tabpfn_binary.py` | Optional |
+
+<!-- reference: package-sfd-reference_architecture-layout source=limen/sfd/reference_architecture/README.md region=layout:package role=layout -->
 ```text
 reference_architecture/
-├── base.py               # ReferenceModel base class
-├── logreg_binary.py
+├── README.md
+├── __init__.py
+├── _backtest_evaluation.py
+├── base.py
+├── direction_sizing.py
 ├── dlinear_regressor.py
 ├── lightgbm_binary.py
-├── xgboost_regressor.py
+├── logreg_binary.py
+├── meta_allocation.py
 ├── random_binary.py
 ├── ridge_regressor.py
 ├── rule_based.py
-└── tabpfn_binary.py      # Optional
+├── tabpfn_binary.py
+└── xgboost_regressor.py
 ```
 
 ## Things to know

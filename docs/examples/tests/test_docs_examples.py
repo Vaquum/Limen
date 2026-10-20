@@ -17,6 +17,23 @@ def test_exact_bindings_and_coverage(research_proof):
     assert ('python', 'observed_costs') in {(item['interface'], item['scenario']) for item in all_bindings(ROOT)}
 
 
+def test_publication_evidence():
+    from publication import git, release_origin
+    from limen import __version__
+    head = git(ROOT, 'rev-parse', 'HEAD')
+    record = {'package': {'version': __version__},
+              'revision': {'head': head, 'tested_commit': head, 'tree': git(ROOT, 'rev-parse', 'HEAD^{tree}'), 'dirty': False},
+              'mode': 'candidate', 'publication': None,
+              'sources': [{'status': 'candidate', 'merged_pr': None}]}
+    with pytest.raises(ValueError, match='cannot promote unmerged source'):
+        release_origin(ROOT, record, 'v' + __version__)
+    for field in ('head', 'tested_commit', 'tree'):
+        changed = copy.deepcopy(record)
+        changed['revision'][field] = '0' * 40
+        with pytest.raises(ValueError, match='exact tested release checkout'):
+            release_origin(ROOT, changed, 'v' + __version__)
+
+
 def test_divergent_authored_source_fails(tmp_path):
     document = (ROOT / 'docs/Research-Book.md').read_text().replace('research = bars[:1440]', 'research = bars[:1500]')
     changed = tmp_path / 'changed.md'
