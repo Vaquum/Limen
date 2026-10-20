@@ -92,13 +92,12 @@ def adaptive_search(data_dir, output):
 # region mixed_feedback
 def mixed_feedback(data_dir, output):
     config = configuration('adaptive', data_dir)
-    output.mkdir(parents=True, exist_ok=True)
-    (output / 'interventions.json').write_text(json.dumps([
-        {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
 
     def steer(log, msq):
         if log.height == 2:
             msq.keep_is('C', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
 
     loop = execute(config, output, callback=steer)
     checkpoint = json.loads((output / 'checkpoint.json').read_text())

@@ -111,13 +111,12 @@ def adaptive_search(data_dir, output):
 # region mixed_feedback
 def mixed_feedback(data_dir, output):
     space = {'window': [4, 12], 'alpha': [.1, 1.]}
-    output.mkdir(parents=True, exist_ok=True)
-    (output / 'interventions.json').write_text(json.dumps([
-        {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
 
     def steer(log, msq):
         if log.height == 2:
             msq.keep_is('alpha', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
 
     def model(data, round_params):
         fitted = project.fit(data['train'], round_params)

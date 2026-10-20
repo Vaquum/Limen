@@ -211,7 +211,7 @@ Use a callback for caller-owned control logic or experiment hooks. Each project 
 
 With an `experiment_dir`, the controller watches that directory's `interventions.json`. The caller supplies a JSON array of declarative operations; Limen does not create this control file for the caller. The controller polls modification time and applies changed contents on the next feedback trigger. An unchanged file is not applied again in the same controller lifetime; controller checkpoint state retains the observed modification time.
 
-The examples write the actual control file before starting. Python injects a new Ridge penalty of `2.0`; Compiled injects a new logistic penalty parameter `C=7.5`. Neither value belongs to its initial search domain.
+The callbacks write the actual control files during the first feedback cycle, before the controller polls its file source. A fresh experiment rejects a directory containing a pre-existing intervention file as partial state; create that control file after execution starts. Python injects a new Ridge penalty of `2.0`; Compiled injects a new logistic penalty parameter `C=7.5`. Neither value belongs to its initial search domain.
 
 ## Audit trail
 
@@ -225,13 +225,12 @@ Each project's separate mixed run enables all three feedback sources:
 ```python
 def mixed_feedback(data_dir, output):
     space = {'window': [4, 12], 'alpha': [.1, 1.]}
-    output.mkdir(parents=True, exist_ok=True)
-    (output / 'interventions.json').write_text(json.dumps([
-        {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
 
     def steer(log, msq):
         if log.height == 2:
             msq.keep_is('alpha', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
 
     def model(data, round_params):
         fitted = project.fit(data['train'], round_params)
@@ -254,13 +253,12 @@ def mixed_feedback(data_dir, output):
 ```python
 def mixed_feedback(data_dir, output):
     config = configuration('adaptive', data_dir)
-    output.mkdir(parents=True, exist_ok=True)
-    (output / 'interventions.json').write_text(json.dumps([
-        {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
 
     def steer(log, msq):
         if log.height == 2:
             msq.keep_is('C', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
 
     loop = execute(config, output, callback=steer)
     checkpoint = json.loads((output / 'checkpoint.json').read_text())
