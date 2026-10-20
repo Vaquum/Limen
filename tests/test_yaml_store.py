@@ -1,10 +1,15 @@
 import json
 import tempfile
+from functools import partial
 from pathlib import Path
 
 import pytest
+from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
+from limen.yaml import validate
+from limen.yaml.config import round_trip_yaml
 from limen.yaml.store import SHA256_PREFIX
+from limen.yaml.store import canonical_manifest_id
 from limen.yaml.store import commit_manifest
 from limen.yaml.store import fork_manifest
 from limen.yaml.store import is_full_manifest_id
@@ -12,6 +17,8 @@ from limen.yaml.store import load_index
 from limen.yaml.store import normalize_manifest_ref
 from limen.yaml.store import resolve_manifest_uri
 
+
+_TEMPLATE_DIR = Path(__file__).resolve().parents[1] / 'limen' / 'yaml' / 'templates'
 
 _SAMPLE_YAML = '''\
 schema_version: "1.0"
@@ -341,3 +348,133 @@ def test_commit_reads_parent_from_forked_lineage() -> None:
         index = load_index(project_root)
         child_entry = next(m for m in index['manifests'] if m['id'] == child_id)
         assert child_entry['parent_id'] == parent_id
+
+
+@pytest.fixture
+def committed_rule_manifest(tmp_path: Path) -> tuple[Path, Path, Path, str]:
+    root, source = _make_project(tmp_path)
+    text = (_TEMPLATE_DIR / 'rule_based.yaml').read_text().replace('mode: development', 'mode: production')
+    assert validate(round_trip_yaml().load(text)).valid
+    source.write_text(text)
+    manifest_id, _ = commit_manifest(source, root)
+    destination = root / 'manifests' / 'committed' / f'{manifest_id[len(SHA256_PREFIX):]}.yaml'
+    return root, source, destination, manifest_id
+
+
+def _assert_integrity_rejected(root: Path,
+                               source: Path,
+                               destination: Path,
+                               index_state: str,
+                               cause_type: type[Exception] | None = None) -> None:
+    index_path = destination.parent / 'index.json'
+    if index_state == 'missing':
+        index_path.unlink()
+    elif index_state == 'corrupt':
+        index_path.write_text('{invalid index')
+    destination_before = destination.read_bytes()
+    index_before = index_path.read_bytes() if index_path.exists() else None
+    operations = [
+        partial(resolve_manifest_uri, f'manifest://{SHA256_PREFIX}{destination.stem[:length]}', root)
+        for length in (64, 1, 8, 63)
+    ]
+    operations.append(partial(commit_manifest, source, root))
+    for operation in operations:
+        with pytest.raises(ValueError, match='Integrity check failed') as failure:
+            operation()
+        if cause_type is not None:
+            assert isinstance(failure.value.__cause__, cause_type)
+        assert destination.read_bytes() == destination_before
+        assert (index_path.read_bytes() if index_path.exists() else None) == index_before
+
+
+@pytest.mark.parametrize('index_state', ['existing', 'missing', 'corrupt'])
+def test_committed_manifest_rejects_content_tampering(
+    committed_rule_manifest: tuple[Path, Path, Path, str], index_state: str,
+) -> None:
+    root, source, destination, manifest_id = committed_rule_manifest
+    destination.write_text(destination.read_text().replace(
+        'name: rule_based_experiment', 'name: rule_based_experiment_tampered',
+    ))
+    document = round_trip_yaml().load(destination.read_text())
+    assert document['lineage']['id'] == manifest_id
+    assert canonical_manifest_id(document) != manifest_id
+    _assert_integrity_rejected(root, source, destination, index_state)
+
+
+@pytest.mark.parametrize('index_state', ['existing', 'missing', 'corrupt'])
+@pytest.mark.parametrize('lineage_state', ['wrong', 'missing', 'scalar', 'empty'])
+def test_committed_manifest_rejects_invalid_stored_lineage(
+    committed_rule_manifest: tuple[Path, Path, Path, str], index_state: str, lineage_state: str,
+) -> None:
+    root, source, destination, manifest_id = committed_rule_manifest
+    yaml = round_trip_yaml()
+    document = yaml.load(destination.read_text())
+    if lineage_state == 'wrong':
+        document['lineage']['id'] = manifest_id[:-1] + ('0' if manifest_id[-1] != '0' else '1')
+    elif lineage_state == 'missing':
+        del document['lineage']
+    elif lineage_state == 'scalar':
+        document['lineage'] = 'damaged'
+    else:
+        document['lineage'] = {}
+    with destination.open('w', encoding='utf-8') as stream:
+        yaml.dump(document, stream)
+    assert canonical_manifest_id(yaml.load(destination.read_text())) == manifest_id
+    _assert_integrity_rejected(root, source, destination, index_state)
+
+
+@pytest.mark.parametrize('index_state', ['existing', 'missing', 'corrupt'])
+@pytest.mark.parametrize('damage,cause_type', [('mixed_keys', TypeError), ('root_cycle', ValueError)])
+def test_committed_manifest_rejects_uncanonicalizable_content(
+    committed_rule_manifest: tuple[Path, Path, Path, str],
+    index_state: str,
+    damage: str,
+    cause_type: type[Exception],
+) -> None:
+    root, source, destination, manifest_id = committed_rule_manifest
+    text = destination.read_text()
+    if damage == 'mixed_keys':
+        text += '\nuncanonicalizable:\n  1: one\n  label: two\n'
+    else:
+        text = '&root\n' + text + '\ncycle: *root\n'
+    destination.write_text(text)
+    document = round_trip_yaml().load(text)
+    assert document['lineage']['id'] == manifest_id
+    if damage == 'root_cycle':
+        assert document['cycle'] is document
+    with pytest.raises(cause_type):
+        canonical_manifest_id(document)
+    _assert_integrity_rejected(root, source, destination, index_state, cause_type)
+
+
+@pytest.mark.parametrize('template', sorted(_TEMPLATE_DIR.glob('*.yaml')), ids=lambda path: path.stem)
+def test_committed_manifest_preserves_canonical_equivalence(tmp_path: Path, template: Path) -> None:
+    root, source = _make_project(tmp_path)
+    source.write_text(template.read_text().replace('mode: development', 'mode: production'))
+    yaml = round_trip_yaml(preserve_quotes=True)
+    expected_id = canonical_manifest_id(yaml.load(source.read_text()))
+    manifest_id, already_existed = commit_manifest(source, root)
+    assert (manifest_id, already_existed) == (expected_id, False)
+    destination = root / 'manifests' / 'committed' / f'{manifest_id[len(SHA256_PREFIX):]}.yaml'
+    original = destination.read_bytes()
+    document = yaml.load(destination.read_text())
+    assert canonical_manifest_id(document) == manifest_id
+    document['metadata']['name'] = DoubleQuotedScalarString(document['metadata']['name'])
+    document['metadata'] = dict(reversed(tuple(document['metadata'].items())))
+    document['lineage']['committed_at'] = '2000-01-01T00:00:00Z'
+    document['lineage']['parent_id'] = SHA256_PREFIX + 'a' * 64
+    document = dict(reversed(tuple(document.items())))
+    with destination.open('w', encoding='utf-8') as stream:
+        yaml.dump(document, stream)
+    destination.write_text('# Canonically equivalent committed manifest\n' + destination.read_text())
+    equivalent = destination.read_bytes()
+    assert equivalent != original
+    assert canonical_manifest_id(yaml.load(destination.read_text())) == manifest_id
+    for length in (64, 1, 8, 63):
+        uri = f'manifest://{SHA256_PREFIX}{destination.stem[:length]}'
+        assert resolve_manifest_uri(uri, root) == (destination, root)
+    assert commit_manifest(source, root) == (manifest_id, True)
+    assert destination.read_bytes() == equivalent
+    entry = load_index(root)['manifests'][0]
+    assert entry['committed_at'] == document['lineage']['committed_at']
+    assert entry['parent_id'] == document['lineage']['parent_id']
