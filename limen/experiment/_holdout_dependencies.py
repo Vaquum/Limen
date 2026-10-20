@@ -96,9 +96,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             attributes.update(value.__code__.co_names)
             method_names.update(value.__code__.co_names)
             visit(vars(value))
+            visit(value.__annotations__, annotation=True)
             if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
                 return
-            visit(value.__annotations__, annotation=True)
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
             visit(value.__defaults__)

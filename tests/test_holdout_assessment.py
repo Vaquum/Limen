@@ -1920,12 +1920,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result['_probs'] = self.policy.__annotations__['adjust'](result['_probs'])
             return result
     annotated._model.__class__ = AnnotationCallableState
-    with patch.object(identity_probabilities, '__annotations__', {'adjust': later_probabilities}):
-        annotation_handle = _freeze(annotated)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(annotation_handle, assessment_case)
-            assert loader.call_count == 0
+    for policy in (identity_probabilities, LogisticRegression.predict_proba):
+        annotated._model.policy = policy
+        with patch.object(policy, '__annotations__', {'adjust': later_probabilities}):
+            annotation_handle = _freeze(annotated)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(annotation_handle, assessment_case)
+                assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):
