@@ -25,6 +25,7 @@ __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'depe
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
 _LIBRARIES = ('numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy')
+_ATOMIC_TYPES = (str, bool, int, float, bytes, type(Union), type(Literal))
 
 def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
@@ -80,7 +81,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     constructor_revision = len(method_names)
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes, type(Union), type(Literal)) or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
+        if value is None or type(value) in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
             if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)

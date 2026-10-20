@@ -24,6 +24,9 @@ __all__ = ['children', 'code_digest', 'fitted_witness', 'object_payload']
 
 _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
 _FORM_TYPES = (type(typing.Union), type(typing.Literal))
+_ATOMIC_TYPES = (str, bool, bytes)
+_NO_ATTRIBUTE_TYPES = (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray)
+_CONTAINER_TYPES = (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)
 # Verify canonical identity rather than assume the interpreter's integer cache.
 _CANONICAL_INTS = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
@@ -95,7 +98,7 @@ def children(value: object) -> tuple[object, ...]:
 def _attributes(value: object) -> dict[str, object]:
     if type(value) in _FORM_TYPES:
         return {}
-    if type(value) in (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray):
+    if type(value) in _NO_ATTRIBUTE_TYPES:
         return {}
     values: dict[str, object] = {}
     native_dict = False
@@ -125,7 +128,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
-        if item is None or type(item) in (str, bool, bytes) or (type(item) is int and item is _CANONICAL_INTS.get(item)):
+        if item is None or type(item) in _ATOMIC_TYPES or (type(item) is int and item is _CANONICAL_INTS.get(item)):
             return item
         if isinstance(item, ModuleType):
             return ('module', item.__name__)
@@ -148,7 +151,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             return (kind, tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         if type(item) in (set, frozenset):
             return (kind, tuple(node(part) for part in cast(set[object] | frozenset[object], item)), None)
-        attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)) else {}
+        attributes = _attributes(item) if issubclass(type(item), _CONTAINER_TYPES) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
             result = ('function', item.__module__, item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(item.__closure__), node(vars(item)), node(item.__annotations__))
