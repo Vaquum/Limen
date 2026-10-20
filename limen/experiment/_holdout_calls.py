@@ -9,7 +9,7 @@ from threading import RLock
 from types import CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'matches', 'native_attribute', 'native_codes', 'namespace_calls', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
