@@ -88,7 +88,7 @@ def _normalized(frame):
 
 @pytest.mark.parametrize('manifest_type', _TYPES)
 @pytest.mark.parametrize('api', _APIS)
-@pytest.mark.parametrize('form', ('function', 'partial', 'instance', 'local', 'static',
+@pytest.mark.parametrize('form', ('function', 'partial', 'parquet_partial', 'instance', 'local', 'static',
                                 'named_self', 'receiver', 'unbound', 'bound', 'decorated',
                                 'selective_wrapper', 'native_file', 'native_file_bound',
                                 'native_spot', 'native_spot_bound'))
@@ -109,6 +109,7 @@ def test_manifest_callable_sources(manifest_type, api, form):
         return raw.head(rows)
 
     methods = {'function': _recorded, 'partial': partial(_recorded, rows=2),
+               'parquet_partial': partial(pl.read_parquet, _FILE),
                'instance': owner, 'local': local, 'static': _Source.static,
                'named_self': _Source.named_self, 'receiver': _Source.load,
                'unbound': _Source.load, 'bound': owner.load,
@@ -128,6 +129,8 @@ def test_manifest_callable_sources(manifest_type, api, form):
         expected = _normalized(quarter).select(columns).tail(3)
     else:
         method = methods[form]
+        if form == 'parquet_partial':
+            params = {'n_rows': 3}
         if form == 'receiver':
             params['receiver'] = owner
             expected = raw.head(1)
@@ -144,7 +147,8 @@ def test_manifest_callable_sources(manifest_type, api, form):
     config = getattr(manifest, f'{api}_source_config')
     assert config.method is method
     assert config.params is params
-    assert params['row_count_limit' if form.startswith('native') else 'rows'] == 3
+    key = 'row_count_limit' if form.startswith('native') else 'n_rows' if form == 'parquet_partial' else 'rows'
+    assert params[key] == 3
     if form in ('local', 'selective_wrapper'):
         assert calls == [3]
         assert result is not raw

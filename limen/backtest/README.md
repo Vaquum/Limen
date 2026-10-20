@@ -8,6 +8,10 @@
 - [Benchmark](../../docs/Benchmark.md)
 - [Log](../../docs/Log.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) constructs execution inputs and policy directly. The [Compiled project](../../docs/examples/compiled-research/README.md) binds them through its Manifest. Their `execution` scenarios retain native ledgers, declared clocks, product rules and recorded funding.
+
 ## What this package owns
 
 Owns Limen's research execution, inventory/economics ledger and snapshot assumptions.
@@ -30,10 +34,33 @@ The package root exports `backtest_snapshot`, `long_flat_strategy`, `ExecutionRe
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `backtest_snapshot.py` | Vectorized snapshot evaluator (price validation + ledger) |
+| `long_flat_strategy.py` | Default long-only execution model |
+
+<!-- reference: package-backtest-layout source=limen/backtest/README.md region=layout:package role=layout -->
 ```text
 backtest/
-├── backtest_snapshot.py     # Vectorized snapshot evaluator (price validation + ledger)
-└── long_flat_strategy.py    # Default long-only execution model
+├── README.md
+├── __init__.py
+├── _cost_comparison.py
+├── _cost_history.py
+├── _cost_identity.py
+├── _cost_statistics.py
+├── _event_clock.py
+├── _event_plan.py
+├── _long_flat_tp_sl.py
+├── _snapshot_execution.py
+├── _snapshot_ledger.py
+├── backtest_snapshot.py
+├── execution_events.py
+├── funding_adapter.py
+├── funding_presets.py
+├── long_flat_strategy.py
+├── observed_costs.py
+├── trade_contract.py
+└── trade_execution.py
 ```
 
 ## Things to know

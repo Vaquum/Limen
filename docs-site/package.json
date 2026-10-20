@@ -6,58 +6,27 @@
     "node": ">=20"
   },
   "scripts": {
-    "prepare-docs": "node ./scripts/assemble-docs.mjs",
-    "lint": "markdownlint-cli2 --config ../.markdownlint.json ../README.md ../CHANGELOG.md \"../docs/**/*.md\" \"../limen/**/README.md\"",
+    "lint": "node scripts/lint-docs.mjs",
     "security:audit": "node ./scripts/audit-security.mjs",
-    "start": "npm run prepare-docs && docusaurus start --host 0.0.0.0",
-    "build": "npm run prepare-docs && docusaurus build",
-    "check": "npm run lint && npm run prepare-docs && docusaurus build --no-minify",
-    "serve": "docusaurus serve . --dir build --host 0.0.0.0 --port 3001 --no-open",
-    "clear": "docusaurus clear",
-    "build:reader": "node scripts/build-reader.mjs",
-    "check:reader": "node scripts/check-reader.mjs",
-    "serve:reader": "node scripts/serve-reader.mjs"
+    "start": "node scripts/serve-reader.mjs",
+    "build": "node scripts/build-reader.mjs",
+    "check": "npm run lint && npm run build",
+    "serve": "node scripts/serve-reader.mjs",
+    "check:reader": "node scripts/check-reader.mjs"
   },
   "dependencies": {
-    "@docusaurus/core": "^3.10.1",
-    "@docusaurus/preset-classic": "^3.10.1",
-    "@easyops-cn/docusaurus-search-local": "^0.55.2",
-    "katex": "^0.19.0",
-    "prism-react-renderer": "^2.4.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
-    "rehype-katex": "^7.0.1",
-    "remark-math": "^6.0.0",
     "markdown-it": "14.3.2",
     "prismjs": "1.30.0",
     "@fontsource-variable/archivo": "5.3.0",
     "@fontsource/ibm-plex-mono": "5.3.0"
   },
   "overrides": {
-    "serialize-javascript": "7.0.5",
-    "uuid": "11.1.1",
-    "js-yaml@^4": "^4.3.2",
     "markdown-it": "$markdown-it",
-    "websocket-driver": "^0.7.5",
-    "body-parser": "^1.20.6",
-    "brace-expansion": "5.0.12",
-    "shell-quote": "^1.8.5",
-    "webpack-dev-server": "^5.2.6",
-    "fast-uri": "^3.1.8",
-    "postcss": "^8.5.18",
-    "svgo": "^3.3.4",
-    "js-yaml@^3": "^3.15.2",
-    "qs": "^6.16.0",
-    "http-cache-semantics": "^4.3.0",
-    "image-size": "^2.0.4",
-    "katex": "^0.19.0",
-    "tinypool": "^2.2.0",
-    "proxy-addr": "^2.0.8",
-    "postcss-selector-parser": "^7.1.6"
+    "katex": "^0.19.0"
   },
   "license": "MIT",
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "markdownlint-cli2": "^0.18.1"
+    "markdownlint": "0.38.0"
   }
 }

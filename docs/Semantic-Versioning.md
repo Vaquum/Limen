@@ -4,7 +4,7 @@ This page is the Limen-local versioning contract.
 
 ## Limen local scope
 
-Use this page to decide the version bump and apply the result to Limen's local version surfaces.
+Use this page to decide the version bump and apply it to Limen's release surfaces. Both the [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) execute against that package identity; their source and results must identify the version they actually validate.
 
 ## Prerequisites
 
@@ -27,8 +27,8 @@ Limen-local version surfaces:
 - MINOR: new compatible public capability.
 - PATCH: compatible fix, docs correction, package metadata correction, dependency/security refresh, or proof-gate change.
 - Keep `pyproject.toml`, `CITATION.cff`, template `metadata.limen_version`, changelog entry, release tag, and release notes aligned to the same version.
-- Code changes require a version update and changelog entry in the same PR. Update affected public docs there as well.
-- A docs-only PR may remain version-neutral. Change the version only when the operator intends that PR to create a release candidate.
+- Every PR advances the package version and adds a changelog entry under [repository law 5](../CLAUDE.md#the-laws), including documentation changes. Update affected public docs in that PR.
+- A withdrawal may use the explicit version-rewind procedure defined by that law; documentation does not create a separate exemption.
 
 ## Review notes
 

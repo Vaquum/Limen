@@ -207,6 +207,7 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.resolve_release_tag.outputs.tag_name }}
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
@@ -252,3 +253,16 @@ jobs:
             } >> release_body.md
             gh release edit "$TAG_NAME" --notes-file release_body.md
           fi
+
+      - name: Record the successful package publication
+        env:
+          TAG_NAME: ${{ needs.resolve_release_tag.outputs.tag_name }}
+        run: python docs/examples/release_identity.py write --release "$TAG_NAME" --run-id "$GITHUB_RUN_ID" --dist dist --output .docs-evidence/package-publication/identity.json
+
+      - name: Retain the run-scoped package identity
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: released-docs-identity
+          path: .docs-evidence/package-publication/identity.json
+          include-hidden-files: true
+          if-no-files-found: error

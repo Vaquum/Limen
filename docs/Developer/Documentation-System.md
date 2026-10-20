@@ -4,6 +4,11 @@ Limen's documentation is a research book built around two complete, executable p
 
 This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md#research-interface-contract) establishes the research interfaces. Documentation must describe their current behavior and make the evidence behind its examples inspectable.
 
+The [Python project](../examples/python-research/README.md) and
+[Compiled project](../examples/compiled-research/README.md) are the canonical
+programs governed here. Their entry points, recorded inputs and named scenarios
+supply chapter examples; the appendix procedures below maintain their proof.
+
 ## Prerequisites
 
 - a Limen checkout and its Python development environment
@@ -22,13 +27,13 @@ The owned reader and research projects are candidates in this repository. Their 
 | [Reader and projects](https://github.com/Vaquum/Limen/issues/1052) | Build the reader inside Limen, both comprehensive projects, their semantic tests and bindings, and the first complete chapter. |
 | [Complete book and publication](https://github.com/Vaquum/Limen/issues/1047) | Complete the maintained corpus and reference coverage, prove released-package reproduction, activate validated publication and retain rollback. |
 
-The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.mjs` maps maintained sources into Overview, Guides, Reference, Developer and Packages. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the static build. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
+The owned reader is the sole renderer in this checkout. `docs-site/reader/content.json` maps every maintained source into Book, Reference and Developer. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the evidence-consuming static build. The retained production Worker still serves the predecessor until the first released-book proof passes. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
 
-The candidate first chapter binds exact source regions and retained observations to both projects. The scenario catalogue defines required executions; the evidence checker rejects missing, skipped or stale proof. Selected tests can run independently, but their incomplete evidence cannot publish a reader. The complete suite must execute every required scenario and integrity test before producing successful publication evidence. The reader consumes the tested wheel, input bundle, source identities and current results. Browser checks exercise the real base path and Worker policy, including keyboard use, reduced motion, saved passages, code copying, reference return and mobile navigation. Retained screenshots record the candidate's rendered state.
+The complete candidate corpus binds exact source regions and retained observations to both projects. The scenario catalogue defines required executions; the evidence checker rejects missing, skipped or stale proof. Selected tests can run independently, but their incomplete evidence cannot publish a reader. The complete suite must execute every required scenario and integrity test before producing successful publication evidence. The reader consumes the tested wheel, input bundle, source identities and current results. Browser checks exercise the real base path and Worker policy, including keyboard use, reduced motion, saved passages, code copying, reference return and mobile navigation. Retained screenshots record the candidate's rendered state.
 
 Integrity tests record native fitting and calibration inputs and forbid fitting after final selection is frozen. The archived CLI commands run in a separate process with the installed wheel. Native result files, checkpoints, round records, audits, final assessment rows and the installed dependency inventory remain available in the evidence archive.
 
-Most existing pages still need their examples classified and connected to the projects. Their source footers identify reference excerpts without claiming execution. The first complete chapter is a checkpoint; it does not complete the book. Keep the existing renderer and its source checks until the complete-book publication delivery replaces it.
+The maintained source inventory equals `catalogue.json`'s bound pages. Each page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. Complete source migration does not establish production publication. Preserve the source checks while replacing the renderer. The first-release sequence below retains the deployed predecessor until released-book acceptance.
 
 ## Validating the candidate reader
 
@@ -36,13 +41,13 @@ Use Python 3.10–3.13 and Node.js 20 or later. CI uses the policy-pinned Python
 
 From the repository root, after publishing the candidate PR:
 
-```bash
-npm --prefix docs-site ci
-python docs/examples/check_sources.py
-python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
-python docs/examples/prepare_environment.py
-python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
-```
+| Step | Command |
+|---|---|
+| 1 | `npm --prefix docs-site ci` |
+| 2 | `python docs/examples/check_sources.py` |
+| 3 | `python docs/examples/provenance.py --output .docs-evidence/source-provenance.json` |
+| 4 | `python docs/examples/prepare_environment.py` |
+| 5 | `python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short` |
 
 The binding checker uses the reader's locked Markdown parser to identify fenced and indented code blocks, including quoted and tilde forms. Each must occupy the exact location of a validated source or output binding. Install the Node dependencies before running binding tests.
 
@@ -50,24 +55,18 @@ Acquire provenance with full Git history and authenticated read access to GitHub
 
 Then, from `docs-site/`:
 
-```bash
-npm run check
-npm run security:audit
-npm run build:reader
-npx --no-install playwright install chromium
-npm run check:reader
-```
+| Step | Command |
+|---|---|
+| 1 | `npm run check` |
+| 2 | `npm run security:audit` |
+| 3 | `npx --no-install playwright install chromium` |
+| 4 | `npm run check:reader` |
 
 The reader build requires a clean source tree, matching package and current execution evidence. Browser verification checks that evidence and every built file before opening the pages. Use the repository's managed validation runner when it owns the PR; record the necessary commands there and run them in the required order. A background start is not a passing result.
 
 Change canonical project code first, synchronize its marked chapter regions and run the affected proof. Keep displayed observations under their recorded run identity unless their meaning or comparison bounds require a new capture. Never hand-edit a successful current-validation record. Extend the model and scenario catalogue when the public surface changes; a newly exported family cannot silently disappear from the documentation's coverage inventory.
 
-Two deployment defects also remain open in the current source and build:
-
-- `docs-site/src/worker.js` redirects `/robots.txt` to `/limen/robots.txt`, but the build emits no `robots.txt` asset at that destination.
-- The Google Fonts import in `docs-site/src/css/custom.css` conflicts with the Worker's CSP: its style and font directives do not admit the required Google origins.
-
-The reader delivery must self-host the selected fonts and prove that they load under the CSP. The publication delivery must emit and verify the canonical robots resource. Retain both defect records until their rendered-build and deployment checks pass.
+The owned reader emits the canonical robots resource and self-hosts Archivo/Plex under the Worker CSP. Both are checked before publication and over anonymous HTTP before activation. The predecessor remains deployed until the first released-book proof passes; removing its build sources does not replace its live Worker version.
 
 ## Ownership
 
@@ -104,9 +103,9 @@ The main book carries one research question from recorded observations to select
 
 Package READMEs retain their ownership, public entry points and adjacent boundaries. Place their navigation with the reference material rather than requiring a separate top-level section.
 
-Maintain one explicit source-to-route map. Every maintained source has exactly one canonical page and route. Generated contents, indexes and search results route to those pages. Count the actual corpus: root `README.md`, maintained Markdown under `docs/`, and package READMEs under `limen/`. A fixed page count is not a completeness test.
+Maintain one explicit source-to-route map. Every maintained source has exactly one canonical page and route. Generated contents, indexes and search results route to those pages. Optional `navigationTitle` supplies an API lookup label for a narrative page heading; the sidebar, reference index and search share that label from the same map. The authored heading and its anchor remain unchanged. Count the actual corpus: root `README.md`, maintained Markdown under `docs/`, and package READMEs under `limen/`. A fixed page count is not a completeness test.
 
-Every maintained page connects to one or both example projects. A research page uses the relevant source, scenario or result. A developer page connects through maintaining, proving or releasing those projects. A contributor-only task does not need an artificial research snippet. Shared applicable capabilities show both interfaces; a tag or repeated boilerplate link alone does not establish coverage.
+Every maintained page connects to one or both example projects. The required evidence check now requires the bound-page catalogue and scenario contexts to equal the complete maintained inventory, with no duplicate or opt-out page. Adding a page without those bindings fails before a reader can be built. A research page uses the relevant source, scenario or result. A developer page connects through maintaining, proving or releasing those projects. A contributor-only task does not need an artificial research snippet. Shared applicable capabilities show both interfaces; a tag or repeated boilerplate link alone does not establish coverage.
 
 ### Chapter composition
 
@@ -133,7 +132,7 @@ The README's language must remain coherent across the whole system.
 - Keep measurements tied to their data and environment. Do not turn them into performance promises.
 - Distinguish implemented, historical, planned and unproved behavior.
 - Author each explanation once; summarize and link from adjacent pages.
-- Use relative links between maintained source documents.
+- Use relative links between maintained source documents. The root README uses public repository source URLs so its PyPI/package description remains usable; the reader resolves those known source URLs through the same canonical route map.
 - Omit praise, intensifiers, ornamental transitions and claims of capability unsupported by source and execution.
 
 The book may be extensive. Each paragraph, table, example and visual must earn its place through the information it carries.
@@ -156,6 +155,8 @@ Tests run those commands and sources unchanged. Accept recorded-input paths as d
 
 Prove the installation outside the source checkout. Verify the imported distribution and location, package version, input digests, path behavior and meaningful results. Candidate checks execute the candidate wheel. Production validation executes the actual released wheel; an editable installation plus a version-availability lookup does not establish that result.
 
+`docs/examples/released_wheel.py` downloads the exact version from public PyPI metadata and retains the wheel, metadata and digest receipt. The research tests accept `--released-wheel RECEIPT` to install that wheel instead of building a candidate. Both paths use the same isolated environment, unchanged project commands and semantic assertions. A released wheel must match the checkout's version and every shipped Python source file. Selecting or downloading a wheel alone does not prove execution; publication still requires the complete passing suite and merged-source evidence.
+
 ## Examples and their bindings
 
 Classify every Python, YAML, JSON and Bash fence. Its role determines the proof it needs.
@@ -164,11 +165,18 @@ Classify every Python, YAML, JSON and Bash fence. Its role determines the proof 
 |---|---|
 | Executable project excerpt | Exact named region of canonical project source, with scenario, prerequisites and executing semantic tests. |
 | API signature | Current public source and signature; clearly presented as reference, not a runnable workflow. |
+| Package layout | Exact tracked package inventory, derived from its package README location and presented as text. No executable-workflow claim. |
 | Partial fragment | Explicit earlier state and full-project route; no claim that the fragment runs alone. If it comes from an executed project, retain that binding. |
 | Command | Current arguments and dependency/working-directory context; execute commands used to establish a workflow claim. |
 | Observed output | Retained bytes from an identified successful execution and its declared comparison rules. |
 
-Keep standalone Python parseable; identify non-standalone fragments explicitly. Preserve plain language info strings when adding role markers: `python`, `python-fragment`, `yaml`, `json`, `bash`, `sh`, `text` and unlabelled display fences must be accounted for. Put binding metadata outside the fence, or update its parser and migration in the same change. `python-fragment` remains a partial fragment; `bash` and `sh` carry commands; `text` may carry observed output or non-executable reference text. Language alone does not distinguish signatures from executable Python. Existing fences remain under the current checks until the book migration classifies the complete corpus. Informational fences do not escape source checking or establish execution. Runnable examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
+Keep standalone Python parseable; identify non-standalone fragments explicitly. Preserve plain language info strings when adding role markers: `python`, `python-fragment`, `yaml`, `json`, `bash`, `sh`, `text` and unlabelled display fences must be accounted for. Put binding metadata outside the fence, or update its parser and migration in the same change. `python-fragment` remains a partial fragment; `bash` and `sh` carry commands; `text` may carry observed output or non-executable reference text. Language alone does not distinguish signatures from executable Python. Existing fences remain under the current checks until the book migration classifies the complete corpus. Informational fences do not escape source checking or establish execution. Manifest-based examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
+
+Package signatures and constant definitions are derived from the current Python syntax tree. Signature bindings retain the declared parameters, defaults, annotations and decorators while replacing executable bodies with an ellipsis. Definition bindings retain the actual module assignment. Their source hashes and merged-PR identities are checked separately from the projects; the current wheel proof also compares every shipped Python source file with the tested tree. These blocks describe package interfaces and do not claim to execute a research workflow.
+
+Package layouts use `layout:package` with their own `limen/**/README.md` as source. Their text must equal the immediate files and directories in Git's tracked package inventory. Adding, removing or renaming a tracked member requires updating that diagram. Module-responsibility notes remain authored reference text beside the inventory.
+
+Each bound page records its relevant scenario identities in `catalogue.json` under `page_contexts`. Its visible Markdown links must reach every applicable canonical project, unless the page is that project's own README. The reader's parser checks those links as well as the fences; a link inside an HTML comment cannot establish the connection. Reference and layout roles do not replace the scenario context or assert that every alternative helper ran.
 
 Authored and displayed executable excerpts must equal their canonical source regions. Tests execute that source, compare the excerpts and reject a missing region, duplicate identity, wrong interface, stale binding or changed display. Test deliberate divergence so the guarantee itself has evidence.
 
@@ -267,7 +275,7 @@ Code controls preserve exact source when copying, exclude line-number gutters, r
 
 ## Routes, security and discovery
 
-During this prelaunch restructuring, routes and anchors may change deliberately. Blanket redirects are not required under the operator’s explicit decision for this restructuring. The publication delivery must enumerate links already shipped in README/package metadata and record their retained, redirected or deliberately retired destinations; absolute links to the documentation origin belong in the same route-map checks. This contract slice changes no routes. Migrate internal links and ensure source links, anchors, navigation, search, canonical metadata and sitemap all use the same map. Once a route is intentionally retained, it must resolve to its declared content.
+During this prelaunch restructuring, routes and anchors may change deliberately. Blanket redirects are not required under the operator’s explicit decision for this restructuring. The publication delivery must enumerate links already shipped in README/package metadata and record their retained, redirected or deliberately retired destinations; absolute links to the documentation origin belong in the same route-map checks. The retained `docs-site/reader/route-decisions.json` inventories every route and README/package link in the pre-cutover source revision. It records the retained or deliberately retired URL and its current reading destination. Source checks verify the pinned baseline and complete inventory; browser checks prove retained and retired status codes and replacement destinations. The build seals this record as `route-decisions.json`. Migrate internal links and ensure source links, anchors, navigation, search, canonical metadata and sitemap all use the same map. Once a route is intentionally retained, it must resolve to its declared content.
 
 Maintain one canonical origin and product base path. Limen owns `/limen/`; shared-host routing, root resources, robots and sitemap ownership must be explicit. A product adapter must not take over another product's prefix. Prove status codes, redirects and errors through the real deployment adapter.
 
@@ -275,29 +283,41 @@ Preserve HSTS, CSP, permissions, referrer, content-type and frame protections. B
 
 ## Publication and rollback
 
-The existing Cloudflare Git-integrated build runs independently of GitHub checks. Keep it through the reader checkpoint. Before merging the first removal of the production renderer, prepare and activate its replacement, record the actual cutover and disable the independent deployment path. Required credentials or dashboard actions must be resolved at that concrete deployment boundary.
+The first migration keeps three delivery slices. Before merging BOOK-LIMEN, retain the current production Worker version and home-page digest, disconnect its independent Git-integrated build, prove the complete candidate, provision the release publisher and remove the Docusaurus sources and configuration in the same PR. The deployed predecessor keeps serving while the merged package is released.
+
+After merge, the publisher must obtain and execute that actual released wheel, retain its public evidence, verify an inactive preview and activate it or restore the predecessor. Parent #1045 remains open until the actual cutover, anonymous artifact verification and rollback acceptance are recorded. This ordering permits the publisher to use its own merged release; candidate proof cannot satisfy the post-merge obligations.
 
 Production publication follows successful package publication. Resolve the merged release and available wheel, obtain the pinned example/input bundle, and execute the documented commands against that wheel outside the source checkout. Build the site from the resulting exact-release evidence. A push to `main` alone is not publication approval.
 
 Assemble evidence and attach bundles through deterministic code, independently of release-note prose. Retain content-addressed source, input, output, validation and site bundles as public GitHub Release assets and static evidence. Actions artifacts may supplement diagnostics but are not sufficient for anonymous durable access. Verify bundle identities rather than assuming a filename is immutable.
 
+Keep a wheel's original distribution, version and compatibility filename so a downloaded artifact remains installable. Its static parent directory carries its SHA-256; the Release copy must have identical bytes. Keep each detached manifest as `publication-SHA256.json` on the Release. The site's `publication.json` selects its manifest; a rebuild must preserve every earlier manifest and artifact so the previous deployment and rollback remain verifiable. Never replace a Release asset with different bytes.
+
+`docs/examples/publication.py` seals an already tested reader only when every maintained page is bound, the checkout is clean at its merged release tag, every source has merged-PR provenance, and the executed wheel matches its retained PyPI receipt. The execution record stays unchanged. Production adds separate hashes for that record, the project/input bundle and the site payload. The payload excludes evidence and build metadata to avoid hashing itself. The rollback archive retains the site and evidence; its manifest and the rollback archive itself remain detached. Restore both alongside the extracted site. `verify_publication.py` retrieves the advertised artifacts without credentials, checks their hashes and source identities against the public GitHub Release, compares the wheel with current public PyPI metadata, and checks every served document and asset against the sealed payload. The Worker and build share one security-header declaration. The sealed site retains that declaration as `security-headers.json`; verification compares all six values on every response with that release's policy, including the 404 response. An unknown route must return the sealed 404 with status 404. These tools do not themselves activate a deployment.
+
+The replacement `.github/workflows/docs_publish.yml` accepts only a successful canonical package-publishing run and its run-scoped identity artifact. `release_identity.py` verifies that run, merged tag and exact wheel. `release_assets.py` uploads immutable artifacts without replacement and downloads the actual public project/input bundle. The full proof executes that downloaded bundle and wheel outside the checkout. A release superseded while queued cannot activate.
+
+`deploy_publication.py` requires disconnected Git build triggers before staging. It reads the production version before and after capturing rollback hashes and rejects a changed version before uploading. It then uploads an inactive Worker version and verifies its anonymous Version URL. Activation rechecks disconnected triggers, preview evidence and the recorded production version. It checks the latest package release again immediately before deployment, after deployment and after production verification; a release superseded during those operations cannot receive acceptance. A failed activation or production check restores the recorded predecessor and verifies its home-page bytes and, when available, its complete release envelope. The first cutover from Docusaurus records its existing Worker version and home-page digest explicitly; it cannot invent release evidence for that renderer. Live acceptance remains necessary. Setup and credential requirements are in [the deployment instructions](../../docs-site/CLOUDFLARE.md).
+
+The publisher pins Wrangler in its own lockfile and requires Node.js 22 or later. The required Docs Site job runs the research reader under Node.js 20, then installs and audits the separate publisher graph. Both audits inspect the complete graph and allow no advisory exceptions. Temporary HTTP 502, 503 or 504 responses from the public npm audit endpoint receive at most three attempts, with every response retained. Advisories, authentication failures and malformed reports fail without retries; exhausted gateway attempts also fail. Contributor and fork builds do not require deployment credentials.
+
 Prove anonymous HTTP retrieval and digests for the advertised source, results, validation and rollback artifacts. Exercise pending or failed proof, wrong revisions, PR-versus-merged identities and missing or failed package publication. These conditions must retain the previous validated deployment. A unit test of a JSON record alone cannot prove ordering between release, execution and deployment.
 
-Retain the previous validated site and its evidence through cutover and post-deployment smoke checks. Verify the candidate preview before activation and the deployed routes, headers, assets and proof afterward. Remove the replaced build path after acceptance; do not leave permanent competing production renderers.
+Retain the previous validated site and its evidence through cutover and post-deployment smoke checks. Verify the candidate preview before activation and the deployed routes, headers, assets and proof afterward. The obsolete build path is removed in BOOK-LIMEN before merge; its deployed Worker and rollback identity survive through actual cutover acceptance. Keep one production publisher.
 
 ## Verification and completion
 
 For the current renderer, run the existing commands after publishing the useful first commit and non-draft PR, following repository workflow:
 
-```bash
-python -m pytest tests/test_docs_surface.py -q
-npm --prefix docs-site run security:audit
-npm --prefix docs-site run check
-```
+| Step | Command |
+|---|---|
+| 1 | `python -m pytest tests/test_docs_surface.py -q` |
+| 2 | `npm --prefix docs-site run security:audit` |
+| 3 | `npm --prefix docs-site run check` |
 
-These commands prove their current scope. They do not establish the future reader, comprehensive examples or evidence-bound production.
+These commands prove source integrity, dependency security and the owned reader build. The build requires the complete same-head project proof above; local commands do not establish a production deployment.
 
-The reader delivery adds executing project/binding tests under `docs/examples/tests/` and browser/build checks under `docs-site/`. The final delivery applies them to the complete corpus and actual publication. Keep every existing required package, security, typing, coverage, runtime, install and packaging check effective.
+The reader delivery supplies executing project/binding tests under `docs/examples/tests/` and browser/build checks under `docs-site/`. The final delivery applies them to the complete corpus and actual publication. Keep every existing required package, security, typing, coverage, runtime, install and packaging check effective.
 
 The acceptance matrix covers:
 

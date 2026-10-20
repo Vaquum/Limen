@@ -265,38 +265,23 @@ def test_supply_chain_surfaces() -> None:
     assert 'require-hashes' in policy
 
     site_package = json.loads((ROOT / 'docs-site' / 'package.json').read_text(encoding='utf-8'))
-    assert site_package['overrides']['js-yaml@^4'] == '^4.3.2'
-    assert site_package['overrides']['js-yaml@^3'] == '^3.15.2'
     markdown_it_pin = site_package['dependencies']['markdown-it']
     assert re.fullmatch(r'\d+\.\d+\.\d+', markdown_it_pin)
     assert site_package['overrides']['markdown-it'] == '$markdown-it'
-    assert site_package['overrides']['body-parser'] == '^1.20.6'
-    assert site_package['overrides']['brace-expansion'] == '5.0.12'
-    assert site_package['overrides']['shell-quote'] == '^1.8.5'
-    assert site_package['overrides']['webpack-dev-server'] == '^5.2.6'
-    assert site_package['overrides']['fast-uri'] == '^3.1.8'
-    assert site_package['overrides']['postcss'] == '^8.5.18'
-    assert site_package['overrides']['svgo'] == '^3.3.4'
-    assert site_package['overrides']['qs'] == '^6.16.0'
-    assert site_package['overrides']['http-cache-semantics'] == '^4.3.0'
-    assert site_package['overrides']['image-size'] == '^2.0.4'
+    assert site_package['scripts']['build'] == 'node scripts/build-reader.mjs'
+    assert site_package['scripts']['check'] == 'npm run lint && npm run build'
     site_lock = json.loads((ROOT / 'docs-site' / 'package-lock.json').read_text(encoding='utf-8'))
-    js_yaml_versions = {
-        tuple(int(part) for part in pkg['version'].split('.')[:3])
-        for key, pkg in site_lock['packages'].items()
-        if key.endswith('node_modules/js-yaml')
-    }
-    assert js_yaml_versions
-    assert all(v >= (3, 15, 0) if v[0] == 3 else v >= (4, 2, 0) for v in js_yaml_versions)
+    assert site_lock['packages']['']['dependencies'] == site_package['dependencies']
+    assert not any('@docusaurus/' in key or 'docusaurus-search-local' in key for key in site_lock['packages'])
     markdown_it_versions = {
         tuple(int(part) for part in pkg['version'].split('.')[:3])
         for key, pkg in site_lock['packages'].items()
         if key.endswith('node_modules/markdown-it')
     }
-    assert markdown_it_versions
-    assert all(v >= (14, 2, 0) for v in markdown_it_versions)
     assert markdown_it_versions == {tuple(int(part) for part in markdown_it_pin.split('.'))}
+    assert all(v >= (14, 2, 0) for v in markdown_it_versions)
     advisory_floors = {
+        'js-yaml': (4, 3, 2),
         'body-parser': (1, 20, 6),
         'brace-expansion': (5, 0, 12),
         'shell-quote': (1, 8, 5),
@@ -308,13 +293,10 @@ def test_supply_chain_surfaces() -> None:
         'image-size': (2, 0, 4),
     }
     for package_name, floor in advisory_floors.items():
-        resolved_versions = {
-            tuple(int(part) for part in pkg['version'].split('.')[:3])
-            for key, pkg in site_lock['packages'].items()
-            if key.endswith(f'node_modules/{package_name}')
-        }
-        assert resolved_versions, package_name
-        assert all(v >= floor for v in resolved_versions), (package_name, resolved_versions)
+        for key, pkg in site_lock['packages'].items():
+            if key.endswith(f'node_modules/{package_name}'):
+                version = tuple(int(part) for part in pkg['version'].split('.')[:3])
+                assert version >= floor, (package_name, version)
 
     release_script = (ROOT / 'scripts' / 'create_release.py').read_text(encoding='utf-8')
     assert 'TAG_RE' in release_script

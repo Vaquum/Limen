@@ -7,6 +7,10 @@
 - [Rule-Based Strategy](../../../docs/Experiment-Manifest.md#rule-based-strategy) — conditions, temporal modifiers and parameter references
 - [Single-File Decoder](../../../docs/Single-File-Decoder.md)
 
+## In the research projects
+
+The [Python project](../../../docs/examples/python-research/README.md) supplies its own execution signals. The [Compiled project](../../../docs/examples/compiled-research/README.md) `allocation` scenario includes a declared rule-based primary. In both paths, the execution contract determines fills, costs and availability after a research decision has been formed.
+
 ## What this package owns
 
 Owns the rule-based decoder building blocks: the `RuleBasedConfig` schema (with leaf-condition validation) and `build_predicate`, which compiles a condition tree into an evaluable predicate over a frame.
@@ -26,10 +30,20 @@ Does **not** own the SFD wiring that uses these (owned by the `rule_based` modul
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `config.py` | RuleBasedConfig + leaf-condition validation |
+| `predicates.py` | build_predicate + operator table |
+
+<!-- reference: package-sfd-rule_based-layout source=limen/sfd/rule_based/README.md region=layout:package role=layout -->
 ```text
 rule_based/
-├── config.py       # RuleBasedConfig + leaf-condition validation
-└── predicates.py   # build_predicate + operator table
+├── README.md
+├── __init__.py
+├── _temporal.py
+├── common_strategies.py
+├── config.py
+└── predicates.py
 ```
 
 ## Things to know

@@ -1,0 +1,646 @@
+{
+  "baseline": "367e4a41a6bc680b5a664952b5e22772360fbd0f",
+  "policy": "Prelaunch route reset: retain declared current routes; deliberately retire replaced routes and anchors without blanket redirects. Replacements identify the current reading destination.",
+  "sources": {
+    "README.md": "9152958c18c550da358e87e32542ceeeffdf92de20f1f6e19a8b2963b51e8043",
+    "pyproject.toml": "e088018e9cc6163ae78bb34b0808b15ffec36d339987e24a589392869e2e2330",
+    "docs-site/scripts/assemble-docs.mjs": "9eb2a1f28c5ce86aeef73ab2742b1cca2ad880b13d2c11c429bc782a4091154a"
+  },
+  "legacy_routes": [
+    {
+      "source": "README.md",
+      "url": "https://docs.vaquum.fi/limen/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/developer/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/developer/home/"
+    },
+    {
+      "source": "docs/Developer/Contributing-Foundational-SFDs.md",
+      "url": "https://docs.vaquum.fi/limen/developer/contributing-foundational-sfds/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/contributing-foundational-sfds/"
+    },
+    {
+      "source": "docs/Developer/Documentation-System.md",
+      "url": "https://docs.vaquum.fi/limen/developer/documentation-system/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/documentation-system/"
+    },
+    {
+      "source": "docs/Developer/README.md",
+      "url": "https://docs.vaquum.fi/limen/developer/home/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/home/"
+    },
+    {
+      "source": "docs/Developer/Making-Release.md",
+      "url": "https://docs.vaquum.fi/limen/developer/making-release/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/making-release/"
+    },
+    {
+      "source": "docs/Developer/Packaging.md",
+      "url": "https://docs.vaquum.fi/limen/developer/packaging/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/packaging/"
+    },
+    {
+      "source": "docs/Developer/Pruning-Strategies.md",
+      "url": "https://docs.vaquum.fi/limen/developer/pruning-strategies/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/pruning-strategies/"
+    },
+    {
+      "source": "docs/Developer/Release-Policy.md",
+      "url": "https://docs.vaquum.fi/limen/developer/release-policy/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/release-policy/"
+    },
+    {
+      "source": "docs/Developer/Security-Assurance-Case.md",
+      "url": "https://docs.vaquum.fi/limen/developer/security-assurance-case/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/security-assurance-case/"
+    },
+    {
+      "source": "docs/Semantic-Versioning.md",
+      "url": "https://docs.vaquum.fi/limen/developer/semantic-versioning/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/semantic-versioning/"
+    },
+    {
+      "source": "docs/TechnicalDebt.md",
+      "url": "https://docs.vaquum.fi/limen/developer/technical-debt/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/technical-debt/"
+    },
+    {
+      "source": "docs/Developer/Writing-Docstrings.md",
+      "url": "https://docs.vaquum.fi/limen/developer/writing-docstrings/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/developer/writing-docstrings/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/guides/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/"
+    },
+    {
+      "source": "docs/Advanced-Search.md",
+      "url": "https://docs.vaquum.fi/limen/guides/advanced-search/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/advanced-search/"
+    },
+    {
+      "source": "docs/Backtest-Benchmarks.md",
+      "url": "https://docs.vaquum.fi/limen/guides/backtest-benchmarks/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/developer/backtest-benchmarks/"
+    },
+    {
+      "source": "docs/Backtest.md",
+      "url": "https://docs.vaquum.fi/limen/guides/backtest/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/backtest/"
+    },
+    {
+      "source": "docs/Benchmark.md",
+      "url": "https://docs.vaquum.fi/limen/guides/benchmark/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/benchmark/"
+    },
+    {
+      "source": "docs/Built-In-SFDs.md",
+      "url": "https://docs.vaquum.fi/limen/guides/built-in-sfds/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/built-in-sfds/"
+    },
+    {
+      "source": "docs/Cohort.md",
+      "url": "https://docs.vaquum.fi/limen/guides/cohort/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/cohort/"
+    },
+    {
+      "source": "docs/Command-Line-Interface.md",
+      "url": "https://docs.vaquum.fi/limen/guides/command-line-interface/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/command-line-interface/"
+    },
+    {
+      "source": "docs/Common-Strategies.md",
+      "url": "https://docs.vaquum.fi/limen/guides/common-strategies/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/common-strategies/"
+    },
+    {
+      "source": "docs/examples/compiled-research/README.md",
+      "url": "https://docs.vaquum.fi/limen/guides/compiled-research-project/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/compiled-research/"
+    },
+    {
+      "source": "docs/Conserved-Flux-Renormalization.md",
+      "url": "https://docs.vaquum.fi/limen/guides/conserved-flux-renormalization/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/conserved-flux-renormalization/"
+    },
+    {
+      "source": "docs/Data-Bars.md",
+      "url": "https://docs.vaquum.fi/limen/guides/data-bars/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/data-bars/"
+    },
+    {
+      "source": "docs/End-to-End-Workflow.md",
+      "url": "https://docs.vaquum.fi/limen/guides/end-to-end-workflow/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/end-to-end-workflow/"
+    },
+    {
+      "source": "docs/Experiment-Manifest.md",
+      "url": "https://docs.vaquum.fi/limen/guides/experiment-manifest/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/experiment-manifest/"
+    },
+    {
+      "source": "docs/Final-Holdout.md",
+      "url": "https://docs.vaquum.fi/limen/guides/final-holdout/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/final-holdout/"
+    },
+    {
+      "source": "docs/Fractional-Differentiation.md",
+      "url": "https://docs.vaquum.fi/limen/guides/fractional-differentiation/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/fractional-differentiation/"
+    },
+    {
+      "source": "docs/Historical-Data.md",
+      "url": "https://docs.vaquum.fi/limen/guides/historical-data/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/historical-data/"
+    },
+    {
+      "source": "docs/Log.md",
+      "url": "https://docs.vaquum.fi/limen/guides/log/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/log/"
+    },
+    {
+      "source": "docs/Perturbation-Strategies.md",
+      "url": "https://docs.vaquum.fi/limen/guides/perturbation-strategies/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/perturbation-strategies/"
+    },
+    {
+      "source": "docs/examples/python-research/README.md",
+      "url": "https://docs.vaquum.fi/limen/guides/python-research-project/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/python-research/"
+    },
+    {
+      "source": "docs/Reducers-And-Feedback.md",
+      "url": "https://docs.vaquum.fi/limen/guides/reducers-and-feedback/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/reducers-and-feedback/"
+    },
+    {
+      "source": "docs/Research-Book.md",
+      "url": "https://docs.vaquum.fi/limen/guides/research-book/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/"
+    },
+    {
+      "source": "docs/Single-File-Decoder.md",
+      "url": "https://docs.vaquum.fi/limen/guides/single-file-decoder/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/single-file-decoder/"
+    },
+    {
+      "source": "docs/Trainer.md",
+      "url": "https://docs.vaquum.fi/limen/guides/trainer/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/trainer/"
+    },
+    {
+      "source": "docs/Triple-Barrier-Method.md",
+      "url": "https://docs.vaquum.fi/limen/guides/triple-barrier-method/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/triple-barrier-method/"
+    },
+    {
+      "source": "docs/Universal-Experiment-Loop.md",
+      "url": "https://docs.vaquum.fi/limen/guides/universal-experiment-loop/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/universal-experiment-loop/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/overview/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/overview/docs-hub/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/overview/comparison/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/about/",
+      "reason": "The previously linked comparison URL has no maintained page in the baseline; the current introduction explains the interface choice."
+    },
+    {
+      "source": "docs/README.md",
+      "url": "https://docs.vaquum.fi/limen/overview/docs-hub/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/overview/docs-hub/"
+    },
+    {
+      "source": "docs/Roadmap.md",
+      "url": "https://docs.vaquum.fi/limen/overview/roadmap/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/overview/roadmap/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/packages/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/"
+    },
+    {
+      "source": "limen/backtest/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/backtest/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/backtest/"
+    },
+    {
+      "source": "limen/calibration/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/calibration/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/calibration/"
+    },
+    {
+      "source": "limen/cli/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/cli/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/cli/"
+    },
+    {
+      "source": "limen/cohort/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/cohort/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/cohort/"
+    },
+    {
+      "source": "limen/data/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/data/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/data/"
+    },
+    {
+      "source": "limen/experiment/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/experiment/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/experiment/"
+    },
+    {
+      "source": "limen/features/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/features/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/features/"
+    },
+    {
+      "source": "limen/indicators/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/indicators/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/indicators/"
+    },
+    {
+      "source": "limen/inference/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/inference/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/inference/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/packages/internals/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/"
+    },
+    {
+      "source": "limen/cli/commands/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/cli-commands/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/cli-commands/"
+    },
+    {
+      "source": "limen/cohort/sfc/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/cohort-selectors/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/cohort-selectors/"
+    },
+    {
+      "source": "limen/data/bars/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/data-bars/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/data-bars/"
+    },
+    {
+      "source": "limen/data/utils/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/data-utils/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/data-utils/"
+    },
+    {
+      "source": "limen/sfd/foundational_sfd/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/foundational-sfds/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/foundational-sfds/"
+    },
+    {
+      "source": "limen/experiment/param_search/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/parameter-search/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/parameter-search/"
+    },
+    {
+      "source": "limen/experiment/reducer/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/reducers/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/reducers/"
+    },
+    {
+      "source": "limen/sfd/reference_architecture/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/reference-architectures/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/reference-architectures/"
+    },
+    {
+      "source": "limen/sfd/rule_based/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/internals/rule-based/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/internals/rule-based/"
+    },
+    {
+      "source": "limen/log/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/log/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/log/"
+    },
+    {
+      "source": "limen/metrics/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/metrics/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/metrics/"
+    },
+    {
+      "source": "limen/scalers/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/scalers/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/scalers/"
+    },
+    {
+      "source": "limen/sfd/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/sfd/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/sfd/"
+    },
+    {
+      "source": "limen/targets/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/targets/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/targets/"
+    },
+    {
+      "source": "limen/transforms/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/transforms/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/transforms/"
+    },
+    {
+      "source": "limen/utils/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/utils/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/utils/"
+    },
+    {
+      "source": "limen/yaml/README.md",
+      "url": "https://docs.vaquum.fi/limen/packages/yaml/",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/packages/yaml/"
+    },
+    {
+      "source": null,
+      "url": "https://docs.vaquum.fi/limen/reference/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/"
+    },
+    {
+      "source": "docs/Calibration.md",
+      "url": "https://docs.vaquum.fi/limen/reference/calibration/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/calibration/"
+    },
+    {
+      "source": "docs/Features.md",
+      "url": "https://docs.vaquum.fi/limen/reference/features/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/features/"
+    },
+    {
+      "source": "docs/Glossary.md",
+      "url": "https://docs.vaquum.fi/limen/reference/glossary/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/glossary/"
+    },
+    {
+      "source": "docs/Indicators.md",
+      "url": "https://docs.vaquum.fi/limen/reference/indicators/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/indicators/"
+    },
+    {
+      "source": "docs/Reference-Architecture.md",
+      "url": "https://docs.vaquum.fi/limen/reference/reference-architecture/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/reference-architecture/"
+    },
+    {
+      "source": "docs/Scalers.md",
+      "url": "https://docs.vaquum.fi/limen/reference/scalers/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/scalers/"
+    },
+    {
+      "source": "docs/Standard-Metrics-Library.md",
+      "url": "https://docs.vaquum.fi/limen/reference/standard-metrics-library/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/standard-metrics-library/"
+    },
+    {
+      "source": "docs/Targets.md",
+      "url": "https://docs.vaquum.fi/limen/reference/targets/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/targets/"
+    },
+    {
+      "source": "docs/Transforms.md",
+      "url": "https://docs.vaquum.fi/limen/reference/transforms/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/transforms/"
+    },
+    {
+      "source": "docs/Utilities.md",
+      "url": "https://docs.vaquum.fi/limen/reference/utilities/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/utilities/"
+    }
+  ],
+  "published_links": [
+    {
+      "url": "https://docs.vaquum.fi/limen/",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/developer",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/developer/home/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/advanced-search",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/advanced-search/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/backtest",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/backtest/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/benchmark#walk-forward-selection-report",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/benchmark/#walk-forward-selection-report"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/cohort",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/cohort/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/cohort#python-cohorts",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/cohort/#python-cohorts"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/command-line-interface",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/command-line-interface/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/end-to-end-workflow",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/end-to-end-workflow/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/experiment-manifest",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/experiment-manifest/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/experiment-manifest#how-a-manifest-executes",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/experiment-manifest/#how-a-manifest-executes"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/experiment-manifest#walk-forward-sweeps",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/experiment-manifest/#walk-forward-sweeps"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/final-holdout",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/final-holdout/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/log",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/log/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/single-file-decoder#custom-sfds",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/single-file-decoder/#custom-sfds"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/trainer",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/trainer/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/trainer#python-construction",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/trainer/#python-construction"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/trainer#sensor",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/reference/trainer/#sensor"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/universal-experiment-loop",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/universal-experiment-loop/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/universal-experiment-loop/#direct-python-run"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/universal-experiment-loop#recording-policy",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/universal-experiment-loop/#recording-policy"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/guides/universal-experiment-loop#what-uel-stores-after-a-run",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/book/universal-experiment-loop/#what-uel-stores-after-a-run"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/overview/comparison",
+      "status": "retired",
+      "replacement": "https://docs.vaquum.fi/limen/about/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/overview/docs-hub",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/overview/docs-hub/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/overview/roadmap",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/overview/roadmap/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/reference/calibration#shared-validation-return-objective",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/calibration/#shared-validation-return-objective"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/reference/features",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/features/"
+    },
+    {
+      "url": "https://docs.vaquum.fi/limen/reference/targets",
+      "status": "retained",
+      "replacement": "https://docs.vaquum.fi/limen/reference/targets/"
+    }
+  ]
+}

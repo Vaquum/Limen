@@ -1,6 +1,6 @@
 # Built-in SFDs
 
-Limen ships foundational SFDs under `limen.sfd.foundational_sfd`; most have matching YAML templates under `limen/yaml/templates`. Ordinary runs should start from a YAML template when one exists; the Python modules are the packaged decoder layer beneath that path.
+Limen ships foundational SFDs under `limen.sfd.foundational_sfd`; most have matching YAML templates under `limen/yaml/templates`. These packaged experiments adopt the Compiled Research contract, whether invoked through YAML or from Python. The [Compiled project](examples/compiled-research/README.md) uses smaller recorded-data declarations to exercise the same model families. The [Python project](examples/python-research/README.md) instead owns its Ridge fitting, scoring and retained state directly; using sklearn does not make that workflow a packaged SFD.
 
 They show the packaged Limen experiment shape because each one combines:
 
@@ -58,7 +58,7 @@ The bundled YAML template fixes:
 - grid: four momentum thresholds × four flow thresholds × five holds (`30`, `45`, `60`, `90`, `120` minutes), all 80 combinations
 - execution: one-bar lag, 10 bps fee plus 5 bps slippage on each entry and exit fill
 
-The reference candidate (`-575` bps momentum, `-0.5` flow score, `60` minutes) produced sparse executed samples in the fixed window: 129 train, 13 validation, and 14 test trades. Mean compounded net PnL per executed trade was 76.1, 115.9, and 127.5 bps respectively after costs. On the irregular test bars, observed position paths spanned about 61.6–149.7 minutes. These are reproducible backtest observations, not a population guarantee or expected live return.
+The canonical projects do not claim to replay this entire multi-year sweep. The recorded [crash-reversal fixture regression](../tests/test_dollar_bar_crash_reversal.py) separately checks transform availability, signal counts and exact native evaluation on its pinned observations. Treat the packaged sweep's fixed dates, costs and trigger availability as part of its research protocol, rather than an expected live return.
 
 The transform prevents the final observed row of each UTC day from initiating a trigger because same-date membership requires the next row. A position already within its wall-clock hold can remain active on that row. Treat trigger initiation as one-row available; the default execution lag adapts the research signal to the backtest but does not make the raw trigger same-row causal.
 
@@ -80,10 +80,7 @@ The classifier parameter surface mirrors the sklearn `LogisticRegression` constr
 
 The calibration search space includes `use_calibration`, `use_threshold`, `cal_method`, `threshold_min`, `threshold_max`, and `threshold_step`, creating a grid of calibration modes within a single experiment run.
 
-In the bundled smoke path, it prepared:
-
-- `24` training features
-- `3610` training rows
+The Compiled project's `selection` and `calibration` declarations use a smaller ROC-based logistic pipeline. Their counts describe those declarations, rather than the complete packaged feature set.
 
 ## `lightgbm_binary`
 
@@ -123,10 +120,7 @@ model and solver contract.
 
 `random_binary` is the baseline binary classifier. It is stochastic and intended for control runs, smoke tests, and low-skill comparison points.
 
-In the bundled smoke path, it prepared:
-
-- `18` training features
-- `2999` training rows
+The Compiled project executes this family as a stochastic baseline and checks the recorded prediction domain and metric range. It does not claim deterministic Trainer replay for that baseline.
 
 Because it is stochastic, it is a poor fit for deterministic reconstruction in [Trainer](Trainer.md).
 
@@ -149,20 +143,33 @@ a shared baseline. Scaling is fitted on training data; ablation uses the existin
 `feature_drop_count` and `feature_drop_seed` controls. Prepare each sampled round
 because the feature pipeline and target can change.
 
-Run the [sweep example](examples/xgboost_sweep.py) from the repository root:
+The Compiled project includes XGBoost in its recorded model-family comparison:
 
-```bash
-python docs/examples/xgboost_sweep.py --env test --permutations 12 --output /tmp/xgboost-test
-python docs/examples/xgboost_sweep.py --env prod --permutations 100 --output /tmp/xgboost-prod
+<!-- example: builtins-compiled-model-families source=docs/examples/compiled-research/scenarios.py region=model_comparisons scenario=search interface=compiled role=executed -->
+```python
+def model_comparisons(data_dir, output):
+    families = {}
+    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'):
+        config = configuration('family_' + family, data_dir)
+        # This diagnostic baseline uses NumPy's caller-owned process RNG.
+        if family == 'random_binary':
+            np.random.seed(42)
+        directory = output / family
+        loop = execute(config, directory, post_processing=False)
+        log = research_project.completed_log(loop)
+        with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
+            records = [json.loads(line) for line in stream]
+        metric = 'direction_accuracy' if family == 'direction_sizing' else 'accuracy' if family == 'random_binary' else 'rmse'
+        selected = log['id'].head(1).to_list()
+        sensors = [] if family == 'random_binary' else Trainer(directory).train(selected)
+        predictions = {record['round_id']: recorded_predictions(directory, record) for record in records}
+        families[family] = {'metrics': log.select('id', metric).to_dicts(), 'records': records, 'predictions': predictions, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
+    return families
 ```
 
-`test` selects the built-in 5,000-row, two-hour data source; `prod` selects hourly
-bars from 2025-01-01. Both use real market data. `--seed` controls reproducible
-candidate sampling; `--device cuda:0` requests CUDA with histogram trees. CUDA
-requires a compatible XGBoost build and available GPU; inspect the fitted
-booster's configuration to verify the backend. The example writes results,
-round data, metadata and checkpoints through the existing experiment loop.
-The shipped YAML template remains a smaller fixed-window example.
+This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains prediction payloads and reconstructs deterministic selected rounds. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
+
+The separate [XGBoost sweep driver](examples/xgboost_sweep.py) remains available for broader research. Its `test` mode selects a 5,000-row two-hour source; `prod` selects hourly observations from 2025-01-01. Its seed controls candidate sampling. CUDA additionally needs a compatible XGBoost build and GPU; inspect the fitted booster configuration to establish the actual backend. Those broader and GPU runs are outside the canonical project's recorded proof.
 
 ## `dlinear_regressor`
 
@@ -192,17 +199,31 @@ That optional status matters at execution time: discovery and template listing w
 
 ## Running one immediately
 
-A built-in YAML template can run directly through the CLI:
+The Compiled selection entry point shows how a declared configuration becomes an SFD, runs through UEL and reconstructs its chosen recorded round:
 
-```bash
-limen init built-in-logreg.yaml --template logreg_binary
-limen validate built-in-logreg.yaml
-limen profile built-in-logreg.yaml
-limen run --dry-run built-in-logreg.yaml
-limen run built-in-logreg.yaml
+<!-- example: builtins-compiled-selection source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
+```python
+def run_research(data_dir, output_dir):
+    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
+    source = data_dir / "spot_15m_20250101_20250531.parquet"
+    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
+    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+        raise ValueError("Recorded quarter-hour input digest differs")
+    # Resolve the driver's public --data-dir argument into the recorded run definition.
+    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
+    compiled = CompiledSFD(config)
+    loop = UniversalExperimentLoop(
+        sfd=compiled, search_strategy=build_search_strategy(config),
+        experiment_dir=output_dir, yaml_reference=config,
+    )
+    loop.run("compiled-selection", n_permutations=2, workers=1,
+             post_processing=True, progress_bar=False)
+    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
+    sensors = Trainer(output_dir).train(selected)
+    return loop, sensors, selected
 ```
 
-The same built-in SFDs run through the [Python/MSQ route](Universal-Experiment-Loop.md#direct-python-run). Supply a built-in or custom search strategy; when `data=` is omitted on a manifest-driven SFD, the manifest fetches data using `fetch_data()`.
+The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template scaffolding and installed commands. Native invocation can supply a built-in or custom search strategy; adopting the Manifest keeps it Compiled Research. When `data=` is omitted, the Manifest fetches data through `fetch_data()`.
 
 ## How to choose
 

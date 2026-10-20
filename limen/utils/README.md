@@ -9,6 +9,10 @@
 - [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
 - [Log](../../docs/Log.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) and the [Compiled project](../../docs/examples/compiled-research/README.md) keep parameter traversal, recorded inputs and availability clocks explicit throughout `search`. The utilities reference describes the lower-level helpers and the distinct legacy ParamSpace contract; it does not replace either project’s entry point.
+
 ## What this package owns
 
 Owns general utilities such as legacy parameter sampling, `data_dict` conversion, confidence filtering, stationarity testing, price-line helpers, and report formatting.
@@ -35,15 +39,30 @@ Does **not** own the canonical experiment, feature, metric, or backtest surfaces
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `param_space.py` | Legacy permutation sampler |
+| `data_dict_to_numpy.py` | Convert Limen data_dict to numpy arrays |
+| `confidence_filtering_system.py` | Confidence-based prediction filtering |
+| `adf_test.py` | Optional statsmodels-backed ADF test |
+| `find_price_lines.py` | Price-line discovery |
+| `filter_lines_by_quantile.py` | Price-line filtering |
+| `reporting.py` | Text-formatting helpers |
+
+<!-- reference: package-utils-layout source=limen/utils/README.md region=layout:package role=layout -->
 ```text
 utils/
-├── param_space.py                 # Legacy permutation sampler
-├── data_dict_to_numpy.py          # Convert Limen data_dict to numpy arrays
-├── confidence_filtering_system.py # Confidence-based prediction filtering
-├── adf_test.py                     # Optional statsmodels-backed ADF test
-├── find_price_lines.py             # Price-line discovery
-├── filter_lines_by_quantile.py     # Price-line filtering
-└── reporting.py                   # Text-formatting helpers
+├── README.md
+├── __init__.py
+├── _computation_cache.py
+├── _line_arrays.py
+├── adf_test.py
+├── confidence_filtering_system.py
+├── data_dict_to_numpy.py
+├── filter_lines_by_quantile.py
+├── find_price_lines.py
+├── param_space.py
+└── reporting.py
 ```
 
 ## Things to know

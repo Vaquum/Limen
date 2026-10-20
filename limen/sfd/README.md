@@ -10,6 +10,10 @@
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) supplies `params`, `prep` and `model` as ordinary caller-owned functions. The [Compiled project](../../docs/examples/compiled-research/README.md) uses a Manifest-backed SFD. The built-in definitions indexed here provide declared pipelines; a custom Python experiment owns its own functions and models.
+
 ## What this package owns
 
 Owns packaged SFD modules and the reference architectures they rely on.
@@ -35,26 +39,20 @@ Does **not** own experiment execution, data retrieval, or the lower-level indica
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `foundational_sfd/` | Packaged SFDs with params + manifest |
+| `tabpfn_binary.py` | Optional |
+| `reference_architecture/` | Model-function implementations and templates |
+
+<!-- reference: package-sfd-layout source=limen/sfd/README.md region=layout:package role=layout -->
 ```text
 sfd/
-├── foundational_sfd/          # Packaged SFDs with params + manifest
-│   ├── logreg_binary.py
-│   ├── dlinear_regressor.py
-│   ├── lightgbm_binary.py
-│   ├── random_binary.py
-│   ├── ridge_regressor.py
-│   ├── rule_based.py
-│   ├── xgboost_regressor.py
-│   └── tabpfn_binary.py       # Optional
-└── reference_architecture/    # Model-function implementations and templates
-    ├── logreg_binary.py
-    ├── dlinear_regressor.py
-    ├── lightgbm_binary.py
-    ├── random_binary.py
-    ├── ridge_regressor.py
-    ├── rule_based.py
-    ├── xgboost_regressor.py
-    └── tabpfn_binary.py
+├── README.md
+├── __init__.py
+├── foundational_sfd/
+├── reference_architecture/
+└── rule_based/
 ```
 
 ## Things to know

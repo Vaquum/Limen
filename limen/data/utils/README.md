@@ -7,6 +7,10 @@
 - [Historical Data](../../../docs/Historical-Data.md)
 - [Data Bars](../../../docs/Data-Bars.md)
 
+## In the research projects
+
+The [Python project](../../../docs/examples/python-research/README.md) owns its walk-forward loop and selection inside each fitting window. The [Compiled project](../../../docs/examples/compiled-research/README.md) records the fold campaign and reconstructs qualified members. The shared splitting helpers supply geometry; the project controls what is fitted and assessed.
+
 ## What this package owns
 
 Owns the manifest-facing data helpers: the `compute_data_bars()` bar-formation entry point, the train/validation/test split functions, and random window slicing.
@@ -32,11 +36,21 @@ Does **not** own raw data access (owned by `limen.data.HistoricalData`) or the l
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `compute_data_bars.py` | Public bar-formation entry point |
+| `splits.py` | Train/validation/test split helpers |
+| `random_slice.py` | Random window slicing helper |
+
+<!-- reference: package-data-utils-layout source=limen/data/utils/README.md region=layout:package role=layout -->
 ```text
 utils/
-├── compute_data_bars.py   # Public bar-formation entry point
-├── splits.py              # Train/validation/test split helpers
-└── random_slice.py        # Random window slicing helper
+├── README.md
+├── __init__.py
+├── compute_data_bars.py
+├── random_slice.py
+├── split_walk_forward.py
+└── splits.py
 ```
 
 ## Things to know

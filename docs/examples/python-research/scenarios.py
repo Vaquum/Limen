@@ -35,11 +35,13 @@ INPUTS = {
 }
 
 
+# region recorded_input
 def recorded(data_dir, name, rows):
     source = data_dir / name
     if hashlib.sha256(source.read_bytes()).hexdigest() != INPUTS[name]:
         raise ValueError('Recorded input digest differs: ' + name)
     return pl.read_parquet(source, n_rows=rows)
+# endregion recorded_input
 
 
 def quarter_hour(data_dir):
@@ -64,6 +66,81 @@ def recordable_prep(raw, round_params):
     return data
 
 
+# region preparation
+def preparation(data_dir, output):
+    from sklearn.decomposition import PCA
+    from sklearn.linear_model import Ridge
+    from limen.features import fractional_diff, find_min_d
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.targets import TripleBarrierTarget
+    from limen.utils import adf_test
+
+    raw = hourly(data_dir, 1440)
+    partitions = [raw[:864], raw[864:1152], raw[1152:1440]]
+    d = find_min_d(partitions[0], 'close', d_end=.4, step=.2, threshold=.05)
+    stationarity = adf_test(fractional_diff(partitions[0], d=d, cols=['close'], threshold=.05)['close_fracdiff'])
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
+        target = TripleBarrierTarget(partitions[0], 'label', upper_multiple=1.5,
+                                     lower_multiple=1., max_horizon=3, span=8, min_periods=8)
+        columns = ['close', 'roc_3', 'roc_12', 'close_fracdiff']
+        dropped = ['roc_12'] if compressed else []
+        features = [column for column in columns if column not in dropped]
+        prepared = []
+        for partition in partitions:
+            frame = fractional_diff(roc(roc(partition, period=3), period=12),
+                                    d=.4, cols=['close'], threshold=.05)
+            prepared.append(target.transform(frame).select('datetime', *features, 'label').drop_nulls())
+        scaler = RobustScaler(prepared[0].select(features))
+        scaled = [scaler.transform(frame.select(features)) for frame in prepared]
+        pca = PCA(n_components=2, svd_solver='full') if compressed else None
+        matrices = ([pca.fit_transform(scaled[0].to_numpy()),
+                     *[pca.transform(frame.to_numpy()) for frame in scaled[1:]]]
+                    if pca is not None else [frame.to_numpy() for frame in scaled])
+        names = ['pc_0', 'pc_1'] if compressed else features
+        model = Ridge(alpha=1., solver='svd').fit(matrices[0], prepared[0]['label'].to_numpy())
+        predictions = model.predict(matrices[2])
+        for split, frame, matrix in zip(('train', 'val', 'test'), prepared, matrices, strict=True):
+            pl.DataFrame(matrix, schema=names, orient='row').with_columns(
+                frame['datetime'], frame['label']).write_parquet(directory / (split + '.parquet'))
+        cases.append({'name': name, 'features': features, 'dropped': dropped,
+                      'rows': [frame.height for frame in prepared],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': predictions.tolist(),
+                      'rmse': float(np.sqrt(np.mean((predictions-prepared[2]['label'].to_numpy())**2)))})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': False,
+            'fixed_d': .4, 'weight_threshold': .05, 'adf_grid_result': d,
+            'adf_stationary': bool(stationarity.stationary), 'adf_p_value': float(stationarity.p_value)}
+# endregion preparation
+
+
+# region common_baselines
+def common_baselines(data_dir, output):
+    from limen.sfd.rule_based.common_strategies import STRATEGY_NAMES, strategy_signals
+
+    raw = hourly(data_dir, None)
+    train_rows, val_rows = raw.height * 8 // 11, raw.height // 11
+    evaluation = raw[train_rows + val_rows:]
+    output.mkdir(parents=True)
+    rows = []
+    for name in STRATEGY_NAMES:
+        signals = strategy_signals(evaluation, name)
+        # Caller-owned one-bar trades: enter next open, exit that close, 2 bp total cost.
+        net = signals[:-1] * (evaluation['close'].to_numpy()[1:] / evaluation['open'].to_numpy()[1:] - 1 - .0002)
+        evaluation.select('datetime').with_columns(pl.Series('desired_position', signals)).write_parquet(output / (name + '.parquet'))
+        rows.append({'strategy': name, 'mean_net_return': float(net.mean()),
+                     'net': net.tolist(), 'signals': signals.tolist()})
+    return {'rows': rows, 'split_rows': [train_rows, val_rows, evaluation.height],
+            'round_trip_bps': 2., 'execution': 'independent next-open-to-close trades'}
+# endregion common_baselines
+
+
 # region search
 def search(data_dir, output):
     bars = hourly(data_dir, 1440)
@@ -81,7 +158,8 @@ def search(data_dir, output):
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
-    return {'runs': runs, 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive')}
+    return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search
 
 
@@ -103,6 +181,34 @@ def adaptive_search(data_dir, output):
             'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
             'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 # endregion adaptive_search
+
+
+# region mixed_feedback
+def mixed_feedback(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
+
+    def steer(log, msq):
+        if log.height == 2:
+            msq.keep_is('alpha', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
+
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd,
+                                   search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output,
+                                   checkpoint_interval=1, feedback_interval=1, intra_callback=steer,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-feedback', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
+            'remaining': checkpoint['msq_state']['trim_budget']}
+# endregion mixed_feedback
 
 
 # region recovery

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ast
+from copy import deepcopy
+from functools import lru_cache
 import hashlib
 import json
 import math
@@ -8,21 +10,77 @@ import re
 import subprocess
 import tarfile
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from catalogue_surfaces import validate_surface_catalogue
 from catalogue_tests import validate_test_reference
 
 EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
+REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
 
 
 def digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+@lru_cache(maxsize=512)
+def package_reference(source: str, name: str) -> str:
+    kind, symbol = name.split(':', 1)
+    parts = symbol.split('.')
+    if any(not part.isidentifier() or part.startswith('_') and part not in ('__init__', '__call__') for part in parts):
+        raise ValueError('Invalid reference symbol: ' + symbol)
+    scope = ast.parse(source).body
+    selected = None
+    for index, part in enumerate(parts):
+        matches: list[ast.stmt] = [node for node in scope if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part]
+        if kind == 'definition' and len(parts) == 1:
+            matches += [node for node in scope if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == part for target in node.targets)]
+            matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
+        if len(matches) != 1:
+            raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
+        selected = matches[0]
+        if index < len(parts) - 1:
+            if not isinstance(selected, ast.ClassDef):
+                raise ValueError('Reference members require a class: ' + symbol)
+            scope = selected.body
+    if selected is None:
+        raise ValueError('Missing reference symbol: ' + symbol)
+    selected = deepcopy(selected)
+    if kind == 'signature':
+        if isinstance(selected, ast.ClassDef):
+            selected.body = [node for node in selected.body if isinstance(node, ast.AnnAssign)] or [ast.Expr(value=ast.Constant(value=Ellipsis))]
+        elif isinstance(selected, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            selected.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
+        else:
+            raise ValueError('A signature requires a function or class')
+    elif not isinstance(selected, (ast.Assign, ast.AnnAssign)):
+        raise ValueError('A definition requires a module constant')
+    return ast.unparse(ast.fix_missing_locations(selected)) + '\n'
+
+
 def region(path: Path, name: str) -> str:
     if name == '__file__':
         return path.read_text()
+    if name.startswith('layout:'):
+        if name != 'layout:package' or path.name != 'README.md':
+            raise ValueError('A package layout must name its package README')
+        directory = path.parent.resolve()
+        root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], cwd=directory, text=True).strip())
+        tracked = subprocess.check_output(['git', 'ls-files', '-z', '--', str(directory.relative_to(root))], cwd=root, text=True)
+        names = set()
+        for filename in tracked.split('\0'):
+            if filename:
+                parts = (root / filename).relative_to(directory).parts
+                names.add(parts[0] + ('/' if len(parts) > 1 else ''))
+        ordered = sorted(names)
+        if not ordered:
+            raise ValueError('Package layout has no tracked members')
+        return directory.name + '/\n' + ''.join(('└── ' if index == len(ordered) - 1 else '├── ') + member + '\n' for index, member in enumerate(ordered))
+    if name.startswith(('signature:', 'definition:')):
+        if path.suffix != '.py':
+            raise ValueError('Invalid reference symbol: ' + name.split(':', 1)[1])
+        return package_reference(path.read_text(), name)
     if path.suffix == '.json':
         command = json.loads(path.read_text())[name]
         if not isinstance(command, str) or '\n' in command or not command.strip():
@@ -61,6 +119,20 @@ def maintained_documents(root: Path) -> list[Path]:
     return sorted({root / 'README.md', *(root / 'docs').rglob('*.md'), *(root / 'limen').rglob('README.md')})
 
 
+def validate_page_catalogue(root: Path, catalogue):
+    pages = catalogue['candidate_pages']
+    expected = {str(path.relative_to(root)) for path in maintained_documents(root)}
+    if len(pages) != len(set(pages)) or set(pages) != expected:
+        raise ValueError('Bound page catalogue must cover every maintained document exactly once')
+    contexts = catalogue['page_contexts']
+    if set(contexts) != expected:
+        raise ValueError('Bound page contexts differ from the maintained documents')
+    for page, scenarios in contexts.items():
+        if not scenarios or len(set(scenarios)) != len(scenarios) or any(name not in catalogue['scenario_details'] for name in scenarios):
+            raise ValueError('Page has no complete scenario context: ' + page)
+    return contexts
+
+
 def all_bindings(root: Path) -> list[dict[str, str]]:
     found = [item for document in maintained_documents(root) for item in bindings(root, document)]
     if len({item['id'] for item in found}) != len(found):
@@ -82,20 +154,81 @@ def output_bindings(root: Path, document: Path) -> list[dict[str, str]]:
     return found
 
 
-def validate_fences(root: Path, document: Path) -> None:
+def reference_bindings(root: Path, document: Path) -> list[dict[str, str]]:
+    text = document.read_text()
+    found = []
+    for match in re.finditer(REFERENCE_FENCE, text, re.S):
+        identity, source, name, role, excerpt = match.groups()
+        requested = root / source
+        path = requested.resolve()
+        if not path.is_relative_to((root / 'limen').resolve()) or any(part.is_symlink() for part in (requested, *requested.parents)):
+            raise ValueError('Reference source escapes the package')
+        if not name.startswith(role + ':') or region(path, name) != excerpt + '\n':
+            raise ValueError('Reference differs from current package source: ' + identity)
+        if role == 'layout' and not match.group(0).split('\n', 1)[1].startswith('```text\n'):
+            raise ValueError('A package layout requires a text fence')
+        found.append({'id': identity, 'path': source, 'region': name, 'role': role, 'sha256': digest((excerpt + '\n').encode())})
+    if len(found) != len(re.findall(r'<!-- reference:', text)) or len({item['id'] for item in found}) != len(found):
+        raise ValueError('Missing or duplicate reference bindings')
+    return found
+
+
+def all_reference_bindings(root: Path) -> list[dict[str, str]]:
+    found = [item for document in maintained_documents(root) for item in reference_bindings(root, document)]
+    identities = [item['id'] for item in [*all_bindings(root), *found]]
+    if len(set(identities)) != len(identities):
+        raise ValueError('Duplicate source binding across maintained documents')
+    return found
+
+
+@lru_cache(maxsize=8)
+def markdown_documents(site: Path, texts: tuple[str, ...]) -> dict:
+    parser = '''import MarkdownIt from 'markdown-it';
+let input = ''; for await (const chunk of process.stdin) input += chunk;
+const markdown = new MarkdownIt({html:true});
+console.log(JSON.stringify(JSON.parse(input).map(text => {
+  const tokens = markdown.parse(text, {});
+  return {
+    fences: tokens.filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0]),
+    links: tokens.flatMap(token => token.children || []).filter(token => token.type === 'link_open').map(token => token.attrGet('href'))
+  };
+})));'''
+    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=site,
+                            input=json.dumps(texts), text=True, capture_output=True, check=True)
+    return {text: (tuple(record['fences']), tuple(record['links']))
+            for text, record in zip(texts, json.loads(parsed.stdout), strict=True)}
+
+
+@lru_cache(maxsize=256)
+def markdown_structure(site: Path, text: str) -> tuple[tuple[int, ...], tuple[str, ...]]:
+    documents = tuple(document.read_text() for document in maintained_documents(site.parent))
+    return markdown_documents(site, documents if text in documents else (text,))[text]
+
+
+def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] = ()) -> None:
     text = document.read_text()
     bindings(root, document)
     output_bindings(root, document)
-    parser = '''import MarkdownIt from 'markdown-it';
-let text = ''; for await (const chunk of process.stdin) text += chunk;
-console.log(JSON.stringify(new MarkdownIt({html:true}).parse(text, {})
-  .filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0])));'''
-    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=root / 'docs-site',
-                            input=text, text=True, capture_output=True, check=True)
-    expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE)
+    reference_bindings(root, document)
+    fence_lines, links = markdown_structure(root / 'docs-site', text)
+    expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE, REFERENCE_FENCE)
                       for match in re.finditer(pattern, text, re.S))
-    if json.loads(parsed.stdout) != expected:
+    if fence_lines != tuple(expected):
         raise ValueError('Unbound code fence or indented block in candidate documentation: ' + str(document))
+    repository = json.loads((root / 'docs-site/reader/content.json').read_text())['product']['repository']
+    source_prefix = repository + '/blob/main/'
+    targets = []
+    for href in links:
+        if href.startswith(source_prefix):
+            targets.append((root / unquote(urlsplit(href[len(source_prefix):]).path)).resolve())
+        elif not urlsplit(href).scheme and not href.startswith(('/', '#')):
+            targets.append((document.parent / unquote(urlsplit(href).path)).resolve())
+    for interface in interfaces:
+        if interface not in ('python', 'compiled'):
+            raise ValueError('Unknown project interface: ' + interface)
+        project = (root / f'docs/examples/{interface}-research/README.md').resolve()
+        if document.resolve() != project and project not in targets:
+            raise ValueError('Missing visible canonical project connection: ' + interface)
 
 
 def compare_output(current, retained, tolerances, at='') -> None:
@@ -242,8 +375,10 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
     validate_surface_catalogue(root, catalogue_data)
-    for page in catalogue_data['candidate_pages']:
-        validate_fences(root, root / page)
+    contexts = validate_page_catalogue(root, catalogue_data)
+    for page, scenarios in contexts.items():
+        interfaces = tuple(sorted({catalogue_data['scenario_details'][name]['interface'] for name in scenarios}))
+        validate_fences(root, root / page, interfaces=interfaces)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:
@@ -280,6 +415,10 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             raise ValueError('Stale executable binding')
         if not any(item['id'] == binding['scenario'] and item['interface'] == binding['interface'] and item['status'] == 'passed' for item in record['validation']['scenarios']):
             raise ValueError('Unexecuted example binding')
+    for binding in all_reference_bindings(root):
+        source = next((item for item in record['sources'] if item['path'] == binding['path'] and item['region'] == binding['region']), None)
+        if source is None or source['sha256'] != binding['sha256']:
+            raise ValueError('Stale package reference binding')
 
     tested = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     if record['revision']['tested_commit'] != tested:
@@ -332,14 +471,19 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         raise ValueError('Installed wheel artifact does not match')
     for item in [*record['displays'], *record['validation']['scenarios']]:
         verified_file(item.get('path', item.get('output_path')), item.get('sha256', item.get('output_sha256')))
+    candidate_base = subprocess.check_output(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=root, text=True).strip() if record['mode'] == 'candidate' else None
+    changed_paths: dict[str, int] = {}
     for source in record['sources']:
         if source['status'] == 'candidate' and source['merged_pr'] is not None:
             raise ValueError('Candidate source cannot claim a merged PR')
-        if record['mode'] == 'candidate':
-            base = subprocess.check_output(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=root, text=True).strip()
-            changed = subprocess.run(['git', 'diff', '--quiet', base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
-            if changed and source['status'] != 'candidate':
+        if candidate_base is not None:
+            if source['path'] not in changed_paths:
+                changed_paths[source['path']] = subprocess.run(['git', 'diff', '--quiet', candidate_base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
+            if changed_paths[source['path']] and source['status'] != 'candidate':
                 raise ValueError('Unmerged source presented as merged')
+    if record['mode'] == 'production':
+        from publication import validate_production
+        validate_production(root, record)
 
 
 if __name__ == '__main__':
