@@ -10,7 +10,7 @@ import logging
 import marshal
 import pickle
 import typing
-from types import CodeType, GenericAlias, GetSetDescriptorType, MemberDescriptorType, ModuleType
+from types import CodeType, GenericAlias, GetSetDescriptorType, MemberDescriptorType, MethodWrapperType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
@@ -152,9 +152,9 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
         elif type(item) is logging.Logger:
             result = ('logger', item.name)
-        elif inspect.isbuiltin(item):
+        elif inspect.isbuiltin(item) or isinstance(item, MethodWrapperType):
             owner = getattr(item, '__self__', None)
-            result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
+            result = ('builtin', getattr(item, '__module__', None), item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
         elif (metadata := _typing_metadata(item)) is not None:
             result = (kind, 'typing-parameter', node(metadata), node(_attributes(item)))
         elif isinstance(item, GenericAlias):
