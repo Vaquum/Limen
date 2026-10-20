@@ -841,6 +841,25 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class HiddenMapping(dict):
+        def items(self):
+            return ()
+        def adjust(self, values):
+            return np.clip(values + self['offset'], 0, 1)
+        def __deepcopy__(self, memo):
+            return type(self)((key, copy.deepcopy(value, memo)) for key, value in dict.items(self))
+    class NonpreservingHidden(HiddenMapping):
+        def __deepcopy__(self, memo):
+            clone = super().__deepcopy__(memo)
+            clone['offset'] += 0.1
+            return clone
+    mapped._model.policy = HiddenMapping(offset=expected_offset)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingHidden(offset=expected_offset)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
     class Relative(LogRegBinary):
         def predict(self, data):
             from . import test_holdout_research as helpers
@@ -1081,6 +1100,22 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         nested._model.policy.prediction_calibration_config.threshold_func = callback
         with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
             callback()
+        assert callback_calls == []
+    configured_provider = SimpleNamespace(prediction_calibration_config=SimpleNamespace(calibration_func=None, threshold_func=nested_threshold))
+    def default_provider(provider=configured_provider):
+        provider.prediction_calibration_config.threshold_func()
+    def closed_provider(provider):
+        def invoke():
+            provider.prediction_calibration_config.threshold_func()
+        return invoke
+    class BoundProvider:
+        prediction_calibration_config = configured_provider.prediction_calibration_config
+        def invoke(self):
+            self.prediction_calibration_config.threshold_func()
+    for provider in (default_provider, closed_provider(configured_provider), BoundProvider().invoke):
+        nested._model.policy = provider
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+            provider()
         assert callback_calls == []
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):

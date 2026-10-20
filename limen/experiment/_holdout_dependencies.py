@@ -51,7 +51,8 @@ def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
 
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        return (*tuple(part for pair in cast(Mapping[object, object], value).items() for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
+        entries = dict.items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
+        return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
     if object_array(value):
@@ -120,7 +121,7 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, payload, node(_attributes(item)))
         elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
-            result = (kind, factory, tuple((node(key), node(part)) for key, part in cast(Mapping[object, object], item).items()), state)
+            result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict.items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
         elif isinstance(item, (tuple, list, deque)):
             result = (kind, tuple(node(part) for part in cast(Collection[object], item)), item.maxlen if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
@@ -257,7 +258,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__len__', '__contains__'} | attributes
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
-        done = processed.setdefault(id(value), set())
+        done = processed.setdefault(id(cls), set())
         for parent in cls.__mro__:
             for name in names.intersection(parent.__dict__):
                 key = f'{parent.__module__}.{parent.__qualname__}:{name}'
@@ -279,7 +280,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1)
     while previous != (len(attributes), len(objects)):
         previous = (len(attributes), len(objects))
-        for value in tuple(objects):
+        for value in {(id(item) if isinstance(item, type) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
     return evidence
 

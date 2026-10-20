@@ -113,7 +113,12 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
         if config is not None:
             for name in ('calibration_func', 'threshold_func'):
                 forbid(getattr(config, name, None))
-        for part in children(value):
+        parts = children(value)
+        if inspect.ismethod(value):
+            parts += (value.__func__, value.__self__)
+        elif inspect.isfunction(value):
+            parts += (value.__defaults__, value.__kwdefaults__, tuple(cell.cell_contents for cell in value.__closure__ or ()))
+        for part in parts:
             collect(part)
 
     for sensor in sensors:
