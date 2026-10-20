@@ -725,6 +725,71 @@ def test_frozen_default_bindings_and_provider_identity(assessment_case):
         assert loader.call_count == 0
 
 
+def test_frozen_library_namespace_metaclass_and_config_binding(assessment_case):
+    from types import FunctionType
+    from sklearn.linear_model import LogisticRegression
+    from limen.experiment._holdout_prediction import readonly_prediction
+
+    class Policy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy(result['_probs'])
+            return result
+    selected = copy.deepcopy(assessment_case[2][0][0])
+    selected._model.__class__ = Policy
+    namespace = LogisticRegression.predict_proba.__globals__
+    with patch.dict(namespace, {'_LATE_RULES': _LATE_RULES}):
+        selected._model.policy = FunctionType(later_probabilities.__code__, namespace)
+        handle = _freeze(selected)
+        assert _report(handle, assessment_case)['state'] == 'completed'
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(handle, assessment_case)
+            assert loader.call_count == 0
+
+    class Meta(type):
+        def __instancecheck__(cls, value):
+            return _LATE_RULES['offset'] > 0
+    class Gate(metaclass=Meta):
+        pass
+    class InstancePolicy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + (0.1 if isinstance(self, self.policy) else 0.0), 0, 1)
+            return result
+    selected._model.__class__ = InstancePolicy
+    selected._model.policy = Gate
+    handle = _freeze(selected)
+    assert _report(handle, assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(handle, assessment_case)
+        assert loader.call_count == 0
+
+    class Config:
+        calibration_func = None
+        threshold_func = staticmethod(later_probabilities)
+    class AlternatingConfig:
+        def __init__(self):
+            self.enabled, self.reads = Config(), 0
+        @property
+        def prediction_calibration_config(self):
+            self.reads ^= 1
+            return None if self.reads else self.enabled
+    selected._model.effect_provider = AlternatingConfig()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='stable observable binding'):
+            _freeze(selected)
+        assert loader.call_count == 0
+    assert selected._model.effect_provider.reads == 0
+    class StableConfig:
+        prediction_calibration_config = Config()
+    selected._model.effect_provider = StableConfig()
+    assert _report(_freeze(selected), assessment_case)['state'] == 'completed'
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected]):
+        selected._model.effect_provider.prediction_calibration_config.threshold_func(selected._model.model.coef_.ravel())
+
+
 def test_frozen_dependencies_and_invalid_state(assessment_case):
     import limen.scalers.logreg_scaler as scaler_module
     from sklearn.linear_model import LogisticRegression

@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, native_attribute
+from limen.experiment._holdout_calls import call_functions, function_module, native_attribute
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -48,11 +48,6 @@ def _dependency_positions(code: CodeType) -> tuple[int, ...]:
     return tuple(index for index, instruction in enumerate(_instructions(code)) if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_METHOD', 'IMPORT_NAME', 'IMPORT_FROM', 'STORE_FAST', 'STORE_DEREF', 'STORE_NAME') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)))
 
 
-def _function_module(value: FunctionType) -> str:
-    name = value.__globals__.get('__name__')
-    module = sys.modules.get(name) if isinstance(name, str) else None
-    return module.__name__ if module is not None and vars(module) is value.__globals__ else ''
-
 def _native_annotation(value: object) -> bool:
     if not isinstance(value, type):
         return False
@@ -76,7 +71,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     reflective_keys: set[tuple[str, str]] = set()
     reflected: dict[int, set[tuple[str, str]]] = {}
     recorded_bindings: set[tuple[int, str, int]] = set()
-    method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
+    method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__', '__instancecheck__', '__subclasscheck__'} | attributes
     constructor_names = method_names | {'__new__', '__init__'}
     constructor_revision = len(method_names)
 
@@ -97,7 +92,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         seen[id(value)] = value
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value
-            origin = _function_module(function) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
+            origin = function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
             modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
             if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
                 raise ValueError('Holdout inference has an unowned random dependency')
@@ -120,7 +115,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for cell in value.__closure__ or ():
                 for part in children(cell):
                     visit(part)
-            function_module, function_name = _function_module(value), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
+            function_module, function_name = function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
             if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)

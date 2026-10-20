@@ -2,11 +2,12 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from functools import partial
 import inspect
+import sys
 from threading import RLock
-from types import FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
+from types import FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType, ModuleType
 from typing import NamedTuple, cast
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'matches', 'native_attribute', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'function_module', 'matches', 'native_attribute', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
@@ -168,3 +169,19 @@ def matches(function: FunctionType, frame: FrameType, owner: object | None, inst
     return frame.f_globals is function.__globals__ and all(
         frame.f_locals.get(name) is cell.cell_contents
         for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True))
+
+
+def function_module(value: FunctionType, libraries: tuple[str, ...]) -> str:
+    name = value.__globals__.get('__name__')
+    module = sys.modules.get(name) if isinstance(name, str) else None
+    if module is None or vars(module) is not value.__globals__:
+        return ''
+    if module.__name__.split('.')[0] in sys.stdlib_module_names or module.__name__.split('.')[0] in libraries:
+        binding: object = module
+        for part in value.__qualname__.split('.'):
+            binding = vars(binding).get(part) if isinstance(binding, (ModuleType, type)) else None
+            if isinstance(binding, (staticmethod, classmethod)):
+                binding = native_attribute(binding, '__func__')
+        if binding is not value:
+            return ''
+    return module.__name__
