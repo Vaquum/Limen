@@ -53,7 +53,7 @@ def _encode(value: object, active: frozenset[int], *, ordered: bool) -> list[obj
     if isinstance(value, CellType):
         return ['cell', encode(value.cell_contents, active, ordered=ordered)]
     if isinstance(value, defaultdict):
-        return _encode_component(cast(object, value), active | {id(value)}, owner_only=True)
+        return _encode_component(cast(object, value), active | {id(cast(object, value))}, owner_only=True)
     if value is None:
         node: list[object] = ['null']
     elif isinstance(value, str):
