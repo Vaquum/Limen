@@ -54,10 +54,9 @@ def children(value: object) -> tuple[object, ...]:
         return (npt.NDArray[np.generic].tolist(value), *_attributes(cast(object, value)).values())
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
-    if isinstance(value, property):
-        return (value.fget, value.fset, value.fdel, _attributes(cast(object, value)))
-    if isinstance(value, partial):
-        return (value.func, value.args, value.keywords, _attributes(cast(object, value)))
+    if isinstance(value, (partial, property)):
+        parts = (value.fget, value.fset, value.fdel) if isinstance(value, property) else (value.func, value.args, value.keywords)
+        return (*parts, _attributes(cast(object, value)))
     return tuple(_attributes(value).values())
 
 
