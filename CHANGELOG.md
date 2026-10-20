@@ -1869,6 +1869,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.13] - 2026-10-20
 
+- Reject YAML resolver traversal outside allowed namespaces and introspective dunder attributes while preserving supported symbols.
+
+## [5.45.14] - 2026-10-20
+
 - Admit cyclic fitted mappings and sequences once per object, and preserve logger settings that affect selected prediction.
 
 - Schedule the measured longest holdout proof first under native item distribution while preserving every case, assertion and serial selection.

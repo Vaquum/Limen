@@ -17,6 +17,7 @@ import polars as pl
 from ruamel.yaml import YAML
 from limen.cli.commands.run import run_experiment
 from limen.data import HistoricalData
+from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver
 
 NUMERICAL_ENV = {
     'OMP_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1',
@@ -29,7 +30,8 @@ MARKET = ROOT / 'tests/fixtures/dollar_bar_crash_reversal_15m.parquet'
 BASELINE = '7746615031a9a2af30905bc218977b624f718143'
 CASES = ('binary_costs','directional_barriers','interleaved','rule_based')
 
-def fixture_source(**_kwargs: object) -> pl.DataFrame:
+def fixture_source(config: DataSourceConfig) -> pl.DataFrame:
+    assert config.method is HistoricalData.get_spot_klines
     return pl.read_parquet(MARKET)
 
 def manifest(case: str) -> dict:
@@ -95,7 +97,7 @@ def execute(case: str, directory: Path, factorize: bool | None = None) -> dict:
     yaml=directory/'manifest.yaml'
     with yaml.open('w') as stream:
         YAML().dump(cfg,stream)
-    with patch.object(HistoricalData,'get_spot_klines',staticmethod(fixture_source)):
+    with patch.object(DataSourceResolver,'resolve',staticmethod(fixture_source)):
         assert run_experiment(yaml,results_base=directory,progress_bar=False)
     output=directory/'results'/'dev'/case
     with (output/'results.csv').open(newline='') as stream:

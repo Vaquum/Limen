@@ -20,6 +20,7 @@ from limen.cohort.sfc.backtest_pareto import select as select_backtest_pareto
 from limen.cohort.sfc.diverse_metrics import select as select_diverse_metrics
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
+from limen.experiment.manifest_core import DataSourceResolver
 from limen.inference import Trainer
 from limen.inference.sensor import BarPrediction
 
@@ -132,8 +133,8 @@ def _run_real_experiment(experiment_dir: Path,
                          n_permutations: int = 2) -> list[str]:
 
     experiment_dir = Path(experiment_dir).resolve()
-    original = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    original = DataSourceResolver.resolve
+    DataSourceResolver.resolve = staticmethod(_fixture_data_source)
     try:
         with TemporaryDirectory() as tmpdir, patch('click.echo'), patch('click.secho'):
             yaml_path = Path(tmpdir) / 'exp.yaml'
@@ -142,7 +143,7 @@ def _run_real_experiment(experiment_dir: Path,
             yaml_path.write_text(yaml_text)
             run_experiment(yaml_path)
     finally:
-        historical_data.HistoricalData.get_spot_klines = original
+        DataSourceResolver.resolve = staticmethod(original)
 
     round_ids: list[str] = []
     with _storage.open_text(_storage.round_path(experiment_dir)) as f:
@@ -219,16 +220,21 @@ def _patch_round_architecture(experiment_dir: Path,
 def _train_real_members_and_input(experiment_dir: Path,
                                   permutation_ids: list[str]) -> tuple[list, pl.DataFrame]:
 
-    original = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    original = DataSourceResolver.resolve
+    DataSourceResolver.resolve = staticmethod(_fixture_data_source)
     try:
         trainer = Trainer(experiment_dir)
         sensors = trainer.train(permutation_ids)
     finally:
-        historical_data.HistoricalData.get_spot_klines = original
+        DataSourceResolver.resolve = staticmethod(original)
 
     post_data = _make_post_training_data()
     return sensors, post_data
+
+
+def _fixture_data_source(config):
+    assert config.method is historical_data.HistoricalData.get_spot_klines
+    return _make_yaml_contract_data(**config.params)
 
 
 def _make_yaml_contract_data(kline_size: int = 3600,
@@ -811,8 +817,8 @@ def test_manifest_id_consistent_across_members():
 
 def test_yaml_reference_lineage_stripped_from_metadata():
 
-    original = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    original = DataSourceResolver.resolve
+    DataSourceResolver.resolve = staticmethod(_fixture_data_source)
     try:
         with TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
@@ -841,7 +847,7 @@ def test_yaml_reference_lineage_stripped_from_metadata():
             expected_id = 'sha256:' + hashlib.sha256(canonical.encode()).hexdigest()
             assert metadata['manifest_id'] == expected_id
     finally:
-        historical_data.HistoricalData.get_spot_klines = original
+        DataSourceResolver.resolve = staticmethod(original)
 
 
 # ---------------------------------------------------------------------------
@@ -850,8 +856,8 @@ def test_yaml_reference_lineage_stripped_from_metadata():
 
 def test_yaml_cli_artifact_cohort_predict_returns_bar_prediction():
 
-    original_get_spot_klines = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_yaml_contract_data)
+    original_resolve = DataSourceResolver.resolve
+    DataSourceResolver.resolve = staticmethod(_fixture_data_source)
 
     try:
         with TemporaryDirectory() as tmpdir:
@@ -894,7 +900,7 @@ def test_yaml_cli_artifact_cohort_predict_returns_bar_prediction():
             assert bar_pred.reason is None
             assert bar_pred.prediction == sensor_bar_pred.prediction
     finally:
-        historical_data.HistoricalData.get_spot_klines = original_get_spot_klines
+        DataSourceResolver.resolve = staticmethod(original_resolve)
 
 
 def test_predict_requires_members():

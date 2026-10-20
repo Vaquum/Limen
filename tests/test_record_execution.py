@@ -17,6 +17,7 @@ from limen.cli.main import cli
 from limen.cohort import Cohort
 from limen.data import HistoricalData
 from limen.experiment import UniversalExperimentLoop
+from limen.experiment.manifest_core import DataSourceResolver
 from limen.inference import Trainer
 from limen.sfd.reference_architecture import RidgeRegressor
 from limen.sfd.reference_architecture import _backtest_evaluation
@@ -27,7 +28,8 @@ from tests.utils.yaml_config import parse_cached
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _recorded_spot_klines(**kwargs):
+def _recorded_spot_klines(config):
+    assert config.method is HistoricalData.get_spot_klines
     return pl.read_parquet(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
 
 
@@ -260,7 +262,7 @@ def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypat
     yaml_path = tmp_path / 'experiment.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_recorded_spot_klines))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_spot_klines))
     original_run = UniversalExperimentLoop.run
 
     def interrupted_run(loop, *args, **kwargs):
@@ -388,7 +390,7 @@ def test_cli_resume_uses_python_recording_setting(recorded_bars, tmp_path, monke
     assert metadata['record_execution'] is True
     assert metadata['yaml_reference'] == config
 
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(_recorded_spot_klines))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_spot_klines))
     result = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', str(tmp_path)])
     assert result.exit_code == 0, result.output
     records = _records(tmp_path)
