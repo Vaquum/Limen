@@ -41,6 +41,11 @@ def _instructions(code: CodeType) -> tuple[dis.Instruction, ...]:
     return (*dis.get_instructions(code), *(instruction for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS for instruction in _instructions(part)))
 
 
+@lru_cache(maxsize=2048)
+def _dependency_positions(code: CodeType) -> tuple[int, ...]:
+    return tuple(index for index, instruction in enumerate(_instructions(code)) if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_METHOD', 'IMPORT_NAME', 'IMPORT_FROM', 'STORE_FAST', 'STORE_DEREF', 'STORE_NAME') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)))
+
+
 def _function_module(value: FunctionType) -> str:
     name = value.__globals__.get('__name__')
     module = sys.modules.get(name) if isinstance(name, str) else None
@@ -68,6 +73,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     recorded_mro: set[int] = set()
     reflective_keys: set[str] = set()
     reflected: dict[int, set[str]] = {}
+    recorded_bindings: set[tuple[int, str, int]] = set()
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
@@ -122,7 +128,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             imported: ModuleType | None = None
             chained_import = False
             binding: object = None
-            for index, instruction in enumerate(instructions):
+            for index in _dependency_positions(value.__code__):
+                instruction = instructions[index]
                 name = str(instruction.argval)
                 indirect_globals = instruction.opname == 'LOAD_CONST' and name == '__globals__' and any(part.opname in ('CALL', 'CALL_FUNCTION') for part in instructions[index + 1:index + 4])
                 if name == '__globals__' and (instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect_globals):
@@ -187,7 +194,10 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             aliases.append(item)
                     try:
                         visit(item)
-                        evidence.append((value.__module__, value.__qualname__, instruction.argval, item))
+                        binding_key = (id(value), name, id(item))
+                        if binding_key not in recorded_bindings:
+                            recorded_bindings.add(binding_key)
+                            evidence.append((value.__module__, value.__qualname__, instruction.argval, item))
                     except (ValueError, TypeError, pickle.PickleError) as exc:
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
