@@ -148,7 +148,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
     function_witness = lru_cache(maxsize=None)(fitted_witness)
-    attributes: set[str] = set()
+    attributes: set[str] = {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
 
@@ -255,7 +255,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def methods(value: object) -> None:
         cls = value if isinstance(value, type) else type(value)
         names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__len__', '__contains__'} | attributes
-        names.update(f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or'))
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
         done = processed.setdefault(id(value), set())
