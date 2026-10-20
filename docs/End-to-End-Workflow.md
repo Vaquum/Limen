@@ -28,6 +28,7 @@ The base selection's CSV and summary do not serialize arbitrary fitted models. T
 
 ## Run the Compiled research
 
+
 <!-- example: workflow-compiled-selection source=docs/examples/commands.json region=compiled-selection scenario=selection interface=compiled role=executed -->
 ```bash
 python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
