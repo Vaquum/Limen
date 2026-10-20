@@ -4,6 +4,7 @@ import json
 import os
 import subprocess
 import sys
+from collections import Counter
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -11,7 +12,7 @@ from tempfile import TemporaryDirectory
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def _run_profiled_test_module(source: str) -> tuple[subprocess.CompletedProcess[str], dict]:
+def _run_profiled_test_module(source: str, args: tuple[str, ...] = ()) -> tuple[subprocess.CompletedProcess[str], dict]:
     with TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
         test_path = tmp_path / 'test_profiled.py'
@@ -22,7 +23,7 @@ def _run_profiled_test_module(source: str) -> tuple[subprocess.CompletedProcess[
         env['LIMEN_RUNTIME_PROFILE_PATH'] = str(profile_path)
 
         result = subprocess.run(
-            [sys.executable, '-m', 'tests.run', str(test_path), '-q'],
+            [sys.executable, '-m', 'tests.run', *args, str(test_path), '-q'],
             cwd=ROOT,
             env=env,
             capture_output=True,
@@ -155,3 +156,97 @@ def test_tests_run_rejects_invalid_slowest_limit_before_pytest() -> None:
     assert result.returncode == 2
     assert 'LIMEN_RUNTIME_SLOWEST_LIMIT must be a positive integer' in result.stderr
     assert not profile_exists
+
+
+def test_default_parallel_args_and_caller_selection() -> None:
+    from tests.run import _pytest_args
+
+    assert _pytest_args([]) == ['-n', '2', '--dist', 'loadfile', '--max-worker-restart=0', 'tests']
+    for args in (['-n', '0'], ['-n', '4'], ['-p', 'no:xdist'], ['--dist', 'load'],
+                 ['-k', 'runtime'], ['tests/test_runtime_tracking.py'], ['--max-worker-restart=3']):
+        original = args[:]
+        assert _pytest_args(args) is args
+        assert args == original
+
+
+def test_parallel_profile_preserves_failure_accounting() -> None:
+    result, profile = _run_profiled_test_module(
+        """
+import pytest
+
+@pytest.fixture
+def broken_setup():
+    raise RuntimeError('setup failed')
+
+@pytest.fixture
+def broken_teardown():
+    yield
+    raise RuntimeError('teardown failed')
+
+@pytest.fixture
+def skipped_setup():
+    pytest.skip('recorded skip outcome')
+
+def test_setup(broken_setup):
+    raise AssertionError('unreachable')
+
+def test_teardown(broken_teardown):
+    assert True
+
+def test_both(broken_teardown, broken_setup):
+    raise AssertionError('unreachable')
+
+def test_call():
+    raise RuntimeError('call failed')
+
+def test_skip(skipped_setup):
+    raise AssertionError('unreachable')
+
+def test_pass():
+    assert True
+""",
+        ('-n', '2', '--dist', 'loadfile', '--max-worker-restart=0'),
+    )
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert profile['suite']['test_count'] == 6
+    assert profile['suite']['passed_count'] == 1
+    assert profile['suite']['failed_count'] == 4
+    assert profile['suite']['skipped_count'] == 1
+    assert len({(record['test_name'], record['worker_id']) for record in profile['tests']}) == 6
+    assert profile['parallel']['reconciled'] is True
+    assert profile['parallel']['execution_count'] == 6
+    workers = profile['parallel']['workers']
+    assert len({worker['pid'] for worker in workers}) == 2
+    assert sum(worker['test_count'] for worker in workers) == 6
+    assert all(worker['backend'] is None and worker['data_sha256'] is None for worker in workers)
+    for record in profile['tests']:
+        assert profile['suite']['started_at'] <= record['started_at'] <= record['finished_at'] <= profile['suite']['finished_at']
+
+
+def test_explicit_each_distribution_retains_execution_multiplicity() -> None:
+    result, profile = _run_profiled_test_module(
+        'def test_first():\n    assert True\ndef test_second():\n    assert True\n',
+        ('-n', '2', '--dist', 'each', '--max-worker-restart=0'),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert profile['parallel']['distribution'] == 'each'
+    assert profile['parallel']['reconciled'] is True
+    assert profile['parallel']['collected_count'] == 2
+    assert profile['parallel']['execution_count'] == profile['suite']['test_count'] == 4
+    assert set(Counter(record['test_name'] for record in profile['tests']).values()) == {2}
+    assert len({(record['test_name'], record['worker_id']) for record in profile['tests']}) == 4
+
+
+def test_parallel_profile_retains_crashed_case() -> None:
+    result, profile = _run_profiled_test_module(
+        'import os\ndef test_worker_death():\n    os._exit(23)\n',
+        ('-n', '2', '--dist', 'loadfile', '--max-worker-restart=0'),
+    )
+    assert result.returncode != 0, result.stdout + result.stderr
+    assert profile['suite']['failed_count'] == 1
+    assert profile['suite']['test_count'] == 1
+    assert profile['tests'][0]['test_name'].endswith('test_worker_death')
+    assert profile['tests'][0]['status'] == 'failed'
+    assert 'crashed while running' in profile['tests'][0]['error']
+    assert profile['parallel']['reconciled'] is False
+    assert any('Worker' in error for error in profile['parallel']['errors'])
