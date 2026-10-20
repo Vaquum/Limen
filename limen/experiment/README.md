@@ -78,9 +78,16 @@ experiment/
 ├── _objective.py
 ├── _objective_run.py
 ├── _parallel_commit.py
+├── _parallel_encoding.py
+├── _parallel_evidence.py
+├── _parallel_graph.py
+├── _parallel_identity.py
+├── _parallel_plan.py
+├── _parallel_resources.py
 ├── _parallel_resume.py
 ├── _parallel_rounds.py
 ├── _parallel_sources.py
+├── _parallel_state.py
 ├── _parallel_worker.py
 ├── _prepare_backtest_data.py
 ├── _prepare_trade_context.py
