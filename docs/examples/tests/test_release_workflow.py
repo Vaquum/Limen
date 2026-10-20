@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from deploy_publication import activate, require_latest_release, stage
+from deploy_publication import activate, deploy_version, require_latest_release, stage
 from release_assets import attach
 from release_identity import validate_identity
 
@@ -198,3 +198,88 @@ def test_a_release_superseded_during_verification_or_activation_is_not_accepted(
     else:
         assert deployments == [staged['version_id'], staged['previous']['version_id']]
         assert json.loads((output / 'rollback.json').read_text()) == staged['previous']
+
+
+@pytest.mark.parametrize('production_failure', [False, True])
+def test_public_verification_waits_for_activation_and_rollback_propagation(monkeypatch, tmp_path, production_failure):
+    from email.message import Message
+    from urllib.error import HTTPError
+    from verify_publication import sha256
+    output = tmp_path / '.docs-evidence/deployment'
+    output.mkdir(parents=True)
+    current = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
+    previous = (ROOT / 'docs/examples/retained/compiled-selection.json').read_bytes()
+    staged = {'release': 'v5.45.8', 'version_id': '9c62f8e9-12c5-4341-8948-4d181a5a028e',
+              'preview_url': 'https://9c62f8e9-limen.mailme-758.workers.dev/limen/', 'manifest_sha256': sha256(current),
+              'previous': {'version_id': '7272c591-c9c1-4d1b-9c08-437acca7437d', 'home_sha256': sha256(previous), 'mode': 'legacy'}}
+    (output / 'staged.json').write_text(json.dumps(staged))
+    state = {'clock': 0, 'version': staged['previous']['version_id'], 'public': staged['previous']['version_id'], 'pending': None}
+    deployments = []
+
+    def propagate():
+        if state['pending'] is not None and state['clock'] >= state['pending'][1]:
+            state['public'] = state['pending'][0]
+            state['pending'] = None
+
+    def run(command, *, env, check):
+        assert check is True
+        state['clock'] += 3
+        propagate()
+        version = command[3].removesuffix('@100%')
+        deployments.append(version)
+        state['version'] = version
+        state['pending'] = (version, state['clock'] + 2)
+        Path(env['WRANGLER_OUTPUT_FILE_PATH']).write_text(json.dumps({'type': 'version-deploy', 'version': 1, 'worker_name': 'limen'}) + '\n')
+
+    def sleep(seconds):
+        state['clock'] += seconds
+        propagate()
+
+    def fetch(url):
+        if url.startswith(staged['preview_url']):
+            return current
+        propagate()
+        if url.endswith('publication.json') and state['public'] != staged['version_id']:
+            raise HTTPError(url, 404, 'Not Found', Message(), None)
+        return current if state['public'] == staged['version_id'] else previous
+
+    def verify(url, release):
+        if url == 'https://docs.vaquum.fi/limen/':
+            fetch(url + 'publication.json')
+            if production_failure:
+                raise ValueError('injected altered public content')
+        return {'release': release}
+
+    monkeypatch.setattr('deploy_publication.require_disconnected_builds', lambda: None)
+    monkeypatch.setattr('deploy_publication.require_latest_release', lambda release: None)
+    monkeypatch.setattr('deploy_publication.current_version', lambda *args: state['version'])
+    monkeypatch.setattr('deploy_publication.subprocess.run', run)
+    monkeypatch.setattr('deploy_publication.time.sleep', sleep)
+    monkeypatch.setattr('deploy_publication.fetch', fetch)
+    monkeypatch.setattr('deploy_publication.verify', verify)
+    if production_failure:
+        with pytest.raises(ValueError, match='injected altered public content'):
+            activate(tmp_path, Path('wrangler'))
+        assert deployments == [staged['version_id'], staged['previous']['version_id']]
+        assert state['public'] == staged['previous']['version_id']
+        assert json.loads((output / 'rollback.json').read_text()) == staged['previous']
+        assert not (output / 'accepted.json').exists()
+    else:
+        activate(tmp_path, Path('wrangler'))
+        assert deployments == [staged['version_id']]
+        assert state['public'] == staged['version_id']
+        assert json.loads((output / 'accepted.json').read_text())['production'] == {'release': staged['release']}
+        assert not (output / 'rollback.json').exists()
+
+
+@pytest.mark.parametrize('phase', ['activation', 'settling'])
+def test_deployment_identity_must_hold_through_the_propagation_barrier(monkeypatch, tmp_path, phase):
+    expected = '9c62f8e9-12c5-4341-8948-4d181a5a028e'
+    previous = '7272c591-c9c1-4d1b-9c08-437acca7437d'
+    versions = iter([previous] if phase == 'activation' else [expected, previous])
+    monkeypatch.setattr('deploy_publication.subprocess.run', lambda *args, **kwargs: None)
+    monkeypatch.setattr('deploy_publication.receipt', lambda *args: {})
+    monkeypatch.setattr('deploy_publication.current_version', lambda *args: next(versions))
+    monkeypatch.setattr('deploy_publication.time.sleep', lambda seconds: None)
+    with pytest.raises(ValueError, match='did not become fully active' if phase == 'activation' else 'changed during deployment propagation'):
+        deploy_version(Path('wrangler'), tmp_path / 'wrangler.json', expected, tmp_path / 'operation.ndjson')
