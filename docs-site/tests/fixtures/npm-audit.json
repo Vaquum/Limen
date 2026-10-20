@@ -1,0 +1,596 @@
+{
+  "auditReportVersion": 2,
+  "vulnerabilities": {
+    "@docusaurus/babel": {
+      "name": "@docusaurus/babel",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/utils"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/babel"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/bundler": {
+      "name": "@docusaurus/bundler",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/babel",
+        "@docusaurus/utils",
+        "copy-webpack-plugin"
+      ],
+      "effects": [
+        "@docusaurus/core"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/bundler"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/core": {
+      "name": "@docusaurus/core",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@docusaurus/babel",
+        "@docusaurus/bundler",
+        "@docusaurus/mdx-loader",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation",
+        "chokidar",
+        "webpack-dev-server"
+      ],
+      "effects": [
+        "@docusaurus/plugin-css-cascade-layers",
+        "@docusaurus/plugin-google-analytics",
+        "@docusaurus/plugin-google-gtag",
+        "@docusaurus/plugin-google-tag-manager",
+        "@docusaurus/preset-classic"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/core"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/mdx-loader": {
+      "name": "@docusaurus/mdx-loader",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/mdx-loader"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-content-blog": {
+      "name": "@docusaurus/plugin-content-blog",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/mdx-loader",
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/theme-common",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-content-blog"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-content-docs": {
+      "name": "@docusaurus/plugin-content-docs",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/mdx-loader",
+        "@docusaurus/theme-common",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [
+        "@docusaurus/plugin-content-blog",
+        "@docusaurus/theme-common"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-content-docs"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-content-pages": {
+      "name": "@docusaurus/plugin-content-pages",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/mdx-loader",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-content-pages"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-css-cascade-layers": {
+      "name": "@docusaurus/plugin-css-cascade-layers",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [
+        "@docusaurus/preset-classic"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-css-cascade-layers"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/plugin-debug": {
+      "name": "@docusaurus/plugin-debug",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-debug"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-google-analytics": {
+      "name": "@docusaurus/plugin-google-analytics",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [
+        "@docusaurus/preset-classic"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-google-analytics"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/plugin-google-gtag": {
+      "name": "@docusaurus/plugin-google-gtag",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-google-gtag"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-google-tag-manager": {
+      "name": "@docusaurus/plugin-google-tag-manager",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [
+        "@docusaurus/preset-classic"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-google-tag-manager"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/plugin-sitemap": {
+      "name": "@docusaurus/plugin-sitemap",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-sitemap"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/plugin-svgr": {
+      "name": "@docusaurus/plugin-svgr",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [
+        "@docusaurus/preset-classic"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/plugin-svgr"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/preset-classic": {
+      "name": "@docusaurus/preset-classic",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/plugin-content-blog",
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/plugin-content-pages",
+        "@docusaurus/plugin-css-cascade-layers",
+        "@docusaurus/plugin-debug",
+        "@docusaurus/plugin-google-analytics",
+        "@docusaurus/plugin-google-gtag",
+        "@docusaurus/plugin-google-tag-manager",
+        "@docusaurus/plugin-sitemap",
+        "@docusaurus/plugin-svgr",
+        "@docusaurus/theme-classic",
+        "@docusaurus/theme-common",
+        "@docusaurus/theme-search-algolia"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/preset-classic"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/theme-classic": {
+      "name": "@docusaurus/theme-classic",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/mdx-loader",
+        "@docusaurus/plugin-content-blog",
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/plugin-content-pages",
+        "@docusaurus/theme-common",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/theme-classic"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/theme-common": {
+      "name": "@docusaurus/theme-common",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/mdx-loader",
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/utils"
+      ],
+      "effects": [
+        "@docusaurus/plugin-content-blog",
+        "@docusaurus/plugin-content-docs"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/theme-common"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/theme-search-algolia": {
+      "name": "@docusaurus/theme-search-algolia",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/core",
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/theme-common",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/theme-search-algolia"
+      ],
+      "fixAvailable": true
+    },
+    "@docusaurus/utils": {
+      "name": "@docusaurus/utils",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "globby",
+        "micromatch"
+      ],
+      "effects": [
+        "@docusaurus/babel",
+        "@docusaurus/bundler",
+        "@docusaurus/mdx-loader",
+        "@docusaurus/plugin-content-blog",
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/plugin-content-pages",
+        "@docusaurus/plugin-css-cascade-layers",
+        "@docusaurus/plugin-debug",
+        "@docusaurus/plugin-sitemap",
+        "@docusaurus/plugin-svgr",
+        "@docusaurus/theme-classic",
+        "@docusaurus/theme-common",
+        "@docusaurus/theme-search-algolia",
+        "@docusaurus/utils-validation",
+        "@easyops-cn/docusaurus-search-local"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/utils"
+      ],
+      "fixAvailable": false
+    },
+    "@docusaurus/utils-validation": {
+      "name": "@docusaurus/utils-validation",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "@docusaurus/utils"
+      ],
+      "effects": [
+        "@docusaurus/mdx-loader"
+      ],
+      "range": "<=4.0.0-canary-6835",
+      "nodes": [
+        "node_modules/@docusaurus/utils-validation"
+      ],
+      "fixAvailable": true
+    },
+    "@easyops-cn/docusaurus-search-local": {
+      "name": "@easyops-cn/docusaurus-search-local",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "@docusaurus/plugin-content-docs",
+        "@docusaurus/theme-common",
+        "@docusaurus/utils",
+        "@docusaurus/utils-validation"
+      ],
+      "effects": [],
+      "range": ">=0.29.1",
+      "nodes": [
+        "node_modules/@easyops-cn/docusaurus-search-local"
+      ],
+      "fixAvailable": {
+        "name": "@easyops-cn/docusaurus-search-local",
+        "version": "0.29.0",
+        "isSemVerMajor": true
+      }
+    },
+    "braces": {
+      "name": "braces",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        {
+          "source": 1240992,
+          "name": "braces",
+          "dependency": "braces",
+          "title": "braces vulnerable to stack-exhaustion denial of service through deeply nested patterns",
+          "url": "https://github.com/advisories/GHSA-vfj7-8cjw-p6xm",
+          "severity": "high",
+          "cwe": [
+            "CWE-674"
+          ],
+          "cvss": {
+            "score": 7.5,
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H"
+          },
+          "range": "<=3.0.3"
+        }
+      ],
+      "effects": [
+        "chokidar",
+        "micromatch"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/braces"
+      ],
+      "fixAvailable": false
+    },
+    "chokidar": {
+      "name": "chokidar",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "braces"
+      ],
+      "effects": [
+        "@docusaurus/core",
+        "webpack-dev-server"
+      ],
+      "range": "2.0.0 - 3.6.0",
+      "nodes": [
+        "node_modules/chokidar"
+      ],
+      "fixAvailable": false
+    },
+    "copy-webpack-plugin": {
+      "name": "copy-webpack-plugin",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "fast-glob",
+        "globby"
+      ],
+      "effects": [
+        "@docusaurus/bundler"
+      ],
+      "range": "6.0.0 - 12.0.2",
+      "nodes": [
+        "node_modules/copy-webpack-plugin"
+      ],
+      "fixAvailable": false
+    },
+    "fast-glob": {
+      "name": "fast-glob",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "micromatch"
+      ],
+      "effects": [
+        "copy-webpack-plugin",
+        "globby"
+      ],
+      "range": "*",
+      "nodes": [
+        "node_modules/fast-glob"
+      ],
+      "fixAvailable": false
+    },
+    "globby": {
+      "name": "globby",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "fast-glob"
+      ],
+      "effects": [
+        "@docusaurus/utils",
+        "copy-webpack-plugin",
+        "markdownlint-cli2"
+      ],
+      "range": ">=8.0.0",
+      "nodes": [
+        "node_modules/copy-webpack-plugin/node_modules/globby",
+        "node_modules/globby",
+        "node_modules/markdownlint-cli2/node_modules/globby"
+      ],
+      "fixAvailable": false
+    },
+    "http-proxy-middleware": {
+      "name": "http-proxy-middleware",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "micromatch"
+      ],
+      "effects": [
+        "webpack-dev-server"
+      ],
+      "range": ">=0.3.0",
+      "nodes": [
+        "node_modules/http-proxy-middleware"
+      ],
+      "fixAvailable": false
+    },
+    "markdownlint-cli2": {
+      "name": "markdownlint-cli2",
+      "severity": "high",
+      "isDirect": true,
+      "via": [
+        "globby",
+        "micromatch"
+      ],
+      "effects": [],
+      "range": ">=0.0.2",
+      "nodes": [
+        "node_modules/markdownlint-cli2"
+      ],
+      "fixAvailable": {
+        "name": "markdownlint-cli2",
+        "version": "0.0.4",
+        "isSemVerMajor": true
+      }
+    },
+    "micromatch": {
+      "name": "micromatch",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "braces"
+      ],
+      "effects": [
+        "@docusaurus/utils",
+        "fast-glob",
+        "http-proxy-middleware",
+        "markdownlint-cli2"
+      ],
+      "range": ">=0.2.0",
+      "nodes": [
+        "node_modules/micromatch"
+      ],
+      "fixAvailable": false
+    },
+    "webpack-dev-server": {
+      "name": "webpack-dev-server",
+      "severity": "high",
+      "isDirect": false,
+      "via": [
+        "chokidar",
+        "http-proxy-middleware"
+      ],
+      "effects": [
+        "@docusaurus/core"
+      ],
+      "range": ">=1.15.0",
+      "nodes": [
+        "node_modules/webpack-dev-server"
+      ],
+      "fixAvailable": false
+    }
+  },
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 30,
+      "critical": 0,
+      "total": 30
+    },
+    "dependencies": {
+      "prod": 1302,
+      "dev": 17,
+      "optional": 21,
+      "peer": 1,
+      "peerOptional": 0,
+      "total": 1340
+    }
+  }
+}

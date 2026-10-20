@@ -1,0 +1,7 @@
+{
+  "interface": "compiled",
+  "scenario": "selection",
+  "rounds": 2,
+  "selected_rounds": 1,
+  "reconstructed_sensors": 1
+}

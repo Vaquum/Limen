@@ -1,0 +1,36 @@
+{
+  "product": {
+    "id": "limen",
+    "name": "Limen",
+    "wordmark": "LIMEN",
+    "basePath": "/limen",
+    "origin": "https://docs.vaquum.fi",
+    "repository": "https://github.com/Vaquum/Limen",
+    "subject": "Limen research",
+    "interfaces": "Limen / Python Research and Compiled Research"
+  },
+  "pages": {
+    "docs/Research-Book.md": {
+      "route": "/",
+      "bookOrder": 0
+    },
+    "docs/examples/python-research/README.md": {
+      "route": "/book/python-research/",
+      "bookOrder": 1
+    },
+    "docs/examples/compiled-research/README.md": {
+      "route": "/book/compiled-research/",
+      "bookOrder": 2
+    },
+    "README.md": {
+      "route": "/about/",
+      "omitPreamble": true
+    },
+    "docs/Trainer.md": {
+      "route": "/reference/trainer/"
+    },
+    "docs/Cohort.md": {
+      "route": "/reference/cohort/"
+    }
+  }
+}

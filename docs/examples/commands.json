@@ -1,0 +1,6 @@
+{
+  "python-selection": "python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python",
+  "python-all": "python python-research/research.py --scenario all --data-dir inputs --output-dir results/python-all",
+  "compiled-selection": "python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled",
+  "compiled-all": "python compiled-research/research.py --scenario all --data-dir inputs --output-dir results/compiled-all"
+}
