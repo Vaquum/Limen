@@ -115,9 +115,19 @@ class MappingRolling(Mapping[str, int]):
         return _caller_feature(data, window=self.window)
 
 
-class OpaqueMappingRolling(dict):
+class DictRolling(dict):
     def __call__(self, data):
         return _caller_feature(data, window=self['window'])
+
+
+class ListRolling(list):
+    def __call__(self, data):
+        return _caller_feature(data, window=self[0])
+
+
+class OpaqueSequenceRolling(tuple):
+    def __call__(self, data):
+        return _caller_feature(data, window=self[0])
 
 
 class CallerPartial(partial):
@@ -263,7 +273,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), _partial_stage()):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             declare_parallel(component, contract)
@@ -275,6 +285,11 @@ def test_frozen_manifest_round_plan() -> None:
                 assert type(restored) is MappingRolling and restored.window == 3 and callable(restored)
                 assert dict(restored) == {'window': 3}
                 validate_resources(frozen, _parameters())
+            if isinstance(component, (DictRolling, ListRolling)):
+                restored = decode(encode(component))
+                assert type(restored) is type(component) and restored == component and callable(restored)
+                restored['window' if isinstance(restored, dict) else 0] = 4
+                assert digest(restored) != digest(component)
             if isinstance(component, NormalizedRolling):
                 assert component.window == decode(encode(component)).window == 3
             if isinstance(component, CallerPartial):
@@ -348,7 +363,7 @@ def test_frozen_manifest_round_plan() -> None:
                                     (validate_domain, (rejected, {key: [value] for key, value in params.items()}, None))):
             with pytest.raises(ValueError, match='data_dict_extension: fixed integer seed'):
                 validate(*arguments)
-    opaque = OpaqueMappingRolling(window=3)
+    opaque = OpaqueSequenceRolling((3,))
     declare_parallel(opaque, ParallelRoundContract(_caller_validator, ('window',)))
     with pytest.raises(TypeError, match=r'object\.__new__.*not safe'):
         freeze_manifest(copy.deepcopy(plan.manifest).add_feature(opaque), None)

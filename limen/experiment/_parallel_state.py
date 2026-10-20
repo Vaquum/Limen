@@ -5,7 +5,7 @@ from functools import partial
 from types import MemberDescriptorType
 from typing import cast
 
-ObjectState = tuple[dict[str, object], list[tuple[type, str, object]], tuple[object, ...] | None]
+ObjectState = tuple[dict[str, object], list[tuple[type, str, object]], tuple[object, ...] | None, list[object] | None]
 
 
 def slot_state(value: object) -> list[tuple[type, str, object]]:
@@ -33,13 +33,22 @@ def object_state(value: object) -> ObjectState:
     reducer = cast(Callable[[object], tuple[object, ...]], vars(partial)['__reduce__'])
     reduced = reducer(value) if issubclass(type(value), partial) else None
     bound = cast(tuple[object, ...], reduced[2])[:3] if reduced is not None else None
-    return attributes, slot_state(value), bound
+    native: list[object] | None = ([item for item in dict.items(cast(dict[object, object], value))] if isinstance(value, dict)
+                                 else list(list.__iter__(cast(list[object], value))) if isinstance(value, list) else None)
+    return attributes, slot_state(value), bound, native
 
 
 def restore_object(cls: type, state: ObjectState) -> object:
-    attributes, slots, bound = state
+    attributes, slots, bound, native = state
     if bound is None:
-        result: object = cast(object, object.__new__(cls))
+        if issubclass(cls, dict):
+            result: object = dict.__new__(cls)
+            dict.update(cast(dict[object, object], result), cast(list[tuple[object, object]], native))
+        elif issubclass(cls, list):
+            result = list.__new__(cls)
+            list.extend(cast(list[object], result), cast(list[object], native))
+        else:
+            result = cast(object, object.__new__(cls))
         if attributes:
             vars(result).update(attributes)
     else:
