@@ -52,6 +52,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     module_dynamic: dict[int, bool] = {}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
+    recorded_mro: set[int] = set()
 
     def visit(value: object, *, fitted_module: bool = True) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
@@ -175,13 +176,16 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
-        done = processed.setdefault(id(cls), set())
+        if id(cls) not in recorded_mro:
+            recorded_mro.add(id(cls))
+            evidence.append(('mro', cls.__module__, cls.__qualname__, tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)))
         for parent in cls.__mro__:
-            for name in names.intersection(parent.__dict__):
-                key = f'{parent.__module__}.{parent.__qualname__}:{name}'
-                if key in done or fitting_call(parent.__module__, f'{parent.__qualname__}.{name}'):
+            done = processed.setdefault(id(parent), set())
+            for name in names.intersection(parent.__dict__) - done:
+                done.add(name)
+                if fitting_call(parent.__module__, f'{parent.__qualname__}.{name}'):
                     continue
-                done.add(key)
+                key = f'{parent.__module__}.{parent.__qualname__}:{name}'
                 method = parent.__dict__[name]
                 evidence.append((key, type(method).__module__, type(method).__qualname__))
                 if isinstance(method, (property, staticmethod, classmethod)):

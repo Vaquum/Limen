@@ -1558,6 +1558,24 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
             callback(distinct._model.model.coef_.ravel(), adjustment=expected_offset)
         assert callback.__code__ is original_code
+    class FirstAdjustment:
+        def adjust(self, values):
+            return values
+    class SecondAdjustment:
+        def adjust(self, values):
+            return np.clip(values + expected_offset, 0, 1)
+    class OrderedPrediction(FirstAdjustment, SecondAdjustment, LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.adjust(result['_probs'])
+            return result
+    ordered = copy.deepcopy(assessment_case[2][0][0])
+    ordered._model.__class__ = OrderedPrediction
+    ordered_handle = _freeze(ordered)
+    with patch.object(OrderedPrediction, '__bases__', (SecondAdjustment, FirstAdjustment, LogRegBinary)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(ordered_handle, assessment_case)
+        assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):
