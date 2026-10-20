@@ -72,6 +72,22 @@ jobs:
           RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
         run: git checkout --detach "$RELEASE_COMMIT"
 
+      - name: Set up the publisher's required Node runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            docs-site/package-lock.json
+            docs-site/publisher/package-lock.json
+
+      - name: Install and audit both complete dependency graphs
+        run: |
+          npm ci --prefix docs-site
+          npm ci --prefix docs-site/publisher
+          npm --prefix docs-site run security:audit
+          npm --prefix docs-site/publisher run security:audit
+
       - name: Install the pinned research and proof tools
         run: |
           python -m pip install --require-hashes -r docs/examples/requirements-quality.txt
@@ -97,22 +113,6 @@ jobs:
 
       - name: Execute the downloaded projects against the released wheel
         run: timeout 120s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --released-wheel .docs-evidence/released-wheel.json --released-bundle .docs-evidence/released-examples.tar.gz
-
-      - name: Set up the publisher's required Node runtime
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '22'
-          cache: npm
-          cache-dependency-path: |
-            docs-site/package-lock.json
-            docs-site/publisher/package-lock.json
-
-      - name: Install and audit both complete dependency graphs
-        run: |
-          npm ci --prefix docs-site
-          npm ci --prefix docs-site/publisher
-          npm --prefix docs-site run security:audit
-          npm --prefix docs-site/publisher run security:audit
 
       - name: Build and verify the released reader
         working-directory: docs-site

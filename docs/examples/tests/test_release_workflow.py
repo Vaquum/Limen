@@ -12,6 +12,16 @@ from release_identity import validate_identity
 ROOT = Path(__file__).resolve().parents[3]
 
 
+def test_release_proof_has_its_markdown_runtime_before_any_python_collection():
+    from ruamel.yaml import YAML
+    workflow = YAML(typ='safe').load((ROOT / '.github/workflows/docs_publish.yml').read_text())
+    steps = workflow['jobs']['publish']['steps']
+    node = next(index for index, step in enumerate(steps) if step.get('uses', '').startswith('actions/setup-node@'))
+    dependencies = next(index for index, step in enumerate(steps) if 'npm ci --prefix docs-site\n' in step.get('run', ''))
+    proof = next(index for index, step in enumerate(steps) if 'python -m pytest ' in step.get('run', ''))
+    assert node < dependencies < proof
+
+
 @pytest.fixture
 def release_checkout(tmp_path):
     def run(*args):
