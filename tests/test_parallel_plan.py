@@ -993,7 +993,7 @@ def _assert_recovery_faults(configuration, directory, temporary):
         elif fault == 'version':
             metadata['limen_version'] = 'unknown'
         elif fault == 'downgraded':
-            metadata['limen_version'] = '5.45.6'
+            metadata['limen_version'] = '5.45.7'
         elif fault == 'worker':
             metadata['worker_native_threads'] = 2
         elif fault == 'marker':
@@ -1014,7 +1014,7 @@ def _assert_legacy_recovery(configuration, directory, temporary):
     shutil.copytree(directory, legacy)
     path = legacy / 'metadata.json'
     metadata = json.loads(path.read_text())
-    metadata.update(limen_version='5.45.6')
+    metadata.update(limen_version='5.45.7')
     metadata.pop('parallel_plan')
     path.write_text(json.dumps(metadata))
     checkpoint = CheckpointManager().load(legacy)
