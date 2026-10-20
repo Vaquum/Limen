@@ -53,7 +53,7 @@ def _booster(value: object) -> bool:
 
 
 def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
-    return isinstance(value, np.ndarray) and npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], value), type=np.ndarray).dtype.hasobject
+    return isinstance(value, np.ndarray) and cast(np.dtype[np.generic], native_attribute(cast(object, value), 'dtype', np.ndarray)).hasobject
 
 
 def children(value: object) -> tuple[object, ...]:
@@ -164,7 +164,7 @@ def fitted_witness(value: object) -> bytes:
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(sorted((node(part) for part in _native_values(cast(object, item))), key=pickle.dumps)), state)
         elif object_array(item):
-            native_array = npt.NDArray[np.generic].view(item, type=np.ndarray)
+            native_array = cast(npt.NDArray[np.generic], npt.NDArray[np.generic].view(item, type=np.ndarray))
             result = (kind, native_array.shape, native_array.dtype.descr, node(npt.NDArray[np.generic].tolist(item)), state)
         elif isinstance(item, np.ndarray):
             native = cast(object, npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
