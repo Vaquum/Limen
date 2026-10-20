@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -31,11 +31,6 @@ def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
             or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
             or (module.startswith(('limen.scalers.', 'limen.targets.')) and name.rsplit('.', 1)[-1] == '__init__'))
-
-
-def entropy_call(value: object) -> bool:
-    name, module = getattr(value, '__name__', None), getattr(value, '__module__', None)
-    return isinstance(name, str) and isinstance(module, str) and name in ('urandom', 'getrandom') and module in ('os', 'posix', 'nt')
 
 
 @lru_cache(maxsize=2048)
@@ -69,11 +64,11 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     inspected: set[tuple[int, bool, int, int]] = set()
     recorded_mro: set[int] = set()
     reflective_keys: set[tuple[str, str]] = set()
+    globals_names: set[str] = set()
     reflected: dict[int, set[tuple[str, str]]] = {}
     recorded_bindings: set[tuple[int, str, int]] = set()
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__', '__instancecheck__', '__subclasscheck__'} | attributes
-    constructor_names = method_names | {'__new__', '__init__'}
-    constructor_revision = len(method_names)
+    constructor_names, constructor_revision = method_names | {'__new__', '__init__'}, len(method_names)
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
         if value is None or type(value) in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
@@ -90,6 +85,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
+        if isinstance(value, dict):
+            globals_names.update(key for key, part in dict.items(value) if isinstance(key, str) and part is _native_globals)
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value
             origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
@@ -238,8 +235,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             return
         cls = value if isinstance(value, type) else type(value)
         if isinstance(value, type) and constructor_revision != len(method_names):
-            constructor_names = method_names | {'__new__', '__init__'}
-            constructor_revision = len(method_names)
+            constructor_names, constructor_revision = method_names | {'__new__', '__init__'}, len(method_names)
         names = constructor_names if isinstance(value, type) else method_names
         if id(cls) not in recorded_mro:
             recorded_mro.add(id(cls))
@@ -265,20 +261,27 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     method = native_attribute(method, 'fget')
                 if isinstance(method, (staticmethod, classmethod)):
                     method = native_attribute(cast(object, method), '__func__')
+                if method is _native_globals:
+                    globals_names.add(name)
                 if method is not None:
                     visit(method, annotation=name in ('__annotations__', '__type_params__', '__parameters__'))
 
     for value in values:
         visit(value)
-    previous = (-1, -1, -1, -1, -1, -1, -1)
-    while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0):
-        previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0)
+    previous = (-1, -1, -1, -1, -1, -1, -1, -1)
+    while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys or globals_names else 0, len(globals_names)):
+        previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys or globals_names else 0, len(globals_names))
         for value in tuple(objects.values()):
             methods(value)
-        if reflective_keys:
+        if reflective_keys or globals_names:
             functions = [value for value in seen.values() if inspect.isfunction(value)]
             functions.extend(function for config in exclude for name in ('calibration_func', 'threshold_func') for function in call_functions(getattr(config, name, None)))
             for function in functions:
+                for name, key in namespace_calls(function.__code__):
+                    if name in globals_names:
+                        if key is None:
+                            raise ValueError('Holdout requires a literal key for prediction globals lookup')
+                        reflective_keys.add(('__globals__', key))
                 done = reflected.setdefault(id(function), set())
                 for namespace_name, key in sorted(reflective_keys - done):
                     done.add((namespace_name, key))

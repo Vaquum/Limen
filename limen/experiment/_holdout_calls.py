@@ -2,13 +2,14 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from functools import lru_cache, partial
 import inspect
+import dis
 from importlib.abc import InspectLoader
 import sys
 from threading import RLock
 from types import CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'function_module', 'matches', 'native_attribute', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'function_module', 'matches', 'native_attribute', 'native_codes', 'namespace_calls', 'entropy_call', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
@@ -173,7 +174,7 @@ def matches(function: FunctionType, frame: FrameType, owner: object | None, inst
 
 
 @lru_cache(maxsize=256)
-def _module_codes(name: str) -> frozenset[CodeType]:
+def native_codes(name: str) -> frozenset[CodeType]:
     loader = getattr(sys.modules[name], '__loader__', None)
     code = loader.get_code(name) if isinstance(loader, InspectLoader) else None
     pending, codes = [code] if code is not None else [], set[CodeType]()
@@ -189,6 +190,24 @@ def function_module(value: FunctionType, libraries: tuple[str, ...]) -> str:
     module = sys.modules.get(name) if isinstance(name, str) else None
     if module is None or vars(module) is not value.__globals__:
         return ''
-    if (module.__name__.split('.')[0] in sys.stdlib_module_names or module.__name__.split('.')[0] in libraries) and value.__code__ not in _module_codes(module.__name__):
+    if (module.__name__.split('.')[0] in sys.stdlib_module_names or module.__name__.split('.')[0] in libraries) and value.__code__ not in native_codes(module.__name__):
         return ''
     return module.__name__
+
+
+def entropy_call(value: object) -> bool:
+    name, module = getattr(value, '__name__', None), getattr(value, '__module__', None)
+    return isinstance(name, str) and isinstance(module, str) and name in ('urandom', 'getrandom') and module in ('os', 'posix', 'nt')
+
+
+@lru_cache(maxsize=2048)
+def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
+    instructions = tuple(part for part in dis.get_instructions(code) if part.opname != 'PRECALL')
+    found: list[tuple[str, str | None]] = []
+    for index, part in enumerate(instructions[:-1]):
+        call = instructions[index + 1]
+        if part.opname in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST') and isinstance(part.argval, str) and call.opname in ('CALL', 'CALL_FUNCTION', 'CALL_METHOD') and call.arg == 0:
+            lookup = instructions[index + 2:index + 4]
+            key = lookup[0].argval if len(lookup) == 2 and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
+            found.append((part.argval, key))
+    return (*found, *(entry for part in code.co_consts if isinstance(part, CodeType) for entry in namespace_calls(part)))

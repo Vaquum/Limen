@@ -871,6 +871,68 @@ def test_frozen_logger_prediction_settings(native_assessment_case):
         assert loader.call_count == 0
 
 
+def test_frozen_instance_namespace_module_alias_and_fixed_labels(native_assessment_case):
+    from types import FunctionType, ModuleType
+    from sklearn.preprocessing import _label
+    from limen.experiment._holdout_prediction import readonly_prediction
+    from limen.experiment._holdout_state import fitted_witness
+
+    class InstanceGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + self.read_globals()['_LATE_RULES']['offset'], 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = InstanceGlobals
+    selected._model.read_globals = globals
+    handle = _freeze(selected)
+    assert _report(handle, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(handle, native_assessment_case)
+        assert loader.call_count == 0
+
+    class ModuleAliases(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + (0 if self.left is self.right else 0.1), 0, 1)
+            return result
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            memo[id(self.left)] = self.left
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            if self.split_modules:
+                clone.right = ModuleType(self.right.__name__)
+            return clone
+    selected._model.__class__ = ModuleAliases
+    del selected._model.read_globals
+    selected._model.left = selected._model.right = ModuleType('holdout_alias')
+    selected._model.split_modules = False
+    assert _report(_freeze(selected), native_assessment_case)['state'] == 'completed'
+    assert fitted_witness((selected._model.left, selected._model.left)) != fitted_witness((selected._model.left, ModuleType('holdout_alias')))
+    selected._model.split_modules = True
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed selected state'):
+            _freeze(selected)
+        assert loader.call_count == 0
+
+    def fit(y):
+        y.append(2)
+        return y
+    class Config:
+        calibration_func = None
+        threshold_func = staticmethod(FunctionType(fit.__code__, vars(_label)))
+    class Provider:
+        prediction_calibration_config = Config()
+    selected._model.split_modules = False
+    selected._model.effect_provider = Provider()
+    labels = [0, 1]
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected]):
+        selected._model.effect_provider.prediction_calibration_config.threshold_func(labels)
+    assert labels == [0, 1]
+
+
 def test_frozen_dependencies_and_invalid_state(assessment_case):
     import limen.scalers.logreg_scaler as scaler_module
     from sklearn.linear_model import LogisticRegression

@@ -129,14 +129,14 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     def node(item: object) -> object:
         if item is None or type(item) in _ATOMIC_TYPES or (type(item) is int and item is _CANONICAL_INTS.get(item)):
             return item
-        if isinstance(item, ModuleType):
-            return ('module', item.__name__)
         if id(item) in seen:
             return ('ref', seen[id(item)])
         if class_aliases and type(item).__module__ != 'builtins':
             classes[id(type(item))] = type(item)
         seen[id(item)] = len(retained)
         retained.append(item)
+        if isinstance(item, ModuleType):
+            return ('module', item.__name__)
         if type(item) in (int, float):
             return ('scalar', type(item).__name__, item)
         if isinstance(item, type):

@@ -14,7 +14,7 @@ import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_payload, restore_iterations
-from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, receiver_position, same_callback
+from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, native_codes, receiver_position, same_callback
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -127,7 +127,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             if (module, code.co_name) in (('threading', 'start'), ('concurrent.futures.thread', 'submit')):
                 violation = 'Holdout inference attempted thread dispatch'
                 raise ValueError(violation)
-            fixed_labels = module == 'sklearn.preprocessing._label' and code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
+            fixed_labels = module == 'sklearn.preprocessing._label' and sys.modules.get(module) is not None and frame.f_globals is vars(sys.modules[module]) and code in native_codes(module) and code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
             entry = observed.get(id(code))
             matched = entry is not None and any(_matches(entry[0], frame, owner, instance, index) for owner, instance, index in entry[1])
             if not fixed_labels and (matched or fitting_call(str(module), getattr(code, 'co_qualname', code.co_name))):
