@@ -92,6 +92,7 @@ def adaptive_search(data_dir, output):
 # region mixed_feedback
 def mixed_feedback(data_dir, output):
     config = configuration('adaptive', data_dir)
+    config['uel']['recording'] = {'predictions': True, 'alignment': True, 'trade_ledger': False, 'fold_details': False}
 
     def steer(log, msq):
         if log.height == 2:
