@@ -213,10 +213,10 @@ def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (
 
 def call_functions(value: object) -> tuple[FunctionType, ...]:
     if isinstance(value, (staticmethod, classmethod)):
-        native = staticmethod if isinstance(value, staticmethod) else classmethod
-        if inspect.getattr_static(type(value), '__get__') is not native.__get__:
-            return ()
+        native: type[object] = staticmethod if isinstance(value, staticmethod) else classmethod
         descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
+        if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
+            return ()
         return call_functions(descriptor.__func__)
     if isinstance(value, partial):
         provider = cast(partial[object], value)
