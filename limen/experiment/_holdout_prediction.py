@@ -30,6 +30,8 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
         if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
             from lightgbm import Booster
             original = cast(Booster, value)
+            if 'predict' in vars(original) or (type(original).predict.__module__, type(original).predict.__qualname__) != ('lightgbm.basic', 'Booster.predict'):
+                raise ValueError('Holdout refuses replaced Booster prediction methods')
             copied = cast(Booster, memo[id(value)])
             copied.best_iteration = original.best_iteration
         for part in children(value):

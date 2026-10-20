@@ -569,6 +569,13 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(native_handle, assessment_case)
             assert loader.call_count == 0
+    altered_native = copy.deepcopy(assessment_case[2][1][1])
+    native_booster = altered_native._model.model.booster_
+    native_booster.predict = lambda *args, **kwargs: original_booster_predict(native_booster, *args, **kwargs)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='replaced Booster prediction methods'):
+            _freeze(altered_native)
+        assert loader.call_count == 0
     frozen = _freeze(assessment_case[2][0][0])
     with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
         with pytest.raises(ValueError, match='prediction dependency changed'):
