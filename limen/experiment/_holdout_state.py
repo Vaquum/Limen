@@ -75,7 +75,8 @@ def children(value: object) -> tuple[object, ...]:
         elif isinstance(value, property):
             parts = (value.fget, value.fset, value.fdel)
         else:
-            parts = (value.func, value.args, value.keywords)
+            provider = cast(partial[object], value)
+            parts = (provider.func, provider.args, provider.keywords)
         return (*parts, _attributes(cast(object, value)))
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
