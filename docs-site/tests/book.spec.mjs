@@ -155,6 +155,16 @@ test('search and keyboard reach the same reference',async({page})=>{
   await expect(page.locator('[data-reference-dialog]')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
 });
 
+test('reference lookup uses API names while the page keeps its narrative title',async({page})=>{
+  await page.goto('/limen/reference/');
+  const trainer=page.locator('main').getByRole('link',{name:'Trainer and Sensor',exact:true});
+  await expect(trainer).toHaveAttribute('href','/limen/reference/trainer/');
+  await trainer.click();
+  await expect(page.getByRole('heading',{level:1})).toHaveText('Carry selected behavior into inference');
+  await expect(page.locator('.chapter-nav').getByRole('link',{name:'Log',exact:true})).toHaveAttribute('href','/limen/reference/log/');
+  await expect(page.locator('.chapter-nav').getByRole('link',{name:'Trainer and Sensor',exact:true})).toHaveAttribute('aria-current','page');
+});
+
 test('color preferences preserve the fixed composition',async({page})=>{
   await page.emulateMedia({colorScheme:'light'});await open(page);const first=await page.locator('.hero').evaluate(el=>getComputedStyle(el).backgroundColor);
   await page.emulateMedia({colorScheme:'dark'});expect(await page.locator('.hero').evaluate(el=>getComputedStyle(el).backgroundColor)).toBe(first);expect(first).toBe('rgb(20, 32, 56)');

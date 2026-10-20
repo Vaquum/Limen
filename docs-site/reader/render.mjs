@@ -9,6 +9,7 @@ import {readFileSync} from 'node:fs';
 export const content=JSON.parse(readFileSync(new URL('./content.json',import.meta.url),'utf8'));
 export const hash=value=>createHash('sha256').update(value).digest('hex');
 export const escape=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+export const pageLabel=page=>page.navigationTitle||page.title;
 export function slug(text){return text.replace(/[^\p{L}\p{N}_\- ]/gu,'').trim().toLowerCase().replaceAll(' ','-');}
 function documentText(markdown,{omitPreamble=false}={}){
   const tokens=new MarkdownIt({html:true}).parse(markdown,{}),lines=markdown.split('\n');
@@ -69,8 +70,8 @@ export function renderMarkdown(page,pages,evidence){
 export function renderPage(page,pages,evidence,{product=content.product.id}={}){
   const {html,headings,introduction}=renderMarkdown(page,pages,evidence);const book=pages.filter(p=>p.bookOrder!==undefined).sort((a,b)=>a.bookOrder-b.bookOrder);const at=book.indexOf(page),next=at>=0?book[at+1]:null,previous=at>0?book[at-1]:null;
   const home=book[0];const reference=pages.find(p=>p.route==='/reference/'),developer=pages.find(p=>p.source==='docs/Developer/README.md');
-  const navigation=page.part==='Book'?book:pages.filter(p=>p.part===page.part&&p.source).sort((a,b)=>a.title.localeCompare(b.title));
-  const nav=navigation.map(p=>`<li><a href="${p.url}"${p===page?' aria-current="page"':''}>${escape(p.title)}</a></li>`).join('');
+  const navigation=page.part==='Book'?book:pages.filter(p=>p.part===page.part&&p.source).sort((a,b)=>pageLabel(a).localeCompare(pageLabel(b)));
+  const nav=navigation.map(p=>`<li><a href="${p.url}"${p===page?' aria-current="page"':''}>${escape(pageLabel(p))}</a></li>`).join('');
   const contents=headings.map(h=>`<li><a href="#${escape(h.id)}">${escape(h.title)}</a></li>`).join('');
   const mobile=`<details class="mobile-nav"><summary>Contents</summary><nav aria-label="Chapter navigation"><p class="label">${page.part==='Book'?'The research book':escape(page.part)}</p><ul>${nav}</ul></nav><nav aria-label="In this chapter"><p class="label">In this chapter</p><ol>${contents}</ol></nav></details>`;
   const firstParagraph=introduction||page.title;

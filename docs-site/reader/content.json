@@ -93,11 +93,13 @@
     },
     "docs/Log.md": {
       "route": "/reference/log/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationTitle": "Log"
     },
     "docs/Benchmark.md": {
       "route": "/reference/benchmark/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationTitle": "Benchmark"
     },
     "docs/Backtest.md": {
       "route": "/book/backtest/",
@@ -110,11 +112,13 @@
     },
     "docs/Trainer.md": {
       "route": "/reference/trainer/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationTitle": "Trainer and Sensor"
     },
     "docs/Cohort.md": {
       "route": "/reference/cohort/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationTitle": "Cohort"
     },
     "docs/Conserved-Flux-Renormalization.md": {
       "route": "/reference/conserved-flux-renormalization/",
@@ -158,7 +162,8 @@
     },
     "docs/Calibration.md": {
       "route": "/reference/calibration/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationTitle": "Calibration"
     },
     "docs/Standard-Metrics-Library.md": {
       "route": "/reference/standard-metrics-library/",
