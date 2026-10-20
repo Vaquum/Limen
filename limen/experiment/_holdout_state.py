@@ -75,7 +75,7 @@ def children(value: object) -> tuple[object, ...]:
         elif isinstance(value, GenericAlias):
             parts = tuple(vars(GenericAlias)[name].__get__(value, type(value)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias))
         elif isinstance(value, property):
-            parts = tuple(native_attribute(value, name) for name in ('fget', 'fset', 'fdel'))
+            parts = tuple(native_attribute(value, name) for name in ('fget', 'fset', 'fdel', '__doc__'))
         else:
             parts = tuple(native_attribute(cast(object, value), name) for name in ('func', 'args', 'keywords'))
         return (*parts, _attributes(cast(object, value)))
@@ -93,7 +93,7 @@ def _attributes(value: object) -> dict[str, object]:
     for cls in type(value).__mro__:
         descriptor = cls.__dict__.get('__dict__')
         if isinstance(descriptor, GetSetDescriptorType):
-            values.update(cast(dict[str, object], descriptor.__get__(value, type(value))))
+            values[f'{cls.__module__}.{cls.__qualname__}:__dict__'] = descriptor.__get__(value, type(value))
             native_dict = True
     if type(value).__dictoffset__ and not native_dict and _typing_metadata(value) is None:
         raise ValueError('Holdout refuses hidden native instance dictionaries')
@@ -161,7 +161,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             metadata = {name: vars(GenericAlias)[name].__get__(item, type(item)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
             result = (kind, 'generic-alias', node(metadata), node(_attributes(cast(object, item))))
         elif isinstance(item, property):
-            result = (kind, 'property', *(node(native_attribute(item, name)) for name in ('fget', 'fset', 'fdel')), node(_attributes(cast(object, item))))
+            result = (kind, 'property', *(node(native_attribute(item, name)) for name in ('fget', 'fset', 'fdel', '__doc__')), node(_attributes(cast(object, item))))
         elif isinstance(item, partial):
             result = (kind, 'partial', *(node(native_attribute(cast(object, item), name)) for name in ('func', 'args', 'keywords')), node(_attributes(cast(object, item))))
         elif isinstance(item, bytearray):

@@ -2055,6 +2055,131 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                     delattr(policy, field)
                 else:
                     setattr(policy, field, original_metadata)
+    class ReprPolicy:
+        def __repr__(self):
+            return str(_LATE_RULES['offset'])
+    class ReprModel(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + float(repr(self.policy)), 0, 1)
+            return result
+    reviewed = copy.deepcopy(assessment_case[2][0][0])
+    reviewed._model.__class__ = ReprModel
+    reviewed._model.policy = ReprPolicy()
+    repr_handle = _freeze(reviewed)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(repr_handle, assessment_case)
+        assert loader.call_count == 0
+    class PolicyModel(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.adjust(result['_probs'])
+            return result
+    class DictionaryAlias:
+        def __init__(self):
+            self.offset = expected_offset
+            self.state = vars(self)
+        def adjust(self, values):
+            return np.clip(values + self.offset + (0 if self.state is vars(self) else 0.1), 0, 1)
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            memo[id(vars(self))] = vars(clone)
+            vars(clone).update((name, copy.deepcopy(part, memo)) for name, part in vars(self).items())
+            return clone
+    class BrokenDictionaryAlias(DictionaryAlias):
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            return clone
+    reviewed._model.__class__ = PolicyModel
+    reviewed._model.policy = DictionaryAlias()
+    _freeze(reviewed)
+    reviewed._model.policy = BrokenDictionaryAlias()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(reviewed)
+        assert loader.call_count == 0
+    class PropertyDocument:
+        @property
+        def offset(self):
+            return expected_offset
+        def adjust(self, values):
+            return np.clip(values + float(type(self).offset.__doc__), 0, 1)
+    descriptor = vars(PropertyDocument)['offset']
+    descriptor.__doc__ = str(expected_offset)
+    reviewed._model.policy = PropertyDocument()
+    property_handle = _freeze(reviewed)
+    try:
+        descriptor.__doc__ = str(expected_offset + 0.1)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(property_handle, assessment_case)
+            assert loader.call_count == 0
+    finally:
+        descriptor.__doc__ = str(expected_offset)
+    class NativeNamespace(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + self.policy.__globals__['holdout_rules']['offset'], 0, 1)
+            return result
+    reviewed._model.__class__ = NativeNamespace
+    for policy in (identity_probabilities, LogisticRegression.predict_proba):
+        reviewed._model.policy = policy
+        with patch.dict(policy.__globals__, {'holdout_rules': _LATE_RULES}):
+            namespace_handle = _freeze(reviewed)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(namespace_handle, assessment_case)
+                assert loader.call_count == 0
+    class DynamicNamespace(NativeNamespace):
+        def predict(self, data):
+            result = LogRegBinary.predict(self, data)
+            result['_probs'] = self.policy.__globals__[self.namespace_key](result['_probs'])
+            return result
+    reviewed._model.__class__ = DynamicNamespace
+    reviewed._model.namespace_key = 'adjust'
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='literal key for reflective function globals'):
+            _freeze(reviewed)
+        assert loader.call_count == 0
+    class FreshConfigProvider:
+        @property
+        def prediction_calibration_config(self):
+            def threshold(values):
+                callback_calls.append('fresh config threshold')
+                return np.max(values)
+            return CalibrationConfig(calibration_func=None, threshold_func=threshold)
+        def adjust(self, values):
+            self.prediction_calibration_config.threshold_func(values)
+            return values
+    class StableConfigProvider(FreshConfigProvider):
+        def __init__(self, config):
+            self.config = config
+        @property
+        def prediction_calibration_config(self):
+            return self.config
+    class CallbackOnFinal(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                result['_probs'] = self.policy.adjust(result['_probs'])
+            return result
+    reviewed = copy.deepcopy(assessment_case[2][0][0])
+    reviewed._model.__class__ = CallbackOnFinal
+    reviewed._model.research_x = late._model.research_x.copy()
+    reviewed._model.policy = FreshConfigProvider()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='stable observable binding'):
+            _freeze(reviewed)
+        assert loader.call_count == 0 and callback_calls == []
+    reviewed._model.policy = StableConfigProvider(CalibrationConfig(calibration_func=None, threshold_func=nested_threshold))
+    _freeze(reviewed)
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([reviewed]):
+        reviewed._model.policy.adjust(reviewed._model.model.coef_.ravel())
+    assert callback_calls == []
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

@@ -88,6 +88,8 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             for name in _EFFECTS:
                 forbid(getattr(value, name, None))
             config = getattr(value, 'prediction_calibration_config', None)
+            if config is not getattr(value, 'prediction_calibration_config', None):
+                raise ValueError('Holdout refuses calibration providers without stable observable binding')
             if config is not None:
                 configs.append(config)
                 for name in ('calibration_func', 'threshold_func'):

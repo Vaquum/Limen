@@ -58,7 +58,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
-    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__', '__round__', '__trunc__', '__floor__', '__ceil__', '__divmod__', '__rdivmod__', '__hash__', '__format__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
+    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__repr__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__', '__round__', '__trunc__', '__floor__', '__ceil__', '__divmod__', '__rdivmod__', '__hash__', '__format__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     module_attributes: set[str] = set()
     fitted_names: set[str] = set()
     module_dynamic: dict[int, bool] = {}
@@ -66,6 +66,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     processed: dict[int, set[str]] = {}
     inspected: set[tuple[int, bool, int, int]] = set()
     recorded_mro: set[int] = set()
+    reflective_keys: set[str] = set()
+    reflected: dict[int, set[str]] = {}
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
@@ -123,6 +125,11 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
+                if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') and name == '__globals__':
+                    lookup = instructions[index + 1:index + 3]
+                    if len(lookup) != 2 or lookup[0].opname != 'LOAD_CONST' or not isinstance(lookup[0].argval, str) or lookup[1].opname != 'BINARY_SUBSCR':
+                        raise ValueError('Holdout requires a literal key for reflective function globals')
+                    reflective_keys.add(lookup[0].argval)
                 if instruction.opname == 'LOAD_GLOBAL' and name == 'globals' and name not in value.__globals__:
                     lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
                     if not lookup[2:] or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':
@@ -238,11 +245,21 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
     for value in values:
         visit(value)
-    previous = (-1, -1, -1, -1, -1)
-    while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values())):
-        previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()))
+    previous = (-1, -1, -1, -1, -1, -1, -1)
+    while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0):
+        previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0)
         for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
+        if reflective_keys:
+            functions = [value for value in seen.values() if inspect.isfunction(value)]
+            functions.extend(function for config in exclude for name in ('calibration_func', 'threshold_func') for function in call_functions(getattr(config, name, None)))
+            for function in functions:
+                done = reflected.setdefault(id(function), set())
+                for key in reflective_keys.intersection(function.__globals__) - done:
+                    done.add(key)
+                    part = cast(object, function.__globals__[key])
+                    visit(part)
+                    evidence.append(('function-globals', function.__module__, function.__qualname__, key, part))
     if capture is not None:
         capture.extend(seen.values())
     return [fitted_witness((tuple(values), evidence))]
