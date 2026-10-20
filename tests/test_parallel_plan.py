@@ -639,10 +639,10 @@ def test_frozen_manifest_round_plan() -> None:
         validator_manifest = copy.deepcopy(plan.manifest).add_feature(_caller_feature, window=3)
         validator_plan = freeze_manifest(validator_manifest, None)
         validator_digest = digest(validator_plan)
-        for attribute, owner, changed in [('__kwdefaults__', _closed_validator, {'maximum': 1}),
+        for attribute, validator_owner, changed in [('__kwdefaults__', _closed_validator, {'maximum': 1}),
                                           ('cell_contents', _closed_validator.__closure__[0], 5)]:
             with pytest.MonkeyPatch.context() as patch:
-                patch.setattr(owner, attribute, changed)
+                patch.setattr(validator_owner, attribute, changed)
                 invalid_validator_plan = freeze_manifest(validator_manifest, None)
                 assert (invalid_validator_plan.pipeline_digest, invalid_validator_plan.resource_digest) != (validator_plan.pipeline_digest, validator_plan.resource_digest)
                 with pytest.raises(ValueError, match='window outside captured bounds'):
