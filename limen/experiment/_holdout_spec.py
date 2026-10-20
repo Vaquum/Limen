@@ -37,8 +37,11 @@ def normalized(value: object) -> object:
     elif inspect.ismethod(value) or inspect.isfunction(value) or isinstance(value, (type, partial)):
         callable_value = cast(object, value)
         factory = callable_value
-        while isinstance(factory, partial) and inspect.getattr_static(type(factory), '__call__', None) is partial[object].__call__:
-            factory = native_attribute(cast(object, factory), 'func')
+        while isinstance(factory, partial):
+            provider = cast(partial[object], factory)
+            if inspect.getattr_static(type(provider), '__call__', None) is not partial[object].__call__:
+                break
+            factory = native_attribute(provider, 'func')
         constructors = tuple(inspect.getattr_static(owner, name, None) for owner, name in ((factory, '__new__'), (factory, '__init__'), (type(factory), '__call__'))) if isinstance(factory, type) else ()
         bindings = tuple((function, {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}) for target in (callable_value, *constructors) for function in call_functions(target))
         result = {'callable': f'{getattr(callable_value, "__module__", type(callable_value).__module__)}.{getattr(callable_value, "__qualname__", type(callable_value).__qualname__)}',
