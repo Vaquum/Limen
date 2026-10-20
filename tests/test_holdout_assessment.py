@@ -1051,6 +1051,29 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(relative_handle, assessment_case)
             assert loader.call_count == 0
+    class CollidingOffset(float):
+        def __hash__(self):
+            return 0
+    class SetChoice(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + next(iter(self.policy)), 0, 1)
+            return result
+        def __deepcopy__(self, memo):
+            clone = type(self).__new__(type(self))
+            memo[id(self)] = clone
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            clone.policy = type(self.policy)(reversed(tuple(self.policy)))
+            return clone
+    reordered = copy.deepcopy(assessment_case[2][0][0])
+    reordered._model.__class__ = SetChoice
+    for container in (set, frozenset):
+        reordered._model.policy = container((CollidingOffset(expected_offset), CollidingOffset(expected_offset + 0.1)))
+        assert tuple(copy.deepcopy(reordered._model).policy) == tuple(reversed(tuple(reordered._model.policy)))
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(reordered)
+            assert loader.call_count == 0
     class FloatPolicy(float):
         def adjust(self, values):
             return np.clip(values + float(self), 0, 1)

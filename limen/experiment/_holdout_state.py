@@ -132,7 +132,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         if type(item) in (list, tuple):
             return (kind, tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         if type(item) in (set, frozenset):
-            return (kind, tuple(sorted((node(part) for part in cast(set[object] | frozenset[object], item)), key=pickle.dumps)), None)
+            return (kind, tuple(node(part) for part in cast(set[object] | frozenset[object], item)), None)
         attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
@@ -173,7 +173,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif isinstance(item, (tuple, list, deque)):
             result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), native_attribute(cast(object, item), 'maxlen', deque) if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
-            result = (kind, tuple(sorted((node(part) for part in _native_values(cast(object, item))), key=pickle.dumps)), state)
+            result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), state)
         elif object_payload(item):
             payload_owner: type[object] = np.ndarray if isinstance(item, np.ndarray) else np.generic
             result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(npt.NDArray[np.generic].tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
