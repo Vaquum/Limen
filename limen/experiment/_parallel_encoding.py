@@ -40,6 +40,8 @@ _EMPTY_IDS: frozenset[int] = frozenset()
 
 
 def encode(value: object, active: frozenset[int] = _EMPTY_IDS) -> list[object]:
+    if callable(value):
+        return _encode_composite(value, active)
     if value is None:
         node: list[object] = ['null']
     elif isinstance(value, str):

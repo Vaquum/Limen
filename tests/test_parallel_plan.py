@@ -115,6 +115,11 @@ class MappingRolling(Mapping[str, int]):
         return _caller_feature(data, window=self.window)
 
 
+class OpaqueMappingRolling(dict):
+    def __call__(self, data):
+        return _caller_feature(data, window=self['window'])
+
+
 class CallerPartial(partial):
     __slots__ = ('bias',)
 
@@ -343,6 +348,10 @@ def test_frozen_manifest_round_plan() -> None:
                                     (validate_domain, (rejected, {key: [value] for key, value in params.items()}, None))):
             with pytest.raises(ValueError, match='data_dict_extension: fixed integer seed'):
                 validate(*arguments)
+    opaque = OpaqueMappingRolling(window=3)
+    declare_parallel(opaque, ParallelRoundContract(_caller_validator, ('window',)))
+    with pytest.raises(TypeError, match=r'object\.__new__.*not safe'):
+        freeze_manifest(copy.deepcopy(plan.manifest).add_feature(opaque), None)
     original.split_config = (2, 1, 1)
     assert plan.manifest.split_config != original.split_config
     with pytest.raises(ValueError, match='unchanged compiled YAML'):
