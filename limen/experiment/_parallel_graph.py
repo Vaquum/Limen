@@ -25,10 +25,12 @@ def shared_copy(memo: dict[int, tuple[object, object]]) -> Iterator[None]:
 
 
 def _value_only(value: object, *, functions: bool = True) -> bool:
-    if isinstance(value, tuple):
-        return all(_value_only(item, functions=False) for item in cast(tuple[object, ...], value))
     if isinstance(value, FunctionType):
         return functions and value.__closure__ is None and value.__kwdefaults__ is None and '__wrapped__' not in vars(value) and _value_only(value.__defaults__)
+    if callable(value) and not isinstance(value, type):
+        return False
+    if isinstance(value, tuple):
+        return all(_value_only(item, functions=False) for item in cast(tuple[object, ...], value))
     return isinstance(value, (type(None), str, bool, int, float, date, Path, type))
 
 
