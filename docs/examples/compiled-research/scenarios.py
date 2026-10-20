@@ -72,7 +72,9 @@ def search(data_dir, output):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
         results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'), 'adaptive': adaptive_search(data_dir, output / 'adaptive')}
+    return {'runs': results, 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
+            'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search
 
 
@@ -85,6 +87,29 @@ def adaptive_search(data_dir, output):
             'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
             'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 # endregion adaptive_search
+
+
+# region mixed_feedback
+def mixed_feedback(data_dir, output):
+    config = configuration('adaptive', data_dir)
+    output.mkdir(parents=True, exist_ok=True)
+    (output / 'interventions.json').write_text(json.dumps([
+        {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
+
+    def steer(log, msq):
+        if log.height == 2:
+            msq.keep_is('C', .1)
+
+    loop = execute(config, output, callback=steer)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())
+    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
+            'remaining': checkpoint['msq_state']['trim_budget'], 'records': records,
+            'predictions': {record['round_id']: recorded_predictions(output, record) for record in records}}
+# endregion mixed_feedback
 
 
 def recorded_predictions(directory: Path, record):

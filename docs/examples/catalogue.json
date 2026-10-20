@@ -85,7 +85,10 @@
     "limen/targets/README.md",
     "limen/transforms/README.md",
     "limen/utils/README.md",
-    "limen/yaml/README.md"
+    "limen/yaml/README.md",
+    "docs/Advanced-Search.md",
+    "docs/Calibration.md",
+    "docs/Reducers-And-Feedback.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2097,7 +2100,7 @@
       ],
       "recorded_window": "hourly: first 1,440 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds."
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget."
     },
     "compiled/search": {
       "interface": "compiled",
@@ -2112,7 +2115,7 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three."
+      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget."
     },
     "python/recovery": {
       "interface": "python",
@@ -2512,6 +2515,23 @@
     ],
     "limen/yaml/README.md": [
       "compiled/command_line"
+    ],
+    "docs/Advanced-Search.md": [
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Calibration.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "python/selection",
+      "compiled/selection",
+      "compiled/walk_forward"
+    ],
+    "docs/Reducers-And-Feedback.md": [
+      "python/search",
+      "compiled/search"
     ]
   }
 }

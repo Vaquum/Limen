@@ -83,7 +83,8 @@ def search(data_dir, output):
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
-    return {'runs': runs, 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive')}
+    return {'runs': runs, 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search
 
 
@@ -105,6 +106,35 @@ def adaptive_search(data_dir, output):
             'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
             'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 # endregion adaptive_search
+
+
+# region mixed_feedback
+def mixed_feedback(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
+    output.mkdir(parents=True, exist_ok=True)
+    (output / 'interventions.json').write_text(json.dumps([
+        {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
+
+    def steer(log, msq):
+        if log.height == 2:
+            msq.keep_is('alpha', .1)
+
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd,
+                                   search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output,
+                                   checkpoint_interval=1, feedback_interval=1, intra_callback=steer,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-feedback', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
+            'remaining': checkpoint['msq_state']['trim_budget']}
+# endregion mixed_feedback
 
 
 # region recovery

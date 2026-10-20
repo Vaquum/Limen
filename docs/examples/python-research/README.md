@@ -25,7 +25,7 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 
 The execution scenario compares cash spot with a linear perpetual using the recorded funding history, realized rates and mark prices. The shared `recorded_inputs.py` checks and normalizes those records; the native funding ledger exposes each payment. Both runs retain their execution contract. Tests require signal fills to follow its one-hour delay and compare every displayed fill with the native Parquet record. The bar scenario also forms three CFR diagnostic bars from the pinned 90-second trade slice. This is shared preprocessing on recorded events, not a claim that the short slice can support model selection.
 
-Search also runs a separate resource-controlled grid. `BudgetReducer(max_permutations=3)` reduces a four-candidate budget to three completed rounds through the shared feedback controller. Its audit and checkpoint retain the intervention and remaining queue state. This changes the amount of research performed; it is not evidence that the reduced search selects a better model.
+Search also runs a separate resource-controlled grid. `BudgetReducer(max_permutations=3)` reduces a four-candidate budget to three completed rounds through the shared feedback controller. Its audit and checkpoint retain the intervention and remaining queue state. A separate mixed run combines that reducer with a callback and a file-driven injection. The proof checks ordering, deduplication, resulting domain and independently computed scores. These controls change the observations collected; they do not establish better selection.
 
 Search and recovery use the first 1,440 recorded hourly observations. Recovery compares the completed resumed run with a separate uninterrupted run. Walk-forward uses the first 384 hourly observations; its inference callback declares their one-hour availability interval. Selection, ordinary final assessment and classifier calibration retain their quarter-hour population.
 
@@ -33,7 +33,7 @@ The observed-cost scenario creates one immutable calibration from the recorded C
 
 | Scenario | Decision and output |
 |---|---|
-| `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |
+| `search` | Compare bounded grid, random, Sobol and shuffled traversal; then budget-only and reducer/callback/file feedback runs. |
 | `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
 | `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |

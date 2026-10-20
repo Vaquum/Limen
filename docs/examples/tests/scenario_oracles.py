@@ -92,6 +92,36 @@ def verify(interface, name, result, output, inputs):
             else:
                 original = next(item for item in result['runs']['grid'] if item['C'] == row['C'])
                 assert row['id'] == original['id'] and row['accuracy'] == pytest.approx(original['accuracy'])
+        feedback = result['feedback']
+        assert len(feedback['rows']) == feedback['yielded'] == 3 and feedback['remaining'] == 0
+        assert all(row['errors'] == [] and row['suggestions'] == [] for row in feedback['audit'])
+        first = feedback['audit'][0]['interventions']
+        assert [item['source'] for item in first] == ['BudgetReducer', 'intra_callback', 'intervention_file']
+        assert [item.get('op', item.get('operation')) for item in first] == ['trim', 'keep_is', 'inject_value']
+        assert sum(item['source'] == 'intervention_file' for cycle in feedback['audit'] for item in cycle['interventions']) == 1
+        assert first[0]['target_count'] == 3
+        parameter, injected = ('alpha', 2.) if interface == 'python' else ('C', 7.5)
+        assert first[1]['param'] == first[2]['param'] == parameter
+        assert first[1]['value'] == .1 and first[2]['value'] == injected
+        assert feedback['domain'][parameter] == [.1, injected]
+        assert feedback['rows'][-1][parameter] == injected
+        if interface == 'python':
+            assert {(row['window'], row['alpha']) for row in feedback['rows']} == {(4, .1), (12, .1), (4, 2.)}
+            for row in feedback['rows']:
+                assert row['validation_net_return'] == pytest.approx(ridge_score(bars, row['window'], row['alpha']), rel=1e-10, abs=1e-12)
+        else:
+            assert [row['C'] for row in feedback['rows']] == [.1, .5, 7.5]
+            training = bars.filter(pl.col('datetime') < datetime(2024, 1, 15, tzinfo=timezone.utc))['close'].to_numpy()
+            cutoff = float(np.median((training[1:] / training[:-1] - 1) * 100))
+            labels = bars.with_columns((((pl.col('close').shift(-1) / pl.col('close') - 1) * 100) > cutoff).cast(pl.UInt8).alias('label'))
+            records = {record['round_id']: record for record in feedback['records']}
+            assert set(records) == set(feedback['predictions']) == {row['id'] for row in feedback['rows']}
+            for row in feedback['rows']:
+                alignment = records[row['id']]['alignment']
+                expected = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))['label'].to_numpy()
+                predictions = np.asarray(feedback['predictions'][row['id']])
+                assert predictions.size == expected.size > 0
+                assert row['accuracy'] == pytest.approx(float(np.mean(predictions == expected)))
         if interface == 'compiled':
             assert set(result['families']) == {'ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'}
             raw = pl.read_parquet(inputs / 'spot_15m_20250101_20250531.parquet')

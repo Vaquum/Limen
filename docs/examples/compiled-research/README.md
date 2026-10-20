@@ -25,7 +25,7 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 
 | Scenario | Decision and output |
 |---|---|
-| `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |
+| `search` | Compare bounded grid, random, Sobol and shuffled traversal; then budget-only and reducer/callback/file feedback runs. |
 | `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
 | `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |

@@ -35,9 +35,11 @@ sfd:
       transform_params:
         shift: -1
 # endregion fitted_target
+# region validation_objective
     objective:
       metric: backtest_total_return
       direction: maximize
+# endregion validation_objective
     backtest:
       source_interval_seconds: 900
       fee_bps: 1.0
