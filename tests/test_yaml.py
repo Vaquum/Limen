@@ -4,13 +4,19 @@ import re
 from datetime import date
 from pathlib import Path
 from textwrap import dedent
+from unittest.mock import patch
 
 import polars as pl
+from polars.testing import assert_frame_equal
 import pytest
 
+from limen import indicators
+from limen.data import HistoricalData
+from limen.data import historical_data
 from limen.calibration import grid_threshold_optimizer
 from limen.calibration import sklearn_probability_calibrator
 from limen.experiment.manifest_core import AblationConfig
+from limen.experiment.manifest_core import Manifest
 from limen.experiment.manifest_core import MLManifest
 from limen.experiment.manifest_core import RuleBasedManifest
 from limen.metrics.balanced_metric import balanced_metric
@@ -20,6 +26,7 @@ from limen.yaml.compiler import _resolve_func_params
 from limen.yaml.compiler import build_manifest
 from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.compiler import build_search_strategy
+from limen.yaml.errors import ResolutionError
 from limen.yaml.errors import GitError
 from limen.yaml.errors import ValidationError
 from limen.yaml.errors import YAMLError
@@ -209,6 +216,89 @@ def test_resolve_returns_correct_object_types() -> None:
     import inspect
     assert callable(resolve('limen.indicators.roc'))
     assert inspect.ismodule(resolve('limen.indicators'))
+
+
+@pytest.mark.parametrize('path', (
+    'limen.data.historical_data.os',
+    'limen.data.historical_data.os.system',
+    'limen.data.historical_data.urlparse',
+    'limen.data.historical_data.os.path.join',
+    'limen.data.historical_data.os._limen_reentry',
+    'limen.backtest.funding_adapter.importlib.import_module',
+    'limen.features.price_lines.cached_price_line_arrays',
+))
+def test_resolve_rejects_external_namespace_traversal(path: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    if path.endswith('._limen_reentry'):
+        monkeypatch.setattr(historical_data.os, '_limen_reentry', indicators.roc, raising=False)
+    with pytest.raises(ResolutionError) as exc:
+        resolve(path)
+    assert exc.value.path == path
+    assert not is_resolvable(path)
+
+
+@pytest.mark.parametrize('path', (
+    'limen.indicators.roc.__globals__',
+    'limen.indicators.roc.__class__',
+    'limen.data.HistoricalData.__init__',
+    'limen.data.HistoricalData.get_spot_klines.__globals__',
+    'limen.data.historical_data.__dict__',
+))
+def test_resolve_rejects_dunder_traversal(path: str) -> None:
+    with patch('limen.yaml.resolver.importlib.import_module') as import_module:
+        with pytest.raises(ResolutionError):
+            resolve(path)
+        assert not is_resolvable(path)
+        import_module.assert_not_called()
+
+
+@pytest.mark.parametrize(('path', 'expected'), (
+    ('limen.indicators.roc', indicators.roc),
+    ('limen.indicators', indicators),
+    ('limen.data.HistoricalData.get_spot_klines', HistoricalData.get_spot_klines),
+    ('limen.calibration.grid_threshold_optimizer', grid_threshold_optimizer),
+))
+def test_resolve_preserves_allowed_object_identity(path: str, expected: object) -> None:
+    assert resolve(path) is expected
+
+
+@pytest.mark.parametrize('template', ('logreg_binary.yaml', 'rule_based.yaml'))
+@pytest.mark.parametrize('path', (
+    'limen.data.historical_data.os.system',
+    'limen.data.historical_data.urlparse',
+))
+def test_yaml_rejects_external_data_source_before_binding(template: str, path: str) -> None:
+    yaml_dict, errors = parse((_TEMPLATES_DIR / template).read_text())
+    assert errors == []
+    yaml_dict['sfd']['manifest']['data_source']['method'] = path
+    result = validate(yaml_dict)
+    assert not result.valid
+    assert any(error.path == 'sfd.manifest.data_source.method' and path in error.message
+               for error in result.errors)
+    with patch.object(Manifest, 'set_data_source') as bind:
+        with pytest.raises(ResolutionError) as exc:
+            build_manifest(yaml_dict)
+        assert exc.value.path == path
+        bind.assert_not_called()
+
+
+@pytest.mark.parametrize('template', ('logreg_binary.yaml', 'rule_based.yaml'))
+def test_yaml_allowed_data_source_reads_recorded_fixture(template: str) -> None:
+    fixture = Path(__file__).resolve().parent / 'fixtures' / 'spot_1h_20240101_20241231.parquet'
+    yaml_dict, errors = parse((_TEMPLATES_DIR / template).read_text())
+    assert errors == []
+    yaml_dict['sfd']['manifest']['data_source'] = {
+        'method': 'limen.data.HistoricalData.get_any_file',
+        'params': {'file_path_or_url': str(fixture)},
+    }
+    result = validate(yaml_dict)
+    assert result.valid, [error.message for error in result.errors]
+    manifest = build_manifest(yaml_dict)
+    assert manifest.data_source_config.method is HistoricalData.get_any_file
+    actual = manifest.fetch_data()
+    assert actual.height == 8784
+    assert actual['close'][0] == 42475.23
+    assert actual['close'][-1] == 93576.0
+    assert_frame_equal(actual, pl.read_parquet(fixture))
 
 
 def test_validation_error_carries_errors_and_formats_message() -> None:

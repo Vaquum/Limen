@@ -1869,5 +1869,9 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.13] - 2026-10-20
 
+- Reject YAML resolver traversal outside allowed namespaces and introspective dunder attributes while preserving supported symbols.
+
+## [5.45.14] - 2026-10-20
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
-- Preserve legacy parallel recovery through 5.45.12 and isolate captured callable declarations from newer caller contracts.
+- Preserve legacy parallel recovery through 5.45.13 and isolate captured callable declarations from newer caller contracts.

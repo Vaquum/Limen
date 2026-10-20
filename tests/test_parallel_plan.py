@@ -1482,7 +1482,7 @@ def _assert_recovery_faults(configuration, directory, temporary):
         elif fault == 'version':
             metadata['limen_version'] = 'unknown'
         elif fault == 'downgraded':
-            metadata['limen_version'] = '5.45.12'
+            metadata['limen_version'] = '5.45.13'
         elif fault == 'worker':
             metadata['worker_native_threads'] = 2
         elif fault == 'marker':
@@ -1499,7 +1499,7 @@ def _assert_recovery_faults(configuration, directory, temporary):
 def _assert_legacy_recovery(configuration, directory, temporary):
     from limen.experiment.checkpoint_manager import CheckpointManager
     from tests.test_parallel_rounds import records, run_loop
-    for version in ('5.45.7', '5.45.8', '5.45.9', '5.45.10', '5.45.11', '5.45.12'):
+    for version in ('5.45.7', '5.45.8', '5.45.9', '5.45.10', '5.45.11', '5.45.12', '5.45.13'):
         legacy = temporary / ('legacy-' + version)
         shutil.copytree(directory, legacy)
         path = legacy / 'metadata.json'
