@@ -121,7 +121,9 @@
     "docs/Backtest-Benchmarks.md",
     "docs/Fractional-Differentiation.md",
     "docs/Triple-Barrier-Method.md",
-    "docs/Perturbation-Strategies.md"
+    "docs/Perturbation-Strategies.md",
+    "docs/Experiment-Manifest.md",
+    "docs/Reference-Architecture.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2741,6 +2743,17 @@
     ],
     "docs/Perturbation-Strategies.md": [
       "python/search",
+      "compiled/search"
+    ],
+    "docs/Experiment-Manifest.md": [
+      "compiled/selection",
+      "compiled/search",
+      "compiled/walk_forward",
+      "compiled/execution"
+    ],
+    "docs/Reference-Architecture.md": [
+      "python/selection",
+      "compiled/selection",
       "compiled/search"
     ]
   }
