@@ -5,7 +5,7 @@ import sys
 from types import FrameType
 from threading import local
 
-__all__ = ['profile_active', 'readonly_profile']
+__all__ = ['profile_active', 'readonly_profile', 'record_profile_failure']
 
 
 class _ProfileState(local):
@@ -17,7 +17,7 @@ _ACTIVE = _ProfileState()
 
 def _audit(event: str, _args: tuple[object, ...]) -> None:
     active = _ACTIVE.failure if event == 'sys.setprofile' else None
-    if active is not None:
+    if active is not None and not active:
         active.append('Holdout inference attempted profile replacement')
         raise ValueError(active[-1])
 
@@ -27,6 +27,11 @@ sys.addaudithook(_audit)
 
 def profile_active() -> bool:
     return _ACTIVE.failure is not None
+
+
+def record_profile_failure() -> None:
+    if _ACTIVE.failure is not None:
+        _ACTIVE.failure.append('Holdout inference guard failed')
 
 
 @contextmanager

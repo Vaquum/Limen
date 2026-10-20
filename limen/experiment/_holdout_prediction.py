@@ -15,7 +15,7 @@ import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_payload, restore_iterations
 from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, native_codes, receiver_position, same_callback
-from limen.experiment._holdout_profile import profile_active, readonly_profile
+from limen.experiment._holdout_profile import profile_active, readonly_profile, record_profile_failure
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -149,6 +149,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
                 _ = previous(frame, event, arg)
         except BaseException:
             violation = violation or 'Holdout inference guard failed'
+            record_profile_failure()
             raise
 
     try:
