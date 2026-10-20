@@ -17,9 +17,9 @@ import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_calls import call_functions, native_attribute
-from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
+from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
-__all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array', 'restore_iterations']
+__all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -61,7 +61,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
+        if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
             if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)
@@ -166,7 +166,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             owner = getattr(value, '__self__', None)
             if owner is not None and not isinstance(owner, ModuleType):
                 visit(owner)
-        elif object_array(value):
+        elif object_payload(value):
             for part in children(cast(object, value)):
                 visit(part)
             if type(value) is not np.ndarray:

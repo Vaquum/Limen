@@ -1850,6 +1850,19 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             return clone
     mapped._model.policy = PreservingGlobalSentinel()
     assert _report(_freeze(mapped), assessment_case)['rows_sha256']
+    class StructuredPolicy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy['adjust'](result['_probs'])
+            return result
+    structured = copy.deepcopy(assessment_case[2][0][0])
+    structured._model.__class__ = StructuredPolicy
+    structured._model.policy = np.asarray((later_probabilities,), dtype=[('adjust', object)])[()]
+    structured_handle = _freeze(structured)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(structured_handle, assessment_case)
+        assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):
