@@ -52,7 +52,7 @@ def children(value: object) -> tuple[object, ...]:
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (npt.NDArray[np.generic].tolist(value), *_attributes(cast(object, value)).values())
-    if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value):
+    if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, _attributes(cast(object, value)))
@@ -138,6 +138,8 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, pickle.dumps(item, protocol=5), state)
         elif kind[0].split('.')[0] == 'numpy' and kind[1] == '_ArrayFunctionDispatcher':
             result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
+        elif type(item) is np.ufunc:
+            result = (kind, pickle.dumps(item, protocol=5))
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
         elif type(item).__dictoffset__ or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
