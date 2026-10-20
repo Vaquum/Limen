@@ -1852,3 +1852,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Replace the Docusaurus build and dependencies with the sole evidence-consuming research reader; retain the deployed predecessor through first-release cutover.
 - Record and verify retained and deliberately retired prelaunch routes, published README/package links and their current reading destinations.
 - Reduce repeated Markdown parser starts and immutable Git-history queries while retaining current source, provenance and execution checks.
+- Retain every npm audit response and bound retries for temporary registry gateway failures; preserve fatal advisory, authentication and malformed-report handling.
