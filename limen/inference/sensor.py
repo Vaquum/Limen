@@ -15,7 +15,7 @@ import polars as pl
 
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
-from limen.inference._python_sensor import BarPrediction, PredictionReason, HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase
+from limen.inference._python_sensor import BarPrediction, PredictionReason, HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase, mapped_values
 from limen.inference._sensor_from_model import Missing, ModelInput, ModelPairs, Prepare, Predict, identity_pairs, model_infer
 
 
@@ -99,7 +99,7 @@ class Sensor:
 
     def predict(self, raw_klines: pl.DataFrame) -> BarPrediction:
 
-        '''Predict the last bar; distinguish unavailable data from flat and report per-bar failures.'''
+        '''Predict the last bar; report unavailable data or invalid numeric outputs with a reason.'''
 
         if hasattr(self, '_fold_context'):
             return _fold_guard.last_prediction(self, raw_klines)
@@ -130,11 +130,15 @@ class Sensor:
 
             x = np.array(last_row.select(feature_cols).row(0), dtype=float).reshape(1, -1)
             pred_result = self._model.predict({'x_test': x})
+            prediction, probability, reason = mapped_values((
+                _extract_scalar(pred_result.get('_preds')),
+                _extract_scalar(pred_result.get('_probs')),
+            ))
             return BarPrediction(
                 datetime=dt,
-                prediction=_extract_scalar(pred_result.get('_preds')),
-                probability=_extract_scalar(pred_result.get('_probs')),
-                reason=None,
+                prediction=prediction,
+                probability=probability,
+                reason=reason,
                 available_at_ns=int(last_row['__trade_available_at_ns__'][0]) if '__trade_available_at_ns__' in last_row.columns else None,
                 trade_contract_digest=self._trade_digest,
             )
@@ -151,7 +155,8 @@ class Sensor:
         Prepare raw klines and return one prediction per input bar.
 
         Warm-up bars and bars inside the training window have prediction=None
-        with reason set. Valid bars have predictions populated. Output length
+        with reason set. Invalid numeric outputs have reason='sensor-error'.
+        Valid bars have predictions populated. Output length
         equals the post-bar-formation row count, not necessarily len(raw_klines).
 
         Args:
@@ -226,15 +231,19 @@ class Sensor:
             if valid_indices:
                 x = data[valid_indices].select(feature_cols).to_numpy().astype(float)
                 pred_result = self._model.predict({'x_test': x})
-                preds = pred_result.get('_preds', [])
+                preds = pred_result.get('_preds')
                 probs = pred_result.get('_probs')
 
                 for j, idx in enumerate(valid_indices):
+                    prediction, probability, reason = mapped_values((
+                        _extract_scalar(preds[j]) if preds is not None else None,
+                        _extract_scalar(probs[j]) if probs is not None else None,
+                    ))
                     results[idx] = BarPrediction(
                         datetime=datetimes[idx],
-                        prediction=_extract_scalar(preds[j]),
-                        probability=_extract_scalar(probs[j]) if probs is not None else None,
-                        reason=None,
+                        prediction=prediction,
+                        probability=probability,
+                        reason=reason,
                         available_at_ns=int(data['__trade_available_at_ns__'][idx]) if '__trade_available_at_ns__' in data.columns else None,
                         trade_contract_digest=self._trade_digest,
                     )
@@ -264,8 +273,6 @@ def _extract_scalar(arr: Any) -> int | float | None:
     '''Extract a Python scalar from an array-like or from a scalar directly.'''
 
     if arr is None:
-        return None
-    if isinstance(arr, bool):
         return None
     if isinstance(arr, (int, float)):
         return arr

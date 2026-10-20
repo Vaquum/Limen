@@ -1863,6 +1863,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Admit fixed-threshold binary evaluation targets over OHLC columns with horizon one to final holdout assessment; pin the shift in the frozen spec and validate binary labels with per-row availability.
 
-## [5.45.11] - 2026-10-20
+## [5.45.12] - 2026-10-20
 
-- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit behavior-identical subclasses by effective member identity.
+- Reject null, nonnumeric, boolean and nonfinite compiled Sensor prediction values; preserve valid numeric scores and native Python inference.
+
+## [5.45.13] - 2026-10-20
+
+- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit bound subclasses only when HistoricalData itself defines the store.
