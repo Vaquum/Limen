@@ -88,7 +88,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             for name in ('calibration_func', 'threshold_func'):
                 method = getattr(config, name, None)
                 for function in _call_functions(method):
-                forbidden.setdefault(function.__code__, set()).add(function)
+                    forbidden.setdefault(function.__code__, set()).add(function)
         for part in children(value):
             collect(part)
 
