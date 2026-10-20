@@ -1863,7 +1863,11 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Admit fixed-threshold binary evaluation targets over OHLC columns with horizon one to final holdout assessment; pin the shift in the frozen spec and validate binary labels with per-row availability.
 
-## [5.45.11] - 2026-10-20
+## [5.45.12] - 2026-10-20
+
+- Reject null, nonnumeric, boolean and nonfinite compiled Sensor prediction values; preserve valid numeric scores and native Python inference.
+
+## [5.45.13] - 2026-10-20
 
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
-- Preserve legacy parallel recovery through 5.45.10 and isolate captured callable declarations from newer caller contracts.
+- Preserve legacy parallel recovery through 5.45.12 and isolate captured callable declarations from newer caller contracts.
