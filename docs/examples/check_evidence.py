@@ -12,6 +12,9 @@ from pathlib import Path
 from catalogue_surfaces import validate_surface_catalogue
 from catalogue_tests import validate_test_reference
 
+EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
+OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
+
 
 def digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
@@ -34,9 +37,8 @@ def region(path: Path, name: str) -> str:
 
 def bindings(root: Path, document: Path) -> list[dict[str, str]]:
     text = document.read_text()
-    pattern = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
     found = []
-    for match in re.finditer(pattern, text, re.S):
+    for match in re.finditer(EXECUTED_FENCE, text, re.S):
         identity, source, name, scenario, interface, excerpt = match.groups()
         requested = root / source
         path = requested.resolve()
@@ -68,9 +70,8 @@ def all_bindings(root: Path) -> list[dict[str, str]]:
 
 def output_bindings(root: Path, document: Path) -> list[dict[str, str]]:
     text = document.read_text()
-    pattern = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
     found = []
-    for match in re.finditer(pattern, text, re.S):
+    for match in re.finditer(OBSERVED_FENCE, text, re.S):
         identity, source, scenario, interface, excerpt = match.groups()
         path = (root / source).resolve()
         if not path.is_relative_to(root.resolve()) or path.read_text() != excerpt + '\n':
@@ -82,8 +83,18 @@ def output_bindings(root: Path, document: Path) -> list[dict[str, str]]:
 
 
 def validate_fences(root: Path, document: Path) -> None:
-    fences = list(re.finditer(r'(?ms)^(?P<ticks>`{3,})[^\n]*\n.*?^(?P=ticks)[ \t]*(?:\n|$)', document.read_text()))
-    if len(fences) != len(bindings(root, document)) + len(output_bindings(root, document)):
+    text = document.read_text()
+    bindings(root, document)
+    output_bindings(root, document)
+    parser = '''import MarkdownIt from 'markdown-it';
+let text = ''; for await (const chunk of process.stdin) text += chunk;
+console.log(JSON.stringify(new MarkdownIt({html:true}).parse(text, {})
+  .filter(token => token.type === 'fence').map(token => token.map[0])));'''
+    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=root / 'docs-site',
+                            input=text, text=True, capture_output=True, check=True)
+    expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE)
+                      for match in re.finditer(pattern, text, re.S))
+    if json.loads(parsed.stdout) != expected:
         raise ValueError('Unbound code fence in candidate documentation: ' + str(document))
 
 

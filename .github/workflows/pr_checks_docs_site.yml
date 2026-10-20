@@ -37,6 +37,17 @@ jobs:
       - name: Check documentation Python
         run: python docs/examples/check_sources.py
 
+      - name: Set up Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install docs-site dependencies
+        working-directory: docs-site
+        run: npm ci
+
       - name: Check bindings without prior execution evidence
         run: python -m pytest --import-mode=importlib docs/examples/tests/test_docs_examples.py -k 'not exact_bindings_and_coverage' -q --docs-evidence .docs-evidence/bindings-only.json
 
@@ -52,17 +63,6 @@ jobs:
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: timeout 120s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
-
-      - name: Set up Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: '20'
-          cache: npm
-          cache-dependency-path: docs-site/package-lock.json
-
-      - name: Install docs-site dependencies
-        working-directory: docs-site
-        run: npm ci
 
       - name: Prove dependency audit failures
         working-directory: docs-site

@@ -61,10 +61,29 @@ def test_missing_catalogue_scenario_fails():
         validate_scenarios(records, catalogue, ROOT)
 
 
-def test_unmarked_candidate_fence_fails(tmp_path):
+@pytest.mark.parametrize('fence', [
+    '```python\nprint("unbound")\n```',
+    '~~~python\nprint("unbound")\n~~~',
+    ' ```python\n print("unbound")\n ```',
+    '   ~~~python\n   print("unbound")\n   ~~~~~',
+    '> ```python\n> print("unbound")\n> ```',
+    '- ```python\n  print("unbound")\n  ```',
+    '```python\nprint("unbound")',
+])
+def test_unmarked_candidate_fence_fails(tmp_path, fence):
     from check_evidence import validate_fences
     document = tmp_path / 'chapter.md'
-    document.write_text((ROOT / 'docs/Research-Book.md').read_text() + '\n```python\nprint("unbound")\n```\n')
+    document.write_text((ROOT / 'docs/Research-Book.md').read_text() + '\n' + fence + '\n')
+    with pytest.raises(ValueError, match='Unbound code fence'):
+        validate_fences(ROOT, document)
+
+
+def test_binding_inside_an_unmarked_fence_fails(tmp_path):
+    from check_evidence import validate_fences
+    chapter = (ROOT / 'docs/Research-Book.md').read_text()
+    marked = '<!-- example:' + chapter.split('<!-- example:', 1)[1].split('\n```\n', 1)[0] + '\n```\n'
+    document = tmp_path / 'chapter.md'
+    document.write_text('~~~~markdown\n' + marked + '~~~~\n')
     with pytest.raises(ValueError, match='Unbound code fence'):
         validate_fences(ROOT, document)
 
