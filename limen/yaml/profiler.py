@@ -150,7 +150,9 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     )
 
     manifest = compiled_sfd.manifest()
-    from limen.experiment._holdout_research import operation, reject_modes
+    from limen.experiment._holdout_research import bind_manifest, binding_of, operation, reject_modes
+    if binding_of(manifest) is None:
+        _ = bind_manifest(manifest)
     reject_modes(manifest, profile=True)
 
     with operation(manifest, 'experiment'):

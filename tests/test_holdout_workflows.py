@@ -28,8 +28,9 @@ def _profile_reservation_worker(root, pipe):
     pipe.close()
 
 
+@pytest.mark.parametrize('binding', ['explicit', 'lazy'])
 @pytest.mark.parametrize(('kind', 'failure'), [('ml', None), ('rule', None), ('ml', 'load'), ('ml', 'model'), ('ml', 'interrupt')])
-def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failure):
+def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failure, binding):
     assert hashlib.sha256(_FIXTURE.read_bytes()).hexdigest() == 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72'
     root = _project(tmp_path / 'project')
     config = _configuration(root)
@@ -41,7 +42,19 @@ def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failur
         for key in ('target', 'scaler'):
             body.pop(key)
         config['sfd']['params'] = {'sharpe_std_threshold': [0.5]}
-    compiled = CompiledSFD(config, project_root=root)
+    outside = tmp_path / 'outside'
+    outside.mkdir()
+
+    def compile_for_profile():
+        with monkeypatch.context() as patch:
+            patch.chdir(outside)
+            value = CompiledSFD(config, project_root=root if binding == 'explicit' else None)
+            cached = value.manifest()
+            assert (research.binding_of(cached) is None) == (binding == 'lazy')
+        return value
+
+    compiled = compile_for_profile()
+    monkeypatch.chdir(root)
     manifest = compiled.manifest()
     loader, evaluator = manifest.fetch_data, manifest.run_model
     logger = logging.getLogger('limen.experiment.manifest_core')
@@ -65,6 +78,7 @@ def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failur
         assert not (root / 'manifests/holdout.sqlite3').exists()
 
     def fetch():
+        assert research.binding_of(manifest).root == root
         refuse_first_reservation()
         data = loader()
         assert data.height > 0
@@ -120,7 +134,7 @@ def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failur
             pytest.fail('reservation worker did not stop after profiler cleanup')
         assert worker.exitcode == 0
 
-    protected = CompiledSFD(config, project_root=root)
+    protected = compile_for_profile()
     protected_manifest = protected.manifest()
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
         before = [tuple(row) for row in db.execute('SELECT * FROM reservations')]
@@ -135,7 +149,7 @@ def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failur
         assert db.execute('SELECT COUNT(*) FROM research').fetchone()[0] == 0
     withdraw_holdout(root, identifier)
 
-    raced = CompiledSFD(config, project_root=root)
+    raced = compile_for_profile()
     _ = raced.manifest()
     reject = research.reject_modes
     raced_reservations = []
