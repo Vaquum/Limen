@@ -11,7 +11,7 @@ import logging
 import pickle
 import sys
 from types import CodeType, FunctionType, GetSetDescriptorType, MemberDescriptorType, ModuleType
-from typing import cast
+from typing import Literal, Union, cast
 
 import numpy as np
 import polars as pl
@@ -61,8 +61,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or (annotation and isinstance(value, type)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
-            if isinstance(value, str):
+        if value is None or type(value) in (str, bool, int, float, bytes, type(Union), type(Literal)) or (annotation and isinstance(value, type)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
+            if isinstance(value, str) and not annotation:
                 attributes.add(value)
                 method_names.add(value)
                 fitted_names.add(value)

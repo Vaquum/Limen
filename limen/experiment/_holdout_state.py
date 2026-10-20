@@ -23,9 +23,11 @@ __all__ = ['children', 'code_digest', 'fitted_witness', 'object_payload']
 
 
 _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
-
+_FORM_TYPES = (type(typing.Union), type(typing.Literal))
 
 def _typing_metadata(value: object) -> dict[str, object] | None:
+    if type(value) in _FORM_TYPES:
+        return {'name': str(value)}
     if type(value) not in _PARAMETER_TYPES:
         return None
     return {name: getattr(value, name) for name in ('__name__', '__bound__', '__constraints__', '__covariant__', '__contravariant__', '__infer_variance__', '__default__', '__origin__') if hasattr(value, name)}
@@ -34,7 +36,6 @@ def _typing_metadata(value: object) -> dict[str, object] | None:
 @lru_cache(maxsize=2048)
 def code_digest(code: CodeType) -> str:
     return sha256(marshal.dumps(code)).hexdigest()
-
 
 def _native_values(value: object) -> tuple[object, ...]:
     if isinstance(value, tuple):
@@ -82,8 +83,9 @@ def children(value: object) -> tuple[object, ...]:
         return ()
     return tuple(_attributes(value).values())
 
-
 def _attributes(value: object) -> dict[str, object]:
+    if type(value) in _FORM_TYPES:
+        return {}
     if type(value) in (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray):
         return {}
     values: dict[str, object] = {}
