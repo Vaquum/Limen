@@ -101,7 +101,8 @@ def test_site_assembly_preserves_authoring_and_navigation_contracts() -> None:
         assert sources
         assert all('## Prerequisites' in _read(source) for source in sources)
     assert 'Edit this source' in _read('docs-site/reader/render.mjs')
-    assert 'overflow-x:auto' in _read('docs-site/reader/book.css').replace(' ', '')
+    css = _read('docs-site/reader/book.css').replace(' ', '')
+    assert re.search(r'\.table-scroll\{[^}]*\boverflow:(?:auto|scroll)(?:;|})', css)
 
 
 def test_local_markdown_links_and_anchors_resolve() -> None:
