@@ -118,7 +118,7 @@ def source_spec(manifest: SourceManifest, binding: ProjectBinding) -> tuple[str,
         if set(params) - {'file_path_or_url', 'has_header', 'columns', 'row_count_limit', 'n_rows'}:
             raise ValueError('Holdout file source has unsupported parameters')
         store = getattr(owner, '_store', None) if owner is not None else None
-        if store is not None and getattr(store, '__func__', store) is not HistoricalData._store:
+        if store is not None and getattr(store, '__func__', store) is not vars(HistoricalData)['_store']:
             raise ValueError('Holdout source overrides/subclasses are unsupported')
         if owner is not None and type(owner) is not HistoricalData and set(vars(owner)) - {'data', 'data_columns'}:
             raise ValueError('Holdout source overrides/subclasses are unsupported')
