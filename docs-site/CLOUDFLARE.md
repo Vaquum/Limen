@@ -20,6 +20,8 @@ After proof, the publisher seals the build and retains its source, results, whee
 
 ## Deployment credential and Git integration
 
+Enable Preview URLs for the `limen` Worker before staging. Its normal `workers.dev` route may remain disabled. `wrangler versions upload` reads the existing preview setting; declaring `preview_urls: true` in the configuration does not apply that setting during an inactive upload. The upload must return an immutable Version URL before staging can pass.
+
 Use a user-scoped Cloudflare API token restricted to the Limen account, with Workers Scripts Edit and Workers Builds Configuration Read. The latter permits the activation guard to inspect build triggers; it does not modify them. Store it as `CLOUDFLARE_DOCS_API_TOKEN` in the GitHub `documentation` environment. Do not commit or print the token.
 
 Keep the existing Git-integrated build until the replacement and its rollback are concrete. At cutover, open the `limen` Worker in Cloudflare, select **Settings → Builds → Disconnect**, and verify that its trigger inventory is empty. Disconnect only this Worker's repository integration. Do not uninstall the account's Cloudflare GitHub application.

@@ -8,12 +8,13 @@ import re
 import tarfile
 from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from check_evidence import validate_shape
 from released_wheel import wheel_entry
 
 ROLES = {'examples', 'native_outputs', 'validation', 'evidence', 'site', 'rollback', 'wheel', 'pypi_metadata'}
+USER_AGENT = 'LimenDocsVerifier/1.0 (+https://github.com/Vaquum/Limen)'
 
 
 def sha256(data: bytes) -> str:
@@ -36,7 +37,7 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
         route = name.removesuffix('index.html') if name.endswith('index.html') else name
         url = urljoin(base_url, route)
         anonymous_url(url)
-        with urlopen(url, timeout=30) as response:
+        with urlopen(Request(url, headers={'User-Agent': USER_AGENT}), timeout=30) as response:
             anonymous_url(response.geturl())
             if response.read() != expected:
                 raise ValueError('The active site member differs from its sealed payload: ' + name)
@@ -47,7 +48,7 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
     with ThreadPoolExecutor(max_workers=8) as readers:
         list(readers.map(member, ((name, data) for name, data in files.items() if name != '404.html')))
     try:
-        with urlopen(urljoin(base_url, '__missing-docs-acceptance__/'), timeout=30):
+        with urlopen(Request(urljoin(base_url, '__missing-docs-acceptance__/'), headers={'User-Agent': USER_AGENT}), timeout=30):
             raise ValueError('An unknown documentation route did not return 404')
     except HTTPError as error:
         if error.code != 404 or error.read() != files['404.html']:
@@ -71,7 +72,7 @@ def anonymous_url(url: str) -> None:
 
 def fetch(url: str) -> bytes:
     anonymous_url(url)
-    with urlopen(url, timeout=30) as response:
+    with urlopen(Request(url, headers={'User-Agent': USER_AGENT}), timeout=30) as response:
         anonymous_url(response.geturl())
         return response.read()
 

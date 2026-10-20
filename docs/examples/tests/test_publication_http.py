@@ -10,7 +10,7 @@ import pytest
 
 from build_bundle import write_archive
 from publication import restore, validated_site_files
-from verify_publication import ROLES, archive_files, fetch, manifest_name, relative_path, retrieve, sha256, verify_release_manifest, verify_site
+from verify_publication import ROLES, USER_AGENT, archive_files, fetch, manifest_name, relative_path, retrieve, sha256, verify_release_manifest, verify_site
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -43,6 +43,7 @@ def test_anonymous_release_retrieval(anonymous_server):
     base, payload, requests = anonymous_server
     assert fetch(base + 'retained-python.json') == payload
     assert len(requests) == 1
+    assert requests[0]['User-Agent'] == USER_AGENT
     assert not any(name.lower() in ('authorization', 'cookie') for name in requests[0])
 
 
@@ -76,6 +77,7 @@ def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path
     observation = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
     missing = (ROOT / 'docs/examples/retained/compiled-selection.json').read_bytes()
     files = {'index.html': observation, 'chapter/index.html': observation, 'source/research.py': source, '404.html': missing}
+    agents = []
     for name, data in files.items():
         path = tmp_path / name
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -84,6 +86,10 @@ def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path
     class Handler(SimpleHTTPRequestHandler):
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(tmp_path), **kwargs)
+
+        def do_GET(self):
+            agents.append(self.headers.get('User-Agent'))
+            super().do_GET()
 
         def end_headers(self):
             for name, value in [('Content-Security-Policy', "default-src 'self'; frame-ancestors 'none'"),
@@ -110,6 +116,7 @@ def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path
         (tmp_path / 'source/research.py').write_bytes(source)
         with pytest.raises(ValueError, match='404 differs'):
             verify_site(base, files | {'404.html': observation})
+        assert agents and set(agents) == {USER_AGENT}
     finally:
         server.shutdown()
         server.server_close()
