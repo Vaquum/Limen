@@ -156,6 +156,8 @@ Tests run those commands and sources unchanged. Accept recorded-input paths as d
 
 Prove the installation outside the source checkout. Verify the imported distribution and location, package version, input digests, path behavior and meaningful results. Candidate checks execute the candidate wheel. Production validation executes the actual released wheel; an editable installation plus a version-availability lookup does not establish that result.
 
+`docs/examples/released_wheel.py` downloads the exact version from public PyPI metadata and retains the wheel, metadata and digest receipt. The research tests accept `--released-wheel RECEIPT` to install that wheel instead of building a candidate. Both paths use the same isolated environment, unchanged project commands and semantic assertions. A released wheel must match the checkout's version and every shipped Python source file. Selecting or downloading a wheel alone does not prove execution; publication still requires the complete passing suite and merged-source evidence.
+
 ## Examples and their bindings
 
 Classify every Python, YAML, JSON and Bash fence. Its role determines the proof it needs.

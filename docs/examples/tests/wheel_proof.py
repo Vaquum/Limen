@@ -10,6 +10,7 @@ import zipfile
 
 from build_bundle import INPUTS, build, build_results
 from prepare_environment import verify_wheelhouse
+from released_wheel import verify_download
 from scenario_oracles import verify
 
 
@@ -69,7 +70,7 @@ def unpack(bundle: Path, target: Path, root: Path):
                     raise ValueError('Candidate project source differs: ' + str(relative))
 
 
-def prove_wheel(root: Path, temporary: Path):
+def prove_wheel(root: Path, temporary: Path, *, released_wheel: Path | None = None):
     output = root / '.docs-evidence'
     output.mkdir(exist_ok=True)
     bundle = output / 'examples.tar.gz'
@@ -80,14 +81,21 @@ def prove_wheel(root: Path, temporary: Path):
     python = isolated / 'bin/python'
     run([python, '-m', 'pip', 'install', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
          '--require-hashes', '-r', root / offline['runtime_lock'], '-r', root / 'docs/examples/requirements-build.txt'], cwd=temporary)
-    wheel_dir = temporary / 'wheels'
-    environment = dict(os.environ)
-    environment['SOURCE_DATE_EPOCH'] = subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=root, text=True).strip()
-    environment['PIP_NO_INDEX'] = '1'
-    run([python, '-m', 'build', '--wheel', '--no-isolation', '--outdir', wheel_dir], cwd=root, env=environment)
-    wheels = list(wheel_dir.glob('*.whl'))
-    assert len(wheels) == 1
-    wheel = wheels[0]
+    if released_wheel is None:
+        wheel_dir = temporary / 'wheels'
+        environment = dict(os.environ)
+        environment['SOURCE_DATE_EPOCH'] = subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=root, text=True).strip()
+        environment['PIP_NO_INDEX'] = '1'
+        run([python, '-m', 'build', '--wheel', '--no-isolation', '--outdir', wheel_dir], cwd=root, env=environment)
+        wheels = list(wheel_dir.glob('*.whl'))
+        assert len(wheels) == 1
+        wheel = wheels[0]
+    else:
+        import re
+        version = re.search(r'^version = "([^"]+)"$', (root / 'pyproject.toml').read_text(), re.M)
+        if version is None:
+            raise ValueError('Package version is unavailable')
+        wheel = verify_download(released_wheel.resolve(), version[1])
     with zipfile.ZipFile(wheel) as archive:
         shipped = {name for name in archive.namelist() if name.startswith('limen/') and name.endswith('.py')}
         expected = {str(path.relative_to(root)) for path in (root / 'limen').rglob('*.py')}
@@ -105,6 +113,8 @@ info={"version":m.version("vaquum-limen"),"import_location":str(Path(limen.__fil
 Path(sys.argv[1]).write_text(json.dumps(info))'''
     run([python, '-I', '-c', inspect, info_file], cwd=project)
     info = json.loads(info_file.read_text())
+    if released_wheel is not None:
+        assert info['version'] == json.loads(released_wheel.read_text())['version']
     assert Path(info['import_location']).is_relative_to(isolated)
     assert Path(info['distribution_location']).is_relative_to(isolated)
     assert not any(Path(entry or project).resolve() == root.resolve() for entry in info['sys_path'])
