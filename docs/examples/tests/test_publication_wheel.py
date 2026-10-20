@@ -38,7 +38,7 @@ def assert_installable_download(wheel: Path, temporary: Path):
             'from importlib.metadata import distribution; import json; d=distribution("vaquum-limen"); print(json.dumps({"version":d.version,"location":str(d.locate_file(""))}))'],
             cwd=temporary, text=True)
         metadata = json.loads(inspect)
-        assert Path(metadata['location']).is_relative_to(isolated)
+        assert Path(metadata['location']).resolve().is_relative_to(isolated.resolve())
         assert downloaded.name.startswith('vaquum_limen-' + metadata['version'] + '-')
         return metadata
     finally:
