@@ -1,8 +1,11 @@
 import argparse
+from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
+import time
 
 
 def git(root, *arguments):
@@ -15,11 +18,17 @@ def base_revision(root):
     return git(root, 'merge-base', 'HEAD', 'origin/main')
 
 
-def latest_change(root, base, path):
-    commit = git(root, 'log', '--first-parent', '--diff-merges=first-parent', '--no-patch', '-1', '--format=%H', base, '--', path)
+@lru_cache(maxsize=4096)
+def history_change(root, revision, path, first_parent):
+    options = ['--first-parent', '--diff-merges=first-parent'] if first_parent else []
+    commit = git(root, 'log', *options, '--no-patch', '-1', '--format=%H', revision, '--', path)
     if not commit:
-        raise ValueError('No first-parent source change: ' + path)
+        raise ValueError('No source change: ' + path)
     return commit
+
+
+def latest_change(root, base, path):
+    return history_change(root, git(root, 'rev-parse', base), path, True)
 
 
 def merged_pull(commit, responses):
@@ -29,29 +38,56 @@ def merged_pull(commit, responses):
     return matches[0]['html_url']
 
 
+def pull_associations(commit):
+    command = ['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls']
+    for attempt in range(3):
+        response = subprocess.run(command, text=True, capture_output=True)
+        if response.returncode == 0:
+            associations = json.loads(response.stdout)
+            if not isinstance(associations, list):
+                raise ValueError('Source PR associations must be a JSON array: ' + commit)
+            return associations
+        if response.stderr.strip() != 'unexpected end of JSON input' or attempt == 2:
+            raise subprocess.CalledProcessError(response.returncode, command, output=response.stdout, stderr=response.stderr)
+        print(f'Incomplete GitHub response for {commit}; retry {attempt + 1}/2: {response.stderr.strip()}', file=sys.stderr)
+        time.sleep(attempt + 1)
+    raise RuntimeError('Source PR association attempts exhausted')
+
+
 def source_paths(root):
-    return sorted({'README.md', *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json') and 'tests' not in path.parts]})
+    from check_evidence import all_reference_bindings
+    references = {item['path'] for item in all_reference_bindings(root)}
+    return sorted({'README.md', *references, *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json') and 'tests' not in path.parts]})
 
 
-def identity(root, base, path):
-    current = git(root, 'rev-parse', 'HEAD:' + path)
-    previous = subprocess.run(['git', 'rev-parse', '--verify', base + ':' + path], cwd=root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if previous.returncode or previous.stdout.strip() != current:
-        return git(root, 'log', '-1', '--format=%H', 'HEAD', '--', path), 'candidate'
-    return latest_change(root, base, path), 'merged'
+def tree_objects(root, revision):
+    objects = {}
+    for entry in git(root, 'ls-tree', '-rz', revision).split('\0'):
+        if entry:
+            metadata, path = entry.split('\t', 1)
+            objects[path] = metadata.split()[2]
+    return objects
+
+
+def identity(root, base, path, current, previous, *, head=None):
+    if previous.get(path) != current[path]:
+        return history_change(root, head or git(root, 'rev-parse', 'HEAD'), path, False), 'candidate'
+    return history_change(root, base, path, True), 'merged'
 
 
 def acquire(root, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text('{"status":"running"}\n')
     base = base_revision(root)
+    head = git(root, 'rev-parse', 'HEAD')
+    current, previous = tree_objects(root, head), tree_objects(root, base)
     files, responses = [], {}
     for path in source_paths(root):
-        commit, status = identity(root, base, path)
+        commit, status = identity(root, base, path, current, previous, head=head)
         pull = None
         if status == 'merged':
             if commit not in responses:
-                responses[commit] = json.loads(subprocess.check_output(['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls'], text=True))
+                responses[commit] = pull_associations(commit)
             pull = merged_pull(commit, responses[commit])
         files.append({'path': path, 'commit': commit, 'status': status, 'merged_pr': pull, 'sha256': hashlib.sha256((root / path).read_bytes()).hexdigest()})
     record = {'schema_version': 1, 'base': base, 'files': files, 'responses': responses}
@@ -63,10 +99,13 @@ def validate_provenance(root, record):
     base = base_revision(root)
     if record['schema_version'] != 1 or record['base'] != base:
         raise ValueError('Source provenance belongs to another main ancestry')
-    if len(record['files']) != len(source_paths(root)) or {item['path'] for item in record['files']} != set(source_paths(root)):
+    paths = source_paths(root)
+    if len(record['files']) != len(paths) or {item['path'] for item in record['files']} != set(paths):
         raise ValueError('Source provenance inventory differs')
+    head = git(root, 'rev-parse', 'HEAD')
+    current, previous = tree_objects(root, head), tree_objects(root, base)
     for item in record['files']:
-        commit, status = identity(root, base, item['path'])
+        commit, status = identity(root, base, item['path'], current, previous, head=head)
         if (item['commit'], item['status']) != (commit, status) or item['sha256'] != hashlib.sha256((root / item['path']).read_bytes()).hexdigest():
             raise ValueError('Source-changing commit or source bytes differ')
         expected = merged_pull(commit, record['responses'][commit]) if status == 'merged' else None

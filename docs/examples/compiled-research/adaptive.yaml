@@ -46,6 +46,7 @@ sfd:
     - 2.0
     random_state:
     - 42
+# region budget_config
 uel:
   n_permutations: 4
   search_strategy:
@@ -57,3 +58,4 @@ uel:
     params:
       max_permutations: 3
   feedback_interval: 1
+# endregion budget_config

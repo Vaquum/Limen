@@ -1,14 +1,15 @@
 # Glossary
 
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-This glossary defines the terms used across public docs, developer docs, package READMEs, and issue work.
+These terms apply to the [Python project](examples/python-research/README.md), the [Compiled project](examples/compiled-research/README.md) and the reference appendices. Their distinction is methodological ownership: a Manifest invoked from Python remains Compiled Research.
 
 ## Core terms
 
 | Term | Meaning |
 | --- | --- |
-| Limen | Vaquum's Bitcoin research engine for manifest-driven experiments, logged analytics, backtests, and decoder cohorts. |
-| YAML manifest | The default operator-facing experiment definition consumed by the `limen` CLI. |
+| Limen | Vaquum's Bitcoin research engine for Python and Compiled experiments, analysis, backtesting and reusable Sensors and Cohorts. |
+| Python Research | Caller-owned data, preparation, models, backtesting and selection in ordinary Python; no Manifest or built-in-model whitelist is required. |
+| Compiled Research | A declared Manifest pipeline, invoked through the CLI or Python, with its configured validation, preparation and evidence contracts. |
+| YAML manifest | A Compiled experiment definition consumed by the `limen` CLI or `CompiledSFD`. |
 | `Manifest` | The abstract experiment-pipeline interface. Runnable pipelines use `MLManifest` or `RuleBasedManifest`. |
 | `MLManifest` | Manifest implementation for trainable reference architectures. |
 | `RuleBasedManifest` | Manifest implementation for predicate-driven, non-learned strategies. |
@@ -21,15 +22,15 @@ This glossary defines the terms used across public docs, developer docs, package
 | round / permutation | One concrete parameter combination executed by UEL. |
 | experiment artifact | A persisted run output such as `metadata.json`, `results.csv`, `round_data.jsonl.gz`, `checkpoint.json`, or `audit.jsonl`. |
 | `Trainer` | Reconstructs and replays selected rounds from a saved YAML experiment, validates metrics, and returns Sensors. |
-| `Sensor` | A validated model plus manifest, fitted preprocessing state, round parameters, and inference methods. |
-| `Cohort` | A bound set of Sensors with one aggregation mode and cohort identity. |
-| selector | A callable that chooses string permutation IDs for a Cohort. |
+| `Sensor` | A native predictor wrapping fitted state and inference behavior. Python Sensors preserve caller-owned preparation, cutoffs and output meanings; Compiled Sensors carry their reconstructed Manifest and recorded identities. |
+| `Cohort` | Compatible Sensors composed with an aggregation rule, timestamp checks and unavailable-result handling. Recorded Compiled membership can additionally bind artifact identities. |
+| selector | For artifact-backed Compiled composition, a callable choosing string permutation IDs. Python callers can select their fitted models directly before constructing Sensors. |
 | `HistoricalData` | Stateful data-access class for Limen's supported market-data sources and files. |
 | reducer | A `PruningStrategy` that analyzes completed rounds and returns declarative search interventions. |
 | `MSQ` | Mutable Search Queue inside UEL, used by CLI and Python search-strategy runs to select candidates and apply optional feedback. |
 | `Log` | Analysis wrapper over an experiment log and retained round artifacts. |
-| benchmark | Confusion-oriented outcome analysis; not an independent public benchmark suite or leaderboard. |
-| backtest | Long/flat per-bar research ledger with basis-point outputs; not an execution simulator. |
+| benchmark | Outcome analysis of retained research results. Confusion metrics and advisory walk-forward selection reports have different evidence requirements; neither creates statistical acceptance or an independent leaderboard. |
+| backtest | Evaluation under an explicit trading policy. Limen offers a snapshot ledger and an event execution engine; Python callers can supply their own backtester. State the execution assumptions and measured units. |
 
 ## Implementation names
 

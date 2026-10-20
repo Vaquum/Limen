@@ -11,6 +11,12 @@ long/flat contract. Trading results after fees are a separate native SFD
 campaign. The eight fixed strategy definitions, parameters and split behavior
 are canonical in [Common strategy baselines](Common-Strategies.md).
 
+The [Python project](examples/python-research/README.md) declares its own trading
+score and direct event-policy cases. The [Compiled project](examples/compiled-research/README.md)
+records native snapshot and event outputs. The historical campaigns below
+compare their named snapshot workloads under explicit parity rules; they do
+not replace current project proof or establish event-execution parity.
+
 ## Prerequisites
 
 - A Limen repository checkout, Python 3.12 and the recorded timestamped OHLCV parquet fixtures.
@@ -43,17 +49,12 @@ under `tests/`, and is not installed as a separate package command. Use Python
 
 The following comparison-package versions match the implementation setup:
 
-```bash
-python3.12 -m venv ../limen-benchmark-env
-../limen-benchmark-env/bin/python -m pip install -e '.[data]' \
-  'numpy==2.5.4' 'pandas==2.3.3' 'polars==1.44.2' \
-  'backtesting==0.6.6' 'backtrader==1.9.78.123'
-
-python3.12 -m venv ../vectorbt-benchmark-env
-../vectorbt-benchmark-env/bin/python -m pip install \
-  'numpy==2.5.4' 'pandas==3.0.6' 'vectorbt[rust]==1.1.2' \
-  'numba==0.68.0' 'llvmlite==0.50.0'
-```
+| Step | Command |
+|---|---|
+| 1 | `python3.12 -m venv ../limen-benchmark-env` |
+| 2 | `../limen-benchmark-env/bin/python -m pip install -e '.[data]' 'numpy==2.5.4' 'pandas==2.3.3' 'polars==1.44.2' 'backtesting==0.6.6' 'backtrader==1.9.78.123'` |
+| 3 | `python3.12 -m venv ../vectorbt-benchmark-env` |
+| 4 | `../vectorbt-benchmark-env/bin/python -m pip install 'numpy==2.5.4' 'pandas==3.0.6' 'vectorbt[rust]==1.1.2' 'numba==0.68.0' 'llvmlite==0.50.0'` |
 
 To reproduce the complete recorded package stacks, use the published
 [Limen environment pins](benchmarks/common-strategies-2026-10-18/limen-requirements.txt)
@@ -62,13 +63,11 @@ in place of the installation commands above. They pin every installed
 distribution except the editable Limen checkout, which is installed separately
 from the measured source revision:
 
-```bash
-../limen-benchmark-env/bin/python -m pip install \
-  -r docs/benchmarks/common-strategies-2026-10-18/limen-requirements.txt
-../limen-benchmark-env/bin/python -m pip install --no-deps -e .
-../vectorbt-benchmark-env/bin/python -m pip install \
-  -r docs/benchmarks/common-strategies-2026-10-18/vectorbt-requirements.txt
-```
+| Step | Command |
+|---|---|
+| 1 | `../limen-benchmark-env/bin/python -m pip install -r docs/benchmarks/common-strategies-2026-10-18/limen-requirements.txt` |
+| 2 | `../limen-benchmark-env/bin/python -m pip install --no-deps -e .` |
+| 3 | `../vectorbt-benchmark-env/bin/python -m pip install -r docs/benchmarks/common-strategies-2026-10-18/vectorbt-requirements.txt` |
 
 Limen declares `pandas>=2.3,<3`; vectorbt 1.1.2 declares
 `pandas>=3.0.3,<4`. Separate environments preserve both dependency contracts.
@@ -81,10 +80,10 @@ incompatible selection instead of substituting another engine.
 
 Preserve the full dependency inventories alongside a published result:
 
-```bash
-../limen-benchmark-env/bin/python -m pip freeze --all > ../limen-benchmark-env/requirements.lock.txt
-../vectorbt-benchmark-env/bin/python -m pip freeze --all > ../vectorbt-benchmark-env/requirements.lock.txt
-```
+| Step | Command |
+|---|---|
+| 1 | `../limen-benchmark-env/bin/python -m pip freeze --all > ../limen-benchmark-env/requirements.lock.txt` |
+| 2 | `../vectorbt-benchmark-env/bin/python -m pip freeze --all > ../vectorbt-benchmark-env/requirements.lock.txt` |
 
 The setup commands pin the principal comparison packages. Transitive packages,
 the Python patch release and the operating system also belong to a reproducible
@@ -100,16 +99,9 @@ stacks and can affect setup and API costs.
 This command runs all eight strategies against all five configurations on both
 bundled timestamped market fixtures:
 
-```bash
-../limen-benchmark-env/bin/python -m tests.benchmark_backtest_strategies \
-  --inputs tests/fixtures/spot_1h_20240101_20241231.parquet \
-    tests/fixtures/spot_15m_20250101_20250531.parquet \
-  --engines limen vectorbt vectorbt_rust backtesting_py backtrader \
-  --engine-python vectorbt=../vectorbt-benchmark-env/bin/python \
-  --engine-python vectorbt_rust=../vectorbt-benchmark-env/bin/python \
-  --repeats 7 \
-  --output ../backtest-engine-results
-```
+| Step | Command |
+|---|---|
+| 1 | `../limen-benchmark-env/bin/python -m tests.benchmark_backtest_strategies --inputs tests/fixtures/spot_1h_20240101_20241231.parquet tests/fixtures/spot_15m_20250101_20250531.parquet --engines limen vectorbt vectorbt_rust backtesting_py backtrader --engine-python vectorbt=../vectorbt-benchmark-env/bin/python --engine-python vectorbt_rust=../vectorbt-benchmark-env/bin/python --repeats 7 --output ../backtest-engine-results` |
 
 The output directory must be new or empty. Every completed worker updates the
 reports, so a failed competitor remains visible. An unavailable optional engine
@@ -130,17 +122,9 @@ descriptive statistic.
 The `--batch` workload compares one vectorbt portfolio matrix with serial Limen
 calls for the same strategy columns. Run it in its own output directory:
 
-```bash
-../limen-benchmark-env/bin/python -m tests.benchmark_backtest_strategies \
-  --inputs tests/fixtures/spot_1h_20240101_20241231.parquet \
-    tests/fixtures/spot_15m_20250101_20250531.parquet \
-  --batch \
-  --engines limen vectorbt vectorbt_rust \
-  --engine-python vectorbt=../vectorbt-benchmark-env/bin/python \
-  --engine-python vectorbt_rust=../vectorbt-benchmark-env/bin/python \
-  --repeats 7 \
-  --output ../backtest-matrix-results
-```
+| Step | Command |
+|---|---|
+| 1 | `../limen-benchmark-env/bin/python -m tests.benchmark_backtest_strategies --inputs tests/fixtures/spot_1h_20240101_20241231.parquet tests/fixtures/spot_15m_20250101_20250531.parquet --batch --engines limen vectorbt vectorbt_rust --engine-python vectorbt=../vectorbt-benchmark-env/bin/python --engine-python vectorbt_rust=../vectorbt-benchmark-env/bin/python --repeats 7 --output ../backtest-matrix-results` |
 
 All eight catalogue strategies are selected by default. Each column has its
 own initial cash and account history; vectorbt uses `cash_sharing=False` and
@@ -442,13 +426,11 @@ tolerance. Table schemas, row and column order, null masks, identifiers, clocks
 and contract digests must agree. Snapshot regressions use the tighter `1e-12`
 absolute tolerance and preserve the original CVaR tail summation order.
 
-```bash
-mkdir -p /tmp/limen-backtest-baseline
-git archive ec254c73f0ff47cfcc2017e262458b2d5f671fb0 | tar -x -C /tmp/limen-backtest-baseline
-python -m tests.benchmark_backtest_reuse \
-  --baseline-root /tmp/limen-backtest-baseline \
-  --output "$(mktemp -d /tmp/limen-backtest-reuse.XXXXXX)/campaign"
-```
+| Step | Command |
+|---|---|
+| 1 | `mkdir -p /tmp/limen-backtest-baseline` |
+| 2 | `git archive ec254c73f0ff47cfcc2017e262458b2d5f671fb0 \| tar -x -C /tmp/limen-backtest-baseline` |
+| 3 | `python -m tests.benchmark_backtest_reuse --baseline-root /tmp/limen-backtest-baseline --output "$(mktemp -d /tmp/limen-backtest-reuse.XXXXXX)/campaign"` |
 
 The benchmark measures the snapshot ledger, complete snapshot evaluation,
 repeated line features, full timer-driven event execution and forward trade

@@ -1,12 +1,18 @@
-# Calibration
+# Calibrate probabilities and choose a decision boundary
 
-Calibration controls two model-output surfaces: the reliability of predicted probabilities, and where the decision boundary sits. Limen's calibration layer is declarative — it is configured on the manifest and injected automatically into each experiment round.
+Calibration changes probability estimates. Threshold selection changes the decision made from those estimates. Both consume validation evidence; neither supplies an untouched assessment of the selected model.
+
+The [Python project](examples/python-research/README.md) owns these steps as ordinary Python functions. The [Compiled project](examples/compiled-research/README.md) declares them in its Manifest and lets the pipeline fit, record and reconstruct them. Both projects compare all four on/off combinations in their `calibration` scenario.
+
+## Prerequisites
+
+Use the complete project entry points and matching recorded input bundle. The Python example fits a logistic classifier on its training partition and calibrates on validation. The Compiled example validates its declaration, executes four rounds and reconstructs all four Sensors through `Trainer`. The assessment partition supplies no calibration or threshold fitting data.
 
 ## What Calibration Does
 
 Binary classifiers return raw probabilities, but raw probabilities can be miscalibrated. A model output of `0.7` is not automatically a calibrated `70%` positive-class probability. Probability calibration fits a post-hoc correction on a held-out validation set so the output probabilities align with actual class frequencies.
 
-Threshold optimization solves a different problem. The default decision boundary at `0.5` can be suboptimal when the target metric is asymmetric, such as when recall and precision have unequal importance. Limen's `grid_threshold_optimizer` sweeps a range of candidate thresholds, scores each one with a chosen metric, and selects the highest-scoring candidate.
+Threshold optimization solves a different problem. A decision boundary at `0.5` need not maximize the chosen metric, particularly when false positives and false negatives have different consequences. Limen's `grid_threshold_optimizer` sweeps a range of candidate thresholds, scores each one with a chosen metric, and selects the highest-scoring candidate.
 
 The two steps are independent and can be used together or separately.
 
@@ -19,163 +25,155 @@ The two steps are independent and can be used together or separately.
 | False | True | raw probabilities → optimize threshold |
 | False | False | raw model output, no calibration injected |
 
-Both flags default to `True`, so adding `with_calibration()` to a manifest with no search over these flags runs the fully calibrated path automatically.
+For a configured Compiled calibration, both flags default to `True`. Register the required calibrator and/or optimizer before calling `.done()`; `with_calibration()` alone does not register either step.
 
 When both are `False`, no `prediction_calibration_config` is injected into the architecture and the model behaves exactly as if calibration was never configured.
 
 ## Quick Start
 
-The minimum setup: add `with_calibration()` to the manifest.
+Read the two complete scenario functions together. Their reports have different owners: Python returns an explicit threshold even when tuning is disabled; the Compiled classifier keeps a stable results schema with nullable calibration fields.
 
+<!-- example: calibration-python-modes source=docs/examples/python-research/scenarios.py region=calibration scenario=calibration interface=python role=executed -->
 ```python
-from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
-from limen.data import HistoricalData
-from limen.experiment import Manifest, MLManifest
-from limen.indicators import roc
-from limen.metrics.balanced_metric import balanced_metric
-from limen.scalers import LogRegScaler
-from limen.sfd.reference_architecture import logreg_binary
-from limen.targets import QuantileBinaryTarget
-
-def manifest() -> Manifest:
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_indicator(roc, period=14)
-        .with_target_label(
-            'quantile_flag',
-            QuantileBinaryTarget,
-            fit_params={'source_column': 'roc_14', 'quantile': 0.40},
-            transform_params={'shift': -1},
-        )
-        .set_scaler(LogRegScaler)
-        .with_reference_architecture(logreg_binary)
-        .with_calibration()
-        .probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
-        .threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
-        .done()
-    )
+def calibration(data_dir, output):
+    bars = quarter_hour(data_dir)
+    params = {'window': 4, 'alpha': .1}
+    train, validation = project.prep(bars, params).values()
+    model = make_pipeline(StandardScaler(), LogisticRegression(C=1, random_state=42)).fit(train.select('momentum'), train['next_return'].to_numpy() > 0)
+    modes = []
+    for calibrate in (False, True):
+        fitted = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method='sigmoid') if calibrate else model
+        probabilities = fitted.predict_proba(validation.select('momentum'))[:, 1]
+        for tune in (False, True):
+            threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric) if tune else (.5, None)
+            state = SimpleNamespace(model=fitted, threshold=threshold)
+            sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows, state_id=f'sigmoid={calibrate};threshold={tune}', fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+            cohort = Cohort.from_python([sensor], aggregate='vote')
+            tape = cohort.predict_all(bars[1428:1920])[12:]
+            if any(point.prediction not in (0, 1) for point in tape):
+                raise ValueError('Classifier inference must provide a binary decision for every assessment row')
+            modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
+    return {'modes': modes, 'validation_reused': True}
 ```
 
-`with_calibration()` returns a `CalibrationBuilder`. After configuring the steps, call `.done()` to return to the manifest and finalize the pipeline.
+<!-- example: calibration-compiled-modes source=docs/examples/compiled-research/scenarios.py region=calibration scenario=calibration interface=compiled role=executed -->
+```python
+def calibration(data_dir, output):
+    config = configuration('calibration', data_dir)
+    loop = execute(config, output / 'experiment')
+    sensors = Trainer(output / 'experiment').train(research_project.completed_log(loop)['id'].to_list())
+    return {'modes': research_project.completed_log(loop).select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
+```
 
-`sklearn_probability_calibrator` wraps sklearn's `CalibratedClassifierCV` with `FrozenEstimator` to avoid the deprecation that came with sklearn 1.6. It accepts `method='isotonic'` (default) or `method='sigmoid'`.
+The Python example uses sigmoid calibration, a caller-owned fitted state and `Sensor.from_python`. It wraps that Sensor in a voting Cohort and checks every assessment decision is binary. The Compiled project uses this declaration:
 
-`grid_threshold_optimizer` sweeps a bounded range of thresholds, scores each with the chosen metric, and returns the highest-scoring threshold. `balanced_metric` is Limen's built-in `precision * sqrt(trade_rate)` score, which balances signal quality with trade frequency — appropriate when both accuracy and trading activity matter.
+<!-- example: calibration-compiled-config source=docs/examples/compiled-research/calibration.yaml region=calibration_config scenario=calibration interface=compiled role=executed -->
+```yaml
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: sigmoid
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+```
+
+`sklearn_probability_calibrator` wraps `CalibratedClassifierCV` with `FrozenEstimator`, preserving the already-fitted classifier. It accepts isotonic calibration (the default) and sigmoid calibration. `grid_threshold_optimizer` chooses the highest-scoring admissible threshold; the default `balanced_metric` is `precision * sqrt(trade_rate)`.
+
+<!-- reference: calibration-probability-api source=limen/calibration/probability.py region=signature:sklearn_probability_calibrator role=signature -->
+```python
+def sklearn_probability_calibrator(clf: Any, x_val: npt.NDArray[Any] | pl.DataFrame, y_val: npt.NDArray[Any] | pl.Series, method: str='isotonic') -> Any:
+    ...
+```
+
+<!-- reference: calibration-threshold-api source=limen/calibration/threshold.py region=signature:grid_threshold_optimizer role=signature -->
+```python
+def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series, val_proba: npt.NDArray[np.floating[Any]], threshold_min: float=0.2, threshold_max: float=0.7, threshold_step: float=0.05, default_threshold: float=0.35, metric: Callable[[Any, Any], float]=balanced_metric, *, _objective_maximize: bool | None=None) -> tuple[float, float]:
+    ...
+```
 
 ## Threshold-Only Path
 
-`threshold_function()` configures threshold optimization without probability recalibration. In an existing manifest chain, the calibration fragment is:
+The Python scenario's `calibrate=False, tune=True` case optimizes raw model probabilities. Its `calibrate=True, tune=False` case calibrates and uses `0.5`. In a Manifest, register just the threshold function for threshold-only behavior. Register just a probability calibrator for calibrated decisions at `0.5`.
 
-```python-fragment
-.with_calibration()
-.threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
-.done()
+The builder methods below describe the current fluent API; they are reference signatures, rather than a separate executable experiment. Obtain the builder from `MLManifest.with_calibration()` and return to the Manifest with `.done()`.
+
+<!-- reference: calibration-builder-entry source=limen/experiment/manifest_core.py region=signature:MLManifest.with_calibration role=signature -->
+```python
+def with_calibration(self) -> 'CalibrationBuilder':
+    ...
 ```
 
-The optimizer runs on the raw model probabilities. No calibration step is applied.
+<!-- reference: calibration-builder-probability source=limen/experiment/manifest_core.py region=signature:CalibrationBuilder.probability_calibration role=signature -->
+```python
+def probability_calibration(self, func: CalibratorProtocol, **params: Any) -> 'CalibrationBuilder':
+    ...
+```
+
+<!-- reference: calibration-builder-threshold source=limen/experiment/manifest_core.py region=signature:CalibrationBuilder.threshold_function role=signature -->
+```python
+def threshold_function(self, func: ThresholdOptimizerProtocol, **params: Any) -> 'CalibrationBuilder':
+    ...
+```
+
+<!-- reference: calibration-builder-done source=limen/experiment/manifest_core.py region=signature:CalibrationBuilder.done role=signature -->
+```python
+def done(self) -> 'MLManifest':
+    ...
+```
 
 ## Searching Over Calibration Parameters
 
-String parameter values are treated as round-param references. This is the same resolution mechanism used elsewhere in the manifest.
-
-```python
-def params():
-    return {
-        'cal_method':      ['isotonic', 'sigmoid'],
-        'threshold_min':   [0.20, 0.25, 0.30],
-        'threshold_max':   [0.60, 0.65, 0.70],
-        'threshold_step':  [0.05, 0.10],
-    }
-
-def manifest() -> Manifest:
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_indicator(roc, period=14)
-        .with_target_label(
-            'quantile_flag',
-            QuantileBinaryTarget,
-            fit_params={'source_column': 'roc_14', 'quantile': 0.40},
-            transform_params={'shift': -1},
-        )
-        .set_scaler(LogRegScaler)
-        .with_reference_architecture(logreg_binary)
-        .with_calibration()
-        .probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
-        .threshold_function(
-            func=grid_threshold_optimizer,
-            metric=balanced_metric,
-            threshold_min='threshold_min',
-            threshold_max='threshold_max',
-            threshold_step='threshold_step',
-        )
-        .done()
-    )
-```
-
-At runtime, `'cal_method'` is substituted with the current round's `cal_method` value. Non-string values (floats, callables like `metric=balanced_metric`) pass through unchanged.
+Manifest builder string parameters name round-parameter references. For example, registering `method='cal_method'` resolves the current round's `cal_method`; non-string floats and callables pass through unchanged. YAML uses explicit parameter references in the declared component parameters. Search domains and the admissibility of their combinations remain part of the experiment definition.
 
 ## On/Off Comparison Within a Single Experiment
 
-`use_calibration` and `use_threshold` are consumed by `run_model()` before the architecture is called. The architecture never sees these flags — it only sees the resulting (possibly masked) `CalibrationConfig`.
+The Compiled project declares its 2×2 comparison here:
 
-Adding both to `params()` creates a 2×2 grid of calibration modes within a single experiment:
-
-```python
-def params():
-    return {
-        'use_calibration': [True, False],
-        'use_threshold':   [True, False],
-    }
+<!-- example: calibration-compiled-flags source=docs/examples/compiled-research/calibration.yaml region=calibration_modes scenario=calibration interface=compiled role=executed -->
+```yaml
+    use_calibration:
+    - false
+    - true
+    use_threshold:
+    - false
+    - true
 ```
 
-All four modes produce comparable metrics in the same experiment log, so each step's effect is visible directly from the results.
+`run_model()` consumes these flags before calling the architecture. The architecture receives the resulting, possibly masked `CalibrationConfig`. The four rows expose each step's effect within this recorded experiment; comparing them still reuses validation evidence.
 
 ## Custom Calibrators and Optimizers
 
-The calibration layer is protocol-based. Any function that matches the expected signatures can be plugged in.
+A custom probability calibrator accepts the fitted classifier and validation features/labels, and returns an object with `predict_proba()`. A custom optimizer accepts validation labels/probabilities and returns a threshold and score. The shared protocols are:
 
-**Calibrator protocol** — `(clf, x_val, y_val, **params) -> fitted model with predict_proba()`:
-
+<!-- reference: calibration-calibrator-protocol source=limen/calibration/pipeline.py region=signature:CalibratorProtocol.__call__ role=signature -->
 ```python
-def passthrough_calibrator(clf, x_val, y_val, **params):
-    return clf
+def __call__(self, clf: Any, x_val: npt.NDArray[Any] | pl.DataFrame, y_val: npt.NDArray[Any] | pl.Series, **params: Any) -> Any:
+    ...
 ```
 
-Pass `passthrough_calibrator` as the `func=` value in `probability_calibration()`.
-
-**Threshold optimizer protocol** — `(y_val, val_proba, **params) -> tuple[float, float]`:
-
+<!-- reference: calibration-optimizer-protocol source=limen/calibration/pipeline.py region=signature:ThresholdOptimizerProtocol.__call__ role=signature -->
 ```python
-def fixed_threshold_optimizer(y_val, val_proba, **params) -> tuple[float, float]:
-    return 0.5, 0.0
+def __call__(self, y_val: npt.NDArray[Any] | pl.Series, val_proba: npt.NDArray[np.floating[Any]], **params: Any) -> tuple[float, float]:
+    ...
 ```
 
-Pass `fixed_threshold_optimizer` as the `func=` value in `threshold_function()`.
-
-The two protocols are independent. Limen's built-in calibrator can be paired with a custom optimizer, and a custom calibrator can be paired with Limen's built-in optimizer.
+The protocols are independent: a custom calibrator can use the built-in threshold optimizer, and a custom optimizer can use the built-in calibrator. Python Research owns their composition directly; Compiled Research registers them through the builder. The project proof executes the built-in combinations above; these signatures document the extension contract.
 
 ## What Gets Added to Results
 
-When calibration is configured, `evaluate()` always includes these two keys so the experiment log schema stays stable across rounds (e.g. when `use_calibration`/`use_threshold` are searched as `[True, False]`):
+For the configured Compiled classifier, `evaluate()` always includes these two keys so the experiment log schema stays stable across rounds (e.g. when `use_calibration`/`use_threshold` are searched as `[True, False]`):
 
 | Key | Type | Meaning |
 |---|---|---|
-| `optimal_threshold` | `float` or `None` | the threshold chosen by the optimizer (`None` when calibration is off for this round) |
+| `optimal_threshold` | `float` or `None` | the threshold chosen by the optimizer (`None` when both calibration flags disable the configuration for this round) |
 | `val_score` | `float` or `None` | the metric score at that threshold; `None` when no threshold function ran |
 
 These appear in the experiment log alongside the standard binary metrics. `Trainer` validates them during reconstruction; `Sensor` does not expose an experiment-results mapping.
 
-NOTE: `predict()` only includes these keys when calibration is active for the round. `evaluate()` always emits them to ensure every row in the CSV has a consistent schema.
+The lower-level `predict()` only includes these keys when calibration is active for the round. `evaluate()` always emits them to ensure every row in the CSV has a consistent schema.
 
 `_preds` are computed using `optimal_threshold`: a test observation is predicted positive when its probability is at or above the threshold.
 
@@ -195,29 +193,22 @@ Threshold grids are caller-owned inputs: `threshold_step` must be positive and f
 
 ## Calibration at Inference
 
-When a calibrated model is promoted to a `Sensor`, the calibrator is fitted once during training evaluation (on validation data) and stored inside the model instance. Subsequent `predict()` calls — including all sensor inference calls — reuse the stored calibrator without needing `x_val` or `y_val`. Calibrated sensors therefore work identically to uncalibrated ones from the caller's perspective: pass `x_test`, receive predictions.
+The Python scenario stores the fitted probability model and selected threshold together in its caller-owned state. Its inference function prepares completed history and reuses that state without fitting. The Compiled scenario reconstructs the declared model through `Trainer`; the resulting Sensor reuses fitted preprocessing, calibration and the selected threshold.
 
-`fit_calibrator` is the low-level function that encapsulates this fit step. It is called internally by `LogRegBinary.predict()` and `TabPFNBinary.predict()` on first use, and is also available as a public API for calibrator fitting outside the standard pipeline.
+A Sensor accepts history through its native inference API. The lower-level classifier's `predict()` accepts the prepared feature matrix; these are distinct boundaries. `fit_calibrator` provides the shared fit operation outside a Manifest too.
 
 ## Where To Look
 
-- `limen/calibration/` — `fit_calibrator`, `sklearn_probability_calibrator`, `grid_threshold_optimizer`, `apply_calibrated_predict`, `CalibratorProtocol`, `ThresholdOptimizerProtocol`
-- `limen.experiment.CalibrationConfig` — the resolved config dataclass injected into the architecture
-- `CalibrationBuilder` — the fluent builder returned by `MLManifest.with_calibration()`; not a public import, obtain it only via the fluent chain
-
-## Read Next
-
-- Continue to [Experiment Manifest](Experiment-Manifest.md) for the full manifest builder reference.
-- Continue to [Reference Architecture](Reference-Architecture.md) to see how calibration interacts with `predict()` and `evaluate()`.
-- Continue to [Built-In SFDs](Built-In-SFDs.md) to see calibration wired up in the foundational `logreg_binary` and `tabpfn_binary` SFDs.
+- `limen/calibration/` provides the calibration protocols, fitting, probability correction, threshold optimization and prediction helpers.
+- `limen.experiment.CalibrationConfig` holds the resolved configuration injected into a Compiled architecture.
+- `CalibrationBuilder` is obtained through `MLManifest.with_calibration()`; it is not a public import.
 
 ## Shared validation-return objective
 
 The optional `sfd.manifest.objective` declares the measure for threshold search and existing metric-driven reducers:
 
+<!-- example: calibration-compiled-objective source=docs/examples/compiled-research/selection.yaml region=validation_objective scenario=selection interface=compiled role=executed -->
 ```yaml
-sfd:
-  manifest:
     objective:
       metric: backtest_total_return
       direction: maximize
@@ -225,7 +216,7 @@ sfd:
 
 Native manifests use `manifest.set_objective(metric="backtest_total_return", direction="maximize")`. Only event-ledger total return and `maximize`/`minimize` are supported. Return is ending equity divided by initial equity minus one, including configured execution costs/funding and the engine's terminal mark; it is not a closed-trade return formula. Binary logreg, LightGBM and TabPFN require an explicit event-execution product. Fee/slippage-only snapshot backtests and custom threshold optimizers are rejected.
 
-[The complete example](examples/logreg_return.yaml) adds an explicit cash-spot product to the logreg configuration and removes the threshold function's classification `metric`. Validate it with `limen validate docs/examples/logreg_return.yaml`. The objective does not enable threshold search on its own: existing calibration/threshold flags still control tuning.
+The Compiled project's `selection.yaml` pairs this objective with an explicit cash-spot product and ranks its recorded rounds by validation return. Its `walk_forward` scenario also tunes thresholds against validation execution. The objective does not enable threshold search on its own: existing calibration/threshold flags still control tuning. Python Research can call the shared execution engine inside its own scorer; the Python project keeps its explicit caller-owned net-return calculation.
 
 Threshold candidates use validation execution only. All-flat is represented by the finite threshold `2.0` with `>=`, so it remains flat at inference even for probability `1.0`. Exact ties prefer all-flat, then the higher threshold. Candidate execution failures and invalid probabilities/returns raise; there is no economic-mode fallback.
 
@@ -236,3 +227,7 @@ YAML binds Correlation, Focus, Sanity, Saturation and worst-first Budget reducer
 Persisted YAML/MSQ experiments save `metadata.json.objective` and reconstruct the same operating point through Trainer/Sensor. Resume accepts the same declaration and rejects changes/addition/removal or a missing validation-score column before rewriting artifacts. Legacy runs keep their existing schemas. Standard runs score without new resume/promotion support; runs without an experiment directory keep their objective results in memory.
 
 These are validation selection scores. Calibration/search reuse validation data, tuned-versus-untuned comparisons are optimistic, and valid all-flat zero returns can tie. They establish no statistical acceptance or causal effect. Scoring cost grows with the existing threshold grid. Existing diagnostic/resource controls remain independent of the objective.
+
+## Read Next
+
+Continue to [search and recovery](Advanced-Search.md) to compare candidates, [the Manifest reference](Experiment-Manifest.md) for builder declarations, and [Sensor construction](Trainer.md) for fitted model reuse.

@@ -1,6 +1,6 @@
 # Scalers
 
-Scalers are train-fitted preprocessing objects. A manifest fits the scaler on `x_train`, then reuses that fitted state to transform validation and test data without refitting.
+Scalers fit preprocessing state on training observations and reuse that state on later observations. Python Research owns that fit in ordinary Python; Compiled Research gives it to the Manifest.
 
 This page covers scaler selection, `set_scaler()` and `set_scaler_from_params()` behavior, and the custom scaler interface.
 
@@ -26,50 +26,34 @@ That is why scalers live separately from the stateless helpers in [Transforms](T
 | `CausalRollingRobustScaler` | non-stationary features whose scale drifts over time | no | Median and IQR from a strictly trailing rolling window, so no look-ahead. Not row-wise invertible from the fitted scaler. |
 | `RankGaussScaler` | numeric features that benefit from a Gaussianized shape | approximate | The inverse is only approximate because rank-based transforms are lossy. |
 
-## Manifest Usage
+## Fit once, then reuse
 
-### Fixed scaler
+The [Python project](examples/python-research/README.md) fits a scikit-learn `StandardScaler` and Ridge model together. `run_research` retains that evaluated pipeline, and its Sensor uses the same fitted objects without fitting them again.
 
+<!-- example: scalers-python-fit source=docs/examples/python-research/research.py region=fitted_scaler scenario=selection interface=python role=executed -->
 ```python
-from limen.scalers import LogRegScaler
-
-manifest.set_scaler(LogRegScaler)
+def fit(train, round_params):
+    return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
+        train.select("momentum"), train["next_return"].to_numpy()
+    )
 ```
 
-### Parameterized scaler choice
+The [Compiled project](examples/compiled-research/README.md) resolves its scaler from the current round's `scaler_type`. Its selection configuration declares `scaler_type: [logreg]`; the Manifest fits `LogRegScaler` on `x_train` and reuses it on validation and test. Trainer later reconstructs the selected recorded definition with its original splits.
 
-```python
-manifest.set_scaler_from_params('scaler_type')
-
-params = {
-    'scaler_type': ['linear', 'robust', 'rank_gauss'],
-}
+<!-- example: scalers-compiled-fit source=docs/examples/compiled-research/selection.yaml region=fitted_scaler scenario=selection interface=compiled role=executed -->
+```yaml
+    scaler:
+      from_params: scaler_type
 ```
 
-The built-in registry currently maps:
+A fixed scaler uses `Manifest.set_scaler(transform_class, param_name, extra_params)`. A searched scaler uses `Manifest.set_scaler_from_params(param_name, extra_params)`, with a declared parameter whose values are registry keys. The current registry is:
 
-| Key | Class |
-|---|---|
-| `'linear'` | `LinearScaler` |
-| `'logreg'` | `LogRegScaler` |
-| `'robust'` | `RobustScaler` |
-| `'rank_gauss'` | `RankGaussScaler` |
-| `'causal_rolling_robust'` | `CausalRollingRobustScaler` |
-
-The registry itself is also a public export:
-
+<!-- reference: scalers-registry source=limen/scalers/registry.py region=definition:SCALER_REGISTRY role=definition -->
 ```python
-from limen.scalers import SCALER_REGISTRY
-
-sorted(SCALER_REGISTRY)
+SCALER_REGISTRY: dict[str, type] = {'linear': LinearScaler, 'logreg': LogRegScaler, 'robust': RobustScaler, 'rank_gauss': RankGaussScaler, 'causal_rolling_robust': CausalRollingRobustScaler}
 ```
 
-That is the lookup surface `set_scaler_from_params()` uses under the hood.
-
-`set_scaler_from_params('scaler_type')` resolves registry keys such as:
-
-- `'robust'` to `RobustScaler`
-- `'rank_gauss'` to `RankGaussScaler`
+The class definitions below describe alternative scaling policies. The two selection runs prove the fitted pipelines shown above; they do not claim to search every registered scaler.
 
 ## Built-In Scalers
 
@@ -99,11 +83,7 @@ Use `set_scaler_from_params()` for explicit scaling-policy control or search-tim
 
 ### `RobustScaler`
 
-`RobustScaler(x_train, quantile_range=(0.25, 0.75))` applies:
-
-```python
-(x - median) / IQR
-```
+`RobustScaler(x_train, quantile_range=(0.25, 0.75))` applies `(x - median) / IQR`.
 
 It skips datetime and non-numeric columns automatically and fits heavy-tail or outlier-distorted standardization cases.
 
@@ -115,11 +95,7 @@ Use it when relative ordering matters more than preserving original spacing. Its
 
 ### CausalRollingRobustScaler
 
-`CausalRollingRobustScaler(x_train, window=1000, quantile_range=(0.25, 0.75), clip=8.0, min_samples=50)` applies:
-
-```python
-(x - rolling_median) / rolling_IQR
-```
+`CausalRollingRobustScaler(x_train, window=1000, quantile_range=(0.25, 0.75), clip=8.0, min_samples=50)` applies `(x - rolling_median) / rolling_IQR`.
 
 The median and IQR for each row are taken from the `window` rows strictly before it (`.shift(1)`), so the transform never reads the current row or any future row. That makes it suited to non-stationary series whose scale drifts over time.
 
@@ -133,25 +109,29 @@ Scalers without a `context_rows` property (such as `RobustScaler` and `StandardS
 
 ## Custom Scaler Contract
 
-All custom scalers should follow the same interface:
+A Manifest scaler accepts training features at construction and exposes `transform(df) -> pl.DataFrame`. Store learned statistics during construction; transform later splits with those stored statistics. There is no required base class. `RobustScaler` exposes the concrete package signatures:
 
+<!-- reference: scalers-robust-constructor source=limen/scalers/robust_scaler.py region=signature:RobustScaler.__init__ role=signature -->
 ```python
-class IdentityScaler:
-    def __init__(self, x_train: pl.DataFrame, **kwargs):
-        self.columns = x_train.columns
-
-    def transform(self, df: pl.DataFrame) -> pl.DataFrame:
-        return df
+def __init__(self, x_train: pl.DataFrame, quantile_range: tuple[float, float]=(0.25, 0.75)) -> None:
+    ...
 ```
 
-Optional inverse helper:
-
+<!-- reference: scalers-robust-transform source=limen/scalers/robust_scaler.py region=signature:RobustScaler.transform role=signature -->
 ```python
-def inverse_transform(df: pl.DataFrame, scaler: IdentityScaler) -> pl.DataFrame:
-    return df
+def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+    ...
 ```
 
-That contract is what makes the scaler usable from `Manifest.set_scaler()` and compatible with post-processing flows that need to return to the original scale.
+The package's inverse helper is a separate callable accepting the frame and fitted scaler:
+
+<!-- reference: scalers-robust-inverse source=limen/scalers/robust_scaler.py region=signature:inverse_transform role=signature -->
+```python
+def inverse_transform(df: pl.DataFrame, scaler: RobustScaler) -> pl.DataFrame:
+    ...
+```
+
+An inverse is optional and must reflect the information the transform retains. A rolling scaler cannot promise a row-wise inverse from fitted state alone. Python Research may instead use any caller-owned preprocessing object, including the pipeline above; it does not require adopting the Manifest scaler convention.
 
 ## Practical Notes
 

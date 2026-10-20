@@ -8,6 +8,10 @@
 - [Experiment Manifest](../../docs/Experiment-Manifest.md#calibration)
 - [Reference Architecture](../../docs/Reference-Architecture.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) calibrates an ordinary fitted classifier and chooses a threshold before Sensor construction. The [Compiled project](../../docs/examples/compiled-research/README.md) declares the same four calibration/threshold choices in its Manifest. Both `calibration` scenarios disclose reuse of validation observations.
+
 ## What this package owns
 
 Owns probability calibration, threshold optimization, and the runtime pipeline that applies those steps to model outputs.
@@ -31,11 +35,21 @@ Does **not** own target construction, scaler fitting, model training, or downstr
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `pipeline.py` | protocol types, fit step, and calibrated prediction helper |
+| `probability.py` | scikit-learn probability calibrator wrapper |
+| `threshold.py` | grid threshold optimizer |
+
+<!-- reference: package-calibration-layout source=limen/calibration/README.md region=layout:package role=layout -->
 ```text
 calibration/
-|-- pipeline.py     # protocol types, fit step, and calibrated prediction helper
-|-- probability.py  # scikit-learn probability calibrator wrapper
-`-- threshold.py    # grid threshold optimizer
+├── README.md
+├── __init__.py
+├── _objective_threshold.py
+├── pipeline.py
+├── probability.py
+└── threshold.py
 ```
 
 ## Things to know

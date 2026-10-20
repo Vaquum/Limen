@@ -1,22 +1,15 @@
-# Advanced Search
+# Choose which trials run
 
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-Search strategies control candidate generation for both CLI and Python/MSQ experiments. The CLI builds the strategy from YAML. Python callers construct a strategy over a `ParamDomain` and pass it to UEL; UEL creates MSQ around that strategy.
+A search chooses the next parameter combination to evaluate. Fix the admissible values, scoring population and trial budget before interpreting its winner. Python Research owns its SFD functions and strategy objects; Compiled Research obtains a declared pipeline and can construct its strategy through the CLI or Python.
 
-This page covers:
-
-- choosing built-in grid, random or Sobol search
-- optional persistence and resumability
-- optional feedback that mutates the remaining search space
-- implementing a custom Python search strategy
-
-Start with the [CLI workflow](Command-Line-Interface.md) for YAML or the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run) for an SFD. Neither route requires adaptive feedback or a custom strategy implementation.
+The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) each provide a `search` scenario. Their examples below are exact functions from those projects. Use the complete project entry points, matching wheel and recorded input bundle; their preparation helpers and declarations remain in the complete source.
 
 ## Prerequisites
 
-- a working SFD and bounded data source
-- a `ParamDomain` and `SearchStrategy` for direct Python use
-- an `experiment_dir` only when saved artifacts or checkpoints are needed
+- the matching package and recorded input bundle described in each project
+- a bounded parameter domain and an explicit research objective
+- the statistics extra for Sobol sampling
+- an experiment directory and the required recording groups when continuing an interrupted run
 
 ## The core pieces
 
@@ -28,7 +21,7 @@ Start with the [CLI workflow](Command-Line-Interface.md) for YAML or the [Python
 | `FeedbackController` | reducer, callback, and file-driven feedback cycles |
 | `CheckpointManager` | durable save and restore of persisted MSQ run state |
 
-The important mental model is:
+A candidate passes through four stages:
 
 1. `SearchStrategy` proposes combinations
 2. `MSQ` decides what is still legal
@@ -43,30 +36,53 @@ The important mental model is:
 | `RandomStrategy` | Lazily sample unseen combinations; accepts a candidate-generation seed. | `uel.search_strategy.type: random`, optionally with `seed` |
 | `SobolStrategy` | Project seeded, scrambled Sobol points onto declared parameter values. | `uel.search_strategy.type: sobol` with a required `seed` |
 
-CLI defaults to random search. Grid search is unshuffled by default. From 5.31.0, YAML and Python accept a seeded finite shuffle; YAML `shuffle: true` requires an integer seed. A shuffle declaration on other strategies is rejected. In Python, select a strategy over the SFD's parameter space:
+CLI defaults to random search. Grid search is unshuffled by default. From 5.31.0, YAML and Python accept a seeded finite shuffle; YAML `shuffle: true` requires an integer seed. A shuffle declaration on other strategies is rejected. The two project functions make those choices explicit:
 
+<!-- example: search-python-traversal source=docs/examples/python-research/scenarios.py region=search scenario=search interface=python role=executed -->
 ```python
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
+def search(data_dir, output):
+    bars = hourly(data_dir, 1440)
+    space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
+    runs = {}
+    for name in ('grid', 'random', 'sobol', 'shuffled'):
+        domain = ParamDomain(space)
+        strategy = (GridStrategy(domain, shuffle=True, seed=42) if name == 'shuffled'
+                    else {'grid': GridStrategy, 'random': RandomStrategy, 'sobol': SobolStrategy}[name](domain, **({} if name == 'grid' else {'seed': 42})))
 
-domain = ParamDomain(sfd.params())
-strategy = GridStrategy(domain)
+        def model(data, round_params):
+            fitted = project.fit(data['train'], round_params)
+            return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
+
+        loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
+        loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
+        runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
+    return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
 ```
 
-Use the [Python/MSQ example](Universal-Experiment-Loop.md#direct-python-run) for the complete data-loading and execution flow. Random search deduplicates repeated draws and can fail near domain exhaustion; use grid search when exhaustive coverage is required. A search seed does not control model or preparation randomness.
+<!-- example: search-compiled-traversal source=docs/examples/compiled-research/scenarios.py region=search scenario=search interface=compiled role=executed -->
+```python
+def search(data_dir, output):
+    results = {}
+    for kind in ('grid', 'random', 'sobol', 'shuffled', 'factorized'):
+        config = configuration('factorized' if kind == 'factorized' else 'search', data_dir)
+        config['uel']['search_strategy'] = {'type': kind if kind in ('random', 'sobol') else 'grid'}
+        if kind in ('random', 'sobol'):
+            config['uel']['search_strategy']['seed'] = 42
+        if kind in ('shuffled', 'factorized'):
+            config['uel']['search_strategy'].update(shuffle=True, seed=42)
+        loop = execute(config, output / kind, factorize=kind == 'factorized')
+        results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
+    return {'runs': results, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
+            'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
+```
+
+The Python case compares grid, random, Sobol and shuffled traversal over two windows and two Ridge penalties. The Compiled case compares the same traversal choices, a separately admitted factorized grid and declared model families. Their budgets finish the bounded comparison used in this proof; they do not establish universal finite-domain coverage for a sampler. A search seed does not control model randomness.
 
 ## Seeded finite traversal
 
-```yaml
-uel:
-  factorize: true
-  search_strategy:
-    type: grid
-    shuffle: true
-    seed: 42
-```
-
-Native equivalent: `GridStrategy(domain, shuffle=True, seed=42)` with the existing `run(..., factorize=True)` switch. The [recorded example](examples/factorized_shuffle.yaml) runs from the repository root with `limen run docs/examples/factorized_shuffle.yaml`.
+The Python search function constructs its shuffled grid with `shuffle=True, seed=42`. The Compiled search function declares the same strategy settings and enables factorization only for its separate factorized case. The unmodified driver records these choices alongside the base configuration; running that YAML file alone does not reproduce the driver's traversal choices.
 
 Fresh seeded shuffled grids use version 2: eight balanced Feistel rounds with SHAKE-256, cycle-walked into the finite index domain. Candidate generation never materializes the Cartesian product or a permutation list. Cycle-walk cost varies. Sorted parameter keys and declared level order define the mixed-radix mapping. The seed changes the permutation; the round budget does not, so increasing it extends the same prefix. Exhaustion stops normally; existing full-parameter hash deduplication still collapses duplicate-valued levels.
 
@@ -80,15 +96,7 @@ Factorized traversal retains its [snapshot admission and cache limits](Universal
 
 Install the existing statistics extra with `pip install 'vaquum-limen[stats]'` for SciPy `>=1.15,<2`.
 
-For an existing manifest with at least eight parameter combinations, set:
-
-```yaml
-uel:
-  n_permutations: 8
-  search_strategy:
-    type: sobol
-    seed: 42
-```
+Each traversal comparison uses four candidate combinations. Both seeded strategies use a literal `42`; the assertions compare completed candidate identities and retain the resulting scores. The Compiled scenario also runs its separate model-family diagnostics.
 
 Native equivalent: `SobolStrategy(domain, seed=42)`, imported from `limen.experiment.param_search`. The seed is a required literal, non-boolean, nonnegative integer. Scrambling is always enabled; `scramble`, `shuffle` and other unsupported Sobol fields are rejected. This selects a candidate generator for the existing MSQ path, without changing model execution or its randomness. `factorize=True` still requires GridStrategy and rejects Sobol.
 
@@ -98,55 +106,44 @@ Different points can select the same discrete combination. Accepted combinations
 
 Checkpoint state pins the seed, stream format, raw point position, generated count, ordered current domain and SciPy version. Resume reconstructs the engine and fast-forwards to that position, using the existing domain and accepted-hash restoration. Changed or unsupported state fails before persisted artifacts are rewritten; keep the same SciPy version when resuming. The existing [recording requirements](#resume-flow) still apply.
 
-The short recorded-data proof uses `tests/fixtures/spot_1h_20240101_20241231.parquet`:
-
-```bash
-python -m pytest -q tests/test_sobol_search.py
-```
+The project proof uses the pinned hourly observations. [Sobol protocol tests](../tests/test_sobol_search.py) retain additional state, mutation and refusal cases; the [scenario assertions](examples/tests/scenario_oracles.py) check the project runs.
 
 ## Optional persistence and feedback
 
-Add `experiment_dir` to save round artifacts and checkpoints. Add reducers only when adapting the search fits the research design. This example adds a budget reducer to a built-in grid:
+Both project searches include a separate budget-controlled run. It requests four trials and stops after three completed rounds. The same controller writes the trim into its audit and checkpoint; the assertions check the actual queue state.
 
+<!-- example: search-python-budget source=docs/examples/python-research/scenarios.py region=adaptive_search scenario=search interface=python role=executed -->
 ```python
-import limen
+def adaptive_search(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
 
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
-from limen.experiment.reducer import BudgetReducer
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
 
-domain = ParamDomain(limen.sfd.random_binary.params())
-strategy = GridStrategy(domain)
-
-uel = limen.UniversalExperimentLoop(
-    sfd=limen.sfd.random_binary,
-    search_strategy=strategy,
-    pruning_strategies=[
-        BudgetReducer(max_permutations=4, check_after_pct=0.25),
-    ],
-    feedback_interval=2,
-    checkpoint_interval=3,
-    experiment_dir='advanced-budget',
-)
-
-uel.run(
-    experiment_name='advanced-budget',
-    n_permutations=6,
-)
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
+                                   experiment_dir=output, checkpoint_interval=1, feedback_interval=1,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-adaptive-search', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 ```
 
-In the bundled budget-reducer example, this requested `6` permutations but finished with:
-
-- `4` rows in `results.csv`
-- `4` entries in `round_data.jsonl.gz`
-- `1` feedback-cycle entry in `audit.jsonl`
-- a checkpoint saved after round `3`
-
-The reducer intervention that caused the trim was:
-
+<!-- example: search-compiled-budget source=docs/examples/compiled-research/scenarios.py region=adaptive_search scenario=search interface=compiled role=executed -->
 ```python
-{'op': 'trim', 'target_count': 4, 'reason': 'budget trim to 4 total permutations'}
+def adaptive_search(data_dir, output):
+    config = configuration('adaptive', data_dir)
+    loop = execute(config, output)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 ```
+
+Use feedback when changing the remaining search belongs to the research design. A reduced budget changes which observations of model performance are collected. It does not establish that the resulting selection is better.
 
 ## What `experiment_dir` stores
 
@@ -167,12 +164,63 @@ Unlike the other files above, `interventions.json` is not produced by the run. I
 
 Python/MSQ can resume from a saved checkpoint when all four [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
 
+The `recovery` scenarios interrupt after two completed rounds, reconstruct their original configuration and resume. The Python scenario also compares its completed results with an uninterrupted run:
+
+<!-- example: search-python-recovery source=docs/examples/python-research/scenarios.py region=recovery scenario=recovery interface=python role=executed -->
 ```python
-uel.run(
-    experiment_name='advanced-budget',
-    n_permutations=6,
-    resume=True,
-)
+def recovery(data_dir, output):
+    bars = hourly(data_dir, 1440)
+    space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
+
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        forecasts = fitted.predict(data['validation'].select('momentum'))
+        return {'validation_net_return': project.backtest(data['validation'], forecasts), '_preds': forecasts}
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+
+    def stop_after_two(log, msq):
+        if log.height == 2:
+            signal.raise_signal(signal.SIGINT)
+
+    def loop(callback=None, directory='experiment'):
+        return UniversalExperimentLoop(data=bars, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output / directory, checkpoint_interval=1, feedback_interval=1, intra_callback=callback)
+
+    recording: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+    interrupted = loop(stop_after_two)
+    interrupted.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
+    completed_before_resume = project.completed_log(interrupted).height
+    resumed = loop()
+    resumed.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording, resume=True)
+    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    full = loop(directory='uninterrupted')
+    full.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
+    if not project.completed_log(resumed).drop('execution_time').equals(project.completed_log(full).drop('execution_time')):
+        raise ValueError('Resumed Python results differ from uninterrupted research')
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
+```
+
+<!-- example: search-compiled-recovery source=docs/examples/compiled-research/scenarios.py region=recovery scenario=recovery interface=compiled role=executed -->
+```python
+def recovery(data_dir, output):
+    config = configuration('recovery', data_dir)
+    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+
+    def stop_after_two(log, msq):
+        if log.height == 2:
+            signal.raise_signal(signal.SIGINT)
+
+    first = execute(config, output / 'experiment', callback=stop_after_two)
+    resumed = execute(config, output / 'experiment', resume=True)
+    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    selected = research_project.completed_log(resumed)['id'][0]
+    sensors = Trainer(output / 'experiment').train([selected])
+    full = execute(config, output / 'uninterrupted')
+    if not research_project.completed_log(resumed).drop('execution_time').equals(research_project.completed_log(full).drop('execution_time')):
+        raise ValueError('Resumed Compiled results differ from uninterrupted research')
+    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors), 'uninterrupted_equivalence': True}
 ```
 
 In the shutdown-and-resume example:
@@ -191,9 +239,9 @@ For resume to work cleanly, keep these stable:
 
 ## Capabilities shared with CLI
 
-CLI runs already use MSQ and provide the same search, persisted round predictions, checkpoint/resume, and YAML-configured reducers. These are capabilities of the shared engine, not a separate execution route.
+The CLI constructs a compiled SFD and strategy around the same MSQ engine. Both projects use that engine's candidate identities, feedback controller and checkpoint format. Direct Python invocation can construct the shared objects explicitly; adopting a Manifest still makes the experiment Compiled Research.
 
-Python additionally permits custom SFD functions, custom `SearchStrategy` implementations, and in-process callbacks. An `experiment_dir` alone does not make those custom runs compatible with [Trainer](Trainer.md) or CLI resume: those tools require a reconstructible YAML definition saved as `yaml_reference`.
+Python Research owns its arbitrary SFD functions and fitted models. Recovery restores the search state and recorded results, rather than arbitrary fitted Python objects. Saving a custom run does not give it Trainer reconstruction: Trainer and CLI resume require a reconstructible YAML definition saved as `yaml_reference`. [Trainer](Trainer.md) describes that boundary.
 
 ## Optional custom `SearchStrategy`
 

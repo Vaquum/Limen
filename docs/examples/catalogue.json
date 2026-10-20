@@ -50,7 +50,81 @@
   "candidate_pages": [
     "docs/Research-Book.md",
     "docs/examples/python-research/README.md",
-    "docs/examples/compiled-research/README.md"
+    "docs/examples/compiled-research/README.md",
+    "docs/Walk-Forward.md",
+    "docs/Indicators.md",
+    "docs/Features.md",
+    "docs/Transforms.md",
+    "docs/Scalers.md",
+    "docs/Targets.md",
+    "docs/Historical-Data.md",
+    "docs/Data-Bars.md",
+    "docs/Final-Holdout.md",
+    "limen/backtest/README.md",
+    "limen/calibration/README.md",
+    "limen/cli/README.md",
+    "limen/cli/commands/README.md",
+    "limen/cohort/README.md",
+    "limen/cohort/sfc/README.md",
+    "limen/data/README.md",
+    "limen/data/bars/README.md",
+    "limen/data/utils/README.md",
+    "limen/experiment/README.md",
+    "limen/experiment/param_search/README.md",
+    "limen/experiment/reducer/README.md",
+    "limen/features/README.md",
+    "limen/indicators/README.md",
+    "limen/inference/README.md",
+    "limen/log/README.md",
+    "limen/metrics/README.md",
+    "limen/scalers/README.md",
+    "limen/sfd/README.md",
+    "limen/sfd/foundational_sfd/README.md",
+    "limen/sfd/reference_architecture/README.md",
+    "limen/sfd/rule_based/README.md",
+    "limen/targets/README.md",
+    "limen/transforms/README.md",
+    "limen/utils/README.md",
+    "limen/yaml/README.md",
+    "docs/Advanced-Search.md",
+    "docs/Calibration.md",
+    "docs/Reducers-And-Feedback.md",
+    "docs/README.md",
+    "docs/Glossary.md",
+    "docs/Semantic-Versioning.md",
+    "docs/TechnicalDebt.md",
+    "docs/Roadmap.md",
+    "docs/Command-Line-Interface.md",
+    "docs/Single-File-Decoder.md",
+    "docs/End-to-End-Workflow.md",
+    "docs/Utilities.md",
+    "docs/Standard-Metrics-Library.md",
+    "docs/Built-In-SFDs.md",
+    "docs/Trainer.md",
+    "docs/Cohort.md",
+    "docs/Conserved-Flux-Renormalization.md",
+    "README.md",
+    "docs/Log.md",
+    "docs/Benchmark.md",
+    "docs/Universal-Experiment-Loop.md",
+    "docs/Backtest.md",
+    "docs/Developer/README.md",
+    "docs/Developer/Packaging.md",
+    "docs/Developer/Making-Release.md",
+    "docs/Developer/Release-Policy.md",
+    "docs/Developer/Security-Assurance-Case.md",
+    "docs/Developer/Writing-Docstrings.md",
+    "docs/Developer/Contributing-Foundational-SFDs.md",
+    "docs/Developer/Pruning-Strategies.md",
+    "docs/Developer/Documentation-System.md",
+    "docs/Developer/Indicator-Performance.md",
+    "docs/Backtest-Benchmarks.md",
+    "docs/Fractional-Differentiation.md",
+    "docs/Triple-Barrier-Method.md",
+    "docs/Perturbation-Strategies.md",
+    "docs/Experiment-Manifest.md",
+    "docs/Reference-Architecture.md",
+    "docs/Common-Strategies.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2047,7 +2121,10 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025, split January 15/18",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics."
+      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics. The same YAML also runs through the installed CLI; candidate identities and validation returns equal the Python driver.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_direct_yaml_selection_matches_python_driver"
+      ]
     },
     "python/search": {
       "interface": "python",
@@ -2058,11 +2135,15 @@
       "region": "search",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
-        "data, stats and boosting extras for the complete project"
+        "data and stats extras for the complete Python project"
       ],
-      "recorded_window": "hourly: first 1,440 rows",
+      "recorded_window": "hourly: first 1,440 rows; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds."
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
+      ]
     },
     "compiled/search": {
       "interface": "compiled",
@@ -2075,9 +2156,13 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics",
+      "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three."
+      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
+      ]
     },
     "python/recovery": {
       "interface": "python",
@@ -2141,12 +2226,13 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "hourly: first 384 rows; two recorded folds",
+      "recorded_window": "hourly: first 384 rows for calibrated folds; complete 8784 rows for two-trial acceptance",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff.",
+      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff; independent DSR/CSCV and timestamp checks verify retained acceptance reports and verdicts.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry",
-        "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local"
+        "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local",
+        "docs/examples/tests/test_research_examples.py::test_acceptance_report_matches_recorded_tracks"
       ]
     },
     "python/holdout": {
@@ -2329,6 +2415,354 @@
     "docs/examples/commands.json": [
       "python",
       "compiled"
+    ]
+  },
+  "page_contexts": {
+    "docs/Research-Book.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/examples/python-research/README.md": [
+      "python/selection"
+    ],
+    "docs/examples/compiled-research/README.md": [
+      "compiled/selection"
+    ],
+    "docs/Walk-Forward.md": [
+      "python/walk_forward",
+      "compiled/walk_forward"
+    ],
+    "docs/Indicators.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Features.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Transforms.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Scalers.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Targets.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Historical-Data.md": [
+      "python/bars",
+      "compiled/selection"
+    ],
+    "docs/Data-Bars.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "docs/Final-Holdout.md": [
+      "python/holdout",
+      "compiled/holdout"
+    ],
+    "limen/backtest/README.md": [
+      "python/execution",
+      "compiled/execution"
+    ],
+    "limen/calibration/README.md": [
+      "python/calibration",
+      "compiled/calibration"
+    ],
+    "limen/cli/README.md": [
+      "compiled/command_line"
+    ],
+    "limen/cli/commands/README.md": [
+      "compiled/command_line"
+    ],
+    "limen/cohort/README.md": [
+      "python/selection",
+      "compiled/walk_forward"
+    ],
+    "limen/cohort/sfc/README.md": [
+      "compiled/walk_forward"
+    ],
+    "limen/data/README.md": [
+      "python/bars",
+      "compiled/selection"
+    ],
+    "limen/data/bars/README.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "limen/data/utils/README.md": [
+      "python/walk_forward",
+      "compiled/walk_forward"
+    ],
+    "limen/experiment/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/experiment/param_search/README.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "limen/experiment/reducer/README.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "limen/features/README.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "limen/indicators/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/inference/README.md": [
+      "python/selection",
+      "compiled/walk_forward"
+    ],
+    "limen/log/README.md": [
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "limen/metrics/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/scalers/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/sfd/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/sfd/foundational_sfd/README.md": [
+      "python/selection",
+      "compiled/search"
+    ],
+    "limen/sfd/reference_architecture/README.md": [
+      "python/selection",
+      "compiled/search"
+    ],
+    "limen/sfd/rule_based/README.md": [
+      "python/execution",
+      "compiled/allocation"
+    ],
+    "limen/targets/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/transforms/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/utils/README.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "limen/yaml/README.md": [
+      "compiled/command_line"
+    ],
+    "docs/Advanced-Search.md": [
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Calibration.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "python/selection",
+      "compiled/selection",
+      "compiled/walk_forward"
+    ],
+    "docs/Reducers-And-Feedback.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Glossary.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Semantic-Versioning.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/TechnicalDebt.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Roadmap.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/search",
+      "compiled/search",
+      "python/walk_forward",
+      "compiled/walk_forward",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Command-Line-Interface.md": [
+      "compiled/command_line"
+    ],
+    "docs/Single-File-Decoder.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/End-to-End-Workflow.md": [
+      "python/selection",
+      "python/search",
+      "python/recovery",
+      "python/walk_forward",
+      "python/holdout",
+      "python/calibration",
+      "python/execution",
+      "python/bars",
+      "python/observed_costs",
+      "compiled/selection",
+      "compiled/search",
+      "compiled/recovery",
+      "compiled/walk_forward",
+      "compiled/holdout",
+      "compiled/calibration",
+      "compiled/execution",
+      "compiled/bars",
+      "compiled/allocation",
+      "compiled/command_line"
+    ],
+    "docs/Utilities.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Standard-Metrics-Library.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/search",
+      "compiled/execution"
+    ],
+    "docs/Built-In-SFDs.md": [
+      "compiled/selection",
+      "compiled/search",
+      "compiled/execution"
+    ],
+    "docs/Trainer.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/walk_forward"
+    ],
+    "docs/Cohort.md": [
+      "python/selection",
+      "compiled/walk_forward"
+    ],
+    "docs/Conserved-Flux-Renormalization.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Log.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Benchmark.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/walk_forward"
+    ],
+    "docs/Universal-Experiment-Loop.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Backtest.md": [
+      "python/execution",
+      "compiled/execution",
+      "python/observed_costs",
+      "compiled/allocation"
+    ],
+    "docs/Developer/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Packaging.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Making-Release.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Release-Policy.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Security-Assurance-Case.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Writing-Docstrings.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Contributing-Foundational-SFDs.md": [
+      "compiled/selection"
+    ],
+    "docs/Developer/Pruning-Strategies.md": [
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Developer/Documentation-System.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Indicator-Performance.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Backtest-Benchmarks.md": [
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Fractional-Differentiation.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Triple-Barrier-Method.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Perturbation-Strategies.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Experiment-Manifest.md": [
+      "compiled/selection",
+      "compiled/search",
+      "compiled/walk_forward",
+      "compiled/execution"
+    ],
+    "docs/Reference-Architecture.md": [
+      "python/selection",
+      "compiled/selection",
+      "compiled/search"
+    ],
+    "docs/Common-Strategies.md": [
+      "python/search",
+      "compiled/search"
     ]
   }
 }

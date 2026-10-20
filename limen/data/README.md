@@ -7,6 +7,10 @@
 - [Historical Data](../../docs/Historical-Data.md)
 - [Data Bars](../../docs/Data-Bars.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) checks recorded input digests before reading bounded populations. The [Compiled project](../../docs/examples/compiled-research/README.md) resolves its declared file source through the driver’s data directory. The data chapter explains both acquisition paths and the difference between a fixed file and a provider’s current snapshot.
+
 ## What this package owns
 
 Owns raw data access, optional threshold-bar formation, train/validation/test splitting, and the helpers that turn raw frames into the `data_dict` schema used by model code.
@@ -29,17 +33,24 @@ Does **not** own indicators, higher-level features, manifests, or model training
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `historical_data.py` | HistoricalData class |
+| `binance_file_to_polars.py` | Binance archive download and parsing |
+| `standard_bars.py` | Threshold bar implementation |
+| `compute_data_bars.py` | Public bar-formation entry point |
+| `splits.py` | Train/validation/test split helpers |
+| `random_slice.py` | Random window slicing helper |
+
+<!-- reference: package-data-layout source=limen/data/README.md region=layout:package role=layout -->
 ```text
 data/
-├── historical_data.py              # HistoricalData class
+├── README.md
+├── __init__.py
 ├── _internal/
-│   └── binance_file_to_polars.py   # Binance archive download and parsing
 ├── bars/
-│   └── standard_bars.py            # Threshold bar implementation
+├── historical_data.py
 └── utils/
-    ├── compute_data_bars.py        # Public bar-formation entry point
-    ├── splits.py                   # Train/validation/test split helpers
-    └── random_slice.py             # Random window slicing helper
 ```
 
 ## Things to know

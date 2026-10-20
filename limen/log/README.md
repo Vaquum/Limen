@@ -8,6 +8,10 @@
 - [Benchmark](../../docs/Benchmark.md)
 - [Backtest](../../docs/Backtest.md)
 
+## In the research projects
+
+Both projects run `recovery`. The [Python project](../../docs/examples/python-research/README.md) compares resumed results with an uninterrupted run; [Compiled project](../../docs/examples/compiled-research/README.md) retains reconstructible manifest metadata. Captured aggregate reads and row-level replay require different retained evidence, as the Log reference describes.
+
 ## What this package owns
 
 Owns post-run analysis and reconstruction of per-round results.
@@ -33,15 +37,25 @@ Does **not** own experiment execution, model training, or artifact persistence d
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `log.py` | Log class and test-window reconstruction |
+
+<!-- reference: package-log-layout source=limen/log/README.md region=layout:package role=layout -->
 ```text
 log/
-├── log.py                                 # Log class and test-window reconstruction
-├── _permutation_prediction_performance.py
-├── _permutation_confusion_metrics.py
-├── _experiment_confusion_metrics.py
+├── README.md
+├── __init__.py
 ├── _experiment_backtest_results.py
+├── _experiment_confusion_metrics.py
 ├── _experiment_parameter_correlation.py
-└── _read_from_file.py
+├── _experiment_parameter_importance.py
+├── _permutation_confusion_metrics.py
+├── _permutation_prediction_performance.py
+├── _permutation_returns.py
+├── _read_from_file.py
+├── _snapshot_backtest_round.py
+└── log.py
 ```
 
 ## Things to know

@@ -7,6 +7,10 @@
 - [Standard Metrics Library](../../docs/Standard-Metrics-Library.md)
 - [Walk-forward selection methodology](../../docs/Benchmark.md#walk-forward-selection-report)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) returns its caller-defined validation net return. The [Compiled project](../../docs/examples/compiled-research/README.md) records architecture and backtest metrics under its declared objective. Read those values with their population, units and availability; a metric name alone does not make two experiments comparable.
+
 ## What this package owns
 
 Owns the metric helpers used inside model functions and experiment outputs.
@@ -33,14 +37,19 @@ Does **not** own model fitting, prediction generation, experiment logging, or ba
 
 ## Quick orientation
 
+<!-- reference: package-metrics-layout source=limen/metrics/README.md region=layout:package role=layout -->
 ```text
 metrics/
+├── README.md
+├── __init__.py
+├── balanced_metric.py
 ├── binary_metrics.py
-├── multiclass_metrics.py
 ├── continuous_metrics.py
+├── deflated_sharpe_ratio.py
+├── multiclass_metrics.py
+├── probability_of_backtest_overfitting.py
 ├── rule_based_metrics.py
-├── safe_ovr_auc.py
-└── balanced_metric.py
+└── safe_ovr_auc.py
 ```
 
 ## Things to know

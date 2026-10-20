@@ -4,6 +4,10 @@ The Manifest owns preparation and its configured checks. Trainer reconstructs se
 
 The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the proof required before this candidate is published as the complete book.
 
+The search scenario also compares baseline and compressed preparation on 1,440 recorded hourly bars. It retains each prepared train/validation/test matrix, a fixed-order fractional feature, ternary forward-close labels, training-fitted robust statistics, an explicit feature drop and optional two-component PCA. Independent tests reconstruct the labels, differenced values, scaler statistics, PCA subspace and Ridge forecasts. The Python case owns separate partition preparation; the native Manifest case retains its admitted CCO context. These are preparation checks, not a feature-importance ranking or profitability claim.
+
+The walk-forward scenario also runs `acceptance.yaml` against the complete recorded hourly source. It retains two rule-based trials, their 96-return tracks, fold timestamps and JSON/Markdown acceptance reports under `walk_forward/acceptance/`. Independent tests recompute Deflated Sharpe probability and PBO from those tracks and check the declared verdicts. The driver binds the YAML's repository-relative source filename through `--data-dir`; use the complete project when running from the downloaded bundle.
+
 ## Prerequisites
 
 Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats,boosting]`; Sobol uses statistics; factorization uses LightGBM.
@@ -19,13 +23,26 @@ python compiled-research/research.py --scenario selection --data-dir inputs --ou
 
 From a repository checkout, work in `docs/examples/`, use `--data-dir ../../tests/fixtures` and put generated output under `../../.docs-evidence/`. The command checks the recorded file digest before research. It writes `summary.json`, `results.csv`, `metadata.json` and the compressed round artifacts. Trainer reconstructs the selected round from those artifacts and validates the replayed metrics; it does not restore saved model weights.
 
+## Run the declaration through the CLI
+
+From the recorded example bundle root, the same `selection.yaml` can run directly:
+
+<!-- example: compiled-selection-yaml-command source=docs/examples/commands.json region=compiled-yaml scenario=selection interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/selection.yaml
+```
+
+The declaration uses the bundle's `inputs/` directory and writes `results/dev/compiled-cli`. The proof compares its two distinct candidate identities and validation returns with the Python driver's recorded run. Use a fresh output directory for a new experiment; the driver command above supplies its output explicitly.
+
 ## Continue through the research decisions
+
+Search also executes all eight [common strategy baselines](../../Common-Strategies.md) on the recorded 2024 hourly source. Their desired signals share the same assessment window. The Python case owns next-open-to-close one-bar trades with a declared 2 bp round-trip cost; the Compiled case uses the native lagged held-position snapshot with 10 bp fee and 5 bp slippage per fill. Independent assertions check causal signals and each policy's arithmetic; these are different trading interpretations, not a cross-engine return ranking.
 
 `--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.
 
 | Scenario | Decision and output |
 |---|---|
-| `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |
+| `search` | Compare traversal, preparation, eight common rules, budget reduction and mixed feedback under their declared populations. |
 | `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
 | `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |

@@ -1,6 +1,6 @@
 # Historical Data
 
-`HistoricalData` is Limen's stateful file-backed data surface. It has five public retrieval methods:
+Begin with a fixed set of observations. The two projects use recorded files with declared digests; a hosted dataset is an acquisition source whose current snapshot may differ. `HistoricalData` provides five file-backed retrieval methods:
 
 - `get_spot_klines()`
 - `get_spot_dollar_klines()`
@@ -18,18 +18,32 @@ Install `vaquum-limen[data]` when using Hugging Face parquet datasets or Arrow I
 - `pip install "vaquum-limen[data]"` for every built-in hosted or Arrow data path on this page
 - network access for Hugging Face or remote URL examples; local files need no network
 
-## How It Works
+## Fix the observations before research
 
+The [Python project's](examples/python-research/README.md) scenarios verify the complete recorded file before selecting a row prefix. Python Research can use ordinary file I/O; it does not require a Manifest or `HistoricalData`.
+
+<!-- example: data-python-recorded source=docs/examples/python-research/scenarios.py region=recorded_input scenario=bars interface=python role=executed -->
 ```python
-import limen
-
-historical = limen.HistoricalData()
-data = historical.get_spot_klines(kline_size=3600, start_date_limit='2025-01-01')
-
-assert data is historical.data
+def recorded(data_dir, name, rows):
+    source = data_dir / name
+    if hashlib.sha256(source.read_bytes()).hexdigest() != INPUTS[name]:
+        raise ValueError('Recorded input digest differs: ' + name)
+    return pl.read_parquet(source, n_rows=rows)
 ```
 
-`HistoricalData` stays stateful for manifest compatibility, and the public methods also return the loaded frame directly.
+The [Compiled project](examples/compiled-research/README.md) names the recorded quarter-hour source in its selection Manifest:
+
+<!-- example: data-compiled-recorded source=docs/examples/compiled-research/selection.yaml region=recorded_source scenario=selection interface=compiled role=executed -->
+```yaml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+```
+
+Its driver verifies the input digest and resolves the documented `--data-dir` argument into this file declaration. The archived source and exact commands preserve that resolution. Both projects acquire their matching recorded inputs from the project bundle; neither requires a live dataset download during research proof.
+
+`HistoricalData` remains stateful for Manifest compatibility. Each retrieval method returns the loaded frame and stores it on the instance as `data`, with column names in `data_columns`.
 
 ## Current Surface
 
@@ -49,14 +63,10 @@ By default it reads native [1m](https://huggingface.co/datasets/vaquum/binance_b
 
 Dataset snapshot file names are treated as the cache identity. Limen does not package upstream dataset bytes, licenses, or hash manifests inside the wheel/sdist; release packaging proves code and metadata integrity, while dataset publishers remain authoritative for dataset size, license, and content integrity. Cached snapshots live under `~/.cache/limen/datasets` and can be large; delete that directory to reclaim local disk or force a refetch.
 
+<!-- reference: data-api-get-spot-klines source=limen/data/historical_data.py region=signature:HistoricalData.get_spot_klines role=signature -->
 ```python
-from limen.data import HistoricalData
-
-historical = HistoricalData()
-data = historical.get_spot_klines(
-    kline_size=3600,
-    start_date_limit='2025-01-01',
-)
+def get_spot_klines(self, row_count_limit: int | None=None, kline_size: int=60, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+    ...
 ```
 
 Important rules:
@@ -81,14 +91,10 @@ Returned columns:
 
 It reads native [1M](https://huggingface.co/datasets/vaquum/binance_btcusdt_1M_dollar_klines), [15M](https://huggingface.co/datasets/vaquum/binance_btcusdt_15M_dollar_klines), [30M](https://huggingface.co/datasets/vaquum/binance_btcusdt_30M_dollar_klines), [60M](https://huggingface.co/datasets/vaquum/binance_btcusdt_60M_dollar_klines), [120M](https://huggingface.co/datasets/vaquum/binance_btcusdt_120M_dollar_klines), or [240M](https://huggingface.co/datasets/vaquum/binance_btcusdt_240M_dollar_klines) datasets for matching `dollar_bar_size` values. Other multiples use the largest available lower dollar-bar source and aggregate upward.
 
+<!-- reference: data-api-get-spot-dollar-klines source=limen/data/historical_data.py region=signature:HistoricalData.get_spot_dollar_klines role=signature -->
 ```python
-from limen.data import HistoricalData
-
-historical = HistoricalData()
-data = historical.get_spot_dollar_klines(
-    dollar_bar_size=30_000_000,
-    start_date_limit='2025-01-01',
-)
+def get_spot_dollar_klines(self, row_count_limit: int | None=None, dollar_bar_size: int=1000000, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+    ...
 ```
 
 Important rules:
@@ -103,18 +109,10 @@ Important rules:
 
 `get_binance_file()` keeps the same role as before: load a Binance archive directly and normalize its `timestamp` / `datetime` columns.
 
+<!-- reference: data-api-get-binance-file source=limen/data/historical_data.py region=signature:HistoricalData.get_binance_file role=signature -->
 ```python
-from limen.data import HistoricalData
-
-historical = HistoricalData()
-trades = historical.get_binance_file(
-    file_url='https://data.binance.vision/data/spot/monthly/trades/BTCUSDT/BTCUSDT-trades-2025-01.zip',
-    has_header=False,
-    columns=[
-        'trade_id', 'price', 'quantity', 'quote_qty',
-        'timestamp', 'is_buyer_maker', 'is_best_match',
-    ],
-)
+def get_binance_file(self, file_url: str, has_header: bool=False, columns: list[str] | None=None) -> pl.DataFrame:
+    ...
 ```
 
 Use this for Binance source files rather than the curated kline dataset.
@@ -127,14 +125,10 @@ Use this for Binance source files rather than the curated kline dataset.
 - `.csv`
 - `.zip`
 
+<!-- reference: data-api-get-any-file source=limen/data/historical_data.py region=signature:HistoricalData.get_any_file role=signature -->
 ```python
-from limen.data import HistoricalData
-
-historical = HistoricalData()
-data = historical.get_any_file(
-    file_path_or_url='path/to/local/data.parquet',
-    row_count_limit=5000,
-)
+def get_any_file(self, file_path_or_url: str, has_header: bool=True, columns: list[str] | None=None, row_count_limit: int | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+    ...
 ```
 
 It is the right choice for:
@@ -144,31 +138,19 @@ It is the right choice for:
 - remote parquet snapshots
 - manifest test data sources
 
+## `get_arrow_file()`
+
+<!-- reference: data-api-get-arrow-file source=limen/data/historical_data.py region=signature:HistoricalData.get_arrow_file role=signature -->
+```python
+def get_arrow_file(self, file_path: str, row_count_limit: int | None=None, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+    ...
+```
+
+The local Arrow IPC file must contain one uncompressed record batch. A strictly increasing Int64 nanosecond `ts` index permits date filtering and latest-row limits through contiguous slices; `datetime` is added from `ts` when absent. A datetime-only date filter materializes. Multi-batch and compressed files are refused instead of claiming zero-copy access. Keep the returned frame referenced while retaining views into its mapped buffers.
+
 ## Manifest Integration
 
-Manifest-driven experiments should use:
-
-- `HistoricalData.get_spot_klines` for production data
-- `HistoricalData.get_spot_dollar_klines` for event-time dollar-bar production data
-- `HistoricalData.get_spot_klines` with a bounded `row_count_limit` and coarser `kline_size` for test runs
-- `HistoricalData.get_any_file` only for a specific local or remote file
-
-```python
-from limen.data import HistoricalData
-from limen.experiment import MLManifest
-
-manifest = (
-    MLManifest()
-    .set_data_source(
-        method=HistoricalData.get_spot_klines,
-        params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-    )
-    .set_test_data_source(
-        method=HistoricalData.get_spot_klines,
-        params={'kline_size': 7200, 'row_count_limit': 5000},
-    )
-)
-```
+Use `HistoricalData.get_any_file` when the experiment names a specific recorded local file or URL, as the Compiled project does above. Hosted `get_spot_klines` and `get_spot_dollar_klines` resolve the provider's available snapshots. Preserve the actual input identity when reproducing a run; a dataset name alone cannot identify its bytes. A bounded, coarser test source can shorten preparation diagnostics, but it changes the population and cannot stand in for proof of the full experiment.
 
 ## Choosing The Right Surface
 

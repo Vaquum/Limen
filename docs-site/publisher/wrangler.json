@@ -1,16 +1,12 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "limen",
-  "main": "./src/worker.js",
+  "account_id": "758576157d0685fa4eb2aeaf16781577",
+  "main": "../src/worker.js",
   "compatibility_date": "2026-03-27",
-  "routes": [
-    {
-      "pattern": "docs.vaquum.fi",
-      "custom_domain": true
-    }
-  ],
+  "preview_urls": true,
   "assets": {
-    "directory": "./build",
+    "directory": "../reader-build",
     "binding": "ASSETS",
     "run_worker_first": true,
     "html_handling": "auto-trailing-slash",

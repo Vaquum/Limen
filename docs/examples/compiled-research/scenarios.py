@@ -60,6 +60,86 @@ def execute(config, output, *, bars=None, callback=None, resume=False, project_r
     return loop
 
 
+# region preparation
+def preparation(data_dir, output):
+    from limen.experiment import MLManifest
+    from limen.features import fractional_diff
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.sfd.reference_architecture import RidgeRegressor
+    from limen.targets import TripleBarrierTarget
+
+    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
+
+        def surface(data):
+            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
+
+        def capture(data_dict, split_data, round_params, fitted_params):
+            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
+                frame.write_parquet(directory / (split + '.parquet'))
+            return data_dict
+
+        manifest = MLManifest()
+        (manifest.set_split_config(6, 2, 2)
+                    .add_indicator(roc, period=3, group='momentum')
+                    .add_indicator(roc, period=12, group='momentum')
+                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
+                    .add_feature(surface)
+                    .with_target_label('label', TripleBarrierTarget, fit_params={
+                        'upper_multiple': 1.5, 'lower_multiple': 1.,
+                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
+        (manifest.set_scaler(RobustScaler).set_feature_ablation()
+                    .set_pca_compression().add_to_data_dict(capture))
+        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
+                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
+        data = manifest.prepare_data(raw, params)
+        model = RidgeRegressor().train(data, alpha=1., solver='svd')
+        scored = model.evaluate(data, inline_metrics=False)
+        scaler = data['_scaler']
+        pca = data.get('_pca')
+        cases.append({'name': name,
+                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
+                      'dropped': params.get('_dropped_features', []),
+                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
+            'fixed_d': .4, 'weight_threshold': .05}
+# endregion preparation
+
+
+# region common_baselines
+def common_baselines(data_dir, output):
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.sfd.foundational_sfd import common_strategies
+
+    source = configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url']
+    raw = pl.read_parquet(source)
+    directory = output / 'experiment'
+    loop = UniversalExperimentLoop(data=raw, sfd=common_strategies,
+                                   search_strategy=GridStrategy(ParamDomain(common_strategies.params())),
+                                   experiment_dir=directory)
+    loop.run('common-baselines', n_permutations=8, workers=1, record_execution=True,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+             post_processing=False, progress_bar=False)
+    with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    tracks = {record['round_params']['strategy']: record['execution'] for record in records}
+    columns = ['strategy', 'pnl_per_bar_bps_test', 'position_rate_test', 'num_executed_trades_test']
+    return {'rows': research_project.completed_log(loop).select(columns).to_dicts(),
+            'tracks': tracks, 'source_rows': raw.height, 'fee_bps': 10., 'slip_bps': 5.,
+            'execution': 'native lagged long/flat snapshot with per-fill costs'}
+# endregion common_baselines
+
+
 # region search
 def search(data_dir, output):
     results = {}
@@ -72,7 +152,9 @@ def search(data_dir, output):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
         results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'), 'adaptive': adaptive_search(data_dir, output / 'adaptive')}
+    return {'runs': results, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
+            'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search
 
 
@@ -87,6 +169,30 @@ def adaptive_search(data_dir, output):
 # endregion adaptive_search
 
 
+# region mixed_feedback
+def mixed_feedback(data_dir, output):
+    config = configuration('adaptive', data_dir)
+    config['uel']['recording'] = {'predictions': True, 'alignment': True, 'trade_ledger': False, 'fold_details': False}
+
+    def steer(log, msq):
+        if log.height == 2:
+            msq.keep_is('C', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
+
+    loop = execute(config, output, callback=steer)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())
+    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
+            'remaining': checkpoint['msq_state']['trim_budget'], 'records': records,
+            'predictions': {record['round_id']: recorded_predictions(output, record) for record in records}}
+# endregion mixed_feedback
+
+
+# region recorded_predictions
 def recorded_predictions(directory: Path, record):
     metadata = json.loads((directory / 'metadata.json').read_text())
     if metadata['round_storage'] != 'gzip-jsonl-v2':
@@ -103,6 +209,7 @@ def recorded_predictions(directory: Path, record):
     if not isinstance(values, list) or len(values) != reference['count']:
         raise ValueError('Recorded prediction count differs')
     return values
+# endregion recorded_predictions
 
 
 # region model_comparisons
@@ -158,6 +265,17 @@ def fold_metadata(sensor):
     return {'fold': fold, 'fitting': fitting.isoformat(), 'selection': selection.isoformat()}
 
 
+# region acceptance
+def acceptance(data_dir, output):
+    config = configuration('acceptance', data_dir)
+    loop = execute(config, output)
+    report = json.loads((output / 'acceptance_report.json').read_text())
+    return {'rounds': research_project.completed_log(loop).height, 'report': report,
+            'artifacts': {name: hashlib.sha256((output / name).read_bytes()).hexdigest() for name in (
+                'trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+# endregion acceptance
+
+
 # region walk_forward
 def walk_forward(data_dir, output):
     config = configuration('walk_forward', data_dir)
@@ -170,7 +288,8 @@ def walk_forward(data_dir, output):
     cohort.set_members(sensors)
     metadata = [fold_metadata(sensor) for sensor in sensors]
     round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
+    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
+            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
             'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
             'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
             'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}

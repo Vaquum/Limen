@@ -1,10 +1,44 @@
-# Log
+# Read the recorded experiment
 
 `Log` reads captured experiment metrics and supports explicit row-level analysis when the required live evidence was retained.
 
 For YAML CLI runs, start from the generated result directory and `results.csv`. After a Python/MSQ run, construct `limen.Log(uel_object=uel)` for captured aggregates. Use `post_processing=True` for retained row analysis and the automatic `uel._log`.
 
 In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.csv` contains trial aggregates. Use the recorded fold results and per-trial net-return track to inspect the individual test windows behind those means.
+
+## Follow the two projects
+
+Both projects use the same small reader: require completed rows and return the
+loop's Polars frame. The Python project sorts its caller-defined validation
+return; the Compiled project sorts the recorded native validation objective.
+The helper does not manufacture a native metric group for arbitrary Python
+results.
+
+### Python Research
+
+<!-- example: log-python-completed source=docs/examples/python-research/research.py region=completed_log scenario=selection interface=python role=executed -->
+```python
+def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
+    log = loop.experiment_log
+    if log is None:
+        raise ValueError("The experiment has no completed result log")
+    return log
+```
+
+### Compiled Research
+
+<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.py region=completed_log scenario=selection interface=compiled role=executed -->
+```python
+def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
+    log = loop.experiment_log
+    if log is None:
+        raise ValueError("The experiment has no completed result log")
+    return log
+```
+
+`Log` adds captured-group and row-analysis APIs to those results. The constructor
+and method signatures below are source-bound reference; the project proof does
+not claim every diagnostic is meaningful for its small candidate population.
 
 ## Prerequisites
 
@@ -16,11 +50,9 @@ In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.c
 
 ### UEL-backed `Log`
 
-Run the [Python/MSQ example](Universal-Experiment-Loop.md#direct-python-run) with `post_processing=True`, then access the live analysis object:
+Use `post_processing=True` when the next step requires live serial row evidence. The [Compiled project](examples/compiled-research/README.md) enables it for its selection run; the [Python project](examples/python-research/README.md) keeps caller-owned fitted state and reads completed metrics without it.
 
-```python
-log = uel._log
-```
+The live analysis object is `uel._log` after automatic post-processing.
 
 This mode has access to:
 
@@ -34,12 +66,12 @@ Aggregate views require only the captured experiment rows. Construct `limen.Log(
 
 ### File-backed `Log`
 
-A CSV log can also be loaded from disk:
+The constructor accepts either a live loop or a CSV path:
 
+<!-- reference: log-constructor source=limen/log/log.py region=signature:Log.__init__ role=signature -->
 ```python
-import limen
-
-log = limen.Log(file_path='my_experiment.csv')
+def __init__(self, uel_object: Any | None=None, file_path: str | None=None, inverse_scaler: Callable[[pl.DataFrame, Any], pl.DataFrame] | None=None, cols_to_multilabel: list[str] | None=None) -> None:
+    ...
 ```
 
 This path supports the cleaned experiment log, captured aggregate metrics and parameter correlation. It reads only the supplied CSV; it does not discover or load sibling round or fold artifacts.
@@ -53,14 +85,9 @@ Important limitation:
 
 Use captured aggregate views to compare completed rounds. Explicit row inspection is a separate path requiring retained evidence.
 
-The four-round Python/MSQ example supports aggregate and retained row inspection. Correlation needs a larger experiment: with the default cohorts and `min_n=10`, at least 11 rows with valid target metrics are needed for a cohort to qualify, and the metric and numeric features must vary. Continue to [parameter correlation](#parameter-correlation-surface) after that larger run.
+The four-round Python selection reads its caller-defined validation metric. It does not claim native confusion groups, snapshot columns or retained row replay. The Compiled selection retains the native groups and serial evidence. Correlation needs a larger experiment: with the default cohorts and `min_n=10`, at least 11 rows with valid target metrics are needed for a cohort to qualify, and the metric and numeric features must vary. Continue to [parameter correlation](#parameter-correlation-surface) after that larger run.
 
-```python
-log = limen.Log(uel_object=uel)
-
-benchmark = log.experiment_confusion_metrics()
-backtest = log.experiment_backtest_results()
-```
+Read `experiment_confusion_metrics()` for captured classifier metrics and `experiment_backtest_results()` for captured trading metrics. These are methods of the constructed `Log`.
 
 ## `permutation_prediction_performance(round_id)`
 
@@ -71,8 +98,11 @@ This method reconstructs a single round's test-period table and joins:
 - hit/miss flags
 - aligned price data
 
+<!-- reference: log-round-performance source=limen/log/log.py region=signature:Log.permutation_prediction_performance role=signature -->
 ```python
-perf = uel._log.permutation_prediction_performance(round_id=0)
+@_holdout.replay_guard
+def permutation_prediction_performance(self, round_id: int) -> pd.DataFrame:
+    ...
 ```
 
 The resulting table has these columns:
@@ -100,8 +130,10 @@ The benchmark layer measures directional signal quality before translation into 
 
 With no `x`, this method reads the captured `confusion_*` columns and removes their prefix. It preserves stored values and units: `precision` and `recall` remain fractions, not percentages. The complete group contains `tp`, `fp`, `tn`, `fn`, `precision`, `recall`, and the four `*_mean_return_pct` fields.
 
+<!-- reference: log-confusion source=limen/log/_experiment_confusion_metrics.py region=signature:experiment_confusion_metrics role=signature -->
 ```python
-bench = log.experiment_confusion_metrics()
+def experiment_confusion_metrics(self: Any, x: str | None=None) -> pd.DataFrame:
+    ...
 ```
 
 This untrimmed view requires no predictions, scaler, preparation or execution. It excludes recorded strict-mode failures and preserves successful occurrence order, including repeated parameter identities, zero values and valid metric NaNs. Missing or partial captured groups raise; there is no replay fallback. Raw captured columns are retained separately from optional categorical encoding used for parameter correlation.
@@ -110,9 +142,7 @@ This untrimmed view requires no predictions, scaler, preparation or execution. I
 
 Passing `x` selects the existing row-analysis summary. It requires retained live evidence and produces one row per successful retained round.
 
-```python
-bench = uel._log.experiment_confusion_metrics('price_change')
-```
+Pass `x="price_change"` to request row analysis instead of the captured aggregate group.
 
 This table combines:
 
@@ -122,19 +152,7 @@ This table combines:
 - mean and median of `x` within TP and FP
 - TP-versus-FP separation through Cohen's d and KS
 
-The explicit `price_change` summary is exposed directly on UEL with `post_processing=True` as:
-
-```python
-uel.experiment_confusion_metrics
-```
-
-because UEL computes:
-
-```python
-uel._log.experiment_confusion_metrics('price_change')
-```
-
-automatically at the end of the run.
+With `post_processing=True`, UEL exposes the explicit row summary as `uel.experiment_confusion_metrics`, computed through `uel._log.experiment_confusion_metrics("price_change")` at run conclusion.
 
 Rounds whose effective outputs are not binary classification — a non-binary
 `prediction_mode`, fractional predictions, or no classifiable labels — raise
@@ -146,11 +164,10 @@ parameter correlation, and the convergence report.
 
 Produces the same style of summary for one specific round.
 
+<!-- reference: log-round-confusion source=limen/log/_permutation_confusion_metrics.py region=signature:permutation_confusion_metrics role=signature -->
 ```python
-round0_conf = uel._log.permutation_confusion_metrics(
-    x='price_change',
-    round_id=0,
-)
+def permutation_confusion_metrics(self: Any, x: str, round_id: int, *, pred_col: str='predictions', actual_col: str='actuals', proba_col: str | None=None, threshold: float=0.5, outlier_quantiles: Sequence[float]=(0.01, 0.99), outlier_mode: str='filter', id_cols: dict[str, Any] | None=None) -> pd.DataFrame:
+    ...
 ```
 
 This view isolates benchmark behavior for one selected round.
@@ -176,15 +193,13 @@ those four fields use the same immediate-next-execution-row contract as snapshot
 
 Read one captured backtest row per successful single-split round, removing the `backtest_` prefix. This method performs no preparation, prediction or execution and requires no retained row arrays. It works with UEL-backed or CSV-backed `Log` when the complete metric group is available.
 
+<!-- reference: log-backtest source=limen/log/_experiment_backtest_results.py region=signature:experiment_backtest_results role=signature -->
 ```python
-bt = uel._log.experiment_backtest_results()
+def experiment_backtest_results(self: Any) -> pd.DataFrame:
+    ...
 ```
 
-With `post_processing=True`, the same table is exposed directly on UEL as:
-
-```python
-uel.experiment_backtest_results
-```
+With `post_processing=True`, UEL also exposes the table through `uel.experiment_backtest_results`.
 
 Snapshot captures retain the 20 bar-based backtest ledger fields in their existing column order. Event captures retain the execution engine's metric order. Recorded strict-mode failures are excluded; successful occurrences preserve their order, including repeats, valid zeros and NaNs. Missing or partial metric groups raise without replay.
 
@@ -209,11 +224,10 @@ The metrics were computed with each round's declared trading policy during execu
 
 This method looks for robust relationships between experiment parameters and a chosen metric across explicit cohorts.
 
+<!-- reference: log-parameter-correlation source=limen/log/_experiment_parameter_correlation.py region=signature:experiment_parameter_correlation role=signature -->
 ```python
-corr = uel.experiment_parameter_correlation(
-    'auc',
-    min_n=10,
-)
+def experiment_parameter_correlation(self: Any, metric: str, *, cols_to_drop: list[str] | None=None, sort_key: str | None=None, sort_ascending: bool=False, heads: Sequence[float | int] | None=None, method: Literal['pearson', 'kendall', 'spearman']='spearman', n_boot: int=300, min_n: int=10, random_state: int=0) -> pd.DataFrame:
+    ...
 ```
 
 The result is a dataframe indexed by:
@@ -240,16 +254,12 @@ The default `min_n=10` skips smaller cohorts. If every requested cohort is small
 
 Estimate how much each explicitly selected parameter helps a Random Forest predict one recorded metric. This advisory analysis reads captured successful experiment rows from a UEL-backed or CSV-backed `Log`; it does not prepare data, fit the experiment's models, replay execution, write artifacts or alter the search.
 
-For an objective-enabled run with at least 20 distinct recorded `lookback`/`C` configurations:
+This method requires at least 20 distinct selected configurations. The two-candidate Compiled selection and four-candidate Python selection do not satisfy that floor. Its current signature is:
 
+<!-- reference: log-parameter-importance source=limen/log/_experiment_parameter_importance.py region=signature:experiment_parameter_importance role=signature -->
 ```python
-log = limen.Log(file_path='results.csv')
-importance = log.experiment_parameter_importance(
-    'val_backtest_total_return',
-    parameters=['lookback', 'C'],
-    random_state=0,
-    n_repeats=10,
-)
+def experiment_parameter_importance(self: object, metric: str, *, parameters: Sequence[str], random_state: int=0, n_repeats: int=10) -> pd.DataFrame:
+    ...
 ```
 
 Select parameter columns explicitly; bookkeeping and other metric columns are not inferred as inputs. Parameters must contain finite scalar numbers, booleans or text, with no null or nested values. The chosen metric must be finite and numeric on every successful row. Missing, duplicate or malformed selections raise. Recorded strict-mode failures are excluded. CSV input retains the existing CSV reader's type interpretation; this method does not reconstruct typed round parameters.
@@ -274,20 +284,15 @@ The result contains one row per parameter, ordered by descending `importance_mea
 
 Round parameter values become columns in `experiment_log` alongside the metrics. When ablation is configured, `_dropped_features` is taken from the actual prepared parameters and serialized as JSON text on every row, including `[]` for zero drops; automatic post-processing preserves this column. A perturbation sweep therefore leaves its own audit trail: `scaler_type`, `feature_groups`, any `use_*` toggle, `feature_drop_count`, `feature_drop_seed`, and the JSON-encoded `_dropped_features` list all appear as columns.
 
-Because `experiment_log` is a pandas DataFrame, the simplest analysis is direct filtering and grouping:
+Use the captured parameter columns to compare perturbations:
 
-```python
-robust_only = log.experiment_log[log.experiment_log['scaler_type'] == 'robust']
-by_groups = log.experiment_log.groupby('feature_groups')['auc'].mean()
-```
+Filter the pandas `Log.experiment_log` by its `scaler_type` column to compare one scaler. Group its `feature_groups` column and aggregate a captured metric to compare declared groups. The loop itself stores a Polars frame; `Log` copies those rows into pandas.
 
 `experiment_parameter_correlation` coerces every column to numeric, so string and list columns — `scaler_type`, `feature_groups`, and the JSON-encoded `_dropped_features` — become NaN and drop out. Only numeric perturbation columns survive; boolean `use_*` flags survive because they coerce to `0`/`1` and group naturally.
 
 To bring a categorical perturbation into the correlation, one-hot it when constructing the `Log`:
 
-```python
-log = limen.Log(file_path='my_experiment.csv', cols_to_multilabel=['scaler_type'])
-```
+Pass `cols_to_multilabel=["scaler_type"]` to the `Log` constructor above.
 
 That replaces `scaler_type` with `scaler_type_robust`, `scaler_type_logreg`, … `0`/`1` columns (and casts bool columns to int), which then reach `experiment_parameter_correlation`. It cannot expand the JSON-encoded `_dropped_features`; deriving feature importance from ablation needs a per-feature boolean membership column, covered in [Perturbation Strategies](Perturbation-Strategies.md).
 
@@ -301,9 +306,7 @@ That replaces `scaler_type` with `scaler_type_robust`, `scaler_type_logreg`, …
 
 Large model or prep objects that should not be flattened into the experiment log belong under:
 
-```python
-round_results['extras'] = {'model': fitted_model}
-```
+`round_results["extras"]` as a mapping; for example, a `model` entry may retain the fitted object.
 
 UEL preserves those in `uel.extras`.
 
@@ -330,6 +333,12 @@ It:
 - removes duplicated header rows that may appear in streamed CSV logs
 - trims whitespace in object columns
 - returns a cleaned pandas dataframe
+
+<!-- reference: log-read-file source=limen/log/_read_from_file.py region=signature:read_from_file role=signature -->
+```python
+def read_from_file(_self: Any, file_path: str) -> pd.DataFrame:
+    ...
+```
 
 Use `read_from_file()` to recover or inspect an experiment log outside a live UEL object.
 
