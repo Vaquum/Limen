@@ -60,8 +60,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     recorded_mro: set[int] = set()
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
-    def visit(value: object, *, fitted_module: bool = True) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
+    def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
+        if value is None or type(value) in (str, bool, int, float, bytes) or (annotation and isinstance(value, type)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
             if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)
@@ -98,7 +98,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(vars(value))
             if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
                 return
-            visit(value.__annotations__)
+            visit(value.__annotations__, annotation=True)
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
             visit(value.__defaults__)
@@ -169,7 +169,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 visit(owner)
         elif object_payload(value):
             for part in children(cast(object, value)):
-                visit(part)
+                visit(part, annotation=annotation)
             if type(value) is not np.ndarray:
                 objects.append(value)
         elif isinstance(value, ModuleType):
@@ -181,7 +181,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 objects.append(value)
             if not isinstance(value, type):
                 for part in children(value):
-                    visit(part)
+                    visit(part, annotation=annotation)
 
     def methods(value: object) -> None:
         if isinstance(value, ModuleType):
