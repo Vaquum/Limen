@@ -36,10 +36,15 @@ _REPEAT_KEYS = ('spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'sour
 
 
 _LATE_RULES = {'offset': 0.0}
+_COPY_AFTER_FREEZE = False
+_GLOBAL_FITTED_PROVIDER = None
 
 
 def later_probabilities(values):
     return np.clip(values + _LATE_RULES['offset'], 0, 1)
+
+
+fit_calibrator = later_probabilities
 
 
 def identity_probabilities(values):
@@ -860,6 +865,55 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class HiddenSequence(list):
+        def __iter__(self):
+            return iter(())
+        def adjust(self, values):
+            return np.clip(values + list.__getitem__(self, 0), 0, 1)
+        def __deepcopy__(self, memo):
+            return type(self)(copy.deepcopy(value, memo) for value in list.__iter__(self))
+    class NonpreservingSequence(HiddenSequence):
+        def __deepcopy__(self, memo):
+            clone = super().__deepcopy__(memo)
+            clone[0] += 0.1
+            return clone
+    mapped._model.policy = HiddenSequence([expected_offset])
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingSequence([expected_offset])
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class AliasPrediction(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = fit_calibrator(result['_probs'])
+            return result
+    aliased_helper = copy.deepcopy(assessment_case[2][0][0])
+    aliased_helper._model.__class__ = AliasPrediction
+    alias_handle = _freeze(aliased_helper)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(alias_handle, assessment_case)
+        assert loader.call_count == 0
+    class AssessmentCopy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = later_probabilities(result['_probs'])
+            return result
+        def __deepcopy__(self, memo):
+            clone = type(self).__new__(type(self))
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            if _COPY_AFTER_FREEZE:
+                _LATE_RULES['offset'] += 0.1
+            return clone
+    copying = copy.deepcopy(assessment_case[2][0][0])
+    copying._model.__class__ = AssessmentCopy
+    copying_handle = _freeze(copying)
+    with patch.dict(globals(), {'_COPY_AFTER_FREEZE': True}), patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed prediction dependencies before observation access'):
+            _report(copying_handle, assessment_case)
+        assert loader.call_count == 0
     class Relative(LogRegBinary):
         def predict(self, data):
             from . import test_holdout_research as helpers
@@ -1070,7 +1124,13 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(selected, assessment_case)
                 assert loader.call_count == 0
-    from types import SimpleNamespace
+    from limen.experiment.manifest_core import CalibrationConfig
+    class FittingProvider:
+        def __init__(self, config):
+            self.prediction_calibration_config = config
+        def adjust(self, values):
+            self.prediction_calibration_config.threshold_func(values)
+            return values
     from limen.experiment._holdout_prediction import readonly_prediction
     class NumericCallbacks(np.ndarray):
         prediction_calibration_config = None
@@ -1079,14 +1139,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         callback_calls.append('threshold')
     nested = copy.deepcopy(assessment_case[2][0][0])
     nested._model.policy = nested._model.model.coef_.copy().view(NumericCallbacks)
-    nested._model.policy.prediction_calibration_config = SimpleNamespace(calibration_func=None, threshold_func=nested_threshold)
+    nested._model.policy.prediction_calibration_config = CalibrationConfig(calibration_func=None, threshold_func=nested_threshold)
     with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
         nested._model.policy.prediction_calibration_config.threshold_func()
     assert callback_calls == []
     class ScalarCallbacks(float):
         prediction_calibration_config = None
     nested._model.policy = ScalarCallbacks(expected_offset)
-    nested._model.policy.prediction_calibration_config = SimpleNamespace(calibration_func=None, threshold_func=nested_threshold)
+    nested._model.policy.prediction_calibration_config = CalibrationConfig(calibration_func=None, threshold_func=nested_threshold)
     with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
         nested._model.policy.prediction_calibration_config.threshold_func()
     assert callback_calls == []
@@ -1101,7 +1161,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
             callback()
         assert callback_calls == []
-    configured_provider = SimpleNamespace(prediction_calibration_config=SimpleNamespace(calibration_func=None, threshold_func=nested_threshold))
+    configured_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=nested_threshold))
     def default_provider(provider=configured_provider):
         provider.prediction_calibration_config.threshold_func()
     def closed_provider(provider):
@@ -1117,6 +1177,29 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
             provider()
         assert callback_calls == []
+    nested._model.policy = FittingProvider(CalibrationConfig(threshold_func=partial(max)))
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='callbacks without observable Python call protection'), readonly_prediction([nested]):
+            nested._model.policy.adjust(nested._model.model.coef_.ravel())
+        assert loader.call_count == 0
+    class GlobalCallbackModel(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                result['_probs'] = _GLOBAL_FITTED_PROVIDER.adjust(result['_probs'])
+            return result
+    globally_configured = copy.deepcopy(assessment_case[2][0][0])
+    globally_configured._model.__class__ = GlobalCallbackModel
+    globally_configured._model.research_x = late._model.research_x.copy()
+    with patch.dict(globals(), {'_GLOBAL_FITTED_PROVIDER': configured_provider}):
+        global_handle = _freeze(globally_configured)
+        with pytest.raises(ValueError, match='attempted fitting') as global_failure:
+            _report(global_handle, assessment_case)
+        assert callback_calls == []
+        with history.connection(assessment_case[0] / history._HISTORY) as db:
+            record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+            assert record['state'] == 'failed' and record['id'] in str(global_failure.value)
+            assert json.loads(record['error_json'])['stage'] == 'predict'
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
