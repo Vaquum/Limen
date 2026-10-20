@@ -180,6 +180,9 @@ def _retained_grid(tmp_path, monkeypatch):
         assert observed['scaler'] > 0
         assert (observed['pca'] > 0) is params['auto_pca']
         assert len(predictions) == raw.height == replay.height
+        assert {p.datetime for p in predictions if p.reason is None} == set(raw.tail(408)['datetime'])
+        assert {p.datetime for p in predictions if p.reason == 'inside-training-window'} == set(raw.head(2448)['datetime'])
+        assert replay.drop('datetime').null_count().sum_horizontal()[0] == 0
         test_times = raw.tail(408)['datetime'].to_list()
         eligible = {p.datetime: p for p in predictions if p.datetime in set(test_times)}
         assert len(eligible) == 408 and all(p.reason is None for p in eligible.values())
