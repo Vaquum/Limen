@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from inspect import Signature, getattr_static, signature
+from inspect import getattr_static, isfunction
 from typing import Protocol, cast
 
 import polars as pl
@@ -16,22 +16,22 @@ class TransformClass(Protocol):
 
 
 @dataclass(frozen=True)
-class ScalerTransform:
+class CapturedTransform:
     """Bind captured behavior without changing the fitted object's type or state."""
 
     function: Callable[..., pl.DataFrame]
     bind_instance: bool
     __parallel_round_contract__: ParallelRoundContract | None
 
-    @property
-    def __signature__(self) -> Signature:
-        result = signature(self.function)
-        return result.replace(parameters=list(result.parameters.values())[1:]) if self.bind_instance else result
+    def __call__(self, instance: object, data: pl.DataFrame, **params: object) -> pl.DataFrame:
+        if getattr_static(instance, 'transform') is not getattr_static(type(instance), 'transform'):
+            return cast(TransformClass, instance).transform(data, **params)
+        return self.function(instance, data, **params) if self.bind_instance else self.function(data, **params)
 
-    def __call__(self, data: pl.DataFrame, fitted_transform: object) -> pl.DataFrame:
-        if getattr_static(fitted_transform, 'transform') is not getattr_static(type(fitted_transform), 'transform'):
-            return cast(TransformClass, fitted_transform).transform(data)
-        return self.function(fitted_transform, data) if self.bind_instance else self.function(data)
+
+def capture_transform(cls: type) -> CapturedTransform:
+    return CapturedTransform(cast(TransformClass, cls).transform, isfunction(getattr_static(cls, 'transform')),
+                             getattr(cls, '__parallel_round_contract__', None))
 
 
 @dataclass(frozen=True)
@@ -39,7 +39,7 @@ class ScalerFactory:
     transform_class: object
     static_params: dict[str, object]
     dynamic_selector: str | None
-    transforms: dict[type, ScalerTransform]
+    transforms: dict[type, CapturedTransform]
 
     def selected(self, params: Mapping[str, object]) -> object:
         return self.transform_class if self.dynamic_selector is None else cast(dict[str, object], self.transform_class)[cast(str, params['scaler_type'])]
@@ -55,7 +55,7 @@ class ScalerFactory:
         return cast(Callable[..., object], self.selected(params))(data, **self.static_params, **extras)
 
     def transform(self, data: pl.DataFrame, fitted_transform: object) -> pl.DataFrame:
-        return self.transforms[type(fitted_transform)](data, fitted_transform)
+        return self.transforms[type(fitted_transform)](fitted_transform, data)
 
 
 attach(ScalerFactory)
@@ -65,7 +65,5 @@ attach(ScalerFactory.transform)
 def scaler_factory(cls: object, params: dict[str, object], selector: str | None,
                    constructor: Callable[[object], object]) -> ScalerFactory:
     classes = {'': cast(type, cls)} if selector is None else SCALER_REGISTRY
-    transforms = {value: ScalerTransform(cast(TransformClass, value).transform,
-                  not isinstance(getattr_static(value, 'transform'), (classmethod, staticmethod)),
-                  getattr(value, '__parallel_round_contract__', None)) for value in classes.values()}
+    transforms = {value: capture_transform(value) for value in classes.values()}
     return ScalerFactory(constructor(cls) if selector is None else {name: constructor(value) for name, value in classes.items()}, params, selector, transforms)

@@ -489,6 +489,18 @@ class TransformSeedTarget(CallerTarget):
         return RandomBinaryTarget(data, self.target_name, random_state).transform(data)
 
 
+class StaticTarget(CallerTarget):
+    @staticmethod
+    def transform(data, random_state=42):
+        return RandomBinaryTarget(data, 'noise', random_state).transform(data)
+
+
+class ClassTarget(CallerTarget):
+    @classmethod
+    def transform(cls, data, random_state=42):
+        return RandomBinaryTarget.transform(cls(data, 'noise', random_state), data)
+
+
 def _caller_scaler(data, n_jobs=2):
     return data.with_columns((pl.col('close') * n_jobs).alias('close'))
 
@@ -525,6 +537,10 @@ class ClassScaler(RobustScaler):
     @classmethod
     def transform(cls, data):
         return data.with_columns((pl.col('close') * 3).alias('close'))
+
+
+class CallableScaler(RobustScaler):
+    transform = CallerScalerTransform(n_jobs=1)
 
 
 class InstanceTransformScaler(RobustScaler):
@@ -732,13 +748,24 @@ def test_frozen_manifest_round_plan() -> None:
                 actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
-        for scaler_class in (StaticScaler, ClassScaler, InstanceTransformScaler):
+        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler):
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
             from tests.test_parallel_rounds import recorded_source
             data = recorded_source().head(24).select('close')
             control = scaler_class(data).transform(data).to_dict(as_series=False)
             actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
             assert actual[5] == control and actual[3] != os.getpid()
+            if scaler_class is CallableScaler:
+                before = digest(frozen)
+                with pytest.MonkeyPatch.context() as patch:
+                    patch.setattr(CallableScaler.transform, 'n_jobs', 2)
+                    unsafe = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
+                    assert unsafe.pipeline_digest != frozen.pipeline_digest and unsafe.resource_digest != frozen.resource_digest
+                    with pytest.raises(ValueError, match=r'scaler\.class\.0\.0\.transform: effective n_jobs=1'):
+                        validate_resources(unsafe, _parameters())
+                    for _ in range(2):
+                        actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+                        assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
         weights = ConfiguredScaler.transform.__closure__[0].cell_contents
         for dynamic in (False, True):
             manifest = copy.deepcopy(native).set_scaler_from_params() if dynamic else copy.deepcopy(native).set_scaler(ConfiguredScaler)
@@ -1075,6 +1102,24 @@ def _assert_transform_bindings(params, pool):
     safe = params | {'transform_seed': 42}
     validate_domain(frozen, domain | {'transform_seed': [42]}, None)
     assert pool.submit(_target_probe, frozen, safe).result(timeout=30) == _target_probe(frozen, safe)
+    from tests.test_parallel_rounds import recorded_source
+    for cls in (StaticTarget, ClassTarget):
+        declare_parallel(cls, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
+        manifest = copy.deepcopy(base).with_target_label('noise', cls, fit_params={'random_state': 42})
+        native = manifest.prepare_data(recorded_source(), params)
+        expected = {key: native[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
+        frozen = freeze_manifest(manifest, None)
+        before = digest(frozen)
+        function = cls.transform.__func__ if inspect.ismethod(cls.transform) else cls.transform
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(function, '__defaults__', (None,))
+            unsafe = freeze_manifest(manifest, None)
+            assert unsafe.pipeline_digest != frozen.pipeline_digest and unsafe.resource_digest != frozen.resource_digest
+            with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
+                validate_resources(unsafe, params)
+            for _ in range(2):
+                assert pool.submit(_target_probe, frozen, params).result(timeout=30) == _target_probe(frozen, params) == expected
+                assert digest(frozen) == before
     for transform in (_caller_scaler, CallerScalerTransform()):
         declare_parallel(transform, ParallelRoundContract(deterministic_stage, ('n_jobs',)))
         scaler = copy.deepcopy(base)

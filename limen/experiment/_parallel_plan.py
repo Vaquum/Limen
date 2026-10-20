@@ -12,7 +12,7 @@ from functools import partial
 from importlib import import_module
 from string import Formatter
 from types import CellType, FunctionType, MethodType
-from typing import Protocol, cast
+from typing import cast
 
 import polars as pl
 from typing_extensions import override
@@ -26,10 +26,7 @@ from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_scaler import ScalerFactory, scaler_factory
-
-class TargetClass(Protocol):
-    transform: Callable[..., object]
+from limen.experiment._parallel_scaler import ScalerFactory, capture_transform, scaler_factory
 
 
 class _CapturedCall(partial[object]):
@@ -172,7 +169,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     if type(value) is _manifest.TargetClassConfig:
         target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
-                                    cast(Callable[..., object], target.target_class.__init__), cast(TargetClass, target.target_class).transform,
+                                    cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class),
                                     target.target_class.__new__ if inspect.isfunction(target.target_class.__new__) else None)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':

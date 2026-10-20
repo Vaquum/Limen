@@ -12,10 +12,10 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
-from limen.experiment._parallel_scaler import ScalerFactory
+from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
-from limen.experiment._parallel_plan import TargetClass, FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -268,11 +268,11 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
 
 
 def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:
-    signature = inspect.signature(cast(Callable[..., object], component))
+    component, skip = (component.function, 2 if component.bind_instance else 1) if isinstance(component, CapturedTransform) else (component, skip)
     owner = component.__self__ if inspect.ismethod(component) else component
     state = component_state(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) else {}
     result = {key: value for key, value in state.items() if key != '__parallel_round_contract__'} | dict(params)
-    for i, (key, value) in enumerate(signature.parameters.items()):
+    for i, (key, value) in enumerate(inspect.signature(cast(Callable[..., object], component)).parameters.items()):
         if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:
             continue
         if key not in params:
@@ -317,7 +317,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
         initializer = getattr(target, '_parallel_init', None)
         result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=2 if initializer is None else 3, path='target', runtime=runtime)
-        transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(TargetClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
+        transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(TransformClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
         if (allocator := getattr(target, '_parallel_new', None)) is not None:
