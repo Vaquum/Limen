@@ -163,13 +163,17 @@ def provenance(sensor: Sensor) -> dict[str, object]:
     return proof
 
 
-def _fitted_value(value: object) -> None:
+def _fitted_value(value: object, seen: dict[int, object] | None = None) -> None:
+    seen = {} if seen is None else seen
+    if id(value) in seen:
+        return
+    seen[id(value)] = value
     if isinstance(value, Mapping):
         for item in cast(Mapping[str, object], value).values():
-            _fitted_value(item)
+            _fitted_value(item, seen)
     elif isinstance(value, (list, tuple)):
         for item in cast(list[object] | tuple[object, ...], value):
-            _fitted_value(item)
+            _fitted_value(item, seen)
     elif hasattr(value, '__dict__') and not isinstance(value, type):
         unchanged(value)
         if isinstance(value, BaseEstimator) and callable(getattr(value, 'fit', None)):

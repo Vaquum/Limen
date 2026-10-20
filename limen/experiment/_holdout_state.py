@@ -170,7 +170,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
         elif type(item) is logging.Logger:
-            result = ('logger', item.name)
+            result = ('logger', item.name, item.level, item.disabled, item.propagate, logging.Logger.getEffectiveLevel(item), item.manager.disable, node({name: part for name, part in vars(item).items() if name not in ('name', 'level', 'disabled', 'propagate', 'parent', 'manager', 'handlers', 'filters', '_cache')}))
         elif inspect.isbuiltin(item) or isinstance(item, MethodWrapperType):
             owner = getattr(item, '__self__', None)
             result = ('builtin', getattr(item, '__module__', None), item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))

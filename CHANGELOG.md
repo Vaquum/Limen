@@ -1861,6 +1861,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.10] - 2026-10-20
 
+- Admit cyclic fitted mappings and sequences once per object, and preserve logger settings that affect selected prediction.
+
 - Schedule the measured longest holdout proof first under native item distribution while preserving every case, assertion and serial selection.
 
 - Retain dependency-method representatives across traversal rounds to avoid rebuilding the same type index.

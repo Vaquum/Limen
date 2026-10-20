@@ -790,6 +790,59 @@ def test_frozen_library_namespace_metaclass_and_config_binding(assessment_case):
         selected._model.effect_provider.prediction_calibration_config.threshold_func(selected._model.model.coef_.ravel())
 
 
+def test_frozen_cyclic_fitted_containers(assessment_case):
+    class MappingCalibrator(dict):
+        def predict_proba(self, values):
+            return self['estimator'].predict_proba(np.asarray(values))
+    class SequenceCalibrator(list):
+        def predict_proba(self, values):
+            return self[0].predict_proba(np.asarray(values))
+    selected = copy.deepcopy(assessment_case[2][0][0])
+    expected = _report(_freeze(selected), assessment_case)
+    for implementation in (MappingCalibrator, SequenceCalibrator):
+        changed = copy.deepcopy(selected)
+        original = changed._model._fitted_calibrator
+        calibrator = implementation(estimator=original) if implementation is MappingCalibrator else implementation([original])
+        if implementation is MappingCalibrator:
+            calibrator['self'] = calibrator
+        else:
+            calibrator.append(calibrator)
+        changed._model._fitted_calibrator = calibrator
+        clone = owned_copy(changed)
+        owned = clone._model._fitted_calibrator
+        assert (owned['self'] if implementation is MappingCalibrator else owned[1]) is owned
+        report = _report(_freeze(changed), assessment_case)
+        assert report['rows_sha256'] == expected['rows_sha256']
+        assert read_holdout_report(assessment_case[0], report['attempt_id']) == report
+
+
+def test_frozen_logger_prediction_settings(assessment_case):
+    class LoggerPrediction(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + self.logger.level / 1000, 0, 1)
+            return result
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            vars(clone).update({name: copy.deepcopy(value, memo) for name, value in vars(self).items() if name != 'logger'})
+            clone.logger = logging.Logger(self.logger.name, self.logger.level + (10 if self.corrupt_copy else 0))
+            return clone
+    selected = copy.deepcopy(assessment_case[2][0][0])
+    selected._model.__class__ = LoggerPrediction
+    selected._model.logger = logging.Logger('fitted-holdout-logger', logging.INFO)
+    selected._model.corrupt_copy = False
+    frozen = _freeze(selected)
+    first = _report(frozen, assessment_case)
+    selected._model.logger.setLevel(logging.WARNING)
+    assert _report(frozen, assessment_case)['rows_sha256'] == first['rows_sha256']
+    selected._model.corrupt_copy = True
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed selected state'):
+            _freeze(selected)
+        assert loader.call_count == 0
+
+
 def test_frozen_dependencies_and_invalid_state(assessment_case):
     import limen.scalers.logreg_scaler as scaler_module
     from sklearn.linear_model import LogisticRegression
