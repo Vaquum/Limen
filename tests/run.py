@@ -4,6 +4,7 @@ import logging
 import hashlib
 import json
 import os
+import resource
 import sys
 import time
 from collections import Counter
@@ -296,6 +297,13 @@ def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> No
         logger.info('Runtime profile written to %s', output_path)
 
     suite = profile['suite']
+    usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+    logger.info('Native CPU count: %s; completed child CPU user=%fs system=%fs', os.cpu_count(), usage.ru_utime, usage.ru_stime)
+    if hasattr(os, 'sched_getaffinity'):
+        logger.info('CPU affinity count: %s', len(os.sched_getaffinity(0)))
+    quota = Path('/sys/fs/cgroup/cpu.max')
+    if quota.is_file():
+        logger.info('Cgroup cpu.max: %s', quota.read_text().strip())
     worker_seconds: dict[str, float] = {}
     worker_finishes: dict[str, str] = {}
     for record in profile['tests']:
