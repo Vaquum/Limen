@@ -60,12 +60,13 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
     recorded_mro: set[int] = set()
-    method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'}
+    method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
             if isinstance(value, str):
                 attributes.add(value)
+                method_names.add(value)
                 fitted_names.add(value)
             return
         if type(value) is logging.Logger:
@@ -95,6 +96,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
+            method_names.update(value.__code__.co_names)
             visit(vars(value))
             if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
                 return
@@ -122,6 +124,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                         evidence.append((function_module, value.__qualname__, lookup[1].argval, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
+                    method_names.add(name)
                     module_attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     chained_import = instructions[index - 1].argval is None
@@ -221,7 +224,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1, -1, -1, -1)
     while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values())):
         previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()))
-        method_names.update(attributes)
         for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
     if capture is not None:

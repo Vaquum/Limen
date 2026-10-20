@@ -125,9 +125,18 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
 
     def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
+        if type(item) is dict:
+            return (kind, None, tuple((node(key), node(part)) for key, part in item.items()), None)
+        if type(item) in (list, tuple):
+            return (kind, tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
+        if type(item) in (set, frozenset):
+            return (kind, tuple(sorted((node(part) for part in cast(set[object] | frozenset[object], item)), key=pickle.dumps)), None)
         attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, deque, np.ndarray)) else {}
         state = node(attributes) if attributes else None
-        if _booster(item):
+        if inspect.isfunction(item):
+            closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
+            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
+        elif _booster(item):
             from lightgbm import Booster
             booster = cast(Booster, item)
             result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
@@ -142,9 +151,6 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif inspect.isbuiltin(item):
             owner = getattr(item, '__self__', None)
             result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
-        elif inspect.isfunction(item):
-            closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
         elif (metadata := _typing_metadata(item)) is not None:
             result = (kind, 'typing-parameter', node(metadata), node(_attributes(item)))
         elif isinstance(item, GenericAlias):
