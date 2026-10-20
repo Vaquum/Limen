@@ -181,19 +181,28 @@ def all_reference_bindings(root: Path) -> list[dict[str, str]]:
     return found
 
 
+@lru_cache(maxsize=8)
+def markdown_documents(site: Path, texts: tuple[str, ...]) -> dict:
+    parser = '''import MarkdownIt from 'markdown-it';
+let input = ''; for await (const chunk of process.stdin) input += chunk;
+const markdown = new MarkdownIt({html:true});
+console.log(JSON.stringify(JSON.parse(input).map(text => {
+  const tokens = markdown.parse(text, {});
+  return {
+    fences: tokens.filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0]),
+    links: tokens.flatMap(token => token.children || []).filter(token => token.type === 'link_open').map(token => token.attrGet('href'))
+  };
+})));'''
+    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=site,
+                            input=json.dumps(texts), text=True, capture_output=True, check=True)
+    return {text: (tuple(record['fences']), tuple(record['links']))
+            for text, record in zip(texts, json.loads(parsed.stdout), strict=True)}
+
+
 @lru_cache(maxsize=256)
 def markdown_structure(site: Path, text: str) -> tuple[tuple[int, ...], tuple[str, ...]]:
-    parser = '''import MarkdownIt from 'markdown-it';
-let text = ''; for await (const chunk of process.stdin) text += chunk;
-const tokens = new MarkdownIt({html:true}).parse(text, {});
-console.log(JSON.stringify({
-  fences: tokens.filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0]),
-  links: tokens.flatMap(token => token.children || []).filter(token => token.type === 'link_open').map(token => token.attrGet('href'))
-}));'''
-    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=site,
-                            input=text, text=True, capture_output=True, check=True)
-    record = json.loads(parsed.stdout)
-    return tuple(record['fences']), tuple(record['links'])
+    documents = tuple(document.read_text() for document in maintained_documents(site.parent))
+    return markdown_documents(site, documents if text in documents else (text,))[text]
 
 
 def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] = ()) -> None:

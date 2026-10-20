@@ -1,4 +1,5 @@
 import argparse
+from functools import lru_cache
 import hashlib
 import json
 from pathlib import Path
@@ -17,11 +18,17 @@ def base_revision(root):
     return git(root, 'merge-base', 'HEAD', 'origin/main')
 
 
-def latest_change(root, base, path):
-    commit = git(root, 'log', '--first-parent', '--diff-merges=first-parent', '--no-patch', '-1', '--format=%H', base, '--', path)
+@lru_cache(maxsize=4096)
+def history_change(root, revision, path, first_parent):
+    options = ['--first-parent', '--diff-merges=first-parent'] if first_parent else []
+    commit = git(root, 'log', *options, '--no-patch', '-1', '--format=%H', revision, '--', path)
     if not commit:
-        raise ValueError('No first-parent source change: ' + path)
+        raise ValueError('No source change: ' + path)
     return commit
+
+
+def latest_change(root, base, path):
+    return history_change(root, git(root, 'rev-parse', base), path, True)
 
 
 def merged_pull(commit, responses):
@@ -62,20 +69,21 @@ def tree_objects(root, revision):
     return objects
 
 
-def identity(root, base, path, current, previous):
+def identity(root, base, path, current, previous, *, head=None):
     if previous.get(path) != current[path]:
-        return git(root, 'log', '-1', '--format=%H', 'HEAD', '--', path), 'candidate'
-    return latest_change(root, base, path), 'merged'
+        return history_change(root, head or git(root, 'rev-parse', 'HEAD'), path, False), 'candidate'
+    return history_change(root, base, path, True), 'merged'
 
 
 def acquire(root, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text('{"status":"running"}\n')
     base = base_revision(root)
-    current, previous = tree_objects(root, 'HEAD'), tree_objects(root, base)
+    head = git(root, 'rev-parse', 'HEAD')
+    current, previous = tree_objects(root, head), tree_objects(root, base)
     files, responses = [], {}
     for path in source_paths(root):
-        commit, status = identity(root, base, path, current, previous)
+        commit, status = identity(root, base, path, current, previous, head=head)
         pull = None
         if status == 'merged':
             if commit not in responses:
@@ -94,9 +102,10 @@ def validate_provenance(root, record):
     paths = source_paths(root)
     if len(record['files']) != len(paths) or {item['path'] for item in record['files']} != set(paths):
         raise ValueError('Source provenance inventory differs')
-    current, previous = tree_objects(root, 'HEAD'), tree_objects(root, base)
+    head = git(root, 'rev-parse', 'HEAD')
+    current, previous = tree_objects(root, head), tree_objects(root, base)
     for item in record['files']:
-        commit, status = identity(root, base, item['path'], current, previous)
+        commit, status = identity(root, base, item['path'], current, previous, head=head)
         if (item['commit'], item['status']) != (commit, status) or item['sha256'] != hashlib.sha256((root / item['path']).read_bytes()).hexdigest():
             raise ValueError('Source-changing commit or source bytes differ')
         expected = merged_pull(commit, record['responses'][commit]) if status == 'merged' else None

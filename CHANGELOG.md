@@ -1851,3 +1851,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Bind documentation publication to the successful package run, immutable public artifacts and an anonymously verified inactive Worker version; retain and verify the previous deployment on activation failure.
 - Replace the Docusaurus build and dependencies with the sole evidence-consuming research reader; retain the deployed predecessor through first-release cutover.
 - Record and verify retained and deliberately retired prelaunch routes, published README/package links and their current reading destinations.
+- Reduce repeated Markdown parser starts and immutable Git-history queries while retaining current source, provenance and execution checks.
