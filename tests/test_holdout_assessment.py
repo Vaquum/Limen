@@ -1509,9 +1509,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             return max
     class DynamicClassThreshold:
         __call__ = DynamicClassMethod(identity_probabilities)
+    class DynamicProperty(property):
+        def __get__(self, instance, owner=None):
+            return max
+    class DynamicPropertyThreshold:
+        __call__ = DynamicProperty(lambda self: identity_probabilities)
     misleading = NativeThreshold()
     misleading.__wrapped__ = identity_probabilities
-    for callback in (misleading, DynamicThreshold(), DynamicClassThreshold()):
+    for callback in (misleading, DynamicThreshold(), DynamicClassThreshold(), DynamicPropertyThreshold()):
         unsafe_callback._model.callback_provider.prediction_calibration_config.threshold_func = callback
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
@@ -1533,6 +1538,26 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     assert _report(distinct_handle, assessment_case)['rows_sha256']
     with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
         distinct._model.callback_provider.prediction_calibration_config.threshold_func(distinct._model.model.coef_.ravel())
+    def positional_default(offset):
+        def invoke(values, adjustment=offset):
+            return np.clip(values + adjustment, 0, 1)
+        return invoke
+    def keyword_default(offset):
+        def invoke(values, *, adjustment=offset):
+            return np.clip(values + adjustment, 0, 1)
+        return invoke
+    for factory, callback_offset in ((positional_default, expected_offset + 0.1), (keyword_default, expected_offset + 0.1), (positional_default, expected_offset)):
+        prediction = factory(expected_offset)
+        callback = factory(callback_offset)
+        original_code = callback.__code__
+        distinct._model.policy = prediction
+        distinct._model.callback_provider.prediction_calibration_config.threshold_func = callback
+        distinct_handle = _freeze(distinct)
+        assert _report(distinct_handle, assessment_case)['rows_sha256']
+        assert callback.__code__ is original_code
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
+            callback(distinct._model.model.coef_.ravel(), adjustment=expected_offset)
+        assert callback.__code__ is original_code
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

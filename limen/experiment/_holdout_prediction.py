@@ -6,13 +6,14 @@ import inspect
 from functools import partial
 import random
 import sys
-from types import CodeType, FrameType, FunctionType
+from types import FrameType, FunctionType
 from typing import cast
 
 import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, call_functions, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_array, restore_iterations
+from limen.experiment._holdout_calls import call_codes
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -43,7 +44,7 @@ def _matches(function: FunctionType, frame: FrameType, owner: object | None) -> 
 
 @contextmanager
 def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | None = None) -> Iterator[None]:
-    forbidden: dict[CodeType, list[tuple[FunctionType, object | None]]] = {}
+    forbidden: dict[FunctionType, list[object | None]] = {}
     seen: set[int] = set()
     configs: list[object] = []
 
@@ -76,7 +77,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             wrapped_owner = type(wrapped) if isinstance(wrapped_call, classmethod) else None if isinstance(wrapped_call, staticmethod) else wrapped
         for function in functions:
             owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
-            forbidden.setdefault(function.__code__, []).append((function, owner))
+            forbidden.setdefault(function, []).append(owner)
 
     def collect(value: object) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or isinstance(value, (pl.DataFrame, pl.Series)) or (type(value).__module__ == 'numpy' and type(value).__name__ == 'ndarray' and not object_array(value)):
@@ -124,18 +125,22 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             violation = 'Holdout inference consumed unowned randomness'
             raise ValueError(violation)
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
-        matched = event == 'call' and frame.f_code in forbidden and any(_matches(function, frame, owner) for function, owner in forbidden[frame.f_code])
+        matched = event == 'call' and id(frame.f_code) in observed and any(_matches(observed[id(frame.f_code)][0], frame, owner) for owner in observed[id(frame.f_code)][1])
         if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = 'Holdout inference attempted fitting/calibration/threshold search'
             raise ValueError(violation)
         if previous is not None:
             _ = previous(frame, event, arg)
 
-    sys.setprofile(profile)
     try:
-        yield
+        with call_codes(tuple(forbidden)):
+            observed = {id(function.__code__): (function, owners) for function, owners in forbidden.items()}
+            sys.setprofile(profile)
+            try:
+                yield
+            finally:
+                sys.setprofile(previous)
     finally:
-        sys.setprofile(previous)
         if violation is not None:
             raise ValueError(violation)
         if fitted_witness(np.random.get_state()) != numpy_state or random.getstate() != python_state:

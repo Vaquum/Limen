@@ -212,12 +212,12 @@ def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (
 
 
 def call_functions(value: object) -> tuple[FunctionType, ...]:
-    if isinstance(value, (staticmethod, classmethod)):
-        native: type[object] = staticmethod if isinstance(value, staticmethod) else classmethod
-        descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
+    if isinstance(value, (property, staticmethod, classmethod)):
+        native: type[object] = property if isinstance(value, property) else staticmethod if isinstance(value, staticmethod) else classmethod
+        descriptor = cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value)
         if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
             return ()
-        return call_functions(descriptor.__func__)
+        return call_functions(descriptor.fget if isinstance(descriptor, property) else descriptor.__func__)
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
@@ -230,8 +230,7 @@ def call_functions(value: object) -> tuple[FunctionType, ...]:
     if inspect.isfunction(value):
         return (value,)
     call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-    functions = call_functions(call.fget) if isinstance(call, property) else call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
-    return functions
+    return call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (property, staticmethod, classmethod)) else ()
 
 
 def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
