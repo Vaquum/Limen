@@ -106,6 +106,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
+    is_component = callable(value)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -113,9 +114,9 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
         if value.__qualname__ == 'MLManifest.set_scaler_from_params.<locals>._scaler_factory':
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
-    if isinstance(value, dict) and not callable(value):
+    if isinstance(value, dict) and not is_component:
         return {key: _normalize(item, active) for key, item in cast(dict[str, object], value).items()}
-    if isinstance(value, (list, tuple)) and not callable(value):
+    if isinstance(value, (list, tuple)) and not is_component:
         items = [_normalize(item, active) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
     if issubclass(type(value), partial):
