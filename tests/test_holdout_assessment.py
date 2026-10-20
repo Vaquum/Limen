@@ -966,7 +966,8 @@ def test_profile_replacement_cannot_complete_final_assessment(native_assessment_
 
 
 @pytest.mark.parametrize('entry', ['__new__', '__init__', '__call__'])
-def test_trusted_component_class_constructor_binding(native_assessment_case, entry):
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_trusted_component_class_constructor_binding(native_assessment_case, entry, wrapped):
     from limen.sfd.reference_architecture.logreg_binary import logreg_binary
     class Meta(type):
         def __call__(cls, data, **params):
@@ -977,11 +978,12 @@ def test_trusted_component_class_constructor_binding(native_assessment_case, ent
         def __init__(self, data, **params):
             self.data = data
     def configure(manifest):
-        manifest.with_reference_architecture(Factory)
+        manifest.with_reference_architecture(partial(Factory) if wrapped else Factory)
     compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
     recorded = compiled.yaml_reference
-    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is Factory
-    directory = native_assessment_case[0] / f'constructor-{entry}'
+    architecture = CompiledSFD(recorded, components=configure).manifest().architecture_function
+    assert architecture.func is Factory if wrapped else architecture is Factory
+    directory = native_assessment_case[0] / f'constructor-{entry}-{wrapped}'
     directory.mkdir()
     metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
     metadata['yaml_reference'] = recorded
