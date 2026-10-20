@@ -295,8 +295,10 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     evidence.append((namespace_name, function.__module__, function.__qualname__, key, part))
     if capture is not None:
         capture.extend(seen.values())
-    del visit, methods
-    return [fitted_witness((tuple(values), evidence))]
+    result = [fitted_witness((tuple(values), evidence))]
+    for graph in (seen, objects, evidence):
+        graph.clear()
+    return result
 
 
 def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:

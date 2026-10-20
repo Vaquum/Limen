@@ -96,9 +96,7 @@ def children(value: object) -> tuple[object, ...]:
     return _cell_parts(value) if type(value) is CellType else tuple(_attributes(value).values())
 
 def _attributes(value: object) -> dict[str, object]:
-    if type(value) in _FORM_TYPES:
-        return {}
-    if type(value) in _NO_ATTRIBUTE_TYPES:
+    if type(value) in _FORM_TYPES or type(value) in _NO_ATTRIBUTE_TYPES:
         return {}
     values: dict[str, object] = {}
     native_dict = False
@@ -217,6 +215,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             result = (kind, pickle.dumps(item, protocol=5))
         return result
     result = node(value)
-    del node, structure
     aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
-    return pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
+    encoded = pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
+    for graph in (seen, retained, classes):
+        graph.clear()
+    return encoded
