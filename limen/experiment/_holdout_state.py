@@ -139,7 +139,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)), node(item.__annotations__))
+            result = ('function', item.__module__, item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)), node(item.__annotations__))
         elif _booster(item):
             from lightgbm import Booster
             booster = cast(Booster, item)
@@ -192,7 +192,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             raise ValueError('Holdout refuses opaque external prediction dependencies')
         elif type(item).__dictoffset__ or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
             if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in type(item).__mro__):
-                raise ValueError('Holdout refuses opaque native prediction state')
+                raise ValueError(f'Holdout refuses opaque native prediction state: {kind[0]}.{kind[1]}')
             result = (kind, node(_attributes(item)))
         else:
             result = (kind, pickle.dumps(item, protocol=5))

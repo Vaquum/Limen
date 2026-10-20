@@ -1952,6 +1952,64 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(annotation_handle, assessment_case)
                 assert loader.call_count == 0
+    class AnnotationHelper:
+        def __new__(cls, values):
+            return later_probabilities(values)
+    annotated._model.policy = identity_probabilities
+    with patch.object(identity_probabilities, '__annotations__', {'adjust': AnnotationHelper}):
+        class_handle = _freeze(annotated)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(class_handle, assessment_case)
+            assert loader.call_count == 0
+        with patch.object(AnnotationHelper, '__new__', staticmethod(lambda cls, values: values)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(class_handle, assessment_case)
+            assert loader.call_count == 0
+    class FunctionDefaults(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.__defaults__[0](result['_probs'])
+            return result
+    annotated._model.__class__ = FunctionDefaults
+    annotated._model.policy = LogisticRegression.predict_proba
+    with patch.object(LogisticRegression.predict_proba, '__defaults__', (later_probabilities,)):
+        defaults_handle = _freeze(annotated)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(defaults_handle, assessment_case)
+            assert loader.call_count == 0
+    from types import FunctionType
+    def captured_adjustment(adjust):
+        def apply(values):
+            return adjust(values)
+        return apply
+    template = captured_adjustment(later_probabilities)
+    annotated._model.policy = FunctionType(template.__code__, LogisticRegression.predict_proba.__globals__, closure=template.__closure__)
+    class FunctionClosure(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.__closure__[0].cell_contents(result['_probs'])
+            return result
+    annotated._model.__class__ = FunctionClosure
+    closure_handle = _freeze(annotated)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(closure_handle, assessment_case)
+        assert loader.call_count == 0
+    class FunctionDocument(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + float(self.policy.__doc__), 0, 1)
+            return result
+    annotated._model.__class__ = FunctionDocument
+    annotated._model.policy = identity_probabilities
+    with patch.object(identity_probabilities, '__doc__', str(expected_offset)):
+        document_handle = _freeze(annotated)
+        with patch.object(identity_probabilities, '__doc__', str(expected_offset + 0.1)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='changed'):
+                _report(document_handle, assessment_case)
+            assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

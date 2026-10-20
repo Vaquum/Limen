@@ -45,6 +45,13 @@ def _function_module(value: FunctionType) -> str:
     module = sys.modules.get(name) if isinstance(name, str) else None
     return module.__name__ if module is not None and vars(module) is value.__globals__ else ''
 
+def _native_annotation(value: object) -> bool:
+    if not isinstance(value, type):
+        return False
+    module = sys.modules.get(value.__module__)
+    root = value.__module__.split('.')[0]
+    return module is not None and vars(module).get(value.__qualname__) is value and (root in sys.stdlib_module_names or root in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'))
+
 
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
     seen: dict[int, object] = {}
@@ -61,7 +68,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes, type(Union), type(Literal)) or (annotation and isinstance(value, type)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
+        if value is None or type(value) in (str, bool, int, float, bytes, type(Union), type(Literal)) or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
             if isinstance(value, str) and not annotation:
                 attributes.add(value)
                 method_names.add(value)
@@ -90,21 +97,21 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 objects.append(cast(object, value))
         elif inspect.isfunction(value):
             evidence.append(value)
+            visit(vars(value))
+            visit(value.__annotations__, annotation=True)
+            visit(value.__defaults__)
+            visit(value.__kwdefaults__)
+            for cell in value.__closure__ or ():
+                visit(cell.cell_contents)
             function_module, function_name = _function_module(value), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
             if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
             method_names.update(value.__code__.co_names)
-            visit(vars(value))
-            visit(value.__annotations__, annotation=True)
             if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
                 return
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
-            visit(value.__defaults__)
-            visit(value.__kwdefaults__)
-            for cell in value.__closure__ or ():
-                visit(cell.cell_contents)
             instructions = _instructions(value.__code__)
             references = {name: [part] for name, part in value.__globals__.items()}
             references.update((name, [cell.cell_contents]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True))
