@@ -1746,7 +1746,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         def default_factory(self):
             return identity_probabilities
         def adjust(self, values):
-            return self['provider'](values)
+            return defaultdict.__dict__['default_factory'].__get__(self, type(self))()(values)
         def __deepcopy__(self, memo):
             return type(self)(defaultdict.__dict__['default_factory'].__get__(self, type(self)))
     class NonpreservingFactory(HiddenFactory):
