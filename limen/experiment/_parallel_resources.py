@@ -15,13 +15,15 @@ from typing import cast
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, _TargetClass, component_digest, static_source
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
 
 @dataclass
 class FrozenClassFactory:
+    """Avoid Python 3.10 dataclass signature inference on the instance-only property."""
+
     factory_class: type
     initializer: Callable[..., object] | None
     allocator: Callable[..., object] | None
@@ -303,7 +305,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
         result['target'] = _defaults(target.target_class, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=2, path='target', runtime=runtime)
-        transform_config = _defaults(getattr(target.target_class, 'transform'), dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
+        transform_config = _defaults(cast(_TargetClass, target.target_class).transform, dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
     if isinstance(manifest, MLManifest):

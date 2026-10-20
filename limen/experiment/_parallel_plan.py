@@ -147,7 +147,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     active |= {id(value)}
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
-        target = cast(_manifest.TargetClassConfig, value)
+        target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
                                     signature_defaults(target.target_class, 2), signature_defaults(cast(_TargetClass, target.target_class).transform, 2),
                                     cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform)
@@ -175,9 +175,9 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     else:
         clone = _normalize_component(cast(object, value), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     memo[key] = (value, clone)
-    if not callable(value) or key not in state_memo:
+    if not callable(cast(object, value)) or key not in state_memo:
         state_memo[key] = (cast(object, value), clone)
-    return clone
+    return cast(object, clone)
 
 
 def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
@@ -188,12 +188,12 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
-        elif not inspect.isfunction(value):
-            owner = cast(object, value.__self__ if inspect.ismethod(value) else value)
+        elif not inspect.isfunction(cast(object, value)):
+            owner = cast(object, value.__self__ if inspect.ismethod(cast(object, value)) else value)
             restored = clone.__self__ if inspect.ismethod(clone) else clone
             if not isinstance(owner, type):
                 _ = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
-            if inspect.ismethod(value):
+            if inspect.ismethod(cast(object, value)):
                 _ = _normalize(value.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
         if hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
@@ -273,7 +273,9 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
 def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | None,
                     factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
     from limen.yaml.compiler import build_manifest
-    from limen.experiment._parallel_resources import bind_factories, factory_bindings
+    resources = vars(import_module('limen.experiment._parallel_resources'))
+    bind_factories = cast(Callable[[Mapping[str, list[object]], Mapping[str, object]], dict[str, object]], resources['bind_factories'])
+    factory_bindings = cast(Callable[[Manifest, Mapping[str, list[object]] | None], dict[str, list[object]]], resources['factory_bindings'])
 
     source = copy.copy(manifest)
     vars(source)['_parallel_factory_options'] = factory_bindings(manifest, factory_options)
