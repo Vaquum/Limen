@@ -61,6 +61,10 @@ class _Source:
         type(self).calls += 1
         self.data = _recorded(rows=args)
 
+    def positional(receiver, /, **kwargs):
+        type(receiver).calls += 1
+        receiver.data = _recorded(rows=kwargs['receiver'])
+
     @staticmethod
     def static(*, rows=3):
         return _recorded(rows=rows)
@@ -102,7 +106,8 @@ def _normalized(frame):
 @pytest.mark.parametrize('api', _APIS)
 @pytest.mark.parametrize('form', ('function', 'partial', 'parquet_partial', 'instance', 'local', 'static',
                                 'named_self', 'receiver', 'unbound', 'bound', 'decorated',
-                                'variadic', 'variadic_bound', 'selective_wrapper', 'native_file', 'native_file_bound',
+                                'variadic', 'variadic_bound', 'positional', 'positional_bound',
+                                'selective_wrapper', 'native_file', 'native_file_bound',
                                 'native_spot', 'native_spot_bound'))
 def test_manifest_callable_sources(manifest_type, api, form):
     raw = pl.read_parquet(_FILE)
@@ -126,7 +131,8 @@ def test_manifest_callable_sources(manifest_type, api, form):
                'named_self': _Source.named_self, 'receiver': _Source.load,
                'unbound': _Source.load, 'bound': owner.load,
                'decorated': _Source.decorated, 'variadic': _Source.variadic,
-               'variadic_bound': owner.variadic, 'selective_wrapper': selective}
+               'variadic_bound': owner.variadic, 'positional': _Source.positional,
+               'positional_bound': owner.positional, 'selective_wrapper': selective}
     _Source.calls = 0
     if form.startswith('native_file'):
         method = HistoricalData().get_any_file if form.endswith('bound') else HistoricalData.get_any_file
@@ -151,6 +157,8 @@ def test_manifest_callable_sources(manifest_type, api, form):
             params['self'] = raw
         elif form.startswith('variadic'):
             params = {'args': 3}
+        elif form.startswith('positional'):
+            params = {'receiver': 3}
     manifest = manifest_type()
     if form.startswith('native_spot'):
         with patch('limen.data.historical_data._read_any_file', return_value=quarter) as transport:
@@ -162,14 +170,15 @@ def test_manifest_callable_sources(manifest_type, api, form):
     config = getattr(manifest, f'{api}_source_config')
     assert config.method is method
     assert config.params is params
-    key = 'row_count_limit' if form.startswith('native') else 'n_rows' if form == 'parquet_partial' else 'args' if form.startswith('variadic') else 'rows'
+    key = ('row_count_limit' if form.startswith('native') else 'n_rows' if form == 'parquet_partial'
+           else 'args' if form.startswith('variadic') else 'receiver' if form.startswith('positional') else 'rows')
     assert params[key] == 3
     if form in ('local', 'selective_wrapper'):
         assert calls == [3]
         assert result is not raw
-    if form in ('decorated', 'variadic', 'variadic_bound'):
+    if form in ('decorated', 'variadic', 'variadic_bound', 'positional', 'positional_bound'):
         assert _Source.calls == 1
-    if form in ('bound', 'receiver', 'variadic_bound'):
+    if form in ('bound', 'receiver', 'variadic_bound', 'positional_bound'):
         assert_frame_equal(owner.data, raw.head(3))
 
 
