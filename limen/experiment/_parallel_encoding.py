@@ -167,11 +167,10 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
     if tag == 'method':
         owner = (_decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True)
                  if isinstance(value, list) and value and value[0] in ('dataclass', 'instance') else decode(cast(object, value), isolate_functions=isolate_functions))
-        method = getattr(owner, cast(str, parts[2]))
         function = decode(parts[3], isolate_functions=isolate_functions)
-        if not inspect.ismethod(method) or not inspect.isfunction(function) or reference(method.__func__) != reference(function):
+        if not inspect.isfunction(function):
             raise ValueError('Parallel bound method implementation changed')
-        return MethodType(function, method.__self__)
+        return MethodType(function, owner)
     return _decode_instance(parts, isolate_functions=isolate_functions)
 
 
