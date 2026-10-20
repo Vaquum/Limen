@@ -59,7 +59,7 @@ def children(value: object) -> tuple[object, ...]:
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value):
         return ()
     if isinstance(value, partial):
-        return (value.func, value.args, value.keywords, _attributes(value))
+        return (value.func, value.args, value.keywords, _attributes(cast(object, value)))
     return tuple(_attributes(value).values())
 
 
@@ -112,7 +112,7 @@ def fitted_witness(value: object) -> bytes:
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
         elif isinstance(item, partial):
-            result = (kind, 'partial', node(item.func), node(item.args), node(item.keywords), node(_attributes(item)))
+            result = (kind, 'partial', node(item.func), node(item.args), node(item.keywords), node(_attributes(cast(object, item))))
         elif isinstance(item, bytearray):
             result = (kind, bytes(memoryview(item)), node(_attributes(item)))
         elif isinstance(item, (str, int, float, bytes)):
