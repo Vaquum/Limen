@@ -337,6 +337,7 @@ def test_frozen_manifest_round_plan() -> None:
                 restored = decode(encode(component))
                 assert list(restored.steps) == ['offset', 'multiply']
                 restored.steps = dict(reversed(list(restored.steps.items())))
+                declare_parallel(restored, contract)
                 reordered = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(restored), None)
                 assert reordered.pipeline_digest != frozen.pipeline_digest and reordered.resource_digest != frozen.resource_digest
             if isinstance(component, (DictRolling, ListRolling)):
