@@ -351,7 +351,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), partial(CallerRolling(3)), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
+        for component in (partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             if isinstance(component, (DictRolling, ListRolling)):
@@ -439,6 +439,17 @@ def test_frozen_manifest_round_plan() -> None:
         frozen = freeze_manifest(target, None)
         params = _parameters() | {'target_seed': 42}
         assert pool.submit(_target_probe, frozen, params).result(timeout=30) == _target_probe(frozen, params)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(ShadowedSeedRolling.__call__, '__defaults__', (42,))
+            component = ShadowedSeedRolling(None)
+            declare_parallel(component, ParallelRoundContract(seeded_stage, ('random_state',)))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+            before = digest(frozen)
+        assert digest(frozen) == before
+        validate_resources(frozen, params)
+        actual, pid = pool.submit(_carried_probe, frozen, params).result(timeout=30)
+        expected, _ = _carried_probe(frozen, params)
+        assert actual == expected and pid != os.getpid()
         shadowed = ShadowedSeedRolling()
         signature = SignatureSeedRolling(None)
         for component in (shadowed, signature):

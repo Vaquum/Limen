@@ -7,6 +7,7 @@ import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from functools import partial
+from types import FunctionType, MethodType
 from importlib import import_module
 from typing import Protocol, cast
 
@@ -15,7 +16,7 @@ from typing_extensions import override
 
 from limen._parallel_contract import ParallelRoundContract, attach
 from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
-from limen.experiment._parallel_state import component_state
+from limen.experiment._parallel_state import call_implementation, component_state
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
@@ -129,6 +130,10 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
             object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot))
     else:
         clone = copy.deepcopy(value)
+    implementation = call_implementation(value)
+    if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__):
+        clone = partial(MethodType(cast(FunctionType, decode(encode(implementation), isolate_functions=True)), clone))
+        vars(clone)['__parallel_round_contract__'] = getattr(value, '__parallel_round_contract__', None)
     return clone
 
 

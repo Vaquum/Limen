@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
-from inspect import signature
+from inspect import ismethod, signature
 from types import MemberDescriptorType
 from typing import cast
 
@@ -25,6 +25,8 @@ def slot_state(value: object) -> list[tuple[type, str, object]]:
 
 
 def component_state(value: object) -> dict[str, object]:
+    if ismethod(value):
+        return {} if isinstance(value.__self__, type) else component_state(value.__self__)
     state = dict(vars(value)) if hasattr(value, '__dict__') else {}
     state |= {name: item for _, name, item in reversed(slot_state(value))}
     if issubclass(type(value), partial):

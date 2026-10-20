@@ -88,7 +88,10 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
 
 def _encode_component(value: object, active: frozenset[int]) -> list[object]:
     if inspect.ismethod(value):
-        return ['method', encode(value.__self__, active), value.__name__, encode(value.__func__, active)]
+        owner = encode(value.__self__, active)
+        if owner[0] in ('dataclass', 'instance'):
+            owner[-1] = ['null']  # The owner supplies state; the separately captured method is invoked.
+        return ['method', owner, value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value):
         return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True)]
     if isinstance(value, type):
@@ -165,7 +168,9 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
                 vars(function)['__parallel_round_contract__'] = vars(source)['__parallel_round_contract__']
         return function
     if tag == 'method':
-        method = getattr(decode(value, isolate_functions=isolate_functions), cast(str, parts[2]))
+        owner = (_decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True)
+                 if isinstance(value, list) and value and value[0] in ('dataclass', 'instance') else decode(value, isolate_functions=isolate_functions))
+        method = getattr(owner, cast(str, parts[2]))
         function = decode(parts[3], isolate_functions=isolate_functions)
         if not inspect.ismethod(method) or not inspect.isfunction(function) or reference(method.__func__) != reference(function):
             raise ValueError('Parallel bound method implementation changed')
@@ -173,7 +178,7 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
     return _decode_instance(parts, isolate_functions=isolate_functions)
 
 
-def _decode_instance(parts: list[object], *, isolate_functions: bool) -> object:
+def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only: bool = False) -> object:
     tag, value, state, implementation = parts
     if tag == 'dataclass':
         cls = cast(type, _import(value))
@@ -187,7 +192,7 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool) -> object:
         instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
-    if encode(call_implementation(instance)) != implementation:
+    if not owner_only and encode(call_implementation(instance)) != implementation:
         raise ValueError('Parallel callable implementation changed')
     return instance
 
