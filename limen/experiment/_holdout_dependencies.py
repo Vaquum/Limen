@@ -172,7 +172,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         elif isinstance(value, partial):
             for part in children(cast(object, value)):
                 visit(part)
-            if type(value) is not partial:
+            if type(cast(object, value)) is not partial:
                 objects.append(cast(object, value))
         elif inspect.isfunction(value):
             evidence.append(cached_witness(id(value)))
