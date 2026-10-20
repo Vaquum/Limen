@@ -622,18 +622,24 @@ def test_frozen_manifest_round_plan() -> None:
     assert clone_manifest(plan.manifest).architecture_function is original.architecture_function
     assert clone_manifest(plan.manifest).prediction_calibration_config.threshold_func is original.prediction_calibration_config.threshold_func
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
-    for component in (original.architecture_function, original.prediction_calibration_config.threshold_func):
+    method = MethodOnlyRolling(3).transform
+    declare_parallel(method, ParallelRoundContract(_caller_validator, ('window',)))
+    method_manifest = copy.deepcopy(plan.manifest).add_feature(method)
+    method_plan = freeze_manifest(method_manifest, None)
+    for component, live, frozen in ((original.architecture_function, original, plan),
+                                    (original.prediction_calibration_config.threshold_func, original, plan),
+                                    (method.__func__, method_manifest, method_plan)):
         revoked = replace(component.__parallel_round_contract__, validate=unfrozen_stage)
-        captured = digest(plan)
+        captured = digest(frozen)
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(component, '__parallel_round_contract__', revoked)
-            restored = clone_manifest(plan.manifest)
+            restored = clone_manifest(frozen.manifest)
             assert component.__parallel_round_contract__ is revoked
-            validate_resources(plan, _parameters())
+            validate_resources(frozen, _parameters())
             validate_resources(freeze_manifest(restored, None), _parameters())
             with pytest.raises(ValueError, match='unfrozen external state'):
-                validate_resources(freeze_manifest(original, None), _parameters())
-            assert component.__parallel_round_contract__ is revoked and digest(plan) == captured
+                validate_resources(freeze_manifest(live, None), _parameters())
+            assert component.__parallel_round_contract__ is revoked and digest(frozen) == captured
     assert len(pickle.dumps(plan)) <= 65536
     from limen.experiment import _parallel_identity as identities
     def no_discovery():
