@@ -26,7 +26,7 @@ from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
 from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness
-from limen.experiment._holdout_prediction import restore_iterations, validate_inference_dependencies, validate_prediction
+from limen.experiment._holdout_prediction import restore_iterations, validate_prediction
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
@@ -287,7 +287,7 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
                 source.method = getattr(source.method, '__func__', source.method)
                 values['data_source_config'] = source
             vars(manifest).clear()
-            vars(manifest).update(copy.deepcopy(values))
+            vars(manifest).update(copy.deepcopy(values, memo))
             if '_holdout_binding' in vars(cached):
                 vars(manifest)['_holdout_binding'] = vars(cached)['_holdout_binding']
         vars(member)['_manifest'] = manifest
@@ -320,10 +320,12 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
             versions[package] = version(package)
         except PackageNotFoundError:
             versions[package] = None
+    for member in members(selection):
+        _ = vars(Sensor)['_get_manifest'](member)
+    dependencies = prediction_dependencies(selection)
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
-    for member in members(snapshot[0]):
-        validate_inference_dependencies(member)
-    dependencies = prediction_dependencies(snapshot[0])
+    if prediction_dependencies(snapshot[0]) != dependencies:
+        raise ValueError('Holdout copy changed prediction dependencies')
     for member in members(snapshot[0]):
         validate_prediction(member)
     if prediction_dependencies(snapshot[0]) != dependencies:

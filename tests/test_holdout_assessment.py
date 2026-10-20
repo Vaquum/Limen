@@ -607,6 +607,22 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='mutated prediction dependencies'):
             _freeze(assessment_case[2][0][0])
         assert loader.call_count == 0
+    class CopyDependency(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = later_probabilities(result['_probs'])
+            return result
+        def __deepcopy__(self, memo):
+            result = type(self).__new__(type(self))
+            vars(result).update(copy.deepcopy(vars(self), memo))
+            _LATE_RULES['offset'] += 0.1
+            return result
+    copy_dependency = copy.deepcopy(assessment_case[2][0][0])
+    copy_dependency._model.__class__ = CopyDependency
+    with patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed prediction dependencies'):
+            _freeze(copy_dependency)
+        assert loader.call_count == 0
     defaults, closure = {'offset': 0.0}, {'offset': 0.0}
     def correction(values=defaults):
         return values['offset'] + closure['offset']

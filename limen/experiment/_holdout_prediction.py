@@ -12,11 +12,11 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_evidence, object_array
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, object_array
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
-__all__ = ['readonly_prediction', 'restore_iterations', 'validate_inference_dependencies', 'validate_prediction']
+__all__ = ['readonly_prediction', 'restore_iterations', 'validate_prediction']
 _EFFECTS = FITTING_METHODS
 
 
@@ -124,12 +124,6 @@ def _probe_output(sensor: Sensor) -> object:
     if result.probability is not None and (not np.isfinite(result.probability) or not 0 <= result.probability <= 1):
         raise ValueError('Holdout requires finite fitted probabilities')
     return result
-
-
-def validate_inference_dependencies(sensor: Sensor) -> None:
-    roots = _roots(sensor)
-    config = getattr(vars(sensor)['_model'], 'prediction_calibration_config', None)
-    _ = inference_evidence(roots, exclude=() if config is None else (config,))
 
 
 def validate_prediction(sensor: Sensor) -> None:
