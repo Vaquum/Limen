@@ -15,7 +15,7 @@ class _ProfileState(local):
 _ACTIVE = _ProfileState()
 
 
-def _audit(event: str, args: tuple[object, ...]) -> None:
+def _audit(event: str, _args: tuple[object, ...]) -> None:
     active = _ACTIVE.failure if event == 'sys.setprofile' else None
     if active is not None:
         active.append('Holdout inference attempted profile replacement')
