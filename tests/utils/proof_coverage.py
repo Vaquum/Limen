@@ -1,3 +1,5 @@
+"""PYTEST_DONT_REWRITE: the controller imports this assertion-free plugin."""
+
 from __future__ import annotations
 
 import hashlib
