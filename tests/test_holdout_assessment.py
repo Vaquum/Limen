@@ -2010,6 +2010,24 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='changed'):
                 _report(document_handle, assessment_case)
             assert loader.call_count == 0
+    class FunctionMetadataCall(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            payload = getattr(self.policy, self.metadata_field)
+            adjust = payload[0] if isinstance(payload, tuple) else payload
+            result['_probs'] = adjust(result['_probs'])
+            return result
+    annotated._model.__class__ = FunctionMetadataCall
+    for policy in (identity_probabilities, LogisticRegression.predict_proba):
+        annotated._model.policy = policy
+        for field in ('__doc__', '__type_params__'):
+            annotated._model.metadata_field = field
+            with patch.object(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities, create=True):
+                metadata_handle = _freeze(annotated)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(metadata_handle, assessment_case)
+                    assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

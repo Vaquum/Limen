@@ -100,6 +100,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             evidence.append(value)
             visit(vars(value))
             visit(value.__annotations__, annotation=True)
+            visit(value.__doc__, annotation=True)
+            visit(getattr(value, '__type_params__', ()), annotation=True)
             visit(value.__defaults__)
             visit(value.__kwdefaults__)
             for cell in value.__closure__ or ():
