@@ -1,6 +1,7 @@
 import io
 import json
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import functools
+from http.server import BaseHTTPRequestHandler, SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tarfile
 from threading import Thread
@@ -9,7 +10,7 @@ import pytest
 
 from build_bundle import write_archive
 from publication import restore, validated_site_files
-from verify_publication import ROLES, archive_files, fetch, relative_path, retrieve, sha256
+from verify_publication import ROLES, archive_files, fetch, manifest_name, relative_path, retrieve, sha256, verify_release_manifest
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -43,6 +44,31 @@ def test_anonymous_release_retrieval(anonymous_server):
     assert fetch(base + 'retained-python.json') == payload
     assert len(requests) == 1
     assert not any(name.lower() in ('authorization', 'cookie') for name in requests[0])
+
+
+def test_publication_manifest_rebuild_preserves_the_previous_release_identity(tmp_path):
+    previous = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
+    current = (ROOT / 'docs/examples/retained/compiled-selection.json').read_bytes()
+    assert previous != current
+    for payload in (previous, current):
+        (tmp_path / manifest_name(payload)).write_bytes(payload)
+    (tmp_path / 'publication.json').write_bytes(current)
+    handler = functools.partial(SimpleHTTPRequestHandler, directory=str(tmp_path))
+    server = ThreadingHTTPServer(('127.0.0.1', 0), handler)
+    worker = Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    try:
+        base = f'http://127.0.0.1:{server.server_port}/'
+        assert fetch(base + 'publication.json') == current
+        verify_release_manifest(base, previous)
+        verify_release_manifest(base, current)
+        (tmp_path / manifest_name(previous)).write_bytes(current)
+        with pytest.raises(ValueError, match='manifest differs'):
+            verify_release_manifest(base, previous)
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join(timeout=3)
 
 
 def test_anonymous_transport_cannot_accept_changed_artifact(anonymous_server):

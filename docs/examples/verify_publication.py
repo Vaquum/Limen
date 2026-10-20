@@ -18,6 +18,15 @@ def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def manifest_name(payload: bytes) -> str:
+    return 'publication-' + sha256(payload) + '.json'
+
+
+def verify_release_manifest(release_url: str, payload: bytes) -> None:
+    if fetch(urljoin(release_url.rstrip('/') + '/', manifest_name(payload))) != payload:
+        raise ValueError('The active manifest differs from the public GitHub Release')
+
+
 def relative_path(value: str) -> str:
     path = PurePosixPath(value)
     if not value or path.is_absolute() or '..' in path.parts or str(path) != value or not re.fullmatch(r'[A-Za-z0-9_./-]+', value):
@@ -79,8 +88,7 @@ def verify(base_url: str, release: str):
         raise ValueError('Publication belongs to another release')
     files = retrieve(base_url, manifest)
     release_url = f'https://github.com/Vaquum/Limen/releases/download/{release}/'
-    if fetch(release_url + 'publication.json') != manifest_bytes:
-        raise ValueError('The active manifest differs from the public GitHub Release')
+    verify_release_manifest(release_url, manifest_bytes)
     for role, artifact in manifest['artifacts'].items():
         name = PurePosixPath(artifact['path']).name
         if sha256(fetch(release_url + name)) != sha256(files[role]):

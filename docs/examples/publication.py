@@ -7,7 +7,7 @@ import subprocess
 from build_bundle import write_archive
 from check_evidence import maintained_documents, validate_evidence
 from released_wheel import verify_download
-from verify_publication import archive_files, relative_path, sha256
+from verify_publication import archive_files, manifest_name, relative_path, sha256
 
 
 def git(root: Path, *arguments: str) -> str:
@@ -138,6 +138,7 @@ def prepare(root: Path, release: str):
     manifest = {'schema_version': 1, 'release': release, 'merged_commit': record['revision']['head'], 'artifacts': artifacts}
     encoded = (json.dumps(manifest, indent=2) + '\n').encode()
     (output / 'publication.json').write_bytes(encoded)
+    (output / manifest_name(encoded)).write_bytes(encoded)
     (site / 'publication.json').write_bytes(encoded)
     return manifest
 
