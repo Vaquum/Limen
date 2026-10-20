@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from deploy_publication import activate, require_latest_release
+from deploy_publication import activate, require_latest_release, stage
 from release_assets import attach
 from release_identity import validate_identity
 
@@ -117,3 +117,33 @@ def test_failed_production_verification_restores_and_checks_the_previous_version
                           'deploy ' + staged['previous']['version_id']]
     assert json.loads((output / 'rollback.json').read_text()) == staged['previous']
     assert not (output / 'accepted.json').exists()
+
+
+def test_staging_rejects_a_version_change_during_rollback_capture(monkeypatch, tmp_path):
+    from verify_publication import sha256
+    site = tmp_path / 'docs-site/reader-build'
+    site.mkdir(parents=True)
+    (site / 'publication.json').write_text(json.dumps({'release': 'v5.45.3'}))
+    operations = []
+    versions = iter(['d3143e09-4594-47f7-8344-4dd3d113b414', '9d51a409-ca8e-44ca-ab4d-7a0a3958e84d'])
+    monkeypatch.setattr('deploy_publication.require_disconnected_builds', lambda: operations.append('disconnected'))
+    monkeypatch.setattr('deploy_publication.require_latest_release', lambda release: operations.append('latest'))
+
+    def current(*args):
+        operations.append('version')
+        return next(versions)
+
+    def previous():
+        operations.append('capture')
+        return {'mode': 'legacy', 'home_sha256': sha256((ROOT / 'README.md').read_bytes())}
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Staging uploaded a version after its rollback identity changed')
+
+    monkeypatch.setattr('deploy_publication.current_version', current)
+    monkeypatch.setattr('deploy_publication.previous_publication', previous)
+    monkeypatch.setattr('deploy_publication.subprocess.run', forbidden)
+    with pytest.raises(ValueError, match='Production changed while capturing rollback evidence'):
+        stage(tmp_path, Path('wrangler'), 'v5.45.3')
+    assert operations == ['disconnected', 'latest', 'version', 'capture', 'version']
+    assert not (tmp_path / '.docs-evidence/deployment/staged.json').exists()

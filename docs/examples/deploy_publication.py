@@ -80,9 +80,13 @@ def stage(root: Path, wrangler: Path, release: str):
     manifest = (root / 'docs-site/reader-build/publication.json').read_bytes()
     if json.loads(manifest)['release'] != release:
         raise ValueError('The staged site belongs to another release')
+    require_disconnected_builds()
     require_latest_release(release)
+    version = current_version(wrangler, config)
     previous = previous_publication()
-    previous['version_id'] = current_version(wrangler, config)
+    if current_version(wrangler, config) != version:
+        raise ValueError('Production changed while capturing rollback evidence; stage again')
+    previous['version_id'] = version
     upload = output / 'upload.ndjson'
     if upload.exists():
         raise ValueError('Use a fresh deployment evidence directory')
