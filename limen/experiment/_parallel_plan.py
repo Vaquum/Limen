@@ -189,7 +189,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
         elif not inspect.isfunction(source := cast(object, value)):
-            owner = cast(object, source.__self__ if inspect.ismethod(source) else source)
+            owner = source.__self__ if inspect.ismethod(source) else source
             restored = clone.__self__ if inspect.ismethod(clone) else clone
             if not isinstance(owner, type):
                 _ = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
