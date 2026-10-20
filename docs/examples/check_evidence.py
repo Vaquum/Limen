@@ -55,13 +55,14 @@ def region(path: Path, name: str) -> str:
                 matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
             if len(matches) != 1:
                 raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
-            selected = deepcopy(matches[0])
+            selected = matches[0]
             if index < len(parts) - 1:
                 if not isinstance(selected, ast.ClassDef):
                     raise ValueError('Reference members require a class: ' + symbol)
                 scope = selected.body
         if selected is None:
             raise ValueError('Missing reference symbol: ' + symbol)
+        selected = deepcopy(selected)
         if kind == 'signature':
             if isinstance(selected, ast.ClassDef):
                 selected.body = [node for node in selected.body if isinstance(node, ast.AnnAssign)] or [ast.Expr(value=ast.Constant(value=Ellipsis))]

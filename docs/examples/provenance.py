@@ -35,10 +35,17 @@ def source_paths(root):
     return sorted({'README.md', *references, *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json') and 'tests' not in path.parts]})
 
 
-def identity(root, base, path):
-    current = git(root, 'rev-parse', 'HEAD:' + path)
-    previous = subprocess.run(['git', 'rev-parse', '--verify', base + ':' + path], cwd=root, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
-    if previous.returncode or previous.stdout.strip() != current:
+def tree_objects(root, revision):
+    objects = {}
+    for entry in git(root, 'ls-tree', '-rz', revision).split('\0'):
+        if entry:
+            metadata, path = entry.split('\t', 1)
+            objects[path] = metadata.split()[2]
+    return objects
+
+
+def identity(root, base, path, current, previous):
+    if previous.get(path) != current[path]:
         return git(root, 'log', '-1', '--format=%H', 'HEAD', '--', path), 'candidate'
     return latest_change(root, base, path), 'merged'
 
@@ -47,9 +54,10 @@ def acquire(root, output):
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text('{"status":"running"}\n')
     base = base_revision(root)
+    current, previous = tree_objects(root, 'HEAD'), tree_objects(root, base)
     files, responses = [], {}
     for path in source_paths(root):
-        commit, status = identity(root, base, path)
+        commit, status = identity(root, base, path, current, previous)
         pull = None
         if status == 'merged':
             if commit not in responses:
@@ -65,10 +73,12 @@ def validate_provenance(root, record):
     base = base_revision(root)
     if record['schema_version'] != 1 or record['base'] != base:
         raise ValueError('Source provenance belongs to another main ancestry')
-    if len(record['files']) != len(source_paths(root)) or {item['path'] for item in record['files']} != set(source_paths(root)):
+    paths = source_paths(root)
+    if len(record['files']) != len(paths) or {item['path'] for item in record['files']} != set(paths):
         raise ValueError('Source provenance inventory differs')
+    current, previous = tree_objects(root, 'HEAD'), tree_objects(root, base)
     for item in record['files']:
-        commit, status = identity(root, base, item['path'])
+        commit, status = identity(root, base, item['path'], current, previous)
         if (item['commit'], item['status']) != (commit, status) or item['sha256'] != hashlib.sha256((root / item['path']).read_bytes()).hexdigest():
             raise ValueError('Source-changing commit or source bytes differ')
         expected = merged_pull(commit, record['responses'][commit]) if status == 'merged' else None

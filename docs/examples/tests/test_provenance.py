@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from provenance import git, latest_change, merged_pull
+from provenance import git, identity, latest_change, merged_pull, tree_objects
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -23,9 +23,22 @@ def test_first_parent_change_includes_merge_and_later_revert(tmp_path):
     run('checkout', '-q', 'main');run('merge', '--no-ff', 'chapter', '-qm', 'merge: integrate chapter')
     merged = git(tmp_path, 'rev-parse', 'HEAD')
     assert latest_change(tmp_path, 'HEAD', 'page.md') == merged
+    before = tree_objects(tmp_path, merged)
+    assert before['page.md'] == git(tmp_path, 'rev-parse', merged + ':page.md')
+    assert identity(tmp_path, merged, 'page.md', before, before) == (merged, 'merged')
     source.write_text(original);run('commit', '-qam', 'docs: restore chapter boundary')
-    assert latest_change(tmp_path, 'HEAD', 'page.md') == git(tmp_path, 'rev-parse', 'HEAD')
+    restored = git(tmp_path, 'rev-parse', 'HEAD')
+    current = tree_objects(tmp_path, 'HEAD')
+    assert latest_change(tmp_path, 'HEAD', 'page.md') == restored
     assert latest_change(tmp_path, 'HEAD', 'page.md') != merged
+    assert identity(tmp_path, merged, 'page.md', current, before) == (restored, 'candidate')
+    assert identity(tmp_path, restored, 'page.md', current, current) == (restored, 'merged')
+    named = tmp_path / 'project with spaces.md'
+    named.write_text((ROOT / 'docs/examples/python-research/README.md').read_text())
+    run('add', named.name);run('commit', '-qm', 'docs: retain project source')
+    current = tree_objects(tmp_path, 'HEAD')
+    assert current[named.name] == git(tmp_path, 'rev-parse', 'HEAD:' + named.name)
+    assert identity(tmp_path, merged, named.name, current, before) == (git(tmp_path, 'rev-parse', 'HEAD'), 'candidate')
 
 
 def test_source_association_requires_its_exact_merged_main_pr():
