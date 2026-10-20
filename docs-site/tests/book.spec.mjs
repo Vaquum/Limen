@@ -9,8 +9,9 @@ test.afterEach(async({page})=>{expect(failures.get(page)).toEqual([]);});
 async function open(page){await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);await expect(page.getByRole('button',{name:'Search',exact:true})).toBeVisible();}
 
 test('reader command rejects substituted expected identities',()=>{
-  for(const [option,message]of [['head','Reader build does not match'],['tested','Expected checkout identity differs'],['tree','Expected checkout identity differs']]){
-    const result=spawnSync(process.execPath,['scripts/check-reader.mjs','--'+option,'0'.repeat(40)],{encoding:'utf8',timeout:5000});
+  const wrong='0'.repeat(40);
+  for(const [option,value,message]of [['head',wrong,'Reader build does not match'],['tested',wrong,'Expected checkout identity differs'],['tree',wrong,'Expected checkout identity differs'],['evidence','../docs/examples/evidence.schema.json','Current successful research execution is required']]){
+    const result=spawnSync(process.execPath,['scripts/check-reader.mjs','--'+option,value],{encoding:'utf8',timeout:5000});
     expect(result.error).toBeUndefined();expect(result.status).not.toBe(0);expect(result.stderr).toContain(message);
   }
 });
