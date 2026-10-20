@@ -8,7 +8,7 @@ from threading import Thread
 import pytest
 
 from build_bundle import write_archive
-from publication import restore
+from publication import restore, validated_site_files
 from verify_publication import ROLES, archive_files, fetch, relative_path, retrieve, sha256
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -92,3 +92,23 @@ def test_rollback_restores_the_site_and_detached_evidence(tmp_path):
     archive.write_bytes(archive.read_bytes() + b'changed')
     with pytest.raises(ValueError, match='differs from its detached'):
         restore(manifest, archive, tmp_path / 'changed')
+
+
+def test_unvalidated_page_or_asset_cannot_enter_the_sealed_build(tmp_path):
+    source = (ROOT / 'docs/examples/python-research/research.py').read_bytes()
+    member = tmp_path / 'source/research.py'
+    member.parent.mkdir()
+    member.write_bytes(source)
+    built = {'files': {'source/research.py': sha256(source)}}
+    (tmp_path / 'build.json').write_text(json.dumps(built))
+    assert validated_site_files(tmp_path, built)['source/research.py'] == source
+    for name in ('book/extra/index.html', 'assets/extra.mjs'):
+        added = tmp_path / name
+        added.parent.mkdir(parents=True)
+        added.write_bytes(source)
+        with pytest.raises(ValueError, match='inventory changed'):
+            validated_site_files(tmp_path, built)
+        added.unlink()
+    member.unlink()
+    with pytest.raises(ValueError, match='inventory changed'):
+        validated_site_files(tmp_path, built)

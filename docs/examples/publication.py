@@ -61,6 +61,15 @@ def site_files(site: Path) -> dict[str, bytes]:
     return files
 
 
+def validated_site_files(site: Path, built) -> dict[str, bytes]:
+    original = site_files(site)
+    if set(original) != set(built['files']) | {'build.json'} or 'publication.json' in original:
+        raise ValueError('The built reader inventory changed or was already published')
+    if any(sha256(original[name]) != value for name, value in built['files'].items()):
+        raise ValueError('The built reader member changed')
+    return original
+
+
 def prepare(root: Path, release: str):
     execution = (root / '.docs-evidence/current.json').read_bytes()
     record = json.loads(execution)
@@ -74,9 +83,7 @@ def prepare(root: Path, release: str):
     built = json.loads((site / 'build.json').read_text())
     if built['evidence_sha256'] != sha256(execution) or built['version'] != record['package']['version'] or (built['head'], built['tested_commit'], built['tree']) != (record['revision']['head'], record['revision']['tested_commit'], record['revision']['tree']):
         raise ValueError('The built reader belongs to another execution')
-    original = site_files(site)
-    if 'publication.json' in original or any(sha256(original[name]) != value for name, value in built['files'].items()):
-        raise ValueError('The built reader was changed or already published')
+    original = validated_site_files(site, built)
     output = root / '.docs-evidence/publication'
     output.mkdir(exist_ok=True)
     artifacts = {}
