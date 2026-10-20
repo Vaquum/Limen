@@ -36,9 +36,9 @@ def same_callback(first: object, second: object) -> bool:
         return True
     if inspect.ismethod(first) and inspect.ismethod(second):
         return first.__func__ is second.__func__ and first.__self__ is second.__self__
-    if type(first) is partial and type(second) is partial:
+    if type(cast(object, first)) is partial and type(cast(object, second)) is partial:
         return same_callback(native_attribute(cast(object, first), 'func'), native_attribute(cast(object, second), 'func'))
-    if type(first) is staticmethod and type(second) is staticmethod:
+    if type(cast(object, first)) is staticmethod and type(cast(object, second)) is staticmethod:
         return same_callback(native_attribute(cast(object, first), '__func__'), native_attribute(cast(object, second), '__func__'))
     return False
 
