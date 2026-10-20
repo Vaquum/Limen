@@ -52,11 +52,18 @@ def children(value: object) -> tuple[object, ...]:
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (npt.NDArray[np.generic].tolist(value), *_attributes(cast(object, value)).values())
+    if isinstance(value, (partial, property, staticmethod, classmethod)):
+        parts: tuple[object, ...]
+        if isinstance(value, (staticmethod, classmethod)):
+            descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
+            parts = (descriptor.__func__,)
+        elif isinstance(value, property):
+            parts = (value.fget, value.fset, value.fdel)
+        else:
+            parts = (value.func, value.args, value.keywords)
+        return (*parts, _attributes(cast(object, value)))
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
-    if isinstance(value, (partial, property)):
-        parts = (value.fget, value.fset, value.fdel) if isinstance(value, property) else (value.func, value.args, value.keywords)
-        return (*parts, _attributes(cast(object, value)))
     return tuple(_attributes(value).values())
 
 
@@ -109,6 +116,9 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
         elif inspect.ismethod(item):
             result = ('method', node(item.__func__), node(item.__self__))
+        elif isinstance(item, (staticmethod, classmethod)):
+            descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', item)
+            result = (kind, 'descriptor', node(descriptor.__func__), node(_attributes(cast(object, item))))
         elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
         elif type(item) is logging.Logger:

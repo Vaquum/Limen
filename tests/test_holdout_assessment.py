@@ -5,6 +5,7 @@ from functools import partial, wraps
 import json
 import logging
 import multiprocessing
+import os
 from importlib.metadata import version
 from pathlib import Path
 from threading import Thread
@@ -1210,6 +1211,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + (-self.policy), 0, 1)
             return result
+    class RoundPolicy:
+        def __round__(self, ndigits=None):
+            return round(_LATE_RULES['offset'], ndigits)
+    class Rounded(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + round(self.policy, 2), 0, 1)
+            return result
     class ComparisonPolicy:
         def __gt__(self, other):
             return _LATE_RULES['offset'] > other
@@ -1226,9 +1235,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), ConversionPolicy()):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1253,10 +1262,26 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = module_probabilities(manifest_core, result['_probs'])
             return result
-    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument):
+    class DynamicLookup(LogRegBinary):
+        def adjust_late(self, values):
+            return later_probabilities(values)
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = getattr(self, self.method_name)(result['_probs'])
+            return result
+    class BoundLookup(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy('adjust')(result['_probs'])
+            return result
+    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument, DynamicLookup, BoundLookup):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
         selection._model.research_x = late._model.research_x.copy()
+        if implementation is DynamicLookup:
+            selection._model.method_name = 'adjust_late'
+        if implementation is BoundLookup:
+            selection._model.policy = {'adjust': later_probabilities}.get
         if implementation is Factory:
             selection._model.policy = defaultdict(later_probabilities)
         if implementation is PartialState:
@@ -1370,6 +1395,47 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='attempted thread dispatch'), readonly_prediction([nested]):
             pool.submit(nested_threshold).result()
         assert callback_calls == []
+    def descriptor_get(self, instance, owner=None):
+        return lambda values: np.clip(later_probabilities(values) + self.offset, 0, 1)
+    class StaticDescriptor(staticmethod):
+        __get__ = descriptor_get
+    class ClassDescriptor(classmethod):
+        __get__ = descriptor_get
+    for descriptor_type in (StaticDescriptor, ClassDescriptor):
+        class DescriptorModel(LogRegBinary):
+            adjust = descriptor_type(identity_probabilities)
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.adjust(result['_probs'])
+                return result
+        descriptor = vars(DescriptorModel)['adjust']
+        descriptor.offset = expected_offset
+        described = copy.deepcopy(assessment_case[2][0][0])
+        described._model.__class__ = DescriptorModel
+        descriptor_handle = _freeze(described)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(descriptor_handle, assessment_case)
+            assert loader.call_count == 0
+        with patch.object(descriptor, 'offset', expected_offset + 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(descriptor_handle, assessment_case)
+            assert loader.call_count == 0
+    class ExternalEntropy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                result['_probs'] = np.clip(result['_probs'] + int.from_bytes(os.urandom(1), 'big') / 255, 0, 1)
+            return result
+    entropic = copy.deepcopy(assessment_case[2][0][0])
+    entropic._model.__class__ = ExternalEntropy
+    entropic._model.research_x = late._model.research_x.copy()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='random dependency'):
+            _freeze(entropic)
+        assert loader.call_count == 0
+    with pytest.raises(ValueError, match='unowned randomness'), readonly_prediction([nested]):
+        os.urandom(1)
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)

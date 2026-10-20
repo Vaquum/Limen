@@ -18,7 +18,7 @@ import polars as pl
 
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'entropy_call', 'inference_evidence', 'object_array']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -27,6 +27,10 @@ def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
             or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
             or (module.startswith(('limen.scalers.', 'limen.targets.')) and name.rsplit('.', 1)[-1] == '__init__'))
+
+
+def entropy_call(value: object) -> bool:
+    return getattr(value, '__name__', None) in ('urandom', 'getrandom') and getattr(value, '__module__', None) in ('os', 'posix', 'nt')
 
 
 @lru_cache(maxsize=2048)
@@ -41,13 +45,16 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def witness(identity: int) -> bytes:
         return fitted_witness(seen[identity])
     cached_witness = lru_cache(maxsize=None)(witness)
-    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
+    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__', '__round__', '__trunc__', '__floor__', '__ceil__', '__divmod__', '__rdivmod__', '__hash__', '__format__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     module_attributes: set[str] = set()
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
 
     def visit(value: object) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
+            if isinstance(value, str):
+                attributes.add(value)
+                module_attributes.add(value)
             return
         if type(value) is logging.Logger:
             evidence.append(fitted_witness(value))
@@ -56,7 +63,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             return
         seen[id(value)] = value
         modules = (getattr(value, '__module__', None) or type(value).__module__, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
-        if callable(value) and any(isinstance(module, str) and module.startswith(('numpy.random', 'random')) for module in modules):
+        if callable(value) and (entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules)):
             raise ValueError('Holdout inference has an unowned random dependency')
         if inspect.ismethod(value):
             visit(value.__func__)
@@ -131,6 +138,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
             evidence.append(fitted_witness(value))
+            owner = getattr(value, '__self__', None)
+            if owner is not None and not isinstance(owner, ModuleType):
+                visit(owner)
         elif object_array(value):
             for part in children(cast(object, value)):
                 visit(part)
@@ -169,9 +179,10 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 done.add(key)
                 method = parent.__dict__[name]
                 evidence.append((key, type(method).__module__, type(method).__qualname__))
-                if isinstance(method, property):
+                if isinstance(method, (property, staticmethod, classmethod)):
                     visit(cast(object, method))
                     evidence.append((key, cached_witness(id(method))))
+                if isinstance(method, property):
                     method = method.fget
                 if isinstance(method, (staticmethod, classmethod)):
                     method = cast('staticmethod[..., object] | classmethod[object, ..., object]', method).__func__

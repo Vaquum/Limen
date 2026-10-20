@@ -12,7 +12,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_evidence, object_array
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_array
 from limen.experiment._holdout_state import restore_iterations
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
@@ -125,6 +125,9 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         nonlocal violation
         if (event == 'call' and (frame.f_globals.get('__name__'), frame.f_code.co_name) in (('threading', 'start'), ('concurrent.futures.thread', 'submit'))) or (event == 'c_call' and getattr(arg, '__module__', None) == '_thread' and getattr(arg, '__name__', None) == 'start_new_thread'):
             violation = 'Holdout inference attempted thread dispatch'
+            raise ValueError(violation)
+        if event == 'c_call' and entropy_call(arg):
+            violation = 'Holdout inference consumed unowned randomness'
             raise ValueError(violation)
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
         matched = event == 'call' and frame.f_code in forbidden and any(_matches(function, frame, owner) for function, owner in forbidden[frame.f_code])
