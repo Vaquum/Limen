@@ -121,7 +121,6 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     if type(value) is _manifest.TargetClassConfig:
         value = _FrozenTargetConfig(value.target_class, value.fit_params, value.transform_params,
                                     _target_defaults(value.target_class, 2), _target_defaults(cast(_TargetClass, value.target_class).transform, 2))
-    value = cast(object, value)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -134,6 +133,10 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     if isinstance(value, (list, tuple)) and not is_component:
         items = [_normalize(item, active, snapshot=snapshot) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
+    return _normalize_component(cast(object, value), active, snapshot=snapshot)
+
+
+def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool) -> object:
     if inspect.isfunction(value) or inspect.ismethod(value) or issubclass(type(value), partial):
         clone = decode(encode(value), isolate_functions=snapshot)
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
