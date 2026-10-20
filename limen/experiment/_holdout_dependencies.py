@@ -10,12 +10,13 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, FunctionType, ModuleType
+from types import CodeType, ModuleType
 from typing import cast
 
 import numpy as np
 import polars as pl
 
+from limen.experiment._holdout_calls import call_functions
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array', 'restore_iterations']
@@ -214,27 +215,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:
     return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved, capture=capture), protocol=5)).hexdigest()
 
-
-def call_functions(value: object) -> tuple[FunctionType, ...]:
-    if isinstance(value, (property, staticmethod, classmethod)):
-        native: type[object] = property if isinstance(value, property) else staticmethod if isinstance(value, staticmethod) else classmethod
-        descriptor = cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value)
-        if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
-            return ()
-        return call_functions(descriptor.fget if isinstance(descriptor, property) else descriptor.__func__)
-    if isinstance(value, partial):
-        provider = cast(partial[object], value)
-        call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
-        return call_functions(provider.func) if call is partial[object].__call__ else call_functions(call)
-    if isinstance(value, type):
-        call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-        return (*call_functions(value.__init__), *call_functions(value.__new__)) if call is type.__call__ else call_functions(call)
-    if inspect.ismethod(value):
-        value = value.__func__
-    if inspect.isfunction(value):
-        return (value,)
-    call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-    return call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (property, staticmethod, classmethod)) else ()
 
 
 def restore_iterations(source: object, memo: Mapping[int, object]) -> None:

@@ -1578,6 +1578,40 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(ordered_handle, assessment_case)
         assert loader.call_count == 0
+    class NativeNewCallback:
+        __new__ = staticmethod(getattr)
+        def __init__(self, *args):
+            raise AssertionError('unused initializer')
+    unsafe_class = copy.deepcopy(assessment_case[2][0][0])
+    unsafe_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativeNewCallback))
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+            _freeze(unsafe_class)
+        assert loader.call_count == 0
+    class SharedInitializer:
+        def __init__(self, values):
+            self.values = values
+    class SharedNew(SharedInitializer):
+        def __new__(cls, values):
+            return object.__new__(cls)
+    for base in (SharedInitializer, SharedNew):
+        class ThresholdClass(base):
+            __slots__ = ()
+        class ReadonlyClass(base):
+            __slots__ = ()
+        class UsesClass(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = ReadonlyClass(result['_probs']).values
+                return result
+        for callback in (ThresholdClass, partial(ThresholdClass)):
+            selected_class = copy.deepcopy(assessment_case[2][0][0])
+            selected_class._model.__class__ = UsesClass
+            selected_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=callback))
+            class_handle = _freeze(selected_class)
+            assert _report(class_handle, assessment_case)['rows_sha256']
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected_class]):
+                callback(selected_class._model.model.coef_.ravel())
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):
