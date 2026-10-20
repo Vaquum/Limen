@@ -1822,3 +1822,7 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.45.2] - 2026-10-20
 
 Infer nullable allocation opportunity fields across all observed labels so late censored opportunities retain their text reason after the first 100 rows; preserve strict conversion and causal supervision.
+
+## [5.45.3] - 2026-10-20
+
+- Reject invalid compiled Sensor prediction/probability pairs while preserving row metadata, alignment and valid finite outputs.
