@@ -528,6 +528,20 @@ def test_compiled_fitted_components_complete_final_assessment(assessment_case):
             assert all(first[key] == repeat[key] for key in _REPEAT_KEYS)
             assert first['attempt_id'] != repeat['attempt_id']
             assert read_holdout_report(root, repeat['attempt_id']) == repeat
+    selected = copy.deepcopy([sensor for sensor in trained[0] if type(sensor._model) is WrappedLogReg])
+    assert len(selected) == len(members(cohort))
+    selected[1]._model.model = selected[0]._model.model
+    selected[1]._model._fitted_calibrator = selected[0]._model._fitted_calibrator
+    shared = Cohort(experiment_log_path=str(cohort.experiment_dir), permutation_ids=[sensor.permutation_id for sensor in selected])
+    shared.set_members(selected)
+    for copied in (owned_copy(shared), owned_copy(owned_copy(shared))):
+        left, right = members(copied)
+        assert left._model.model is right._model.model
+        assert left._model._fitted_calibrator is right._model._fitted_calibrator
+        assert left._model.model is not selected[0]._model.model
+    shared_report = _report(_freeze(shared), assessment_case)
+    assert shared_report['state'] == 'completed'
+    assert read_holdout_report(root, shared_report['attempt_id']) == shared_report
 
 
 @pytest.mark.parametrize('limit', ['equal', 'truncated'])
@@ -2102,6 +2116,28 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(reviewed)
         assert loader.call_count == 0
+    class ClassReferencePolicy:
+        def __init__(self):
+            self.first = type('HoldoutMarker', (), {})
+            self.second = type('HoldoutMarker', (), {})
+            self.selected = self.first
+            self.break_copy = False
+        def adjust(self, values):
+            return np.clip(values + (0 if self.selected is self.first else 0.1), 0, 1)
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            if self.break_copy:
+                clone.selected = clone.second
+            return clone
+    reviewed._model.policy = ClassReferencePolicy()
+    _freeze(reviewed)
+    reviewed._model.policy.break_copy = True
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(reviewed)
+        assert loader.call_count == 0
     class PropertyDocument:
         @property
         def offset(self):
@@ -2120,6 +2156,22 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             assert loader.call_count == 0
     finally:
         descriptor.__doc__ = str(expected_offset)
+    class AnnotationDispatch(LogRegBinary):
+        def annotation_selected_offset(self, values):
+            return np.clip(values + _LATE_RULES['offset'], 0, 1)
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = getattr(self, self.policy.__annotations__['method'])(result['_probs'])
+            return result
+    reviewed._model.__class__ = AnnotationDispatch
+    for policy in (identity_probabilities, LogisticRegression.predict_proba):
+        reviewed._model.policy = policy
+        with patch.object(policy, '__annotations__', {'method': 'annotation_selected_offset'}):
+            annotation_handle = _freeze(reviewed)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(annotation_handle, assessment_case)
+                assert loader.call_count == 0
     class NativeNamespace(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)

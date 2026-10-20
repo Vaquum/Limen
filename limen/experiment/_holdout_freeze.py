@@ -267,10 +267,10 @@ def _copy_witness(selection: Sensor | Cohort) -> bytes:
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
     before = _copy_witness(selection)
     copied: list[Sensor] = []
+    memo: dict[int, object] = {}
     for original in members(selection):
         member = copy.copy(original)
         vars(member).clear()
-        memo: dict[int, object] = {}
         state = _member_state(original)
         vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(state, memo), strict=True))
         restore_iterations(state, memo)

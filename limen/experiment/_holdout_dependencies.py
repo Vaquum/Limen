@@ -78,7 +78,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes, type(Union), type(Literal)) or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
-            if isinstance(value, str) and not annotation:
+            if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)
                 fitted_names.add(value)

@@ -118,13 +118,15 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     def node(item: object) -> object:
         if item is None or type(item) in (str, bool, int, float, bytes):
             return item
-        if isinstance(item, (ModuleType, type)):
-            return ('module', item.__name__) if isinstance(item, ModuleType) else ('class', item.__module__, item.__qualname__)
+        if isinstance(item, ModuleType):
+            return ('module', item.__name__)
         if id(item) in seen:
             return ('ref', seen[id(item)][0])
         if class_aliases and type(item).__module__ != 'builtins':
             classes[id(type(item))] = type(item)
         seen[id(item)] = (len(seen), item)
+        if isinstance(item, type):
+            return ('class', item.__module__, item.__qualname__)
         return structure(item)
 
     def structure(item: object) -> object:
