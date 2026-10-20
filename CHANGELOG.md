@@ -1857,7 +1857,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.9] - 2026-10-20
 
-- Bind trusted library functions to their exported identity, capture metaclass inference methods, and reject alternating calibration configurations.
+- Authenticate trusted library bodies against their installed module code, capture metaclass inference methods, and reject alternating calibration configurations.
 
 - Preserve owned fitted binary prediction, native iteration limits and preparation/calibration dependencies through final holdout assessment.
 - Reuse exact native type groups during dependency sealing and fitted-state encoding.

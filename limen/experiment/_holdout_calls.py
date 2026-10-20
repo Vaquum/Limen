@@ -1,10 +1,11 @@
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
-from functools import partial
+from functools import lru_cache, partial
 import inspect
+from importlib.abc import InspectLoader
 import sys
 from threading import RLock
-from types import FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType, ModuleType
+from types import CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
 __all__ = ['call_codes', 'call_functions', 'constructor_entry', 'function_module', 'matches', 'native_attribute', 'receiver_position', 'same_callback']
@@ -171,17 +172,23 @@ def matches(function: FunctionType, frame: FrameType, owner: object | None, inst
         for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True))
 
 
+@lru_cache(maxsize=256)
+def _module_codes(name: str) -> frozenset[CodeType]:
+    loader = getattr(sys.modules[name], '__loader__', None)
+    code = loader.get_code(name) if isinstance(loader, InspectLoader) else None
+    pending, codes = [code] if code is not None else [], set[CodeType]()
+    while pending:
+        current = pending.pop()
+        codes.add(current)
+        pending.extend(part for part in current.co_consts if isinstance(part, CodeType))
+    return frozenset(codes)
+
+
 def function_module(value: FunctionType, libraries: tuple[str, ...]) -> str:
     name = value.__globals__.get('__name__')
     module = sys.modules.get(name) if isinstance(name, str) else None
     if module is None or vars(module) is not value.__globals__:
         return ''
-    if module.__name__.split('.')[0] in sys.stdlib_module_names or module.__name__.split('.')[0] in libraries:
-        binding: object = module
-        for part in value.__qualname__.split('.'):
-            binding = vars(binding).get(part) if isinstance(binding, (ModuleType, type)) else None
-            if isinstance(binding, (staticmethod, classmethod)):
-                binding = native_attribute(binding, '__func__')
-        if binding is not value:
-            return ''
+    if (module.__name__.split('.')[0] in sys.stdlib_module_names or module.__name__.split('.')[0] in libraries) and value.__code__ not in _module_codes(module.__name__):
+        return ''
     return module.__name__
