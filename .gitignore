@@ -74,3 +74,4 @@ venv-codex
 # Documentation execution and candidate reader output
 .docs-evidence/
 docs-site/reader-build/
+docs-site/publisher/.wrangler/

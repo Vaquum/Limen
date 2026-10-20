@@ -85,11 +85,15 @@ def compare_selection_logs(original_directory, command_directory):
         assert math.isclose(original[key], command_line[key], rel_tol=1e-10, abs_tol=1e-12), key
 
 
-def prove_wheel(root: Path, temporary: Path, *, released_wheel: Path | None = None):
+def prove_wheel(root: Path, temporary: Path, *, released_wheel: Path | None = None, released_bundle: Path | None = None):
     output = root / '.docs-evidence'
     output.mkdir(exist_ok=True)
     bundle = output / 'examples.tar.gz'
     bundle_sha = build(root, bundle)
+    if released_bundle is not None:
+        if released_wheel is None or hashlib.sha256(released_bundle.read_bytes()).hexdigest() != bundle_sha:
+            raise ValueError('The public project bundle differs from the released research source')
+        bundle.write_bytes(released_bundle.read_bytes())
     canonical_commands = json.loads((root / 'docs/examples/commands.json').read_text())
     offline = verify_wheelhouse(root)
     isolated = temporary / 'isolated'

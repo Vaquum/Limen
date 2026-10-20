@@ -27,6 +27,7 @@ pages.push({source:null,route:'/reference/',url:content.product.basePath+'/refer
 const output=path.resolve(site,values.output);if(output===path.join(site,'build')||!output.startsWith(site+path.sep))throw Error('Candidate output must be separate from production');
 await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'assets/fonts'),{recursive:true});
 for(const page of pages){const target=path.join(output,page.route,'index.html');await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,renderPage(page,pages,evidence));}
+await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'},pages,evidence));
 for(const name of ['main','motion','code','place','navigation','search'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
 await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/book.css'));
 for(const [from,to]of [['@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2','archivo.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2','plex.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2','plex-medium.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-italic.woff2','plex-italic.woff2'],['@fontsource-variable/archivo/LICENSE','archivo-OFL.txt'],['@fontsource/ibm-plex-mono/LICENSE','plex-OFL.txt']])await fs.copyFile(path.join(site,'node_modules',from),path.join(output,'assets/fonts',to));
@@ -41,6 +42,7 @@ for(const source of [...evidence.sources,...evidence.displays]){const target=pat
 await fs.writeFile(path.join(output,'search.json'),JSON.stringify(pages.map(p=>({title:pageLabel(p),route:p.url,text:p.markdown.replace(/```[\s\S]*?```/g,'').replace(/<!--[^]*?-->/g,'').replace(/[#*`|]/g,'').replace(/\s+/g,' ').trim()}))));
 await fs.writeFile(path.join(output,'routes.json'),JSON.stringify(pages.map(p=>({source:p.source,url:p.url,part:p.part}))));
 await fs.writeFile(path.join(output,'sitemap.xml'),'<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(p=>`<url><loc>${content.product.origin}${p.url}</loc></url>`).join('')+'</urlset>');
+await fs.writeFile(path.join(output,'robots.txt'),'User-agent: *\nAllow: '+content.product.basePath+'/\nSitemap: '+content.product.origin+content.product.basePath+'/sitemap.xml\n');
 const members={};
 async function collect(folder){for(const entry of await fs.readdir(folder,{withFileTypes:true})){const absolute=path.join(folder,entry.name);if(entry.isDirectory())await collect(absolute);else members[path.relative(output,absolute)]=hash(await fs.readFile(absolute));}}
 await collect(output);

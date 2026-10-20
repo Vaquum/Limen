@@ -42,6 +42,22 @@ test('complete research chapter',async({page})=>{
   await expect(page.getByRole('link',{name:'Python Sensor construction',exact:true})).toHaveAttribute('href','/limen/reference/trainer/#python-construction');
 });
 
+test('published routes agree with robots and sitemap while other products remain outside Limen',async({request})=>{
+  for(const [source,target]of [['/','/limen/'],['/limen','/limen/'],['/robots.txt','/limen/robots.txt'],['/sitemap.xml','/limen/sitemap.xml']]){
+    const response=await request.get(source,{maxRedirects:0});
+    expect(response.status()).toBe(302);expect(new URL(response.headers().location).pathname).toBe(target);
+  }
+  const robots=await request.get('/limen/robots.txt');expect(robots.status()).toBe(200);
+  expect(robots.headers()['content-type']).toContain('text/plain');
+  expect(await robots.text()).toContain('Sitemap: https://docs.vaquum.fi/limen/sitemap.xml');
+  const sitemap=await (await request.get('/limen/sitemap.xml')).text();
+  const routes=await (await request.get('/limen/routes.json')).json();
+  expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>new URL(match[1]).pathname).sort()).toEqual(routes.map(route=>route.url).sort());
+  for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");}
+  const missing=await request.get('/limen/absent-chapter/');expect(missing.status()).toBe(404);expect(await missing.text()).toContain('Page unavailable');
+  expect((await request.get('/another-product/')).status()).toBe(404);
+});
+
 test('reference returns to the same passage and focus',async({page})=>{
   await open(page);const link=page.getByRole('link',{name:'Python Sensor construction',exact:true});
   await link.focus();await link.scrollIntoViewIfNeeded();const before=await link.evaluate(el=>({id:el.id,top:el.getBoundingClientRect().top}));

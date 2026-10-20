@@ -102,3 +102,16 @@ jobs:
           path: |
             .docs-evidence/
             !.docs-evidence/wheelhouse/**
+
+      - name: Set up the isolated deployment toolchain runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: docs-site/publisher/package-lock.json
+
+      - name: Install and audit the pinned deployment toolchain
+        working-directory: docs-site/publisher
+        run: |
+          npm ci
+          npm run security:audit

@@ -79,7 +79,8 @@ def research_proof(python_project, compiled_project, tmp_path_factory, request):
     with pytest.MonkeyPatch.context() as environment:
         environment.setenv('PYTHONPATH', str(ROOT))
         wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'),
-                                       released_wheel=request.config.getoption('--released-wheel'))
+                                       released_wheel=request.config.getoption('--released-wheel'),
+                                       released_bundle=request.config.getoption('--released-bundle'))
     request.config.stash[PROOF] = wheel
     return {'python': {'rounds': python_project[2][1].experiment_log.height},
             'compiled': {'rounds': compiled_project[2][0].experiment_log.height},
@@ -93,6 +94,7 @@ REPORTS = []
 def pytest_addoption(parser):
     parser.addoption('--docs-evidence', default=str(ROOT / '.docs-evidence/current.json'))
     parser.addoption('--released-wheel', type=Path, help='Receipt from released_wheel.py; execute that published wheel instead of building a candidate.')
+    parser.addoption('--released-bundle', type=Path, help='Anonymous Release download; its exact bytes must equal the current pinned project/input archive.')
 
 
 def pytest_sessionstart(session):
