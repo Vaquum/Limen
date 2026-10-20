@@ -32,14 +32,15 @@ def native_attribute(value: object, name: str, owner: type[object] | None = None
 
 
 def same_callback(first: object, second: object) -> bool:
+    first_type, second_type = type(first), type(second)
     if first is second:
         return True
     if inspect.ismethod(first) and inspect.ismethod(second):
         return first.__func__ is second.__func__ and first.__self__ is second.__self__
-    if type(cast(object, first)) is partial and type(cast(object, second)) is partial:
-        return same_callback(native_attribute(cast(object, first), 'func'), native_attribute(cast(object, second), 'func'))
-    if type(cast(object, first)) is staticmethod and type(cast(object, second)) is staticmethod:
-        return same_callback(native_attribute(cast(object, first), '__func__'), native_attribute(cast(object, second), '__func__'))
+    if first_type is partial and second_type is partial:
+        return same_callback(native_attribute(first, 'func'), native_attribute(second, 'func'))
+    if first_type is staticmethod and second_type is staticmethod:
+        return same_callback(native_attribute(first, '__func__'), native_attribute(second, '__func__'))
     return False
 
 
