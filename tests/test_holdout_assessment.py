@@ -829,8 +829,8 @@ def test_frozen_logger_prediction_settings(assessment_case):
         def __deepcopy__(self, memo):
             clone = object.__new__(type(self))
             memo[id(self)] = clone
-            vars(clone).update({name: copy.deepcopy(value, memo) for name, value in vars(self).items() if name != 'logger'})
-            clone.logger = logging.Logger(self.logger.name, self.logger.level + (10 if self.corrupt_copy else 0))
+            for name, value in vars(self).items():
+                vars(clone)[name] = logging.Logger(value.name, value.level + (10 if self.corrupt_copy else 0)) if name == 'logger' else copy.deepcopy(value, memo)
             return clone
     selected = copy.deepcopy(assessment_case[2][0][0])
     selected._model.__class__ = LoggerPrediction
