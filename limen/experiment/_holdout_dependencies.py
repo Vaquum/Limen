@@ -75,6 +75,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     reflected: dict[int, set[str]] = {}
     recorded_bindings: set[tuple[int, str, int]] = set()
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
+    constructor_names = method_names | {'__new__', '__init__'}
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes, type(Union), type(Literal)) or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
@@ -233,7 +234,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 evidence.append((value.__name__, name, part))
             return
         cls = value if isinstance(value, type) else type(value)
-        names = method_names | {'__new__', '__init__'} if isinstance(value, type) else method_names
+        names = constructor_names if isinstance(value, type) else method_names
         if id(cls) not in recorded_mro:
             recorded_mro.add(id(cls))
             evidence.append(('mro', cls.__module__, cls.__qualname__, tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)))
@@ -266,6 +267,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1, -1, -1, -1, -1, -1)
     while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0):
         previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0)
+        constructor_names = method_names | {'__new__', '__init__'}
         for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
         if reflective_keys:
