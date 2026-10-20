@@ -163,8 +163,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
-        module = getattr(value, '__module__', type(value).__module__)
-        if callable(value) and ((module or type(value).__module__).startswith(('numpy.random', 'random')) or type(getattr(value, '__self__', None)).__module__.startswith(('numpy.random', 'random'))):
+        modules = (getattr(value, '__module__', None) or type(value).__module__, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
+        if callable(value) and any(isinstance(module, str) and module.startswith(('numpy.random', 'random')) for module in modules):
             raise ValueError('Holdout inference has an unowned random dependency')
         if inspect.ismethod(value):
             visit(value.__func__)

@@ -695,6 +695,20 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             assert json.loads(record['error_json'])['stage'] == 'predict'
         with pytest.raises(ValueError, match='not completed'):
             read_holdout_report(assessment_case[0], record['id'])
+    class NativeRandom(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                result['_probs'] = np.clip(result['_probs'] + self.rng.normal(), 0, 1)
+            return result
+    native_random = copy.deepcopy(assessment_case[2][0][0])
+    native_random._model.__class__ = NativeRandom
+    native_random._model.research_x = late._model.research_x.copy()
+    native_random._model.rng = np.random.default_rng(42)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='random dependency'):
+            _freeze(native_random)
+        assert loader.call_count == 0
     class Branch(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
