@@ -141,14 +141,13 @@ def _decode(node: object, *, ordered: bool, isolate_functions: bool) -> object:
         raise ValueError('Invalid version1 parallel parameter payload')
     if tag == 'null':
         return None
-    elif tag in ('str', 'bool') and type(parts[1]) is (str if tag == 'str' else bool):
+    if tag in ('str', 'bool') and type(parts[1]) is (str if tag == 'str' else bool):
         return parts[1]
-    elif tag in ('int', 'float') and isinstance(value := parts[1], str):
+    if tag in ('int', 'float') and isinstance(value := parts[1], str):
         return int(value) if tag == 'int' else float.fromhex(value)
-    elif tag in ('date', 'datetime', 'path') and isinstance(value := parts[1], str):
+    if tag in ('date', 'datetime', 'path') and isinstance(value := parts[1], str):
         return date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
-    else:
-        return _decode_composite(parts, ordered=ordered, isolate_functions=isolate_functions)
+    return _decode_composite(parts, ordered=ordered, isolate_functions=isolate_functions)
 
 
 def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: bool) -> object:
