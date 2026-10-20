@@ -182,7 +182,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 evidence.append((key, type(method).__module__, type(method).__qualname__))
                 if isinstance(method, (property, staticmethod, classmethod)):
                     visit(cast(object, method))
-                    evidence.append((key, cached_witness(id(method))))
+                    evidence.append((key, cached_witness(id(cast(object, method)))))
                 if isinstance(method, property):
                     method = method.fget
                 if isinstance(method, (staticmethod, classmethod)):
