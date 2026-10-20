@@ -61,10 +61,12 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         while isinstance(wrapped, (partial, staticmethod)):
             if isinstance(wrapped, staticmethod):
                 wrapped = cast('staticmethod[..., object]', wrapped).__func__
-            elif inspect.getattr_static(cast(type[object], type(wrapped)), '__call__', None) is partial[object].__call__:
-                wrapped = cast(partial[object], wrapped).func
             else:
-                break
+                provider = cast(partial[object], wrapped)
+                wrapped = provider
+                if inspect.getattr_static(cast(type[object], type(provider)), '__call__', None) is not partial[object].__call__:
+                    break
+                wrapped = provider.func
         if inspect.ismethod(wrapped):
             wrapped_owner = wrapped.__self__
         elif wrapped is None or inspect.isfunction(wrapped) or isinstance(wrapped, type):
