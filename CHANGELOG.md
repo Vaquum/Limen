@@ -1874,3 +1874,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.15] - 2026-10-20
 
 - Report post-experiment confusion only for binary classification; record explicit unavailability for exposure, continuous, and unclassifiable outputs while preserving backtests, correlation, and the convergence report.
+
+## [5.45.16] - 2026-10-21
+
+- Hold Compiled profiling admission through loading, evaluation and cleanup so first reservations cannot race real model fitting. Preserve active-reservation refusal and ordinary profiling results.

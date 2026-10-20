@@ -150,64 +150,65 @@ def profile(compiled_sfd: 'CompiledSFD') -> ProfileResult:
     )
 
     manifest = compiled_sfd.manifest()
-    from limen.experiment._holdout_research import reject_modes
+    from limen.experiment._holdout_research import operation, reject_modes
     reject_modes(manifest, profile=True)
 
-    try:
-        raw_data = manifest.fetch_data()
-    except Exception as exc:  # noqa: BLE001
-        result.errors.append(f'Failed to load data: {type(exc).__name__}: {exc}')
-        return result
+    with operation(manifest, 'experiment'):
+        try:
+            raw_data = manifest.fetch_data()
+        except Exception as exc:  # noqa: BLE001
+            result.errors.append(f'Failed to load data: {type(exc).__name__}: {exc}')
+            return result
 
-    permutations = make_covering_array(params)
-    result.sample_permutations_attempted = len(permutations)
+        permutations = make_covering_array(params)
+        result.sample_permutations_attempted = len(permutations)
 
-    from limen.experiment.manifest_core import MLManifest  # local to avoid circular import
+        from limen.experiment.manifest_core import MLManifest  # local to avoid circular import
 
-    elapsed_times: list[float] = []
-    saved_strict_mode = False
-    ml_manifest = manifest if isinstance(manifest, MLManifest) else None
-    if ml_manifest is not None:
-        saved_strict_mode = ml_manifest.strict_mode
-        ml_manifest.strict_mode = False
-
-    log_capture = _LogCapture()
-    manifest_logger = logging.getLogger(_MANIFEST_CORE_LOGGER)
-    manifest_logger.addHandler(log_capture)
-
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            for round_params in permutations:
-                try:
-                    t0 = time.perf_counter()
-                    data_dict = manifest.prepare_data(raw_data, round_params)
-                    _: Any = manifest.run_model(data_dict, round_params)
-                    elapsed_times.append(time.perf_counter() - t0)
-                except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
-                    result.errors.append(_classify_error(exc))
-    finally:
-        manifest_logger.removeHandler(log_capture)
+        elapsed_times: list[float] = []
+        saved_strict_mode = False
+        ml_manifest = manifest if isinstance(manifest, MLManifest) else None
         if ml_manifest is not None:
-            ml_manifest.strict_mode = saved_strict_mode
+            saved_strict_mode = ml_manifest.strict_mode
+            ml_manifest.strict_mode = False
 
-    seen: set[str] = set()
-    for msg in log_capture.records:
-        if 'Unexpected nulls' in msg and msg not in seen:
-            seen.add(msg)
-            result.data_quality_warnings.append(msg)
+        log_capture = _LogCapture()
+        manifest_logger = logging.getLogger(_MANIFEST_CORE_LOGGER)
+        manifest_logger.addHandler(log_capture)
 
-    result.sample_permutations_completed = len(elapsed_times)
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                for round_params in permutations:
+                    try:
+                        t0 = time.perf_counter()
+                        data_dict = manifest.prepare_data(raw_data, round_params)
+                        _: Any = manifest.run_model(data_dict, round_params)
+                        elapsed_times.append(time.perf_counter() - t0)
+                    except (ValueError, RuntimeError, MemoryError, TypeError, ArithmeticError) as exc:
+                        result.errors.append(_classify_error(exc))
+        finally:
+            manifest_logger.removeHandler(log_capture)
+            if ml_manifest is not None:
+                ml_manifest.strict_mode = saved_strict_mode
 
-    if elapsed_times:
-        result.sample_time_seconds_per_permutation = sum(elapsed_times) / len(elapsed_times)
-    elif not result.errors:
-        result.warnings.append('No permutations completed — timing unavailable.')
+        seen: set[str] = set()
+        for msg in log_capture.records:
+            if 'Unexpected nulls' in msg and msg not in seen:
+                seen.add(msg)
+                result.data_quality_warnings.append(msg)
 
-    if result.sample_permutations_completed < result.sample_permutations_attempted:
-        failed = result.sample_permutations_attempted - result.sample_permutations_completed
-        result.warnings.append(
-            f"{failed} of {result.sample_permutations_attempted} sample permutation(s) failed — timing estimate based on {result.sample_permutations_completed} completed run(s)."
-        )
+        result.sample_permutations_completed = len(elapsed_times)
 
-    return result
+        if elapsed_times:
+            result.sample_time_seconds_per_permutation = sum(elapsed_times) / len(elapsed_times)
+        elif not result.errors:
+            result.warnings.append('No permutations completed — timing unavailable.')
+
+        if result.sample_permutations_completed < result.sample_permutations_attempted:
+            failed = result.sample_permutations_attempted - result.sample_permutations_completed
+            result.warnings.append(
+                f"{failed} of {result.sample_permutations_attempted} sample permutation(s) failed — timing estimate based on {result.sample_permutations_completed} completed run(s)."
+            )
+
+        return result
