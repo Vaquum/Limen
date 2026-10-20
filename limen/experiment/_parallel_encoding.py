@@ -106,7 +106,7 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
     if isinstance(value, partial):
         return ['partial', encode(value.func, active), encode(value.args, active), encode(value.keywords, active)]
     if inspect.ismethod(value):
-        return ['method', encode(value.__self__, active), value.__name__]
+        return ['method', encode(value.__self__, active), value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value) or isinstance(value, type):
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, type):
@@ -133,7 +133,7 @@ def _import(node: object) -> object:
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
           'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'import': 2, 'partial': 4,
-          'method': 3, 'dataclass': 3, 'instance': 3}
+          'method': 4, 'dataclass': 3, 'instance': 3}
 
 
 def decode(node: object) -> object:
@@ -171,7 +171,10 @@ def _decode_composite(parts: list[object]) -> object:
         return partial(cast(type, decode(value)), *cast(tuple[object, ...], decode(parts[2])),
                        **cast(dict[str, object], decode(parts[3])))
     if tag == 'method':
-        return getattr(decode(value), cast(str, parts[2]))
+        method = getattr(decode(value), cast(str, parts[2]))
+        if not inspect.ismethod(method) or method.__func__ is not decode(parts[3]):
+            raise ValueError('Parallel bound method implementation changed')
+        return method
     return _decode_instance(parts)
 
 

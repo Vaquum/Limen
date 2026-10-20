@@ -62,4 +62,4 @@ def grid_threshold_optimizer(y_val: npt.NDArray[Any] | pl.Series,
     best_idx = int(np.argmax(scores))
     return float(valid_thresholds[best_idx]), float(scores[best_idx])
 
-_parallel(grid_threshold_optimizer)
+_parallel(grid_threshold_optimizer, backend_imports=('numpy', 'sklearn', 'limen.metrics.balanced_metric'))

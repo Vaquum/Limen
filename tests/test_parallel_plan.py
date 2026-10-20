@@ -26,6 +26,7 @@ from limen.scalers.robust_scaler import RobustScaler
 from limen.targets.random_binary import RandomBinaryTarget
 from limen.yaml import parse
 from limen.yaml.compiler import build_manifest
+from tests.test_parallel_rounds import CallerRollingBase
 
 
 def _configuration() -> dict[str, object]:
@@ -51,11 +52,8 @@ def _caller_validator(params):
 
 
 @dataclass
-class CallerRolling:
+class CallerRolling(CallerRollingBase):
     window: int
-
-    def transform(self, data):
-        return _caller_feature(data, self.window)
 
     def __call__(self, data):
         return self.transform(data)
@@ -134,6 +132,8 @@ def test_frozen_manifest_round_plan() -> None:
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
             assert digest(decode(encode(frozen))) == digest(frozen)
+            if hasattr(component, '__func__'):
+                _assert_inherited_identity(frozen)
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
@@ -157,6 +157,45 @@ def test_frozen_manifest_round_plan() -> None:
     assert digest(values['tuple']) != digest(values['list'])
     assert digest(values) == digest(dict(reversed(list(values.items()))))
     _assert_plan_identity(plan)
+    _assert_selector_and_metric_identity(plan)
+
+
+def _assert_inherited_identity(plan):
+    from limen.experiment import _parallel_encoding as codec
+    from limen.experiment._parallel_plan import plan_digests
+    original = codec.module_identity
+    def identity(name):
+        result = original(name)
+        return [result[0], 'changed-inherited-source', result[2]] if name == 'tests.test_parallel_rounds' else result
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(codec, 'module_identity', identity)
+        changed = plan_digests(plan.manifest, plan.stages)
+    assert changed[0] != plan.pipeline_digest and changed[1] != plan.resource_digest
+
+
+def _assert_selector_and_metric_identity(plan):
+    from limen.experiment import _parallel_encoding as codec, _parallel_plan as plans
+    fixed = freeze_manifest(copy.deepcopy(plan.manifest).set_scaler(RobustScaler), None)
+    registry = list(plans.SCALER_REGISTRY.items())
+    swapped = dict([(registry[1][0], registry[0][1]), (registry[0][0], registry[1][1]), *registry[2:]])
+    assert list(swapped.values()) == list(plans.SCALER_REGISTRY.values())
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(plans, 'SCALER_REGISTRY', swapped)
+        changed = plans.plan_digests(plan.manifest, plan.stages)
+        assert changed[0] != plan.pipeline_digest and changed[1] != plan.resource_digest
+        assert plans.plan_digests(fixed.manifest, fixed.stages) == (fixed.pipeline_digest, fixed.resource_digest)
+    config = _configuration()
+    config['sfd']['manifest']['calibration']['threshold_function']['params'] = {}
+    default_metric = freeze_manifest(build_manifest(config), config)
+    original = codec.module_identity
+    def identity(name):
+        result = original(name)
+        return [result[0], 'changed-default-metric', result[2]] if name == 'limen.metrics.balanced_metric' else result
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(codec, 'module_identity', identity)
+        patch.setattr(plans, 'module_identity', identity)
+        changed = plans.plan_digests(default_metric.manifest, default_metric.stages)
+    assert changed[0] != default_metric.pipeline_digest and changed[1] != default_metric.resource_digest
 
 
 def _assert_plan_identity(plan):

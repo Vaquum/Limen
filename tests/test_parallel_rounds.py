@@ -38,6 +38,11 @@ from limen.yaml.compiler import build_pruning_strategies
 from limen.yaml.store import canonical_manifest_id
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class CallerRollingBase:
+    def transform(self, data):
+        return data.with_columns(pl.col('close').rolling_mean(self.window).alias('caller_mean'))
 FIXTURE = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
 _TRANSIENT = {'execution_time'}
 
