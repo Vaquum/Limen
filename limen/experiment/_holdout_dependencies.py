@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from builtins import globals as _native_globals
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from functools import lru_cache, partial
@@ -71,8 +72,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     processed: dict[int, set[str]] = {}
     inspected: set[tuple[int, bool, int, int]] = set()
     recorded_mro: set[int] = set()
-    reflective_keys: set[str] = set()
-    reflected: dict[int, set[str]] = {}
+    reflective_keys: set[tuple[str, str]] = set()
+    reflected: dict[int, set[tuple[str, str]]] = {}
     recorded_bindings: set[tuple[int, str, int]] = set()
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
     constructor_names = method_names | {'__new__', '__init__'}
@@ -116,7 +117,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(value.__defaults__)
             visit(value.__kwdefaults__)
             for cell in value.__closure__ or ():
-                visit(cell.cell_contents)
+                for part in children(cell):
+                    visit(part)
             function_module, function_name = _function_module(value), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
             if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
@@ -127,7 +129,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
             instructions = _instructions(value.__code__)
-            references = {name: [cell.cell_contents] for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
+            references = {name: list(children(cell)[1:]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             imported: ModuleType | None = None
             chained_import = False
             binding: object = None
@@ -136,26 +138,18 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 name = str(instruction.argval)
                 if instruction.opname in ('LOAD_FAST', 'LOAD_DEREF') and name not in references:
                     continue
-                indirect_globals = instruction.opname == 'LOAD_CONST' and name == '__globals__' and any(part.opname in ('CALL', 'CALL_FUNCTION') for part in instructions[index + 1:index + 4])
-                if name == '__globals__' and (instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect_globals):
+                indirect_globals = instruction.opname == 'LOAD_CONST' and name in ('__globals__', '__builtins__') and any(part.opname in ('CALL', 'CALL_FUNCTION') for part in instructions[index + 1:index + 4])
+                if name in ('__globals__', '__builtins__') and (instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect_globals):
                     lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
                     if indirect_globals:
                         lookup = lookup[next(offset for offset, part in enumerate(lookup) if part.opname in ('CALL', 'CALL_FUNCTION')) + 1:]
                     if not lookup[1:] or lookup[0].opname != 'LOAD_CONST' or not isinstance(lookup[0].argval, str) or lookup[1].opname != 'BINARY_SUBSCR':
                         raise ValueError('Holdout requires a literal key for reflective function globals')
-                    reflective_keys.add(lookup[0].argval)
+                    reflective_keys.add((name, lookup[0].argval))
                 if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME'):
                     namespace = value.__globals__ if name in value.__globals__ else value.__builtins__
                     if name in namespace:
                         references[name] = [namespace[name]]
-                if instruction.opname == 'LOAD_GLOBAL' and name == 'globals' and name not in value.__globals__:
-                    lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
-                    if not lookup[2:] or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':
-                        raise ValueError('Holdout requires a literal key for prediction globals lookup')
-                    if lookup[1].argval in value.__globals__:
-                        part = cast(object, value.__globals__[lookup[1].argval])
-                        visit(part)
-                        evidence.append((function_module, value.__qualname__, lookup[1].argval, part))
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
                     method_names.add(name)
@@ -190,6 +184,14 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             following += 2
                         else:
                             break
+                    if item is _native_globals and (following == len(instructions) or instructions[following].opname not in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME')):
+                        lookup = [part for part in instructions[following:following + 5] if part.opname != 'PRECALL']
+                        if not lookup[2:] or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':
+                            raise ValueError('Holdout requires a literal key for prediction globals lookup')
+                        if lookup[1].argval in value.__globals__:
+                            part = cast(object, value.__globals__[lookup[1].argval])
+                            visit(part)
+                            evidence.append((function_module, value.__qualname__, lookup[1].argval, part))
                     if isinstance(item, ModuleType) and index > 0 and instructions[index - 1].argval == 'getattr':
                         for attribute in attributes.intersection(vars(item)):
                             visit(getattr(item, attribute))
@@ -279,11 +281,14 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             functions.extend(function for config in exclude for name in ('calibration_func', 'threshold_func') for function in call_functions(getattr(config, name, None)))
             for function in functions:
                 done = reflected.setdefault(id(function), set())
-                for key in reflective_keys.intersection(function.__globals__) - done:
-                    done.add(key)
-                    part = cast(object, function.__globals__[key])
+                for namespace_name, key in sorted(reflective_keys - done):
+                    done.add((namespace_name, key))
+                    namespace = cast(dict[str, object], getattr(function, namespace_name))
+                    if key not in namespace:
+                        continue
+                    part = namespace[key]
                     visit(part)
-                    evidence.append(('function-globals', function.__module__, function.__qualname__, key, part))
+                    evidence.append((namespace_name, function.__module__, function.__qualname__, key, part))
     if capture is not None:
         capture.extend(seen.values())
     return [fitted_witness((tuple(values), evidence))]

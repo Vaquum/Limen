@@ -101,7 +101,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         if inspect.ismethod(value):
             parts += (value.__func__, value.__self__)
         elif inspect.isfunction(value):
-            parts += (value.__defaults__, value.__kwdefaults__, tuple(cell.cell_contents for cell in value.__closure__ or ()))
+            parts += (value.__defaults__, value.__kwdefaults__, value.__closure__)
         for part in parts:
             collect(part)
 

@@ -42,6 +42,7 @@ _COPY_AFTER_FREEZE = False
 _GLOBAL_FITTED_PROVIDER = None
 _ALIAS_SENTINEL = object()
 _ALIAS_REGISTRY = {'default': _ALIAS_SENTINEL}
+_READ_GLOBALS = globals
 
 
 def later_probabilities(values):
@@ -53,6 +54,10 @@ fit_calibrator = later_probabilities
 
 def identity_probabilities(values):
     return values
+
+
+def aliased_namespace_probabilities(values):
+    return np.clip(values + _READ_GLOBALS()['_LATE_RULES']['offset'], 0, 1)
 
 
 class InferenceOffset:
@@ -587,6 +592,65 @@ def test_readonly_prediction_restores_native_profiler(assessment_case):
     finally:
         profiler.disable()
     assert any(entry.code is retained_shape.__code__ for entry in profiler.getstats())
+
+
+def test_frozen_namespace_and_closure_identity(assessment_case):
+    from types import CellType, FunctionType
+    from limen.experiment._holdout_state import fitted_witness
+
+    class AliasPolicy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy(result['_probs'])
+            return result
+    class BuiltinsPolicy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.__builtins__['adjust'](result['_probs'])
+            return result
+    selected = copy.deepcopy(assessment_case[2][0][0])
+    native_policy = FunctionType(identity_probabilities.__code__, {'__name__': __name__, '__builtins__': {'adjust': later_probabilities}})
+    for implementation, policy in ((AliasPolicy, aliased_namespace_probabilities), (BuiltinsPolicy, native_policy)):
+        selected._model.__class__ = implementation
+        selected._model.policy = policy
+        handle = _freeze(selected)
+        assert _report(handle, assessment_case)['state'] == 'completed'
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(handle, assessment_case)
+            assert loader.call_count == 0
+
+    def shared_functions():
+        shared = None
+        def left():
+            return shared
+        def right():
+            return shared
+        return left, right
+    class SharedCells(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + (0 if self.left.__closure__[0] is self.right.__closure__[0] else 0.1), 0, 1)
+            return result
+    class SplitCells(SharedCells):
+        def __deepcopy__(self, memo):
+            result = type(self).__new__(type(self))
+            vars(result).update(copy.deepcopy(vars(self), memo))
+            original = self.right
+            result.right = FunctionType(original.__code__, original.__globals__, original.__name__, original.__defaults__, (CellType(original.__closure__[0].cell_contents),))
+            result.right.__qualname__ = original.__qualname__
+            return result
+    del selected._model.policy
+    selected._model.__class__ = SharedCells
+    selected._model.left, selected._model.right = shared_functions()
+    assert selected._model.left.__closure__[0] is selected._model.right.__closure__[0]
+    assert _report(_freeze(selected), assessment_case)['state'] == 'completed'
+    selected._model.__class__ = SplitCells
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed selected state'):
+            _freeze(selected)
+        assert loader.call_count == 0
+    assert fitted_witness((CellType(), CellType())) != fitted_witness((CellType(), CellType(None)))
 
 
 def test_frozen_dependencies_and_invalid_state(assessment_case):

@@ -10,7 +10,7 @@ import logging
 import marshal
 import pickle
 import typing
-from types import CodeType, GenericAlias, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, MethodWrapperType, ModuleType
+from types import CellType, CodeType, GenericAlias, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, MethodWrapperType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
@@ -60,6 +60,11 @@ def object_payload(value: object) -> TypeGuard[npt.NDArray[np.generic] | np.gene
 
 
 def children(value: object) -> tuple[object, ...]:
+    if type(value) is CellType:
+        try:
+            return (True, value.cell_contents)
+        except ValueError:
+            return (False,)
     if isinstance(value, Mapping):
         entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
         return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
@@ -144,8 +149,9 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
-            closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)), node(item.__annotations__))
+            result = ('function', item.__module__, item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(item.__closure__), node(vars(item)), node(item.__annotations__))
+        elif type(item) is CellType:
+            result = ('cell', *(node(part) for part in children(item)))
         elif _booster(item):
             from lightgbm import Booster
             booster = cast(Booster, item)
