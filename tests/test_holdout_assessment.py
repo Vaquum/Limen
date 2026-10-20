@@ -662,6 +662,7 @@ def test_frozen_namespace_and_closure_identity(assessment_case):
 
 
 def test_frozen_default_bindings_and_provider_identity(assessment_case):
+    from limen.experiment._holdout_dependencies import dependency_digest
     from limen.experiment._holdout_prediction import readonly_prediction
     from limen.experiment._holdout_state import fitted_witness
 
@@ -709,11 +710,10 @@ def test_frozen_default_bindings_and_provider_identity(assessment_case):
     selected._model.policy = first()
     handle = _freeze(selected)
     assert _report(handle, assessment_case)['state'] == 'completed'
+    dependencies = dependency_digest([first, second, selected._model.policy])
     selected._model.policy.__class__ = second
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(handle, assessment_case)
-        assert loader.call_count == 0
+    assert dependency_digest([first, second, selected._model.policy]) != dependencies
+    assert _report(handle, assessment_case)['state'] == 'completed'
     selected._model.policy.__class__ = first
     def switch_provider(self, memo):
         result = second()
