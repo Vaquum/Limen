@@ -21,6 +21,7 @@ from limen.experiment import _holdout_report as reports
 from limen.experiment._holdout_freeze import FrozenHoldoutSelection, digest, members, owned_copy, provenance, state_digest, unchanged, frozen_parts
 from limen.experiment._holdout_source import SourceEvidence, load_admitted_source, source_spec
 from limen.experiment.manifest_core import MLManifest
+from limen.targets.threshold_binary import ThresholdBinaryTarget
 from limen.inference.sensor import BarPrediction, Sensor
 
 _aggregate = cast(Callable[[Cohort, list[BarPrediction]], BarPrediction], vars(Cohort)['_aggregate_bar_predictions'])
@@ -132,6 +133,13 @@ def _execute(final: pl.DataFrame, tape: list[dict[str, object]], declarations: l
     return summaries, ledgers
 
 
+def _checked_labels(labels: list[int | None], height: int) -> list[int | None]:
+    if (len(labels) != height or (labels and labels[-1] is not None) or any(value is None for value in labels[:-1])
+            or any(value is not None and value not in (0, 1) for value in labels)):
+        raise ValueError('Holdout labels must be binary with a single unavailable terminal label')
+    return labels
+
+
 def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | Path,
                          reservation_id: str, start: str | None = None, end: str | None = None) -> dict[str, object]:
     """Allocate durable exposure, then assess a causal tape from an owned fitted copy."""
@@ -175,7 +183,14 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 failures.member_id, failures.bar_ns = None, None
                 final = raw.filter(pl.col('datetime').dt.epoch('ns') >= planned['start_ns'])
                 stage = 'labels'
-                labels: list[int | None] = cast(list[int | None], target.transform(final)[target.target_name].to_list()) if target is not None else [None] * final.height
+                labels: list[int | None] = cast(list[int | None], [None] * final.height)
+                if target is not None:
+                    options = cast(dict[str, object], spec['target']) if isinstance(spec.get('target'), dict) else {}
+                    if 'shift' in options:
+                        frame = cast(ThresholdBinaryTarget, target).transform(final, shift=cast(int, options['shift']))[target.target_name].to_list()
+                    else:
+                        frame = target.transform(final)[target.target_name].to_list()
+                    labels = _checked_labels(cast(list[int | None], frame), final.height)
                 stage = 'execute'
                 summaries, ledgers = _execute(final, tape, declarations)
                 stage = 'artifacts'
