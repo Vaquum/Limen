@@ -2,6 +2,10 @@
 
 A chronological split answers a question about one fitting window and what followed it. Walk-forward research repeats that decision as the available history changes. Each fold needs its own fitted state, validation decision and later assessment window.
 
+## Prerequisites
+
+Use the matching Limen wheel and recorded-input bundle from the [Python](examples/python-research/README.md) and [Compiled](examples/compiled-research/README.md) project pages. Their environment and entry-point instructions also apply to this chapter's `walk_forward` scenario.
+
 The two projects use the first 384 recorded hourly Bitcoin observations from `spot_1h_20240101_20241231.parquet`. They retain different research decisions. The Python project owns its folds and selection; the Compiled project records a pipeline whose selected folds can be reconstructed. Their results are not interchangeable estimates of the same model.
 
 ## Choose the information available to each fit
