@@ -1,6 +1,6 @@
-# Universal Experiment Loop
+# Run and retain an experiment
 
-The Universal Experiment Loop (UEL) executes Limen experiments. Choose the CLI for YAML manifests or the Python API for SFDs and direct search control. Both routes use the Mutable Search Queue (MSQ) inside UEL: a search strategy generates candidates, MSQ controls which candidate runs next, and UEL prepares data and evaluates it.
+The Universal Experiment Loop (UEL) runs the research definition one candidate at a time. The [Python project](examples/python-research/README.md) supplies its preparation, fitted model and score as ordinary functions. The [Compiled project](examples/compiled-research/README.md) supplies a Manifest through YAML. Both use a search strategy and the Mutable Search Queue (MSQ): the strategy generates candidates, the queue chooses what runs next, and UEL prepares and evaluates it.
 
 This page covers:
 
@@ -12,21 +12,21 @@ This page covers:
 
 ## Prerequisites
 
-- `pip install "vaquum-limen[data]"` for the example below and access to its market-data source
+- the project and recorded-input bundle, installed as described in either project README
 - a validated YAML manifest for the CLI path, or an SFD plus compatible data for direct Python use
 - a `SearchStrategy` for Python/MSQ execution
 - an `experiment_dir` when you need persisted round artifacts or checkpoints
 
 ## Preferred execution path
 
-Start with CLI for a first YAML experiment:
+From the recorded-input bundle root, run the Compiled project directly:
 
+<!-- example: uel-compiled-yaml source=docs/examples/commands.json region=compiled-yaml scenario=selection interface=compiled role=executed -->
 ```bash
-limen validate logreg-first.yaml
-limen profile logreg-first.yaml
-limen run --dry-run logreg-first.yaml
-limen run logreg-first.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
 ```
+
+The YAML definition and complete working-directory instructions live in the [Compiled project](examples/compiled-research/README.md). Validation, profiling and dry-run controls are documented in the [CLI reference](Command-Line-Interface.md).
 
 `limen run` constructs UEL with a compiled SFD, a concrete search strategy, an `experiment_dir`, and the parsed YAML stored as `yaml_reference` in `metadata.json`. The result directory contains the copied manifest, `metadata.json`, `results.csv`, and `round_data.jsonl.gz`.
 
@@ -42,43 +42,37 @@ the same pinned calibration reused in a later experiment, use the runnable
 
 Pass `search_strategy` explicitly to select MSQ. The constructor still defaults to `None`, which selects the supported [standard execution contract](#legacy-execution-reference).
 
-This example uses a built-in SFD and seeded random search. Replace the SFD with your own module to run custom code under the same loop.
+The Python project runs grid, seeded random, Sobol and shuffled traversal over the same caller-owned SFD. The complete function uses the recorded-data and SFD helpers from its project; no built-in model is required.
 
+<!-- example: uel-python-search source=docs/examples/python-research/scenarios.py region=search scenario=search interface=python role=executed -->
 ```python
-import limen
-from limen.data import HistoricalData
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import RandomStrategy
+def search(data_dir, output):
+    bars = hourly(data_dir, 1440)
+    space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
+    runs = {}
+    for name in ('grid', 'random', 'sobol', 'shuffled'):
+        domain = ParamDomain(space)
+        strategy = (GridStrategy(domain, shuffle=True, seed=42) if name == 'shuffled'
+                    else {'grid': GridStrategy, 'random': RandomStrategy, 'sobol': SobolStrategy}[name](domain, **({} if name == 'grid' else {'seed': 42})))
 
-historical = HistoricalData()
-data = historical.get_spot_klines(kline_size=7200, row_count_limit=2000)
-sfd = limen.sfd.logreg_binary
-strategy = RandomStrategy(ParamDomain(sfd.params()), seed=42)
+        def model(data, round_params):
+            fitted = project.fit(data['train'], round_params)
+            return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
 
-uel = limen.UniversalExperimentLoop(
-    data=data,
-    sfd=sfd,
-    search_strategy=strategy,
-)
-
-uel.run(
-    experiment_name='logreg-first',
-    n_permutations=4,
-    post_processing=True,
-)
+        loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
+        loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
+        runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
+    return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+            'feedback': mixed_feedback(data_dir, output / 'feedback')}
 ```
 
-With `post_processing=True`, these attributes are available:
+Result availability follows the selected interface and retention policy:
 
-```python
-uel.experiment_log
-uel.experiment_confusion_metrics
-uel.experiment_backtest_results
-```
+With native compatible retained results, UEL exposes `experiment_log`, `experiment_confusion_metrics` and `experiment_backtest_results`. The first is always populated; the latter two require post-processing and their native evidence.
 
-Without `post_processing=True`, UEL still populates `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset. With no `experiment_dir`, the run writes `logreg-first.csv`; it does not persist round data or checkpoints.
+Without `post_processing=True`, UEL still populates `uel.experiment_log`, but `uel._log`, `uel.experiment_confusion_metrics`, and `uel.experiment_backtest_results` remain unset. With no `experiment_dir`, the run writes `<experiment_name>.csv`; it does not persist round data or checkpoints.
 
-For exhaustive search, use `GridStrategy` over the same `ParamDomain`. The random-search seed controls candidate generation, not randomness inside preparation or model code. See [Advanced Search](Advanced-Search.md) for strategy choices and optional feedback.
+The function above uses `GridStrategy` for its exhaustive cases over the same `ParamDomain`. The random-search seed controls candidate generation, not randomness inside preparation or model code. See [Advanced Search](Advanced-Search.md) for strategy choices and optional feedback.
 
 The [convergence warning report](#convergence-warning-report) is available after run conclusion independently of `post_processing`.
 
@@ -92,9 +86,14 @@ Post-processing retains:
 ### Promote caller-owned fitted state
 
 Promote evaluated fitted models with `Sensor.from_model`, then compose them with
-`Cohort.from_python(selected_sensors)`. This example requires a repository checkout: the recorded
-fixture is not included in the wheel. Save the following block as a Python file
-and run it from the checkout root.
+`Cohort.from_python(selected_sensors)`. Use the [complete Python project](examples/python-research/README.md), its matching wheel and recorded-input bundle. The project includes the imports, preparation and inference helpers used by the selection function below. From the bundle root, run:
+
+<!-- example: uel-python-selection-command source=docs/examples/commands.json region=python-selection scenario=selection interface=python role=executed -->
+```bash
+python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
+```
+
+The project instructions also give the working directory, input path and output directory for a repository checkout. Recorded fixtures are not installed inside the wheel.
 
 The caller defines one-bar trades: a decision at bar `t` enters at the next open
 and exits at that bar's close, with a declared 2 bp total round-trip cost. Search
@@ -102,62 +101,11 @@ sees only the first 1,440 bars. It selects the best validation return per window
 breaking ties by alpha, then reuses those exact evaluated models. The native
 Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
+The excerpt below is the project's selection function. Execute it through the project entry point above; the function uses helpers from its complete source file.
+
 <!-- python-sensor-example -->
+<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
 ```python
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from types import SimpleNamespace
-
-import numpy as np
-import polars as pl
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
-from limen import Cohort, Sensor, UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
-
-
-def features(bars, window):
-    return bars.with_columns(
-        (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
-    )
-
-
-def prepare_split(bars, round_params):
-    return features(bars, round_params["window"]).with_columns(
-        (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
-        .alias("next_return")
-    ).slice(12).drop_nulls(["momentum", "next_return"])
-
-
-def prep(bars, round_params):
-    # Split before features and labels; no target crosses a boundary.
-    return {
-        "train": prepare_split(bars[:960], round_params),
-        "validation": prepare_split(bars[960:1440], round_params),
-    }
-
-
-def fit(train, round_params):
-    return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
-        train.select("momentum"), train["next_return"].to_numpy()
-    )
-
-
-def backtest(validation, forecasts):
-    positions = np.sign(forecasts)
-    net = positions * validation["next_return"].to_numpy() - abs(positions) * 0.0002
-    return float(np.mean(net))
-
-
-def prepare_live(history, params):
-    return features(history, params["window"]).with_columns(
-        (pl.col("datetime").dt.epoch("ns") + 900_000_000_000).alias("available_at_ns"),
-    )
-
-
 def run_research(bars, experiment_name):
     research = bars[:1440]
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
@@ -178,7 +126,7 @@ def run_research(bars, experiment_name):
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
     selected = (
-        uel.experiment_log.sort(
+        completed_log(uel).sort(
             ["window", "validation_net_return", "alpha"],
             descending=[False, True, False],
         ).unique(subset="window", keep="first", maintain_order=True)
@@ -192,19 +140,6 @@ def run_research(bars, experiment_name):
     ]
     cohort = Cohort.from_python(sensors)
     return cohort, uel, selected, retained
-
-
-if __name__ == "__main__":
-    bars = pl.read_parquet(
-        "tests/fixtures/spot_15m_20250101_20250531.parquet", n_rows=1920
-    )
-    with TemporaryDirectory() as directory:
-        cohort, uel, selected, retained = run_research(
-            bars, str(Path(directory) / "python-research")
-        )
-        # Twelve prior bars supply context for all 480 held-out decisions.
-        predictions = cohort.predict_all(bars[1428:1920])
-        print(predictions[-1])
 ```
 
 Each partition loses twelve warm-up rows and its final forward-label row:
@@ -227,15 +162,41 @@ prediction; preserve the completed context your preparation needs. See
 and [Cohort](Cohort.md) for custom aggregation and member-input/output mapping.
 Compiled artifact binding remains a separate construction path.
 
+## Compiled construction
+
+Calling a Manifest-backed SFD from Python remains Compiled Research. Its
+selection function validates the recorded source digest, retains a reconstructible
+YAML reference, runs two candidates, selects by validation return and asks Trainer
+to reconstruct the selected round.
+
+<!-- example: uel-compiled-selection source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
+```python
+def run_research(data_dir, output_dir):
+    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
+    source = data_dir / "spot_15m_20250101_20250531.parquet"
+    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
+    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+        raise ValueError("Recorded quarter-hour input digest differs")
+    # Resolve the driver's public --data-dir argument into the recorded run definition.
+    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
+    compiled = CompiledSFD(config)
+    loop = UniversalExperimentLoop(
+        sfd=compiled, search_strategy=build_search_strategy(config),
+        experiment_dir=output_dir, yaml_reference=config,
+    )
+    loop.run("compiled-selection", n_permutations=2, workers=1,
+             post_processing=True, progress_bar=False)
+    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
+    sensors = Trainer(output_dir).train(selected)
+    return loop, sensors, selected
+```
+
 ## Constructor contract
 
+<!-- reference: uel-constructor source=limen/experiment/experiment_core.py region=signature:UniversalExperimentLoop.__init__ role=signature -->
 ```python
-uel = limen.UniversalExperimentLoop(
-    data=data,
-    sfd=sfd,
-    search_strategy=strategy,
-    experiment_dir=None,
-)
+def __init__(self, *, data: pl.DataFrame | None=None, sfd: Any=None, search_strategy: SearchStrategy | None=None, pruning_strategies: list[PruningStrategy] | None=None, feedback_interval: int=100, checkpoint_interval: int=1000, experiment_dir: str | Path | None=None, intra_callback: Callable[[Any, MSQ], None] | None=None, test_mode: bool=False, yaml_reference: dict[str, Any] | None=None, project_root: str | Path | None=None) -> None:
+    ...
 ```
 
 ### Core constructor arguments
@@ -257,11 +218,11 @@ uel = limen.UniversalExperimentLoop(
 
 ## `run()` contract
 
+<!-- reference: uel-run source=limen/experiment/experiment_core.py region=signature:UniversalExperimentLoop.run role=signature -->
 ```python
-uel.run(
-    experiment_name='my_experiment',
-    n_permutations=100,
-)
+@_holdout.run_guard
+def run(self, experiment_name: str, n_permutations: int=10000, prep_each_round: bool=False, random_search: bool=True, maintain_details_in_params: bool=False, context_params: dict[str, object] | None=None, params: Callable[[], dict[str, object]] | None=None, prep: Callable[..., dict[str, object]] | None=None, model: Callable[..., dict[str, object]] | None=None, resume: bool=False, post_processing: bool=False, progress_bar: bool=True, record_execution: bool=False, record_model_outputs: bool=False, factorize: bool=False, workers: int | None=None, recording: Mapping[str, bool] | None=None) -> None:
+    ...
 ```
 
 ### Core run arguments
@@ -296,9 +257,7 @@ Both caches belong to one sweep invocation and contain only successful work. Fit
 
 The recorded-data benchmark isolates the fitted-preparation extension: both campaigns use `factorize=True` and retain prediction reuse; the baseline clears only the fitted-preparation cache before each evaluation. It records actual target/scaler fits, stage timings, end-to-end elapsed time, peak process RSS and scientific-output digests. It uses fixed 2024 hourly observations, pinned splits and single-threaded LightGBM settings; its bounded workload makes no universal speedup claim.
 
-```bash
-python -m tests.benchmark_factorized_preparation --output /tmp/limen-factorized-preparation
-```
+The maintained [factorized preparation probe](../tests/benchmark_factorized_preparation.py) records this comparison separately from the canonical project's scientific equivalence assertions.
 
 ### SFD execution contract
 
@@ -338,14 +297,13 @@ This is what lets downstream analysis stay aligned with the actual test window s
 
 ### Convergence warning report
 
-After a completed standard, MSQ or walk-forward run, read:
+After a completed standard, MSQ or walk-forward run, inspect `uel.convergence_report`:
 
-```python
-report = uel.convergence_report
-report["convergence_warning_rounds"]
-report["observed_rounds"]
-report["convergence_warning_pct"]
-```
+| Field | Meaning |
+|---|---|
+| `convergence_warning_rounds` | Finished, observed rounds with a recorded convergence warning. |
+| `observed_rounds` | Finished rounds with available category diagnostics. |
+| `convergence_warning_pct` | Warning-bearing share of observed rounds, or null without observations. |
 
 This dictionary reports explicitly recorded `ConvergenceWarning` categories, including subclasses. Warning message text is not used to infer convergence problems. A recorded absence of that warning means no warning was observed; it does not prove the model converged.
 
@@ -399,31 +357,29 @@ The same flag records the sibling `market: {"ret": [...]}`: unscaled returns fro
 
 When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), both `execution` and `market` are `null`. A flat snapshot has full-length zero execution arrays and still records market returns. Event execution retains its existing `trade_ledger` by default. With recording off, neither field is added.
 
-Read a new-format snapshot record with available market returns and reproduce its snapshot metrics:
+Read retained arrays according to the declared storage format. The Compiled project's family comparisons use this exact version-2 prediction reader; its independent tests check the decoded values against the model/label population. This helper requires a validated v2 prediction reference and is not a general reader for all formats:
 
+<!-- example: uel-compiled-recorded-predictions source=docs/examples/compiled-research/scenarios.py region=recorded_predictions scenario=search interface=compiled role=executed -->
 ```python
-import json
-from pathlib import Path
-from limen.experiment._round_storage import open_text, round_path
-import numpy as np
-from limen.backtest.long_flat_strategy import ExecutionResult
-from limen.backtest._snapshot_ledger import snapshot_ledger
-
-with open_text(round_path(Path("results"))) as rows:
-    record = json.loads(next(rows))
-execution = record["execution"]
-result = ExecutionResult(**{key: np.asarray(value) for key, value in execution.items()})
-metrics = snapshot_ledger(result, 1.0)
-
-ret = np.asarray(record["market"]["ret"], dtype=float)  # JSON null becomes NaN
-valid = np.isfinite(ret) & np.isfinite(result.pos) & np.isfinite(result.gross)
-timing_per_row = (
-    result.gross[valid].mean()
-    - result.pos[valid].mean() * ret[valid].mean()
-)
+def recorded_predictions(directory: Path, record):
+    metadata = json.loads((directory / 'metadata.json').read_text())
+    if metadata['round_storage'] != 'gzip-jsonl-v2':
+        raise ValueError('This project expects its recorded version-2 signal payloads')
+    reference = record['preds_ref']
+    digest = reference['sha256']
+    if not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
+        raise ValueError('Invalid recorded prediction digest')
+    with gzip.GzipFile(filename=directory / 'round_signals' / (digest + '.json.gz'), mode='rb') as stream:
+        payload = stream.read()
+    if hashlib.sha256(payload).hexdigest() != digest:
+        raise ValueError('Recorded prediction payload differs')
+    values = json.loads(payload)
+    if not isinstance(values, list) or len(values) != reference['count']:
+        raise ValueError('Recorded prediction count differs')
+    return values
 ```
 
-The replayed metrics match `backtest_*` columns (`*_test` for rule-based strategies); using the original notional again would scale twice. For the shipped snapshot strategy without TP/SL, `gross[i] == execution.pos[i] * market.ret[i]` on available market rows. TP/SL uses fill-based exit returns, so a residual against original market closes includes exit effects. The reading example computes arithmetic timing per row over one common, nonempty finite population using gross returns; it adds no Limen metric. Net returns include costs, and compounded market return is a separate quantity.
+To replay snapshot summaries, construct an `ExecutionResult` from retained `pos`, `gross` and `net` arrays and apply the package-local snapshot ledger with notional `1.0`. Those arrays already contain the resolved notional; applying the original notional again would scale twice. For the shipped snapshot strategy without TP/SL, `gross[i] == execution.pos[i] * market.ret[i]` on available market rows. TP/SL uses fill-based exit returns, so a residual against original market closes includes exit effects. A timing diagnostic can subtract mean position times mean market return from mean gross return over one common, nonempty finite population; this adds no Limen metric. Net returns include costs, and compounded market return is a separate quantity.
 
 Ordinal halves use `k = n // 2`, H1 rows `[0:k)` and H2 rows `[k:n)`; an odd middle row belongs to H2. For `n >= 2` with valid prices and no interior nulls, compounding available returns gives H1 `close[k-1] / close[0] - 1` and H2 `close[n-1] / close[k-1] - 1`. H2 includes the move across the boundary. Skipping interior nulls does not guarantee those endpoint identities. Window lengths and split dates can differ between rounds; calendar comparisons still require row identity and alignment.
 
@@ -450,15 +406,7 @@ Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ 
 | `trade_ledger` | Omit the complete event ledger; retain the trade contract, its digest and learning binding. |
 | `fold_details` | Omit the entire nested `folds` payload, including fold-local results, bounds and provenance; retain the outer occurrence identity and parameters. |
 
-For example, add this block to an existing YAML `uel` configuration:
-
-```yaml
-recording:
-  predictions: true
-  alignment: true
-  trade_ledger: true
-  fold_details: true
-```
+Choose the evidence policy before the first candidate runs. The two recovery functions below enable all four groups explicitly before the first run. Keep that complete policy when resumability is required.
 
 The Python equivalent is `uel.run(..., recording=dict.fromkeys(("predictions", "alignment", "trade_ledger", "fold_details"), True))`. On a new run, `recording=None` uses the configured YAML policy, or all-false defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `false`: native `{"trade_ledger": True}` overrides YAML `{"predictions": True}` with predictions disabled.
 
@@ -484,64 +432,47 @@ The [recorded payload inventory](https://github.com/Vaquum/Limen/blob/main/tests
 
 In the recorded full-payload baseline, omitting only the event ledger removes 218,682 of the two-event sample's 245,352 logical bytes (89.13%) and recompresses it to 4,668 bytes. With alignment recording disabled, per-signal identities are also omitted; Trainer compares reconstructed contract fields and the original full contract digest. These small fixture observations are not campaign projections or universal savings claims; defaults already omit execution/market and model-output recordings, and compressed omission savings are not additive. Stored counts describe the measured baseline, not a portable exact-byte oracle for other numerical libraries or zlib implementations.
 
-Reproduce the event probe from the repository root using the existing recorded-execution helpers:
-
-```python
-import gzip
-import json
-import tempfile
-from pathlib import Path
-import polars as pl
-from tests import test_record_execution as probe
-
-with tempfile.TemporaryDirectory() as temporary:
-    directory = Path(temporary)
-    config = probe._config('rule')
-    config['sfd']['manifest']['backtest'] = {'product': {
-        'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
-        'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0,
-    }}
-    bars = pl.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet').head(1200)
-    loop = probe._loop(config, bars, directory)
-    probe._run(loop, record_execution=True, record_model_outputs=True, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
-    full = [(json.dumps(record) + '\n').encode('utf-8') for record in probe._records(directory)]
-    lean = [(json.dumps({k: v for k, v in json.loads(row).items() if k != 'trade_ledger'}) + '\n').encode('utf-8') for row in full]
-    print('logical full/without ledger:', sum(map(len, full)), sum(map(len, lean)))
-    print('compressed full/without ledger:', *(sum(len(gzip.compress(row, compresslevel=1, mtime=0)) for row in rows) for rows in (full, lean)))
-```
+The maintained [payload-projection regression](../tests/test_recording_policy.py) verifies structural omissions and relative storage sizes against the recorded fixture. It is separate from the project examples, which prove their actual retained outputs.
 
 Structural and relative-size regression checks run with `python -m pytest -q tests/test_recording_policy.py -k payload_projection`; exact compressed counts are not the acceptance criterion.
 
 ## Optional adaptive search
 
-Optional reducers can adapt the search while UEL runs. This example adds a budget reducer to a built-in grid strategy:
+Optional reducers can adapt the remaining search while UEL runs. Both projects request four candidates and budget the run to three; the recorded audit explains why the fourth did not execute:
 
+### Python Research
+
+<!-- example: uel-budget-python source=docs/examples/python-research/scenarios.py region=adaptive_search scenario=search interface=python role=executed -->
 ```python
-import limen
+def adaptive_search(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
 
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
-from limen.experiment.reducer import BudgetReducer
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
 
-domain = ParamDomain(limen.sfd.random_binary.params())
-strategy = GridStrategy(domain)
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
+                                   experiment_dir=output, checkpoint_interval=1, feedback_interval=1,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-adaptive-search', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
+```
 
-uel = limen.UniversalExperimentLoop(
-    sfd=limen.sfd.random_binary,
-    search_strategy=strategy,
-    pruning_strategies=[
-        BudgetReducer(max_permutations=4, check_after_pct=0.25),
-    ],
-    feedback_interval=2,
-    checkpoint_interval=3,
-    experiment_dir='advanced-budget',
-)
+### Compiled Research
 
-uel.run(
-    experiment_name='advanced-budget',
-    n_permutations=6,
-    recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
-)
+<!-- example: uel-budget-compiled source=docs/examples/compiled-research/scenarios.py region=adaptive_search scenario=search interface=compiled role=executed -->
+```python
+def adaptive_search(data_dir, output):
+    config = configuration('adaptive', data_dir)
+    loop = execute(config, output)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 ```
 
 The budget reducer can trim the remaining queue during a feedback cycle, so the number of completed rows may be lower than the requested permutation budget. `results.csv` and `round_data.jsonl.gz` track completed rounds; `audit.jsonl` records the intervention; checkpoints follow `checkpoint_interval`.
@@ -550,20 +481,68 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 Python/MSQ runs can resume when all four recording groups were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
 
+### Resume Python Research
+
+<!-- example: uel-recovery-python source=docs/examples/python-research/scenarios.py region=recovery scenario=recovery interface=python role=executed -->
 ```python
-uel.run(
-    experiment_name='advanced-budget',
-    n_permutations=6,
-    resume=True,
-)
+def recovery(data_dir, output):
+    bars = hourly(data_dir, 1440)
+    space = {'window': [4, 12], 'alpha': [0.1, 1.0]}
+
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        forecasts = fitted.predict(data['validation'].select('momentum'))
+        return {'validation_net_return': project.backtest(data['validation'], forecasts), '_preds': forecasts}
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+
+    def stop_after_two(log, msq):
+        if log.height == 2:
+            signal.raise_signal(signal.SIGINT)
+
+    def loop(callback=None, directory='experiment'):
+        return UniversalExperimentLoop(data=bars, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output / directory, checkpoint_interval=1, feedback_interval=1, intra_callback=callback)
+
+    recording: dict[str, bool] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+    interrupted = loop(stop_after_two)
+    interrupted.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
+    completed_before_resume = project.completed_log(interrupted).height
+    resumed = loop()
+    resumed.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording, resume=True)
+    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    full = loop(directory='uninterrupted')
+    full.run('python-recovery', n_permutations=4, workers=1, progress_bar=False, recording=recording)
+    if not project.completed_log(resumed).drop('execution_time').equals(project.completed_log(full).drop('execution_time')):
+        raise ValueError('Resumed Python results differ from uninterrupted research')
+    return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
 ```
 
-In a live shutdown-and-resume run in this repo:
+### Resume Compiled Research
 
-- the first phase stopped after `2` completed rounds
-- `results.csv` and `round_data.jsonl.gz` each contained `2` entries
-- the resumed phase finished the remaining rounds
-- the final stored round indices were `0, 1, 2, 3`
+<!-- example: uel-recovery-compiled source=docs/examples/compiled-research/scenarios.py region=recovery scenario=recovery interface=compiled role=executed -->
+```python
+def recovery(data_dir, output):
+    config = configuration('recovery', data_dir)
+    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
+
+    def stop_after_two(log, msq):
+        if log.height == 2:
+            signal.raise_signal(signal.SIGINT)
+
+    first = execute(config, output / 'experiment', callback=stop_after_two)
+    resumed = execute(config, output / 'experiment', resume=True)
+    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    selected = research_project.completed_log(resumed)['id'][0]
+    sensors = Trainer(output / 'experiment').train([selected])
+    full = execute(config, output / 'uninterrupted')
+    if not research_project.completed_log(resumed).drop('execution_time').equals(research_project.completed_log(full).drop('execution_time')):
+        raise ValueError('Resumed Compiled results differ from uninterrupted research')
+    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors), 'uninterrupted_equivalence': True}
+```
+
+Both project recovery cases interrupt a real run after two completed candidates, resume its checkpoint and compare final identities/order with uninterrupted execution. Their tests also reject changed recorded source rows or split geometry. The Compiled case retains four unique candidates; the Python case preserves its caller-defined parameter domain.
 
 Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
 
@@ -587,18 +566,9 @@ With `random_search=False`, combinations follow declared parameter order, with t
 
 ### Direct standard run
 
-For existing callers, omit `search_strategy` and use the legacy arguments. This supported contract remains available; the example uses `data` and `sfd` from the Python example above:
+For existing callers, omit `search_strategy` and use the legacy arguments. This supported contract remains available:
 
-```python
-standard = limen.UniversalExperimentLoop(data=data, sfd=sfd)
-standard.run(
-    experiment_name='standard-run',
-    n_permutations=4,
-    prep_each_round=True,
-    random_search=False,
-    post_processing=True,
-)
-```
+Use the source-bound constructor and `run()` signatures above: omit `search_strategy`, set `prep_each_round=True` for Manifest preparation, and choose `random_search=False` for legacy enumeration. The canonical projects use explicit MSQ strategies.
 
 ## Common Errors
 
@@ -634,7 +604,7 @@ In v2 ordinary rounds, retained top-level `preds` and `probs` flat finite numeri
 
 References are local to one run. They share array bytes, while each occurrence keeps its identity, typed parameters, alignment, threshold rule, metrics and execution evidence. All local evidence remains retained and the existing private reader resolves it for Trainer, Cohort, acceptance and resume. The recording policy still controls which groups are saved. There is no additional switch, sink, acknowledgement, receipt or retention policy.
 
-External readers must verify each member trailer before exposing its round. The internal shared reader uses `zlib.decompressobj(wbits=31)`, requires each gzip header, rejects zero padding, and checks EOF/CRC/ISIZE. It validates references before constructing a path and verifies blob digest and return length against predictions, or retained execution positions when predictions are omitted. Decompression is bounded to 512 MiB per round and 128 MiB per blob. The package-local example above uses the private shared reader; this is not a new public reader API.
+External readers must verify each member trailer before exposing its round. The internal shared reader uses `zlib.decompressobj(wbits=31)`, requires each gzip header, rejects zero padding, and checks EOF/CRC/ISIZE. It validates references before constructing a path and verifies blob digest and return length against predictions, or retained execution positions when predictions are omitted. Decompression is bounded to 512 MiB per round and 128 MiB per blob. The package-local shared reader remains private; the project helper above handles only its declared v2 prediction payloads.
 
 Trainer, Cohort and acceptance processing reject incomplete artifacts. Live/resume reads may ignore only an incomplete final member outside the successful checkpoint prefix. Resume validates ordered successful CSV identities, scans existing member/line offsets, and truncates in place: committed round-data bytes and inode survive. CSV retains its existing rewrite behavior. This is sequential restoration, not indexed random access.
 

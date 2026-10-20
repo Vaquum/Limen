@@ -72,15 +72,11 @@ jobs:
         working-directory: docs-site
         run: npm run security:audit
 
-      - name: Build docs site
-        working-directory: docs-site
-        run: npm run check
-
-      - name: Assemble the candidate reader
+      - name: Lint and build the research book
         working-directory: docs-site
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: timeout 60s npm run build:reader
+        run: timeout 60s npm run check
 
       - name: Provision the locked browser
         working-directory: docs-site
@@ -91,6 +87,20 @@ jobs:
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run check:reader -- --evidence ../.docs-evidence/current.json --head "$LIMEN_EXPECTED_HEAD" --tested "$(git rev-parse HEAD)" --tree "$(git rev-parse HEAD^{tree})"
+
+      - name: Set up the isolated deployment toolchain runtime
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: docs-site/publisher/package-lock.json
+
+      - name: Install and audit the pinned deployment toolchain
+        working-directory: docs-site/publisher
+        run: |
+          npm ci
+          npm run security:audit
+          npm run check:config
 
       - name: Retain research and browser evidence
         if: ${{ always() && hashFiles('.docs-evidence/**') != '' }}

@@ -6,6 +6,10 @@
 
 - [Data Bars](../../../docs/Data-Bars.md)
 
+## In the research projects
+
+Both projects run `bars`. The [Python project](../../../docs/examples/python-research/README.md) checks complete-bar boundaries and conserved volume directly; [Compiled project](../../../docs/examples/compiled-research/README.md) applies the same formation functions separately after each chronological split.
+
 ## What this package owns
 
 Owns the standard threshold-bar implementations that aggregate raw kline rows once a running quantity crosses a threshold.
@@ -26,9 +30,16 @@ Does **not** own raw data retrieval (owned by `limen.data.HistoricalData`) or th
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `standard_bars.py` | volume_bars, trade_bars, liquidity_bars |
+
+<!-- reference: package-data-bars-layout source=limen/data/bars/README.md region=layout:package role=layout -->
 ```text
 bars/
-└── standard_bars.py   # volume_bars, trade_bars, liquidity_bars
+├── README.md
+├── __init__.py
+└── standard_bars.py
 ```
 
 ## Things to know

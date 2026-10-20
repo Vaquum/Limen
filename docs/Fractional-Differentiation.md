@@ -1,9 +1,15 @@
 # Fractional Differentiation
 
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-Fractional differentiation makes a price series stationary while keeping as much of its memory as possible. Full first differencing (returns) is stationary but erases the level information a model can learn from; the raw price keeps all its memory but is non-stationary. Fractional differentiation sits between the two: it applies a real-valued differencing order `d` between `0` and `1` and keeps the smallest amount of differencing that passes a stationarity test.
+Fractional differentiation applies a backward-looking weighted difference to a
+recorded series. The order and truncated history determine which level changes
+remain in the feature. An ADF result describes one tested window; the transform
+does not guarantee stationarity or predictive value.
 
-This guide covers when to reach for it, how to choose `d`, and how to wire it into an experiment. It follows Lopez de Prado's *Advances in Financial Machine Learning* (AFML), Chapter 5.
+The [Python project](examples/python-research/README.md) calls the feature
+explicitly inside each partition and owns its fitted preprocessing. The
+[Compiled project](examples/compiled-research/README.md) declares the same feature
+inside a native Manifest, with split preparation, CCO, ablation and compression.
+Their independent tests check the actual prepared values and training fits.
 
 ## What This Guide Covers
 
@@ -19,31 +25,25 @@ This guide covers when to reach for it, how to choose `d`, and how to wire it in
 
 ## Why Stationarity, And Why Not Just Take Returns
 
-A stationary series has a stable mean and variance over time. Most models assume this: a coefficient learned on 2021 price levels is meaningless on 2024 price levels, so a raw `close` column leaks regime information and generalizes badly.
+Stationarity concerns a series' distribution over time. Stable mean and variance
+are useful diagnostics, but do not establish strict stationarity. Differencing
+price levels and taking returns are distinct transformations; neither is
+universally stationary or memoryless.
 
-The usual fix is to difference the series into returns (`d = 1`). That is stationary, but it is also memoryless — each row now describes only a one-step change and knows nothing about where the level sits in a longer move. Fractional differentiation keeps a fraction of that memory: at `d = 0.4`, each output value is a weighted sum of many past observations, with weights that decay but never vanish. You keep long-range structure and still clear a stationarity test.
-
-The rule of thumb from AFML: use the **smallest** `d` that makes the series stationary. Anything larger throws away memory you did not need to spend.
+At `d=0`, this helper copies the price column. At `d=1`, it subtracts the previous
+price. Intermediate orders combine prior observations with recursively derived
+weights. Fixed-width truncation discards sufficiently small weights, so the
+implemented history is finite. Choosing a smaller order can retain more level
+information; it does not prove that information is useful for the model.
 
 ## Finding The Minimum `d`
 
-`find_min_d` sweeps `d` from `d_start` to `d_end` in steps of `step`, fractionally differencing the column at each value and testing the result with an Augmented Dickey-Fuller (ADF) test. It returns the first `d` whose series is stationary.
+`find_min_d` sweeps `d` from `d_start` to `d_end` in steps of `step`, fractionally differencing the column at each value and testing the result with an Augmented Dickey-Fuller (ADF) test. It returns the first `d` whose transformed training window passes its ADF criterion.
 
+<!-- reference: fractional-minimum-d source=limen/features/fractional_diff.py region=signature:find_min_d role=signature -->
 ```python
-import polars as pl
-
-from limen.features import find_min_d
-
-df = pl.DataFrame({'close': load_close_prices()})
-
-d = find_min_d(
-    df,
-    col='close',
-    d_start=0.0,
-    d_end=1.0,
-    step=0.1,
-    significance_level=0.05,
-)
+def find_min_d(data: pl.DataFrame, col: str, d_start: float=0.0, d_end: float=1.0, step: float=0.1, significance_level: float=0.05, threshold: float=1e-05) -> float:
+    ...
 ```
 
 | Parameter | Default | Meaning |
@@ -55,41 +55,38 @@ d = find_min_d(
 | `significance_level` | `0.05` | ADF p-value threshold for calling a series stationary |
 | `threshold` | `1e-5` | weight-truncation threshold passed through to the differencing |
 
-The return value is a single `float`: the smallest `d` that passed. If no tested `d` is stationary, it returns `d_end`. Very short series cannot be tested and also return `d_end` — the ADF test needs enough observations to be meaningful.
+The return value is a single `float`: the first tested `d` that passed. If no tested `d` passes, it returns `d_end`. Very short series cannot be tested and also return `d_end` — the ADF test needs enough observations to be meaningful.
 
 The stationarity call itself comes from `adf_test`, which wraps `statsmodels`' `adfuller` (with `autolag='AIC'`) and reports a small result object:
 
-```python-fragment
-from limen.utils import adf_test
-
-result = adf_test(df['close'], significance_level=0.05)
-result.stationary       # bool: True when p_value <= significance_level
-result.p_value          # float
-result.test_statistic   # float
-result.critical_values  # dict[str, float]
+<!-- reference: fractional-adf source=limen/utils/adf_test.py region=signature:adf_test role=signature -->
+```python
+def adf_test(series: pl.Series, significance_level: float=0.05) -> AdfResult:
+    ...
 ```
 
 `adf_test` returns a non-stationary, inconclusive result (`stationary=False`, `p_value=1.0`) for empty or constant series rather than raising, so a sweep over a degenerate column degrades gracefully. See [Utilities](Utilities.md) for the full `adf_test` and `AdfResult` reference.
 
-### Recommended `d` Values
+### Choose the order and window
 
-`find_min_d` gives you the data-driven answer for a specific series and window. When you would rather sweep `d` as an experiment parameter and let the search compare outcomes, a practical grid for hourly Bitcoin close prices is:
+An order chosen on one series and window is not a transferable stationarity
+claim. Keep diagnostic selection inside training and retain the test result as
+well as the returned order: `d_end` also represents the no-passing-order case.
 
-```python-fragment
-'frac_diff_d': [0.0, 0.1, 0.2, 0.3, 0.4]
-```
+Choose a finite order grid and weight threshold before inspecting assessment results. The Python project diagnoses the training-only grid `0.0`, `0.2`, `0.4`; both projects separately use fixed order `0.4` and truncation threshold `0.05` for their prepared-matrix comparison.
 
-`d = 0.0` is the identity (a copy of the raw column — a useful baseline for comparison), and most Bitcoin price series reach stationarity well below `d = 0.5`. AFML also recommends applying fractional differentiation to **log** prices rather than raw prices for the cleanest results.
+Applying the helper to log prices is a separate modeling choice. Declare that
+transformation explicitly rather than treating the raw-close project case as a
+reproduction of every AFML recommendation.
 
 ## Adding It As A Feature
 
 `fractional_diff` is a feature-library function. It adds one new column per input column and preserves the originals, so indicators that depend on the raw price still work.
 
-```python-fragment
-def fractional_diff(data: pl.DataFrame,
-                    d: float = 0.0,
-                    cols: list[str] | None = None,
-                    threshold: float = 1e-5) -> pl.DataFrame:
+<!-- reference: fractional-feature source=limen/features/fractional_diff.py region=signature:fractional_diff role=signature -->
+```python
+def fractional_diff(data: pl.DataFrame, d: float=0.0, cols: list[str] | None=None, threshold: float=1e-05) -> pl.DataFrame:
+    ...
 ```
 
 | Parameter | Default | Meaning |
@@ -100,60 +97,132 @@ def fractional_diff(data: pl.DataFrame,
 
 It raises `ValueError` if `cols` is empty, if `d` is negative, or if `threshold` is not positive.
 
-### In A Manifest
+### Python Research
 
-Pass the function to `add_feature`. A string value for `d` is resolved from the round's parameters, so the differencing order can be swept like any other parameter.
+This is the complete Python preparation case used by its search scenario. Its training-only ADF diagnostic and fixed-order comparison are separate decisions. Execute it through the complete project, including its imports and recorded-data helpers:
 
+<!-- example: fractional-python-preparation source=docs/examples/python-research/scenarios.py region=preparation scenario=search interface=python role=executed -->
 ```python
-from limen.data import HistoricalData
-from limen.experiment import Manifest, MLManifest
-from limen.features import fractional_diff
-from limen.scalers import LogRegScaler
-from limen.sfd.reference_architecture import logreg_binary
-from limen.targets import QuantileBinaryTarget
+def preparation(data_dir, output):
+    from sklearn.decomposition import PCA
+    from sklearn.linear_model import Ridge
+    from limen.features import fractional_diff, find_min_d
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.targets import TripleBarrierTarget
+    from limen.utils import adf_test
 
-def params():
-    return {'frac_diff_d': [0.0, 0.2, 0.4]}
-
-def manifest() -> Manifest:
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_feature(fractional_diff, d='frac_diff_d', cols=['close'])
-        .with_target_label(
-            'quantile_flag',
-            QuantileBinaryTarget,
-            fit_params={'source_column': 'close_fracdiff', 'quantile': 0.40},
-            transform_params={'shift': -1},
-        )
-        .set_scaler(LogRegScaler)
-        .with_reference_architecture(logreg_binary)
-    )
+    raw = hourly(data_dir, 1440)
+    partitions = [raw[:864], raw[864:1152], raw[1152:1440]]
+    d = find_min_d(partitions[0], 'close', d_end=.4, step=.2, threshold=.05)
+    stationarity = adf_test(fractional_diff(partitions[0], d=d, cols=['close'], threshold=.05)['close_fracdiff'])
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
+        target = TripleBarrierTarget(partitions[0], 'label', upper_multiple=1.5,
+                                     lower_multiple=1., max_horizon=3, span=8, min_periods=8)
+        columns = ['close', 'roc_3', 'roc_12', 'close_fracdiff']
+        dropped = ['roc_12'] if compressed else []
+        features = [column for column in columns if column not in dropped]
+        prepared = []
+        for partition in partitions:
+            frame = fractional_diff(roc(roc(partition, period=3), period=12),
+                                    d=.4, cols=['close'], threshold=.05)
+            prepared.append(target.transform(frame).select('datetime', *features, 'label').drop_nulls())
+        scaler = RobustScaler(prepared[0].select(features))
+        scaled = [scaler.transform(frame.select(features)) for frame in prepared]
+        pca = PCA(n_components=2, svd_solver='full') if compressed else None
+        matrices = ([pca.fit_transform(scaled[0].to_numpy()),
+                     *[pca.transform(frame.to_numpy()) for frame in scaled[1:]]]
+                    if pca is not None else [frame.to_numpy() for frame in scaled])
+        names = ['pc_0', 'pc_1'] if compressed else features
+        model = Ridge(alpha=1., solver='svd').fit(matrices[0], prepared[0]['label'].to_numpy())
+        predictions = model.predict(matrices[2])
+        for split, frame, matrix in zip(('train', 'val', 'test'), prepared, matrices, strict=True):
+            pl.DataFrame(matrix, schema=names, orient='row').with_columns(
+                frame['datetime'], frame['label']).write_parquet(directory / (split + '.parquet'))
+        cases.append({'name': name, 'features': features, 'dropped': dropped,
+                      'rows': [frame.height for frame in prepared],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': predictions.tolist(),
+                      'rmse': float(np.sqrt(np.mean((predictions-prepared[2]['label'].to_numpy())**2)))})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': False,
+            'fixed_d': .4, 'weight_threshold': .05, 'adf_grid_result': d,
+            'adf_stationary': bool(stationarity.stationary), 'adf_p_value': float(stationarity.p_value)}
 ```
 
-### In A YAML Experiment
+### Compiled Research
 
-Reference the function by its resolvable path under a `features:` entry. The `{frac_diff_d}` placeholder binds to the `params:` block.
+The native builder remains Compiled Research when called from Python. Its preparation case uses the same recorded source and fixed order, while native CCO carries the admitted prior context into later partitions. It fits RobustScaler and optional PCA only on training:
 
-```yaml
-    features:
-      - func: limen.features.fractional_diff
-        params:
-          d: "{frac_diff_d}"
-          cols:
-            - close
+<!-- example: fractional-compiled-preparation source=docs/examples/compiled-research/scenarios.py region=preparation scenario=search interface=compiled role=executed -->
+```python
+def preparation(data_dir, output):
+    from limen.experiment import MLManifest
+    from limen.features import fractional_diff
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.sfd.reference_architecture import RidgeRegressor
+    from limen.targets import TripleBarrierTarget
+
+    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
+
+        def surface(data):
+            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
+
+        def capture(data_dict, split_data, round_params, fitted_params):
+            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
+                frame.write_parquet(directory / (split + '.parquet'))
+            return data_dict
+
+        manifest = MLManifest()
+        (manifest.set_split_config(6, 2, 2)
+                    .add_indicator(roc, period=3, group='momentum')
+                    .add_indicator(roc, period=12, group='momentum')
+                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
+                    .add_feature(surface)
+                    .with_target_label('label', TripleBarrierTarget, fit_params={
+                        'upper_multiple': 1.5, 'lower_multiple': 1.,
+                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
+        (manifest.set_scaler(RobustScaler).set_feature_ablation()
+                    .set_pca_compression().add_to_data_dict(capture))
+        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
+                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
+        data = manifest.prepare_data(raw, params)
+        model = RidgeRegressor().train(data, alpha=1., solver='svd')
+        scored = model.evaluate(data, inline_metrics=False)
+        scaler = data['_scaler']
+        pca = data.get('_pca')
+        cases.append({'name': name,
+                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
+                      'dropped': params.get('_dropped_features', []),
+                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
+            'fixed_d': .4, 'weight_threshold': .05}
 ```
 
-```yaml
-  params:
-    frac_diff_d: [0.0, 0.2, 0.4]
-```
+| YAML field | Binding |
+|---|---|
+| `sfd.manifest.features[].func` | `limen.features.fractional_diff` |
+| `features[].params.d` | A fixed numeric order or a braced search-parameter reference. |
+| `features[].params.cols` | The nonempty source-column list. |
+| `features[].params.threshold` | A finite positive truncation threshold. |
+| `sfd.params` | Declared candidate lists for any referenced values. |
 
-For a fixed order, pass the number directly (`d: 0.5`) and omit the parameter.
+YAML resolves the same feature through the fields above; a fixed numeric order requires no search reference.
 
 ## Output Columns
 
@@ -165,7 +234,7 @@ NOTE: Because the leading rows are null until the weight window fills, a short s
 
 ## Expected Artifacts
 
-After a run, the fractionally differenced column appears in the prepared feature matrix and, if you select it as a model input, in the per-round records written to `round_data.jsonl.gz`. When `d` is swept as a parameter, each `frac_diff_d` value is one row in `results.csv`, so the effect of differencing order on the metrics is visible directly. See [Log](Log.md) for reading those results.
+The project cases save `baseline/` and `compressed/` prepared Parquet partitions under their search scenario's `preparation/` directory. The baseline retains the fractional feature; the compressed case drops `roc_12` and replaces the surviving matrix with two fitted components. Ordinary round logs do not promise to serialize prepared feature matrices. A UEL sweep records its order parameter and metrics in the ordinary results; its payloads follow the [recording policy](Universal-Experiment-Loop.md#recording-policy).
 
 ## Where To Look
 
