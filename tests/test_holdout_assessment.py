@@ -1574,10 +1574,15 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     vars(ordered_model).update(copy.deepcopy(vars(ordered._model)))
     ordered._model = ordered_model
     ordered_handle = _freeze(ordered)
-    with patch.object(OrderedPrediction, '__bases__', (SecondAdjustment, FirstAdjustment, LogRegBinary)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(ordered_handle, assessment_case)
-        assert loader.call_count == 0
+    original_bases = OrderedPrediction.__bases__
+    try:
+        OrderedPrediction.__bases__ = (SecondAdjustment, FirstAdjustment, LogRegBinary)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(ordered_handle, assessment_case)
+            assert loader.call_count == 0
+    finally:
+        OrderedPrediction.__bases__ = original_bases
     class NativeNewCallback:
         __new__ = staticmethod(getattr)
         def __init__(self, *args):
