@@ -56,7 +56,7 @@ class CallerRolling(CallerRollingBase):
     window: int
 
     @classmethod
-    def class_transform(_cls, data, window=3):
+    def class_transform(cls, data, window=3):
         return _caller_feature(data, window)
 
     def __call__(self, data):
