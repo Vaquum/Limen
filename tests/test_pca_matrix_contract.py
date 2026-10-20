@@ -167,6 +167,16 @@ def _retained_grid(tmp_path, monkeypatch):
             patch.setattr(PCA, 'transform', frozen_rotate)
             predictions = sensor.predict_all(raw)
             replay, _ = sensor._manifest.sensor_input_prep(raw, sensor._fitted_params, params)
+            if params['auto_pca'] and params['scaler_type'] == 'linear':
+                instant = raw['datetime'][-10]
+                damaged = raw.with_columns(pl.when(pl.col('datetime') == instant)
+                    .then(float('nan')).otherwise(pl.col('open')).alias('open'))
+                invalid = sensor.predict_all(damaged)
+                assert [p.reason for p in invalid if p.datetime == instant] == ['null-features']
+                damaged = damaged.with_columns(pl.col('open').fill_nan(float('inf')))
+                with pytest.raises(ValueError, match='infinity'):
+                    sensor._manifest.sensor_input_prep(damaged, sensor._fitted_params, params)
+                assert all(p.reason == 'sensor-error' for p in sensor.predict_all(damaged))
         assert observed['scaler'] > 0
         assert (observed['pca'] > 0) is params['auto_pca']
         assert len(predictions) == raw.height == replay.height
