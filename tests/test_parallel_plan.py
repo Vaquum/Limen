@@ -564,14 +564,14 @@ def test_frozen_manifest_round_plan() -> None:
         from tests.test_parallel_rounds import recorded_source
         expected_values = _caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()
         shared = [2]
-        for component in (FunctionRolling(_mutable_feature), AliasedRolling(shared, shared)):
+        for component, window in ((FunctionRolling(_mutable_feature), 2), (AliasedRolling(shared, shared), 3)):
             declare_parallel(component, ParallelRoundContract(deterministic_stage))
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_mutable_feature, '__defaults__', ([2],))
                 frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
             actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _repeated_carried_probe(frozen, _parameters())
-            assert actual == expected == expected_values and pid != os.getpid()
+            assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() and pid != os.getpid()
         declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
         for counter in (RollingCounter(), CallableCounter()):
             with pytest.MonkeyPatch.context() as patch:
