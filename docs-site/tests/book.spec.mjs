@@ -33,7 +33,7 @@ test('complete research chapter',async({page})=>{
   expect(about.match(/<img[^>]+src="https?:/g)).toBeNull();
   const reference=await (await page.request.get('/limen/reference/trainer/')).text();
   const lead=reference.match(/<p class="hero-lead">([^]*?)<\/p>/)[1];
-  expect(lead).toContain('round storage format');expect(lead).not.toContain('[round storage format]');expect(lead).not.toContain('`');
+  expect(lead).toContain('Python project');expect(lead).toContain('Compiled project');expect(lead).not.toContain('[Python project]');expect(lead).not.toContain('`');
   await page.getByRole('link',{name:'the two interfaces',exact:true}).click();
   await expect(page).toHaveURL(/about\/#two-interfaces-different-purposes$/);
   await expect(page.locator('#two-interfaces-different-purposes')).toBeInViewport();
@@ -43,7 +43,7 @@ test('reference returns to the same passage and focus',async({page})=>{
   await open(page);const link=page.getByRole('link',{name:'Python Sensor construction',exact:true});
   await link.focus();await link.scrollIntoViewIfNeeded();const before=await link.evaluate(el=>({id:el.id,top:el.getBoundingClientRect().top}));
   await link.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
-  await expect(page.locator('[data-reference-body] h1')).toHaveText('Trainer');
+  await expect(page.locator('[data-reference-body] h1')).toHaveText('Carry selected behavior into inference');
   await page.getByRole('button',{name:'Return to chapter',exact:true}).click();
   await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
   expect(Math.abs((await link.boundingBox()).y-before.top)).toBeLessThan(3);
@@ -109,7 +109,7 @@ test('reference fragments retain the panel and canonical history',async({page})=
   await page.getByRole('button',{name:'Return to chapter',exact:true}).click();await expect(page).toHaveURL(chapter);
   await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(opener).toBeFocused();
   await page.goForward();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
-  await fragment.click();await page.reload();await expect(page.getByRole('heading',{level:1})).toHaveText('Cohort');
+  await fragment.click();await page.reload();await expect(page.getByRole('heading',{level:1})).toHaveText('Combine compatible Sensors');
   await expect(page).toHaveURL(/reference\/cohort\/#recorded-walk-forward-members$/);
 });
 
@@ -205,7 +205,7 @@ test('without JavaScript both interfaces and proof links remain readable',async(
   const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
   await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
   if(test.info().project.name==='phone'){await page.locator('.mobile-nav summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
-  const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Trainer');await context.close();
+  const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
 });
 
 test('a place within code survives reload and non-wheel scrolling',async({page})=>{
