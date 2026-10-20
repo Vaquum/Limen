@@ -96,7 +96,11 @@
     "docs/Roadmap.md",
     "docs/Command-Line-Interface.md",
     "docs/Single-File-Decoder.md",
-    "docs/End-to-End-Workflow.md"
+    "docs/End-to-End-Workflow.md",
+    "docs/Utilities.md",
+    "docs/Standard-Metrics-Library.md",
+    "docs/Built-In-SFDs.md",
+    "docs/Trainer.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2594,6 +2598,28 @@
       "compiled/bars",
       "compiled/allocation",
       "compiled/command_line"
+    ],
+    "docs/Utilities.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Standard-Metrics-Library.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/search",
+      "compiled/execution"
+    ],
+    "docs/Built-In-SFDs.md": [
+      "compiled/selection",
+      "compiled/search",
+      "compiled/execution"
+    ],
+    "docs/Trainer.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/walk_forward"
     ]
   }
 }

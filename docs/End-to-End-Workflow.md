@@ -10,12 +10,17 @@ Use the matching Limen wheel, optional dependencies and recorded input bundle de
 
 ## Run the Python research
 
+<!-- example: workflow-python-selection source=docs/examples/commands.json region=python-selection scenario=selection interface=python role=executed -->
+```bash
+python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
+```
+
 <!-- example: workflow-python-all source=docs/examples/commands.json region=python-all scenario=selection interface=python role=executed -->
 ```bash
 python python-research/research.py --scenario all --data-dir inputs --output-dir results/python-all
 ```
 
-The unmodified entry point executes selection, search, recovery, walk-forward, holdout assessment, calibration, event execution, bar formation and observed-cost stress comparisons. It checks recorded input digests before research and writes a `summary.json` alongside native outputs.
+The first command runs selection; the second executes search, recovery, walk-forward, holdout assessment, calibration, event execution, bar formation and observed-cost stress comparisons. It checks recorded input digests before research and writes a `summary.json` alongside native outputs.
 
 Selection fits four Ridge candidates and retains their fitted scaler/model pipelines in memory. It chooses the best validation result per feature window and builds a Cohort from the selected Sensors. No fit consumes the final assessment partition. `holdout` then evaluates next-bar decisions on that excluded partition; exclusion remains caller-owned and supplies no project reservation or earlier-exposure guarantee.
 
@@ -23,12 +28,17 @@ The base selection's CSV and summary do not serialize arbitrary fitted models. T
 
 ## Run the Compiled research
 
+<!-- example: workflow-compiled-selection source=docs/examples/commands.json region=compiled-selection scenario=selection interface=compiled role=executed -->
+```bash
+python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
+```
+
 <!-- example: workflow-compiled-all source=docs/examples/commands.json region=compiled-all scenario=selection interface=compiled role=executed -->
 ```bash
 python compiled-research/research.py --scenario all --data-dir inputs --output-dir results/compiled-all
 ```
 
-This entry point executes selection, search, recovery, walk-forward, final holdout, calibration, event execution, bar formation, batch allocation and command-line project operations. It validates declarations, preserves native artifacts and reconstructs selected recorded rounds through `Trainer`.
+The first command runs selection; the second executes search, recovery, walk-forward, final holdout, calibration, event execution, bar formation, batch allocation and command-line project operations. It validates declarations, preserves native artifacts and reconstructs selected recorded rounds through `Trainer`.
 
 The selection declaration applies chronological splits before preparation, fits target/scaler state on training and ranks two logistic candidates by validation event-ledger return. Trainer reconstructs the selected recorded round using the original splits and checks replayed metrics. Reconstruction is a refit under the recorded contract, rather than restoration of arbitrary model weights.
 
