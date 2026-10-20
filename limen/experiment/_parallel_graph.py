@@ -12,7 +12,7 @@ _encoded: ContextVar[tuple[dict[int, tuple[int, object]], set[int]] | None] = Co
 _decoded: ContextVar[list[object] | None] = ContextVar('parallel_decoded_graph', default=None)
 _copy: ContextVar[tuple[dict[int, tuple[object, object]], dict[int, object]] | None] = ContextVar('parallel_shared_copy', default=None)
 _VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
-_EMPTY_IDS: frozenset[int] = frozenset()
+EMPTY_IDS: frozenset[int] = frozenset()
 
 
 @contextmanager
@@ -24,13 +24,13 @@ def shared_copy(memo: dict[int, tuple[object, object]]) -> Iterator[None]:
         _copy.reset(token)
 
 
-def _value_only(value: object, *, functions: bool = True) -> bool:
+def value_only(value: object, *, functions: bool = True) -> bool:
     if isinstance(value, FunctionType):
-        return functions and value.__closure__ is None and value.__kwdefaults__ is None and '__wrapped__' not in vars(value) and _value_only(value.__defaults__)
+        return functions and value.__closure__ is None and value.__kwdefaults__ is None and '__wrapped__' not in vars(value) and value_only(value.__defaults__)
     if callable(value) and not isinstance(value, type):
         return False
     if isinstance(value, tuple):
-        return all(_value_only(item, functions=False) for item in cast(tuple[object, ...], value))
+        return all(value_only(item, functions=False) for item in cast(tuple[object, ...], value))
     return isinstance(value, (type(None), str, bool, int, float, date, Path, type))
 
 
@@ -51,7 +51,7 @@ def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[objec
         context = _encoded.get()
         assert context is not None
         memo, active = context
-        if _value_only(value):
+        if value_only(value):
             return visit()
         key = id(value)
         if key in active:

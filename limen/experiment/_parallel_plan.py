@@ -143,9 +143,10 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     active |= {id(value)}
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
-        value = _FrozenTargetConfig(value.target_class, value.fit_params, value.transform_params,
-                                    _target_defaults(value.target_class, 2), _target_defaults(cast(_TargetClass, value.target_class).transform, 2),
-                                    cast(Callable[..., object], value.target_class.__init__), cast(_TargetClass, value.target_class).transform)
+        target = cast(_manifest.TargetClassConfig, value)
+        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
+                                    _target_defaults(target.target_class, 2), _target_defaults(cast(_TargetClass, target.target_class).transform, 2),
+                                    cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -161,7 +162,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     else:
         clone = _normalize_component(cast(object, value), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     memo[key] = (value, clone)
-    _ = state_memo.setdefault(key, (value, clone))
+    _ = state_memo.setdefault(key, (cast(object, value), clone))
     return clone
 
 

@@ -252,7 +252,7 @@ def parameter_matches(cell: str | None, value: object, *, legacy: bool = False) 
             return float(cell) == value
         if isinstance(value, (list, tuple, dict)):
             parsed = literal_eval(cell)
-            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(literal_eval(repr(value)))
+            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(literal_eval(repr(cast(object, value))))
     except (ValueError, SyntaxError, InvalidOperation) as exc:
         raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
     return cell == str(value)

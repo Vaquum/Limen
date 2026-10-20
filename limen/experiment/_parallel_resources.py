@@ -8,7 +8,7 @@ from string import Formatter
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
-from limen.experiment._parallel_encoding import digest, encode
+from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, configurations
 
 
