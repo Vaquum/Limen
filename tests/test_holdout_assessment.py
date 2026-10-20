@@ -964,6 +964,33 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     class PartialPolicy(partial):
         def __call__(self, values):
             return later_probabilities(super().__call__(values))
+    class SlottedPartial(PartialPolicy):
+        __slots__ = 'offset'
+        def __call__(self, values):
+            return np.clip(super().__call__(values) + self.offset, 0, 1)
+        def __deepcopy__(self, memo):
+            clone = type(self)(self.func, *self.args, **self.keywords)
+            clone.offset = self.offset
+            return clone
+    class NonpreservingSlotted(SlottedPartial):
+        def __deepcopy__(self, memo):
+            clone = super().__deepcopy__(memo)
+            clone.offset += 0.1
+            return clone
+    slotted_partial = SlottedPartial(identity_probabilities)
+    slotted_partial.offset = expected_offset
+    slotted_selection = copy.deepcopy(assessment_case[2][0][0])
+    slotted_selection._model.__class__ = PartialState
+    slotted_selection._model.policy = slotted_partial
+    slotted_selection._model.policy.adjust = slotted_partial
+    _freeze(slotted_selection)
+    slotted_selection._model.policy = NonpreservingSlotted(identity_probabilities)
+    slotted_selection._model.policy.offset = expected_offset
+    slotted_selection._model.policy.adjust = slotted_selection._model.policy
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(slotted_selection)
+        assert loader.call_count == 0
     class NonpreservingPartial(PartialPolicy):
         def __deepcopy__(self, memo):
             return partial(self.func, *self.args, **self.keywords)
@@ -985,9 +1012,17 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.policy + result['_probs']
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy()):
+    class ConversionPolicy:
+        def __float__(self):
+            return _LATE_RULES['offset']
+    class Converted(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
+            return result
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1023,6 +1058,13 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         callback_calls.append('threshold')
     nested = copy.deepcopy(assessment_case[2][0][0])
     nested._model.policy = nested._model.model.coef_.copy().view(NumericCallbacks)
+    nested._model.policy.prediction_calibration_config = SimpleNamespace(calibration_func=None, threshold_func=nested_threshold)
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+        nested._model.policy.prediction_calibration_config.threshold_func()
+    assert callback_calls == []
+    class ScalarCallbacks(float):
+        prediction_calibration_config = None
+    nested._model.policy = ScalarCallbacks(expected_offset)
     nested._model.policy.prediction_calibration_config = SimpleNamespace(calibration_func=None, threshold_func=nested_threshold)
     with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
         nested._model.policy.prediction_calibration_config.threshold_func()

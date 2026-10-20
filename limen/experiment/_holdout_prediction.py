@@ -24,7 +24,7 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
     seen: set[int] = set()
 
     def visit(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic)) or id(value) in seen:
+        if value is None or type(value) in (str, bool, int, float, bytes) or id(value) in seen:
             return
         seen.add(id(value))
         if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
@@ -102,7 +102,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             forbidden.setdefault(function.__code__, []).append((function, owner))
 
     def collect(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (type(value).__module__ == 'numpy' and type(value).__name__ == 'ndarray' and not object_array(value)):
+        if value is None or type(value) in (str, bool, int, float, bytes) or isinstance(value, (pl.DataFrame, pl.Series)) or (type(value).__module__ == 'numpy' and type(value).__name__ == 'ndarray' and not object_array(value)):
             return
         if id(value) in seen:
             return
