@@ -35,6 +35,7 @@ from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.param_search.search_strategy import SearchStrategy
 from limen.utils.param_space import ParamSpace
 from limen.utils._computation_cache import computation_reuse
+from limen.log import ConfusionNotApplicableError
 from limen.log.log import Log
 from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
 from limen.sfd.rule_based._temporal import validate_temporal_conditions
@@ -446,10 +447,13 @@ class UniversalExperimentLoop:
             return
 
         is_rule_based = isinstance(self.manifest, RuleBasedManifest)
-        self.experiment_confusion_metrics = (
-            None if is_rule_based
-            else self._log.experiment_confusion_metrics('price_change')
-        )
+        try:
+            self.experiment_confusion_metrics = (
+                None if is_rule_based
+                else self._log.experiment_confusion_metrics('price_change')
+            )
+        except ConfusionNotApplicableError:
+            self.experiment_confusion_metrics = None
         self.experiment_backtest_results = (
             None if is_rule_based
             else self._log.experiment_backtest_results()
