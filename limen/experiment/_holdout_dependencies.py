@@ -295,6 +295,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     evidence.append((namespace_name, function.__module__, function.__qualname__, key, part))
     if capture is not None:
         capture.extend(seen.values())
+    del visit, methods
     return [fitted_witness((tuple(values), evidence))]
 
 

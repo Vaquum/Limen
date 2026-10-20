@@ -1860,3 +1860,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve owned fitted binary prediction, native iteration limits and preparation/calibration dependencies through final holdout assessment.
 - Reuse exact native type groups during dependency sealing and fitted-state encoding.
 - Seal default-bound namespace readers, reject unstable fitting bindings and preserve native provider-type relationships.
+- Release completed traversal graphs and reduce witness allocations while preserving frozen type and alias relationships.
