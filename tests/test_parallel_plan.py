@@ -78,6 +78,14 @@ class SlottedRolling(SlottedRollingBase):
         return _caller_feature(data, window=self.window + self.offset)
 
 
+def _auxiliary_factory(*, window=3):
+    return CallerRolling(window)
+
+
+def _factory_architecture(data, auxiliary_factory=_auxiliary_factory, auxiliary_params=None):
+    return auxiliary_factory(**(auxiliary_params or {}))(data)
+
+
 class CallerTarget(RandomBinaryTarget):
     '''Importable caller target using the native seeded noise benchmark.'''
 
@@ -293,6 +301,26 @@ def _assert_plan_identity(plan):
         freeze_manifest(cyclic, None)
 
 
+
+def _assert_factory_resources(plan, params):
+    from limen.experiment._parallel_resources import unfrozen_stage
+    from limen.experiment._parallel_resources import deterministic_stage
+    declare_parallel(_factory_architecture, ParallelRoundContract(deterministic_stage, prediction_kind='binary'))
+    declare_parallel(_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
+    manifest = copy.deepcopy(plan.manifest).with_reference_architecture(_factory_architecture)
+    frozen = freeze_manifest(manifest, None)
+    with pytest.raises(ValueError, match='architecture.auxiliary_factory: unfrozen external state'):
+        validate_resources(frozen, params)
+    with pytest.raises(ValueError, match='architecture.auxiliary_factory: unfrozen external state'):
+        validate_domain(frozen, {key: [value] for key, value in params.items()}, None)
+    declare_parallel(_auxiliary_factory, ParallelRoundContract(_caller_validator, ('window',)))
+    frozen = freeze_manifest(manifest, None)
+    validate_resources(frozen, params)
+    with pytest.raises(ValueError, match='architecture.auxiliary_factory: positive integer window required'):
+        validate_domain(frozen, {key: [value] for key, value in params.items()} |
+                        {'auxiliary_params': [{'window': 2}, {'window': 0}]}, None)
+
+
 def test_effective_resources_and_output_evidence(tmp_path) -> None:
     declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
     config = _configuration()
@@ -301,6 +329,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     validate_resources(plan, params)
     validate_domain(plan, {key: [value] for key, value in params.items()}, None)
     _assert_resource_projection(plan, params)
+    _assert_factory_resources(plan, params)
     class_weights = {0: 1, 1: 2}
     assert decode(encode(class_weights)) == class_weights
     validate_resources(plan, params | {'class_weight': class_weights})

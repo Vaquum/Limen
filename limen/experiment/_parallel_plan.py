@@ -209,10 +209,12 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
     from limen.experiment._prepare_trade_context import resolve_component_kwargs
     resolve_component_kwargs(manifest.architecture_function, {}, resolved, params)
     result = {'architecture': resolved}
-    for role in ('direction', 'sizing'):
-        key = f'{role}_factory'
-        if key in resolved:
-            result[f'architecture.{key}'] = _defaults(resolved[key], dict(cast(Mapping[str, object], resolved.get(f'{role}_params') or {})) | {'seed': resolved.get('seed')}, skip=0)
+    for key, factory in resolved.items():
+        if key.endswith('_factory') and callable(factory):
+            arguments = dict(cast(Mapping[str, object], resolved.get(key.removesuffix('_factory') + '_params') or {}))
+            if 'seed' in resolved:
+                arguments['seed'] = resolved['seed']
+            result[f'architecture.{key}'] = _defaults(factory, arguments, skip=0)
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         if step is not None and (path != 'bar_formation' or params.get('bar_type', 'base') != 'base'):

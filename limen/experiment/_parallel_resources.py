@@ -119,7 +119,8 @@ def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]])
                 variants.append(cast(Mapping[str, object], option))
         names = {name for value in variants for name in value}
         arguments: dict[str, object] = {name: [value.get(name) for value in variants] for name in names}
-        return arguments | {'seed': 'seed'}, (key, factory)
+        seeded = 'seed' in signature(function).parameters or any(value.kind == Parameter.VAR_KEYWORD for value in signature(function).parameters.values())
+        return arguments | ({'seed': 'seed'} if seeded else {}), (key, factory)
     if path.startswith('feature_transforms.'):
         entry = manifest.feature_transforms[int(path.split('.')[1])]
         return dict(entry.params), tuple(key for key in (entry.include_if, 'feature_groups' if entry.group is not None else None) if key is not None)
