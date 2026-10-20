@@ -19,7 +19,7 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_graph import decode_graph, encode_graph, reuse_graph
+from limen.experiment._parallel_graph import decode_graph, encode_graph
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
 
 VERSION = 1
@@ -169,8 +169,6 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
             function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, defaults), tuple(CellType(item) for item in cast(tuple[object, ...], closure)) if closure is not None else None)
             function.__kwdefaults__ = cast(dict[str, object] | None, keywords)
             restore_function_metadata(function, source, wrapped)
-        else:
-            reuse_graph(defaults, source.__defaults__)
         return function
     if tag == 'method':
         owner = (decode_graph(value, lambda: _decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True), lambda owner: encode(owner))

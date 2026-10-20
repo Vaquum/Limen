@@ -86,7 +86,7 @@ def call_implementation(value: object) -> object:
 def mutable_function(function: FunctionType) -> bool:
     def mutable(value: object) -> bool:
         return any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not isinstance(value, (type(None), str, bool, int, float, date, Path, type))
-    return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
+    return bool(function.__closure__) or mutable(function.__defaults__) or function.__kwdefaults__ is not None
 
 
 def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:

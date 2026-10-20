@@ -4,10 +4,29 @@ from collections.abc import Callable
 from contextvars import ContextVar
 from datetime import date
 from pathlib import Path
+from types import FunctionType
 
 _encoded: ContextVar[tuple[dict[int, tuple[int, object]], set[int]] | None] = ContextVar('parallel_encoded_graph', default=None)
 _decoded: ContextVar[list[object] | None] = ContextVar('parallel_decoded_graph', default=None)
 _COMPOSITES = frozenset(('list', 'tuple', 'map', 'keyed_map', 'state_map', 'function', 'method', 'dataclass', 'instance'))
+
+
+def _value_only(value: object) -> bool:
+    if isinstance(value, tuple):
+        return all(_value_only(item) for item in value)
+    if isinstance(value, FunctionType):
+        return value.__closure__ is None and value.__kwdefaults__ is None and '__wrapped__' not in vars(value) and _value_only(value.__defaults__)
+    return isinstance(value, (type(None), str, bool, int, float, date, Path, type))
+
+
+def _value_node(node: object) -> bool:
+    if not isinstance(node, list) or not node:
+        return False
+    if node[0] == 'tuple' and len(node) == 2 and isinstance(node[1], list):
+        return all(_value_node(item) for item in node[1])
+    if node[0] == 'function' and len(node) == 6:
+        return _value_node(node[2]) and node[3:] == [['null'], ['null'], ['null']]
+    return node[0] in ('null', 'str', 'bool', 'int', 'float', 'date', 'datetime', 'path', 'import')
 
 
 def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[object]:
@@ -17,7 +36,7 @@ def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[objec
         context = _encoded.get()
         assert context is not None
         memo, active = context
-        if isinstance(value, (type(None), str, bool, int, float, date, Path, type)):
+        if _value_only(value):
             return visit()
         key = id(value)
         if key in active:
@@ -46,7 +65,7 @@ def decode_graph(node: object, visit: Callable[[], object], verify: Callable[[ob
                 raise ValueError('Invalid parallel shared-state reference')
             result = memo[node[1]]
         else:
-            index = len(memo) if isinstance(node, list) and node and node[0] in _COMPOSITES else None
+            index = len(memo) if isinstance(node, list) and node and node[0] in _COMPOSITES and not _value_node(node) else None
             if index is not None:
                 memo.append(None)
             result = visit()
@@ -58,12 +77,3 @@ def decode_graph(node: object, visit: Callable[[], object], verify: Callable[[ob
     if token is not None and verify(result) != node:
         raise ValueError('Noncanonical parallel parameter encoding')
     return result
-
-
-def reuse_graph(captured: object, original: object) -> None:
-    memo = _decoded.get()
-    assert memo is not None
-    memo[:] = [original if item is captured else item for item in memo]
-    if isinstance(captured, tuple) and isinstance(original, tuple):
-        for left, right in zip(captured, original, strict=True):
-            reuse_graph(left, right)
