@@ -57,7 +57,7 @@ def archive_files(payload: bytes) -> dict[str, bytes]:
 
 
 def retrieve(base_url: str, manifest) -> dict[str, bytes]:
-    if manifest['schema_version'] != 1 or set(manifest['artifacts']) != ROLES:
+    if type(manifest['schema_version']) is not int or manifest['schema_version'] != 1 or set(manifest['artifacts']) != ROLES:
         raise ValueError('Incomplete publication artifact inventory')
     files = {}
     for role, artifact in manifest['artifacts'].items():
@@ -73,10 +73,18 @@ def retrieve(base_url: str, manifest) -> dict[str, bytes]:
 
 def verify(base_url: str, release: str):
     base_url = base_url.rstrip('/') + '/'
-    manifest = json.loads(fetch(urljoin(base_url, 'publication.json')))
+    manifest_bytes = fetch(urljoin(base_url, 'publication.json'))
+    manifest = json.loads(manifest_bytes)
     if manifest['release'] != release or not re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', release):
         raise ValueError('Publication belongs to another release')
     files = retrieve(base_url, manifest)
+    release_url = f'https://github.com/Vaquum/Limen/releases/download/{release}/'
+    if fetch(release_url + 'publication.json') != manifest_bytes:
+        raise ValueError('The active manifest differs from the public GitHub Release')
+    for role, artifact in manifest['artifacts'].items():
+        name = PurePosixPath(artifact['path']).name
+        if sha256(fetch(release_url + name)) != sha256(files[role]):
+            raise ValueError('The static artifact differs from the public GitHub Release: ' + role)
     record = json.loads(files['evidence'])
     schema = json.loads((Path(__file__).parent / 'evidence.schema.json').read_text())
     validate_shape(record, schema)

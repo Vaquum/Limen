@@ -1,4 +1,5 @@
 import io
+import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tarfile
@@ -7,7 +8,8 @@ from threading import Thread
 import pytest
 
 from build_bundle import write_archive
-from verify_publication import ROLES, archive_files, fetch, relative_path, retrieve
+from publication import restore
+from verify_publication import ROLES, archive_files, fetch, relative_path, retrieve, sha256
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -71,3 +73,22 @@ def test_archives_retain_real_source_and_reject_links(tmp_path):
         tar.addfile(link)
     with pytest.raises(ValueError, match='non-file members'):
         archive_files(output.getvalue())
+
+
+def test_rollback_restores_the_site_and_detached_evidence(tmp_path):
+    source = (ROOT / 'docs/examples/python-research/research.py').read_bytes()
+    archive = tmp_path / 'rollback.tar.gz'
+    digest = write_archive({'source/python-research/research.py': source}, archive)
+    relative = f'evidence/rollback-{digest}.tar.gz'
+    manifest = tmp_path / 'publication.json'
+    manifest.write_text(json.dumps({'artifacts': {'rollback': {'path': relative, 'sha256': digest}}}))
+    target = tmp_path / 'restored'
+    restore(manifest, archive, target)
+    assert (target / 'source/python-research/research.py').read_bytes() == source
+    assert (target / 'publication.json').read_bytes() == manifest.read_bytes()
+    assert sha256((target / relative).read_bytes()) == digest
+    with pytest.raises(ValueError, match='fresh directory'):
+        restore(manifest, archive, target)
+    archive.write_bytes(archive.read_bytes() + b'changed')
+    with pytest.raises(ValueError, match='differs from its detached'):
+        restore(manifest, archive, tmp_path / 'changed')
