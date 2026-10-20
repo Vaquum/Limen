@@ -25,7 +25,13 @@ def slot_state(value: object) -> list[tuple[type, str, object]]:
 
 def component_state(value: object) -> dict[str, object]:
     state = dict(vars(value)) if hasattr(value, '__dict__') else {}
-    return state | {name: item for _, name, item in reversed(slot_state(value))}
+    native = native_state(value)
+    return state | {name: item for _, name, item in reversed(slot_state(value))} | ({'__parallel_native_state__': native} if native is not None else {})
+
+
+def native_state(value: object) -> list[object] | None:
+    return (list[object](dict[object, object].items(cast(dict[object, object], value))) if issubclass(type(value), dict)
+            else list[object](list[object].__iter__(cast(list[object], value))) if issubclass(type(value), list) else None)
 
 
 def object_state(value: object) -> ObjectState:
@@ -33,9 +39,7 @@ def object_state(value: object) -> ObjectState:
     reducer = cast(Callable[[object], tuple[object, ...]], vars(partial)['__reduce__'])
     reduced = reducer(value) if issubclass(type(value), partial) else None
     bound = cast(tuple[object, ...], reduced[2])[:3] if reduced is not None else None
-    native = (list[object](dict[object, object].items(cast(dict[object, object], value))) if issubclass(type(value), dict)
-              else list[object](list[object].__iter__(cast(list[object], value))) if issubclass(type(value), list) else None)
-    return attributes, slot_state(value), bound, native
+    return attributes, slot_state(value), bound, native_state(value)
 
 
 def restore_object(cls: type, state: ObjectState) -> object:

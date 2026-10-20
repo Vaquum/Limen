@@ -125,6 +125,14 @@ class ListRolling(list):
         return _caller_feature(data, window=self[0])
 
 
+def _dict_validator(params):
+    _caller_validator({'window': dict(params['__parallel_native_state__'])['window']})
+
+
+def _list_validator(params):
+    _caller_validator({'window': params['__parallel_native_state__'][0]})
+
+
 class OpaqueSequenceRolling(tuple):
     def __call__(self, data):
         return _caller_feature(data, window=self[0])
@@ -276,6 +284,8 @@ def test_frozen_manifest_round_plan() -> None:
         for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
+            if isinstance(component, (DictRolling, ListRolling)):
+                contract = ParallelRoundContract(_dict_validator if isinstance(component, DictRolling) else _list_validator, ('__parallel_native_state__',))
             declare_parallel(component, contract)
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
@@ -290,6 +300,12 @@ def test_frozen_manifest_round_plan() -> None:
                 assert type(restored) is type(component) and restored == component and callable(restored)
                 restored['window' if isinstance(restored, dict) else 0] = 4
                 assert digest(restored) != digest(component)
+                validate_resources(frozen, _parameters())
+                invalid = copy.deepcopy(component)
+                invalid['window' if isinstance(invalid, dict) else 0] = 0
+                rejected = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(invalid), None)
+                with pytest.raises(ValueError, match=r'feature_transforms.*positive integer window'):
+                    validate_domain(rejected, {key: [value] for key, value in _parameters().items()}, None)
             if isinstance(component, NormalizedRolling):
                 assert component.window == decode(encode(component)).window == 3
             if isinstance(component, CallerPartial):
