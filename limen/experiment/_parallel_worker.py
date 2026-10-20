@@ -16,6 +16,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
+from limen.experiment._parallel_encoding import distribution_providers
 from limen.experiment._parallel_plan import FrozenManifestPlan, freeze_manifest, plan_identity, plan_digests
 from limen.experiment._parallel_evidence import round_record
 from limen.experiment._parallel_resources import backend_imports, validate_resources, validate_domain
@@ -129,8 +130,9 @@ def worker_init(plan: FrozenManifestPlan, sources: SourceSnapshot,
         _ = signal.pthread_sigmask(signal.SIG_UNBLOCK, (signal.SIGINT, signal.SIGTERM))
     if any(os.environ.get(key) != '1' for key in _THREAD_ENV):
         raise ValueError('Parallel worker startup limits were not applied before imports')
-    if plan_digests(plan.manifest, plan.stages) != (plan.pipeline_digest, plan.resource_digest):
-        raise ValueError('Parallel worker pipeline import identity changed')
+    with distribution_providers(plan.distribution_providers):
+        if plan_digests(plan.manifest, plan.stages) != (plan.pipeline_digest, plan.resource_digest):
+            raise ValueError('Parallel worker pipeline import identity changed')
     for name in backend_imports(plan):
         _ = import_module(name)
     limit = cast(Callable[..., _ThreadLimits], vars(import_module('threadpoolctl'))['threadpool_limits'])

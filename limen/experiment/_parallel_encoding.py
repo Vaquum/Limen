@@ -5,7 +5,9 @@ import inspect
 import json
 import math
 from ast import literal_eval
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import fields, is_dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation
@@ -18,11 +20,21 @@ from typing import cast
 import polars as pl
 
 VERSION = 1
+_providers: ContextVar[Mapping[str, list[str]] | None] = ContextVar('parallel_distribution_providers', default=None)
 
 
 @cache
 def _distributions() -> Mapping[str, list[str]]:
     return metadata.packages_distributions()
+
+
+@contextmanager
+def distribution_providers(providers: Mapping[str, list[str]]) -> Iterator[None]:
+    token = _providers.set(providers)
+    try:
+        yield
+    finally:
+        _providers.reset(token)
 
 
 def module_identity(name: str) -> list[object]:
@@ -31,7 +43,8 @@ def module_identity(name: str) -> list[object]:
     if path is None:
         raise ValueError(f'Parallel import has no source file: {name}')
     top = name.split('.', 1)[0]
-    distributions = _distributions().get(top, []) if top not in ('limen', 'tests') else []
+    providers = _providers.get()
+    distributions = (providers if providers is not None else _distributions()).get(top, []) if top not in ('limen', 'tests') else []
     return [name, hashlib.sha256(Path(path).read_bytes()).hexdigest(),
             [[name, metadata.version(name)] for name in sorted(distributions)]]
 

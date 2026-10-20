@@ -81,6 +81,16 @@ def _carried_probe(plan, params):
 
 
 def _frozen_probe(plan, params):
+    from limen.experiment import _parallel_encoding as codec
+    from limen.experiment._parallel_plan import plan_digests
+    def no_discovery():
+        raise AssertionError('worker repeated parent distribution discovery')
+    with pytest.MonkeyPatch.context() as patch, codec.distribution_providers(plan.distribution_providers):
+        patch.setattr(codec, '_distributions', no_discovery)
+        assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
+        version = codec.metadata.version
+        patch.setattr(codec.metadata, 'version', lambda name: version(name) + '-changed')
+        assert plan_digests(plan.manifest, plan.stages) != (plan.pipeline_digest, plan.resource_digest)
     validate_resources(plan, params)
     from tests.test_parallel_rounds import recorded_source
     data = recorded_source().head(24).select('close')

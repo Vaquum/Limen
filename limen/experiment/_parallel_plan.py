@@ -10,7 +10,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, attach
-from limen.experiment._parallel_encoding import digest, encode, module_identity, reference, source_digest
+from limen.experiment._parallel_encoding import _distributions, digest, encode, module_identity, reference, source_digest
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
@@ -54,6 +54,7 @@ class FrozenManifestPlan:
     stages: tuple[FrozenStage, ...]
     pipeline_digest: str
     resource_digest: str
+    distribution_providers: dict[str, list[str]]
 
 
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 3)
@@ -168,7 +169,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     # Force transport validation even when a stage validator consumes no parameters.
     _ = encode(frozen)
     pipeline, resources = plan_digests(frozen, stages)
-    return FrozenManifestPlan(frozen, stages, pipeline, resources)
+    return FrozenManifestPlan(frozen, stages, pipeline, resources, copy.deepcopy(dict(_distributions())))
 
 
 def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[str, str]:
