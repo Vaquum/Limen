@@ -96,6 +96,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
         if callable(value) and (entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules)):
             raise ValueError('Holdout inference has an unowned random dependency')
+        if callable(value):
+            visit(getattr(value, '__name__', None), annotation=True)
         if inspect.ismethod(value):
             visit(value.__func__)
             visit(value.__self__)
@@ -108,7 +110,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(vars(value))
             visit(value.__annotations__, annotation=True)
             visit(value.__doc__, annotation=True)
-            visit(value.__name__, annotation=True)
             visit(getattr(value, '__type_params__', ()), annotation=True)
             visit(value.__defaults__)
             visit(value.__kwdefaults__)

@@ -2197,6 +2197,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     class NamedDispatch(LogRegBinary):
         def function_named_offset(self, values):
             return np.clip(values + _LATE_RULES['offset'], 0, 1)
+        oct = function_named_offset
+        heaviside = function_named_offset
         def predict(self, data):
             result = super().predict(data)
             result['_probs'] = getattr(self, self.policy.__name__)(result['_probs'])
@@ -2204,12 +2206,23 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     reviewed._model.__class__ = NamedDispatch
     for policy in (identity_probabilities, LogisticRegression.predict_proba):
         reviewed._model.policy = policy
-        with patch.object(policy, '__name__', 'function_named_offset'):
+        original_name = policy.__name__
+        policy.__name__ = 'function_named_offset'
+        try:
             name_handle = _freeze(reviewed)
             with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(name_handle, assessment_case)
                 assert loader.call_count == 0
+        finally:
+            policy.__name__ = original_name
+    for policy in (oct, np.heaviside):
+        reviewed._model.policy = policy
+        name_handle = _freeze(reviewed)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(name_handle, assessment_case)
+            assert loader.call_count == 0
     class AnnotationDispatch(LogRegBinary):
         def annotation_selected_offset(self, values):
             return np.clip(values + _LATE_RULES['offset'], 0, 1)
