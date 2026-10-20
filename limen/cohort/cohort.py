@@ -28,7 +28,7 @@ class Cohort:
     '''
 
     _PROBABILITY_CAPABLE_HINTS = ('logreg', 'tabpfn', 'random_binary', 'random forest', 'random_forest', 'lightgbm',
-                                'lgbm', 'ridge', 'svm', 'hmm', 'garch', 'lstm', 'cnn',
+                                'lgbm', 'svm', 'hmm', 'garch', 'lstm', 'cnn',
                                 )
     _VOTE_THRESHOLD = 0.5
     _REASON_PRIORITY: ClassVar[dict[PredictionReason, int]] = {
