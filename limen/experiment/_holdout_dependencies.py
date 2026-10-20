@@ -118,18 +118,24 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
             instructions = _instructions(value.__code__)
-            references = {name: [part] for name, part in value.__globals__.items()}
-            references.update((name, [cell.cell_contents]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True))
+            references = {name: [cell.cell_contents] for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             imported: ModuleType | None = None
             chained_import = False
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
-                if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') and name == '__globals__':
-                    lookup = instructions[index + 1:index + 3]
+                indirect_globals = instruction.opname == 'LOAD_CONST' and name == '__globals__' and instructions[index + 1].opname in ('PRECALL', 'CALL', 'CALL_FUNCTION')
+                if name == '__globals__' and (instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect_globals):
+                    lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
+                    if indirect_globals:
+                        lookup = lookup[1:]
                     if not lookup[1:] or lookup[0].opname != 'LOAD_CONST' or not isinstance(lookup[0].argval, str) or lookup[1].opname != 'BINARY_SUBSCR':
                         raise ValueError('Holdout requires a literal key for reflective function globals')
                     reflective_keys.add(lookup[0].argval)
+                if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME'):
+                    namespace = value.__globals__ if name in value.__globals__ else value.__builtins__
+                    if name in namespace:
+                        references[name] = [namespace[name]]
                 if instruction.opname == 'LOAD_GLOBAL' and name == 'globals' and name not in value.__globals__:
                     lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
                     if not lookup[2:] or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':

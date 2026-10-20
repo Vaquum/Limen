@@ -2134,6 +2134,36 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(namespace_handle, assessment_case)
                 assert loader.call_count == 0
+    class IndirectNamespace(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + getattr(self.policy, '__globals__')['holdout_rules']['offset'], 0, 1)
+            return result
+    reviewed._model.__class__ = IndirectNamespace
+    for policy in (identity_probabilities, LogisticRegression.predict_proba):
+        reviewed._model.policy = policy
+        with patch.dict(policy.__globals__, {'holdout_rules': _LATE_RULES}):
+            namespace_handle = _freeze(reviewed)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(namespace_handle, assessment_case)
+                assert loader.call_count == 0
+    class BuiltinPolicy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = abs(result['_probs'])
+            return result
+    reviewed._model.__class__ = BuiltinPolicy
+    builtin_handle = _freeze(reviewed)
+    with patch('builtins.abs', later_probabilities), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(builtin_handle, assessment_case)
+        assert loader.call_count == 0
+        builtin_handle = _freeze(reviewed)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}):
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(builtin_handle, assessment_case)
+        assert loader.call_count == 0
     class DynamicNamespace(NativeNamespace):
         def predict(self, data):
             result = LogRegBinary.predict(self, data)
