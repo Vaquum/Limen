@@ -4,6 +4,7 @@ import copy
 import inspect
 import json
 import zlib
+from collections import defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field, fields, is_dataclass
@@ -164,7 +165,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         if value.__qualname__ == 'MLManifest.set_scaler_from_params.<locals>._scaler_factory':
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
-    if isinstance(value, dict) and not is_component:
+    if isinstance(value, dict) and not (is_component or isinstance(value, defaultdict)):
         clone: object = {name: _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[str, object], value).items()}
     elif isinstance(value, (list, tuple)) and not is_component:
         items = [_normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for item in cast(list[object] | tuple[object, ...], value)]
@@ -177,7 +178,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
 
 
 def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
-    if callable(value) and not isinstance(value, type):
+    if callable(value) and not isinstance(value, type) or isinstance(value, defaultdict):
         with shared_copy(state_memo):
             clone = decode(encode(value), isolate_functions=snapshot)
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):

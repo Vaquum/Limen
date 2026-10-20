@@ -65,6 +65,10 @@ def _kwargs_feature(data, **kwargs):
     return _caller_feature(data, kwargs.get('window', 2))
 
 
+def _mapping_feature(data, options):
+    return _caller_feature(data, options['missing'] + 3)
+
+
 def _keyword_feature(data, *, window=2):
     return _caller_feature(data, window)
 
@@ -700,6 +704,13 @@ def test_frozen_manifest_round_plan() -> None:
                 _assert_inherited_identity(frozen)
         assert _cell_increment.__closure__[0] is _cell_read.__closure__[0]
         assert _cell_increment.__closure__[0].cell_contents == 2
+        declare_parallel(_mapping_feature, ParallelRoundContract(deterministic_stage))
+        options = defaultdict(int)
+        frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mapping_feature, options=options), None)
+        assert frozen.manifest.feature_transforms[-1].params['options'].default_factory is int
+        actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+        expected, _ = _repeated_carried_probe(frozen, _parameters())
+        assert actual == expected == expected_values and pid != os.getpid() and not options
         declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
         for counter in (RollingCounter(), CallableCounter()):
             with pytest.MonkeyPatch.context() as patch:
