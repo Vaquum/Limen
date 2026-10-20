@@ -900,6 +900,94 @@ def test_prediction_guard_rejects_empty_cells_and_caught_matcher_errors(native_a
         assert 'matcher failure' in caught[0] if fault else 'attempted fitting' in caught[0]
 
 
+@pytest.mark.parametrize('operation', ['clear', 'replace', 'enable', 'disable'])
+def test_prediction_guard_rejects_profile_replacement(native_assessment_case, operation):
+    from cProfile import Profile
+    import sys
+    from limen.experiment._holdout_prediction import readonly_prediction
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    previous = sys.getprofile()
+    profiler = Profile()
+    replace = sys.setprofile
+    def replacement(frame, event, arg):
+        return None
+    change = partial(replace, None if operation == 'clear' else replacement) if operation in ('clear', 'replace') else getattr(profiler, operation)
+    caught = []
+    with pytest.raises(ValueError, match='Holdout inference'), readonly_prediction([selected]):
+        try:
+            change()
+        except ValueError as error:
+            caught.append(str(error))
+    assert caught == ['Holdout inference attempted profile replacement']
+    assert sys.getprofile() is previous
+
+
+def test_profile_replacement_cannot_complete_final_assessment(native_assessment_case):
+    import sys
+    class Config:
+        calibration_func = None
+        threshold_func = staticmethod(later_probabilities)
+    class ReplacesProfile(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                try:
+                    sys.setprofile(None)
+                except ValueError:
+                    _ = self.policy.threshold_func(result['_probs'])
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    prepared, _ = selected._get_manifest().sensor_input_prep(selected._fitted_params['_holdout_probe'], selected._fitted_params, selected._round_params)
+    columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]
+    selected._model.__class__ = ReplacesProfile
+    selected._model.research_x = np.asarray(prepared.select(columns).tail(1), dtype=float)
+    selected._model.policy = Config()
+    frozen = _freeze(selected)
+    previous = sys.getprofile()
+    with pytest.raises(ValueError, match='Holdout inference') as failed:
+        _report(frozen, native_assessment_case)
+    assert sys.getprofile() is previous
+    with history.connection(native_assessment_case[0] / history._HISTORY) as db:
+        record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+        assert record['state'] == 'failed' and record['id'] in str(failed.value)
+        assert json.loads(record['error_json'])['stage'] == 'predict'
+        report_id = record['id']
+    with pytest.raises(ValueError, match='not completed'):
+        read_holdout_report(native_assessment_case[0], report_id)
+
+
+@pytest.mark.parametrize('entry', ['__new__', '__init__', '__call__'])
+def test_trusted_component_class_constructor_binding(native_assessment_case, entry):
+    from limen.sfd.reference_architecture.logreg_binary import logreg_binary
+    class Meta(type):
+        def __call__(cls, data, **params):
+            return super().__call__(data, **params)
+    class Factory(metaclass=Meta):
+        def __new__(cls, data, **params):
+            return logreg_binary(data, **params)
+        def __init__(self, data, **params):
+            self.data = data
+    def configure(manifest):
+        manifest.with_reference_architecture(Factory)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is Factory
+    directory = native_assessment_case[0] / f'constructor-{entry}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    def changed(*args, **kwargs):
+        raise AssertionError('changed constructor executed')
+    target = Meta if entry == '__call__' else Factory
+    with patch.object(target, entry, staticmethod(changed) if entry == '__new__' else changed), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:

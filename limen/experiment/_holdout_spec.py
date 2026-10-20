@@ -12,6 +12,7 @@ import numbers
 from typing import cast
 
 from limen.experiment._holdout_state import fitted_witness
+from limen.experiment._holdout_calls import call_functions
 
 __all__ = ['digest', 'encoded', 'normalized']
 
@@ -35,8 +36,10 @@ def normalized(value: object) -> object:
         result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
     elif inspect.ismethod(value) or inspect.isfunction(value) or isinstance(value, (type, partial)):
         callable_value = cast(object, value)
+        constructors = tuple(inspect.getattr_static(owner, name, None) for owner, name in ((value, '__new__'), (value, '__init__'), (type(value), '__call__'))) if isinstance(value, type) else ()
+        bindings = tuple((function, {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}) for target in constructors for function in call_functions(target))
         result = {'callable': f'{getattr(callable_value, "__module__", type(callable_value).__module__)}.{getattr(callable_value, "__qualname__", type(callable_value).__qualname__)}',
-                  'implementation': sha256(fitted_witness(callable_value)).hexdigest()}
+                  'implementation': sha256(fitted_witness((callable_value, constructors, bindings))).hexdigest()}
     elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
         result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
     else:
