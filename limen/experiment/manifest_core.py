@@ -217,8 +217,8 @@ class DataSourceResolver:
         if inspect.isfunction(method) and '.' in method.__qualname__:
             cls = getattr(inspect.getmodule(method), method.__qualname__.rsplit('.', 1)[0], None)
             if inspect.isclass(cls) and inspect.getattr_static(cls, method.__name__, None) is method:
-                receiver = next(iter(inspect.signature(method, follow_wrapped=False).parameters), None)
-                if receiver not in params:
+                receiver = next(iter(inspect.signature(method, follow_wrapped=False).parameters.values()), None)
+                if receiver is None or receiver.kind is inspect.Parameter.VAR_POSITIONAL or receiver.name not in params:
                     instance = cls()
                     method(instance, **params)
                     if hasattr(instance, 'data'):
