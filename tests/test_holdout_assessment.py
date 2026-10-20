@@ -1,6 +1,6 @@
 import copy
 from contextlib import ExitStack, contextmanager
-from functools import partial
+from functools import partial, wraps
 import json
 import logging
 import multiprocessing
@@ -25,6 +25,7 @@ from limen.experiment._holdout_freeze import members, owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
 from limen.inference.sensor import Sensor
+from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.targets.next_bar_up import NextBarUpTarget
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
@@ -95,6 +96,17 @@ def external_calibrator(estimator, x, y, kind='native', **params):
     return sklearn_probability_calibrator(estimator, x, y, **params)
 
 
+def readonly_wrapper(function):
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        return function(*args, **kwargs) if args or kwargs else None
+    return wrapped
+
+
+class WrappedLogReg(LogRegBinary):
+    predict = readonly_wrapper(LogRegBinary.predict)
+
+
 class CalibratorFactory(partial):
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs) if args else None
@@ -104,7 +116,9 @@ def mixed_architecture(data, C=1.0, prediction_calibration_config=None):
     from limen.sfd.reference_architecture.logreg_binary import logreg_binary
     from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
     if prediction_calibration_config is not None and prediction_calibration_config.threshold_func is not None:
-        return logreg_binary(data, C=C, prediction_calibration_config=prediction_calibration_config)
+        result = logreg_binary(data, C=C, prediction_calibration_config=prediction_calibration_config)
+        result['_model'].__class__ = WrappedLogReg
+        return result
     return lightgbm_binary(data, n_estimators=5, num_leaves=3, n_jobs=1, early_stopping_rounds=2,
                            prediction_calibration_config=prediction_calibration_config)
 
@@ -138,6 +152,7 @@ def assessment_case(tmp_path_factory):
     import limen.sfd.reference_architecture as architectures
     aliases = ExitStack()
     aliases.enter_context(patch.object(calibration, 'f17_calibrator', CalibratorFactory(external_calibrator), create=True))
+    aliases.enter_context(patch.object(calibration, 'f17_threshold', readonly_wrapper(calibration.grid_threshold_optimizer), create=True))
     aliases.enter_context(patch.object(scalers, 'f17_scaler', ExternalRobust, create=True))
     aliases.enter_context(patch.object(architectures, 'f17_mixed', mixed_architecture, create=True))
     aliases.enter_context(patch.object(architectures, 'f17_tree', tree_architecture, create=True))
@@ -146,7 +161,7 @@ def assessment_case(tmp_path_factory):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.f17_mixed'
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer'}}
+            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.f17_threshold'}}
             current['sfd']['params']['C'] = [1.0]
             current['sfd']['params']['use_calibration'] = [True, False]
             current['sfd']['params']['use_threshold'] = [True, False]
@@ -674,12 +689,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             if not np.array_equal(np.asarray(data['x_test']), self.research_x):
                 if self.refit == 'callback':
                     self.prediction_calibration_config.calibration_func()
+                elif self.refit == 'wrapped':
+                    self.prediction_calibration_config.threshold_func()
                 elif self.refit:
                     self.model.fit(data['x_test'], [0])
                 else:
                     self.counter += 1
             return super().predict(data)
-    for refit in (False, True, 'callback'):
+    for refit in (False, True, 'callback', 'wrapped'):
         late = copy.deepcopy(assessment_case[2][0][0])
         prepared, _ = late._get_manifest().sensor_input_prep(late._fitted_params['_holdout_probe'], late._fitted_params, late._round_params)
         columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]

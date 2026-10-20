@@ -6,7 +6,7 @@ import inspect
 from functools import partial
 import random
 import sys
-from types import CodeType, FrameType
+from types import CodeType, FrameType, FunctionType
 from typing import cast
 
 import numpy as np
@@ -30,7 +30,8 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
         if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
             from lightgbm import Booster
             original = cast(Booster, value)
-            if 'predict' in vars(original) or (type(original).predict.__module__, type(original).predict.__qualname__) != ('lightgbm.basic', 'Booster.predict'):
+            prediction = inspect.getattr_static(cast(type[object], type(original)), 'predict', None)
+            if 'predict' in vars(original) or not inspect.isfunction(prediction) or (prediction.__module__, prediction.__qualname__) != ('lightgbm.basic', 'Booster.predict'):
                 raise ValueError('Holdout refuses replaced Booster prediction methods')
             copied = cast(Booster, memo[id(value)])
             copied.best_iteration = original.best_iteration
@@ -44,24 +45,32 @@ def _roots(sensor: Sensor) -> list[object]:
     return [vars(sensor)['_model'], vars(sensor)['_fitted_params']]
 
 
-def _call_codes(value: object) -> tuple[CodeType, ...]:
+def _call_functions(value: object) -> tuple[FunctionType, ...]:
     if isinstance(value, partial):
         provider = cast(partial[object], value)
-        return (*_call_codes(provider.func), *_call_codes(type(provider).__call__))
+        return (*_call_functions(provider.func), *_call_functions(type(provider).__call__))
     if isinstance(value, type):
-        return (*_call_codes(value.__init__), *_call_codes(value.__new__), *_call_codes(type(value).__call__))
-    method = inspect.unwrap(value) if callable(value) else value
-    if inspect.ismethod(method):
-        method = method.__func__
-    if inspect.isfunction(method):
-        return (method.__code__,)
-    call = inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
-    return (call.__code__,) if inspect.isfunction(call) else ()
+        return (*_call_functions(value.__init__), *_call_functions(value.__new__), *_call_functions(type(value).__call__))
+    if inspect.ismethod(value):
+        value = value.__func__
+    if inspect.isfunction(value):
+        unwrapped = inspect.unwrap(value)
+        return (value, *_call_functions(unwrapped)) if unwrapped is not value else (value,)
+    call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
+    functions = _call_functions(call.fget) if isinstance(call, property) else _call_functions(call) if inspect.isfunction(call) else ()
+    unwrapped = inspect.unwrap(value) if callable(value) else value
+    return (*functions, *_call_functions(unwrapped)) if unwrapped is not value else functions
+
+
+def _matches(function: FunctionType, frame: FrameType) -> bool:
+    return frame.f_globals is function.__globals__ and all(
+        frame.f_locals.get(name) is cell.cell_contents
+        for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True))
 
 
 @contextmanager
 def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
-    forbidden: set[object] = set()
+    forbidden: dict[CodeType, set[FunctionType]] = {}
     seen: set[int] = set()
 
     def collect(value: object) -> None:
@@ -72,12 +81,14 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
         seen.add(id(value))
         for name in _EFFECTS:
             method = getattr(value, name, None)
-            forbidden.update(_call_codes(method))
+            for function in _call_functions(method):
+                forbidden.setdefault(function.__code__, set()).add(function)
         config = getattr(value, 'prediction_calibration_config', None)
         if config is not None:
             for name in ('calibration_func', 'threshold_func'):
                 method = getattr(config, name, None)
-                forbidden.update(_call_codes(method))
+                for function in _call_functions(method):
+                forbidden.setdefault(function.__code__, set()).add(function)
         for part in children(value):
             collect(part)
 
@@ -91,7 +102,8 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
-        if event == 'call' and not fixed_labels and (frame.f_code in forbidden or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
+        matched = event == 'call' and frame.f_code in forbidden and any(_matches(function, frame) for function in forbidden[frame.f_code])
+        if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = True
             raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
         if previous is not None:
