@@ -168,62 +168,59 @@ def tree_architecture(data, prediction_calibration_config=None):
     return result
 
 
+def configure_fitted_components(manifest, *, kind):
+    from limen.calibration import grid_threshold_optimizer
+    if kind == 'logreg':
+        manifest.with_reference_architecture(mixed_architecture)
+        manifest.with_calibration().probability_calibration(CalibratorFactory(external_calibrator), method='sigmoid').threshold_function(readonly_wrapper(grid_threshold_optimizer)).done()
+    elif kind == 'warmup':
+        manifest.with_reference_architecture(tree_architecture)
+        manifest.set_scaler(ExternalRobust)
+        manifest.with_calibration().probability_calibration(CalibratorFactory(external_calibrator), kind='custom').done()
+    else:
+        manifest.with_calibration().probability_calibration(CalibratorFactory(external_calibrator), kind='passthrough' if kind == 'earlier_test' else 'detached').done()
+
+
 @pytest.fixture(scope='module')
 def assessment_case(tmp_path_factory):
     root = _project(tmp_path_factory.mktemp('holdout') / 'project')
     config = _configuration(root)
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
-    from limen import calibration
-    from limen import scalers
-    import limen.sfd.reference_architecture as architectures
-    aliases = ExitStack()
-    aliases.enter_context(patch.object(calibration, 'f17_calibrator', CalibratorFactory(external_calibrator), create=True))
-    aliases.enter_context(patch.object(calibration, 'f17_threshold', readonly_wrapper(calibration.grid_threshold_optimizer), create=True))
-    aliases.enter_context(patch.object(scalers, 'f17_scaler', ExternalRobust, create=True))
-    aliases.enter_context(patch.object(architectures, 'f17_mixed', mixed_architecture, create=True))
-    aliases.enter_context(patch.object(architectures, 'f17_tree', tree_architecture, create=True))
     trained, sources = [], []
     for architecture in ('logreg', 'lightgbm', 'warmup', 'earlier_test'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
-            current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.f17_mixed'
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.f17_threshold'}}
             current['sfd']['params']['C'] = [1.0]
             current['sfd']['params']['use_calibration'] = [True, False]
             current['sfd']['params']['use_threshold'] = [True, False]
             current['uel']['n_permutations'] = 4
         elif architecture == 'warmup':
-            current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.f17_tree'
-            current['sfd']['manifest']['scaler'] = {'class': 'limen.scalers.f17_scaler'}
             current['sfd']['params'] = {}
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'custom'}}}
             current['sfd']['manifest']['indicators'][0]['params']['period'] = 30
             current['sfd']['manifest']['target']['fit_params']['source_column'] = 'roc_30'
         elif architecture == 'earlier_test':
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'passthrough'}}}
             current['sfd']['manifest']['split_dates'] = dict(zip(('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'), ('2024-01-01', '2024-01-02', '2024-01-02', '2024-01-03', '2024-01-03', '2024-01-04'), strict=True))
         else:
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary'
-            current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.f17_calibrator', 'params': {'kind': 'detached'}}}
             current['uel']['n_permutations'] = 2
             current['sfd']['params'] = {'use_calibration': [True, False], 'use_threshold': [False], 'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
         directory = root / architecture
-        loop = UniversalExperimentLoop(sfd=CompiledSFD(current, project_root=root), project_root=root, experiment_dir=directory,
+        components = partial(configure_fitted_components, kind=architecture)
+        compiled = CompiledSFD(current, project_root=root, components=components)
+        current = compiled.yaml_reference
+        loop = UniversalExperimentLoop(sfd=compiled, project_root=root, experiment_dir=directory,
             search_strategy=build_search_strategy(current), yaml_reference=current)
         loop.run(architecture, n_permutations=current['uel']['n_permutations'], progress_bar=False, post_processing=True)
         from limen.experiment import _round_storage
         with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
             ids = [json.loads(line)['round_id'] for line in stream if line.strip()]
-        trained.append(Trainer(directory, project_root=root).train(ids))
+        trained.append(Trainer(directory, project_root=root, components=components).train(ids))
         sources.append(directory)
     selected = [trained[0][0], trained[0][-1]]
     cohort = Cohort(experiment_log_path=str(sources[0]), permutation_ids=[sensor.permutation_id for sensor in selected])
     cohort.set_members(selected)
     cohort.aggregation_mode = 'probability_weighted'
-    try:
-        yield root, reservation, trained, cohort
-    finally:
-        aliases.close()
+    yield root, reservation, trained, cohort
 
 
 @pytest.fixture(scope='module')
@@ -869,6 +866,52 @@ def test_frozen_logger_prediction_settings(native_assessment_case):
         with pytest.raises(ValueError, match='copy changed selected state'):
             _freeze(selected)
         assert loader.call_count == 0
+
+
+def test_trusted_components_require_matching_explicit_reload(native_assessment_case):
+    from limen.yaml.compiler import build_manifest
+    from limen.yaml.resolver import resolve, ALLOWED_NAMESPACES
+    from limen.yaml.errors import ResolutionError
+    native = native_assessment_case[2][0][0]
+    reference = copy.deepcopy(native._yaml_reference)
+    components = partial(configure_fitted_components, kind='earlier_test')
+    compiled = CompiledSFD(reference, components=components)
+    recorded = compiled.yaml_reference
+    assert 'components' not in reference['sfd']
+    assert recorded['sfd']['components']['sha256']
+    assert compiled.manifest().prediction_calibration_config.calibration_func.func is external_calibrator
+    assert external_calibrator.__module__ == __name__
+    allowed = list(ALLOWED_NAMESPACES)
+    with patch('limen.calibration.f17_calibrator', external_calibrator, create=True):
+        with pytest.raises(ResolutionError):
+            resolve('limen.calibration.f17_calibrator')
+    assert ALLOWED_NAMESPACES == allowed
+    directory = native_assessment_case[0] / 'trusted-reload'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    with patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as research_loader:
+        with pytest.raises(ValueError, match='explicit matching'):
+            Trainer(directory, project_root=native_assessment_case[0])
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            Trainer(directory, project_root=native_assessment_case[0], components=partial(configure_fitted_components, kind='warmup'))
+        assert research_loader.call_count == 0
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('source access')) as loader:
+        with pytest.raises(ValueError, match='explicit matching'):
+            CompiledSFD(recorded)
+        with pytest.raises(ValueError, match='explicit matching'):
+            build_manifest(recorded)
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=partial(configure_fitted_components, kind='warmup'))
+        assert loader.call_count == 0
+    assert CompiledSFD(recorded, components=components).manifest().prediction_calibration_config.calibration_func.func is external_calibrator
+    marked = copy.deepcopy(native)
+    marked._yaml_reference = recorded
+    marked._manifest = None
+    marked._components = None
+    with pytest.raises(ValueError, match='explicit matching'):
+        marked._get_manifest()
 
 
 def test_frozen_instance_namespace_module_alias_and_fixed_labels(native_assessment_case):

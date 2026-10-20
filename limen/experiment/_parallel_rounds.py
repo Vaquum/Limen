@@ -39,6 +39,8 @@ def configuration(sfd: object, yaml_reference: dict[str, object] | None) -> tupl
     from limen.yaml.compiler import CompiledSFD
 
     compiled = cast(dict[str, object], copy.deepcopy(vars(sfd)['_yaml'])) if type(sfd) is CompiledSFD else None
+    if type(sfd) is CompiledSFD and vars(sfd).get('_components') is not None and yaml_reference != compiled:
+        raise ValueError('Trusted components require yaml_reference=sfd.yaml_reference when recording research')
     return copy.deepcopy(yaml_reference), compiled, 1, None
 
 

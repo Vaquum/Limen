@@ -48,6 +48,7 @@ The package also owns `parser.py`, `schema.py`, `validator.py`, `resolver.py`, `
 | `validator.py` | validation orchestration and result objects |
 | `resolver.py` | limen.* dotted-reference resolution |
 | `compiler.py` | YAML config to executable manifest-backed SFD |
+| `_component_declaration.py` | Explicit trusted Manifest configurators and recorded reload identity |
 | `profiler.py` | parameter-space profiling |
 | `store.py` | committed manifest store and URI resolution |
 | `config.py` | project-root and limen.toml helpers |
@@ -59,6 +60,7 @@ yaml/
 ├── README.md
 ├── __init__.py
 ├── _backtest_spec.py
+├── _component_declaration.py
 ├── _feature_shim_spec.py
 ├── _objective_spec.py
 ├── _recording_spec.py

@@ -514,5 +514,6 @@
   "limen/experiment/_holdout_prediction.py": 180,
   "limen/experiment/_holdout_dependencies.py": 300,
   "limen/experiment/_holdout_state.py": 200,
-  "limen/experiment/_holdout_calls.py": 180
+  "limen/experiment/_holdout_calls.py": 180,
+  "limen/yaml/_component_declaration.py": 65
 }

@@ -1889,3 +1889,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Reuse exact native type groups during dependency sealing and fitted-state encoding.
 - Seal default-bound namespace readers, reject unstable fitting bindings and preserve native provider-type relationships.
 - Release completed traversal graphs and reduce witness allocations while preserving frozen type and alias relationships.
+
+## [5.46.0] - 2026-10-20
+
+- Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
+- Seal instance-held namespace readers and preserve module alias identity; restrict the fixed-label fitting exemption to installed native code.

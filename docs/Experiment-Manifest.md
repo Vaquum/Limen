@@ -15,6 +15,57 @@ scaler state, declared execution policies and reconstructible recorded runs.
 These checks do not establish the causality of an arbitrary user feature or the
 correctness of its provider's data.
 
+
+## Trusted component declarations
+
+Ordinary Python configurators can install external components through the public
+Manifest methods while retaining Compiled Research. Supply the configurator
+explicitly; YAML references cannot import or authorize it. The existing dotted
+resolver still rejects aliases to external defining modules and dunder traversal.
+
+For an existing validated ML `config` and recorded-data `project`, the handoff is:
+
+```python
+from limen import UniversalExperimentLoop
+from limen.inference import Trainer
+from limen.yaml import CompiledSFD, build_search_strategy
+from limen.calibration import sklearn_probability_calibrator
+
+
+def external_calibrator(estimator, x, y, **params):
+    return sklearn_probability_calibrator(estimator, x, y, **params)
+
+
+def configure_components(manifest):
+    manifest.with_calibration().probability_calibration(
+        external_calibrator, method='sigmoid').done()
+
+
+sfd = CompiledSFD(config, project_root=project, components=configure_components)
+reference = sfd.yaml_reference
+directory = project / 'experiment'
+loop = UniversalExperimentLoop(sfd=sfd, project_root=project,
+    experiment_dir=directory, yaml_reference=reference,
+    search_strategy=build_search_strategy(reference))
+loop.run('configured', n_permutations=1, progress_bar=False)
+trainer = Trainer(directory, project_root=project, components=configure_components)
+```
+
+Use `sfd.yaml_reference` when recording. It returns an independent copy containing
+`sfd.components` with the configurator's name and state/code digest. Trainer must
+receive the matching configurator on every reload; missing or mismatched authority
+fails before fetching research data. Sensors retain it for reconstruction and
+owned holdout copies, which compare the fresh configured Manifest with the cached
+pipeline. The configurator modifies its Manifest and returns `None`. Its code,
+defaults and captured state must remain consistent with the saved declaration.
+The metadata marker is descriptive evidence; it never loads executable code.
+
+`build_manifest(reference, components=configure_components)` also accepts the
+recorded reference. YAML-only CLI compilation requires no configurator for ordinary
+native declarations; a marked trusted declaration requires the explicit Python
+handoff above. All existing source, preparation, fitted-state and final-holdout
+evidence requirements still apply.
+
 ## Prerequisites
 
 - `pip install "vaquum-limen[data]"` for the bundled data-backed templates

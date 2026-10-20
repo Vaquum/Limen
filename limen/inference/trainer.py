@@ -15,6 +15,7 @@ from limen.inference.errors import ReconstructionError
 from limen.inference.sensor import Sensor
 import limen.inference._fold_trainer as _fold_replay
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml._component_declaration import Components, bind_components
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
 
@@ -41,7 +42,7 @@ class Trainer:
     def __init__(self,
                  experiment_dir: str | Path,
                  data: pl.DataFrame | None = None, *,
-                 project_root: str | Path | None = None) -> None:
+                 project_root: str | Path | None = None, components: Components | None = None) -> None:
 
         '''
         Create a Trainer from a completed YAML experiment directory.
@@ -79,11 +80,13 @@ class Trainer:
             raise ValueError(
                 'metadata.json key \'yaml_reference\' must be an object'
             )
+        _ = bind_components(yaml_reference, components)
+        self._components = components
         self._yaml_reference = yaml_reference
         self._manifest_id: str | None = self._metadata.get('manifest_id')
 
         try:
-            sfd = CompiledSFD(yaml_reference, project_root=project_root or self._experiment_dir)
+            sfd = CompiledSFD(yaml_reference, project_root=project_root or self._experiment_dir, components=components)
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError(
                 "metadata.json key 'yaml_reference' is not a valid YAML SFD reference"
@@ -237,6 +240,7 @@ class Trainer:
                 round_params=round_params,
                 permutation_id=pid,
                 manifest_id=self._manifest_id,
+                components=self._components,
                 trade_contract=cast(Mapping[str, JsonValue] | None, data_dict.get('trade_contract') if frozen_contract is not None else None),
             )
             if '_holdout' in fitted_params and self._manifest.split_dates is not None:

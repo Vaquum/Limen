@@ -27,7 +27,7 @@ from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
 from limen.experiment._holdout_dependencies import dependency_digest, fitted_witness
 from limen.experiment._holdout_prediction import restore_iterations, validate_prediction
-from limen.experiment.manifest_core import CalibrationConfig, MLManifest
+from limen.experiment.manifest_core import CalibrationConfig, MLManifest, Manifest
 from limen.inference.sensor import Sensor
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
@@ -109,7 +109,7 @@ def members(selection: Sensor | Cohort) -> list[Sensor]:
 
 
 def _member_state(sensor: Sensor) -> tuple[object, ...]:
-    return tuple(vars(sensor)[key] for key in ('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'))
+    return (*tuple(vars(sensor)[key] for key in ('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract')), vars(sensor).get('_components'))
 
 
 def state_digest(selection: Sensor | Cohort) -> str:
@@ -207,7 +207,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         if isinstance(threshold, bool) or not isinstance(threshold, numbers.Real) or not math.isfinite(float(threshold)):
             raise ValueError('Holdout requires a finite fitted threshold')
     manifest = cast(MLManifest | None, vars(sensor)['_manifest'])
-    fresh = CompiledSFD(cast(dict[str, object], vars(sensor)['_yaml_reference'])).manifest()
+    fresh = CompiledSFD(cast(dict[str, object], vars(sensor)['_yaml_reference']), components=cast(Callable[[Manifest], None] | None, vars(sensor).get('_components'))).manifest()
     if type(fresh) is not MLManifest or (manifest is not None and (type(manifest) is not MLManifest or manifest_projection(manifest) != manifest_projection(fresh))):
         raise ValueError('Holdout cached manifest differs from the declared pipeline')
     effective = fresh if manifest is None else manifest
@@ -275,13 +275,13 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
         member = copy.copy(original)
         vars(member).clear()
         state = _member_state(original)
-        vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(state, memo), strict=True))
+        vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract', '_components'), copy.deepcopy(state, memo), strict=True))
         restore_iterations(state, memo)
         member.permutation_id, member.manifest_id = original.permutation_id, original.manifest_id
         vars(member)['_trade_digest'] = None
         cached = cast(MLManifest | None, vars(original)['_manifest'])
         if cached is None:
-            manifest = CompiledSFD(cast(dict[str, object], vars(member)['_yaml_reference'])).manifest()
+            manifest = CompiledSFD(cast(dict[str, object], vars(member)['_yaml_reference']), components=cast(Callable[[Manifest], None] | None, vars(member).get('_components'))).manifest()
         else:
             manifest = copy.copy(cached)
             values = {field.name: getattr(cached, field.name) for field in fields(cached)}

@@ -134,3 +134,9 @@ Each completed attempt stores `manifests/holdout/<attempt_id>/rows.parquet` and 
 Specification and fitted-state digests pin the selected pipeline, fitted object and environment. They are witnesses for this installed environment, not portable independently refitted model identities. Repeat assessments can share science and row hashes while having different attempt IDs, exposure classes and history.
 
 Existing [acceptance reports](Benchmark.md) remain research diagnostics. Their walk-forward limitations remain separate from a final holdout claim.
+
+External fitted components declared through a trusted Manifest configurator use
+[the recorded component handoff](Experiment-Manifest.md#trusted-component-declarations).
+Supply the matching configurator to Trainer; each resulting Sensor retains it
+through reconstruction and owned holdout copies. The resolver allowlist and final
+source-admission boundaries remain unchanged.

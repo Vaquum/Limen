@@ -2,6 +2,9 @@ from limen.yaml._backtest_spec import apply_backtest
 from limen.experiment._allocation import apply_yaml as apply_allocation
 from limen.experiment._holdout_research import initialize_compiled, cached_manifest
 import inspect
+import copy
+from functools import partial
+from limen.yaml._component_declaration import Components, bind_components, configure_manifest
 from pathlib import Path
 from datetime import date
 from typing import Any, cast
@@ -44,18 +47,19 @@ def _resolve_func_params(params: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
+def build_manifest(yaml_dict: dict[str, Any], *, components: Components | None = None) -> Manifest:
 
     '''Build the declared ML or rule-based manifest.'''
 
+    _ = bind_components(yaml_dict, components)
     m = yaml_dict['sfd']['manifest']
     manifest_type = m['type']
 
     if manifest_type == 'ml':
-        return apply_objective(_build_ml_manifest(m), yaml_dict)
+        return configure_manifest(apply_objective(_build_ml_manifest(m), yaml_dict), yaml_dict, components)
     if manifest_type == 'rule_based':
         _ = read_objective(yaml_dict)
-        return _build_rule_based_manifest(m)
+        return configure_manifest(_build_rule_based_manifest(m), yaml_dict, components)
     raise ValueError(f"Unknown manifest type '{manifest_type}'")
 
 
@@ -274,12 +278,22 @@ class CompiledSFD:
 
     '''SFD-compatible object built from a validated YAML experiment dict.'''
 
-    def __init__(self, yaml_dict: dict[str, Any], *, project_root: str | Path | None = None) -> None:
+    def __init__(self, yaml_dict: dict[str, Any], *, project_root: str | Path | None = None, components: Components | None = None) -> None:
 
         super().__init__()
 
+        self._components = components
+        if components is not None:
+            yaml_dict = copy.deepcopy(yaml_dict)
+            yaml_dict.update(bind_components(yaml_dict, components, record=True))
+        else:
+            _ = bind_components(yaml_dict, components)
         self._yaml, self._holdout_project_root, self.__name__ = initialize_compiled(yaml_dict, project_root)
         self._manifest_cache: Manifest | None = None
+
+    @property
+    def yaml_reference(self) -> dict[str, object]:
+        return copy.deepcopy(self._yaml)
 
     def params(self) -> dict[str, list[Any]]:
 
@@ -291,7 +305,7 @@ class CompiledSFD:
 
         '''Return the compiled Manifest, built once and cached.'''
 
-        return cached_manifest(self, build_manifest)
+        return cached_manifest(self, partial(build_manifest, components=self._components))
 
 
 def _uel_config(yaml_dict: dict[str, Any]) -> dict[str, Any]:

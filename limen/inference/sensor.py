@@ -15,6 +15,7 @@ import polars as pl
 
 from limen.sfd.reference_architecture.base import ReferenceModel
 from limen.yaml.compiler import CompiledSFD
+from limen.yaml._component_declaration import Components, bind_components
 from limen.inference._python_sensor import BarPrediction, PredictionReason, HistoryT, StateT, OutputT, Infer, MapOutput, PythonSensorBase, mapped_values
 from limen.inference._sensor_from_model import Missing, ModelInput, ModelPairs, Prepare, Predict, identity_pairs, model_infer
 
@@ -37,12 +38,13 @@ class Sensor:
                  round_params: dict[str, Any],
                  permutation_id: str | None = None,
                  manifest_id: str | None = None, *,
-                 trade_contract: Mapping[str, JsonValue] | None = None) -> None:
+                 trade_contract: Mapping[str, JsonValue] | None = None, components: Components | None = None) -> None:
 
 
         super().__init__()
         _fold_guard.reject_manual(yaml_reference, self)
-        self._yaml_reference = research_reference(yaml_reference)
+        self._components = components
+        self._yaml_reference = research_reference(bind_components(yaml_reference, components))
         self._model = model
         self._fitted_params = dict(fitted_params)
         self._round_params = dict(round_params)
@@ -93,7 +95,7 @@ class Sensor:
     def _get_manifest(self) -> Any:
 
         if self._manifest is None:
-            self._manifest = CompiledSFD(self._yaml_reference).manifest()
+            self._manifest = CompiledSFD(self._yaml_reference, components=self._components).manifest()
         return self._manifest
 
 
