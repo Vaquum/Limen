@@ -71,8 +71,8 @@ def tree_objects(root, revision):
     return objects
 
 
-def identity(root, base, path, current, previous, *, head=None):
-    if previous.get(path) != current[path]:
+def identity(root, base, path, current, previous, *, head=None, ancestry=None):
+    if previous.get(path) != current[path] or ancestry is not None and ancestry.get(path) != current[path]:
         return history_change(root, head or git(root, 'rev-parse', 'HEAD'), path, False), 'candidate'
     return history_change(root, base, path, True), 'merged'
 
@@ -83,9 +83,10 @@ def acquire(root, output):
     base = base_revision(root)
     head = git(root, 'rev-parse', 'HEAD')
     current, previous = tree_objects(root, head), tree_objects(root, base)
+    ancestry = tree_objects(root, git(root, 'merge-base', head, 'origin/main'))
     files, responses = [], {}
     for path in source_paths(root):
-        commit, status = identity(root, base, path, current, previous, head=head)
+        commit, status = identity(root, base, path, current, previous, head=head, ancestry=ancestry)
         pull = None
         if status == 'merged':
             if commit not in responses:
@@ -106,8 +107,9 @@ def validate_provenance(root, record):
         raise ValueError('Source provenance inventory differs')
     head = git(root, 'rev-parse', 'HEAD')
     current, previous = tree_objects(root, head), tree_objects(root, base)
+    ancestry = tree_objects(root, git(root, 'merge-base', head, 'origin/main'))
     for item in record['files']:
-        commit, status = identity(root, base, item['path'], current, previous, head=head)
+        commit, status = identity(root, base, item['path'], current, previous, head=head, ancestry=ancestry)
         if (item['commit'], item['status']) != (commit, status) or item['sha256'] != hashlib.sha256((root / item['path']).read_bytes()).hexdigest():
             raise ValueError('Source-changing commit or source bytes differ')
         expected = merged_pull(commit, record['responses'][commit]) if status == 'merged' else None

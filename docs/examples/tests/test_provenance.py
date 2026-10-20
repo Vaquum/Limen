@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from provenance import base_revision, git, identity, latest_change, main, merged_pull, pull_associations, tree_objects
+from provenance import acquire, base_revision, git, identity, latest_change, main, merged_pull, pull_associations, tree_objects, validate_provenance
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -66,6 +66,27 @@ def test_provenance_cli_inspects_explicit_checkout_without_changing_it(recorded_
     assert [(item['path'], item['commit'], item['status'], item['merged_pr']) for item in record['files']] == [('page.md', candidate, 'candidate', None)]
     assert git(root, 'rev-parse', 'HEAD') == candidate
     assert git(root, 'status', '--porcelain', '--untracked-files=normal') == before
+
+
+def test_restored_pre_pr_bytes_remain_candidate_against_original_ancestry(recorded_history, monkeypatch):
+    root, run, base, candidate = recorded_history
+    run('checkout', '-q', 'main');run('merge', '--no-ff', 'chapter', '-qm', 'merge: integrate chapter')
+    run('update-ref', 'refs/remotes/origin/main', 'HEAD')
+    run('checkout', '-q', 'chapter')
+    (root / 'page.md').write_text(git(root, 'show', base + ':page.md') + '\n')
+    run('commit', '-qam', 'docs: restore the recorded chapter')
+    restored = git(root, 'rev-parse', 'HEAD')
+    assert git(root, 'merge-base', 'HEAD', 'origin/main') == candidate
+    assert tree_objects(root, base)['page.md'] == tree_objects(root, restored)['page.md']
+    monkeypatch.setattr('provenance.source_paths', lambda selected: ['page.md'])
+    record = acquire(root, root.parent / 'restored-provenance.json')
+    assert (record['files'][0]['commit'], record['files'][0]['status']) == (restored, 'candidate')
+    validate_provenance(root, record)
+    comparison = subprocess.run(['git', 'diff', '--quiet', candidate, 'HEAD', '--', 'page.md'], cwd=root, check=False)
+    assert comparison.returncode == 1
+    record['files'][0]['status'] = 'merged'
+    with pytest.raises(ValueError, match='Source-changing commit or source bytes differ'):
+        validate_provenance(root, record)
 
 
 def test_first_parent_change_includes_merge_and_later_revert(tmp_path):
