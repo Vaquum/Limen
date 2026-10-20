@@ -2037,16 +2037,24 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result['_probs'] = adjust(result['_probs'])
             return result
     annotated._model.__class__ = FunctionMetadataCall
+    missing_metadata = object()
     for policy in (identity_probabilities, LogisticRegression.predict_proba):
         annotated._model.policy = policy
         for field in ('__doc__', '__type_params__'):
             annotated._model.metadata_field = field
-            with patch.object(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities, create=not hasattr(policy, field)):
+            original_metadata = getattr(policy, field, missing_metadata)
+            try:
+                setattr(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities)
                 metadata_handle = _freeze(annotated)
                 with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                     with pytest.raises(ValueError, match='prediction dependency changed'):
                         _report(metadata_handle, assessment_case)
                     assert loader.call_count == 0
+            finally:
+                if original_metadata is missing_metadata:
+                    delattr(policy, field)
+                else:
+                    setattr(policy, field, original_metadata)
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):
