@@ -296,6 +296,13 @@ def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> No
         logger.info('Runtime profile written to %s', output_path)
 
     suite = profile['suite']
+    worker_seconds: dict[str, float] = {}
+    worker_finishes: dict[str, str] = {}
+    for record in profile['tests']:
+        worker_id = str(record.get('worker_id', 'serial'))
+        worker_seconds[worker_id] = worker_seconds.get(worker_id, 0.0) + float(record['duration_seconds'])
+        worker_finishes[worker_id] = max(worker_finishes.get(worker_id, ''), str(record['finished_at']))
+    logger.info('Recorded call seconds by worker: %s; last completion: %s', worker_seconds, worker_finishes)
     logger.info(
         'Test suite runtime: %s across %d tests (%d passed, %d failed, %d skipped)',
         format_duration(float(suite['duration_seconds'])),
@@ -313,10 +320,13 @@ def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> No
         logger.info('Slowest tests:')
         for record in slowest_tests:
             logger.info(
-                '  %s [%s] %s',
+                '  %s [%s] %s worker=%s start=%s finish=%s',
                 record['test_name'],
                 record['status'],
                 format_duration(float(record['duration_seconds'])),
+                record.get('worker_id', 'serial'),
+                record['started_at'],
+                record['finished_at'],
             )
 
 
