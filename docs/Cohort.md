@@ -428,6 +428,9 @@ member, not per experiment, including unequal source membership.
 
 ### 2) `majority_vote`
 
+For ordinary cohorts, members whose architecture id contains `regressor` vote up at
+`prediction > 0`; other member predictions use `> 0.5`.
+
 - uses member `prediction` values
 - computes mean vote across members
 - applies strict threshold `> 0.5`

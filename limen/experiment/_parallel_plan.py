@@ -81,7 +81,7 @@ def clone_manifest(manifest: Manifest) -> Manifest:
     return cast(Manifest, _normalize(manifest))
 
 
-_PARALLEL_EVIDENCE_SINCE = (5, 45, 5)
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 6)
 
 
 def legacy_metadata(metadata: Mapping[str, object]) -> bool:
