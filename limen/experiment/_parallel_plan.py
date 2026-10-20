@@ -27,7 +27,7 @@ import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
 
-class _TargetClass(Protocol):
+class TargetClass(Protocol):
     transform: Callable[..., object]
 
 
@@ -94,8 +94,7 @@ class FrozenManifestPlan:
     @override
     def __reduce__(self) -> tuple[Callable[..., object], tuple[bytes, dict[str, list[str]]]]:
         with distribution_providers(self.distribution_providers), identity_snapshot():
-            payload = zlib.compress(json.dumps(encode(self), ensure_ascii=False, separators=(',', ':')).encode())
-        return restore_plan, (payload, self.distribution_providers)
+            return restore_plan, (zlib.compress(json.dumps(encode(self), ensure_ascii=False, separators=(',', ':')).encode()), self.distribution_providers)
 
 
 def restore_plan(payload: bytes, providers: Mapping[str, list[str]]) -> FrozenManifestPlan:
@@ -171,6 +170,10 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
 _NO_ANCESTORS: frozenset[int] = frozenset()
 
 
+def _scaler_factory(cls: object, params: dict[str, object], selector: str | None) -> ScalerFactory:
+    return cast(Callable[[object, dict[str, object], str | None], ScalerFactory], vars(import_module('limen.experiment._parallel_resources'))['scaler_factory'])(cls, params, selector)
+
+
 def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None,
                state_memo: dict[int, tuple[object, object]] | None = None) -> object:
     if id(value) in active:
@@ -185,16 +188,15 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     if type(value) is _manifest.TargetClassConfig:
         target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
-                                    cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform,
+                                    cast(Callable[..., object], target.target_class.__init__), cast(TargetClass, target.target_class).transform,
                                     target.target_class.__new__ if inspect.isfunction(target.target_class.__new__) else None)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
-        from limen.experiment._parallel_resources import scaler_factory
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
-            value = scaler_factory(cls, params, None)
+            value = _scaler_factory(cls, params, None)
         elif value.__qualname__ == 'MLManifest.set_scaler_from_params.<locals>._scaler_factory':
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
-            value = scaler_factory(None, cast(dict[str, object], closure['_static']), cast(str, closure['param_name']))
+            value = _scaler_factory(None, cast(dict[str, object], closure['_static']), cast(str, closure['param_name']))
     clone: object
     if isinstance(value, CellType):
         clone = state_memo[key][1] if key in state_memo else CellType(None)

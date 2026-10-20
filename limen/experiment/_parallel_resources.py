@@ -14,7 +14,7 @@ from typing import cast
 
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
-from limen.experiment._parallel_plan import _TargetClass, FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source, parameter_references, factory_reference, factory_allocator
+from limen.experiment._parallel_plan import TargetClass, FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source, parameter_references, factory_reference, factory_allocator
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -321,7 +321,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
         initializer = getattr(target, '_parallel_init', None)
         result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=2 if initializer is None else 3, path='target', runtime=runtime)
-        transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(_TargetClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
+        transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(TargetClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
         if (allocator := getattr(target, '_parallel_new', None)) is not None:
