@@ -87,11 +87,9 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
 
 
 
-def _encode_component(value: object, active: frozenset[int]) -> list[object]:
+def _encode_component(value: object, active: frozenset[int], *, owner_only: bool = False) -> list[object]:
     if inspect.ismethod(value):
-        owner = encode(value.__self__, active)
-        if owner[0] in ('dataclass', 'instance'):
-            owner[-1] = ['null']  # The owner supplies state; the separately captured method is invoked.
+        owner = _encode_component(value.__self__, active | {id(value.__self__)}, owner_only=True)
         return ['method', owner, value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value):
         return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(tuple(cell.cell_contents for cell in value.__closure__) if value.__closure__ else None, active, ordered=True), encode(vars(value).get('__wrapped__'), active, ordered=True)]
@@ -102,9 +100,9 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
         if set(component_state(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
-                [[field.name, encode(getattr(value, field.name), active, ordered=True)] for field in fields(value)], encode(call_implementation(value), active)]
-    if callable(value):
-        return ['instance', reference(type(value)), encode(object_state(value), active, ordered=True), encode(call_implementation(value), active)]
+                [[field.name, encode(getattr(value, field.name), active, ordered=True)] for field in fields(value)], encode(None if owner_only else call_implementation(value), active)]
+    if callable(value) or owner_only:
+        return ['instance', reference(type(value)), encode(object_state(value), active, ordered=True), encode(None if owner_only else call_implementation(value), active)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
 
 

@@ -143,6 +143,27 @@ class ClosureRolling:
     __call__ = _closed_implementation([2])
 
 
+def _method_only_transform(owner, data):
+    return _caller_feature(data, owner.window)
+
+
+class MethodOnlyRolling:
+    def __init__(self, window):
+        self.window = window
+
+    transform = _method_only_transform
+
+
+def _unused_call(secret):
+    def implementation(self, data):
+        raise AssertionError(f'Unused call must not execute: {secret}')
+    return implementation
+
+
+class OpaqueUnusedCallRolling(MethodOnlyRolling):
+    __call__ = _unused_call(object())
+
+
 class SignatureSeedRolling(ShadowedSeedRolling):
     def __call__(self, data, random_state=42):
         return super().__call__(data, random_state)
@@ -393,7 +414,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (_wrapped_feature, partial(_kwargs_feature, n_jobs=1, window=3), partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
+        for component in (_wrapped_feature, MethodOnlyRolling(3).transform, OpaqueUnusedCallRolling(3).transform, partial(_kwargs_feature, n_jobs=1, window=3), partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             if isinstance(component, (DictRolling, ListRolling)):
