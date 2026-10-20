@@ -970,6 +970,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             return np.clip(super().__call__(values) + self.offset, 0, 1)
         def __deepcopy__(self, memo):
             clone = type(self)(self.func, *self.args, **self.keywords)
+            memo[id(self)] = clone
+            vars(clone).update(copy.deepcopy(vars(self), memo))
             clone.offset = self.offset
             return clone
     class NonpreservingSlotted(SlottedPartial):
