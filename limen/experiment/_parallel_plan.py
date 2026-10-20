@@ -71,7 +71,7 @@ class FrozenManifestPlan:
 
 def restore_plan(payload: bytes, providers: Mapping[str, list[str]]) -> FrozenManifestPlan:
     with distribution_providers(providers), identity_snapshot():
-        plan = decode(json.loads(zlib.decompress(payload)))
+        plan = decode(json.loads(zlib.decompress(payload)), isolate_functions=True)
     if not isinstance(plan, FrozenManifestPlan):
         raise ValueError('Invalid frozen parallel plan transport')
     return plan

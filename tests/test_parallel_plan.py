@@ -52,6 +52,15 @@ def _keyword_feature(data, *, window=2):
     return _caller_feature(data, window)
 
 
+def _mutable_feature(data, windows=None):
+    window = windows[0]
+    windows[0] += 1
+    return _caller_feature(data, window)
+
+
+_mutable_feature.__defaults__ = ([2],)
+
+
 def _caller_validator(params):
     if type(params.get('window')) is not int or params['window'] < 1:
         raise ValueError('positive integer window required')
@@ -275,6 +284,14 @@ def _carried_probe(plan, params):
     return entry.func(data, **entry.params)['caller_mean'].to_list(), os.getpid()
 
 
+def _repeated_carried_probe(plan, params):
+    before = digest(plan)
+    first, pid = _carried_probe(plan, params)
+    second, _ = _carried_probe(plan, params)
+    assert first == second and digest(plan) == before
+    return first, pid
+
+
 def _frozen_probe(plan, params):
     from limen.experiment import _parallel_identity as identities
     from limen.experiment._parallel_plan import plan_digests
@@ -404,6 +421,13 @@ def test_frozen_manifest_round_plan() -> None:
             expected, _ = _carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
             assert frozen.manifest.feature_transforms[-1].func.__defaults__ == ((3,) if attribute == '__defaults__' else None)
+        declare_parallel(_mutable_feature, ParallelRoundContract(deterministic_stage))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_mutable_feature, '__defaults__', ([2],))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mutable_feature), None)
+            actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+            expected, _ = _repeated_carried_probe(frozen, _parameters())
+            assert actual == expected and pid != os.getpid()
         component = CallerRolling(3)
         declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
         vars(component)['cached_result'] = []
