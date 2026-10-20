@@ -119,6 +119,13 @@ def test_merge_readiness_workflow_contract() -> None:
     assert 'pull_request_review_comment:' in workflow
     assert 'check_suite:' in workflow
     assert '<!-- merge-readiness -->' in workflow
+
+    # Queued, not cancelled. The group exists to serialise the
+    # read-then-create on the marker comment, and cancelling is not
+    # serialising -- it kills the earlier run, which then surfaces as a
+    # failed check on the PR this workflow exists to report on.
+    parsed = yaml.safe_load(workflow)
+    assert parsed['concurrency']['cancel-in-progress'] is False
     assert 'required-check inventory unavailable (fail-closed)' in workflow
     assert 'pull-requests: write' in workflow
     # One concurrency lane per PR across every event type, so parallel

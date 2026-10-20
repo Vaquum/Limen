@@ -29,9 +29,16 @@ on:
 # check_suite, whose payload lists its PRs — so runs for the same PR
 # serialize instead of racing the read-then-create on the marker
 # comment; the head SHA and run id are last-resort fallbacks only.
+#
+# cancel-in-progress is false because cancelling is not serialising: it
+# kills the earlier run, and a cancelled run surfaces as a failed check.
+# This workflow fires on four event types, so an active PR reliably
+# produced cancelled runs and the readiness reporter made its own output
+# look red while reporting correctly. Queuing gives the serialisation the
+# group was added for and leaves no failed runs behind.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || github.event.check_suite.head_sha || github.run_id }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: read
