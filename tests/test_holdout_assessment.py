@@ -561,6 +561,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             vars(result).update(copy.deepcopy(vars(self), memo))
             result.extra = 'changed selected state'
             return result
+    from lightgbm import Booster
+    original_booster_predict = Booster.predict
+    for selected in assessment_case[2][1]:
+        native_handle = _freeze(selected)
+        with patch.object(Booster, 'predict', lambda *args, **kwargs: original_booster_predict(*args, **kwargs)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(native_handle, assessment_case)
+            assert loader.call_count == 0
     frozen = _freeze(assessment_case[2][0][0])
     with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
         with pytest.raises(ValueError, match='prediction dependency changed'):

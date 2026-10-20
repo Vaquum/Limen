@@ -244,7 +244,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(_attributes(value))
             if type(value) is not np.ndarray:
                 objects.append(value)
-        elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray and not _booster(value):
+        elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
             if isinstance(value, type) and type(value) is not type:
                 visit(type(value))
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
