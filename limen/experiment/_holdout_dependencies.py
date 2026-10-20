@@ -105,7 +105,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if type(cast(object, value)) is not partial:
                 objects.append(cast(object, value))
         elif inspect.isfunction(value):
-            evidence.append(value)
             visit(vars(value))
             visit(value.__annotations__, annotation=True)
             visit(value.__doc__, annotation=True)
@@ -201,7 +200,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     except (ValueError, TypeError, pickle.PickleError) as exc:
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
-            evidence.append(value)
             owner = getattr(value, '__self__', None)
             if owner is not None and not isinstance(owner, ModuleType):
                 visit(owner)
@@ -247,7 +245,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     continue
                 key = f'{parent.__module__}.{parent.__qualname__}:{name}'
                 method = parent.__dict__[name]
-                evidence.append((key, type(method).__module__, type(method).__qualname__))
+                if isinstance(method, (type, ModuleType)):
+                    evidence.append((key, type(method).__module__, type(method).__qualname__))
                 if isinstance(method, (property, staticmethod, classmethod)):
                     visit(cast(object, method))
                     evidence.append((key, cast(object, method)))
