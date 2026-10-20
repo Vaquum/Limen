@@ -1859,6 +1859,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Allow Worker deployments to propagate before verifying released documentation or rollback; recheck the active version and retain exact public proof.
 
-## [5.45.11] - 2026-10-20
+## [5.45.10] - 2026-10-20
+
+- Admit fixed-threshold binary evaluation targets over OHLC columns with horizon one to final holdout assessment; pin the shift in the frozen spec and validate binary labels with per-row availability.
+
+## [5.45.13] - 2026-10-20
 
 - Restore compatible callable Manifest sources and override diagnostics while preserving native stateful and holdout admission behavior.
