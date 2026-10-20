@@ -265,12 +265,13 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
         result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2, runtime=runtime)
-        result['target']['transform_params'] = _configured('target.transform', cast(_TargetClass, target.target_class).transform, target.transform_params, params, skip=2, runtime=runtime)
-        result.update({'target.fit': result['target'], 'target.transform': result['target']})
+        transform_config = _configured('target.transform', cast(_TargetClass, target.target_class).transform, target.transform_params, params, skip=2, runtime=runtime)
+        result['target']['transform_params'] = transform_config
+        result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
-            computations, _, arguments = manifest.scaler
-            result['scaler.transform'] = _resolve_params(arguments, dict(params))
+            computations, transform, arguments = manifest.scaler
+            result['scaler.transform'] = _configured('scaler.transform', transform, arguments, params)
             for i, (_, function, arguments) in enumerate(computations):
                 config = _resolve_params(arguments, dict(params))
                 result[f'scaler.fit.{i}'] = _defaults(function, config)

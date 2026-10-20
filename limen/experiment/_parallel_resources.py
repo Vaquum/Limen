@@ -141,7 +141,7 @@ def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]])
         return dict(entry.params), tuple(key for key in (entry.include_if, 'feature_groups' if entry.group is not None else None) if key is not None)
     if path.startswith('target') and manifest.target_class_config is not None:
         target = manifest.target_class_config
-        return dict(target.fit_params) | {'transform_params': target.transform_params}, ()
+        return dict(target.fit_params) | {'transform_params': target.transform_params} | (dict(target.transform_params) if path == 'target.transform' else {}), ()
     if path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         return dict(step[1]), ('bar_type',) if path == 'bar_formation' else ()

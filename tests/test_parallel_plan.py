@@ -17,7 +17,7 @@ from functools import partial
 import pytest
 import polars as pl
 
-from limen._parallel_contract import ParallelRoundContract, declare_parallel, seeded_stage
+from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage
 from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, source_digest
 from limen.experiment._parallel_plan import ScalerFactory, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
@@ -208,6 +208,31 @@ class CallerTarget(RandomBinaryTarget):
     '''Importable caller target using the native seeded noise benchmark.'''
 
 
+class TransformSeedTarget(CallerTarget):
+    def transform(self, data, random_state=None):
+        return RandomBinaryTarget(data, self.target_name, random_state).transform(data)
+
+
+def _caller_scaler(data, n_jobs=2):
+    return data.with_columns((pl.col('close') * n_jobs).alias('close'))
+
+
+@dataclass
+class CallerScalerTransform:
+    n_jobs: int = 2
+
+    def __call__(self, data):
+        return _caller_scaler(data, self.n_jobs)
+
+
+def _prepared_probe(plan, params):
+    from tests.test_parallel_rounds import recorded_source
+    from limen.experiment._parallel_plan import clone_manifest
+    validate_resources(plan, params)
+    data = clone_manifest(plan.manifest).prepare_data(recorded_source(), params)
+    return {key: data[key].to_dict(as_series=False) for key in ('x_train', 'x_val', 'x_test')}, os.getpid()
+
+
 def _target_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     validate_resources(plan, params)
@@ -371,6 +396,7 @@ def test_frozen_manifest_round_plan() -> None:
         actual, pid = pool.submit(_extension_probe, frozen, params).result(timeout=30)
         expected, _ = _extension_probe(frozen, params)
         assert actual == expected and actual['caller_seed'] == 42 and actual['caller_close'] and pid != os.getpid()
+        _assert_transform_bindings(params, pool)
         invalid = copy.deepcopy(extended)
         invalid.data_dict_extension.random_state = None
         rejected = freeze_manifest(invalid, None)
@@ -394,6 +420,46 @@ def test_frozen_manifest_round_plan() -> None:
     _assert_plan_identity(plan)
     _assert_fresh_identity_snapshot(plan)
     _assert_selector_and_metric_identity(plan)
+
+
+def _assert_transform_bindings(params, pool):
+    from tests.test_parallel_rounds import parallel_config
+    base = build_manifest(parallel_config())
+    domain = {key: [value] for key, value in params.items()}
+    declare_parallel(TransformSeedTarget, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
+    target = copy.deepcopy(base).with_target_label('noise', TransformSeedTarget, fit_params={'random_state': 42})
+    with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
+        validate_resources(freeze_manifest(target, None), params)
+    target.with_target_label('noise', TransformSeedTarget, fit_params={'random_state': 42},
+                             transform_params={'random_state': '{transform_seed}'})
+    frozen = freeze_manifest(target, None)
+    for candidates, context in ((domain | {'transform_seed': [42, None]}, None),
+                                (domain | {'transform_seed': [42]}, {'transform_seed': None})):
+        with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
+            validate_domain(frozen, candidates, context)
+    safe = params | {'transform_seed': 42}
+    validate_domain(frozen, domain | {'transform_seed': [42]}, None)
+    assert pool.submit(_target_probe, frozen, safe).result(timeout=30) == _target_probe(frozen, safe)
+    for transform in (_caller_scaler, CallerScalerTransform()):
+        declare_parallel(transform, ParallelRoundContract(deterministic_stage, ('n_jobs',)))
+        scaler = copy.deepcopy(base)
+        computations = scaler.scaler[0]
+        scaler.scaler = (computations, transform, {})
+        with pytest.raises(ValueError, match=r'scaler\.transform: effective n_jobs=1'):
+            validate_resources(freeze_manifest(scaler, None), params)
+        if transform is _caller_scaler:
+            scaler.scaler = (computations, transform, {'n_jobs': '{scale_jobs}'})
+            frozen = freeze_manifest(scaler, None)
+            with pytest.raises(ValueError, match=r'scaler\.transform: effective n_jobs=1'):
+                validate_domain(frozen, domain | {'scale_jobs': [1, 2]}, None)
+            candidate = params | {'scale_jobs': 1}
+        else:
+            transform.n_jobs = 1
+            frozen, candidate = freeze_manifest(scaler, None), params
+        validate_resources(frozen, candidate)
+        actual, pid = pool.submit(_prepared_probe, frozen, candidate).result(timeout=30)
+        expected, _ = _prepared_probe(frozen, candidate)
+        assert actual == expected and actual['x_test'] and pid != os.getpid()
 
 
 def _assert_fresh_identity_snapshot(plan):
