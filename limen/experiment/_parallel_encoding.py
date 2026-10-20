@@ -65,6 +65,8 @@ def _encode_composite(value: object, active: frozenset[int]) -> list[object]:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
+    if callable(value):
+        return _encode_component(value, active)
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
         if all(isinstance(key, str) for key in mapping):

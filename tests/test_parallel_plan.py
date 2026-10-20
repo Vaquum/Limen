@@ -9,6 +9,7 @@ import gzip
 import shutil
 import random
 from concurrent.futures import ProcessPoolExecutor
+from collections.abc import Mapping
 from pathlib import Path
 from dataclasses import dataclass, fields, is_dataclass
 from functools import partial
@@ -93,6 +94,25 @@ class ShadowedSeedRolling:
 class SignatureSeedRolling(ShadowedSeedRolling):
     def __call__(self, data, random_state=42):
         return super().__call__(data, random_state)
+
+
+class MappingRolling(Mapping[str, int]):
+    def __init__(self, window):
+        self.window = window
+
+    def __getitem__(self, key):
+        if key != 'window':
+            raise KeyError(key)
+        return self.window
+
+    def __iter__(self):
+        return iter(('window',))
+
+    def __len__(self):
+        return 1
+
+    def __call__(self, data):
+        return _caller_feature(data, window=self.window)
 
 
 class CallerPartial(partial):
@@ -238,13 +258,18 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), _partial_stage()):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             declare_parallel(component, contract)
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
             assert digest(decode(encode(frozen))) == digest(frozen)
+            if isinstance(component, MappingRolling):
+                restored = decode(encode(component))
+                assert type(restored) is MappingRolling and restored.window == 3 and callable(restored)
+                assert dict(restored) == {'window': 3}
+                validate_resources(frozen, _parameters())
             if isinstance(component, NormalizedRolling):
                 assert component.window == decode(encode(component)).window == 3
             if isinstance(component, CallerPartial):
