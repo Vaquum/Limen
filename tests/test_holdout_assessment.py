@@ -1,5 +1,5 @@
 import copy
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, contextmanager, nullcontext
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
 
@@ -866,6 +866,37 @@ def test_frozen_logger_prediction_settings(native_assessment_case):
         with pytest.raises(ValueError, match='copy changed selected state'):
             _freeze(selected)
         assert loader.call_count == 0
+
+
+def test_prediction_guard_rejects_empty_cells_and_caught_matcher_errors(native_assessment_case):
+    from limen.experiment import _holdout_prediction as prediction
+    unused = None
+    def threshold(values):
+        if values.size < 0:
+            return unused
+        return float(np.mean(values))
+    del unused
+    with pytest.raises(ValueError):
+        _ = threshold.__closure__[0].cell_contents
+    class Config:
+        calibration_func = None
+        threshold_func = staticmethod(threshold)
+    class Provider:
+        prediction_calibration_config = Config()
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.effect_provider = Provider()
+    values = selected._model.model.coef_.ravel()
+    for fault in (False, True):
+        caught = []
+        injection = patch.object(prediction, '_matches', side_effect=ValueError('matcher failure')) if fault else nullcontext()
+        with injection, pytest.raises(ValueError, match='Holdout inference'), prediction.readonly_prediction([selected]):
+            try:
+                threshold(values)
+            except ValueError as error:
+                caught.append(str(error))
+            _ = threshold(values)
+        assert caught
+        assert 'matcher failure' in caught[0] if fault else 'attempted fitting' in caught[0]
 
 
 def test_trusted_components_require_matching_explicit_reload(native_assessment_case):

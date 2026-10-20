@@ -6,7 +6,7 @@ import dis
 from importlib.abc import InspectLoader
 import sys
 from threading import RLock
-from types import CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
+from types import CellType, CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
 __all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'receiver_position', 'same_callback']
@@ -169,8 +169,8 @@ def matches(function: FunctionType, frame: FrameType, owner: object | None, inst
         if (type(receiver) if instance else receiver) is not owner:
             return False
     return frame.f_globals is function.__globals__ and all(
-        frame.f_locals.get(name) is cell.cell_contents
-        for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True))
+        (name in frame.f_locals) == binding[0] and (not binding[0] or frame.f_locals[name] is binding[1])
+        for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True) for binding in (_cell_binding(cell),))
 
 
 @lru_cache(maxsize=256)
@@ -211,3 +211,10 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
             key = lookup[0].argval if bool(lookup[1:]) and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
             found.append((part.argval, key))
     return (*found, *(entry for part in code.co_consts if isinstance(part, CodeType) for entry in namespace_calls(part)))
+
+
+def _cell_binding(cell: CellType) -> tuple[bool, object]:
+    try:
+        return True, cell.cell_contents
+    except ValueError:
+        return False, None
