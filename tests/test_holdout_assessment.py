@@ -1,5 +1,6 @@
 import copy
 from contextlib import ExitStack, contextmanager
+from fractions import Fraction
 import json
 import logging
 import multiprocessing
@@ -24,6 +25,7 @@ from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_repor
 from limen.inference import Trainer
 from limen.inference.sensor import Sensor
 from limen.targets.next_bar_up import NextBarUpTarget
+from limen.targets.threshold_binary import ThresholdBinaryTarget
 from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
 from tests.test_holdout_research import _configuration, _project
@@ -369,3 +371,104 @@ def test_holdout_report_accounting(assessment_case):
     path.write_bytes(original)
     release_holdout(root, reservation)
     assert _report(frozen, assessment_case)['exposure']['class'] == 'post-release'
+
+
+_THRESHOLD = 43750.0
+
+
+def _threshold_target(**overrides):
+    values = {'target_name': 'observed_thr', 'source_column': 'close', 'threshold': _THRESHOLD}
+    values.update(overrides)
+    return ThresholdBinaryTarget(pl.DataFrame(), values['target_name'], values['source_column'], values['threshold'])
+
+
+def _attempt_count(root):
+    with history.connection(root / history._HISTORY) as db:
+        if db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='attempts'").fetchone() is None:
+            return 0
+        return db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
+
+
+def _threshold_freeze(sensor):
+    return freeze_holdout_selection(sensor, context_start='2024-01-04', scenarios=[_SCENARIO], evaluation_target=_threshold_target())
+
+
+def test_holdout_freeze_accepts_threshold_binary_target(assessment_case):
+    root, _, trained, _ = assessment_case
+    target = _threshold_target()
+    with patch.object(ThresholdBinaryTarget, '__init__', side_effect=AssertionError('must not construct on final')):
+        frozen = freeze_holdout_selection(trained[0][0], context_start='2024-01-04', scenarios=[_SCENARIO], evaluation_target=target)
+        report = _report(frozen, assessment_case)
+    spec_target = report['spec']['target']
+    assert spec_target['params'] == {'target_name': 'observed_thr', 'source_column': 'close', 'threshold': _THRESHOLD}
+    assert spec_target['shift'] == -1
+    assert 'threshold_binary' in spec_target['class']
+    rows = pl.read_parquet(root / report['rows_path']).filter(pl.col('role') == 'final')
+    closes = rows['close'].to_list()
+    assert rows['label'].to_list() == [int(value > _THRESHOLD) for value in closes[1:]] + [None]
+    assert rows['label_reason'][-1] == 'terminal-label-unavailable'
+    assert set(rows['label_reason'][:-1].to_list()) == {None}
+    assert report['classification']['accuracy']['denominator'] == len(closes) - 1
+    assert {0, 1} <= set(rows['label'].drop_nulls().to_list())
+
+
+def test_holdout_freeze_rejects_threshold_before_allocation(assessment_case):
+    root, _, trained, _ = assessment_case
+    sensor = trained[0][0]
+    before = _attempt_count(root)
+    bad = [_threshold_target(source_column='roc_30'), _threshold_target(source_column='volume'),
+        _threshold_target(threshold=True), _threshold_target(threshold='high'), _threshold_target(threshold=Fraction(1, 2)),
+        _threshold_target(threshold=float('nan')), _threshold_target(threshold=float('inf'))]
+    extra = _threshold_target()
+    extra.note = 'undeclared'
+    bad.append(extra)
+    for target in bad:
+        with pytest.raises(ValueError, match='threshold target'):
+            freeze_holdout_selection(sensor, context_start='2024-01-04', scenarios=[_SCENARIO], evaluation_target=target)
+    assert _attempt_count(root) == before
+
+
+def test_holdout_freeze_rejects_mutated_threshold_transform(assessment_case, monkeypatch):
+    _, _, trained, _ = assessment_case
+    monkeypatch.setattr(ThresholdBinaryTarget.transform, '__defaults__', (0,))
+    with pytest.raises(ValueError, match='threshold target'):
+        _threshold_freeze(trained[0][0])
+
+
+def test_holdout_threshold_transform_pinned():
+    from limen.experiment import _holdout_freeze as freeze_mod
+    assert ThresholdBinaryTarget in freeze_mod._FITTED_TYPES
+    assert freeze_mod._IMPLEMENTATIONS[ThresholdBinaryTarget] == {'transform': ThresholdBinaryTarget.transform}
+
+
+def test_holdout_freeze_rejects_threshold_subclass(assessment_case):
+    _, _, trained, _ = assessment_case
+    class _SubThreshold(ThresholdBinaryTarget):
+        pass
+    target = _SubThreshold(pl.DataFrame(), 'observed_sub', 'close', _THRESHOLD)
+    with pytest.raises(ValueError, match='exact next-bar'):
+        freeze_holdout_selection(trained[0][0], context_start='2024-01-04', scenarios=[_SCENARIO], evaluation_target=target)
+
+
+def test_holdout_threshold_spec_pins_shift_and_determinism(assessment_case):
+    root, _, trained, _ = assessment_case
+    sensor = trained[0][0]
+    target = _threshold_target()
+    frozen = freeze_holdout_selection(sensor, context_start='2024-01-04', scenarios=[_SCENARIO], evaluation_target=target)
+    target.threshold = 0.0
+    target.source_column = 'open'
+    target.target_name = 'mutated'
+    first = _report(frozen, assessment_case)
+    assert first['spec']['target']['params']['threshold'] == _THRESHOLD
+    rows = pl.read_parquet(root / first['rows_path']).filter(pl.col('role') == 'final')
+    assert rows['label'].to_list() == [int(value > _THRESHOLD) for value in rows['close'].to_list()[1:]] + [None]
+    second = _report(_threshold_freeze(sensor), assessment_case)
+    assert second['spec_sha256'] == first['spec_sha256']
+    assert second['classification'] == first['classification']
+
+
+def test_holdout_labels_reject_nonbinary_or_misplaced_nulls():
+    assert assessment._checked_labels([0, 1, None], 3) == [0, 1, None]
+    for bad in ([0, 1], [0, None, 1], [0, 2, None], [-1, 1, None], [None, None, None]):
+        with pytest.raises(ValueError, match='binary with a single unavailable terminal'):
+            assessment._checked_labels(bad, 3)
