@@ -13,7 +13,7 @@ import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_payload, restore_iterations
-from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, receiver_position
+from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, receiver_position, same_callback
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -90,7 +90,10 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             if config is not None:
                 configs.append(config)
                 for name in ('calibration_func', 'threshold_func'):
-                    forbid(getattr(config, name, None))
+                    callback = getattr(config, name, None)
+                    if not same_callback(callback, getattr(config, name, None)):
+                        raise ValueError('Holdout refuses fitting callbacks without stable observable binding')
+                    forbid(callback)
         parts = children(value)
         if inspect.ismethod(value):
             parts += (value.__func__, value.__self__)

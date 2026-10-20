@@ -6,7 +6,7 @@ from threading import RLock
 from types import FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'matches', 'native_attribute', 'receiver_position']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'matches', 'native_attribute', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
@@ -29,6 +29,18 @@ def native_attribute(value: object, name: str, owner: type[object] | None = None
     descriptor = cast(GetSetDescriptorType | MemberDescriptorType, vars(owner)[name])
     native_value = cast(object, value)
     return descriptor.__get__(native_value, type(native_value))
+
+
+def same_callback(first: object, second: object) -> bool:
+    if first is second:
+        return True
+    if inspect.ismethod(first) and inspect.ismethod(second):
+        return first.__func__ is second.__func__ and first.__self__ is second.__self__
+    if type(first) is partial and type(second) is partial:
+        return same_callback(native_attribute(cast(object, first), 'func'), native_attribute(cast(object, second), 'func'))
+    if type(first) is staticmethod and type(second) is staticmethod:
+        return same_callback(native_attribute(cast(object, first), '__func__'), native_attribute(cast(object, second), '__func__'))
+    return False
 
 
 def receiver_position(value: object) -> int | None:

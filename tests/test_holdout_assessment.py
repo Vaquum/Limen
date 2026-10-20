@@ -1863,6 +1863,69 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(structured_handle, assessment_case)
         assert loader.call_count == 0
+    class FreshCallbackConfig:
+        calibration_func = None
+        @property
+        def threshold_func(self):
+            def choose(values):
+                callback_calls.append('fresh threshold')
+                return np.max(values)
+            return choose
+    unsafe_class._model.callback_provider.prediction_calibration_config = FreshCallbackConfig()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='stable observable binding'):
+            _freeze(unsafe_class)
+        assert loader.call_count == 0 and callback_calls == []
+    class StableCallbackConfig:
+        calibration_func = None
+        def __init__(self, callback):
+            self.callback = callback
+        @property
+        def threshold_func(self):
+            return self.callback
+    class MethodCallbackConfig(StableCallbackConfig):
+        @property
+        def threshold_func(self):
+            return self.choose
+        def choose(self, values):
+            callback_calls.append('bound threshold')
+            return np.max(values)
+    class PartialCallbackConfig(StableCallbackConfig):
+        @property
+        def threshold_func(self):
+            return partial(self.callback)
+    for config in (StableCallbackConfig(nested_threshold), MethodCallbackConfig(nested_threshold), PartialCallbackConfig(nested_threshold)):
+        unsafe_class._model.callback_provider.prediction_calibration_config = config
+        _freeze(unsafe_class)
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+            config.threshold_func(unsafe_class._model.model.coef_.ravel())
+        assert callback_calls == []
+    class AnnotationState(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + self.policy.__annotations__['offset'], 0, 1)
+            return result
+    annotated = copy.deepcopy(assessment_case[2][0][0])
+    annotated._model.__class__ = AnnotationState
+    annotated._model.policy = identity_probabilities
+    with patch.object(identity_probabilities, '__annotations__', {'offset': expected_offset}):
+        annotation_handle = _freeze(annotated)
+        with patch.dict(identity_probabilities.__annotations__, {'offset': expected_offset + 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='changed'):
+                _report(annotation_handle, assessment_case)
+            assert loader.call_count == 0
+    class AnnotationCallableState(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.__annotations__['adjust'](result['_probs'])
+            return result
+    annotated._model.__class__ = AnnotationCallableState
+    with patch.object(identity_probabilities, '__annotations__', {'adjust': later_probabilities}):
+        annotation_handle = _freeze(annotated)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(annotation_handle, assessment_case)
+            assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

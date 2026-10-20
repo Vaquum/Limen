@@ -137,7 +137,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
+            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)), node(item.__annotations__))
         elif _booster(item):
             from lightgbm import Booster
             booster = cast(Booster, item)
