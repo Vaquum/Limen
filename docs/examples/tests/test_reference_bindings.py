@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import json
 
 import pytest
 
@@ -82,3 +83,12 @@ def test_page_connections_must_be_visible_links_to_each_project(tmp_path):
     document.write_text(links['python'] + '\n\n<!-- ' + links['compiled'] + ' -->\n')
     with pytest.raises(ValueError, match='Missing visible canonical project connection: compiled'):
         validate_fences(ROOT, document, interfaces=('python', 'compiled'))
+
+
+def test_current_pages_have_exact_source_and_visible_project_connections():
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    assert set(catalogue['page_contexts']) == set(catalogue['candidate_pages'])
+    for page, contexts in catalogue['page_contexts'].items():
+        assert contexts and len(contexts) == len(set(contexts))
+        interfaces = tuple(sorted({catalogue['scenario_details'][name]['interface'] for name in contexts}))
+        validate_fences(ROOT, ROOT / page, interfaces=interfaces)
