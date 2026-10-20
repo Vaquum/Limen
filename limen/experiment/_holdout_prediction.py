@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from cProfile import Profile
 import inspect
 from functools import partial
 import random
@@ -14,7 +15,7 @@ import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_payload, restore_iterations
 from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, native_codes, receiver_position, same_callback
-from limen.experiment._holdout_profile import readonly_profile
+from limen.experiment._holdout_profile import profile_active, readonly_profile
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -116,6 +117,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
     for value in providers:
         collect(value)
     numpy_state, python_state = fitted_witness(np.random.get_state()), random.getstate()
+    previous = sys.getprofile()
     violation: str | None = None
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
@@ -134,12 +136,17 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
                     raise ValueError(violation)
             elif event == 'c_call':
                 name = getattr(arg, '__name__', None)
+                if name in ('enable', 'disable') and isinstance(getattr(arg, '__self__', None), Profile) and profile_active():
+                    violation = 'Holdout inference attempted profile replacement'
+                    raise ValueError(violation)
                 if name == 'start_new_thread' and getattr(arg, '__module__', None) == '_thread':
                     violation = 'Holdout inference attempted thread dispatch'
                     raise ValueError(violation)
                 if name in ('urandom', 'getrandom') and entropy_call(arg):
                     violation = 'Holdout inference consumed unowned randomness'
                     raise ValueError(violation)
+            if callable(previous):
+                _ = previous(frame, event, arg)
         except BaseException:
             violation = violation or 'Holdout inference guard failed'
             raise

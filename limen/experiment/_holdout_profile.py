@@ -5,7 +5,7 @@ import sys
 from types import FrameType
 from threading import local
 
-__all__ = ['readonly_profile']
+__all__ = ['profile_active', 'readonly_profile']
 
 
 class _ProfileState(local):
@@ -25,32 +25,24 @@ def _audit(event: str, _args: tuple[object, ...]) -> None:
 sys.addaudithook(_audit)
 
 
+def profile_active() -> bool:
+    return _ACTIVE.failure is not None
+
+
 @contextmanager
 def readonly_profile(callback: Callable[[FrameType, str, object], None]) -> Iterator[None]:
     previous, setprofile = sys.getprofile(), sys.setprofile
     failure: list[str] = []
 
-    def observe(frame: FrameType, event: str, arg: object) -> None:
-        try:
-            if event == 'c_call' and _ACTIVE.failure is failure and isinstance(getattr(arg, '__self__', None), Profile) and getattr(arg, '__name__', None) in ('enable', 'disable'):
-                failure.append('Holdout inference attempted profile replacement')
-                raise ValueError(failure[-1])
-            callback(frame, event, arg)
-            if callable(previous):
-                _ = previous(frame, event, arg)
-        except BaseException:
-            failure.append('Holdout inference guard failed')
-            raise
-
     try:
         if isinstance(previous, Profile):
             previous.disable()
-        setprofile(observe)
+        setprofile(callback)
         _ACTIVE.failure = failure
         try:
             yield
         finally:
-            if sys.getprofile() is not observe:
+            if sys.getprofile() is not callback:
                 failure.append('Holdout inference profile changed')
             _ACTIVE.failure = None
             if isinstance(previous, Profile):

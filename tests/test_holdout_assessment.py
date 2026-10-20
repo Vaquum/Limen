@@ -267,6 +267,7 @@ def _mutated_selection(sensor):
 
 
 def test_holdout_frozen_causal_assessment(assessment_case):
+    import sys
     root, _, trained, cohort = assessment_case
     target = NextBarUpTarget(pl.DataFrame(), 'observed_up')
     with patch.object(cohort, '_round_sources', _SourceCache()), patch.object(trained[0][0]._get_manifest(), '_unused_source_cache', _SourceCache(), create=True):
@@ -302,15 +303,19 @@ def test_holdout_frozen_causal_assessment(assessment_case):
         'sklearn.linear_model.LogisticRegression.fit', 'lightgbm.LGBMClassifier.fit', 'sklearn.calibration.CalibratedClassifierCV.fit',
         'sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform', 'limen.calibration.threshold._validate_threshold_grid',
         'limen.sfd.reference_architecture.logreg_binary.fit_calibrator', 'limen.sfd.reference_architecture.lightgbm_binary.fit_calibrator')
+    fitting_codes = {patch(path).get_original()[0].__code__ for path in paths}
+    fitting_codes.update(type(value).__init__.__code__ for sensor in trained[0] + trained[1] for value in sensor._fitted_params.values() if type(value).__module__.startswith(('limen.scalers.', 'limen.targets.')))
+    previous = sys.gettrace()
+    def trace_fitting(frame, event, arg):
+        if event == 'call' and frame.f_code in fitting_codes:
+            calls.append('fit')
+            raise AssertionError('Final assessment invoked fitting')
+        return previous(frame, event, arg) if callable(previous) else None
     with ExitStack() as stack:
         stack.enter_context(_mutated_selection(trained[0][0]))
         stack.enter_context(patch.object(assessment, '_tape', side_effect=traced_tape))
-        for path in paths:
-            stack.enter_context(patch(path, new=lambda *args, **kwargs: calls.append('fit')))
-        for sensor in trained[0] + trained[1]:
-            for value in sensor._fitted_params.values():
-                if type(value).__module__.startswith(('limen.scalers.', 'limen.targets.')):
-                    stack.enter_context(patch.object(type(value), '__init__', new=lambda *args, **kwargs: calls.append('fitted-transform')))
+        stack.callback(sys.settrace, previous)
+        sys.settrace(trace_fitting)
         report = _report(frozen, assessment_case)
     assert calls == []
     assert report['spec']['target']['params']['target_name'] == 'observed_up'
@@ -897,7 +902,7 @@ def test_prediction_guard_rejects_empty_cells_and_caught_matcher_errors(native_a
                 caught.append(str(error))
             _ = threshold(values)
         assert caught
-        assert 'matcher failure' in caught[0] if fault else 'attempted fitting' in caught[0]
+        assert ('matcher failure' in caught[0] if fault else 'attempted fitting' in caught[0]), caught
 
 
 @pytest.mark.parametrize('operation', ['clear', 'replace', 'context', 'roundtrip', 'enable', 'disable', 'partial-enable'])
@@ -913,6 +918,18 @@ def test_prediction_guard_rejects_profile_replacement(native_assessment_case, op
     def replacement(frame, event, arg):
         return None
     change = partial(replace, None if operation in ('clear', 'context', 'roundtrip') else replacement) if operation in ('clear', 'replace', 'context', 'roundtrip') else partial(profiler.enable) if operation == 'partial-enable' else getattr(profiler, operation)
+    if operation == 'partial-enable':
+        try:
+            with readonly_prediction([selected]):
+                guarded = sys.getprofile()
+                change()
+                assert sys.getprofile() is guarded
+        except ValueError as error:
+            assert 'Holdout inference' in str(error)
+        finally:
+            profiler.disable()
+        assert sys.getprofile() is previous
+        return
     caught = []
     with pytest.raises(ValueError, match='Holdout inference'), readonly_prediction([selected]):
         guarded = sys.getprofile()
@@ -925,7 +942,7 @@ def test_prediction_guard_rejects_profile_replacement(native_assessment_case, op
                 partial(replace, guarded)()
         except ValueError as error:
             caught.append(str(error))
-    assert caught == ([] if operation == 'partial-enable' else ['Holdout inference attempted profile replacement'])
+    assert caught == ['Holdout inference attempted profile replacement']
     assert sys.getprofile() is previous
 
 
