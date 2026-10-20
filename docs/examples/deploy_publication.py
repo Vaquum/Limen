@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -11,6 +12,7 @@ from verify_publication import fetch, sha256, verify
 
 ACCOUNT = '758576157d0685fa4eb2aeaf16781577'
 ORIGIN = 'https://docs.vaquum.fi/limen/'
+DEPLOYMENT_SETTLE_SECONDS = 5
 
 
 def cloudflare(path: str):
@@ -113,6 +115,10 @@ def deploy_version(wrangler: Path, config: Path, version: str, output: Path) -> 
     receipt(output, 'version-deploy')
     if current_version(wrangler, config) != version:
         raise ValueError('The requested Worker version did not become fully active')
+    print(f'Wait {DEPLOYMENT_SETTLE_SECONDS} seconds for global Worker deployment propagation before HTTP verification.')
+    time.sleep(DEPLOYMENT_SETTLE_SECONDS)
+    if current_version(wrangler, config) != version:
+        raise ValueError('The active Worker version changed during deployment propagation')
 
 
 def activate(root: Path, wrangler: Path):
