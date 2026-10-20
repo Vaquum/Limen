@@ -1843,4 +1843,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.7] - 2026-10-20
 
+- Admit compatible fitted-scaler matrices to full-SVD PCA and diagnose finalized nonfinite inputs while preserving training ownership and frozen inference.
+
+## [5.45.8] - 2026-10-20
+
 - Reject YAML resolver traversal outside allowed namespaces and introspective dunder attributes while preserving supported symbols.
