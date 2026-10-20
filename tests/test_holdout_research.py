@@ -1,8 +1,11 @@
 import copy
 import json
 import multiprocessing
+import os
 from pathlib import Path
 import sqlite3
+import subprocess
+import sys
 from types import SimpleNamespace
 from uuid import uuid4
 from unittest.mock import patch
@@ -174,7 +177,18 @@ def test_holdout_research_provenance(tmp_path):
     rule['sfd']['params'] = {'sharpe_std_threshold': [0.5]}
     rule_compiled = CompiledSFD(rule, project_root=root)
     native = UniversalExperimentLoop(sfd=rule_compiled, project_root=root)
-    native.run('rule', n_permutations=1, progress_bar=False, prep_each_round=True)
+    native.run(str(root / 'rule'), n_permutations=1, progress_bar=False, prep_each_round=True)
+    rule_csv = root / 'rule.csv'
+    retained_csv = rule_csv.read_bytes()
+    nested = subprocess.run(
+        [sys.executable, '-m', 'tests.run',
+         'tests/test_runtime_tracking.py::test_execute_test_suite_writes_profile_and_stops_on_first_failure', '-q'],
+        cwd=Path(__file__).resolve().parents[1],
+        env=dict(os.environ, LIMEN_RUNTIME_PROFILE_PATH=str(root / 'nested-runtime.json')),
+        capture_output=True, text=True, check=False,
+    )
+    assert nested.returncode == 0, nested.stdout + nested.stderr
+    assert rule_csv.read_bytes() == retained_csv
     rule_data = rule_compiled.manifest().prepare_data(native.data, {'sharpe_std_threshold': 0.5})
     assert rule_data['holdout']['schema_reason'] == 'rule-based-no-fitted-model'
     assert rule_data['holdout']['input_schema'] is None
@@ -249,10 +263,10 @@ def test_holdout_revision_admission(tmp_path, monkeypatch, capsys):
         with pytest.raises(ValueError, match='refuses'):
             new.run('unsupported', n_permutations=1, progress_bar=False, **kwargs)
     new.data = pl.read_parquet(_FIXTURE).head(168)
-    new.run('mutated-frame', n_permutations=1, progress_bar=False, prep_each_round=True)
+    new.run(str(root / 'mutated-frame'), n_permutations=1, progress_bar=False, prep_each_round=True)
     assert new.data.height == 96
     new.data.extend(pl.read_parquet(_FIXTURE).slice(96, 24))
-    new.run('extended-frame', n_permutations=1, progress_bar=False, prep_each_round=True, post_processing=True)
+    new.run(str(root / 'extended-frame'), n_permutations=1, progress_bar=False, prep_each_round=True, post_processing=True)
     source = new._alignment[0]['holdout']['source']
     assert source['kind'] == 'caller_frame'
     assert source['materialized']['rows'] == 120
