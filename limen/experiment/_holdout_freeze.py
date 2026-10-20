@@ -168,17 +168,15 @@ def _fitted_value(value: object) -> None:
     pending, seen = [value], dict[int, object]()
     while pending:
         item = pending.pop()
-        if id(item) in seen:
-            continue
-        seen[id(item)] = item
-        if isinstance(item, Mapping):
-            pending.extend(reversed(tuple(cast(Mapping[str, object], item).values())))
-        elif isinstance(item, (list, tuple)):
-            pending.extend(reversed(cast(list[object] | tuple[object, ...], item)))
-        elif hasattr(item, '__dict__') and not isinstance(item, type):
-            unchanged(item)
-            if isinstance(item, BaseEstimator) and callable(getattr(item, 'fit', None)):
-                check_is_fitted(item)
+        if id(item) not in seen:
+            seen[id(item)] = item
+            if isinstance(item, (Mapping, list, tuple)):
+                parts = cast(Mapping[str, object], item).values() if isinstance(item, Mapping) else cast(list[object] | tuple[object, ...], item)
+                pending.extend(reversed(tuple(parts)))
+            elif hasattr(item, '__dict__') and not isinstance(item, type):
+                unchanged(item)
+                if isinstance(item, BaseEstimator) and callable(getattr(item, 'fit', None)):
+                    check_is_fitted(item)
     _ = fitted_witness(value)
 
 
