@@ -7,7 +7,7 @@ import zlib
 from collections import defaultdict
 from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
-from dataclasses import dataclass, field, fields, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from functools import partial
 from importlib import import_module
 from string import Formatter
@@ -20,7 +20,7 @@ from typing_extensions import override
 from limen._parallel_contract import ParallelRoundContract, attach
 from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import copy_context
-from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, signature_defaults, mutable_function
+from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
@@ -63,8 +63,6 @@ attach(ScalerFactory)
 
 @dataclass
 class _FrozenTargetConfig(_manifest.TargetClassConfig):
-    _parallel_fit_defaults: dict[str, object] = field(default_factory=dict[str, object])
-    _parallel_transform_defaults: dict[str, object] = field(default_factory=dict[str, object])
     _parallel_init: Callable[..., object] | None = None
     _parallel_transform: Callable[..., object] | None = None
     _parallel_new: Callable[..., object] | None = None
@@ -162,7 +160,6 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     if type(value) is _manifest.TargetClassConfig:
         target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
-                                    signature_defaults(target.target_class, 2), signature_defaults(cast(_TargetClass, target.target_class).transform, 2),
                                     cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform,
                                     target.target_class.__new__ if inspect.isfunction(target.target_class.__new__) else None)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':

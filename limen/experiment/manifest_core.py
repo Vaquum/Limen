@@ -1693,7 +1693,7 @@ def _apply_class_based_target(
         raise ValueError('Trade outcome context is reserved and must be supplied by the framework')
 
     if is_training:
-        resolved_fit = dict(getattr(config, '_parallel_fit_defaults', {})) | _resolve_params(config.fit_params, round_params)
+        resolved_fit = _resolve_params(config.fit_params, round_params)
         if needs_context:
             resolved_fit['trade_context'] = trade_context
         instance = getattr(config, '_parallel_make', config.target_class)(train_data=data, target_name=target_name, **resolved_fit)
@@ -1705,7 +1705,7 @@ def _apply_class_based_target(
             )
         instance = all_fitted_params[instance_key]
 
-    resolved_transform = dict(getattr(config, '_parallel_transform_defaults', {})) | _resolve_params(config.transform_params, round_params)
+    resolved_transform = _resolve_params(config.transform_params, round_params)
     if needs_context:
         resolved_transform['trade_context'] = trade_context
     transform = getattr(config, '_parallel_transform', None)

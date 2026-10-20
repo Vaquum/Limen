@@ -299,12 +299,13 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         runtime = ('trade_context',) if getattr(target.target_class, 'requires_trade_context', False) else ()
         if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
-        result['target'] = _defaults(target.target_class, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=2, path='target', runtime=runtime)
-        transform_config = _defaults(cast(_TargetClass, target.target_class).transform, dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
+        initializer = getattr(target, '_parallel_init', None)
+        result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=2 if initializer is None else 3, path='target', runtime=runtime)
+        transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(_TargetClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
         if (allocator := getattr(target, '_parallel_new', None)) is not None:
-            result['target.allocate'] = _defaults(allocator, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=3, runtime=runtime)
+            result['target.allocate'] = _defaults(allocator, _resolve_params(target.fit_params, params), skip=3, runtime=runtime)
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, transform, arguments = manifest.scaler

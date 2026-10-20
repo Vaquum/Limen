@@ -94,6 +94,3 @@ def mutable_function(function: FunctionType, active: frozenset[int] = EMPTY_IDS)
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
 
 
-def signature_defaults(component: object, skip: int) -> dict[str, object]:
-    return {name: parameter.default for index, (name, parameter) in enumerate(signature(cast(Callable[..., object], component)).parameters.items())
-            if index >= skip and parameter.default is not Parameter.empty and parameter.kind in (Parameter.POSITIONAL_OR_KEYWORD, Parameter.KEYWORD_ONLY)}

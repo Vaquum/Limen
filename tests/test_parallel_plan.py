@@ -300,6 +300,17 @@ class AllocatedTarget:
         return data.with_columns((pl.col('close') > pl.col('close').shift(self.window)).cast(pl.Int8).alias(self.target_name))
 
 
+class DualDefaultTarget(AllocatedTarget):
+    def __new__(cls, train_data, target_name, window=2):
+        instance = object.__new__(cls)
+        instance.window = window
+        return instance
+
+    def __init__(self, train_data, target_name, window=3):
+        self.window += window
+        self.target_name = target_name
+
+
 def _method_only_transform(owner, data):
     return _caller_feature(data, owner.window)
 
@@ -801,6 +812,18 @@ def test_frozen_manifest_round_plan() -> None:
         for _ in range(2):
             assert pool.submit(_target_probe, frozen_allocator, _parameters()).result(timeout=30) == _target_probe(frozen_allocator, _parameters()) == expected
         assert digest(frozen_allocator) == before and AllocatedTarget.__new__.__closure__[0].cell_contents == 1
+        declare_parallel(DualDefaultTarget, ParallelRoundContract(deterministic_stage))
+        manifest = copy.deepcopy(plan.manifest).with_target_label('dual', DualDefaultTarget)
+        native = manifest.prepare_data(recorded_source(), _parameters())
+        expected = {key: native[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
+        dual = freeze_manifest(manifest, None)
+        before = digest(dual)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(DualDefaultTarget.__new__, '__defaults__', (4,))
+            patch.setattr(DualDefaultTarget.__init__, '__defaults__', (4,))
+            for _ in range(2):
+                assert pool.submit(_target_probe, dual, _parameters()).result(timeout=30) == _target_probe(dual, _parameters()) == expected
+        assert digest(dual) == before
         component = partial(_kwargs_feature, n_jobs=2)
         declare_parallel(component, ParallelRoundContract(deterministic_stage))
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
