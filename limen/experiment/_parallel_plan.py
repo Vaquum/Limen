@@ -132,7 +132,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     implementation = call_implementation(value)
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__):
-        clone = partial(cast(Callable[..., object], decode(encode(getattr(clone, '__call__')), isolate_functions=True)))
+        clone = partial(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
         vars(clone)['__parallel_round_contract__'] = getattr(value, '__parallel_round_contract__', None)
     return clone
 
