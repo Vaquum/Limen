@@ -185,7 +185,7 @@ def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1,
     signature = inspect.signature(cast(Callable[..., object], component))
     owner = component.__self__ if inspect.ismethod(component) else component
     state = component_state(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) else {}
-    result = {key: value for key, value in cast(dict[str, object], state).items() if key != '__parallel_round_contract__'} | dict(params)
+    result = {key: value for key, value in state.items() if key != '__parallel_round_contract__'} | dict(params)
     for i, (key, value) in enumerate(signature.parameters.items()):
         if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:
             continue

@@ -68,7 +68,7 @@ class SlottedRollingBase:
 
 
 class SlottedRolling(SlottedRollingBase):
-    __slots__ = ('offset', '__dict__', 'unused')
+    __slots__ = ('__dict__', 'offset', 'unused')
 
     def __init__(self, window, offset=1):
         self.window, self.offset = window, offset
@@ -309,14 +309,14 @@ def _assert_factory_resources(plan, params):
     declare_parallel(_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
     manifest = copy.deepcopy(plan.manifest).with_reference_architecture(_factory_architecture)
     frozen = freeze_manifest(manifest, None)
-    with pytest.raises(ValueError, match='architecture.auxiliary_factory: unfrozen external state'):
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: unfrozen external state'):
         validate_resources(frozen, params)
-    with pytest.raises(ValueError, match='architecture.auxiliary_factory: unfrozen external state'):
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: unfrozen external state'):
         validate_domain(frozen, {key: [value] for key, value in params.items()}, None)
     declare_parallel(_auxiliary_factory, ParallelRoundContract(_caller_validator, ('window',)))
     frozen = freeze_manifest(manifest, None)
     validate_resources(frozen, params)
-    with pytest.raises(ValueError, match='architecture.auxiliary_factory: positive integer window required'):
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: positive integer window required'):
         validate_domain(frozen, {key: [value] for key, value in params.items()} |
                         {'auxiliary_params': [{'window': 2}, {'window': 0}]}, None)
 
