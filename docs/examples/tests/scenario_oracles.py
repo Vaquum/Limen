@@ -114,10 +114,10 @@ def verify(interface, name, result, output, inputs):
             training = bars.filter(pl.col('datetime') < datetime(2024, 1, 15, tzinfo=timezone.utc))['close'].to_numpy()
             cutoff = float(np.median((training[1:] / training[:-1] - 1) * 100))
             labels = bars.with_columns((((pl.col('close').shift(-1) / pl.col('close') - 1) * 100) > cutoff).cast(pl.UInt8).alias('label'))
-            records = {record['round_id']: record for record in feedback['records']}
-            assert set(records) == set(feedback['predictions']) == {row['id'] for row in feedback['rows']}
+            feedback_records = {record['round_id']: record for record in feedback['records']}
+            assert set(feedback_records) == set(feedback['predictions']) == {row['id'] for row in feedback['rows']}
             for row in feedback['rows']:
-                alignment = records[row['id']]['alignment']
+                alignment = feedback_records[row['id']]['alignment']
                 expected = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(alignment['first_test_datetime']), datetime.fromisoformat(alignment['last_test_datetime'])))['label'].to_numpy()
                 predictions = np.asarray(feedback['predictions'][row['id']])
                 assert predictions.size == expected.size > 0
