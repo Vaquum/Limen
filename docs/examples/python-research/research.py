@@ -37,12 +37,14 @@ def prepare_split(bars, round_params):
 # endregion next_return_target
 
 
+# region split_preparation
 def prep(bars, round_params):
     # Split before features and labels; no target crosses a boundary.
     return {
         "train": prepare_split(bars[:960], round_params),
         "validation": prepare_split(bars[960:1440], round_params),
     }
+# endregion split_preparation
 
 
 # region fitted_scaler
@@ -53,10 +55,12 @@ def fit(train, round_params):
 # endregion fitted_scaler
 
 
+# region validation_score
 def backtest(validation, forecasts):
     positions = np.sign(forecasts)
     net = positions * validation["next_return"].to_numpy() - abs(positions) * 0.0002
     return float(np.mean(net))
+# endregion validation_score
 
 
 def prepare_live(history, params):

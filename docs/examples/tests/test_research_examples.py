@@ -1,4 +1,10 @@
 from pathlib import Path
+import json
+import os
+import shlex
+import shutil
+import subprocess
+import sys
 
 import numpy as np
 import polars as pl
@@ -137,3 +143,17 @@ def test_mixed_feedback_order_injected_results_and_checkpoint(interface, request
     inputs = ROOT / 'tests/fixtures'
     result = scenarios.mixed_feedback(inputs, tmp_path / interface)
     verify_feedback(interface, result, inputs)
+
+
+def test_direct_yaml_selection_matches_python_driver(compiled_project, tmp_path):
+    from wheel_proof import compare_selection_logs
+    source = ROOT / 'docs/examples/compiled-research/selection.yaml'
+    (tmp_path / 'compiled-research').mkdir()
+    (tmp_path / 'inputs').mkdir()
+    shutil.copyfile(source, tmp_path / 'compiled-research/selection.yaml')
+    shutil.copyfile(ROOT / 'tests/fixtures/spot_15m_20250101_20250531.parquet',
+                    tmp_path / 'inputs/spot_15m_20250101_20250531.parquet')
+    command = json.loads((ROOT / 'docs/examples/commands.json').read_text())['compiled-yaml']
+    environment = dict(os.environ, PATH=str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH'])
+    subprocess.run(shlex.split(command), cwd=tmp_path, env=environment, check=True, timeout=30)
+    compare_selection_logs(compiled_project[1], tmp_path / 'results/dev/compiled-cli')

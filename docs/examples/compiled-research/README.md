@@ -19,6 +19,17 @@ python compiled-research/research.py --scenario selection --data-dir inputs --ou
 
 From a repository checkout, work in `docs/examples/`, use `--data-dir ../../tests/fixtures` and put generated output under `../../.docs-evidence/`. The command checks the recorded file digest before research. It writes `summary.json`, `results.csv`, `metadata.json` and the compressed round artifacts. Trainer reconstructs the selected round from those artifacts and validates the replayed metrics; it does not restore saved model weights.
 
+## Run the declaration through the CLI
+
+From the recorded example bundle root, the same `selection.yaml` can run directly:
+
+<!-- example: compiled-selection-yaml-command source=docs/examples/commands.json region=compiled-yaml scenario=selection interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/selection.yaml
+```
+
+The declaration uses the bundle's `inputs/` directory and writes `results/dev/compiled-cli`. The proof compares its two distinct candidate identities and validation returns with the Python driver's recorded run. Use a fresh output directory for a new experiment; the driver command above supplies its output explicitly.
+
 ## Continue through the research decisions
 
 `--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.

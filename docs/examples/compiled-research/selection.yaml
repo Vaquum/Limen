@@ -61,6 +61,7 @@ sfd:
     C: [1.0, 0.5]
     random_state: [42]
 uel:
+  output_path: compiled-cli
   n_permutations: 2
   search_strategy:
     type: grid

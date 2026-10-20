@@ -33,10 +33,6 @@ Limen is a research engine for Bitcoin traders that brings together parameter sw
 
 Limen helps you go from hypothesis to a trading-ready sensor or sensor cohort with freedom and speed that set a new standard for similar systems.
 
-See how Limen [compares with other similar systems](https://docs.vaquum.fi/limen/overview/comparison).
-
-<!-- TODO: Create the comparison page covering performance per compute budget, academic modelling rigor throughout the workflow, and safety properties. -->
-
 ## Two interfaces, different purposes
 
 Limen offers two interfaces to one research engine: **Python Research** and **Compiled Research**. Python Research gives you unrestricted control: bring your own data, models, backtesting and selection logic, using ordinary Python without a new language or programming model. Compiled Research turns strictly typed manifests into experiments through the CLI, enforcing safeguards against common financial-modelling pitfalls and producing inspectable evidence of what was checked. Both share the same execution safety; one gives you complete methodological freedom, while the other makes its methodological constraints explicit and enforceable.
@@ -55,8 +51,9 @@ Limen offers two interfaces to one research engine: **Python Research** and **Co
 
 Both paths use the same installation:
 
+<!-- example: readme-install source=docs/examples/commands.json region=install scenario=selection interface=python role=executed -->
 ```bash
-pip install "vaquum-limen[data]"
+python -m pip install "vaquum-limen[data]"
 ```
 
 Requires Python `>=3.10,<3.14` (3.10–3.13) on macOS or Linux. Optional extras: `boosting` for LightGBM/XGBoost, `tabpfn` for TabPFN, `indicators` for TA-Lib comparison tooling, `stats` for statistical helpers, or `vaquum-limen[all]` for the full stack.
@@ -65,295 +62,219 @@ Requires Python `>=3.10,<3.14` (3.10–3.13) on macOS or Linux. Optional extras:
 
 Bring your own data and define the experiment in ordinary Python. Your functions own the research methodology, including features, targets, backtesting strategies and cohort selection.
 
-The path is **your data → experiment → search → selection → fitted models → Sensor**. This example defines every research component explicitly. Replace any function with your own Python or compose it with Limen's built-in tools.
+The path is **your data → experiment → search → selection → fitted models → Sensor**. The [complete Python project](docs/examples/python-research/README.md) defines every research component explicitly. Replace any function with your own Python or compose it with Limen's built-in tools. These excerpts belong to that complete source, including its imports, entry point and recorded input checks.
 
 ### Define your experiment
 
-Save the experiment as `research.py`:
+Start with a momentum feature and the next bar's open-to-close return:
 
+<!-- example: readme-python-feature source=docs/examples/python-research/research.py region=momentum_feature scenario=selection interface=python role=executed -->
 ```python
-import numpy as np
-import polars as pl
-from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
-
-fitted_models = {}  # Keep the models evaluated during this serial sweep.
-
-
-def params():
-    return {"window": [12, 24, 48], "C": [0.1, 1.0]}
-
-
-def features(bars, round_params):
+def features(bars, window):
     return bars.with_columns(
-        pl.col("close").pct_change(round_params["window"]).alias("momentum")
+        (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
     )
-
-
-def prep(bars, round_params):
-    # Split first: forward labels never cross a split boundary.
-    a, b = int(len(bars) * 0.6), int(len(bars) * 0.8)
-    splits = {"train": bars[:a], "validation": bars[a:b], "test": bars[b:]}
-    warmup = max(params()["window"])  # Compare the same rows for every candidate.
-    return {
-        name: features(part, round_params).with_columns(
-            (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
-            .alias("next_return")
-        ).slice(warmup).drop_nulls(["momentum", "next_return"])
-        for name, part in splits.items()
-    }
-
-
-def fit(train, round_params):
-    estimator = make_pipeline(
-        StandardScaler(), LogisticRegression(C=round_params["C"], random_state=0)
-    )
-    return estimator.fit(
-        train.select("momentum"),
-        (train["next_return"] > 0).to_numpy(),
-    )
-
-
-def backtest(validation, predictions):
-    # Each signal enters at the next open and exits at that bar's close.
-    # Fixed notional; each round trip pays 5 bps fee + 5 bps slip per side.
-    net_returns = predictions * (validation["next_return"].to_numpy() - 0.002)
-    return float(np.mean(net_returns))
-
-
-def model(data, round_params):
-    fitted = fit(data["train"], round_params)
-    predictions = fitted.predict(data["validation"].select("momentum"))
-    fitted_models[(round_params["window"], round_params["C"])] = fitted
-    return {"validation_mean_return": backtest(data["validation"], predictions)}
 ```
+
+<!-- example: readme-python-target source=docs/examples/python-research/research.py region=next_return_target scenario=selection interface=python role=executed -->
+```python
+def prepare_split(bars, round_params):
+    return features(bars, round_params["window"]).with_columns(
+        (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
+        .alias("next_return")
+    ).slice(12).drop_nulls(["momentum", "next_return"])
+```
+
+Split before computing features and forward labels. Each candidate loses the same 12-bar warm-up and its partition's final forward-label row:
+
+<!-- example: readme-python-split source=docs/examples/python-research/research.py region=split_preparation scenario=selection interface=python role=executed -->
+```python
+def prep(bars, round_params):
+    # Split before features and labels; no target crosses a boundary.
+    return {
+        "train": prepare_split(bars[:960], round_params),
+        "validation": prepare_split(bars[960:1440], round_params),
+    }
+```
+
+Fit a scaler and Ridge model on training observations only, then score the validation forecasts with an explicit one-bar policy:
+
+<!-- example: readme-python-fit source=docs/examples/python-research/research.py region=fitted_scaler scenario=selection interface=python role=executed -->
+```python
+def fit(train, round_params):
+    return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
+        train.select("momentum"), train["next_return"].to_numpy()
+    )
+```
+
+<!-- example: readme-python-score source=docs/examples/python-research/research.py region=validation_score scenario=selection interface=python role=executed -->
+```python
+def backtest(validation, forecasts):
+    positions = np.sign(forecasts)
+    net = positions * validation["next_return"].to_numpy() - abs(positions) * 0.0002
+    return float(np.mean(net))
+```
+
+The score uses signed forecasts, fixed notional and a two-basis-point round-trip cost. This calculation belongs to the caller; it is separate from Limen's configured event execution policy.
 
 ### Run the experiment
 
-Save the driver beside it as `run.py`. Supply your own `bars.csv` containing recorded, completed bars with unique UTC `datetime` values marking bar completion, and positive `open` and `close` prices. The loader and this schema belong to the example; your own SFD can prepare different data and features.
+The project searches four candidates, retains their evaluated fitted pipelines and chooses the best validation result per feature window. Alpha breaks ties:
 
-Allow enough history to retain observations after each split's 48-bar warm-up and forward-label removal, with both target classes in the prepared training data.
-
+<!-- example: readme-python-experiment source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
 ```python
-import polars as pl
-import research
+def run_research(bars, experiment_name):
+    research = bars[:1440]
+    space = {"window": [4, 12], "alpha": [0.1, 1.0]}
+    retained = {}
 
-from limen.experiment import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
+    def model(data, round_params):
+        fitted = fit(data["train"], round_params)
+        forecasts = fitted.predict(data["validation"].select("momentum"))
+        score = backtest(data["validation"], forecasts)
+        retained[(round_params["window"], round_params["alpha"])] = fitted
+        return {"validation_net_return": score}
 
-bars = (
-    pl.read_csv("bars.csv", try_parse_dates=True)
-    .with_columns(pl.col("datetime").dt.replace_time_zone("UTC"))
-    .sort("datetime")
-)
-domain = ParamDomain(research.params())
-uel = UniversalExperimentLoop(
-    data=bars, sfd=research, search_strategy=GridStrategy(domain)
-)
-uel.run("my-research", n_permutations=6, post_processing=False)
+    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+    uel = UniversalExperimentLoop(
+        data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
+    )
+    # An absolute filename stem writes only this CSV; no persisted round artifacts.
+    uel.run(experiment_name, n_permutations=4, workers=1,
+            post_processing=False, progress_bar=False)
+    selected = (
+        completed_log(uel).sort(
+            ["window", "validation_net_return", "alpha"],
+            descending=[False, True, False],
+        ).unique(subset="window", keep="first", maintain_order=True)
+        .select("window", "alpha").to_dicts()
+    )
+    sensors = [
+        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
+                          params=p, fitting_cutoff=bars["datetime"][960],
+                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
+        for p in selected
+    ]
+    cohort = Cohort.from_python(sensors)
+    return cohort, uel, selected, retained
 ```
 
-Run the research with:
+Use the project and recorded input bundle linked with the example evidence. From the bundle root, run:
 
+<!-- example: readme-python-command source=docs/examples/commands.json region=python-selection scenario=selection interface=python role=executed -->
 ```bash
-python run.py
+python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
 ```
 
-You now have one results row per candidate in `uel.experiment_log`, also saved as `my-research.csv`. See [experiment results](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#what-uel-stores-after-a-run) for the available outputs.
+The command checks the recorded source digest and writes `research.csv` and `summary.json`. The evaluated models and Cohort remain in caller-owned memory during the run. Import `run_research` to continue using the returned objects in the same process; the two output files do not restore arbitrary fitted state.
 
 ### Create a Sensor
 
-Continue in `run.py`. Select the best validation result and wrap its retained fitted model in a native Sensor. Reuse the same feature function and fitted pipeline:
+The function above wraps each selected evaluated pipeline with `Sensor.from_model`. The Sensor reuses the fitted scaler and model without refitting, selects the feature names recorded during fitting, and blocks null or nonfinite features and decisions before the selection cutoff. Pass completed history to `sensor.predict(history)` for its latest numeric forecast or explicit unavailable reason. Availability remains a separate declared clock.
 
-```python
-from limen import Sensor
-
-selected = (
-    uel.experiment_log.sort("validation_mean_return", descending=True)
-    .select(*research.params()).row(0, named=True)
-)
-sensor = Sensor.from_model(
-    research.fitted_models[(selected["window"], selected["C"])],
-    prepare=research.features,
-    params=selected,
-    selection_cutoff=bars["datetime"][int(len(bars) * 0.8)],
-    output_id="next-bar-up",
-)
-prediction = sensor.predict(bars)
-```
-
-The Sensor reuses the fitted scaler and classifier without refitting, selects the feature names recorded during fitting, and blocks null or nonfinite feature values and decisions before the selection cutoff. Pass new completed history to `sensor.predict(history)` to get its latest `BarPrediction`: a 0/1 prediction or an explicit unavailable reason. Your Python still owns preparation and causality. Custom prediction and output mapping remain available, while `Sensor.from_python` accepts arbitrary fitted state and inference logic. See [Python Sensor construction](https://docs.vaquum.fi/limen/guides/trainer#python-construction).
+Your Python still owns preparation and causality. Custom prediction and output mapping remain available, while `Sensor.from_python` accepts arbitrary fitted state and inference logic. See [Python Sensor construction](docs/Trainer.md#python-construction).
 
 ### Create a sensor cohort
 
-Your own Python selects any number of candidates from the results. Wrap their retained fitted models as above, then combine them with `Cohort.from_python(selected_sensors, aggregate="vote")` for this binary example. Call `cohort.predict(history)` just like a Sensor. Members declare the same `output_id` to identify compatible output meanings; Limen checks timestamp alignment and preserves unavailable results. Mean aggregation and custom aggregation functions are also available. See [Python cohorts](https://docs.vaquum.fi/limen/guides/cohort#python-cohorts) and the [worked Python workflow](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run).
+Your own Python selects any number of candidates from the results. The project combines its two selected Sensors with `Cohort.from_python`, averaging compatible next-bar return forecasts. Call `cohort.predict(history)` just like a Sensor. Members declare the same `output_id` to identify compatible meanings; Limen checks timestamp alignment and preserves unavailable results. Binary voting and custom aggregation are also available. See [Python cohorts](docs/Cohort.md#python-cohorts).
 
-The example fits on the first 60% of observations and compares candidates on the next 20%, using identical evaluation timestamps. The final 20% are reserved for assessment after selection. Replace any research component with your own Python; the one-feature model and one-bar backtest are only the starting template.
+This recorded case fits on the first 960 observations, compares candidates on the next 480 and reserves the final 480 for later inference and assessment. The project continues through search, feedback, recovery, walk-forward, calibration, execution and holdout decisions. Replace any research component with your own Python; the one-feature model and one-bar score are the starting point.
 
-Continue with [custom SFDs](https://docs.vaquum.fi/limen/guides/single-file-decoder#custom-sfds), [UEL](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#direct-python-run), or [search and feedback](https://docs.vaquum.fi/limen/guides/advanced-search).
+Continue with [custom SFDs](docs/Single-File-Decoder.md#custom-sfds), [UEL](docs/Universal-Experiment-Loop.md#direct-python-run), or [search and feedback](docs/Advanced-Search.md).
 
 ## Compiled Research
 
-Declare the experiment and let Limen enforce its pipeline contract. The Manifest specifies the data, chronological splits, preparation, model and parameter space; the CLI validates and compiles that definition before executing it.
+Declare the experiment and let Limen enforce its pipeline contract. The Manifest specifies the data, chronological splits, preparation, model and parameter space; the CLI validates and compiles that definition before executing it. Invoking the same Manifest from Python remains Compiled Research.
 
-Start with a packaged logistic-regression experiment:
-
-```bash
-limen init logreg-first.yaml --template logreg_binary
-```
+The [complete Compiled project](docs/examples/compiled-research/README.md) starts with a recorded-data logistic experiment. Its selection declaration fixes the source, dates, train-fitted target/scaler, execution policy and validation objective:
 
 <details>
 <summary>Read the full YAML manifest</summary>
 
+<!-- example: readme-compiled-definition source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
 ```yaml
 schema_version: "1.0"
-
 metadata:
-  name: "logreg-first"
-  limen_version: "5.45.6"
+  name: book_compiled_selection
   mode: development
-  description: Logistic regression binary classifier with calibration and feature perturbation
-
 sfd:
   manifest:
     type: ml
-
+# region recorded_source
     data_source:
-      method: limen.data.HistoricalData.get_spot_klines
+      method: limen.data.HistoricalData.get_any_file
       params:
-        kline_size: 3600
-
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+# endregion recorded_source
     split_dates:
-      train_start: "2024-01-01"
-      train_end:   "2024-09-30"
-      val_start:   "2024-10-01"
-      val_end:     "2024-11-30"
-      test_start:  "2024-12-01"
-      test_end:    "2024-12-31"
-
+      train_start: "2025-01-01"
+      train_end: "2025-01-15"
+      val_start: "2025-01-15"
+      val_end: "2025-01-18"
+      test_start: "2025-01-18"
+      test_end: "2025-01-22"
+# region momentum_indicator
     indicators:
       - func: limen.indicators.roc
         params:
-          period: "{roc_period}"
+          period: 1
           group: momentum
-      - func: limen.indicators.atr
-        params:
-          period: 14
-          group: volatility
-      - func: limen.indicators.ppo
-        params:
-          group: momentum
-      - func: limen.indicators.wilder_rsi
-        params:
-          group: momentum
-
-    features:
-      - func: limen.features.fractional_diff
-        params:
-          d: "{frac_diff_d}"
-          cols:
-            - close
-      - func: limen.features.vwap
-        params:
-          group: volume
-      - func: limen.features.kline_imbalance
-        params:
-          group: volume
-
+# endregion momentum_indicator
+# region fitted_target
     target:
       name: quantile_flag
       class: limen.targets.QuantileBinaryTarget
       fit_params:
-        source_column: "roc_{roc_period}"
-        quantile: "{q}"
+        source_column: roc_1
+        quantile: 0.5
       transform_params:
-        shift: "{shift}"
-
+        shift: -1
+# endregion fitted_target
+# region validation_objective
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+# endregion validation_objective
+    backtest:
+      source_interval_seconds: 900
+      fee_bps: 1.0
+      slip_bps: 0.0
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+# region fitted_scaler
     scaler:
       from_params: scaler_type
-
-    feature_ablation:
-      drop_count_key: feature_drop_count
-      seed_key: feature_drop_seed
-
-    strict_mode: true
-
-    reference_architecture: limen.sfd.reference_architecture.logreg_binary.logreg_binary
-
-    calibration:
-      probability_calibration:
-        func: limen.calibration.sklearn_probability_calibrator
-        params:
-          method: "{cal_method}"
-      threshold_function:
-        func: limen.calibration.grid_threshold_optimizer
-        params:
-          metric: limen.metrics.balanced_metric.balanced_metric
-          threshold_min: "{threshold_min}"
-          threshold_max: "{threshold_max}"
-          threshold_step: "{threshold_step}"
-
+# endregion fitted_scaler
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
   params:
-    # data prep
-    frac_diff_d: [0.0]
-    shift: [-1, -3]
-    q: [0.45, 0.50]
-    roc_period: [1, 12]
-    # view perturbation
-    scaler_type: [robust, rank_gauss]
-    # feature perturbation
-    feature_groups: [all, momentum]
-    feature_drop_count: [0]
-    feature_drop_seed: [42]
-    # calibration
-    use_calibration: [true]
-    use_threshold: [true, false]
-    cal_method: [sigmoid]
-    threshold_min: [0.25]
-    threshold_max: [0.65]
-    threshold_step: [0.05]
-    # classifier
-    solver: [lbfgs, liblinear]
-    penalty: [l2]
-    dual: [false]
-    tol: [0.01]
-    C: [0.1, 1.0]
-    fit_intercept: [true]
-    intercept_scaling: [1.0]
-    class_weight: [0.55]
+    scaler_type: [logreg]
+    C: [1.0, 0.5]
     random_state: [42]
-    max_iter: [120]
-    multi_class: [deprecated]
-    verbose: [0]
-    warm_start: [false]
-    n_jobs: [-1]
-    l1_ratio: [null]
-
 uel:
-  n_permutations: 12
+  output_path: compiled-cli
+  n_permutations: 2
   search_strategy:
-    type: random
-  prep_each_round: true
+    type: grid
   output_format: csv
 ```
 
 </details>
 
-Review the generated YAML, including its data dates, model settings and `uel.n_permutations` research budget. Then validate, profile, compile and run:
+From the example bundle root, run that exact declaration through the installed CLI:
 
+<!-- example: readme-compiled-command source=docs/examples/commands.json region=compiled-yaml scenario=selection interface=compiled role=executed -->
 ```bash
-limen validate logreg-first.yaml
-limen profile logreg-first.yaml
-limen run --dry-run logreg-first.yaml
-limen run logreg-first.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
 ```
 
-Validation checks schema and references; dry run compiles without executing candidates. Execution applies the configured split, fitting, alignment and evaluation rules. A rejected configuration must be corrected before that workflow can proceed.
+The command validates and compiles the declaration, executes two candidates and writes `results/dev/compiled-cli`. The [CLI lifecycle](docs/Command-Line-Interface.md#first-yaml-run) also exercises template initialization, explicit validation/profiling, dry compilation, immutable committed definitions, recovery and project backup.
 
-The CLI prints its result directory:
+The Compiled project's Python selection driver runs the same declared candidate comparison, selects by validation return and reconstructs the chosen recorded round through `Trainer`. The proof checks the direct CLI's candidate identities and validation returns against that driver. Reconstruction refits under the recorded pipeline and checks replayed metrics; it does not restore arbitrary saved weights.
 
 | Artifact | What it records |
 |---|---|
@@ -362,9 +283,9 @@ The CLI prints its result directory:
 | `results.csv` | Candidate results. |
 | `round_data.jsonl.gz` | Round identities, parameters and payloads selected by the recording policy. |
 
-Row evidence and recovery depend on the [recording policy](https://docs.vaquum.fi/limen/guides/universal-experiment-loop#recording-policy). Choose it before a run when you need later replay or continuation.
+Row evidence and recovery depend on the [recording policy](docs/Universal-Experiment-Loop.md#recording-policy). Choose it before a run when later replay or continuation needs those payloads.
 
-Continue with the [CLI workflow](https://docs.vaquum.fi/limen/guides/command-line-interface), [Manifest contract](https://docs.vaquum.fi/limen/guides/experiment-manifest), or [end-to-end example](https://docs.vaquum.fi/limen/guides/end-to-end-workflow).
+Continue with the [CLI workflow](docs/Command-Line-Interface.md), [Manifest contract](docs/Experiment-Manifest.md), or [end-to-end workflow](docs/End-to-End-Workflow.md).
 
 ## Shared safety
 
@@ -372,7 +293,7 @@ Both interfaces share the search engine and reusable research components. Python
 
 ### Common foundations
 
-MSQ and UEL provide parameter-domain checks, parameter identities, explicit budgets, round results and convergence-warning records. Seeded built-in search supports repeatable candidate ordering. Optional persistence adds checkpoint and artifact-integrity checks; recovery requires a compatible checkpoint and full recording. Search seeds do not freeze models, data or environments. See [search and recovery](https://docs.vaquum.fi/limen/guides/advanced-search).
+MSQ and UEL provide parameter-domain checks, parameter identities, explicit budgets, round results and convergence-warning records. Seeded built-in search supports repeatable candidate ordering. Optional persistence adds checkpoint and artifact-integrity checks; recovery requires a compatible checkpoint and full recording. Search seeds do not freeze models, data or environments. See [search and recovery](docs/Advanced-Search.md).
 
 In both interfaces, native Sensors wrap fitted state and distinguish usable predictions from unavailable decisions. Native Cohorts check member timestamp alignment before aggregation. Python callers supply their own preparation, selection cutoff and output meanings; these declarations do not create compiled provenance or methodological proof.
 
@@ -393,13 +314,13 @@ The CLI validates schema, component references, parameter links, split declarati
 | Impossible fills, unavailable prices or incorrect funding charges | Configured event execution checks availability clocks, source coverage, exposure, quantity and collateral rules. Funding adapters validate units, schedules and valuation evidence and separate accrual from settlement. |
 | Research and inference quietly using different pipelines | Trainer reconstructs the declared pipeline and checks replayed results and recorded bindings where available. Compiled Sensors carry manifest and permutation identities and reuse fitted preprocessing; artifact-backed Cohorts bind the selected member identities. |
 
-See the [preparation contract](https://docs.vaquum.fi/limen/guides/experiment-manifest#how-a-manifest-executes), [backtest mechanics](https://docs.vaquum.fi/limen/guides/backtest) and [inference contract](https://docs.vaquum.fi/limen/guides/trainer#sensor) for each control's scope.
+See the [preparation contract](docs/Experiment-Manifest.md#how-a-manifest-executes), [backtest mechanics](docs/Backtest.md) and [inference contract](docs/Trainer.md#sensor) for each control's scope.
 
 ### Additional validation, when enabled
 
-- [Walk-forward validation](https://docs.vaquum.fi/limen/guides/experiment-manifest#walk-forward-sweeps) refits each fold with declared purge and embargo gaps. Choose gaps that cover your label horizon.
-- A [validation-return objective](https://docs.vaquum.fi/limen/reference/calibration#shared-validation-return-objective) binds supported threshold tuning and reducers to validation execution. [DSR and PBO reports](https://docs.vaquum.fi/limen/guides/benchmark#walk-forward-selection-report) assess retained research evidence; failed or unavailable criteria are reported rather than stopping the run.
-- Opt-in [project holdout reservations](https://docs.vaquum.fi/limen/guides/final-holdout) exclude reserved observations from supported research and replay. Active reservations reject custom SFDs and unsupported modes; see the workflow's restrictions.
+- [Walk-forward validation](docs/Experiment-Manifest.md#walk-forward-sweeps) refits each fold with declared purge and embargo gaps. Choose gaps that cover your label horizon.
+- A [validation-return objective](docs/Calibration.md#shared-validation-return-objective) binds supported threshold tuning and reducers to validation execution. [DSR and PBO reports](docs/Benchmark.md#walk-forward-selection-report) assess retained research evidence; failed or unavailable criteria are reported rather than stopping the run.
+- Opt-in [project holdout reservations](docs/Final-Holdout.md) exclude reserved observations from supported research and replay. Active reservations reject custom SFDs and unsupported modes; see the workflow's restrictions.
 
 Compilation does not establish arbitrary feature causality, data correctness or future performance. Validation used for tuning is selection evidence; statistical reports do not create an untouched holdout.
 
@@ -437,18 +358,18 @@ See how to [verify a release](https://github.com/Vaquum/Limen/blob/main/docs/Dev
 
 | Path | Guides |
 |---|---|
-| Python Research | [Search and feedback](https://docs.vaquum.fi/limen/guides/advanced-search), [custom SFDs](https://docs.vaquum.fi/limen/guides/single-file-decoder#custom-sfds), [UEL](https://docs.vaquum.fi/limen/guides/universal-experiment-loop). |
-| Compiled Research | [CLI](https://docs.vaquum.fi/limen/guides/command-line-interface), [Manifest](https://docs.vaquum.fi/limen/guides/experiment-manifest), [end-to-end workflow](https://docs.vaquum.fi/limen/guides/end-to-end-workflow). |
-| Research tools | [Features](https://docs.vaquum.fi/limen/reference/features), [targets](https://docs.vaquum.fi/limen/reference/targets), [backtesting](https://docs.vaquum.fi/limen/guides/backtest), [analysis](https://docs.vaquum.fi/limen/guides/log). |
-| Model reuse | [Trainer](https://docs.vaquum.fi/limen/guides/trainer), [Cohort](https://docs.vaquum.fi/limen/guides/cohort). |
+| Python Research | [Search and feedback](docs/Advanced-Search.md), [custom SFDs](docs/Single-File-Decoder.md#custom-sfds), [UEL](docs/Universal-Experiment-Loop.md). |
+| Compiled Research | [CLI](docs/Command-Line-Interface.md), [Manifest](docs/Experiment-Manifest.md), [end-to-end workflow](docs/End-to-End-Workflow.md). |
+| Research tools | [Features](docs/Features.md), [targets](docs/Targets.md), [backtesting](docs/Backtest.md), [analysis](docs/Log.md). |
+| Model reuse | [Trainer](docs/Trainer.md), [Cohort](docs/Cohort.md). |
 
-See the [documentation hub](https://docs.vaquum.fi/limen/overview/docs-hub), [Roadmap](https://docs.vaquum.fi/limen/overview/roadmap), and [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md).
+See the [documentation hub](docs/README.md), [Roadmap](docs/Roadmap.md), and [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md).
 
 ## Contributing
 
 Contribution starts through [CONTRIBUTING.md](https://github.com/Vaquum/Limen/blob/main/CONTRIBUTING.md), [docs changes](https://github.com/Vaquum/Limen/tree/main/docs), or [open issues](https://github.com/Vaquum/Limen/issues).
 
-Before contributing, start with the [Developer docs](https://docs.vaquum.fi/limen/developer).
+Before contributing, start with the [Developer docs](docs/Developer/README.md).
 
 ## Support
 

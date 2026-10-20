@@ -102,7 +102,8 @@
     "docs/Built-In-SFDs.md",
     "docs/Trainer.md",
     "docs/Cohort.md",
-    "docs/Conserved-Flux-Renormalization.md"
+    "docs/Conserved-Flux-Renormalization.md",
+    "README.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2099,7 +2100,7 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025, split January 15/18",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics."
+      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics. The same YAML also runs through the installed CLI; candidate identities and validation returns equal the Python driver."
     },
     "python/search": {
       "interface": "python",
@@ -2630,6 +2631,10 @@
     "docs/Conserved-Flux-Renormalization.md": [
       "python/bars",
       "compiled/bars"
+    ],
+    "README.md": [
+      "python/selection",
+      "compiled/selection"
     ]
   }
 }
