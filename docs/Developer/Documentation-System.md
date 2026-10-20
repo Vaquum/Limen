@@ -111,7 +111,7 @@ Package READMEs retain their ownership, public entry points and adjacent boundar
 
 Maintain one explicit source-to-route map. Every maintained source has exactly one canonical page and route. Generated contents, indexes and search results route to those pages. Count the actual corpus: root `README.md`, maintained Markdown under `docs/`, and package READMEs under `limen/`. A fixed page count is not a completeness test.
 
-Every maintained page connects to one or both example projects. A research page uses the relevant source, scenario or result. A developer page connects through maintaining, proving or releasing those projects. A contributor-only task does not need an artificial research snippet. Shared applicable capabilities show both interfaces; a tag or repeated boilerplate link alone does not establish coverage.
+Every maintained page connects to one or both example projects. The required evidence check now requires the bound-page catalogue and scenario contexts to equal the complete maintained inventory, with no duplicate or opt-out page. Adding a page without those bindings fails before a reader can be built. A research page uses the relevant source, scenario or result. A developer page connects through maintaining, proving or releasing those projects. A contributor-only task does not need an artificial research snippet. Shared applicable capabilities show both interfaces; a tag or repeated boilerplate link alone does not establish coverage.
 
 ### Chapter composition
 

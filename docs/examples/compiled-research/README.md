@@ -4,7 +4,6 @@ The Manifest owns preparation and its configured checks. Trainer reconstructs se
 
 The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the proof required before this candidate is published as the complete book.
 
-
 The search scenario also compares baseline and compressed preparation on 1,440 recorded hourly bars. It retains each prepared train/validation/test matrix, a fixed-order fractional feature, ternary forward-close labels, training-fitted robust statistics, an explicit feature drop and optional two-component PCA. Independent tests reconstruct the labels, differenced values, scaler statistics, PCA subspace and Ridge forecasts. The Python case owns separate partition preparation; the native Manifest case retains its admitted CCO context. These are preparation checks, not a feature-importance ranking or profitability claim.
 
 ## Prerequisites
@@ -35,11 +34,14 @@ The declaration uses the bundle's `inputs/` directory and writes `results/dev/co
 
 ## Continue through the research decisions
 
+Search also executes all eight [common strategy baselines](../../Common-Strategies.md) on the recorded 2024 hourly source. Their desired signals share the same assessment window. The Python case owns next-open-to-close one-bar trades with a declared 2 bp round-trip cost; the Compiled case uses the native lagged held-position snapshot with 10 bp fee and 5 bp slippage per fill. Independent assertions check causal signals and each policy's arithmetic; these are different trading interpretations, not a cross-engine return ranking.
+
+
 `--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.
 
 | Scenario | Decision and output |
 |---|---|
-| `search` | Compare bounded grid, random, Sobol and shuffled traversal; then budget-only and reducer/callback/file feedback runs. |
+| `search` | Compare traversal, preparation, eight common rules, budget reduction and mixed feedback under their declared populations. |
 | `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
 | `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |

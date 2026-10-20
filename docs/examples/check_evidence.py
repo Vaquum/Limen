@@ -111,6 +111,20 @@ def maintained_documents(root: Path) -> list[Path]:
     return sorted({root / 'README.md', *(root / 'docs').rglob('*.md'), *(root / 'limen').rglob('README.md')})
 
 
+def validate_page_catalogue(root: Path, catalogue):
+    pages = catalogue['candidate_pages']
+    expected = {str(path.relative_to(root)) for path in maintained_documents(root)}
+    if len(pages) != len(set(pages)) or set(pages) != expected:
+        raise ValueError('Bound page catalogue must cover every maintained document exactly once')
+    contexts = catalogue['page_contexts']
+    if set(contexts) != expected:
+        raise ValueError('Bound page contexts differ from the maintained documents')
+    for page, scenarios in contexts.items():
+        if not scenarios or len(set(scenarios)) != len(scenarios) or any(name not in catalogue['scenario_details'] for name in scenarios):
+            raise ValueError('Page has no complete scenario context: ' + page)
+    return contexts
+
+
 def all_bindings(root: Path) -> list[dict[str, str]]:
     found = [item for document in maintained_documents(root) for item in bindings(root, document)]
     if len({item['id'] for item in found}) != len(found):
@@ -338,12 +352,8 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
     validate_surface_catalogue(root, catalogue_data)
-    contexts = catalogue_data['page_contexts']
-    if set(contexts) != set(catalogue_data['candidate_pages']):
-        raise ValueError('Bound page contexts differ from the maintained candidate pages')
+    contexts = validate_page_catalogue(root, catalogue_data)
     for page, scenarios in contexts.items():
-        if not scenarios or len(set(scenarios)) != len(scenarios) or any(name not in catalogue_data['scenario_details'] for name in scenarios):
-            raise ValueError('Page has no complete scenario context: ' + page)
         interfaces = tuple(sorted({catalogue_data['scenario_details'][name]['interface'] for name in scenarios}))
         validate_fences(root, root / page, interfaces=interfaces)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())

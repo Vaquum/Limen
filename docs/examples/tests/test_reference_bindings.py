@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from check_evidence import reference_bindings, region, validate_fences
+from check_evidence import reference_bindings, region, validate_fences, validate_page_catalogue
 from provenance import source_paths
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -93,8 +93,25 @@ def test_page_connections_must_be_visible_links_to_each_project(tmp_path):
 
 def test_current_pages_have_exact_source_and_visible_project_connections():
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
-    assert set(catalogue['page_contexts']) == set(catalogue['candidate_pages'])
-    for page, contexts in catalogue['page_contexts'].items():
-        assert contexts and len(contexts) == len(set(contexts))
+    for page, contexts in validate_page_catalogue(ROOT, catalogue).items():
         interfaces = tuple(sorted({catalogue['scenario_details'][name]['interface'] for name in contexts}))
         validate_fences(ROOT, ROOT / page, interfaces=interfaces)
+
+
+def test_new_or_removed_pages_cannot_escape_the_complete_catalogue(monkeypatch):
+    from copy import deepcopy
+    import check_evidence
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    changed = deepcopy(catalogue)
+    page = changed['candidate_pages'].pop()
+    del changed['page_contexts'][page]
+    with pytest.raises(ValueError, match='every maintained document exactly once'):
+        validate_page_catalogue(ROOT, changed)
+    changed = deepcopy(catalogue)
+    changed['candidate_pages'].append(changed['candidate_pages'][0])
+    with pytest.raises(ValueError, match='every maintained document exactly once'):
+        validate_page_catalogue(ROOT, changed)
+    original = check_evidence.maintained_documents(ROOT)
+    monkeypatch.setattr(check_evidence, 'maintained_documents', lambda root: [*original, root / 'docs/new-chapter.md'])
+    with pytest.raises(ValueError, match='every maintained document exactly once'):
+        validate_page_catalogue(ROOT, catalogue)

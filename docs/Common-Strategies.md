@@ -7,6 +7,13 @@ following, momentum and mean reversion. These distinct holding patterns make
 the catalogue useful both for strategy research and for checking backtest
 engines against identical position requests.
 
+The [Python project](examples/python-research/README.md) uses the same eight
+signal rules in a caller-owned next-open-to-close comparison. The
+[Compiled project](examples/compiled-research/README.md) executes their native
+foundational SFD across all eight candidates. Their desired signals agree;
+their trading policies differ and their returns must not be compared as if the
+accounts were equivalent.
+
 ## Prerequisites
 
 - A Limen checkout or installed package; use the `data` extra for automatic market-data fetching.
@@ -56,12 +63,18 @@ complete strategy.
 
 ## Run the eight-strategy grid
 
-Use the native template with the ordinary CLI:
+The installed CLI exposes the `common_strategies` template through `limen init`; see the [command reference](Command-Line-Interface.md). Its native foundational entry points are:
 
-```bash
-limen init common-strategies.yaml --template common_strategies
-limen validate common-strategies.yaml
-limen run common-strategies.yaml
+<!-- reference: common-foundational-params source=limen/sfd/foundational_sfd/common_strategies.py region=signature:params role=signature -->
+```python
+def params() -> dict[str, list[str]]:
+    ...
+```
+
+<!-- reference: common-foundational-manifest source=limen/sfd/foundational_sfd/common_strategies.py region=signature:manifest role=signature -->
+```python
+def manifest() -> Manifest:
+    ...
 ```
 
 The template fetches real hourly observations for calendar year 2024 from the
@@ -76,33 +89,31 @@ data in both normal and test mode. Supplying `data=` uses those recorded rows
 directly, without fetching either source. The benchmark always supplies its
 explicit fixture data; it does not depend on a changing latest-data window.
 
-For a fully offline example from a repository checkout, run the Python SFD on
-the recorded hourly fixture. The Python manifest's default split uses the
-standard `8:1:2` row-count ratio; the CLI template uses its pinned date windows.
-This evaluates all eight candidates and saves the ordinary UEL result artifacts:
+The Compiled project supplies the complete recorded hourly fixture explicitly and performs no network fetch. Its native factory uses the `8:1:2` row-count split; the installed YAML template instead declares date windows. Calling the factory from Python still follows Compiled Research. This complete project function executes all eight candidates and retains native UEL artifacts:
 
+<!-- example: common-compiled-baselines source=docs/examples/compiled-research/scenarios.py region=common_baselines scenario=search interface=compiled role=executed -->
 ```python
-from pathlib import Path
+def common_baselines(data_dir, output):
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.sfd.foundational_sfd import common_strategies
 
-import polars as pl
-from limen import UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
-from limen.sfd.foundational_sfd import common_strategies
-
-bars = pl.read_parquet("tests/fixtures/spot_1h_20240101_20241231.parquet")
-uel = UniversalExperimentLoop(
-    data=bars,
-    sfd=common_strategies,
-    search_strategy=GridStrategy(ParamDomain(common_strategies.params())),
-    experiment_dir=Path("experiments/common-strategies"),
-)
-uel.run(
-    experiment_name="common-strategies",
-    n_permutations=8,
-    record_execution=True,
-    progress_bar=False,
-)
+    source = configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url']
+    raw = pl.read_parquet(source)
+    directory = output / 'experiment'
+    loop = UniversalExperimentLoop(data=raw, sfd=common_strategies,
+                                   search_strategy=GridStrategy(ParamDomain(common_strategies.params())),
+                                   experiment_dir=directory)
+    loop.run('common-baselines', n_permutations=8, workers=1, record_execution=True,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+             post_processing=False, progress_bar=False)
+    with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    tracks = {record['round_params']['strategy']: record['execution'] for record in records}
+    columns = ['strategy', 'pnl_per_bar_bps_test', 'position_rate_test', 'num_executed_trades_test']
+    return {'rows': research_project.completed_log(loop).select(columns).to_dicts(),
+            'tracks': tracks, 'source_rows': raw.height, 'fee_bps': 10., 'slip_bps': 5.,
+            'execution': 'native lagged long/flat snapshot with per-fill costs'}
 ```
 
 `params()` has one categorical axis, `strategy`. A candidate chooses one
@@ -110,11 +121,11 @@ complete fixed configuration, avoiding combinations of irrelevant parameters
 from different strategies. The result includes each split's position rate,
 entry count, backtest metrics, executed-trade count and mean compounded net
 PnL per executed trade. A strategy with no executed trades has a zero trade
-count and an undefined mean trade PnL; it is not evidence of a zero-risk return.
+count and an undefined mean trade PnL; it is not evidence of a zero-risk return. The project summary keeps finite activity/mean-bar fields and the complete execution tracks, while the native artifacts retain their original metric values.
 
 ## Recorded costed results: 2026-10-18
 
-The offline UEL example completed all eight candidates on the recorded 2024
+The historical offline UEL campaign completed all eight candidates on the recorded 2024
 hourly BTCUSDT fixture. Its `8:1:2` row split allocated 6,388 bars to training,
 798 to validation and 1,598 to testing. The test window ran from
 **2024-10-26 10:00 through 2024-12-31 23:00 UTC**. These are the Python
@@ -163,20 +174,29 @@ preserves this limitation explicitly. Cross-engine zero-cost correctness and
 timing measurements are reported separately in
 [Backtest engine benchmarks](Backtest-Benchmarks.md).
 
-## Pure signal API and engine comparisons
+## Python Research and the pure signal API
 
-The same implementation is available independently of UEL:
+The Python project calls the shared signal function directly on the same 1,598 assessment bars. It owns independent one-bar trades, entering the next open and exiting that close with a declared 2 bp round-trip cost. This differs from the native held-position snapshot, its entry/exit pricing and 10/5 bp per-fill assumptions:
 
+<!-- example: common-python-baselines source=docs/examples/python-research/scenarios.py region=common_baselines scenario=search interface=python role=executed -->
 ```python
-from limen.sfd.rule_based.common_strategies import (
-    STRATEGY_NAMES,
-    STRATEGY_PARAMETERS,
-    strategy_signals,
-)
+def common_baselines(data_dir, output):
+    from limen.sfd.rule_based.common_strategies import STRATEGY_NAMES, strategy_signals
 
-positions = strategy_signals(bars, "rsi_mean_reversion")
-assert len(positions) == bars.height
-settings = dict(STRATEGY_PARAMETERS["rsi_mean_reversion"])
+    raw = hourly(data_dir, None)
+    train_rows, val_rows = raw.height * 8 // 11, raw.height // 11
+    evaluation = raw[train_rows + val_rows:]
+    output.mkdir(parents=True)
+    rows = []
+    for name in STRATEGY_NAMES:
+        signals = strategy_signals(evaluation, name)
+        # Caller-owned one-bar trades: enter next open, exit that close, 2 bp total cost.
+        net = signals[:-1] * (evaluation['close'].to_numpy()[1:] / evaluation['open'].to_numpy()[1:] - 1 - .0002)
+        evaluation.select('datetime').with_columns(pl.Series('desired_position', signals)).write_parquet(output / (name + '.parquet'))
+        rows.append({'strategy': name, 'mean_net_return': float(net.mean()),
+                     'net': net.tolist(), 'signals': signals.tolist()})
+    return {'rows': rows, 'split_rows': [train_rows, val_rows, evaluation.height],
+            'round_trip_bps': 2., 'execution': 'independent next-open-to-close trades'}
 ```
 
 `STRATEGY_NAMES` is an immutable ordered tuple. `STRATEGY_PARAMETERS` is a
@@ -195,6 +215,8 @@ The feature adapter `limen.features.common_strategy_positions` appends that
 same array as `common_strategy_position` to eager or lazy Polars frames. It
 preserves the original columns and prevents downstream lazy filters or slices
 from being moved ahead of the stateful calculation.
+
+The canonical project tests check causal signal prefixes, independent SMA/momentum rules and each interface's declared economics. Native cash/fee/slippage returns are checked with a separate scalar episode calculation. Those current assertions are distinct from the frozen historical table above.
 
 The native manifest prepares each train, validation and test split separately,
 as other rule-based manifests do. It therefore resets both indicator history
