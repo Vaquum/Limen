@@ -151,7 +151,7 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
     return None
 
 
-_PARALLEL_EVIDENCE_SINCE = (5, 45, 10)
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 11)
 
 
 def legacy_metadata(metadata: Mapping[str, object]) -> bool:
