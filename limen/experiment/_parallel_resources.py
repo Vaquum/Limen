@@ -12,10 +12,10 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import Protocol, cast
 
-from limen.experiment._parallel_encoding import encode
+from limen.experiment._parallel_encoding import encode, reference
 from limen.experiment._parallel_state import component_state
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source, parameter_references
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -59,16 +59,22 @@ def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | N
     result: dict[str, list[object]] = {}
     for name, values in (defaults | dict(options or {})).items():
         for value in values:
-            if name.endswith('_factory') and isinstance(value, type) and value is not Parameter.empty:
-                if type(value).__call__ is not type.__call__:
+            if name.endswith('_factory') and (isinstance(value, type) or isfunction(value)) and value is not Parameter.empty:
+                if isinstance(value, type) and type(value).__call__ is not type.__call__:
                     raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-                result.setdefault(name, []).append(FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None))
+                component = FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None) if isinstance(value, type) else value
+                result.setdefault(name, []).append((reference(value), component))
     return result
 
 
 def bind_factories(inventory: Mapping[str, list[object]], kwargs: Mapping[str, object]) -> dict[str, object]:
-    return {name: next((factory for factory in inventory.get(name, []) if isinstance(factory, FrozenClassFactory) and value is factory.factory_class), value)
-            for name, value in kwargs.items()}
+    result = dict(kwargs)
+    for name, variants in inventory.items():
+        value = kwargs.get(name)
+        if isfunction(value) or isinstance(value, type):
+            identity = reference(value)
+            result[name] = next((component for source, component in cast(list[tuple[list[object], object]], variants) if source == identity), value)
+    return result
 
 
 def deterministic_stage(params: Mapping[str, object]) -> None:
@@ -145,7 +151,7 @@ def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> d
 def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]) -> None:
     if stage.path not in configs:
         return  # The native Manifest skips this conditional stage for this candidate.
-    if stage.path.startswith('architecture.') and not _same_component(configs['architecture'].get(stage.path.split('.', 1)[1]), stage.component):
+    if stage.path.startswith('architecture.') and not _same_component(configs['architecture'].get(stage.path.split('.')[1]), stage.component):
         return  # A different frozen factory variant is selected for this candidate.
     config = configs[stage.path]
     for key in stage.contract.parameter_keys:
@@ -157,22 +163,6 @@ def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]
         raise ValueError(f'Parallel stage {stage.path}: {exc}') from exc
 
 
-def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
-    if isinstance(value, str):
-        result: set[str] = {value} if value in domain else set()
-        if '{' in value and '}' in value:
-            for _, field, spec, _ in Formatter().parse(value):
-                if field is not None:
-                    result.add(field.split('.', 1)[0].split('[', 1)[0])
-                result.update(_references(spec, domain))
-        return result.intersection(domain)
-    if isinstance(value, Mapping):
-        return set[str]().union(*(_references(item, domain) for item in cast(Mapping[object, object], value).values()))
-    if isinstance(value, (tuple, list)):
-        return set[str]().union(*(_references(item, domain) for item in cast(tuple[object, ...] | list[object], value)))
-    return set()
-
-
 def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]]) -> tuple[Mapping[str, object], tuple[str, ...]]:
     if path == 'architecture':
         function = manifest.architecture_function
@@ -181,7 +171,7 @@ def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]])
         names_to_bind = domain if any(value.kind == Parameter.VAR_KEYWORD for value in parameters.values()) else parameters
         return {key: key for key in names_to_bind if key != 'data'}, ()
     if path.startswith('architecture.'):
-        factory = path.split('.', 1)[1]
+        factory = path.split('.')[1]
         key = factory.removesuffix('_factory') + '_params'
         function = manifest.architecture_function
         assert function is not None
@@ -255,7 +245,7 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
         inputs = set(keys) | set(stage.contract.parameter_keys)
         dependencies = set(selectors)
         for key in inputs:
-            dependencies.update(_references(arguments.get(key), effective))
+            dependencies.update(parameter_references(arguments.get(key), effective))
         projected = {key: values for key, values in effective.items() if key in dependencies}
         for index, values in enumerate(product(*projected.values())):
             candidate = baseline | dict(zip(projected, values, strict=True))
@@ -296,6 +286,8 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
             if 'seed' in resolved:
                 arguments['seed'] = resolved['seed']
             result[f'architecture.{key}'] = _defaults(factory, arguments, skip=0)
+            if isinstance(factory, FrozenClassFactory) and factory.allocator is not None:
+                result[f'architecture.{key}.allocate'] = _defaults(factory.allocator, arguments, skip=1)
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         if step is not None and (path != 'bar_formation' or params.get('bar_type', 'base') != 'base'):
@@ -312,6 +304,8 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         transform_config = _defaults(cast(_TargetClass, target.target_class).transform, dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
+        if (allocator := getattr(target, '_parallel_new', None)) is not None:
+            result['target.allocate'] = _defaults(allocator, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=3, runtime=runtime)
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, transform, arguments = manifest.scaler

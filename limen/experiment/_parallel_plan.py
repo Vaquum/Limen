@@ -11,7 +11,7 @@ from dataclasses import dataclass, field, fields, is_dataclass
 from functools import partial
 from importlib import import_module
 from string import Formatter
-from types import CellType, FunctionType
+from types import CellType, FunctionType, MethodType
 from typing import Protocol, cast
 
 import polars as pl
@@ -29,6 +29,17 @@ from limen.scalers.registry import SCALER_REGISTRY
 
 class _TargetClass(Protocol):
     transform: Callable[..., object]
+
+
+class _CapturedCall(partial[object]):
+    def __getattr__(self, name: str) -> object:
+        return getattr(cast(MethodType, self.func).__self__, name)
+
+    def __setattr__(self, name: str, value: object) -> None:
+        if name == '__parallel_round_contract__':
+            vars(self)[name] = value
+        else:
+            setattr(cast(MethodType, self.func).__self__, name, value)
 
 
 @dataclass(frozen=True)
@@ -55,11 +66,12 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
     _parallel_transform_defaults: dict[str, object] = field(default_factory=dict[str, object])
     _parallel_init: Callable[..., object] | None = None
     _parallel_transform: Callable[..., object] | None = None
+    _parallel_new: Callable[..., object] | None = None
 
     def _parallel_make(self, **params: object) -> object:
         cls = self.target_class
-        allocator = cast(Callable[..., object], cls.__new__)
-        instance = allocator(cls, **({} if cls.__new__ is object.__new__ else params))
+        allocator = self._parallel_new or cast(Callable[..., object], cls.__new__)
+        instance = allocator(cls, **({} if allocator is object.__new__ else params))
         if isinstance(instance, cls):
             assert self._parallel_init is not None
             _ = self._parallel_init(instance, **params)
@@ -150,7 +162,8 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
                                     signature_defaults(target.target_class, 2), signature_defaults(cast(_TargetClass, target.target_class).transform, 2),
-                                    cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform)
+                                    cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform,
+                                    target.target_class.__new__ if inspect.isfunction(target.target_class.__new__) else None)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -207,7 +220,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         with shared_copy(state_memo):
-            clone = partial(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
+            clone = _CapturedCall(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
         vars(clone)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
     return clone
 
@@ -242,7 +255,8 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
     if manifest.target_class_config is not None:
         result.append(('target', manifest.target_class_config.target_class))
         result.extend((f'target.{name}', getattr(manifest.target_class_config, captured))
-                      for name, captured in (('fit', '_parallel_init'), ('transform', '_parallel_transform')))
+                      for name, captured in (('fit', '_parallel_init'), ('transform', '_parallel_transform'), ('allocate', '_parallel_new'))
+                      if getattr(manifest.target_class_config, captured) is not None)
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, transform, _ = manifest.scaler
@@ -288,6 +302,9 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
                    for path, original in components(frozen, factory_options)
                    for component in [bind_factories(cast(dict[str, list[object]], vars(frozen)['_parallel_factory_options']), {path.removeprefix('architecture.'): original})[path.removeprefix('architecture.')]])
+    factory_class = cast(type, resources['FrozenClassFactory'])
+    stages += tuple(FrozenStage(stage.path + '.allocate', stage.component, stage.contract) for stage in stages
+                    if stage.path.startswith('architecture.') and isinstance(stage.component, factory_class) and getattr(stage.component, 'allocator', None) is not None)
     for stage in stages:
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):
@@ -320,5 +337,21 @@ def static_source(value: object, domain: Mapping[str, list[object]]) -> None:
     elif isinstance(value, (tuple, list)):
         for item in cast(tuple[object, ...] | list[object], value):
             static_source(item, domain)
+
+
+def parameter_references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
+    if isinstance(value, str):
+        result: set[str] = {value} if value in domain else set()
+        if '{' in value and '}' in value:
+            for _, field, spec, _ in Formatter().parse(value):
+                if field is not None:
+                    result.add(field.split('.', 1)[0].split('[', 1)[0])
+                result.update(parameter_references(spec, domain))
+        return result.intersection(domain)
+    if isinstance(value, Mapping):
+        return set[str]().union(*(parameter_references(item, domain) for item in cast(Mapping[object, object], value).values()))
+    if isinstance(value, (tuple, list)):
+        return set[str]().union(*(parameter_references(item, domain) for item in cast(tuple[object, ...] | list[object], value)))
+    return set()
 
 

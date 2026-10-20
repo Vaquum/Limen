@@ -147,6 +147,16 @@ class AllocatedRolling(CallerRollingBase):
         return self.transform(data)
 
 
+class DualSeedRolling(AllocatedRolling):
+    def __new__(cls, *, seed=None):
+        instance = object.__new__(cls)
+        instance.window = 3 if seed == 42 else 1
+        return instance
+
+    def __init__(self, *, seed=42):
+        self.initializer_seed = seed
+
+
 class InheritedCallOwnTransform(InheritedCallable):
     def transform(self, data):
         return _caller_feature(data, self.window)
@@ -217,6 +227,11 @@ def _object_default_feature(data, counter=None):
     return _caller_feature(data, counter.window)
 
 
+def _callable_default_feature(data, counter=None):
+    counter.window += 1
+    return counter()(data)
+
+
 @dataclass
 class AliasedRolling:
     left: list[int]
@@ -264,6 +279,25 @@ def _target_transform(window):
 class ClosureTarget:
     __init__ = _target_constructor(1)
     transform = _target_transform(1)
+
+
+def _target_allocator(window):
+    def implementation(cls, train_data, target_name):
+        instance = object.__new__(cls)
+        instance.window = window
+        return instance
+    implementation.__qualname__ = 'AllocatedTarget.__new__'
+    return implementation
+
+
+class AllocatedTarget:
+    __new__ = staticmethod(_target_allocator(1))
+
+    def __init__(self, train_data, target_name):
+        self.target_name = target_name
+
+    def transform(self, data):
+        return data.with_columns((pl.col('close') > pl.col('close').shift(self.window)).cast(pl.Int8).alias(self.target_name))
 
 
 def _method_only_transform(owner, data):
@@ -732,11 +766,12 @@ def test_frozen_manifest_round_plan() -> None:
         actual, pid = pool.submit(_repeated_carried_probe, nested, _parameters()).result(timeout=30)
         expected, _ = _repeated_carried_probe(nested, _parameters())
         assert actual == expected == expected_values and pid != os.getpid()
-        declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
-        for counter in (RollingCounter(), CallableCounter()):
+        for feature, counter in ((_object_default_feature, RollingCounter()), (_object_default_feature, CallableCounter()),
+                                 (_object_default_feature, DefaultRollingFactory(2)), (_callable_default_feature, DefaultRollingFactory(2))):
+            declare_parallel(feature, ParallelRoundContract(deterministic_stage))
             with pytest.MonkeyPatch.context() as patch:
-                patch.setattr(_object_default_feature, '__defaults__', (counter,))
-                frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_object_default_feature), None)
+                patch.setattr(feature, '__defaults__', (counter,))
+                frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(feature), None)
             actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _repeated_carried_probe(frozen, _parameters())
             assert actual == expected == expected_values and pid != os.getpid() and counter.window == 2
@@ -752,6 +787,20 @@ def test_frozen_manifest_round_plan() -> None:
         for _ in range(2):
             assert pool.submit(_target_probe, frozen, _parameters()).result(timeout=30) == _target_probe(frozen, _parameters()) == expected
         assert digest(frozen) == before
+        declare_parallel(AllocatedTarget, ParallelRoundContract(deterministic_stage))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(AllocatedTarget.__new__.__closure__[0], 'cell_contents', 2)
+            manifest = copy.deepcopy(plan.manifest).with_target_label('allocated', AllocatedTarget)
+            native = manifest.prepare_data(recorded_source(), _parameters())
+            expected = {key: native[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
+            frozen_allocator = freeze_manifest(manifest, None)
+            before = digest(frozen_allocator)
+            patch.setattr(AllocatedTarget.__new__.__closure__[0], 'cell_contents', 3)
+            changed = freeze_manifest(manifest, None)
+            assert changed.pipeline_digest != frozen_allocator.pipeline_digest and changed.resource_digest != frozen_allocator.resource_digest
+        for _ in range(2):
+            assert pool.submit(_target_probe, frozen_allocator, _parameters()).result(timeout=30) == _target_probe(frozen_allocator, _parameters()) == expected
+        assert digest(frozen_allocator) == before and AllocatedTarget.__new__.__closure__[0].cell_contents == 1
         component = partial(_kwargs_feature, n_jobs=2)
         declare_parallel(component, ParallelRoundContract(deterministic_stage))
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
@@ -1001,15 +1050,16 @@ def _assert_plan_identity(plan):
 
 
 
-def _factory_probe(plan, factory):
+def _factory_probe(plan, factory, extra=None):
     from limen.experiment._parallel_identity import distribution_providers
     from limen.experiment._parallel_plan import plan_digests
     from tests.test_parallel_rounds import recorded_source
     with distribution_providers(plan.distribution_providers):
         assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
-    validate_resources(plan, _parameters() | {'auxiliary_factory': factory})
+    params = _parameters() | {'auxiliary_factory': factory} | (extra or {})
+    validate_resources(plan, params)
     manifest = clone_manifest(plan.manifest)
-    kwargs = manifest.resolve_model_kwargs(_parameters() | {'auxiliary_factory': factory})
+    kwargs = manifest.resolve_model_kwargs(params)
     result = manifest.architecture_function(recorded_source().head(24), **kwargs)
     return result['caller_mean'].to_list(), os.getpid()
 
@@ -1056,6 +1106,22 @@ def _assert_factory_resources(plan, params):
             actual, pid = pool.submit(_factory_probe, frozen, factory).result(timeout=30)
             expected, _ = _factory_probe(frozen, factory)
             assert actual == expected and pid != os.getpid()
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 4})
+            captured_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})
+        before = digest(captured_function)
+        validate_domain(captured_function, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [_auxiliary_factory]}, None)
+        from tests.test_parallel_rounds import recorded_source
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, captured_function, _auxiliary_factory).result(timeout=30)
+            expected, _ = _factory_probe(captured_function, _auxiliary_factory)
+            assert actual == expected == _caller_feature(recorded_source().head(24), 4)['caller_mean'].to_list() and pid != os.getpid()
+        assert digest(captured_function) == before and _auxiliary_factory.__kwdefaults__ == {'window': 3}
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 0})
+            invalid_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: positive integer window required'):
+            validate_domain(invalid_function, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [_auxiliary_factory]}, None)
         factory = DefaultRollingFactory()
         declare_parallel(factory, ParallelRoundContract(_caller_validator, ('window',)))
         frozen_factory = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
@@ -1089,6 +1155,17 @@ def _assert_factory_resources(plan, params):
         with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: fixed integer seed required'):
             validate_domain(freeze_manifest(manifest, None, {'auxiliary_factory': [AllocatedRolling]}),
                             {key: [value] for key, value in params.items()} | {'auxiliary_factory': [AllocatedRolling]}, None)
+        declare_parallel(DualSeedRolling, ParallelRoundContract(seeded_stage, ('seed',)))
+        dual = freeze_manifest(manifest, None, {'auxiliary_factory': [DualSeedRolling]})
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):
+            validate_resources(dual, params | {'auxiliary_factory': DualSeedRolling})
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):
+            validate_domain(dual, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [DualSeedRolling]}, None)
+        safe = params | {'auxiliary_factory': DualSeedRolling, 'auxiliary_params': {'seed': 42}}
+        validate_domain(dual, {key: [value] for key, value in safe.items()}, None)
+        actual, pid = pool.submit(_factory_probe, dual, DualSeedRolling, {'auxiliary_params': {'seed': 42}}).result(timeout=30)
+        expected, _ = _factory_probe(dual, DualSeedRolling, {'auxiliary_params': {'seed': 42}})
+        assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(CallerRolling.__init__, '__defaults__', (0,))
             invalid_class = freeze_manifest(manifest, None, {'auxiliary_factory': [CallerRolling]})
