@@ -62,11 +62,11 @@ def restore_object(cls: type, state: ObjectState, result: object | None = None) 
         if is_mapping:
             result = dict[object, object].__new__(cast(type[dict[object, object]], cls)) if result is None else result
             dict[object, object].clear(cast(dict[object, object], result))
-            dict[object, object].update(result, cast(list[tuple[object, object]], native))
+            dict[object, object].update(cast(dict[object, object], result), cast(list[tuple[object, object]], native))
         elif is_sequence:
             result = list[object].__new__(cast(type[list[object]], cls)) if result is None else result
             list[object].clear(cast(list[object], result))
-            list[object].extend(result, cast(list[object], native))
+            list[object].extend(cast(list[object], result), cast(list[object], native))
         else:
             result = cast(object, object.__new__(cls)) if result is None else result
         if attributes:

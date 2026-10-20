@@ -14,6 +14,7 @@ from typing import cast
 
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state
+from limen.scalers.registry import SCALER_REGISTRY
 from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])

@@ -164,12 +164,12 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         cast(CellType, clone).cell_contents = _normalize(value.cell_contents, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     elif isinstance(value, dict) and not (is_component or isinstance(value, defaultdict)):
         mapped = {name: _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[object, object], value).items()}
-        clone = state_memo[key][1] if key in state_memo else {}
+        clone = state_memo[key][1] if key in state_memo else dict[object, object]()
         cast(dict[object, object], clone).clear()
         cast(dict[object, object], clone).update(mapped)
     elif isinstance(value, (list, tuple)) and not is_component:
         items = [_normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for item in cast(list[object] | tuple[object, ...], value)]
-        clone = tuple(items) if isinstance(value, tuple) else state_memo[key][1] if key in state_memo else []
+        clone = tuple(items) if isinstance(value, tuple) else state_memo[key][1] if key in state_memo else list[object]()
         if isinstance(clone, list):
             cast(list[object], clone)[:] = items
     else:
@@ -189,7 +189,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
         elif not inspect.isfunction(value):
-            owner = value.__self__ if inspect.ismethod(value) else value
+            owner = cast(object, value.__self__ if inspect.ismethod(value) else value)
             restored = clone.__self__ if inspect.ismethod(clone) else clone
             if not isinstance(owner, type):
                 _ = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
