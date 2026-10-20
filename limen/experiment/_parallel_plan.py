@@ -183,7 +183,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         clone = state_memo[key][1] if key in state_memo else CellType(None)
         cast(CellType, clone).cell_contents = _normalize(value.cell_contents, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     elif isinstance(value, dict) and not (is_component or isinstance(value, defaultdict)):
-        mapped = {name: _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[object, object], value).items()}
+        mapped = {_normalize(name, active, snapshot=snapshot, memo=memo, state_memo=state_memo): _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[object, object], value).items()}
         clone = state_memo[key][1] if key in state_memo else dict[object, object]()
         cast(dict[object, object], clone).clear()
         cast(dict[object, object], clone).update(mapped)

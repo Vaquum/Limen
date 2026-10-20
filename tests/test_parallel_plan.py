@@ -257,6 +257,17 @@ class AliasedRolling:
 
 
 @dataclass
+class DictionaryAliasRolling:
+    steps: dict[InheritedCallable, InheritedCallable]
+
+    def __call__(self, data):
+        owner = next(iter(self.steps))
+        assert owner is self.steps[owner]
+        self.steps[owner].window += 1
+        return owner.transform(data)
+
+
+@dataclass
 class KeyedRolling:
     weights: dict[int, list[int]]
 
@@ -887,7 +898,8 @@ def test_frozen_manifest_round_plan() -> None:
         from tests.test_parallel_rounds import recorded_source
         expected_values = _caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()
         shared = [2]
-        for component, window in ((FunctionRolling(_mutable_feature), 2), (FunctionRolling(ClosureRolling()), 3), (AliasedRolling(shared, shared), 3), (KeyedRolling({1: shared, 0: shared}), 3), (DefaultMappingRolling(defaultdict(int)), 3)):
+        key_owner = InheritedCallable(2)
+        for component, window in ((FunctionRolling(_mutable_feature), 2), (FunctionRolling(ClosureRolling()), 3), (AliasedRolling(shared, shared), 3), (DictionaryAliasRolling({key_owner: key_owner}), 3), (KeyedRolling({1: shared, 0: shared}), 3), (DefaultMappingRolling(defaultdict(int)), 3)):
             declare_parallel(component, ParallelRoundContract(deterministic_stage))
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_mutable_feature, '__defaults__', ([2],))
@@ -895,6 +907,7 @@ def test_frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _repeated_carried_probe(frozen, _parameters())
             assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() and pid != os.getpid()
+        assert key_owner.window == 2
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_mutable_feature, '__defaults__', ([2],))
             first, second = FunctionRolling(_mutable_feature), FunctionRolling(_mutable_feature)
