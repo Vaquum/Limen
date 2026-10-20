@@ -180,8 +180,11 @@ test('reference lookup uses API names while the page keeps its narrative title',
   await expect(trainer).toHaveAttribute('href','/limen/reference/trainer/');
   await trainer.click();
   await expect(page.getByRole('heading',{level:1})).toHaveText('Carry selected behavior into inference');
-  await expect(page.locator('.chapter-nav').getByRole('link',{name:'Log',exact:true})).toHaveAttribute('href','/limen/reference/log/');
-  await expect(page.locator('.chapter-nav').getByRole('link',{name:'Trainer and Sensor',exact:true})).toHaveAttribute('aria-current','page');
+  const phone=test.info().project.name==='phone';
+  if(phone)await page.locator('.mobile-nav summary').click();
+  const navigation=page.locator(phone?'.mobile-nav':'.chapter-nav');
+  await expect(navigation.getByRole('link',{name:'Log',exact:true})).toHaveAttribute('href','/limen/reference/log/');
+  await expect(navigation.getByRole('link',{name:'Trainer and Sensor',exact:true})).toHaveAttribute('aria-current','page');
 });
 
 test('color preferences preserve the fixed composition',async({page})=>{
