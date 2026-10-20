@@ -1,0 +1,20 @@
+{
+  "interface": "python",
+  "scenario": "selection",
+  "rounds": 4,
+  "selected": [
+    {
+      "window": 4,
+      "alpha": 0.1
+    },
+    {
+      "window": 12,
+      "alpha": 0.1
+    }
+  ],
+  "retained_models": 4,
+  "inference_rows": 480,
+  "last_prediction": 0.0003680179954790141,
+  "fitting_cutoff": "2025-01-11T00:00:00+00:00",
+  "selection_cutoff": "2025-01-16T00:00:00+00:00"
+}

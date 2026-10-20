@@ -70,3 +70,7 @@ venv-codex
 # TabPFN local test-run model downloads
 *.ckpt
 .*.ckpt.lock
+
+# Documentation execution and candidate reader output
+.docs-evidence/
+docs-site/reader-build/

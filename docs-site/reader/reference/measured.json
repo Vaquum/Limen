@@ -1,0 +1,21 @@
+{
+  "display": {
+    "color": "rgb(247, 246, 242)",
+    "fontFamily": "\"Archivo Variable\", \"IBM Plex Sans\", sans-serif",
+    "fontSize": "34px",
+    "fontStretch": "125%",
+    "fontWeight": "200",
+    "letterSpacing": "1.36px",
+    "lineHeight": "32.3px"
+  },
+  "prose": {
+    "color": "rgb(247, 246, 242)",
+    "fontFamily": "\"Archivo Variable\", \"IBM Plex Sans\", sans-serif",
+    "fontSize": "20px",
+    "fontStretch": "100%",
+    "fontWeight": "300",
+    "letterSpacing": "normal",
+    "lineHeight": "30px"
+  },
+  "tokens": {}
+}

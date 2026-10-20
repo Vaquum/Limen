@@ -12,6 +12,7 @@ from sklearn.linear_model import Ridge
 
 from limen.backtest.backtest_snapshot import backtest_snapshot
 from limen.cli.commands.run import run_experiment
+from limen.cohort import Cohort
 from limen.data import HistoricalData
 from limen.experiment.manifest_core import DataSourceResolver
 from limen.experiment import MLManifest
@@ -173,9 +174,9 @@ def test_ridge_yaml_experiment_reconstructs(tmp_path, monkeypatch, market_bars):
         'test_start': '2026-01-31', 'test_end': '2026-02-06',
     }
     config['sfd']['params'] = {key: [values[0]] for key, values in ridge_sfd.params().items()}
-    config['sfd']['params']['alpha'] = [0.1, 1.0]
+    config['sfd']['params']['alpha'] = [0.1, 1.0, 1_000_000.0]
     experiment_dir = tmp_path / 'experiment'
-    config['uel'].update(n_permutations=2, output_path=str(experiment_dir))
+    config['uel'].update(n_permutations=3, output_path=str(experiment_dir))
     yaml_path = tmp_path / 'ridge.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
@@ -183,19 +184,69 @@ def test_ridge_yaml_experiment_reconstructs(tmp_path, monkeypatch, market_bars):
     monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_data_source))
     assert run_experiment(yaml_path, progress_bar=False)
     entries = [json.loads(line) for line in _storage.text(_storage.round_path(experiment_dir)).splitlines()]
-    assert len(entries) == 2
+    assert len(entries) == 3
     log = pl.read_csv(experiment_dir / 'results.csv')
-    assert log.height == 2
+    assert log.height == 3
     assert 'mae' in log.columns
     assert log['mae'].is_not_null().all()
     assert np.isfinite(log['mae'].to_numpy()).all()
 
     ids = [str(entry['round_id']) for entry in entries]
-    sensors = Trainer(experiment_dir, data=market_bars).train(ids)
-    assert len(sensors) == 2
+    sensors = sorted(Trainer(experiment_dir, data=market_bars).train(ids), key=lambda s: s.round_params['alpha'])
+    assert [sensor.round_params['alpha'] for sensor in sensors] == [0.1, 1.0, 1_000_000.0]
+    assert all(sensor.round_params['fit_intercept'] is True for sensor in sensors)
     for sensor in sensors:
         assert isinstance(sensor._model, RidgeRegressor)
         prediction = sensor.predict(market_bars)
         assert prediction.reason is None
         assert np.isfinite(prediction.prediction)
         assert prediction.probability is None
+
+    member_batches = [sensor.predict_all(market_bars) for sensor in sensors]
+    datetimes = [bar.datetime for bar in member_batches[0]]
+    rows = [i for i, bar in enumerate(member_batches[0]) if bar.reason is None]
+    assert rows
+    assert all(datetimes[i] is not None for i in rows)
+    for batch in member_batches:
+        assert len(batch) == market_bars.height
+        assert [bar.datetime for bar in batch] == datetimes
+        assert [i for i, bar in enumerate(batch) if bar.reason is None] == rows
+        assert all(bar.probability is None for bar in batch)
+
+    predictions = np.array([[batch[i].prediction for i in rows] for batch in member_batches], dtype=float)
+    assert np.isfinite(predictions).all()
+    votes = predictions > 0
+    down_rows = [rows[i] for i in np.flatnonzero(predictions[2] < 0)]
+    tie_rows = [rows[i] for i in np.flatnonzero(votes[0] != votes[2])]
+    assert votes[2].any()
+    assert down_rows
+    assert tie_rows
+
+    for member_indices in ([2], [0, 2], [0, 1, 2]):
+        members = [sensors[i] for i in member_indices]
+        if len(members) == 3:
+            cohort = Cohort(rounds=[(experiment_dir, sensor.permutation_id) for sensor in members])
+        else:
+            cohort = Cohort(experiment_log_path=str(experiment_dir),
+                            permutation_ids=[sensor.permutation_id for sensor in members])
+        cohort.set_members(members)
+        assert cohort.architecture_id == 'limen.sfd.reference_architecture.ridge_regressor.ridge_regressor'
+        assert cohort._fallback_vote_threshold() == 0.0
+        assert cohort.aggregation_mode == 'majority_vote'
+        assert cohort.supports_probabilities is False
+
+        batch = cohort.predict_all(market_bars)
+        assert len(batch) == market_bars.height
+        assert [bar.datetime for bar in batch] == datetimes
+        assert [i for i, bar in enumerate(batch) if bar.reason is None] == rows
+        assert all(bar.probability is None for bar in batch)
+        expected = (votes[member_indices].sum(axis=0) > len(members) / 2).astype(int)
+        np.testing.assert_array_equal([batch[i].prediction for i in rows], expected)
+        if len(members) == 1:
+            assert all(batch[i].prediction == 0 for i in down_rows)
+        elif len(members) == 2:
+            assert all(batch[i].prediction == 0 for i in tie_rows)
+
+        for row in {len(batch) - 1, down_rows[0], tie_rows[0]}:
+            prefix = market_bars.head(row + 1)
+            assert cohort.predict(prefix) == cohort.predict_all(prefix)[-1] == batch[row]

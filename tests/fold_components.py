@@ -1,6 +1,7 @@
 import copy
 from dataclasses import dataclass
 import json
+import os
 from pathlib import Path
 import shutil
 import time
@@ -151,7 +152,7 @@ def fold_campaigns(tmp_path_factory, caller_components):
         result[kind] = Campaign(destination, bars, copy.deepcopy(reference), metadata, record, sensor, selected, {'research': research_elapsed, 'promotion': promotion_elapsed, 'total': time.perf_counter() - started}, original)
     report = json.dumps({key: item.elapsed for key, item in result.items()}, indent=2)
     (root / 'timings.json').write_text(report)
-    profile = ROOT / 'build/fold-campaign-profile.json'
+    profile = ROOT / f'build/fold-campaign-profile-{os.getpid()}.json'
     profile.parent.mkdir(exist_ok=True)
     profile.write_text(report)
     return result
