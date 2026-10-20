@@ -61,6 +61,17 @@ def _mutable_feature(data, windows=None):
 _mutable_feature.__defaults__ = ([2],)
 
 
+def _configured_feature(window):
+    def feature(data):
+        return _caller_feature(data, window)
+    feature.__qualname__ = '_closed_feature'
+    return feature
+
+
+_closed_feature = _configured_feature(2)
+
+
+
 def _caller_validator(params):
     if type(params.get('window')) is not int or params['window'] < 1:
         raise ValueError('positive integer window required')
@@ -280,8 +291,9 @@ def _carried_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     data = recorded_source().head(24).select('close')
     from limen.experiment._parallel_plan import clone_manifest
-    entry = clone_manifest(plan.manifest).feature_transforms[-1]
-    return entry.func(data, **entry.params)['caller_mean'].to_list(), os.getpid()
+    for entry in clone_manifest(plan.manifest).feature_transforms:
+        data = entry.func(data, **entry.params)
+    return data['caller_mean'].to_list(), os.getpid()
 
 
 def _repeated_carried_probe(plan, params):
@@ -424,10 +436,20 @@ def test_frozen_manifest_round_plan() -> None:
         declare_parallel(_mutable_feature, ParallelRoundContract(deterministic_stage))
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_mutable_feature, '__defaults__', ([2],))
-            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mutable_feature), None)
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mutable_feature).add_feature(_mutable_feature), None)
             actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _repeated_carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
+        declare_parallel(_closed_feature, ParallelRoundContract(deterministic_stage))
+        frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_closed_feature), None)
+        before = digest(frozen)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_closed_feature.__closure__[0], 'cell_contents', 3)
+            changed = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_closed_feature), None)
+            assert changed.pipeline_digest != frozen.pipeline_digest and changed.resource_digest != frozen.resource_digest
+            actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+            expected, _ = _repeated_carried_probe(frozen, _parameters())
+            assert actual == expected and pid != os.getpid() and digest(frozen) == before
         component = CallerRolling(3)
         declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
         vars(component)['cached_result'] = []

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import partial
 from inspect import ismethod, signature
-from types import MemberDescriptorType
+from types import FunctionType, MemberDescriptorType
 from typing import cast
 
 ObjectState = tuple[dict[str, object], list[tuple[type, str, object]], tuple[object, ...] | None, list[object] | None]
@@ -78,3 +78,9 @@ def restore_object(cls: type, state: ObjectState) -> object:
 def call_implementation(value: object) -> object:
     implementation = type(value).__call__ if callable(value) else None
     return None if implementation is vars(partial)['__call__'] else implementation
+
+
+def mutable_function(function: FunctionType) -> bool:
+    def mutable(value: object) -> bool:
+        return isinstance(value, (dict, list)) or isinstance(value, tuple) and any(mutable(item) for item in cast(tuple[object, ...], value))
+    return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())

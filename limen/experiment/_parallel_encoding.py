@@ -13,13 +13,13 @@ from functools import partial
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from types import FunctionType, MethodType
+from types import CellType, FunctionType, MethodType
 from typing import cast
 
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, object_state, restore_object
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
 
@@ -32,6 +32,8 @@ def reference(value: object) -> list[object]:
     for part in name.split('.'):
         resolved = getattr(resolved, part)
     resolved = resolved.__func__ if inspect.ismethod(resolved) else resolved
+    while inspect.isfunction(resolved) and inspect.isfunction(value) and resolved.__code__ is not value.__code__ and hasattr(resolved, '__wrapped__'):
+        name, resolved = name + '.__wrapped__', getattr(resolved, '__wrapped__')
     if resolved is not value and not (inspect.isfunction(value) and inspect.isfunction(resolved)
                                      and value.__code__ is resolved.__code__ and value.__globals__ is resolved.__globals__):
         raise ValueError('Parallel component differs from its importable identity')
@@ -77,8 +79,7 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
             return ['state_map', [[encode(key, active, ordered=True), encode(item, active, ordered=True)] for key, item in mapping.items()]]
         if all(isinstance(key, str) for key in mapping):
             return ['map', [[key, encode(mapping[key], active)] for key in sorted(cast(Mapping[str, object], mapping))]]
-        pairs = [[encode(key, active), encode(item, active)] for key, item in mapping.items()]
-        return ['keyed_map', sorted(pairs, key=lambda pair: json.dumps(pair[0], separators=(',', ':'))) ]
+        return ['keyed_map', sorted([[encode(key, active), encode(item, active)] for key, item in mapping.items()], key=lambda pair: json.dumps(pair[0], separators=(',', ':'))) ]
     if isinstance(value, (list, tuple)):
         return ['tuple' if isinstance(value, tuple) else 'list',
                 [encode(item, active, ordered=ordered) for item in cast(list[object] | tuple[object, ...], value)]]
@@ -93,7 +94,7 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
             owner[-1] = ['null']  # The owner supplies state; the separately captured method is invoked.
         return ['method', owner, value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value):
-        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True)]
+        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(tuple(cell.cell_contents for cell in value.__closure__) if value.__closure__ else None, active, ordered=True)]
     if isinstance(value, type):
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, (type, partial)):
@@ -109,8 +110,7 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
 
 def _import(node: object) -> object:
     identity, name = cast(list[object], node)
-    module_name = cast(list[str], identity)[0]
-    if module_identity(module_name) != identity:
+    if module_identity(module_name := cast(list[str], identity)[0]) != identity:
         raise ValueError('Parallel imported source or dependency identity changed')
     value: object = import_module(module_name)
     for part in cast(str, name).split('.'):
@@ -120,7 +120,7 @@ def _import(node: object) -> object:
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
           'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
-          'function': 4, 'method': 4, 'dataclass': 4, 'instance': 4}
+          'function': 5, 'method': 4, 'dataclass': 4, 'instance': 4}
 
 
 def decode(node: object, *, ordered: bool = False, isolate_functions: bool = False) -> object:
@@ -159,8 +159,8 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         if not inspect.isfunction(source):
             raise ValueError('Parallel function implementation changed')
         function = source
-        if isolate_functions or encode(source) != parts:
-            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), source.__closure__)
+        if isolate_functions or mutable_function(source) or encode(source) != parts:
+            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), tuple(CellType(item) for item in cast(tuple[object, ...], decode(parts[4], ordered=True, isolate_functions=isolate_functions))) if parts[4] != ['null'] else None)
             function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True, isolate_functions=isolate_functions))
             function.__module__, function.__qualname__ = source.__module__, source.__qualname__
             function.__annotations__ = source.__annotations__.copy()
