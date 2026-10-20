@@ -134,9 +134,10 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         return structure(item)
 
     def structure(item: object) -> object:
-        kind = (type(item).__module__, type(item).__qualname__)
-        if type(item) in (dict, list, tuple):
-            parts = tuple(part for pair in cast(dict[object, object], item).items() for part in pair) if type(cast(object, item)) is dict else tuple(cast(list[object] | tuple[object, ...], item))
+        native_type = type(item)
+        kind = (native_type.__module__, native_type.__qualname__)
+        if native_type in (dict, list, tuple):
+            parts = tuple(part for pair in cast(dict[object, object], item).items() for part in pair) if native_type is dict else tuple(cast(list[object] | tuple[object, ...], item))
             if all(part is None or type(part) in (str, bool, bytes) or (type(part) is int and part is _CANONICAL_INTS.get(part)) for part in parts):
                 return (kind, 'literal', parts)
         if type(item) is dict:
