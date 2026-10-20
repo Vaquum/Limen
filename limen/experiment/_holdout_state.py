@@ -9,7 +9,7 @@ from io import IOBase
 import logging
 import marshal
 import pickle
-from types import CodeType, GetSetDescriptorType, ModuleType
+from types import CodeType, GenericAlias, GetSetDescriptorType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
@@ -52,11 +52,13 @@ def children(value: object) -> tuple[object, ...]:
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (npt.NDArray[np.generic].tolist(value), *_attributes(cast(object, value)).values())
-    if isinstance(value, (partial, property, staticmethod, classmethod)):
+    if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)):
         parts: tuple[object, ...]
         if isinstance(value, (staticmethod, classmethod)):
             descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
             parts = (descriptor.__func__,)
+        elif isinstance(value, GenericAlias):
+            parts = tuple(vars(GenericAlias)[name].__get__(value, type(value)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias))
         elif isinstance(value, property):
             parts = (value.fget, value.fset, value.fdel)
         else:
@@ -129,6 +131,9 @@ def fitted_witness(value: object) -> bytes:
         elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
+        elif isinstance(item, GenericAlias):
+            metadata = {name: vars(GenericAlias)[name].__get__(item, type(item)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
+            result = (kind, 'generic-alias', node(metadata), node(_attributes(cast(object, item))))
         elif isinstance(item, property):
             result = (kind, 'property', node(item.fget), node(item.fset), node(item.fdel), node(_attributes(cast(object, item))))
         elif isinstance(item, partial):
