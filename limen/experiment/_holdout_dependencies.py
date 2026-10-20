@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict, deque
-from collections.abc import Callable, Collection, Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from functools import lru_cache, partial
 from hashlib import sha256
 import inspect
@@ -37,8 +37,7 @@ def code_digest(code: CodeType) -> str:
 
 @lru_cache(maxsize=2048)
 def _instructions(code: CodeType) -> tuple[dis.Instruction, ...]:
-    nested = [part for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS]
-    return (*dis.get_instructions(code), *(instruction for part in nested for instruction in _instructions(part)))
+    return (*dis.get_instructions(code), *(instruction for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS for instruction in _instructions(part)))
 
 
 def _booster(value: object) -> bool:
@@ -148,7 +147,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
-    witness: Callable[[int], bytes] = lambda identity: fitted_witness(seen[identity])
+    def witness(identity: int) -> bytes:
+        return fitted_witness(seen[identity])
     cached_witness = lru_cache(maxsize=None)(witness)
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     objects: list[object] = []
