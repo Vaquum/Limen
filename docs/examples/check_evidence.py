@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 from copy import deepcopy
+from functools import lru_cache
 import hashlib
 import json
 import math
@@ -23,6 +24,41 @@ def digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
+@lru_cache(maxsize=512)
+def package_reference(source: str, name: str) -> str:
+    kind, symbol = name.split(':', 1)
+    parts = symbol.split('.')
+    if any(not part.isidentifier() or part.startswith('_') and part not in ('__init__', '__call__') for part in parts):
+        raise ValueError('Invalid reference symbol: ' + symbol)
+    scope = ast.parse(source).body
+    selected = None
+    for index, part in enumerate(parts):
+        matches: list[ast.stmt] = [node for node in scope if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part]
+        if kind == 'definition' and len(parts) == 1:
+            matches += [node for node in scope if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == part for target in node.targets)]
+            matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
+        if len(matches) != 1:
+            raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
+        selected = matches[0]
+        if index < len(parts) - 1:
+            if not isinstance(selected, ast.ClassDef):
+                raise ValueError('Reference members require a class: ' + symbol)
+            scope = selected.body
+    if selected is None:
+        raise ValueError('Missing reference symbol: ' + symbol)
+    selected = deepcopy(selected)
+    if kind == 'signature':
+        if isinstance(selected, ast.ClassDef):
+            selected.body = [node for node in selected.body if isinstance(node, ast.AnnAssign)] or [ast.Expr(value=ast.Constant(value=Ellipsis))]
+        elif isinstance(selected, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            selected.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
+        else:
+            raise ValueError('A signature requires a function or class')
+    elif not isinstance(selected, (ast.Assign, ast.AnnAssign)):
+        raise ValueError('A definition requires a module constant')
+    return ast.unparse(ast.fix_missing_locations(selected)) + '\n'
+
+
 def region(path: Path, name: str) -> str:
     if name == '__file__':
         return path.read_text()
@@ -42,37 +78,9 @@ def region(path: Path, name: str) -> str:
             raise ValueError('Package layout has no tracked members')
         return directory.name + '/\n' + ''.join(('└── ' if index == len(ordered) - 1 else '├── ') + member + '\n' for index, member in enumerate(ordered))
     if name.startswith(('signature:', 'definition:')):
-        kind, symbol = name.split(':', 1)
-        parts = symbol.split('.')
-        if path.suffix != '.py' or any(not part.isidentifier() or part.startswith('_') and part not in ('__init__', '__call__') for part in parts):
-            raise ValueError('Invalid reference symbol: ' + symbol)
-        scope = ast.parse(path.read_text()).body
-        selected = None
-        for index, part in enumerate(parts):
-            matches: list[ast.stmt] = [node for node in scope if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part]
-            if kind == 'definition' and len(parts) == 1:
-                matches += [node for node in scope if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == part for target in node.targets)]
-                matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
-            if len(matches) != 1:
-                raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
-            selected = matches[0]
-            if index < len(parts) - 1:
-                if not isinstance(selected, ast.ClassDef):
-                    raise ValueError('Reference members require a class: ' + symbol)
-                scope = selected.body
-        if selected is None:
-            raise ValueError('Missing reference symbol: ' + symbol)
-        selected = deepcopy(selected)
-        if kind == 'signature':
-            if isinstance(selected, ast.ClassDef):
-                selected.body = [node for node in selected.body if isinstance(node, ast.AnnAssign)] or [ast.Expr(value=ast.Constant(value=Ellipsis))]
-            elif isinstance(selected, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                selected.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
-            else:
-                raise ValueError('A signature requires a function or class')
-        elif not isinstance(selected, (ast.Assign, ast.AnnAssign)):
-            raise ValueError('A definition requires a module constant')
-        return ast.unparse(ast.fix_missing_locations(selected)) + '\n'
+        if path.suffix != '.py':
+            raise ValueError('Invalid reference symbol: ' + name.split(':', 1)[1])
+        return package_reference(path.read_text(), name)
     if path.suffix == '.json':
         command = json.loads(path.read_text())[name]
         if not isinstance(command, str) or '\n' in command or not command.strip():
@@ -173,11 +181,8 @@ def all_reference_bindings(root: Path) -> list[dict[str, str]]:
     return found
 
 
-def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] = ()) -> None:
-    text = document.read_text()
-    bindings(root, document)
-    output_bindings(root, document)
-    reference_bindings(root, document)
+@lru_cache(maxsize=256)
+def markdown_structure(site: Path, text: str) -> tuple[tuple[int, ...], tuple[str, ...]]:
     parser = '''import MarkdownIt from 'markdown-it';
 let text = ''; for await (const chunk of process.stdin) text += chunk;
 const tokens = new MarkdownIt({html:true}).parse(text, {});
@@ -185,17 +190,26 @@ console.log(JSON.stringify({
   fences: tokens.filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0]),
   links: tokens.flatMap(token => token.children || []).filter(token => token.type === 'link_open').map(token => token.attrGet('href'))
 }));'''
-    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=root / 'docs-site',
+    parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=site,
                             input=text, text=True, capture_output=True, check=True)
+    record = json.loads(parsed.stdout)
+    return tuple(record['fences']), tuple(record['links'])
+
+
+def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] = ()) -> None:
+    text = document.read_text()
+    bindings(root, document)
+    output_bindings(root, document)
+    reference_bindings(root, document)
+    fence_lines, links = markdown_structure(root / 'docs-site', text)
     expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE, REFERENCE_FENCE)
                       for match in re.finditer(pattern, text, re.S))
-    parsed_document = json.loads(parsed.stdout)
-    if parsed_document['fences'] != expected:
+    if fence_lines != tuple(expected):
         raise ValueError('Unbound code fence or indented block in candidate documentation: ' + str(document))
     repository = json.loads((root / 'docs-site/reader/content.json').read_text())['product']['repository']
     source_prefix = repository + '/blob/main/'
     targets = []
-    for href in parsed_document['links']:
+    for href in links:
         if href.startswith(source_prefix):
             targets.append((root / unquote(urlsplit(href[len(source_prefix):]).path)).resolve())
         elif not urlsplit(href).scheme and not href.startswith(('/', '#')):

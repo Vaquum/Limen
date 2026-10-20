@@ -35,6 +35,19 @@ def test_changed_signature_or_reference_role_fails(tmp_path):
         reference_bindings(ROOT, document)
 
 
+def test_a_changed_package_file_cannot_reuse_its_previous_signature(tmp_path):
+    original = (ROOT / 'limen/indicators/roc.py').read_text()
+    source = tmp_path / 'roc.py'
+    source.write_text(original)
+    assert region(source, 'signature:roc') == ROC
+    changed = original.replace('period: int = 10', 'period: int = 20')
+    assert changed != original
+    source.write_text(changed)
+    assert region(source, 'signature:roc') == ROC.replace('period: int=10', 'period: int=20')
+    source.write_text(original)
+    assert region(source, 'signature:roc') == ROC
+
+
 def test_signature_marker_inside_unbound_code_cannot_certify_it(tmp_path):
     document = tmp_path / 'reference.md'
     document.write_text('~~~~markdown\n' + MARKER + '\n```python\n' + ROC + '```\n~~~~\n')
