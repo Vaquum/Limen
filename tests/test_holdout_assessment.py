@@ -1617,6 +1617,36 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             assert _report(class_handle, assessment_case)['rows_sha256']
             with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected_class]):
                 callback(selected_class._model.model.coef_.ravel())
+    for library_function in (LogisticRegression.predict_proba, LogisticRegression.fit):
+        @wraps(library_function)
+        def decorated_adjust(values):
+            return np.clip(values + _LATE_RULES['offset'], 0, 1)
+        decorated = copy.deepcopy(assessment_case[2][0][0])
+        decorated._model.__class__ = UsesReadonlyCallable
+        decorated._model.policy = decorated_adjust
+        decorated_handle = _freeze(decorated)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(decorated_handle, assessment_case)
+            assert loader.call_count == 0
+    threshold_selections = []
+    def bound_new(marker, cls, values):
+        threshold_selections.append(cls)
+        return np.max(values)
+    def variadic_new(marker, *args):
+        return bound_new(marker, *args)
+    class NewProvider:
+        def __call__(self, cls, values):
+            return bound_new(expected_offset, cls, values)
+    for factory in (partial(bound_new, expected_offset), partial(variadic_new, expected_offset), NewProvider()):
+        class BoundConstructor:
+            __new__ = factory
+        for callback in (BoundConstructor, partial(BoundConstructor)):
+            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+            _freeze(unsafe_class)
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                callback(unsafe_class._model.model.coef_.ravel())
+            assert threshold_selections == []
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

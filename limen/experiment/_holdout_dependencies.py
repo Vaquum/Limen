@@ -10,7 +10,7 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, ModuleType
+from types import CodeType, FunctionType, ModuleType
 from typing import cast
 
 import numpy as np
@@ -38,6 +38,12 @@ def entropy_call(value: object) -> bool:
 @lru_cache(maxsize=2048)
 def _instructions(code: CodeType) -> tuple[dis.Instruction, ...]:
     return (*dis.get_instructions(code), *(instruction for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS for instruction in _instructions(part)))
+
+
+def _function_module(value: FunctionType) -> str:
+    name = value.__globals__.get('__name__')
+    module = sys.modules.get(name) if isinstance(name, str) else None
+    return module.__name__ if module is not None and vars(module) is value.__globals__ else ''
 
 
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
@@ -69,7 +75,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
-        modules = (getattr(value, '__module__', None) or type(value).__module__, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
+        function = value.__func__ if inspect.ismethod(value) else value
+        origin = _function_module(function) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
+        modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
         if callable(value) and (entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules)):
             raise ValueError('Holdout inference has an unowned random dependency')
         if inspect.ismethod(value):
@@ -82,11 +90,12 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 objects.append(cast(object, value))
         elif inspect.isfunction(value):
             evidence.append(cached_witness(id(value)))
-            if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
+            function_module, function_name = _function_module(value), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
+            if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
             visit(vars(value))
-            if value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
+            if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
                 return
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
@@ -120,7 +129,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 elif instruction.opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME') and binding is not None:
                     references.setdefault(name, []).append(binding)
                     binding = None
-                if (name == 'fit_calibrator' and (value.__module__, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict'))) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
+                if (name == 'fit_calibrator' and (function_module, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict'))) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
                 for candidate in tuple(references.get(name, ())):
                     item = cast(object, candidate)

@@ -28,7 +28,7 @@ def _roots(sensor: Sensor) -> list[object]:
 
 @contextmanager
 def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | None = None) -> Iterator[None]:
-    forbidden: dict[FunctionType, list[tuple[object | None, bool]]] = {}
+    forbidden: dict[FunctionType, list[tuple[object | None, bool, int]]] = {}
     seen: set[int] = set()
     configs: list[object] = []
 
@@ -62,10 +62,11 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         class_target: type[object] | None = wrapped if isinstance(wrapped, type) else method if isinstance(method, type) else None
         for function in functions:
             owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
-            instance = False
+            instance, index = False, 0
             if class_target is not None and function not in calls and inspect.getattr_static(type(class_target), '__call__', None) is type.__call__:
-                owner, instance = class_target, constructor_entry(class_target)[1]
-            forbidden.setdefault(function, []).append((owner, instance))
+                entry = constructor_entry(class_target)
+                owner, instance, index = class_target, entry.instance, entry.index
+            forbidden.setdefault(function, []).append((owner, instance, index))
 
     def collect(value: object) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or isinstance(value, (pl.DataFrame, pl.Series)) or (type(value).__module__ == 'numpy' and type(value).__name__ == 'ndarray' and not object_array(value)):
@@ -113,7 +114,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             violation = 'Holdout inference consumed unowned randomness'
             raise ValueError(violation)
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
-        matched = event == 'call' and id(frame.f_code) in observed and any(_matches(observed[id(frame.f_code)][0], frame, owner, instance) for owner, instance in observed[id(frame.f_code)][1])
+        matched = event == 'call' and id(frame.f_code) in observed and any(_matches(observed[id(frame.f_code)][0], frame, owner, instance, index) for owner, instance, index in observed[id(frame.f_code)][1])
         if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = 'Holdout inference attempted fitting/calibration/threshold search'
             raise ValueError(violation)
