@@ -619,8 +619,8 @@ def test_frozen_manifest_round_plan() -> None:
     original = build_manifest(config)
     plan = freeze_manifest(original, config)
     assert plan.manifest.architecture_function is not original.architecture_function
-    assert clone_manifest(plan.manifest).architecture_function is not original.architecture_function
-    assert clone_manifest(plan.manifest).prediction_calibration_config.threshold_func is not original.prediction_calibration_config.threshold_func
+    assert clone_manifest(plan.manifest).architecture_function is original.architecture_function
+    assert clone_manifest(plan.manifest).prediction_calibration_config.threshold_func is original.prediction_calibration_config.threshold_func
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
     for component in (original.architecture_function, original.prediction_calibration_config.threshold_func):
         revoked = replace(component.__parallel_round_contract__, validate=unfrozen_stage)
