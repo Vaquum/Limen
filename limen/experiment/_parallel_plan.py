@@ -113,12 +113,18 @@ def _contract(component: object, path: str) -> ParallelRoundContract:
     return contract
 
 
-def components(manifest: Manifest) -> list[tuple[str, object]]:
+def components(manifest: Manifest, factory_options: Mapping[str, list[object]] | None = None) -> list[tuple[str, object]]:
     result: list[tuple[str, object]] = [('architecture', manifest.architecture_function)]
     if manifest.architecture_function is not None:
-        for name, parameter in inspect.signature(manifest.architecture_function).parameters.items():
-            if name.endswith('_factory') and callable(parameter.default):
-                result.append((f'architecture.{name}', parameter.default))
+        parameters = inspect.signature(manifest.architecture_function).parameters
+        options = dict(factory_options or {})
+        names = dict.fromkeys([*parameters, *(options if any(value.kind == inspect.Parameter.VAR_KEYWORD for value in parameters.values()) else ())])
+        for name in names:
+            parameter = parameters.get(name)
+            default = inspect.Parameter.empty if parameter is None else parameter.default
+            if name.endswith('_factory'):
+                result.extend((f'architecture.{name}', component) for component in options.get(name, [default])
+                              if component is not inspect.Parameter.empty and callable(component))
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         if step is not None:
@@ -155,14 +161,15 @@ def components(manifest: Manifest) -> list[tuple[str, object]]:
     return result
 
 
-def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | None) -> FrozenManifestPlan:
+def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | None,
+                    factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
     from limen.yaml.compiler import build_manifest
 
     frozen = cast(Manifest, _normalize(manifest))
     if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
-                   for path, component in components(frozen))
+                   for path, component in components(frozen, factory_options))
     for stage in stages:
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):

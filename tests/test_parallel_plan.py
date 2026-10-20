@@ -86,6 +86,14 @@ def _factory_architecture(data, auxiliary_factory=_auxiliary_factory, auxiliary_
     return auxiliary_factory(**(auxiliary_params or {}))(data)
 
 
+def _optional_factory_architecture(data, auxiliary_factory=None, auxiliary_params=None):
+    return data if auxiliary_factory is None else auxiliary_factory(**(auxiliary_params or {}))(data)
+
+
+def _other_auxiliary_factory(*, window=3):
+    return CallerRolling(window)
+
+
 class CallerTarget(RandomBinaryTarget):
     '''Importable caller target using the native seeded noise benchmark.'''
 
@@ -319,6 +327,28 @@ def _assert_factory_resources(plan, params):
     with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: positive integer window required'):
         validate_domain(frozen, {key: [value] for key, value in params.items()} |
                         {'auxiliary_params': [{'window': 2}, {'window': 0}]}, None)
+    declare_parallel(_optional_factory_architecture, ParallelRoundContract(deterministic_stage, prediction_kind='binary'))
+    manifest = copy.deepcopy(plan.manifest).with_reference_architecture(_optional_factory_architecture)
+    candidate = params | {'auxiliary_factory': _auxiliary_factory}
+    options = {'auxiliary_factory': [_auxiliary_factory, _other_auxiliary_factory]}
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: missing frozen independence contract'):
+        validate_resources(freeze_manifest(manifest, None), candidate)
+    declare_parallel(_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: unfrozen external state'):
+        validate_resources(freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]}), candidate)
+    declare_parallel(_auxiliary_factory, ParallelRoundContract(_caller_validator, ('window',)))
+    declare_parallel(_other_auxiliary_factory, ParallelRoundContract(_caller_validator, ('window',)))
+    frozen = freeze_manifest(manifest, None, options)
+    validate_resources(frozen, candidate)
+    validate_resources(frozen, params | {'auxiliary_factory': _other_auxiliary_factory})
+    validate_domain(frozen, {key: [value] for key, value in params.items()} | options, None)
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: missing frozen independence contract'):
+        validate_resources(freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]}),
+                           params | {'auxiliary_factory': _other_auxiliary_factory})
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: positive integer window required'):
+        validate_domain(frozen, {key: [value] for key, value in params.items()} | options |
+                        {'auxiliary_params': [{'window': 2}, {'window': 0}]}, None)
+
 
 
 def test_effective_resources_and_output_evidence(tmp_path) -> None:

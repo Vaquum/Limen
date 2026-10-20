@@ -8,7 +8,7 @@ from string import Formatter
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
-from limen.experiment._parallel_encoding import encode
+from limen.experiment._parallel_encoding import digest, encode
 from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, configurations
 
 
@@ -63,16 +63,31 @@ def unfrozen_stage(_params: Mapping[str, object]) -> None:
 
 
 def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -> None:
-    configs = configurations(plan.manifest, params)
+    configs = _configurations(plan, params)
     for stage in plan.stages:
         _validate_stage(stage, configs)
+
+
+
+def _same_component(left: object, right: object) -> bool:
+    return left is right or digest(left) == digest(right)
+
+
+def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> dict[str, dict[str, object]]:
+    configs = configurations(plan.manifest, params)
+    for key, component in configs['architecture'].items():
+        if key.endswith('_factory') and callable(component):
+            path = f'architecture.{key}'
+            if not any(stage.path == path and _same_component(stage.component, component) for stage in plan.stages):
+                raise ValueError(f'Parallel stage {path}: missing frozen independence contract')
+    return configs
 
 
 def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]) -> None:
     if stage.path not in configs:
         return  # The native Manifest skips this conditional stage for this candidate.
-    if stage.path.startswith('architecture.') and configs['architecture'].get(stage.path.split('.', 1)[1]) is not stage.component:
-        raise ValueError(f'Parallel stage {stage.path}: frozen independence contract differs')
+    if stage.path.startswith('architecture.') and not _same_component(configs['architecture'].get(stage.path.split('.', 1)[1]), stage.component):
+        return  # A different frozen factory variant is selected for this candidate.
     config = configs[stage.path]
     for key in stage.contract.parameter_keys:
         if key not in config:
@@ -188,7 +203,7 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
                 raise ValueError('Parallel rounds require reconstructable declared sources')
             _static_source(source.params, effective)
     baseline = {key: values[0] for key, values in effective.items()}
-    baseline_configs = configurations(plan.manifest, baseline)
+    baseline_configs = _configurations(plan, baseline)
     for stage in plan.stages:
         keys = stage.contract.parameter_keys if stage.contract.validation_keys is None else stage.contract.validation_keys
         arguments, selectors = _bindings(plan.manifest, stage.path, effective)
@@ -199,4 +214,4 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
         projected = {key: values for key, values in effective.items() if key in dependencies}
         for index, values in enumerate(product(*projected.values())):
             candidate = baseline | dict(zip(projected, values, strict=True))
-            _validate_stage(stage, baseline_configs if index == 0 else configurations(plan.manifest, candidate))
+            _validate_stage(stage, baseline_configs if index == 0 else _configurations(plan, candidate))

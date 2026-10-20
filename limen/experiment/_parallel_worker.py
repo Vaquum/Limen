@@ -69,7 +69,7 @@ def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
     devices = effective.get('device_type', effective.get('device', ['cpu']))
     if any(value != 'cpu' for value in devices):
         raise ValueError('Parallel rounds require the CPU backend')
-    plan = freeze_manifest(manifest, yaml_reference)
+    plan = freeze_manifest(manifest, yaml_reference, effective)
     validate_domain(plan, domain, context)
     return plan
 
