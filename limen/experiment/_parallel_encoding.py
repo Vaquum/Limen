@@ -39,9 +39,9 @@ def reference(value: object) -> list[object]:
 _EMPTY_IDS: frozenset[int] = frozenset()
 
 
-def encode(value: object, active: frozenset[int] = _EMPTY_IDS) -> list[object]:
+def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool = False) -> list[object]:
     if callable(value):
-        return _encode_composite(value, active)
+        return _encode_composite(value, active, ordered=ordered)
     if value is None:
         node: list[object] = ['null']
     elif isinstance(value, str):
@@ -59,11 +59,11 @@ def encode(value: object, active: frozenset[int] = _EMPTY_IDS) -> list[object]:
     elif isinstance(value, Path):
         node = ['path', str(value)]
     else:
-        node = _encode_composite(value, active)
+        node = _encode_composite(value, active, ordered=ordered)
     return node
 
 
-def _encode_composite(value: object, active: frozenset[int]) -> list[object]:
+def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -> list[object]:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
@@ -71,13 +71,15 @@ def _encode_composite(value: object, active: frozenset[int]) -> list[object]:
         return _encode_component(value, active)
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
+        if ordered:
+            return ['state_map', [[encode(key, active, ordered=True), encode(item, active, ordered=True)] for key, item in mapping.items()]]
         if all(isinstance(key, str) for key in mapping):
             return ['map', [[key, encode(mapping[key], active)] for key in sorted(cast(Mapping[str, object], mapping))]]
         pairs = [[encode(key, active), encode(item, active)] for key, item in mapping.items()]
         return ['keyed_map', sorted(pairs, key=lambda pair: json.dumps(pair[0], separators=(',', ':'))) ]
     if isinstance(value, (list, tuple)):
         return ['tuple' if isinstance(value, tuple) else 'list',
-                [encode(item, active) for item in cast(list[object] | tuple[object, ...], value)]]
+                [encode(item, active, ordered=ordered) for item in cast(list[object] | tuple[object, ...], value)]]
     return _encode_component(value, active)
 
 
@@ -92,9 +94,9 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
         if set(component_state(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
-                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)], encode(call_implementation(value), active)]
+                [[field.name, encode(getattr(value, field.name), active, ordered=True)] for field in fields(value)], encode(call_implementation(value), active)]
     if callable(value):
-        return ['instance', reference(type(value)), encode(object_state(value), active), encode(call_implementation(value), active)]
+        return ['instance', reference(type(value)), encode(object_state(value), active, ordered=True), encode(call_implementation(value), active)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
 
 
@@ -110,11 +112,11 @@ def _import(node: object) -> object:
 
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
-          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'import': 2,
+          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
           'method': 4, 'dataclass': 4, 'instance': 4}
 
 
-def decode(node: object) -> object:
+def decode(node: object, *, ordered: bool = False) -> object:
     if not isinstance(node, list) or not node or not isinstance(node[0], str):
         raise ValueError('Invalid version1 parallel parameter encoding')
     parts = cast(list[object], node)
@@ -130,19 +132,19 @@ def decode(node: object) -> object:
     elif tag in ('date', 'datetime', 'path') and isinstance(value := parts[1], str):
         result = date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
     else:
-        result = _decode_composite(parts)
-    if encode(result) != parts:
+        result = _decode_composite(parts, ordered=ordered)
+    if encode(result, ordered=ordered) != parts:
         raise ValueError('Noncanonical parallel parameter encoding')
     return result
 
 
-def _decode_composite(parts: list[object]) -> object:
+def _decode_composite(parts: list[object], *, ordered: bool) -> object:
     tag, value = parts[:2]
     if tag in ('list', 'tuple') and isinstance(value, list):
-        items = [decode(item) for item in cast(list[object], value)]
+        items = [decode(item, ordered=ordered) for item in cast(list[object], value)]
         return tuple(items) if tag == 'tuple' else items
-    if tag in ('map', 'keyed_map') and isinstance(value, list):
-        return {cast(str, pair[0]) if tag == 'map' else decode(pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
+    if tag in ('map', 'keyed_map', 'state_map') and isinstance(value, list):
+        return {cast(str, pair[0]) if tag == 'map' else decode(pair[0], ordered=ordered): decode(pair[1], ordered=ordered) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
     if tag == 'method':
@@ -157,14 +159,14 @@ def _decode_instance(parts: list[object]) -> object:
     tag, value, state, implementation = parts
     if tag == 'dataclass':
         cls = cast(type, _import(value))
-        params = {cast(str, key): decode(item) for key, item in cast(list[list[object]], state)}
+        params = {cast(str, key): decode(item, ordered=True) for key, item in cast(list[list[object]], state)}
         if set(params) != {field.name for field in fields(cls)}:
             raise ValueError('Invalid parallel dataclass fields')
         instance = cast(object, object.__new__(cls))
         for field in fields(cls):
             object.__setattr__(instance, field.name, params[field.name])
     elif tag == 'instance':
-        instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state)))
+        instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state, ordered=True)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
     if encode(call_implementation(instance)) != implementation:

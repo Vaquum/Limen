@@ -115,6 +115,19 @@ class MappingRolling(Mapping[str, int]):
         return _caller_feature(data, window=self.window)
 
 
+class OrderedRolling:
+    def __init__(self, window):
+        self.window = window
+        self.steps = {'offset': 1, 'multiply': 2}
+
+    def __call__(self, data):
+        result = _caller_feature(data, self.window)
+        expression = pl.col('caller_mean')
+        for name, amount in self.steps.items():
+            expression = expression + amount if name == 'offset' else expression * amount
+        return result.with_columns(expression.alias('caller_mean'))
+
+
 class DictRolling(dict):
     def __call__(self, data):
         return _caller_feature(data, window=self['window'])
@@ -306,7 +319,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             if isinstance(component, (DictRolling, ListRolling)):
@@ -320,6 +333,12 @@ def test_frozen_manifest_round_plan() -> None:
                 assert type(restored) is MappingRolling and restored.window == 3 and callable(restored)
                 assert dict(restored) == {'window': 3}
                 validate_resources(frozen, _parameters())
+            if isinstance(component, OrderedRolling):
+                restored = decode(encode(component))
+                assert list(restored.steps) == ['offset', 'multiply']
+                restored.steps = dict(reversed(list(restored.steps.items())))
+                reordered = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(restored), None)
+                assert reordered.pipeline_digest != frozen.pipeline_digest and reordered.resource_digest != frozen.resource_digest
             if isinstance(component, (DictRolling, ListRolling)):
                 restored = decode(encode(component))
                 assert type(restored) is type(component) and restored == component and callable(restored)
