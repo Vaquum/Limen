@@ -29,6 +29,28 @@ def files(directory):
             for path in directory.rglob('*') if path.is_file()}
 
 
+def test_execution_proof_rejects_early_and_substituted_recorded_fills(python_scenarios, tmp_path):
+    from scenario_oracles import execution_clocks, verify
+    result = python_scenarios.execution(FIXTURES, tmp_path)
+    verify('python', 'execution', result, tmp_path, FIXTURES)
+    raw = pl.read_parquet(FIXTURES / 'spot_1h_20240101_20241231.parquet', n_rows=168)
+    before = files(tmp_path)
+    for funded in (False, True):
+        intents = pl.read_parquet(tmp_path / ('funded-intents.parquet' if funded else 'intents.parquet')).to_dicts()
+        changed = deepcopy(result)
+        case = changed['funded'] if funded else changed
+        fill = case['fills'][0]
+        intent = next(row for row in intents if row['intent_id'] == fill['intent_id'])
+        row = next(row for row in case['context']['observations'] if row['start_ns'] == intent['requested_at_ns'])
+        assert fill['time_ns'] == intent['requested_at_ns'] + 3_600_000_000_000
+        fill.update(time_ns=row['start_ns'], evidence_row_id=row['row_id'], reference_price=row['open'])
+        with pytest.raises(AssertionError, match='declared execution lag'):
+            execution_clocks(case['context'], {'fills': case['fills'], 'intents': intents}, raw)
+        with pytest.raises(AssertionError, match='Native .*fill records differ'):
+            verify('python', 'execution', changed, tmp_path, FIXTURES)
+    assert files(tmp_path) == before
+
+
 def test_recorded_resume_refuses_changed_source_and_geometry(python_scenarios, compiled_scenarios, tmp_path, monkeypatch):
     wrong = tmp_path / 'wrong-source'
     wrong.mkdir()

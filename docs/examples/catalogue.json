@@ -2225,7 +2225,10 @@
       ],
       "recorded_window": "hourly: first 168 rows; recorded January 1\u20138 2024 funding",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Nonempty native ledger; equity/cost reconciliation; each funding payment matches recorded rate, mark and signed quantity."
+      "assertions": "Nonempty native ledger; equity/cost reconciliation; each funding payment matches recorded rate, mark and signed quantity.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_execution_proof_rejects_early_and_substituted_recorded_fills"
+      ]
     },
     "compiled/execution": {
       "interface": "compiled",

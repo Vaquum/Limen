@@ -16,7 +16,7 @@ from limen import Cohort, Sensor, UniversalExperimentLoop
 from limen.backtest import ProductSpec, TradeInputs, TradePolicy, trade_execution
 from limen.backtest.execution_events import with_predictions
 from limen.backtest.funding_adapter import prepare_funding
-from limen.backtest.trade_contract import FundingPolicy, source_binding
+from limen.backtest.trade_contract import FundingPolicy, export_trade_contract, source_binding
 from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
 from limen.data.utils import compute_data_bars, split_walk_forward
 from limen.experiment.param_domain import ParamDomain
@@ -237,8 +237,9 @@ def execution(data_dir, output):
     funded = trade_execution(funded_inputs, funded_policy)
     for name in ('states', 'intents', 'fills', 'episodes', 'funding'):
         getattr(funded, name).write_parquet(output / ('funded-' + name + '.parquet'))
-    context = {'observations': observations.to_dicts(), 'partition': [start, end]}
-    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'context': context, 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'payments': funded.funding.to_dicts(), 'fills': funded.fills.to_dicts(), 'context': context, 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
+    context = {'observations': observations.to_dicts(), 'partition': [start, end], 'contract': export_trade_contract(policy, inputs)}
+    funded_context = context | {'contract': export_trade_contract(funded_policy, funded_inputs)}
+    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'context': context, 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'contract_digest': funded.contract_digest, 'payments': funded.funding.to_dicts(), 'fills': funded.fills.to_dicts(), 'context': funded_context, 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
 # endregion execution
 
 

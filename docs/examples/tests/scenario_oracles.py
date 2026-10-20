@@ -47,10 +47,12 @@ def execution_clocks(context, ledger, raw):
         assert row['available_at_ns'] == row['end_ns'] and row['open_available_at_ns'] == row['start_ns']
         assert all(row[name] == source[row['start_ns']][name] for name in ('open', 'high', 'low', 'close'))
     intents = {row['intent_id']: row for row in ledger['intents']}
+    lag = round(context['contract']['policy']['execution_lag_seconds'] * 1_000_000_000)
     for fill in ledger['fills']:
         row, intent = observations[fill['evidence_row_id']], intents[fill['intent_id']]
         assert context['partition'][0] <= fill['time_ns'] <= context['partition'][1]
-        assert fill['time_ns'] >= intent['requested_at_ns']
+        eligible = intent['requested_at_ns'] + (lag if intent['reason'] == 'signal' else 0)
+        assert fill['time_ns'] >= eligible, 'Fill precedes its declared execution lag'
         assert fill['time_ns'] in (row['start_ns'], row['end_ns'])
         if fill['time_ns'] == row['start_ns']:
             assert fill['reference_price'] == row['open']
@@ -218,13 +220,19 @@ def verify(interface, name, result, output, inputs):
             assert metrics['total_return'] == pytest.approx(metrics['ending_equity']/10000-1)
             assert metrics['net_pnl'] == pytest.approx(metrics['gross_pnl']-metrics['fees']-metrics['slippage']+metrics['funding_pnl'])
             fills = pl.read_parquet(output / 'fills.parquet')
-            assert fills.height == len(result['fills']) and metrics['fees'] > 0
+            assert fills.to_dicts() == result['fills'], 'Native fill records differ from the checked output'
+            assert metrics['fees'] > 0
+            assert result['context']['contract']['policy']['execution_lag_seconds'] == 3600
+            assert hashlib.sha256(json.dumps(result['context']['contract'], sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest() == result['contract_digest']
             execution_clocks(result['context'], {'fills': result['fills'], 'intents': pl.read_parquet(output / 'intents.parquet').to_dicts()}, hourly)
         else:
             assert result['rounds'] == 2 and len(set(result['contracts'])) == 2
             assert len(result['ledgers']) == 2
             assert {row['risk_span'] for row in result['metrics']} == {6, 12}
             assert all(row['backtest_completed_trades'] > 0 for row in result['metrics'])
+            with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
+                native = [json.loads(line) for line in stream]
+            assert result['ledgers'] == [row['trade_ledger'] for row in native]
             for context, ledger in zip(result['contexts'], result['ledgers'], strict=True):
                 execution_clocks(context, ledger, hourly)
         funded = result['funded']
@@ -234,6 +242,14 @@ def verify(interface, name, result, output, inputs):
         observed_rates = {row['fundingTime'] * 1_000_000: (float(row['fundingRate']), float(row['markPrice'])) for row in raw}
         ledgers = [{'funding': funded['payments'], 'fills': funded['fills'], 'intents': pl.read_parquet(output / 'funded-intents.parquet').to_dicts()}] if interface == 'python' else funded['ledgers']
         contexts = [funded['context']] if interface == 'python' else funded['contexts']
+        if interface == 'python':
+            assert pl.read_parquet(output / 'funded-fills.parquet').to_dicts() == funded['fills'], 'Native funded fill records differ from the checked output'
+            assert funded['context']['contract']['policy']['execution_lag_seconds'] == 3600
+            assert hashlib.sha256(json.dumps(funded['context']['contract'], sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest() == funded['contract_digest']
+        else:
+            with gzip.open(output / 'funded/round_data.jsonl.gz', 'rt') as stream:
+                native = [json.loads(line) for line in stream]
+            assert funded['ledgers'] == [row['trade_ledger'] for row in native]
         for context, ledger in zip(contexts, ledgers, strict=True):
             assert context['partition'] == bounds
             execution_clocks(context, ledger, hourly)
