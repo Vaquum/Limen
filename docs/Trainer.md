@@ -113,7 +113,7 @@ That means the promotion stack depends on the [Reference Architecture](Reference
 
 <!-- reference: trainer-constructor-api source=limen/inference/trainer.py region=signature:Trainer.__init__ role=signature -->
 ```python
-def __init__(self, experiment_dir: str | Path, data: pl.DataFrame | None=None, *, project_root: str | Path | None=None) -> None:
+def __init__(self, experiment_dir: str | Path, data: pl.DataFrame | None=None, *, project_root: str | Path | None=None, components: Components | None=None) -> None:
     ...
 ```
 
@@ -123,6 +123,9 @@ def __init__(self, experiment_dir: str | Path, data: pl.DataFrame | None=None, *
 |---|---|
 | `experiment_dir` | path to the completed experiment directory |
 | `data` | optional dataframe override; if omitted, Trainer fetches data from the reconstructed manifest |
+| `components` | matching explicit trusted Manifest configurator when the saved reference declares components |
+
+For external components, use the [recorded trusted declaration handoff](Experiment-Manifest.md#trusted-component-declarations). Metadata alone never executes a configurator.
 
 Use `data=` with an exact dataframe override. Otherwise Trainer falls back to `manifest.fetch_data()`.
 

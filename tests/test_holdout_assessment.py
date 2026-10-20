@@ -882,10 +882,9 @@ def test_trusted_components_require_matching_explicit_reload(native_assessment_c
     assert compiled.manifest().prediction_calibration_config.calibration_func.func is external_calibrator
     assert external_calibrator.__module__ == __name__
     allowed = list(ALLOWED_NAMESPACES)
-    with patch('limen.calibration.f17_calibrator', external_calibrator, create=True):
-        with pytest.raises(ResolutionError):
-            resolve('limen.calibration.f17_calibrator')
-    assert ALLOWED_NAMESPACES == allowed
+    with patch('limen.calibration.f17_calibrator', external_calibrator, create=True), pytest.raises(ResolutionError):
+        resolve('limen.calibration.f17_calibrator')
+    assert allowed == ALLOWED_NAMESPACES
     directory = native_assessment_case[0] / 'trusted-reload'
     directory.mkdir()
     metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
