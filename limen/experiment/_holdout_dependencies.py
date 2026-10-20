@@ -104,7 +104,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for part in children(cast(object, value)):
                 visit(part)
             if type(cast(object, value)) is not partial:
-                objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), cast(object, value))
+                _ = objects.setdefault((id(type(cast(object, value))), False), cast(object, value))
         elif inspect.isfunction(value):
             visit(vars(value))
             visit(value.__annotations__, annotation=True)
@@ -214,14 +214,14 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for part in children(cast(object, value)):
                 visit(part, annotation=annotation)
             if type(value) is not np.ndarray:
-                objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), value)
+                _ = objects.setdefault((id(type(value)), False), value)
         elif isinstance(value, ModuleType):
-            objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), value)
+            _ = objects.setdefault((id(value), False), value)
         elif not isinstance(value, (pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
             if isinstance(value, type) and type(value) is not type:
                 visit(type(value))
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict) and not (annotation and type(value).__module__ == 'typing'):
-                objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), value)
+                _ = objects.setdefault((id(value) if isinstance(value, type) else id(type(value)), isinstance(value, type)), value)
             if not isinstance(value, type):
                 for part in children(value):
                     visit(part, annotation=annotation)
