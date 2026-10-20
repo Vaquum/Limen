@@ -899,6 +899,36 @@ def test_prediction_guard_rejects_empty_cells_and_caught_matcher_errors(native_a
         assert 'matcher failure' in caught[0] if fault else 'attempted fitting' in caught[0]
 
 
+def test_trusted_component_implementation_and_globals(native_assessment_case):
+    reference = native_assessment_case[2][0][0]._yaml_reference
+    class Builder:
+        def __call__(self, manifest):
+            manifest.decoder_lookback = 1
+    def changed_call(self, manifest):
+        manifest.decoder_lookback = 2
+    builder = Builder()
+    compiled = CompiledSFD(reference, components=builder)
+    stored = compiled.yaml_reference
+    assert compiled.manifest().decoder_lookback == 1
+    assert CompiledSFD(stored, components=builder).manifest().decoder_lookback == 1
+    with patch.object(Builder, '__call__', changed_call), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(stored, components=builder)
+        assert loader.call_count == 0
+    def configure(manifest):
+        manifest.decoder_lookback = 1 + int(_LATE_RULES['offset'] > 0)
+    def fit(manifest):
+        manifest.decoder_lookback = 1 + int(_LATE_RULES['offset'] > 0)
+    for declaration in (configure, fit):
+        compiled = CompiledSFD(reference, components=declaration)
+        stored = compiled.yaml_reference
+        assert CompiledSFD(stored, components=declaration).manifest().decoder_lookback == 1
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('source access')) as loader:
+            with pytest.raises(ValueError, match='differs from the recorded'):
+                CompiledSFD(stored, components=declaration)
+            assert loader.call_count == 0
+
+
 def test_trusted_components_require_matching_explicit_reload(native_assessment_case):
     from limen.yaml.compiler import build_manifest
     from limen.yaml.resolver import resolve, ALLOWED_NAMESPACES

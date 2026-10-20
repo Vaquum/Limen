@@ -1,10 +1,9 @@
 from collections.abc import Callable, Mapping
 import copy
-from hashlib import sha256
 from typing import cast
 
-from limen.experiment._holdout_state import fitted_witness
-from limen.experiment.manifest_core import Manifest
+from limen.experiment._holdout_dependencies import dependency_digest
+from limen.experiment.manifest_core import Manifest, MLManifest, RuleBasedManifest
 
 __all__ = ['Components', 'bind_components', 'configure_manifest']
 
@@ -23,7 +22,7 @@ def bind_components(reference: Mapping[str, object], components: Components | No
     if not callable(components):
         raise TypeError('components must be a callable Manifest configurator')
     name = f'{getattr(components, "__module__", type(components).__module__)}.{getattr(components, "__qualname__", type(components).__qualname__)}'
-    identity = {'name': name, 'sha256': sha256(fitted_witness(components)).hexdigest()}
+    identity = {'name': name, 'sha256': dependency_digest([components], exclude=(Manifest, MLManifest, RuleBasedManifest), declaration=True)}
     if declared != identity and not (record and 'components' not in sfd):
         raise ValueError('Trusted components configurator differs from the recorded declaration')
     result = copy.deepcopy(dict(reference))
