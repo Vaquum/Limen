@@ -331,11 +331,11 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
                 result[f'scaler.fit.{i}'] = _defaults(function, config)
                 if isinstance(function, ScalerFactory):
                     selected = function.selected(config)
-                    classes = (function.transform_class,) if function.dynamic_selector is None else tuple(cast(dict[str, object], function.transform_class).values())
-                    for j, cls in enumerate(classes):
+                    for j, cls in enumerate(function.variants()):
                         if cls is selected:
                             result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config)
-                            result[f'scaler.class.{i}.{j}.transform'] = result[f'scaler.class.{i}.{j}'] | _defaults(function.transforms[cast(type, vars(cls)['factory_class'])], {})
+                            if function.owns_transform(transform):
+                                result[f'scaler.class.{i}.{j}.transform'] = result[f'scaler.class.{i}.{j}'] | _defaults(function.transforms[cast(type, vars(cls)['factory_class'])], {})
                             if (allocator := factory_allocator(cls)) is not None:
                                 result[f'scaler.class.{i}.{j}.allocate'] = _defaults(allocator, function.static_params | config)
         if manifest.data_dict_extension is not None:

@@ -227,7 +227,8 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         clone = state_memo[id(value)][1] if id(value) in state_memo else copy.deepcopy(value)
         for field in fields(value):
             object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
-        if isinstance(clone, MLManifest) and clone.scaler is not None and isinstance(factory := clone.scaler[0][0][1], ScalerFactory):
+        if (isinstance(clone, MLManifest) and clone.scaler is not None and isinstance(factory := clone.scaler[0][0][1], ScalerFactory)
+                and inspect.isfunction(transform := clone.scaler[1]) and transform.__module__ == 'limen.experiment.manifest_core' and transform.__qualname__ == '_apply_fitted_transform'):
             clone.scaler = (clone.scaler[0], factory.transform, clone.scaler[2])
     else:
         clone = copy.deepcopy(cast(object, value))
@@ -278,9 +279,10 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
             result.append(('scaler.transform', transform))
             for i, (_, compute, _) in enumerate(computations):
                 if isinstance(compute, ScalerFactory):
-                    classes = (compute.transform_class,) if compute.dynamic_selector is None else tuple(cast(dict[str, object], compute.transform_class).values())
+                    classes = compute.variants()
                     result.extend((f'scaler.class.{i}.{j}', cls) for j, cls in enumerate(classes))
-                    result.extend((f'scaler.class.{i}.{j}.transform', compute.transforms[cast(type, vars(cls)['factory_class'])]) for j, cls in enumerate(classes))
+                    if compute.owns_transform(transform):
+                        result.extend((f'scaler.class.{i}.{j}.transform', compute.transforms[cast(type, vars(cls)['factory_class'])]) for j, cls in enumerate(classes))
         if manifest.data_dict_extension is not None:
             result.append(('data_dict_extension', manifest.data_dict_extension))
         from limen.experiment._column_shims import apply_column_shims

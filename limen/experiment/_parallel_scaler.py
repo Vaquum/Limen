@@ -12,14 +12,14 @@ from limen.scalers.registry import SCALER_REGISTRY
 
 
 class TransformClass(Protocol):
-    transform: Callable[..., object]
+    transform: Callable[..., pl.DataFrame]
 
 
 @dataclass(frozen=True)
 class ScalerTransform:
     """Bind captured behavior without changing the fitted object's type or state."""
 
-    function: Callable[..., object]
+    function: Callable[..., pl.DataFrame]
     bind_instance: bool
     __parallel_round_contract__: ParallelRoundContract | None
 
@@ -28,7 +28,7 @@ class ScalerTransform:
         result = signature(self.function)
         return result.replace(parameters=list(result.parameters.values())[1:]) if self.bind_instance else result
 
-    def __call__(self, data: pl.DataFrame, fitted_transform: object) -> object:
+    def __call__(self, data: pl.DataFrame, fitted_transform: object) -> pl.DataFrame:
         if getattr_static(fitted_transform, 'transform') is not getattr_static(type(fitted_transform), 'transform'):
             return cast(TransformClass, fitted_transform).transform(data)
         return self.function(fitted_transform, data) if self.bind_instance else self.function(data)
@@ -44,11 +44,17 @@ class ScalerFactory:
     def selected(self, params: Mapping[str, object]) -> object:
         return self.transform_class if self.dynamic_selector is None else cast(dict[str, object], self.transform_class)[cast(str, params['scaler_type'])]
 
+    def variants(self) -> tuple[object, ...]:
+        return (self.transform_class,) if self.dynamic_selector is None else tuple(cast(dict[str, object], self.transform_class).values())
+
+    def owns_transform(self, value: object) -> bool:
+        return getattr(value, '__self__', None) is self and getattr(getattr(value, '__func__', None), '__code__', None) is ScalerFactory.transform.__code__
+
     def __call__(self, data: pl.DataFrame, **params: object) -> object:
         extras = {key: value for key, value in params.items() if self.dynamic_selector is None or key != 'scaler_type'}
         return cast(Callable[..., object], self.selected(params))(data, **self.static_params, **extras)
 
-    def transform(self, data: pl.DataFrame, fitted_transform: object) -> object:
+    def transform(self, data: pl.DataFrame, fitted_transform: object) -> pl.DataFrame:
         return self.transforms[type(fitted_transform)](data, fitted_transform)
 
 
