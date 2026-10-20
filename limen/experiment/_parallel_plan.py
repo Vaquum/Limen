@@ -20,7 +20,8 @@ from typing_extensions import override
 from limen._parallel_contract import ParallelRoundContract
 from limen.experiment._parallel_encoding import import_reference, decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import copy_context
-from limen.experiment._parallel_state import ObjectState, bind_call, call_implementation, object_state, restore_object, mutable_function
+from limen.experiment._parallel_callable import bind_call
+from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest

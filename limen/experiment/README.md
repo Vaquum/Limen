@@ -77,6 +77,7 @@ experiment/
 ├── _manifest_preparation.py
 ├── _objective.py
 ├── _objective_run.py
+├── _parallel_callable.py
 ├── _parallel_commit.py
 ├── _parallel_encoding.py
 ├── _parallel_evidence.py

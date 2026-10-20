@@ -18,10 +18,12 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding, source_class
-from limen.experiment._parallel_state import ObjectState, bind_call, call_implementation, component_state, mutable_function, object_state, restore_object
+from limen.experiment._parallel_callable import bind_call, restore_function_metadata, source_class
+from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
+_CAPTURED_CALL_ARITY = 2
 
 
 def reference(value: object) -> list[object]:
@@ -194,13 +196,6 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
     return _decode_instance(parts, isolate_functions=isolate_functions)
 
 
-def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:
-    function.__module__, function.__qualname__, function.__annotations__ = source.__module__, source.__qualname__, source.__annotations__.copy()
-    for name, value in {'__wrapped__': wrapped, '__parallel_round_contract__': vars(source).get('__parallel_round_contract__')}.items():
-        if value is not None:
-            vars(function)[name] = value
-
-
 def _decode_reference(parts: list[object], *, ordered: bool, isolate_functions: bool) -> object:
     tag, value = parts[:2]
     if tag == 'cell':
@@ -227,8 +222,9 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only
         instance = restore_object(cast(type, import_reference(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
-    frozen = isinstance(implementation, list) and len(implementation) == 2 and implementation[0] == 'captured_call'
-    captured = decode(cast(list[object], implementation)[1] if frozen else implementation, isolate_functions=isolate_functions)
+    call: list[object] = cast(list[object], implementation) if isinstance(implementation, list) else []
+    frozen = len(call) == _CAPTURED_CALL_ARITY and call[0] == 'captured_call'
+    captured = decode(call[1] if frozen else cast(object, implementation), isolate_functions=isolate_functions)
     if frozen:
         bind_call(instance, captured)
     elif not owner_only and encode(call_implementation(instance)) != encode(captured):
