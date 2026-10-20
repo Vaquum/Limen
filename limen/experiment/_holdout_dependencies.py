@@ -124,11 +124,11 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
-                indirect_globals = instruction.opname == 'LOAD_CONST' and name == '__globals__' and instructions[index + 1].opname in ('PRECALL', 'CALL', 'CALL_FUNCTION')
+                indirect_globals = instruction.opname == 'LOAD_CONST' and name == '__globals__' and any(part.opname in ('CALL', 'CALL_FUNCTION') for part in instructions[index + 1:index + 4])
                 if name == '__globals__' and (instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect_globals):
                     lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
                     if indirect_globals:
-                        lookup = lookup[1:]
+                        lookup = lookup[next(offset for offset, part in enumerate(lookup) if part.opname in ('CALL', 'CALL_FUNCTION')) + 1:]
                     if not lookup[1:] or lookup[0].opname != 'LOAD_CONST' or not isinstance(lookup[0].argval, str) or lookup[1].opname != 'BINARY_SUBSCR':
                         raise ValueError('Holdout requires a literal key for reflective function globals')
                     reflective_keys.add(lookup[0].argval)
