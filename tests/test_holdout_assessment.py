@@ -60,6 +60,14 @@ def aliased_namespace_probabilities(values):
     return np.clip(values + _READ_GLOBALS()['_LATE_RULES']['offset'], 0, 1)
 
 
+def default_namespace_probabilities(values, read_globals=globals):
+    return np.clip(values + read_globals()['_LATE_RULES']['offset'], 0, 1)
+
+
+def keyword_namespace_probabilities(values, *, read_globals=globals):
+    return np.clip(values + read_globals()['_LATE_RULES']['offset'], 0, 1)
+
+
 class InferenceOffset:
     def __init__(self):
         self.offset = _LATE_RULES['offset']
@@ -651,6 +659,70 @@ def test_frozen_namespace_and_closure_identity(assessment_case):
             _freeze(selected)
         assert loader.call_count == 0
     assert fitted_witness((CellType(), CellType())) != fitted_witness((CellType(), CellType(None)))
+
+
+def test_frozen_default_bindings_and_provider_identity(assessment_case):
+    from limen.experiment._holdout_prediction import readonly_prediction
+    from limen.experiment._holdout_state import fitted_witness
+
+    class Policy(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy(result['_probs'])
+            return result
+    selected = copy.deepcopy(assessment_case[2][0][0])
+    selected._model.__class__ = Policy
+    for policy in (default_namespace_probabilities, keyword_namespace_probabilities):
+        selected._model.policy = policy
+        handle = _freeze(selected)
+        assert _report(handle, assessment_case)['state'] == 'completed'
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(handle, assessment_case)
+            assert loader.call_count == 0
+
+    class FreshEffect:
+        grid_threshold_optimizer = property(lambda self: lambda values: max(values))
+    class StableEffect:
+        grid_threshold_optimizer = property(lambda self: later_probabilities)
+    selected._model.policy = identity_probabilities
+    selected._model.effect_provider = StableEffect()
+    assert _report(_freeze(selected), assessment_case)['state'] == 'completed'
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected]):
+        selected._model.effect_provider.grid_threshold_optimizer(selected._model.model.coef_.ravel())
+    selected._model.effect_provider = FreshEffect()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='stable observable binding'):
+            _freeze(selected)
+        assert loader.call_count == 0
+    del selected._model.effect_provider
+
+    def provider_class(offset):
+        class Provider:
+            def __call__(self, values):
+                return np.clip(values + offset, 0, 1)
+        return Provider
+    first, second = provider_class(0.0), provider_class(0.1)
+    assert (first.__module__, first.__qualname__) == (second.__module__, second.__qualname__)
+    assert fitted_witness((first, second, first())) != fitted_witness((first, second, second()))
+    selected._model.providers = (first, second)
+    selected._model.policy = first()
+    handle = _freeze(selected)
+    assert _report(handle, assessment_case)['state'] == 'completed'
+    selected._model.policy.__class__ = second
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(handle, assessment_case)
+        assert loader.call_count == 0
+    selected._model.policy.__class__ = first
+    def switch_provider(self, memo):
+        result = second()
+        vars(result).update(copy.deepcopy(vars(self), memo))
+        return result
+    with patch.object(first, '__deepcopy__', switch_provider, create=True), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed selected state'):
+            _freeze(selected)
+        assert loader.call_count == 0
 
 
 def test_frozen_dependencies_and_invalid_state(assessment_case):

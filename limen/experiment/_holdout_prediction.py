@@ -33,7 +33,9 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
     seen: set[int] = set()
     configs: list[object] = []
 
-    def forbid(method: object) -> None:
+    def forbid(method: object, repeated: object) -> None:
+        if not same_callback(method, repeated):
+            raise ValueError('Holdout refuses fitting callbacks without stable observable binding')
         if not callable(method):
             return
         call = None if inspect.isfunction(method) or inspect.ismethod(method) else inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
@@ -86,17 +88,14 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         seen.add(id(value))
         if type(value) not in (dict, list, tuple, set, frozenset, bytearray, np.ndarray):
             for name in _EFFECTS:
-                forbid(getattr(value, name, None))
+                forbid(getattr(value, name, None), getattr(value, name, None))
             config = getattr(value, 'prediction_calibration_config', None)
             if config is not getattr(value, 'prediction_calibration_config', None) and any(callable(getattr(config, name, None)) for name in ('calibration_func', 'threshold_func')):
                 raise ValueError('Holdout refuses calibration providers without stable observable binding')
             if config is not None:
                 configs.append(config)
                 for name in ('calibration_func', 'threshold_func'):
-                    callback = getattr(config, name, None)
-                    if not same_callback(callback, getattr(config, name, None)):
-                        raise ValueError('Holdout refuses fitting callbacks without stable observable binding')
-                    forbid(callback)
+                    forbid(getattr(config, name, None), getattr(config, name, None))
         parts = children(value)
         if inspect.ismethod(value):
             parts += (value.__func__, value.__self__)

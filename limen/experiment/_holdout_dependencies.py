@@ -131,6 +131,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 raise ValueError('Holdout inference has an unowned random dependency')
             instructions = _instructions(value.__code__)
             references = {name: list(children(cell)[1:]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
+            references.update({name: [part] for name, part in zip(value.__code__.co_varnames[value.__code__.co_argcount - len(value.__defaults__ or ()):value.__code__.co_argcount], value.__defaults__ or (), strict=True)})
+            references.update({name: [part] for name, part in (value.__kwdefaults__ or {}).items()})
             imported: ModuleType | None = None
             chained_import = False
             binding: object = None
