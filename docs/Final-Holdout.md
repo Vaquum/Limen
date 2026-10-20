@@ -119,7 +119,7 @@ Owned copies preserve selected native LightGBM iteration limits, including limit
 
 Each scenario requires exactly the six keys shown. Fees and slippage are finite nonnegative basis points; notional is in `(0,1]`; execution lag is a positive integer; TP/SL are null or finite positive basis points. Boolean numbers are refused. Order and duplicates are retained. Execution starts flat, excludes context positions, applies lag and forces terminal exit using existing snapshot economics. Raw positions are 0/1 and raw returns are unit-notional fractions. Deployed positions and gross/net/cost returns multiply raw values by notional once; summary returns already use that deployed fraction.
 
-Optional `evaluation_target` accepts an initialized exact NextBarUpTarget or NextBarDownTarget. Labels are computed after predictions from final rows only; the terminal label is unavailable. Accuracy, precision, recall, FPR and AUC disclose denominators/support. Missing labels, zero denominators, one-class AUC, absent probabilities and undefined return summaries are null with an explicit reason. Majority-vote probabilities remain null.
+Optional `evaluation_target` accepts an initialized exact NextBarUpTarget, NextBarDownTarget, or ThresholdBinaryTarget with a fixed threshold over open, high, low, or close and horizon one. Labels are computed after predictions from final rows only; the terminal label is unavailable. Accuracy, precision, recall, FPR and AUC disclose denominators/support. Missing labels, zero denominators, one-class AUC, absent probabilities and undefined return summaries are null with an explicit reason. Majority-vote probabilities remain null.
 
 ## Attempts and evidence
 

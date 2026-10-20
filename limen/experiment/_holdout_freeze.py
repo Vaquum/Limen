@@ -33,6 +33,7 @@ from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.targets.next_bar_down import NextBarDownTarget
 from limen.targets.next_bar_up import NextBarUpTarget
+from limen.targets.threshold_binary import ThresholdBinaryTarget
 import limen.targets as _targets
 from limen.scalers import registry as _scalers
 from limen.yaml.compiler import CompiledSFD
@@ -163,22 +164,22 @@ def provenance(sensor: Sensor) -> dict[str, object]:
     return proof
 
 
-def _fitted_value(value: object, seen: dict[int, object] | None = None) -> None:
-    seen = {} if seen is None else seen
-    if id(value) in seen:
-        return
-    seen[id(value)] = value
-    if isinstance(value, Mapping):
-        for item in cast(Mapping[str, object], value).values():
-            _fitted_value(item, seen)
-    elif isinstance(value, (list, tuple)):
-        for item in cast(list[object] | tuple[object, ...], value):
-            _fitted_value(item, seen)
-    elif hasattr(value, '__dict__') and not isinstance(value, type):
-        unchanged(value)
-        if isinstance(value, BaseEstimator) and callable(getattr(value, 'fit', None)):
-            check_is_fitted(value)
-    _ = fitted_witness(cast(object, value))
+def _fitted_value(value: object) -> None:
+    pending, seen = [value], dict[int, object]()
+    while pending:
+        item = pending.pop()
+        if id(item) in seen:
+            continue
+        seen[id(item)] = item
+        if isinstance(item, Mapping):
+            pending.extend(reversed(tuple(cast(Mapping[str, object], item).values())))
+        elif isinstance(item, (list, tuple)):
+            pending.extend(reversed(cast(list[object] | tuple[object, ...], item)))
+        elif hasattr(item, '__dict__') and not isinstance(item, type):
+            unchanged(item)
+            if isinstance(item, BaseEstimator) and callable(getattr(item, 'fit', None)):
+                check_is_fitted(item)
+    _ = fitted_witness(value)
 
 
 def validate_member(sensor: Sensor) -> dict[str, object]:
@@ -257,7 +258,7 @@ class FrozenHoldoutSelection:
         if token is not _TOKEN:
             raise TypeError('Use freeze_holdout_selection')
         super().__init__()
-        self._snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None] | None = None
+        self._snapshot: tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None] | None = None
         self._spec: dict[str, object] | None = None
         self._state_digest: str | None = None
         self._spec_digest: str | None = None
@@ -309,13 +310,23 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
 
 def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
                              scenarios: list[Mapping[str, object]],
-                             evaluation_target: NextBarUpTarget | NextBarDownTarget | None = None) -> FrozenHoldoutSelection:
+                             evaluation_target: NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None = None) -> FrozenHoldoutSelection:
     """Own the fitted selection and preregister its final-assessment specification."""
     _ = history.utc_day(context_start)
     declarations = scenario_declarations(scenarios)
     specs = [validate_member(member) for member in members(selection)]
     if evaluation_target is not None:
-        if type(evaluation_target) not in (NextBarUpTarget, NextBarDownTarget) or set(vars(evaluation_target)) != {'target_name'} or not isinstance(cast(object, evaluation_target.target_name), str):
+        if type(evaluation_target) in (NextBarUpTarget, NextBarDownTarget):
+            if set(vars(evaluation_target)) != {'target_name'} or not isinstance(cast(object, evaluation_target.target_name), str):
+                raise ValueError('Holdout target must be an initialized exact next-bar binary target')
+        elif type(evaluation_target) is ThresholdBinaryTarget:
+            state = cast(dict[str, object], vars(evaluation_target))
+            if (set(state) != {'target_name', 'source_column', 'threshold'} or not isinstance(state['target_name'], str) or not state['target_name']
+                    or not isinstance(state['source_column'], str) or state['source_column'] not in ('open', 'high', 'low', 'close')
+                    or type(state['threshold']) not in (int, float) or not math.isfinite(cast(float, state['threshold']))
+                    or ThresholdBinaryTarget.transform.__defaults__ != (-1,)):
+                raise ValueError('Holdout threshold target must declare a fixed OHLC comparison with horizon one')
+        else:
             raise ValueError('Holdout target must be an initialized exact next-bar binary target')
         unchanged(evaluation_target)
     versions: dict[str, object] = {'python': platform.python_version()}
@@ -338,7 +349,7 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,
                     'aggregation': 'sensor' if type(selection) is Sensor else cast(Cohort, selection).aggregation_mode,
                     'order': [spec['permutation_id'] for spec in specs], 'threshold': 0.5,
-                    'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target))}, 'versions': versions,
+                    'target': None if evaluation_target is None else {'class': normalized(type(evaluation_target)), 'params': copy.deepcopy(vars(evaluation_target)), **({'shift': -1} if type(evaluation_target) is ThresholdBinaryTarget else {})}, 'versions': versions,
                     'prediction_dependencies': dependencies}
     result = FrozenHoldoutSelection(_TOKEN)
     for key, value in zip(('_snapshot', '_spec', '_state_digest', '_spec_digest'), (snapshot, spec, state_digest(snapshot[0]), digest(spec)), strict=True):
@@ -346,8 +357,8 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
     return result
 
 
-def frozen_parts(handle: FrozenHoldoutSelection) -> tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock]:
+def frozen_parts(handle: FrozenHoldoutSelection) -> tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None], dict[str, object], str, str, Lock]:
     parts = tuple(object.__getattribute__(handle, key) for key in ('_snapshot', '_spec', '_state_digest', '_spec_digest', '_lock'))
     if any(value is None for value in parts):
         raise ValueError('Holdout handle was not initialized by freeze_holdout_selection')
-    return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | None], dict[str, object], str, str, Lock], parts)
+    return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None], dict[str, object], str, str, Lock], parts)
