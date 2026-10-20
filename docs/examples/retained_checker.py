@@ -85,6 +85,15 @@ def main():
             raise ValueError('Product or checker identity changed during validation')
         record['exit_code'] = code
         return code
+    except SystemExit as error:
+        record['exit_code'] = error.code if isinstance(error.code, int) else int(error.code is not None)
+        raise
+    except KeyboardInterrupt:
+        record['exit_code'] = 130
+        raise
+    except BaseException:
+        record['exit_code'] = 1
+        raise
     finally:
         receipt.write_text(json.dumps(record, indent=2) + '\n')
         print('Checker invocation receipt: ' + str(receipt), flush=True)

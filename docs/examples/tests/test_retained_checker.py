@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from provenance import acquire, git
+from provenance import base_revision, git
 
 ROOT = Path(__file__).resolve().parents[3]
 DRIVER = ROOT / 'docs/examples/retained_checker.py'
@@ -19,10 +19,11 @@ def retained_checkout(tmp_path_factory):
     subprocess.run(['git', 'clone', '--shared', '--no-checkout', str(ROOT), str(root)], check=True, capture_output=True)
     subprocess.run(['git', 'fetch', 'origin', 'refs/remotes/origin/main:refs/remotes/origin/main'], cwd=root, check=True, capture_output=True)
     subprocess.run(['git', 'checkout', '--detach', recorded['head']], cwd=root, check=True, capture_output=True)
-    with pytest.MonkeyPatch.context() as network:
-        network.setattr('provenance.pull_associations', lambda commit: recorded['responses'][commit])
-        record = acquire(root, root / '.docs-evidence/source-provenance.json')
-    assert record['base'] == recorded['base']
+    record = {name: recorded[name] for name in ('schema_version', 'base', 'files', 'responses')}
+    output = root / '.docs-evidence/source-provenance.json'
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(json.dumps(record))
+    assert record['base'] == base_revision(root)
     assert git(root, 'merge-base', 'HEAD', 'origin/main') == recorded['head']
     launcher = root / '.docs-evidence/reviewed-python'
     subprocess.run([sys.executable, str(DRIVER), '--install-launcher', str(launcher)], cwd=root, check=True, capture_output=True)
@@ -66,13 +67,25 @@ def test_original_checker_binding():
     assert git(root, 'rev-parse', 'HEAD^{tree}') == before
     assert git(root, 'status', '--porcelain', '--untracked-files=normal') == ''
     original_evidence = root / 'docs/examples/check_evidence.py'
+    prior_receipts = set((root / '.docs-evidence/retained-checker').glob('*.json'))
     refused = subprocess.run([str(launcher), str(original_evidence), '--evidence', str(root / '.docs-evidence/current.json'), '--head', git(root, 'rev-parse', 'HEAD'), '--tree', before, '--version', '5.45.12'], cwd=root, text=True, capture_output=True)
-    assert refused.returncode != 0
+    assert refused.returncode == 1
     assert 'check_evidence.py' in refused.stderr
+    created = set((root / '.docs-evidence/retained-checker').glob('*.json')) - prior_receipts
+    assert len(created) == 1
+    assert json.loads(created.pop().read_text())['exit_code'] == refused.returncode
 
 
-def test_retained_checker_refuses_an_unrelated_script(retained_checkout):
+@pytest.mark.parametrize('arguments,code,error', [
+    (['docs/examples/released_wheel.py'], 1, 'only runs the original documentation checks'),
+    (['docs/examples/provenance.py', '--unexpected-option'], 2, '--output'),
+])
+def test_retained_checker_refuses_an_unrelated_script(retained_checkout, arguments, code, error):
     root, _, launcher = retained_checkout
-    result = subprocess.run([str(launcher), 'docs/examples/released_wheel.py'], cwd=root, text=True, capture_output=True)
-    assert result.returncode != 0
-    assert 'only runs the original documentation checks' in result.stderr
+    prior_receipts = set((root / '.docs-evidence/retained-checker').glob('*.json'))
+    result = subprocess.run([str(launcher), *arguments], cwd=root, text=True, capture_output=True)
+    assert result.returncode == code
+    assert error in result.stderr
+    created = set((root / '.docs-evidence/retained-checker').glob('*.json')) - prior_receipts
+    assert len(created) == 1
+    assert json.loads(created.pop().read_text())['exit_code'] == code
