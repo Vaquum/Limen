@@ -27,6 +27,7 @@ Does **not** own experiment execution, model training, or artifact persistence d
 | `experiment_confusion_metrics` | One table across all permutations | Available as a `Log` method and re-exported helper |
 | `experiment_backtest_results` | Snapshot backtests across all rounds | Uses `limen.backtest` downstream |
 | `experiment_parameter_correlation` | Inspect which parameters move with a chosen metric | Supports sweep interpretation |
+| `ConfusionNotApplicableError` | Raised when outputs carry no binary interpretation | Finalization records confusion as `None` |
 
 ## Adjacent modules
 
