@@ -49,7 +49,10 @@ test('reference returns to the same passage and focus',async({page})=>{
   expect(Math.abs((await link.boundingBox()).y-before.top)).toBeLessThan(3);
   await page.goForward();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
   await page.goBack();await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
-  await page.locator('#adopt-the-compiled-pipeline').scrollIntoViewIfNeeded();await page.mouse.wheel(0,120);
+  await page.locator('#adopt-the-compiled-pipeline').scrollIntoViewIfNeeded();
+  const beforeWheel=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);
+  await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(beforeWheel+120);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
   const continued=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
