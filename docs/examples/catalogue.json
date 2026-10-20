@@ -101,7 +101,8 @@
     "docs/Standard-Metrics-Library.md",
     "docs/Built-In-SFDs.md",
     "docs/Trainer.md",
-    "docs/Cohort.md"
+    "docs/Cohort.md",
+    "docs/Conserved-Flux-Renormalization.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2625,6 +2626,10 @@
     "docs/Cohort.md": [
       "python/selection",
       "compiled/walk_forward"
+    ],
+    "docs/Conserved-Flux-Renormalization.md": [
+      "python/bars",
+      "compiled/bars"
     ]
   }
 }
