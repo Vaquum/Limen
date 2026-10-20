@@ -31,27 +31,35 @@ def _counted(method):
     return wrapper
 
 
+def load(receiver, *, rows=3):
+    receiver.data = _recorded(rows=rows)
+    return _recorded(rows=1)
+
+
+def named_self(self, *, rows=3):
+    return self.head(rows)
+
+
 class _Source:
     calls = 0
-
-    def load(receiver, *, rows=3):
-        receiver.data = _recorded(rows=rows)
-        return _recorded(rows=1)
+    load = load
+    named_self = staticmethod(named_self)
 
     @_counted
-    def decorated(receiver, *, rows=3):
-        receiver.data = _recorded(rows=rows)
+    def decorated(self, *, rows=3):
+        self.data = _recorded(rows=rows)
 
     @staticmethod
     def static(*, rows=3):
         return _recorded(rows=rows)
 
-    @staticmethod
-    def named_self(self, *, rows=3):
-        return self.head(rows)
-
     def __call__(self, *, rows=3):
         return _recorded(rows=rows)
+
+
+# Keep real function/staticmethod descriptors with deliberately nonstandard parameters.
+_Source.load.__qualname__ = '_Source.load'
+_Source.named_self.__qualname__ = '_Source.named_self'
 
 
 class _EmptySource:
@@ -74,7 +82,6 @@ def _fetch(manifest, api, method, params):
 
 def _normalized(frame):
     return frame.with_columns(
-        pl.col('timestamp').cast(pl.UInt64),
         pl.col('datetime').cast(pl.Datetime('ms', 'UTC')),
     ).sort('datetime')
 
@@ -207,12 +214,14 @@ def test_manifest_source_validation(manifest_type, api, tmp_path):
         _fetch(manifest_type(), api, HistoricalData.get_any_file,
                {'file_path_or_url': str(tmp_path / 'missing.parquet')})
     with patch('limen.data.historical_data._read_any_file') as transport:
-        for params in ({'kline_size': 0}, {'kline_size': True}, {'kline_size': 900, 'row_count_limit': 0},
+        for params in ({'kline_size': 0}, {'kline_size': 900, 'row_count_limit': 0},
                        {'kline_size': 900, 'row_count_limit': 3, 'n_rows': 4},
                        {'kline_size': 900, 'row_count_limit': 3,
                         'start_date_limit': '2025-01-01', 'end_date_limit': '2025-01-02'}):
             with pytest.raises(ValueError):
                 _fetch(manifest_type(), api, HistoricalData.get_spot_klines, params)
+        with pytest.raises(TypeError, match='HistoricalData kline_size must be an int'):
+            _fetch(manifest_type(), api, HistoricalData.get_spot_klines, {'kline_size': True})
         transport.assert_not_called()
     failure = OSError('recorded transport failed')
     with patch('limen.data.historical_data._read_any_file', side_effect=failure) as transport:
@@ -279,8 +288,8 @@ def test_manifest_callable_boundaries(manifest_type, api):
         calls = Mock(return_value=value)
 
         @wraps(_Source.load)
-        def wrapped(**params):
-            return calls(**params)
+        def wrapped(_calls=calls, **params):
+            return _calls(**params)
 
         assert _fetch(manifest_type(), api, wrapped, {'rows': 3}) is value
         calls.assert_called_once_with(rows=3)
@@ -296,9 +305,17 @@ def test_manifest_callable_boundaries(manifest_type, api):
         manifest.with_params_override(rows=3)
     assert caught.value is failure
 
+    signature_failure = RuntimeError('source signature unavailable')
+
     class Malformed(_Source):
-        __signature__ = 'not a signature'
+        @property
+        def __signature__(self):
+            raise signature_failure
 
     manifest = manifest_type().set_data_source(Malformed())
-    with pytest.raises(TypeError, match='__signature__'):
+    with pytest.raises(RuntimeError) as caught:
         manifest.with_params_override(rows=3)
+    assert caught.value is signature_failure
+    malformed = manifest_type().set_data_source(partial(receiver_required, _recorded(), _recorded()))
+    with pytest.raises(ValueError, match='incorrect arguments'):
+        malformed.with_params_override(rows=3)
