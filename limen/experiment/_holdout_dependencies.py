@@ -51,7 +51,7 @@ def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
 
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        entries = dict.items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
+        entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
         return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
@@ -121,7 +121,7 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, payload, node(_attributes(item)))
         elif isinstance(item, Mapping):
             factory = node(item.default_factory) if isinstance(item, defaultdict) else None
-            result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict.items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
+            result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
         elif isinstance(item, (tuple, list, deque)):
             result = (kind, tuple(node(part) for part in cast(Collection[object], item)), item.maxlen if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
