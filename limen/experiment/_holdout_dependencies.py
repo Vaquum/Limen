@@ -153,7 +153,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
                     method_names.add(name)
-                    module_attributes.add(name)
+                    if name not in ('__globals__', '__builtins__'):
+                        module_attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     chained_import = instructions[index - 1].argval is None
                     level = int(instructions[index - 2].argval)
