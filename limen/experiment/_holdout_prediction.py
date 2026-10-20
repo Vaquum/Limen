@@ -13,7 +13,7 @@ import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_array, restore_iterations
-from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches
+from limen.experiment._holdout_calls import call_codes, call_functions, constructor_entry, matches as _matches, native_attribute, receiver_position
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -42,23 +42,26 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             raise ValueError('Holdout refuses fitting callbacks without observable Python call protection')
         bound_owner = method.__self__ if inspect.ismethod(method) else None
         call_owner: object | None = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
-        wrapped = cast(partial[object], method).func if isinstance(method, partial) else None
+        wrapped = native_attribute(cast(object, method), 'func') if isinstance(method, partial) else None
         while isinstance(wrapped, (partial, staticmethod)):
             if isinstance(wrapped, staticmethod):
-                wrapped = cast('staticmethod[..., object]', wrapped).__func__
+                wrapped = native_attribute(cast(object, wrapped), '__func__')
             else:
                 provider = cast(partial[object], wrapped)
                 wrapped = provider
                 if inspect.getattr_static(cast(type[object], type(provider)), '__call__', None) is not partial[object].__call__:
                     break
-                wrapped = provider.func
+                wrapped = native_attribute(provider, 'func')
         if inspect.ismethod(wrapped):
             wrapped_owner = wrapped.__self__
+            wrapped_entry = wrapped
         elif wrapped is None or inspect.isfunction(wrapped):
             wrapped_owner = None
+            wrapped_entry = wrapped
         else:
             wrapped_call = inspect.getattr_static(cast(type[object], type(wrapped)), '__call__', None)
             wrapped_owner = type(wrapped) if isinstance(wrapped_call, classmethod) else None if isinstance(wrapped_call, staticmethod) else wrapped
+            wrapped_entry = wrapped_call
         class_target: type[object] | None = wrapped if isinstance(wrapped, type) else method if isinstance(method, type) else None
         for function in functions:
             owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
@@ -66,6 +69,11 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             if class_target is not None and function not in calls and inspect.getattr_static(type(class_target), '__call__', None) is type.__call__:
                 entry = constructor_entry(class_target)
                 owner, instance, index = class_target, entry.instance, entry.position
+            else:
+                source = method if bound_owner is not None else call if function in calls else wrapped_entry
+                index = receiver_position(source) if owner is not None else 0
+                if index is None:
+                    raise ValueError('Holdout refuses fitting callbacks without observable Python call protection')
             forbidden.setdefault(function, []).append((owner, instance, index))
 
     def collect(value: object) -> None:

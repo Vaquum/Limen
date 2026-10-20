@@ -1647,6 +1647,72 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
                 callback(unsafe_class._model.model.coef_.ravel())
             assert threshold_selections == []
+    def target_copy(self, memo):
+        clone = object.__new__(type(self))
+        vars(clone).update(copy.deepcopy(vars(self), memo))
+        _LATE_RULES['offset'] += 0.1
+        return clone
+    with history.connection(assessment_case[0] / history._HISTORY) as db:
+        before_target_copy = db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
+    with patch.dict(_LATE_RULES), patch.object(NextBarUpTarget, '__deepcopy__', target_copy, create=True), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed prediction dependencies before observation access'):
+            _report(copying_handle, assessment_case)
+        assert loader.call_count == 0
+    with history.connection(assessment_case[0] / history._HISTORY) as db:
+        assert db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0] == before_target_copy
+    def bound_initializer(marker, cls, values):
+        threshold_selections.append(cls)
+    class BoundInitializer:
+        __init__ = classmethod(partial(bound_initializer, expected_offset))
+    for callback in (BoundInitializer, partial(BoundInitializer)):
+        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+        _freeze(unsafe_class)
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+            callback(unsafe_class._model.model.coef_.ravel())
+        assert threshold_selections == []
+    class HiddenFunction(staticmethod):
+        @property
+        def __func__(self):
+            return identity_probabilities
+    class HiddenThreshold:
+        __call__ = HiddenFunction(max)
+    unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = HiddenThreshold()
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+            _freeze(unsafe_class)
+        assert loader.call_count == 0
+    def bound_adjust(offset, values, *, scale):
+        return np.clip(values * scale + offset, 0, 1)
+    class HiddenPartial(partial):
+        @property
+        def func(self):
+            return identity_probabilities
+        @property
+        def args(self):
+            return ()
+        @property
+        def keywords(self):
+            return {}
+        def adjust(self, values):
+            return self(values)
+        def __deepcopy__(self, memo):
+            values = partial.__dict__['args'].__get__(self, type(self))
+            keywords = partial.__dict__['keywords'].__get__(self, type(self))
+            return type(self)(bound_adjust, *values, **keywords)
+    class NonpreservingHiddenPartial(HiddenPartial):
+        def __deepcopy__(self, memo):
+            values = partial.__dict__['args'].__get__(self, type(self))
+            keywords = partial.__dict__['keywords'].__get__(self, type(self))
+            return type(self)(bound_adjust, values[0] + 0.1, **keywords)
+    hidden_partial = copy.deepcopy(assessment_case[2][0][0])
+    hidden_partial._model.__class__ = PartialState
+    hidden_partial._model.policy = HiddenPartial(bound_adjust, expected_offset, scale=1.0)
+    _freeze(hidden_partial)
+    hidden_partial._model.policy = NonpreservingHiddenPartial(bound_adjust, expected_offset, scale=1.0)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(hidden_partial)
+        assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

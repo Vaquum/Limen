@@ -16,7 +16,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions
+from limen.experiment._holdout_calls import call_functions, native_attribute
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array', 'restore_iterations']
@@ -202,9 +202,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     visit(cast(object, method))
                     evidence.append((key, cached_witness(id(cast(object, method)))))
                 if isinstance(method, property):
-                    method = method.fget
+                    method = native_attribute(method, 'fget')
                 if isinstance(method, (staticmethod, classmethod)):
-                    method = cast('staticmethod[..., object] | classmethod[object, ..., object]', method).__func__
+                    method = native_attribute(cast(object, method), '__func__')
                 if method is not None:
                     visit(method)
                     evidence.append((key, cached_witness(id(method)) if id(method) in seen else fitted_witness(method)))

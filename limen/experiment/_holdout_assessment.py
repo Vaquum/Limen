@@ -152,8 +152,6 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
         if digest(frozen_spec) != spec_sha or state_digest(snapshot[0]) != state_sha:
             raise ValueError('Frozen holdout specification/state changed')
         selection = owned_copy(snapshot[0])
-        if prediction_dependencies(selection) != frozen_spec['prediction_dependencies']:
-            raise ValueError('Holdout copy changed prediction dependencies before observation access')
         target = copy.deepcopy(snapshot[1])
         if target is not None:
             unchanged(target)
@@ -173,6 +171,8 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 _ = vars(manifest).pop('_holdout_binding', None)
                 vars(manifest)['_holdout_assessment_schemas'] = {'input': proof['input_schema'], 'model': proof['model_schema']}
                 vars(manifest)['_holdout_assessment_failure'] = failures.schema
+            if prediction_dependencies(selection) != frozen_spec['prediction_dependencies']:
+                raise ValueError('Holdout preparation/copy changed prediction dependencies before observation access')
             attempt = attempts.allocate(root, declaration, planned, spec=spec_sha, state=state_sha, scenarios=scenarios_sha)
             attempt_id, stage = cast(str, attempt['id']), 'load'
             source: SourceEvidence | None = None

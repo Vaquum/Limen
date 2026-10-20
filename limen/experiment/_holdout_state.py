@@ -17,6 +17,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+from limen.experiment._holdout_calls import native_attribute
+
 __all__ = ['children', 'code_digest', 'fitted_witness', 'object_array']
 
 
@@ -68,15 +70,13 @@ def children(value: object) -> tuple[object, ...]:
         if metadata is not None:
             parts = tuple(metadata.values())
         elif isinstance(value, (staticmethod, classmethod)):
-            descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
-            parts = (descriptor.__func__,)
+            parts = (native_attribute(cast(object, value), '__func__'),)
         elif isinstance(value, GenericAlias):
             parts = tuple(vars(GenericAlias)[name].__get__(value, type(value)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias))
         elif isinstance(value, property):
-            parts = (value.fget, value.fset, value.fdel)
+            parts = tuple(native_attribute(value, name) for name in ('fget', 'fset', 'fdel'))
         else:
-            provider = cast(partial[object], value)
-            parts = (provider.func, provider.args, provider.keywords)
+            parts = tuple(native_attribute(cast(object, value), name) for name in ('func', 'args', 'keywords'))
         return (*parts, _attributes(cast(object, value)))
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
@@ -131,8 +131,7 @@ def fitted_witness(value: object) -> bytes:
         elif inspect.ismethod(item):
             result = ('method', node(item.__func__), node(item.__self__))
         elif isinstance(item, (staticmethod, classmethod)):
-            descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', item)
-            result = (kind, 'descriptor', node(descriptor.__func__), node(_attributes(cast(object, item))))
+            result = (kind, 'descriptor', node(native_attribute(cast(object, item), '__func__')), node(_attributes(cast(object, item))))
         elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
         elif type(item) is logging.Logger:
@@ -149,9 +148,9 @@ def fitted_witness(value: object) -> bytes:
             metadata = {name: vars(GenericAlias)[name].__get__(item, type(item)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
             result = (kind, 'generic-alias', node(metadata), node(_attributes(cast(object, item))))
         elif isinstance(item, property):
-            result = (kind, 'property', node(item.fget), node(item.fset), node(item.fdel), node(_attributes(cast(object, item))))
+            result = (kind, 'property', *(node(native_attribute(item, name)) for name in ('fget', 'fset', 'fdel')), node(_attributes(cast(object, item))))
         elif isinstance(item, partial):
-            result = (kind, 'partial', node(item.func), node(item.args), node(item.keywords), node(_attributes(cast(object, item))))
+            result = (kind, 'partial', *(node(native_attribute(cast(object, item), name)) for name in ('func', 'args', 'keywords')), node(_attributes(cast(object, item))))
         elif isinstance(item, bytearray):
             result = (kind, bytes(memoryview(item)), node(_attributes(item)))
         elif isinstance(item, (str, int, float, bytes)):
