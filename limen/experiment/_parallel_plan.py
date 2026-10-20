@@ -195,6 +195,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     from limen.yaml.compiler import build_manifest
 
     frozen = clone_manifest(manifest)
+    factory_options = cast(Mapping[str, list[object]] | None, _normalize(factory_options))
     if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
