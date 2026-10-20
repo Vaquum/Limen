@@ -12,7 +12,7 @@ from functools import partial
 from importlib import import_module
 from string import Formatter
 from types import CellType, FunctionType, MethodType
-from typing import Protocol, cast
+from typing import cast
 
 import polars as pl
 from typing_extensions import override
@@ -26,10 +26,6 @@ from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
-
-class _TargetClass(Protocol):
-    transform: Callable[..., object]
-
 
 class _CapturedCall(partial[object]):
     def __getattr__(self, name: str) -> object:
@@ -50,7 +46,7 @@ class ScalerFactory:
     dynamic_selector: str | None
 
     def selected(self, params: Mapping[str, object]) -> object:
-        return self.transform_class if self.dynamic_selector is None else SCALER_REGISTRY[cast(str, params['scaler_type'])]
+        return self.transform_class if self.dynamic_selector is None else cast(dict[str, object], self.transform_class)[cast(str, params['scaler_type'])]
 
     def __call__(self, data: pl.DataFrame, **params: object) -> object:
         function = cast(Callable[..., object], self.selected(params))
@@ -132,7 +128,8 @@ def factory_reference(value: object) -> tuple[list[object], bool]:
         source, imported = factory_reference(bound.func)
         return [reference(type(bound)), source, encode((state[0], state[1], bound.args, bound.keywords, state[3]))], imported
     if inspect.ismethod(value):
-        return [component_digest(value)], False
+        identity = reference(value.__func__)
+        return [identity, factory_reference(value.__self__)[0]], import_reference(identity) is value.__func__
     if not (inspect.isfunction(value) or isinstance(value, type)):
         return [reference(type(value)), encode(object_state(value))], callable(value)
     identity = reference(value)
@@ -171,6 +168,10 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
 _NO_ANCESTORS: frozenset[int] = frozenset()
 
 
+def _scaler_factory(cls: object, params: dict[str, object], selector: str | None) -> ScalerFactory:
+    return cast(Callable[[object, dict[str, object], str | None], ScalerFactory], vars(import_module('limen.experiment._parallel_resources'))['scaler_factory'])(cls, params, selector)
+
+
 def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None,
                state_memo: dict[int, tuple[object, object]] | None = None) -> object:
     if id(value) in active:
@@ -185,15 +186,15 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     if type(value) is _manifest.TargetClassConfig:
         target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
-                                    cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform,
+                                    cast(Callable[..., object], target.target_class.__init__), cast(Callable[..., object], getattr(target.target_class, 'transform')),
                                     target.target_class.__new__ if inspect.isfunction(target.target_class.__new__) else None)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
-            return ScalerFactory(cls, copy.deepcopy(params), None)
-        if value.__qualname__ == 'MLManifest.set_scaler_from_params.<locals>._scaler_factory':
+            value = _scaler_factory(cls, params, None)
+        elif value.__qualname__ == 'MLManifest.set_scaler_from_params.<locals>._scaler_factory':
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
-            return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
+            value = _scaler_factory(None, cast(dict[str, object], closure['_static']), cast(str, closure['param_name']))
     clone: object
     if isinstance(value, CellType):
         clone = state_memo[key][1] if key in state_memo else CellType(None)
@@ -257,7 +258,6 @@ def _contract(component: object, path: str) -> ParallelRoundContract:
         raise ValueError(f'Parallel stage {path}: missing independence contract')
     if not inspect.isfunction(contract.validate):
         raise ValueError(f'Parallel stage {path}: validator must be an importable function')
-    _ = reference(contract.validate)
     return cast(ParallelRoundContract, _normalize(contract, snapshot=True))
 
 
@@ -290,7 +290,7 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
             result.append(('scaler.transform', transform))
             for i, (_, compute, _) in enumerate(computations):
                 if isinstance(compute, ScalerFactory):
-                    classes = (compute.transform_class,) if compute.dynamic_selector is None else tuple(SCALER_REGISTRY.values())
+                    classes = (compute.transform_class,) if compute.dynamic_selector is None else tuple(cast(dict[str, object], compute.transform_class).values())
                     result.extend((f'scaler.class.{i}.{j}', cls) for j, cls in enumerate(classes))
         if manifest.data_dict_extension is not None:
             result.append(('data_dict_extension', manifest.data_dict_extension))
@@ -329,7 +329,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
                    for path, original in components(frozen, factory_options)
                    for component in [bind_factories(cast(dict[str, list[object]], vars(frozen)['_parallel_factory_options']), {path.removeprefix('architecture.'): original})[path.removeprefix('architecture.')]])
     stages += tuple(FrozenStage(stage.path + '.allocate', stage.component, stage.contract) for stage in stages
-                    if stage.path.startswith('architecture.') and factory_allocator(stage.component) is not None)
+                    if stage.path.startswith(('architecture.', 'scaler.class.')) and factory_allocator(stage.component) is not None)
     for stage in stages:
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):

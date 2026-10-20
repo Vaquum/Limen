@@ -686,6 +686,19 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
+        for manifest in (copy.deepcopy(native).set_scaler(RobustScaler), copy.deepcopy(native).set_scaler_from_params()):
+            baseline = freeze_manifest(manifest, None)
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(RobustScaler.__init__, '__defaults__', ((0.1, 0.9),))
+                captured_scaler = freeze_manifest(manifest, None)
+                control = _frozen_probe(captured_scaler, _parameters())[5]
+            assert captured_scaler.pipeline_digest != baseline.pipeline_digest and captured_scaler.resource_digest != baseline.resource_digest
+            assert control != _frozen_probe(baseline, _parameters())[5]
+            before = digest(captured_scaler)
+            for _ in range(2):
+                actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
+                assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
+            assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
         for component in (_wrapped_feature, MethodOnlyRolling(3).transform, OpaqueUnusedCallRolling(3).transform, partial(_kwargs_feature, n_jobs=1, window=3), partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
@@ -1268,6 +1281,22 @@ def _assert_factory_resources(plan, params):
             assert inspect.signature(bound).parameters['n_jobs'].default == 2
             assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(captured_instance) == before and DefaultRollingFactory.__call__.__kwdefaults__ == {'n_jobs': 1}
+        method = factory.__call__
+        declare_parallel(method, ParallelRoundContract(_caller_validator, ('window',)))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(DefaultRollingFactory.__call__, '__kwdefaults__', {'n_jobs': 2})
+            captured_method = freeze_manifest(manifest, None, {'auxiliary_factory': [method]})
+        before = digest(captured_method)
+        validate_domain(captured_method, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [method]}, None)
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, captured_method, method).result(timeout=30)
+            expected, _ = _factory_probe(captured_method, method)
+            bound = captured_method.manifest.resolve_model_kwargs(params | {'auxiliary_factory': method})['auxiliary_factory']
+            assert inspect.signature(bound).parameters['n_jobs'].default == 2
+            assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        assert digest(captured_method) == before and DefaultRollingFactory.__call__.__kwdefaults__ == {'n_jobs': 1}
+        with pytest.raises(ValueError, match='missing frozen independence contract'):
+            validate_resources(captured_method, params | {'auxiliary_factory': DefaultRollingFactory(4).__call__})
         declare_parallel(CallerRolling, ParallelRoundContract(_caller_validator, ('window',)))
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(CallerRolling.__init__, '__defaults__', (3,))
