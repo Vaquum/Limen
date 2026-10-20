@@ -98,6 +98,11 @@ def component_state(value: object) -> dict[str, object]:
     return state | {name: item for _, name, item in reversed(slot_state(value))}
 
 
+
+def _call_implementation(value: object) -> object:
+    return type(value).__call__ if callable(value) else None
+
+
 def _encode_component(value: object, active: frozenset[int]) -> list[object]:
     if isinstance(value, partial):
         return ['partial', encode(value.func, active), encode(value.args, active), encode(value.keywords, active)]
@@ -110,10 +115,10 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
         if set(component_state(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
-                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)], encode(getattr(type(value), '__call__') if callable(value) else None, active)]
+                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)], encode(_call_implementation(value), active)]
     if callable(value):
         state = {key: item for key, item in vars(value).items() if key != '__parallel_round_contract__'} if hasattr(value, '__dict__') else {}
-        return ['instance', reference(type(value)), encode((state, slot_state(value)), active), encode(getattr(type(value), '__call__'), active)]
+        return ['instance', reference(type(value)), encode((state, slot_state(value)), active), encode(_call_implementation(value), active)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
 
 
@@ -193,7 +198,7 @@ def _decode_instance(parts: list[object]) -> object:
             vars(cls)[name].__set__(instance, item)
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
-    if encode(getattr(type(instance), '__call__') if callable(instance) else None) != implementation:
+    if encode(_call_implementation(instance)) != implementation:
         raise ValueError('Parallel callable implementation changed')
     return instance
 
