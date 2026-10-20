@@ -55,11 +55,12 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
     _parallel_transform: Callable[..., object] | None = None
 
     def _parallel_make(self, **params: object) -> object:
-        cls = cast(type, self.target_class)
-        instance = cls.__new__(cls) if cls.__new__ is object.__new__ else cls.__new__(cls, **params)
+        cls = self.target_class
+        allocator = cast(Callable[..., object], cls.__new__)
+        instance = allocator(cls, **({} if cls.__new__ is object.__new__ else params))
         if isinstance(instance, cls):
             assert self._parallel_init is not None
-            self._parallel_init(instance, **params)
+            _ = self._parallel_init(instance, **params)
         return instance
 
 
@@ -164,12 +165,12 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         for field in fields(value):
             object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo))
     else:
-        clone = copy.deepcopy(value)
-    implementation = call_implementation(value)
+        clone = copy.deepcopy(cast(object, value))
+    implementation = call_implementation(cast(object, value))
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         clone = partial(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
-        vars(clone)['__parallel_round_contract__'] = getattr(value, '__parallel_round_contract__', None)
+        vars(clone)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
     return clone
 
 

@@ -444,6 +444,10 @@ def test_frozen_manifest_round_plan() -> None:
     for invalid in (['ref', 0], ['ref', -1], ['list', [['ref', 0]]], [[]]):
         with pytest.raises(ValueError):
             decode(invalid)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(_object_default_feature, '__defaults__', (_object_default_feature,))
+        with pytest.raises(ValueError, match='cycles'):
+            encode(_object_default_feature)
     config = _configuration()
     original = build_manifest(config)
     plan = freeze_manifest(original, config)

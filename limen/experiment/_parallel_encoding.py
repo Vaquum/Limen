@@ -171,7 +171,7 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
             restore_function_metadata(function, source, wrapped)
         return function
     if tag == 'method':
-        owner = (decode_graph(value, lambda: _decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True), lambda owner: encode(owner))
+        owner = (decode_graph(cast(object, value), lambda: _decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True), lambda owner: encode(owner))
                  if isinstance(value, list) and value and value[0] in ('dataclass', 'instance') else decode(cast(object, value), isolate_functions=isolate_functions))
         function = decode(parts[3], isolate_functions=isolate_functions)
         if not inspect.isfunction(function):
