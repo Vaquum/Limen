@@ -556,6 +556,25 @@ def test_owned_lightgbm_preserves_effective_iteration(assessment_case, limit, ca
     assert first['state_sha256'] == repeat['state_sha256']
 
 
+def test_readonly_prediction_restores_native_profiler(assessment_case):
+    from cProfile import Profile
+    import sys
+    from limen.experiment._holdout_prediction import validate_prediction
+    selected = assessment_case[2][0][0]
+    def retained_shape():
+        return selected._model.model.coef_.shape
+    profiler = Profile()
+    profiler.enable()
+    previous = sys.getprofile()
+    try:
+        validate_prediction(selected)
+        assert sys.getprofile() is previous
+        assert retained_shape() == selected._model.model.coef_.shape
+    finally:
+        profiler.disable()
+    assert any(entry.code is retained_shape.__code__ for entry in profiler.getstats())
+
+
 def test_frozen_dependencies_and_invalid_state(assessment_case):
     import limen.scalers.logreg_scaler as scaler_module
     from sklearn.linear_model import LogisticRegression

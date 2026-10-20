@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
+from cProfile import Profile
 import inspect
 from functools import partial
 import random
@@ -131,17 +132,22 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = 'Holdout inference attempted fitting/calibration/threshold search'
             raise ValueError(violation)
-        if previous is not None:
+        if callable(previous):
             _ = previous(frame, event, arg)
 
     try:
         with call_codes(tuple(forbidden)):
             observed = {id(function.__code__): (function, owners) for function, owners in forbidden.items()}
+            if isinstance(previous, Profile):
+                previous.disable()
             sys.setprofile(profile)
             try:
                 yield
             finally:
-                sys.setprofile(previous)
+                if isinstance(previous, Profile):
+                    previous.enable()
+                else:
+                    sys.setprofile(previous)
     finally:
         if violation is not None:
             raise ValueError(violation)
