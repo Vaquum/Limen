@@ -9,7 +9,7 @@ from threading import RLock
 from types import CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'function_module', 'matches', 'native_attribute', 'native_codes', 'namespace_calls', 'entropy_call', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'matches', 'native_attribute', 'native_codes', 'namespace_calls', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
@@ -208,6 +208,6 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
         call = instructions[index + 1]
         if part.opname in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST') and isinstance(part.argval, str) and call.opname in ('CALL', 'CALL_FUNCTION', 'CALL_METHOD') and call.arg == 0:
             lookup = instructions[index + 2:index + 4]
-            key = lookup[0].argval if len(lookup) == 2 and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
+            key = lookup[0].argval if bool(lookup[1:]) and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
             found.append((part.argval, key))
     return (*found, *(entry for part in code.co_consts if isinstance(part, CodeType) for entry in namespace_calls(part)))
