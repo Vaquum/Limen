@@ -16,7 +16,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_state import _attributes, children, code_digest, fitted_witness, object_array
+from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
 
 __all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array']
 
@@ -131,8 +131,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
             evidence.append(fitted_witness(value))
         elif object_array(value):
-            visit(value.tolist())
-            visit(_attributes(value))
+            for part in children(cast(object, value)):
+                visit(part)
             if type(value) is not np.ndarray:
                 objects.append(value)
         elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
