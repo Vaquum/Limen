@@ -76,7 +76,11 @@ def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path
     source = (ROOT / 'docs/examples/python-research/research.py').read_bytes()
     observation = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
     missing = (ROOT / 'docs/examples/retained/compiled-selection.json').read_bytes()
-    files = {'index.html': observation, 'chapter/index.html': observation, 'source/research.py': source, '404.html': missing}
+    policy = (ROOT / 'docs-site/src/security-headers.json').read_bytes()
+    headers = json.loads(policy)
+    missing_headers = dict(headers)
+    files = {'index.html': observation, 'chapter/index.html': observation, 'source/research.py': source, '404.html': missing,
+             'security-headers.json': policy}
     agents = []
     for name, data in files.items():
         path = tmp_path / name
@@ -92,9 +96,8 @@ def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path
             super().do_GET()
 
         def end_headers(self):
-            for name, value in [('Content-Security-Policy', "default-src 'self'; frame-ancestors 'none'"),
-                                ('Permissions-Policy', 'camera=(), microphone=()'), ('Referrer-Policy', 'strict-origin-when-cross-origin'),
-                                ('Strict-Transport-Security', 'max-age=31536000'), ('X-Content-Type-Options', 'nosniff'), ('X-Frame-Options', 'DENY')]:
+            response_headers = missing_headers if self.path == '/__missing-docs-acceptance__/' else headers
+            for name, value in response_headers.items():
                 self.send_header(name, value)
             super().end_headers()
 
@@ -116,6 +119,14 @@ def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path
         (tmp_path / 'source/research.py').write_bytes(source)
         with pytest.raises(ValueError, match='404 differs'):
             verify_site(base, files | {'404.html': observation})
+        for name, expected in json.loads(policy).items():
+            headers[name] = "default-src 'none'" if name == 'Content-Security-Policy' else 'changed'
+            with pytest.raises(ValueError, match='sealed security header: ' + name):
+                verify_site(base, files)
+            headers[name] = expected
+        missing_headers['Content-Security-Policy'] = "default-src 'none'"
+        with pytest.raises(ValueError, match='sealed security header: Content-Security-Policy'):
+            verify_site(base, files)
         assert agents and set(agents) == {USER_AGENT}
     finally:
         server.shutdown()

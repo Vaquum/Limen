@@ -31,6 +31,14 @@ def verify_release_manifest(release_url: str, payload: bytes) -> None:
 
 
 def verify_site(base_url: str, files: dict[str, bytes]) -> None:
+    policy = json.loads(files['security-headers.json'])
+
+    def require_headers(headers):
+        for name in ('Content-Security-Policy', 'Permissions-Policy', 'Referrer-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options', 'X-Frame-Options'):
+            expected = policy[name]
+            if not expected or headers.get(name) != expected:
+                raise ValueError('A published response changed its sealed security header: ' + name)
+
     def member(item):
         name, expected = item
         relative_path(name)
@@ -41,10 +49,7 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
             anonymous_url(response.geturl())
             if response.read() != expected:
                 raise ValueError('The active site member differs from its sealed payload: ' + name)
-            if name.endswith('.html'):
-                for header in ('Content-Security-Policy', 'Permissions-Policy', 'Referrer-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options', 'X-Frame-Options'):
-                    if not response.headers.get(header):
-                        raise ValueError('A published document lost its security header: ' + header)
+            require_headers(response.headers)
     with ThreadPoolExecutor(max_workers=8) as readers:
         list(readers.map(member, ((name, data) for name, data in files.items() if name != '404.html')))
     try:
@@ -53,6 +58,7 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
     except HTTPError as error:
         if error.code != 404 or error.read() != files['404.html']:
             raise ValueError('The deployed 404 differs from the sealed reader') from error
+        require_headers(error.headers)
 
 
 def relative_path(value: str) -> str:

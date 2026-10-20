@@ -28,7 +28,7 @@ include docs-site/sidebars.js
 include docs-site/wrangler.jsonc
 include docs-site/docs/.gitkeep
 recursive-include docs-site/scripts *.mjs
-recursive-include docs-site/src *.js *.css
+recursive-include docs-site/src *.js *.css *.json
 recursive-include .github *.md *.yml
 recursive-include limen *.md
 include limen/py.typed

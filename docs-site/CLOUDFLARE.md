@@ -6,6 +6,8 @@ The existing Docusaurus renderer still serves [docs.vaquum.fi/limen/](https://do
 
 The `limen` Worker serves `/limen/*` through `ASSETS`. It redirects `/` and `/limen` to `/limen/`, and root robots/sitemap requests to their product resources. Other product prefixes return 404. Redirects, errors and assets retain HSTS, CSP, permissions, referrer, content-type and frame protections.
 
+The Worker imports `src/security-headers.json`. The build retains that exact policy in its hashed site payload. Verification compares every response's six security-header values with that release's policy, including the 404 response. Rollback retains the previous release's policy.
+
 The legacy [wrangler.jsonc](wrangler.jsonc) reads `build/`. The replacement [publisher/wrangler.json](publisher/wrangler.json) reads the sealed `reader-build/`. The replacement pins Wrangler and its complete dependency graph in `publisher/package-lock.json`; it requires Node.js 22 or later. Reader checks continue to run under Node.js 20 in the required Docs Site job.
 
 ## Release-bound publication
