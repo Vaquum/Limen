@@ -295,7 +295,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     evidence.append((namespace_name, function.__module__, function.__qualname__, key, part))
     if capture is not None:
         capture.extend(seen.values())
-    result = [fitted_witness((tuple(values), evidence))]
+    result: list[object] = [fitted_witness((tuple(values), evidence))]
     for graph in (seen, objects, evidence):
         graph.clear()
     return result
