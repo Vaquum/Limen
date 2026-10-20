@@ -128,3 +128,12 @@ def test_complete_research_scenario(research_proof, interface, scenario):
     item = research_proof['scenarios'][(interface, scenario)]
     assert item['output_sha256'] and item['command']
     assert item['summary']
+
+
+@pytest.mark.parametrize('interface', ['python', 'compiled'])
+def test_mixed_feedback_order_injected_results_and_checkpoint(interface, request, tmp_path):
+    from scenario_oracles import verify_feedback
+    scenarios = request.getfixturevalue(interface + '_scenarios')
+    inputs = ROOT / 'tests/fixtures'
+    result = scenarios.mixed_feedback(inputs, tmp_path / interface)
+    verify_feedback(interface, result, inputs)
