@@ -15,6 +15,10 @@ _VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
 EMPTY_IDS: frozenset[int] = frozenset()
 
 
+def source_class(cls: type) -> type:
+    return cast(type, vars(cls).get('_parallel_source_class', cls))
+
+
 @contextmanager
 def isolated_encoding() -> Iterator[None]:
     token = _encoded.set(None)

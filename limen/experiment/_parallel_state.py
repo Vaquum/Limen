@@ -2,13 +2,20 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
-from inspect import Parameter, ismethod, signature
+from inspect import Parameter, getattr_static, ismethod, signature
 from types import FunctionType, MemberDescriptorType
 from typing import cast
 
-from limen.experiment._parallel_graph import EMPTY_IDS, value_only
+from limen.experiment._parallel_graph import EMPTY_IDS, source_class, value_only
 
 ObjectState = tuple[dict[str, object], list[tuple[type, str, object]], tuple[object, ...] | None, list[object] | None]
+
+
+def bind_call(instance: object, implementation: object) -> None:
+    if type(cls := source_class(type(instance))) is not type or not isinstance(implementation, FunctionType) or implementation.__code__ is not getattr(call_implementation(instance), '__code__', None):
+        raise ValueError('Parallel callable implementation or metaclass state changed')
+    raw = getattr_static(cls, '__call__')
+    object.__setattr__(instance, '__class__', type(cls.__name__, (cls,), {'__slots__': (), '__module__': cls.__module__, '__qualname__': cls.__qualname__, '_parallel_source_class': cls, '__call__': classmethod(implementation) if isinstance(raw, classmethod) else staticmethod(implementation) if isinstance(raw, staticmethod) else implementation}))
 
 
 def slot_state(value: object) -> list[tuple[type, str, object]]:

@@ -20,25 +20,13 @@ from typing_extensions import override
 from limen._parallel_contract import ParallelRoundContract
 from limen.experiment._parallel_encoding import import_reference, decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import copy_context
-from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
+from limen.experiment._parallel_state import ObjectState, bind_call, call_implementation, object_state, restore_object, mutable_function
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
 from limen.experiment._parallel_scaler import ScalerFactory, capture_transform, scaler_factory
-
-
-class _CapturedCall(partial[object]):
-    def __getattr__(self, name: str) -> object:
-        return getattr(cast(MethodType, self.func).__self__, name)
-
-    @override
-    def __setattr__(self, name: str, value: object) -> None:
-        if name == '__parallel_round_contract__':
-            vars(self)[name] = value
-        else:
-            setattr(cast(MethodType, self.func).__self__, name, value)
 
 
 @dataclass
@@ -109,12 +97,12 @@ def factory_reference(value: object) -> tuple[list[object], bool]:
         bound = cast(partial[object], value)
         state = object_state(bound)
         source, imported = factory_reference(bound.func)
-        return [reference(type(bound)), source, encode((state[0], state[1], bound.args, bound.keywords, state[3]))], imported
+        return [reference(type(bound)), source, encode((state[0], state[1], bound.args, bound.keywords, state[3]), ordered=True)], imported
     if inspect.ismethod(value):
         identity = reference(value.__func__)
         return [identity, factory_reference(value.__self__)[0]], import_reference(identity) is value.__func__
     if not (inspect.isfunction(value) or isinstance(value, type)):
-        return [reference(type(value)), encode(object_state(value))], callable(value)
+        return [reference(type(value)), encode(object_state(value), ordered=True)], callable(value)
     identity = reference(value)
     return identity, import_reference(identity) is value
 
@@ -233,7 +221,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         with shared_copy(state_memo):
-            clone = _CapturedCall(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
+            bind_call(clone, decode(encode(implementation), isolate_functions=True))
         vars(clone)['__parallel_round_contract__'] = _normalize(getattr(cast(object, value), '__parallel_round_contract__', None), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     return clone
 

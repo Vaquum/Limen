@@ -18,13 +18,14 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding
-from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
+from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding, source_class
+from limen.experiment._parallel_state import ObjectState, bind_call, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
 
 
 def reference(value: object) -> list[object]:
+    value = source_class(value) if isinstance(value, type) else value
     module, name = getattr(value, '__module__', None), getattr(value, '__qualname__', None)
     if not isinstance(module, str) or module == '__main__' or not isinstance(name, str) or '<' in name:
         raise ValueError('Parallel components require importable module-qualified identities')
@@ -118,7 +119,7 @@ def _encode_component(value: object, active: frozenset[int], *, owner_only: bool
 
 def _call_node(value: object, active: frozenset[int], owner_only: bool) -> list[object]:
     implementation = call_implementation(value)
-    return _owner_call(type(value)) if owner_only and implementation is not None else encode(None if owner_only else implementation, active)
+    return ['captured_call', encode(implementation.__func__ if inspect.ismethod(implementation) else implementation, active)] if source_class(type(value)) is not type(value) else _owner_call(type(value)) if owner_only and implementation is not None else encode(None if owner_only else implementation, active)
 
 
 def _owner_call(cls: type) -> list[object]:
@@ -226,8 +227,11 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only
         instance = restore_object(cast(type, import_reference(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
-    captured = decode(implementation, isolate_functions=isolate_functions)
-    if not owner_only and encode(call_implementation(instance)) != encode(captured):
+    frozen = isinstance(implementation, list) and len(implementation) == 2 and implementation[0] == 'captured_call'
+    captured = decode(cast(list[object], implementation)[1] if frozen else implementation, isolate_functions=isolate_functions)
+    if frozen:
+        bind_call(instance, captured)
+    elif not owner_only and encode(call_implementation(instance)) != encode(captured):
         raise ValueError('Parallel callable implementation changed')
     return instance
 

@@ -150,6 +150,16 @@ class InheritedCallable(CallerRollingBase):
         self.window = window
 
 
+class DefaultSharedRolling(InheritedCallable):
+    def transform(self, data):
+        self.window += 1
+        return super().transform(data)
+
+    def __call__(self, data, increment=1):
+        self.window += increment
+        return super().transform(data)
+
+
 class AllocatedRolling(CallerRollingBase):
     def __new__(cls, *, seed=None):
         instance = super().__new__(cls)
@@ -233,6 +243,17 @@ class DefaultRollingFactory:
 
     def __call__(self, *, n_jobs=1):
         return CallerRolling(self.window)
+
+
+@dataclass
+class OrderedFactory:
+    steps: dict[str, int]
+
+    def __call__(self, *, n_jobs=1):
+        window = 1
+        for name, value in self.steps.items():
+            window = window + value if name == 'offset' else window * value
+        return CallerRolling(window)
 
 
 def _object_default_feature(data, counter=None):
@@ -930,6 +951,20 @@ def test_frozen_manifest_round_plan() -> None:
                 _assert_inherited_identity(frozen)
         assert _cell_increment.__closure__[0] is _cell_read.__closure__[0]
         assert _cell_increment.__closure__[0].cell_contents == 2
+        shared_owner = DefaultSharedRolling(2)
+        for component in (shared_owner.transform, shared_owner):
+            declare_parallel(component, ParallelRoundContract(deterministic_stage))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(DefaultSharedRolling.__call__, '__defaults__', (2,))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(shared_owner.transform).add_feature(shared_owner), None)
+        before = digest(frozen)
+        oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (3, 5)]
+        for _ in range(2):
+            actual, pid = pool.submit(_shared_carried_probe, frozen, 'owner').result(timeout=30)
+            expected, _ = _shared_carried_probe(frozen, 'owner')
+            assert actual == expected == oracle and pid != os.getpid() and digest(frozen) == before
+        assert shared_owner.window == 2 and type(shared_owner) is DefaultSharedRolling
+        assert DefaultSharedRolling.__call__.__defaults__ == (1,)
         declare_parallel(_mapping_feature, ParallelRoundContract(deterministic_stage))
         options = defaultdict(int)
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mapping_feature, options=options), None)
@@ -1404,6 +1439,19 @@ def _assert_factory_resources(plan, params):
             assert inspect.signature(bound).parameters['n_jobs'].default == 2
             assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(captured_instance) == before and DefaultRollingFactory.__call__.__kwdefaults__ == {'n_jobs': 1}
+        ordered = OrderedFactory({'offset': 1, 'multiply': 2})
+        declare_parallel(ordered, ParallelRoundContract(deterministic_stage))
+        ordered_plan = freeze_manifest(manifest, None, {'auxiliary_factory': [ordered]})
+        actual, pid = pool.submit(_factory_probe, ordered_plan, ordered).result(timeout=30)
+        expected, _ = _factory_probe(ordered_plan, ordered)
+        assert actual == expected == _caller_feature(recorded_source().head(24), 4)['caller_mean'].to_list() and pid != os.getpid()
+        reversed_factory = OrderedFactory(dict(reversed(list(ordered.steps.items()))))
+        declare_parallel(reversed_factory, ParallelRoundContract(deterministic_stage))
+        reversed_plan = freeze_manifest(manifest, None, {'auxiliary_factory': [reversed_factory]})
+        assert reversed_plan.pipeline_digest != ordered_plan.pipeline_digest and reversed_plan.resource_digest != ordered_plan.resource_digest
+        with pytest.raises(ValueError, match='missing frozen independence contract'):
+            validate_resources(ordered_plan, params | {'auxiliary_factory': reversed_factory})
+        assert ordered.steps == {'offset': 1, 'multiply': 2}
         method = factory.__call__
         declare_parallel(method, ParallelRoundContract(_caller_validator, ('window',)))
         with pytest.MonkeyPatch.context() as patch:
