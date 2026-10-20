@@ -1857,4 +1857,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.9] - 2026-10-20
 
+- Allow Worker deployments to propagate before verifying released documentation or rollback; recheck the active version and retain exact public proof.
+
+## [5.45.10] - 2026-10-20
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
