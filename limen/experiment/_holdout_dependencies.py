@@ -64,7 +64,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     module_attributes: set[str] = set()
     fitted_names: set[str] = set()
     module_dynamic: dict[int, bool] = {}
-    objects: list[object] = []
+    objects: dict[tuple[int, bool], object] = {}
     processed: dict[int, set[str]] = {}
     inspected: set[tuple[int, bool, int, int]] = set()
     recorded_mro: set[int] = set()
@@ -104,7 +104,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for part in children(cast(object, value)):
                 visit(part)
             if type(cast(object, value)) is not partial:
-                objects.append(cast(object, value))
+                objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), cast(object, value))
         elif inspect.isfunction(value):
             visit(vars(value))
             visit(value.__annotations__, annotation=True)
@@ -214,14 +214,14 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for part in children(cast(object, value)):
                 visit(part, annotation=annotation)
             if type(value) is not np.ndarray:
-                objects.append(value)
+                objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), value)
         elif isinstance(value, ModuleType):
-            objects.append(value)
+            objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), value)
         elif not isinstance(value, (pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
             if isinstance(value, type) and type(value) is not type:
                 visit(type(value))
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict) and not (annotation and type(value).__module__ == 'typing'):
-                objects.append(value)
+                objects.setdefault((id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type)), value)
             if not isinstance(value, type):
                 for part in children(value):
                     visit(part, annotation=annotation)
@@ -273,7 +273,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1, -1, -1, -1, -1, -1)
     while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0):
         previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0)
-        for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
+        for value in tuple(objects.values()):
             methods(value)
         if reflective_keys:
             functions = [value for value in seen.values() if inspect.isfunction(value)]
