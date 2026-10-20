@@ -15,7 +15,6 @@ scaler state, declared execution policies and reconstructible recorded runs.
 These checks do not establish the causality of an arbitrary user feature or the
 correctness of its provider's data.
 
-
 ## Trusted component declarations
 
 Ordinary Python configurators can install external components through the public
