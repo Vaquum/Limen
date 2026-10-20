@@ -1,6 +1,7 @@
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from cProfile import Profile
+import inspect
 import sys
 from types import FrameType
 
@@ -9,7 +10,9 @@ __all__ = ['readonly_profile']
 
 @contextmanager
 def readonly_profile(callback: Callable[[FrameType, str, object], None]) -> Iterator[None]:
-    previous, owner, setprofile = sys.getprofile(), sys._getframe(), sys.setprofile
+    previous, owner, setprofile = sys.getprofile(), inspect.currentframe(), sys.setprofile
+    if owner is None:
+        raise ValueError('Holdout requires observable profile ownership')
     failure: str | None = None
 
     def observe(frame: FrameType, event: str, arg: object) -> None:
