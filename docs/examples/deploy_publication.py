@@ -127,11 +127,14 @@ def activate(root: Path, wrangler: Path):
     previous = staged['previous']
     if current_version(wrangler, config) != previous['version_id']:
         raise ValueError('Another deployment changed the rollback baseline; stage again')
+    require_latest_release(staged['release'])
     try:
         deploy_version(wrangler, config, staged['version_id'], output / 'activation.ndjson')
+        require_latest_release(staged['release'])
         verified = verify(ORIGIN, staged['release'])
         if sha256(fetch(ORIGIN + 'publication.json')) != staged['manifest_sha256']:
             raise ValueError('Production serves another publication manifest')
+        require_latest_release(staged['release'])
     except Exception:
         print('Activation or production verification failed; restore and verify the previous Worker version.')
         deploy_version(wrangler, config, previous['version_id'], output / 'rollback.ndjson')

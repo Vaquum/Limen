@@ -112,8 +112,8 @@ def test_failed_production_verification_restores_and_checks_the_previous_version
     monkeypatch.setattr('deploy_publication.deploy_version', deploy)
     with pytest.raises(ValueError, match='injected production'):
         activate(tmp_path, Path('wrangler'))
-    assert operations == ['disconnected', 'latest', 'verify ' + staged['preview_url'],
-                          'deploy ' + staged['version_id'], 'verify https://docs.vaquum.fi/limen/',
+    assert operations == ['disconnected', 'latest', 'verify ' + staged['preview_url'], 'latest',
+                          'deploy ' + staged['version_id'], 'latest', 'verify https://docs.vaquum.fi/limen/',
                           'deploy ' + staged['previous']['version_id']]
     assert json.loads((output / 'rollback.json').read_text()) == staged['previous']
     assert not (output / 'accepted.json').exists()
@@ -147,3 +147,54 @@ def test_staging_rejects_a_version_change_during_rollback_capture(monkeypatch, t
         stage(tmp_path, Path('wrangler'), 'v5.45.3')
     assert operations == ['disconnected', 'latest', 'version', 'capture', 'version']
     assert not (tmp_path / '.docs-evidence/deployment/staged.json').exists()
+
+
+@pytest.mark.parametrize('phase', ['preview', 'deployment', 'production'])
+def test_a_release_superseded_during_verification_or_activation_is_not_accepted(monkeypatch, tmp_path, phase):
+    from verify_publication import sha256
+    output = tmp_path / '.docs-evidence/deployment'
+    output.mkdir(parents=True)
+    current = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
+    previous = (ROOT / 'docs/examples/retained/compiled-selection.json').read_bytes()
+    staged = {'release': 'v5.45.3', 'version_id': 'd3143e09-4594-47f7-8344-4dd3d113b414',
+              'preview_url': 'https://preview.example.invalid/limen/', 'manifest_sha256': sha256(current),
+              'previous': {'version_id': '9d51a409-ca8e-44ca-ab4d-7a0a3958e84d', 'home_sha256': sha256(previous), 'mode': 'legacy'}}
+    (output / 'staged.json').write_text(json.dumps(staged))
+    state = {'superseded': False, 'version': staged['previous']['version_id']}
+    deployments = []
+
+    def latest(release):
+        assert release == staged['release']
+        if state['superseded']:
+            raise ValueError('A newer package release superseded this documentation build')
+
+    def verify(url, release):
+        if (phase == 'preview' and url == staged['preview_url']) or (phase == 'production' and url == 'https://docs.vaquum.fi/limen/'):
+            state['superseded'] = True
+        return {'release': release}
+
+    def deploy(wrangler, config, version, receipt):
+        deployments.append(version)
+        state['version'] = version
+        if phase == 'deployment' and version == staged['version_id']:
+            state['superseded'] = True
+
+    def fetch(url):
+        return current if url.startswith(staged['preview_url']) or state['version'] == staged['version_id'] else previous
+
+    monkeypatch.setattr('deploy_publication.require_disconnected_builds', lambda: None)
+    monkeypatch.setattr('deploy_publication.require_latest_release', latest)
+    monkeypatch.setattr('deploy_publication.current_version', lambda *args: state['version'])
+    monkeypatch.setattr('deploy_publication.verify', verify)
+    monkeypatch.setattr('deploy_publication.deploy_version', deploy)
+    monkeypatch.setattr('deploy_publication.fetch', fetch)
+    with pytest.raises(ValueError, match='superseded'):
+        activate(tmp_path, Path('wrangler'))
+    assert state['version'] == staged['previous']['version_id']
+    assert not (output / 'accepted.json').exists()
+    if phase == 'preview':
+        assert deployments == []
+        assert not (output / 'rollback.json').exists()
+    else:
+        assert deployments == [staged['version_id'], staged['previous']['version_id']]
+        assert json.loads((output / 'rollback.json').read_text()) == staged['previous']

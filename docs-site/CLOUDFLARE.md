@@ -18,7 +18,7 @@ The publisher downloads the actual public PyPI wheel and the immutable project/i
 
 After proof, the publisher seals the build and retains its source, results, wheel, environment, validation and rollback artifacts on the public GitHub Release. Uploads never replace existing bytes. The site's `publication.json` selects a detached `publication-SHA256.json`; every earlier manifest remains available for verification and rollback. Wheel downloads retain their installable distribution filename.
 
-`deploy_publication.py stage` uploads an inactive Worker version and verifies its anonymous Version URL against those public artifacts. `activate` repeats verification, confirms that independent Git builds are disconnected and that no newer package release superseded the build, then activates exactly that version. Failure restores and verifies the recorded predecessor. The first migration retains the existing legacy Worker version and home-page digest explicitly; later rollbacks also verify the predecessor's complete publication envelope.
+`deploy_publication.py stage` uploads an inactive Worker version and verifies its anonymous Version URL against those public artifacts. `activate` repeats verification, confirms that independent Git builds are disconnected and that no newer package release superseded the build, then checks the latest package release immediately before activating exactly that version. It repeats that check after deployment and after production verification. Supersession or failure restores and verifies the recorded predecessor. The first migration retains the existing legacy Worker version and home-page digest explicitly; later rollbacks also verify the predecessor's complete publication envelope.
 
 ## Deployment credential and Git integration
 
