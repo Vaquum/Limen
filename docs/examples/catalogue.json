@@ -2100,7 +2100,10 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025, split January 15/18",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics. The same YAML also runs through the installed CLI; candidate identities and validation returns equal the Python driver."
+      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics. The same YAML also runs through the installed CLI; candidate identities and validation returns equal the Python driver.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_direct_yaml_selection_matches_python_driver"
+      ]
     },
     "python/search": {
       "interface": "python",
