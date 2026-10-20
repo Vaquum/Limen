@@ -18,7 +18,7 @@ import polars as pl
 
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'entropy_call', 'inference_evidence', 'object_array']
+__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -30,7 +30,8 @@ def fitting_call(module: str, name: str) -> bool:
 
 
 def entropy_call(value: object) -> bool:
-    return getattr(value, '__name__', None) in ('urandom', 'getrandom') and getattr(value, '__module__', None) in ('os', 'posix', 'nt')
+    name, module = getattr(value, '__name__', None), getattr(value, '__module__', None)
+    return isinstance(name, str) and isinstance(module, str) and name in ('urandom', 'getrandom') and module in ('os', 'posix', 'nt')
 
 
 @lru_cache(maxsize=2048)
