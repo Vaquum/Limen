@@ -231,7 +231,7 @@ def native_assessment_case(tmp_path_factory):
     root = _project(tmp_path_factory.mktemp('holdout-native') / 'project')
     config = _configuration(root)
     config['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
-    config['sfd']['params'] = {'C': [1.0], 'use_calibration': [True], 'use_threshold': [False]}
+    config['sfd']['params'] = {'C': [1.0], 'use_calibration': [True], 'use_threshold': [False], 'scaler_type': ['logreg']}
     config['uel']['n_permutations'] = 1
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
     directory = root / 'native'
