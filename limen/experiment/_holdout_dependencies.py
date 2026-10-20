@@ -11,13 +11,13 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, FunctionType, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, ModuleType
+from types import CodeType, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, ModuleType
 from typing import Literal, Union, cast
 
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module, native_attribute
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -92,7 +92,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         seen[id(value)] = value
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value
-            origin = function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
+            origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
             modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
             if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
                 raise ValueError('Holdout inference has an unowned random dependency')
@@ -115,7 +115,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for cell in value.__closure__ or ():
                 for part in children(cell):
                     visit(part)
-            function_module, function_name = function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
+            function_module, function_name = _function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
             if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
