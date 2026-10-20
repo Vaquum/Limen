@@ -10,7 +10,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, attach
-from limen.experiment._parallel_encoding import digest, encode, reference, source_digest
+from limen.experiment._parallel_encoding import component_state, digest, encode, reference, source_digest
 from limen.experiment._parallel_identity import identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
@@ -184,7 +184,7 @@ def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[s
 def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:
     signature = inspect.signature(cast(Callable[..., object], component))
     owner = component.__self__ if inspect.ismethod(component) else component
-    state = vars(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) and hasattr(owner, '__dict__') else {}
+    state = component_state(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) else {}
     result = {key: value for key, value in cast(dict[str, object], state).items() if key != '__parallel_round_contract__'} | dict(params)
     for i, (key, value) in enumerate(signature.parameters.items()):
         if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:

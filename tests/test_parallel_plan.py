@@ -63,6 +63,21 @@ class CallerRolling(CallerRollingBase):
         return self.transform(data)
 
 
+class SlottedRollingBase:
+    __slots__ = ('window',)
+
+
+class SlottedRolling(SlottedRollingBase):
+    __slots__ = ('offset', '__dict__', 'unused')
+
+    def __init__(self, window, offset=1):
+        self.window, self.offset = window, offset
+        self.label = 'caller'
+
+    def __call__(self, data):
+        return _caller_feature(data, window=self.window + self.offset)
+
+
 class CallerTarget(RandomBinaryTarget):
     '''Importable caller target using the native seeded noise benchmark.'''
 
@@ -131,12 +146,22 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2)):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',), imports))
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
             assert digest(decode(encode(frozen))) == digest(frozen)
+            if isinstance(component, SlottedRolling):
+                validate_resources(frozen, _parameters())
+                changed = copy.deepcopy(component)
+                changed.window += 1
+                changed_plan = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(changed), None)
+                assert changed_plan.pipeline_digest != frozen.pipeline_digest
+                assert changed_plan.resource_digest != frozen.resource_digest
+                restored = decode(encode(component))
+                assert (restored.window, restored.offset, restored.label) == (2, 1, 'caller')
+                assert not hasattr(restored, 'unused')
             if getattr(component, '__name__', None) == 'transform':
                 _assert_inherited_identity(frozen)
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
