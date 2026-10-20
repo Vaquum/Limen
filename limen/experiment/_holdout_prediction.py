@@ -34,10 +34,10 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
     configs: list[object] = []
 
     def forbid(method: object, repeated: object) -> None:
+        if not callable(method) and not callable(repeated):
+            return
         if not same_callback(method, repeated):
             raise ValueError('Holdout refuses fitting callbacks without stable observable binding')
-        if not callable(method):
-            return
         call = None if inspect.isfunction(method) or inspect.ismethod(method) else inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
         calls = call_functions(call)
         functions = call_functions(method)
