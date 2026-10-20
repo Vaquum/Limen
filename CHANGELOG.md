@@ -1857,4 +1857,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.9] - 2026-10-20
 
+- Allow Worker deployments to propagate before verifying released documentation or rollback; recheck the active version and retain exact public proof.
+
+## [5.45.10] - 2026-10-20
+
 - Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit behavior-identical subclasses by effective member identity.
