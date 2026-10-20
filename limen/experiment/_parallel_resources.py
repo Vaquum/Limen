@@ -1,15 +1,67 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+import inspect
+from collections.abc import Callable, Mapping
 from itertools import product
-from inspect import Parameter, signature
+from inspect import Parameter, signature, isfunction, Signature
+from dataclasses import dataclass
+from importlib import import_module
 from string import Formatter
 
+import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
 from limen.experiment._parallel_encoding import encode
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, configurations
+from limen.experiment._parallel_state import component_state
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source
+
+_resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
+
+
+@dataclass
+class FrozenClassFactory:
+    factory_class: type
+    initializer: Callable[..., object] | None
+    allocator: Callable[..., object] | None
+
+    @property
+    def __signature__(self) -> Signature:
+        result = signature(self.initializer or self.factory_class)
+        return result.replace(parameters=list(result.parameters.values())[1:]) if self.initializer is not None else result
+
+    @property
+    def __parallel_round_contract__(self) -> object:
+        return getattr(self.factory_class, '__parallel_round_contract__', None)
+
+    def __call__(self, *args: object, **kwargs: object) -> object:
+        allocate = self.allocator or self.factory_class.__new__
+        instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
+        if isinstance(instance, self.factory_class):
+            initialize = self.initializer or self.factory_class.__init__
+            if initialize(instance, *args, **kwargs) is not None:
+                raise TypeError('Parallel factory initializer must return None')
+        return instance
+
+
+def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | None) -> dict[str, list[object]]:
+    function = manifest.architecture_function
+    if function is None:
+        return {}
+    defaults = {name: [item.default] for name, item in signature(function).parameters.items() if name.endswith('_factory')}
+    result: dict[str, list[object]] = {}
+    for name, values in (defaults | dict(options or {})).items():
+        for value in values:
+            if name.endswith('_factory') and isinstance(value, type) and value is not Parameter.empty:
+                if type(value).__call__ is not type.__call__:
+                    raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
+                result.setdefault(name, []).append(FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None))
+    return result
+
+
+def bind_factories(inventory: Mapping[str, list[object]], kwargs: Mapping[str, object]) -> dict[str, object]:
+    return {name: next((factory for factory in inventory.get(name, []) if isinstance(factory, FrozenClassFactory) and value is factory.factory_class), value)
+            for name, value in kwargs.items()}
 
 
 def deterministic_stage(params: Mapping[str, object]) -> None:
@@ -174,20 +226,6 @@ def backend_imports(plan: FrozenManifestPlan) -> tuple[str, ...]:
     return tuple(sorted({name for stage in plan.stages for name in stage.contract.backend_imports}))
 
 
-def _static_source(value: object, domain: Mapping[str, list[object]]) -> None:
-    if callable(value):
-        raise ValueError('Parallel rounds require static source parameters')
-    if isinstance(value, str):
-        if value in domain or any(field is not None for _, field, _, _ in Formatter().parse(value)):
-            raise ValueError('Parallel rounds reject parameter-dependent source declarations')
-    elif isinstance(value, Mapping):
-        for item in cast(Mapping[object, object], value).values():
-            _static_source(item, domain)
-    elif isinstance(value, (tuple, list)):
-        for item in cast(tuple[object, ...] | list[object], value):
-            _static_source(item, domain)
-
-
 def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> None:
     effective = dict(domain) | {key: [value] for key, value in (context or {}).items()}
     if any(not values for values in effective.values()):
@@ -201,7 +239,7 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
         if source is not None:
             if not isinstance(source, DataSourceConfig):
                 raise ValueError('Parallel rounds require reconstructable declared sources')
-            _static_source(source.params, effective)
+            static_source(source.params, effective)
     baseline = {key: values[0] for key, values in effective.items()}
     baseline_configs = _configurations(plan, baseline)
     for stage in plan.stages:
@@ -215,3 +253,82 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
         for index, values in enumerate(product(*projected.values())):
             candidate = baseline | dict(zip(projected, values, strict=True))
             _validate_stage(stage, baseline_configs if index == 0 else _configurations(plan, candidate))
+
+
+def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:
+    signature = inspect.signature(cast(Callable[..., object], component))
+    owner = component.__self__ if inspect.ismethod(component) else component
+    state = component_state(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) else {}
+    result = {key: value for key, value in state.items() if key != '__parallel_round_contract__'} | dict(params)
+    for i, (key, value) in enumerate(signature.parameters.items()):
+        if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:
+            continue
+        if key not in params:
+            if value.default is inspect.Parameter.empty:
+                raise ValueError(f'Parallel stage {path}: unresolved parameter {key}')
+            result[key] = value.default
+    return result
+
+
+def _configured(path: str, component: object, arguments: Mapping[str, object], params: Mapping[str, object], *, skip: int = 1, runtime: tuple[str, ...] = ()) -> dict[str, object]:
+    try:
+        return _defaults(component, _resolve_params(arguments, params), skip=skip, path=path, runtime=runtime)
+    except KeyError as exc:
+        raise ValueError(f'Parallel stage {path}: unresolved parameter {exc.args[0]}') from exc
+
+
+def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str, dict[str, object]]:
+    _ = _defaults(manifest.architecture_function, params)
+    resolved = cast(dict[str, object], manifest.resolve_model_kwargs(dict(params)))
+    from limen.experiment._prepare_trade_context import resolve_component_kwargs
+    resolve_component_kwargs(manifest.architecture_function, {}, resolved, params)
+    result = {'architecture': resolved}
+    for key, factory in resolved.items():
+        if key.endswith('_factory') and callable(factory):
+            arguments = dict(cast(Mapping[str, object], resolved.get(key.removesuffix('_factory') + '_params') or {}))
+            if 'seed' in resolved:
+                arguments['seed'] = resolved['seed']
+            result[f'architecture.{key}'] = _defaults(factory, arguments, skip=0)
+    for path in ('pre_split_data_selector', 'bar_formation'):
+        step = getattr(manifest, path)
+        if step is not None and (path != 'bar_formation' or params.get('bar_type', 'base') != 'base'):
+            result[path] = _configured(path, step[0], step[1], params)
+    included = cast(Callable[[object, Mapping[str, object]], bool], vars(_manifest)['_should_include_transform'])
+    result.update({f'feature_transforms.{i}': _configured(f'feature_transforms.{i}', entry.func, entry.params, params)
+                   for i, entry in enumerate(manifest.feature_transforms) if included(entry, params)})
+    target = manifest.target_class_config
+    if target is not None:
+        runtime = ('trade_context',) if getattr(target.target_class, 'requires_trade_context', False) else ()
+        if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
+            raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
+        result['target'] = _defaults(target.target_class, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=2, path='target', runtime=runtime)
+        transform_config = _defaults(getattr(target.target_class, 'transform'), dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
+        result['target']['transform_params'] = transform_config
+        result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
+    if isinstance(manifest, MLManifest):
+        if manifest.scaler is not None:
+            computations, transform, arguments = manifest.scaler
+            result['scaler.transform'] = _configured('scaler.transform', transform, arguments, params)
+            for i, (_, function, arguments) in enumerate(computations):
+                config = _resolve_params(arguments, dict(params))
+                result[f'scaler.fit.{i}'] = _defaults(function, config)
+                if isinstance(function, ScalerFactory):
+                    selected = function.selected(config)
+                    classes = (function.transform_class,) if function.dynamic_selector is None else tuple(SCALER_REGISTRY.values())
+                    for j, cls in enumerate(classes):
+                        result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config) if cls is selected else {}
+        if manifest.data_dict_extension is not None:
+            result['data_dict_extension'] = _defaults(manifest.data_dict_extension, {'round_params': dict(params)}, skip=0, runtime=('data_dict', 'split_data', 'fitted_params'))
+        if manifest.ablation_config is not None:
+            seed = params.get(manifest.ablation_config.seed_key)
+            result['ablation'] = {'random_state': 0 if seed is None else seed}
+        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], vars(import_module('limen.experiment._column_shims'))['_resolved'])
+        result.update(pca={'svd_solver': 'full'}, feature_shims={'specs': resolve_shims(manifest.feature_shims, params), 'round_params': dict(params)})
+        calibration = manifest.prediction_calibration_config
+        if calibration is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
+            config = calibration.resolve(dict(params))
+            for name in ('calibration', 'threshold'):
+                function = getattr(config, f'{name}_func')
+                if function is not None and params.get(f'use_{name}', True):
+                    result[name] = _defaults(function, getattr(config, f'{name}_params'), skip=3 if name == 'calibration' else 2, path=name)
+    return result

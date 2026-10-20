@@ -55,22 +55,24 @@ def object_state(value: object) -> ObjectState:
     return attributes, slot_state(value), bound, native_state(value)
 
 
-def restore_object(cls: type, state: ObjectState) -> object:
+def restore_object(cls: type, state: ObjectState, result: object | None = None) -> object:
     attributes, slots, bound, native = state
     is_mapping, is_sequence = issubclass(cls, dict), issubclass(cls, list)
     if bound is None:
         if is_mapping:
-            result: object = dict[object, object].__new__(cast(type[dict[object, object]], cls))
+            result = dict[object, object].__new__(cast(type[dict[object, object]], cls)) if result is None else result
+            dict[object, object].clear(cast(dict[object, object], result))
             dict[object, object].update(result, cast(list[tuple[object, object]], native))
         elif is_sequence:
-            result = list[object].__new__(cast(type[list[object]], cls))
+            result = list[object].__new__(cast(type[list[object]], cls)) if result is None else result
+            list[object].clear(cast(list[object], result))
             list[object].extend(result, cast(list[object], native))
         else:
-            result = cast(object, object.__new__(cls))
+            result = cast(object, object.__new__(cls)) if result is None else result
         if attributes:
             vars(result).update(attributes)
     else:
-        result = partial.__new__(cast(type[partial[object]], cls), cast(Callable[..., object], bound[0]))
+        result = partial.__new__(cast(type[partial[object]], cls), cast(Callable[..., object], bound[0])) if result is None else result
         setter = cast(Callable[[object, tuple[object, ...]], None], vars(partial)['__setstate__'])
         setter(result, (*bound, attributes))
     for owner, name, item in slots:
@@ -83,13 +85,6 @@ def call_implementation(value: object) -> object:
     return None if implementation is vars(partial)['__call__'] else implementation
 
 
-def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:
-    function.__module__, function.__qualname__, function.__annotations__ = source.__module__, source.__qualname__, source.__annotations__.copy()
-    for name, value in {'__wrapped__': wrapped, '__parallel_round_contract__': vars(source).get('__parallel_round_contract__')}.items():
-        if value is not None:
-            vars(function)[name] = value
-
-
 def mutable_function(function: FunctionType, active: frozenset[int] = EMPTY_IDS) -> bool:
     if id(function) in active:
         return True
@@ -97,3 +92,8 @@ def mutable_function(function: FunctionType, active: frozenset[int] = EMPTY_IDS)
     def mutable(value: object) -> bool:
         return mutable_function(value, active) if isinstance(value, FunctionType) else any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not value_only(value, functions=False)
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
+
+
+def signature_defaults(component: object, skip: int) -> dict[str, object]:
+    return {name: parameter.default for index, (name, parameter) in enumerate(signature(cast(Callable[..., object], component)).parameters.items())
+            if index >= skip and parameter.default is not Parameter.empty and parameter.kind in (Parameter.POSITIONAL_OR_KEYWORD, Parameter.KEYWORD_ONLY)}

@@ -10,6 +10,8 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field, fields, is_dataclass
 from functools import partial
 from importlib import import_module
+from string import Formatter
+from types import CellType, FunctionType
 from typing import Protocol, cast
 
 import polars as pl
@@ -18,15 +20,12 @@ from typing_extensions import override
 from limen._parallel_contract import ParallelRoundContract, attach
 from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import copy_context
-from limen.experiment._parallel_state import call_implementation, component_state
+from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, signature_defaults, mutable_function
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
-
-_resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(_manifest)['_resolve_params'])
-
 
 class _TargetClass(Protocol):
     transform: Callable[..., object]
@@ -65,11 +64,6 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
             assert self._parallel_init is not None
             _ = self._parallel_init(instance, **params)
         return instance
-
-
-def _target_defaults(component: object, skip: int) -> dict[str, object]:
-    return {name: parameter.default for index, (name, parameter) in enumerate(inspect.signature(cast(Callable[..., object], component)).parameters.items())
-            if index >= skip and parameter.default is not inspect.Parameter.empty and parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)}
 
 
 @dataclass(frozen=True)
@@ -112,7 +106,8 @@ def shared_copy(memo: dict[int, tuple[object, object]]) -> Iterator[None]:
 
 
 def clone_manifest(manifest: Manifest, *, snapshot: bool = False) -> Manifest:
-    return cast(Manifest, _normalize(manifest, snapshot=snapshot))
+    with identity_snapshot():
+        return cast(Manifest, _normalize(manifest, snapshot=snapshot))
 
 
 def component_digest(component: object) -> str:
@@ -149,14 +144,12 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     key = id(value)
     if key in memo:
         return memo[key][1]
-    if not callable(value) and key in state_memo:
-        return state_memo[key][1]
     active |= {id(value)}
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
         target = cast(_manifest.TargetClassConfig, value)
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
-                                    _target_defaults(target.target_class, 2), _target_defaults(cast(_TargetClass, target.target_class).transform, 2),
+                                    signature_defaults(target.target_class, 2), signature_defaults(cast(_TargetClass, target.target_class).transform, 2),
                                     cast(Callable[..., object], target.target_class.__init__), cast(_TargetClass, target.target_class).transform)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
@@ -165,15 +158,25 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         if value.__qualname__ == 'MLManifest.set_scaler_from_params.<locals>._scaler_factory':
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
-    if isinstance(value, dict) and not (is_component or isinstance(value, defaultdict)):
-        clone: object = {name: _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[str, object], value).items()}
+    clone: object
+    if isinstance(value, CellType):
+        clone = state_memo[key][1] if key in state_memo else CellType(None)
+        cast(CellType, clone).cell_contents = _normalize(value.cell_contents, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
+    elif isinstance(value, dict) and not (is_component or isinstance(value, defaultdict)):
+        mapped = {name: _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[object, object], value).items()}
+        clone = state_memo[key][1] if key in state_memo else {}
+        cast(dict[object, object], clone).clear()
+        cast(dict[object, object], clone).update(mapped)
     elif isinstance(value, (list, tuple)) and not is_component:
         items = [_normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for item in cast(list[object] | tuple[object, ...], value)]
-        clone = tuple(items) if isinstance(value, tuple) else items
+        clone = tuple(items) if isinstance(value, tuple) else state_memo[key][1] if key in state_memo else []
+        if isinstance(clone, list):
+            cast(list[object], clone)[:] = items
     else:
         clone = _normalize_component(cast(object, value), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     memo[key] = (value, clone)
-    _ = state_memo.setdefault(key, (cast(object, value), clone))
+    if not callable(value) or key not in state_memo:
+        state_memo[key] = (cast(object, value), clone)
     return clone
 
 
@@ -181,10 +184,21 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
     if (callable(value) and not isinstance(value, type)) or isinstance(value, defaultdict):
         with shared_copy(state_memo):
             clone = decode(encode(cast(object, value)), isolate_functions=snapshot)
+        if isinstance(value, FunctionType) and clone is not value and (snapshot or mutable_function(value)):
+            cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
+            cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
+            _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
+        elif not inspect.isfunction(value):
+            owner = value.__self__ if inspect.ismethod(value) else value
+            restored = clone.__self__ if inspect.ismethod(clone) else clone
+            if not isinstance(owner, type):
+                _ = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
+            if inspect.ismethod(value):
+                _ = _normalize(value.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
         if hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
     elif is_dataclass(value) and not isinstance(value, type):
-        clone = copy.deepcopy(value)
+        clone = state_memo[id(value)][1] if id(value) in state_memo else copy.deepcopy(value)
         for field in fields(value):
             object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
     else:
@@ -259,13 +273,19 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
 def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | None,
                     factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
     from limen.yaml.compiler import build_manifest
+    from limen.experiment._parallel_resources import bind_factories, factory_bindings
 
-    frozen = clone_manifest(manifest, snapshot=True)
-    factory_options = cast(Mapping[str, list[object]] | None, _normalize(factory_options, snapshot=True))
-    if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
+    source = copy.copy(manifest)
+    vars(source)['_parallel_factory_options'] = factory_bindings(manifest, factory_options)
+    with identity_snapshot():
+        frozen, factory_options = cast(tuple[Manifest, Mapping[str, list[object]] | None], _normalize((source, factory_options), snapshot=True))
+    comparison = copy.copy(frozen)
+    vars(comparison)['_parallel_factory_options'] = {}
+    if yaml_reference is not None and digest(comparison) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
-                   for path, component in components(frozen, factory_options))
+                   for path, original in components(frozen, factory_options)
+                   for component in [bind_factories(cast(dict[str, list[object]], vars(frozen)['_parallel_factory_options']), {path.removeprefix('architecture.'): original})[path.removeprefix('architecture.')]])
     for stage in stages:
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):
@@ -286,82 +306,17 @@ def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[s
                 digest((stages, imports, selectors, module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})))
 
 
-def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:
-    signature = inspect.signature(cast(Callable[..., object], component))
-    owner = component.__self__ if inspect.ismethod(component) else component
-    state = component_state(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) else {}
-    result = {key: value for key, value in state.items() if key != '__parallel_round_contract__'} | dict(params)
-    for i, (key, value) in enumerate(signature.parameters.items()):
-        if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:
-            continue
-        if key not in params:
-            if value.default is inspect.Parameter.empty:
-                raise ValueError(f'Parallel stage {path}: unresolved parameter {key}')
-            result[key] = value.default
-    return result
-
-
-def _configured(path: str, component: object, arguments: Mapping[str, object], params: Mapping[str, object], *, skip: int = 1, runtime: tuple[str, ...] = ()) -> dict[str, object]:
-    try:
-        return _defaults(component, _resolve_params(arguments, params), skip=skip, path=path, runtime=runtime)
-    except KeyError as exc:
-        raise ValueError(f'Parallel stage {path}: unresolved parameter {exc.args[0]}') from exc
-
-
-def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str, dict[str, object]]:
-    _ = _defaults(manifest.architecture_function, params)
-    resolved = cast(dict[str, object], manifest.resolve_model_kwargs(dict(params)))
-    from limen.experiment._prepare_trade_context import resolve_component_kwargs
-    resolve_component_kwargs(manifest.architecture_function, {}, resolved, params)
-    result = {'architecture': resolved}
-    for key, factory in resolved.items():
-        if key.endswith('_factory') and callable(factory):
-            arguments = dict(cast(Mapping[str, object], resolved.get(key.removesuffix('_factory') + '_params') or {}))
-            if 'seed' in resolved:
-                arguments['seed'] = resolved['seed']
-            result[f'architecture.{key}'] = _defaults(factory, arguments, skip=0)
-    for path in ('pre_split_data_selector', 'bar_formation'):
-        step = getattr(manifest, path)
-        if step is not None and (path != 'bar_formation' or params.get('bar_type', 'base') != 'base'):
-            result[path] = _configured(path, step[0], step[1], params)
-    included = cast(Callable[[object, Mapping[str, object]], bool], vars(_manifest)['_should_include_transform'])
-    result.update({f'feature_transforms.{i}': _configured(f'feature_transforms.{i}', entry.func, entry.params, params)
-                   for i, entry in enumerate(manifest.feature_transforms) if included(entry, params)})
-    target = manifest.target_class_config
-    if target is not None:
-        runtime = ('trade_context',) if getattr(target.target_class, 'requires_trade_context', False) else ()
-        if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
-            raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
-        result['target'] = _defaults(target.target_class, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=2, path='target', runtime=runtime)
-        transform_config = _defaults(cast(_TargetClass, target.target_class).transform, dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
-        result['target']['transform_params'] = transform_config
-        result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
-    if isinstance(manifest, MLManifest):
-        if manifest.scaler is not None:
-            computations, transform, arguments = manifest.scaler
-            result['scaler.transform'] = _configured('scaler.transform', transform, arguments, params)
-            for i, (_, function, arguments) in enumerate(computations):
-                config = _resolve_params(arguments, dict(params))
-                result[f'scaler.fit.{i}'] = _defaults(function, config)
-                if isinstance(function, ScalerFactory):
-                    selected = function.selected(config)
-                    classes = (function.transform_class,) if function.dynamic_selector is None else tuple(SCALER_REGISTRY.values())
-                    for j, cls in enumerate(classes):
-                        result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config) if cls is selected else {}
-        if manifest.data_dict_extension is not None:
-            result['data_dict_extension'] = _defaults(manifest.data_dict_extension, {'round_params': dict(params)}, skip=0, runtime=('data_dict', 'split_data', 'fitted_params'))
-        if manifest.ablation_config is not None:
-            seed = params.get(manifest.ablation_config.seed_key)
-            result['ablation'] = {'random_state': 0 if seed is None else seed}
-        resolve_shims = cast(Callable[[object, Mapping[str, object]], object], vars(import_module('limen.experiment._column_shims'))['_resolved'])
-        result.update(pca={'svd_solver': 'full'}, feature_shims={'specs': resolve_shims(manifest.feature_shims, params), 'round_params': dict(params)})
-        calibration = manifest.prediction_calibration_config
-        if calibration is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
-            config = calibration.resolve(dict(params))
-            for name in ('calibration', 'threshold'):
-                function = getattr(config, f'{name}_func')
-                if function is not None and params.get(f'use_{name}', True):
-                    result[name] = _defaults(function, getattr(config, f'{name}_params'), skip=3 if name == 'calibration' else 2, path=name)
-    return result
+def static_source(value: object, domain: Mapping[str, list[object]]) -> None:
+    if callable(value):
+        raise ValueError('Parallel rounds require static source parameters')
+    if isinstance(value, str):
+        if value in domain or any(field is not None for _, field, _, _ in Formatter().parse(value)):
+            raise ValueError('Parallel rounds reject parameter-dependent source declarations')
+    elif isinstance(value, Mapping):
+        for item in cast(Mapping[object, object], value).values():
+            static_source(item, domain)
+    elif isinstance(value, (tuple, list)):
+        for item in cast(tuple[object, ...] | list[object], value):
+            static_source(item, domain)
 
 

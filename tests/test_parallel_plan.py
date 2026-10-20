@@ -69,6 +69,10 @@ def _mapping_feature(data, options):
     return _caller_feature(data, options['missing'] + 3)
 
 
+def _nested_default_feature(data, components):
+    return components[0](data)
+
+
 def _keyword_feature(data, *, window=2):
     return _caller_feature(data, window)
 
@@ -674,7 +678,7 @@ def test_frozen_manifest_round_plan() -> None:
         from tests.test_parallel_rounds import recorded_source
         expected_values = _caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()
         shared = [2]
-        for component, window in ((FunctionRolling(_mutable_feature), 2), (AliasedRolling(shared, shared), 3), (KeyedRolling({1: shared, 0: shared}), 3), (DefaultMappingRolling(defaultdict(int)), 3)):
+        for component, window in ((FunctionRolling(_mutable_feature), 2), (FunctionRolling(ClosureRolling()), 3), (AliasedRolling(shared, shared), 3), (KeyedRolling({1: shared, 0: shared}), 3), (DefaultMappingRolling(defaultdict(int)), 3)):
             declare_parallel(component, ParallelRoundContract(deterministic_stage))
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_mutable_feature, '__defaults__', ([2],))
@@ -711,6 +715,13 @@ def test_frozen_manifest_round_plan() -> None:
         actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
         expected, _ = _repeated_carried_probe(frozen, _parameters())
         assert actual == expected == expected_values and pid != os.getpid() and not options
+        declare_parallel(_nested_default_feature, ParallelRoundContract(deterministic_stage))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_nested_default_feature, '__defaults__', ([ClosureRolling()],))
+            nested = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_nested_default_feature), None)
+        actual, pid = pool.submit(_repeated_carried_probe, nested, _parameters()).result(timeout=30)
+        expected, _ = _repeated_carried_probe(nested, _parameters())
+        assert actual == expected == expected_values and pid != os.getpid()
         declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
         for counter in (RollingCounter(), CallableCounter()):
             with pytest.MonkeyPatch.context() as patch:
@@ -987,7 +998,9 @@ def _factory_probe(plan, factory):
     with distribution_providers(plan.distribution_providers):
         assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
     validate_resources(plan, _parameters() | {'auxiliary_factory': factory})
-    result = plan.manifest.architecture_function(recorded_source().head(24), auxiliary_factory=factory)
+    manifest = clone_manifest(plan.manifest)
+    kwargs = manifest.resolve_model_kwargs(_parameters() | {'auxiliary_factory': factory})
+    result = manifest.architecture_function(recorded_source().head(24), **kwargs)
     return result['caller_mean'].to_list(), os.getpid()
 
 
@@ -1041,6 +1054,24 @@ def _assert_factory_resources(plan, params):
         expected, _ = _factory_probe(frozen_factory, factory)
         from tests.test_parallel_rounds import recorded_source
         assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        declare_parallel(CallerRolling, ParallelRoundContract(_caller_validator, ('window',)))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(CallerRolling.__init__, '__defaults__', (3,))
+            frozen_class = freeze_manifest(manifest, None, {'auxiliary_factory': [CallerRolling]})
+            validate_domain(frozen_class, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [CallerRolling]}, None)
+        before = digest(frozen_class)
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, frozen_class, CallerRolling).result(timeout=30)
+            expected, _ = _factory_probe(frozen_class, CallerRolling)
+            assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        assert digest(frozen_class) == before and CallerRolling.__init__.__defaults__ is None
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(CallerRolling.__init__, '__defaults__', (0,))
+            invalid_class = freeze_manifest(manifest, None, {'auxiliary_factory': [CallerRolling]})
+            assert invalid_class.pipeline_digest != frozen_class.pipeline_digest
+            assert invalid_class.resource_digest != frozen_class.resource_digest
+            with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: positive integer window required'):
+                validate_domain(invalid_class, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [CallerRolling]}, None)
     declare_parallel(_other_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
     with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: unfrozen external state'):
         validate_domain(freeze_manifest(manifest, None, options),

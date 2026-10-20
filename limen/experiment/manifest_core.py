@@ -264,6 +264,7 @@ class Manifest:
     metrics_params: dict[str, ParamValue] = field(default_factory=dict[str, ParamValue])
     backtest_config: BacktestConfig | None = None
     allocation_config: _allocation_stage.AllocationConfig | None = None
+    _parallel_factory_options: dict[str, list[object]] = field(default_factory=dict[str, list[object]], init=False, repr=False)
 
     def _add_transform(self,
                        func: Callable[..., Any],
@@ -740,7 +741,8 @@ class Manifest:
                 if not k.startswith('_') and k not in model_kwargs:
                     model_kwargs[k] = v
 
-        return model_kwargs
+        binder = cast(Callable[..., dict[str, object]], vars(importlib.import_module('limen.experiment._parallel_resources'))['bind_factories']) if self._parallel_factory_options else None
+        return model_kwargs if binder is None else binder(self._parallel_factory_options, model_kwargs)
 
 
     def set_backtest_config(self, fee_bps: float | str = 5.0, slip_bps: float | str = 5.0,

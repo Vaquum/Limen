@@ -19,7 +19,7 @@ import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
 from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding
-from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
 
@@ -191,6 +191,13 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
             raise ValueError('Parallel bound method implementation changed')
         return MethodType(function, owner)
     return _decode_instance(parts, isolate_functions=isolate_functions)
+
+
+def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:
+    function.__module__, function.__qualname__, function.__annotations__ = source.__module__, source.__qualname__, source.__annotations__.copy()
+    for name, value in {'__wrapped__': wrapped, '__parallel_round_contract__': vars(source).get('__parallel_round_contract__')}.items():
+        if value is not None:
+            vars(function)[name] = value
 
 
 def _decode_reference(parts: list[object], *, ordered: bool, isolate_functions: bool) -> object:
