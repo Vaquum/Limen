@@ -14,7 +14,7 @@ For the existing source checks, a fresh Python installation is `.[dev,data]`. Re
 
 ## Implementation status
 
-The book contract is the agreed target. It does not imply that the reader, comprehensive projects or publication checks already exist.
+The owned reader and research projects are candidates in this repository. Their execution and browser checks run in `PR Checks Docs Site`. The complete book and released-package publication remain separate delivery obligations; a candidate's successful run does not establish production publication.
 
 | Delivery | Responsibility |
 |---|---|
@@ -24,7 +24,43 @@ The book contract is the agreed target. It does not imply that the reader, compr
 
 The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.mjs` maps maintained sources into Overview, Guides, Reference, Developer and Packages. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the static build. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
 
-Most existing examples do not yet have execution, output and publication provenance. Browser, accessibility, visual and performance acceptance must become reproducible evidence in the reader delivery. Keep these gaps explicit until the corresponding checks exist and pass. The first complete chapter is a checkpoint; it does not complete the book. Until each delivery lands, contributors use the existing renderer, route map and source checks. New execution, binding, browser and publication obligations apply to the delivery that introduces them and subsequent changes; they are not claims about existing pages.
+The candidate first chapter binds exact source regions and retained observations to both projects. The scenario catalogue defines required executions; the evidence checker rejects missing, skipped or stale proof. Selected tests can run independently, but their incomplete evidence cannot publish a reader. The complete suite must execute every required scenario and integrity test before producing successful publication evidence. The reader consumes the tested wheel, input bundle, source identities and current results. Browser checks exercise the real base path and Worker policy, including keyboard use, reduced motion, saved passages, code copying, reference return and mobile navigation. Retained screenshots record the candidate's rendered state.
+
+Integrity tests record native fitting and calibration inputs and forbid fitting after final selection is frozen. The archived CLI commands run in a separate process with the installed wheel. Native result files, checkpoints, round records, audits, final assessment rows and the installed dependency inventory remain available in the evidence archive.
+
+Most existing pages still need their examples classified and connected to the projects. Their source footers identify reference excerpts without claiming execution. The first complete chapter is a checkpoint; it does not complete the book. Keep the existing renderer and its source checks until the complete-book publication delivery replaces it.
+
+## Validating the candidate reader
+
+Use Python 3.10–3.13 and Node.js 20 or later. CI uses the policy-pinned Python 3.10 runtime and installs the hash-pinned research environment and the tools in `docs/examples/requirements-quality.txt`. The supplemental documentation type configuration is selected explicitly; it does not shadow the package's strict configuration. Prepare runtime and build wheels before pytest. The proof creates a new environment, installs those wheels offline with hash checking, builds without isolated dependency resolution and installs the candidate wheel there. It imports no dependency from the invoking environment. Linux uses the research CI lock; macOS uses its separately resolved lock with the same version constraints. Both records identify the resolution target and actual interpreter.
+
+From the repository root, after publishing the candidate PR:
+
+```bash
+npm --prefix docs-site ci
+python docs/examples/check_sources.py
+python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
+python docs/examples/prepare_environment.py
+python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
+```
+
+The binding checker uses the reader's locked Markdown parser to identify fenced and indented code blocks, including quoted and tilde forms. Each must occupy the exact location of a validated source or output binding. Install the Node dependencies before running binding tests.
+
+Acquire provenance with full Git history and authenticated read access to GitHub's commit-to-PR associations. Keep its response inventory with the execution evidence. The tests build the actual wheel, install it outside the checkout, unpack the source/input bundle and execute each project's CLI unchanged. They write `.docs-evidence/current.json` as successful only after the required semantic assertions pass. A failed run leaves an explicit running or failed record; it cannot preserve an earlier success.
+
+Then, from `docs-site/`:
+
+```bash
+npm run check
+npm run security:audit
+npm run build:reader
+npx --no-install playwright install chromium
+npm run check:reader
+```
+
+The reader build requires a clean source tree, matching package and current execution evidence. Browser verification checks that evidence and every built file before opening the pages. Use the repository's managed validation runner when it owns the PR; record the necessary commands there and run them in the required order. A background start is not a passing result.
+
+Change canonical project code first, synchronize its marked chapter regions and run the affected proof. Keep displayed observations under their recorded run identity unless their meaning or comparison bounds require a new capture. Never hand-edit a successful current-validation record. Extend the model and scenario catalogue when the public surface changes; a newly exported family cannot silently disappear from the documentation's coverage inventory.
 
 Two deployment defects also remain open in the current source and build:
 
@@ -140,6 +176,8 @@ Assertions must establish the promised behavior. Depending on the claim, this in
 
 Retained output displayed in the book must match its evidence record exactly. Retain a named, immutable output record for display; each fresh execution compares its semantic results with that record under declared per-metric tolerances and deterministic settings. In-tolerance numerical drift alone does not require editing displayed output. A changed claim, failed invariant or exceeded tolerance requires inspection and, where warranted, a regenerated record and synchronized prose. Record timestamps, attempt identities and timing measurements as run evidence; do not require fresh executions to reproduce a previous run's incidental identifiers. Explain why a reader's environment can produce different digits and what invariant must still hold.
 
+Verify a retained observation's source region against its recorded execution commit. Verify the current excerpt against the current executable source separately. A later source edit must pass fresh semantic comparison; it must not relabel the earlier observation as a new run.
+
 ## Source and current validation
 
 Every displayed example exposes its immutable source identity and separate current validation. A source hash does not prove compatibility with a later package.
@@ -176,7 +214,7 @@ Binding tests must request current-run execution evidence themselves. Running on
 The existing required `PR Checks Docs Site` context will own the comprehensive example proof and reader checks. Extend its job in this order:
 
 1. Identify the checked-out revision and source tree.
-2. Install Python 3.12 and the hashed research dependencies; build the candidate wheel and install it in the isolated execution environment.
+2. Install the policy-pinned Python 3.10 runtime and the hashed research dependencies; build the candidate wheel and install it in the isolated execution environment.
 3. Execute the canonical projects and semantic/binding tests under `docs/examples/tests/`, producing evidence for those exact inputs.
 4. Run Node's source, route, lint, dependency and reader checks against that same-job evidence.
 5. Build and browser-check the site, retaining the execution and browser artifacts.

@@ -1,0 +1,66 @@
+schema_version: '1.0'
+metadata:
+  name: book_compiled_factorized
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: ret_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: '{fee}'
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.lightgbm_binary
+  params:
+    fee:
+    - 7.0
+    - 9.0
+    n_estimators:
+    - 4
+    - 8
+    n_jobs:
+    - 1
+    random_state:
+    - 42
+    deterministic:
+    - true
+    force_row_wise:
+    - true
+    early_stopping_rounds:
+    - 0
+    subsample_freq:
+    - 0
+    subsample:
+    - 1.0
+    colsample_bytree:
+    - 1.0
+uel:
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
