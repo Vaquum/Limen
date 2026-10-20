@@ -160,6 +160,16 @@ class DefaultSharedRolling(InheritedCallable):
         return super().transform(data)
 
 
+class SlottedDefaultRolling:
+    __slots__ = ('window',)
+
+    def __init__(self, window):
+        self.window = window
+
+    def __call__(self, data, increment=1):
+        return _caller_feature(data, self.window + increment)
+
+
 class AllocatedRolling(CallerRollingBase):
     def __new__(cls, *, seed=None):
         instance = super().__new__(cls)
@@ -965,6 +975,23 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual == expected == oracle and pid != os.getpid() and digest(frozen) == before
         assert shared_owner.window == 2 and type(shared_owner) is DefaultSharedRolling
         assert DefaultSharedRolling.__call__.__defaults__ == (1,)
+        slotted = SlottedDefaultRolling(2)
+        declare_parallel(SlottedDefaultRolling, ParallelRoundContract(_caller_validator, ('window',)))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(SlottedDefaultRolling.__call__, '__defaults__', (2,))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(slotted), None)
+        before = digest(frozen)
+        restored = clone_manifest(frozen.manifest).feature_transforms[-1].func
+        assert isinstance(restored, SlottedDefaultRolling) and not hasattr(restored, '__dict__')
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(SlottedDefaultRolling, '__parallel_round_contract__', ParallelRoundContract(unfrozen_stage))
+            validate_resources(freeze_manifest(clone_manifest(frozen.manifest), None), _parameters())
+            for _ in range(2):
+                actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+                expected, _ = _repeated_carried_probe(frozen, _parameters())
+                assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), 4)['caller_mean'].to_list()
+                assert pid != os.getpid() and digest(frozen) == before
+        assert slotted.window == 2 and not hasattr(slotted, '__dict__') and SlottedDefaultRolling.__call__.__defaults__ == (1,)
         declare_parallel(_mapping_feature, ParallelRoundContract(deterministic_stage))
         options = defaultdict(int)
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mapping_feature, options=options), None)

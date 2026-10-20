@@ -222,8 +222,8 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         with shared_copy(state_memo):
-            bind_call(clone, decode(encode(implementation), isolate_functions=True))
-        vars(clone)['__parallel_round_contract__'] = _normalize(getattr(cast(object, value), '__parallel_round_contract__', None), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
+            bind_call(clone, (decode(encode(implementation), isolate_functions=True),
+                             _normalize(getattr(cast(object, value), '__parallel_round_contract__', None), active, snapshot=snapshot, memo=memo, state_memo=state_memo)))
     return clone
 
 

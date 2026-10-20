@@ -121,7 +121,7 @@ def _encode_component(value: object, active: frozenset[int], *, owner_only: bool
 
 def _call_node(value: object, active: frozenset[int], owner_only: bool) -> list[object]:
     implementation = call_implementation(value)
-    return ['captured_call', encode(implementation.__func__ if inspect.ismethod(implementation) else implementation, active)] if source_class(type(value)) is not type(value) else _owner_call(type(value)) if owner_only and implementation is not None else encode(None if owner_only else implementation, active)
+    return ['captured_call', encode((implementation.__func__ if inspect.ismethod(implementation) else implementation, getattr(value, '__parallel_round_contract__', None)), active)] if source_class(type(value)) is not type(value) else _owner_call(type(value)) if owner_only and implementation is not None else encode(None if owner_only else implementation, active)
 
 
 def _owner_call(cls: type) -> list[object]:
