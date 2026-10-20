@@ -1861,4 +1861,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.10] - 2026-10-20
 
+- Admit fixed-threshold binary evaluation targets over OHLC columns with horizon one to final holdout assessment; pin the shift in the frozen spec and validate binary labels with per-row availability.
+
+## [5.45.11] - 2026-10-20
+
 - Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit behavior-identical subclasses by effective member identity.
