@@ -131,13 +131,12 @@ def factory_reference(value: object) -> tuple[list[object], bool]:
         state = object_state(bound)
         source, imported = factory_reference(bound.func)
         return [reference(type(bound)), source, encode((state[0], state[1], bound.args, bound.keywords, state[3]))], imported
+    if inspect.ismethod(value):
+        return [component_digest(value)], False
     if not (inspect.isfunction(value) or isinstance(value, type)):
         return [reference(type(value)), encode(object_state(value))], callable(value)
     identity = reference(value)
-    original: object = import_module(cast(list[str], identity[0])[0])
-    for part in cast(str, identity[1]).split('.'):
-        original = getattr(original, part)
-    return identity, original is value
+    return identity, import_reference(identity) is value
 
 
 def factory_allocator(value: object) -> Callable[..., object] | None:
