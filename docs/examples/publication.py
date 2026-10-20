@@ -17,7 +17,7 @@ def git(root: Path, *arguments: str) -> str:
 def release_origin(root: Path, record, release: str) -> None:
     version = record['package']['version']
     head = git(root, 'rev-parse', 'HEAD')
-    if release != 'v' + version or record['revision']['head'] != head or record['revision']['tested_commit'] != head:
+    if release != 'v' + version or record['revision']['head'] != head or record['revision']['tested_commit'] != head or record['revision']['tree'] != git(root, 'rev-parse', 'HEAD^{tree}'):
         raise ValueError('Publication requires the exact tested release checkout, not a PR merge')
     if record['mode'] != 'candidate' or record['publication'] is not None or record['revision']['dirty']:
         raise ValueError('Publication requires an unchanged complete execution record')
@@ -65,14 +65,14 @@ def prepare(root: Path, release: str):
     execution = (root / '.docs-evidence/current.json').read_bytes()
     record = json.loads(execution)
     release_origin(root, record, release)
-    validate_evidence(record, root, head=record['revision']['head'], tree=record['revision']['tree'], version=record['package']['version'])
+    validate_evidence(record, root, head=git(root, 'rev-parse', 'HEAD'), tree=git(root, 'rev-parse', 'HEAD^{tree}'), version=record['package']['version'])
     receipt = root / '.docs-evidence/released-wheel.json'
     wheel = verify_download(receipt, record['package']['version'])
     if sha256(wheel.read_bytes()) != record['package']['wheel_sha256']:
         raise ValueError('The executed wheel is not the downloaded public release')
     site = root / 'docs-site/reader-build'
     built = json.loads((site / 'build.json').read_text())
-    if built['evidence_sha256'] != sha256(execution) or (built['head'], built['tested_commit'], built['tree']) != (record['revision']['head'], record['revision']['tested_commit'], record['revision']['tree']):
+    if built['evidence_sha256'] != sha256(execution) or built['version'] != record['package']['version'] or (built['head'], built['tested_commit'], built['tree']) != (record['revision']['head'], record['revision']['tested_commit'], record['revision']['tree']):
         raise ValueError('The built reader belongs to another execution')
     original = site_files(site)
     if 'publication.json' in original or any(sha256(original[name]) != value for name, value in built['files'].items()):

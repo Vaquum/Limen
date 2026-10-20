@@ -22,14 +22,16 @@ def test_publication_evidence():
     from limen import __version__
     head = git(ROOT, 'rev-parse', 'HEAD')
     record = {'package': {'version': __version__},
-              'revision': {'head': head, 'tested_commit': head, 'dirty': False},
+              'revision': {'head': head, 'tested_commit': head, 'tree': git(ROOT, 'rev-parse', 'HEAD^{tree}'), 'dirty': False},
               'mode': 'candidate', 'publication': None,
               'sources': [{'status': 'candidate', 'merged_pr': None}]}
     with pytest.raises(ValueError, match='cannot promote unmerged source'):
         release_origin(ROOT, record, 'v' + __version__)
-    record['revision']['tested_commit'] = '0' * 40
-    with pytest.raises(ValueError, match='exact tested release checkout'):
-        release_origin(ROOT, record, 'v' + __version__)
+    for field in ('head', 'tested_commit', 'tree'):
+        changed = copy.deepcopy(record)
+        changed['revision'][field] = '0' * 40
+        with pytest.raises(ValueError, match='exact tested release checkout'):
+            release_origin(ROOT, changed, 'v' + __version__)
 
 
 def test_divergent_authored_source_fails(tmp_path):
