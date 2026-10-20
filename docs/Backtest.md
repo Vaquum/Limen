@@ -52,6 +52,7 @@ intraminute extrema. Both runs are retrospective stress: the August 4 archive
 availability follows the August 1 evaluation, and historical delivery is unknown.
 
 <!-- recorded-cost-python:start -->
+<!-- example: python-observed-cost-model source=docs/examples/python-research/cost_research.py region=observed_cost_model scenario=observed_costs interface=python role=executed -->
 ```python
 import json
 from pathlib import Path
@@ -59,9 +60,9 @@ from types import SimpleNamespace
 
 import polars as pl
 
-from limen.backtest.observed_costs import CostCalibration, CostCandidate
+from limen.backtest.observed_costs import CostCalibration, CostCandidate, CostConditions
 from limen.backtest.trade_contract import (
-    ProductSpec, TradeInputs, TradePolicy, source_binding,
+    PredictionMode, ProductSpec, TradeInputs, TradePolicy, source_binding,
 )
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
@@ -82,7 +83,7 @@ class CallerModel:
 
 
 def run_cost_experiment(calibration_path, specification_path, benchmark_path,
-                        output, *, mode="binary", hour=1):
+                        output, *, mode: PredictionMode="binary", hour=1):
     expected = json.loads(Path(specification_path).read_text())["calibration_digest"]
     calibration = CostCalibration.read(calibration_path, expected_digest=expected)
     benchmark = pl.DataFrame(json.loads(Path(benchmark_path).read_text()), schema={
@@ -123,7 +124,7 @@ def run_cost_experiment(calibration_path, specification_path, benchmark_path,
             ProductSpec("linear_perpetual", "BTC", "BTC", "USDC", 0.00001, 1.0),
             prediction_mode=mode, fee_bps=5.0, slip_bps=5.0,
         )
-        conditions = {
+        conditions: CostConditions = {
             "venue": "hyperliquid", "environment": "mainnet",
             "product_kind": "linear_perpetual", "instrument": "BTC",
             "base_currency": "BTC", "quote_currency": "USDC",

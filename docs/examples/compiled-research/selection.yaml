@@ -1,0 +1,57 @@
+schema_version: "1.0"
+metadata:
+  name: book_compiled_selection
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: "2025-01-01"
+      train_end: "2025-01-15"
+      val_start: "2025-01-15"
+      val_end: "2025-01-18"
+      test_start: "2025-01-18"
+      test_end: "2025-01-22"
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: 1
+          group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+    backtest:
+      source_interval_seconds: 900
+      fee_bps: 1.0
+      slip_bps: 0.0
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type: [logreg]
+    C: [1.0, 0.5]
+    random_state: [42]
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv

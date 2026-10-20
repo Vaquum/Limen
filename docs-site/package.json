@@ -13,7 +13,10 @@
     "build": "npm run prepare-docs && docusaurus build",
     "check": "npm run lint && npm run prepare-docs && docusaurus build --no-minify",
     "serve": "docusaurus serve . --dir build --host 0.0.0.0 --port 3001 --no-open",
-    "clear": "docusaurus clear"
+    "clear": "docusaurus clear",
+    "build:reader": "node scripts/build-reader.mjs",
+    "check:reader": "node scripts/check-reader.mjs",
+    "serve:reader": "node scripts/serve-reader.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "^3.10.1",
@@ -24,13 +27,17 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "rehype-katex": "^7.0.1",
-    "remark-math": "^6.0.0"
+    "remark-math": "^6.0.0",
+    "markdown-it": "14.3.2",
+    "prismjs": "1.30.0",
+    "@fontsource-variable/archivo": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0"
   },
   "overrides": {
     "serialize-javascript": "7.0.5",
     "uuid": "11.1.1",
     "js-yaml@^4": "^4.3.2",
-    "markdown-it": "^14.2.0",
+    "markdown-it": "$markdown-it",
     "websocket-driver": "^0.7.5",
     "body-parser": "^1.20.6",
     "brace-expansion": "5.0.12",
@@ -50,6 +57,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "markdownlint-cli2": "^0.18.1"
   }
 }

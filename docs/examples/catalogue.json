@@ -1,0 +1,2334 @@
+{
+  "schema_version": 1,
+  "required_scenarios": {
+    "selection": [
+      "python",
+      "compiled"
+    ],
+    "search": [
+      "python",
+      "compiled"
+    ],
+    "recovery": [
+      "python",
+      "compiled"
+    ],
+    "walk_forward": [
+      "python",
+      "compiled"
+    ],
+    "holdout": [
+      "python",
+      "compiled"
+    ],
+    "calibration": [
+      "python",
+      "compiled"
+    ],
+    "execution": [
+      "python",
+      "compiled"
+    ],
+    "bars": [
+      "python",
+      "compiled"
+    ],
+    "allocation": [
+      "compiled"
+    ],
+    "command_line": [
+      "compiled"
+    ],
+    "observed_costs": [
+      "python"
+    ]
+  },
+  "unproved": {
+    "tabpfn": "https://github.com/Vaquum/Limen/issues/628",
+    "continuous_post_processing": "https://github.com/Vaquum/Limen/issues/1079"
+  },
+  "candidate_pages": [
+    "docs/Research-Book.md",
+    "docs/examples/python-research/README.md",
+    "docs/examples/compiled-research/README.md"
+  ],
+  "model_families": {
+    "logreg_binary": {
+      "interface": "compiled",
+      "scenario": "selection",
+      "configuration": "docs/examples/compiled-research/selection.yaml"
+    },
+    "lightgbm_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/factorized.yaml"
+    },
+    "rule_based": {
+      "interface": "compiled",
+      "scenario": "execution",
+      "configuration": "docs/examples/compiled-research/execution.yaml"
+    },
+    "ridge_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_ridge_regressor.yaml"
+    },
+    "dlinear_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_dlinear_regressor.yaml"
+    },
+    "xgboost_regressor": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_xgboost_regressor.yaml"
+    },
+    "random_binary": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_random_binary.yaml"
+    },
+    "direction_sizing": {
+      "interface": "compiled",
+      "scenario": "search",
+      "configuration": "docs/examples/compiled-research/family_direction_sizing.yaml"
+    },
+    "tabpfn_binary": {
+      "unproved": "https://github.com/Vaquum/Limen/issues/628"
+    }
+  },
+  "recorded_inputs": {
+    "spot_15m_20250101_20250531.parquet": {
+      "scenario": "selection",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "spot_1h_20240101_20241231.parquet": {
+      "scenario": "execution",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "btcusdt_funding_20240101_20240108.json": {
+      "scenario": "execution",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    },
+    "binance_trades_btcusdt_2025-05-23_90s.zip": {
+      "scenario": "bars",
+      "interfaces": [
+        "python",
+        "compiled"
+      ]
+    }
+  },
+  "cli_commands": {
+    "commit": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "ls": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "validate": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "profile": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "run": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "list-templates": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "init": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "reindex": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "fork": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "lineage": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "new": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    },
+    "backup": {
+      "interface": "compiled",
+      "scenario": "command_line"
+    }
+  },
+  "surfaces": {
+    "public_exports": {
+      "limen": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/__init__.py",
+        "entry_point": "limen",
+        "names": [
+          "Cohort",
+          "HistoricalData",
+          "Log",
+          "MLManifest",
+          "Manifest",
+          "ReconstructionError",
+          "RuleBasedManifest",
+          "Sensor",
+          "Trainer",
+          "UniversalExperimentLoop",
+          "__version__",
+          "features",
+          "indicators",
+          "log",
+          "metrics",
+          "scalers",
+          "sfd",
+          "targets",
+          "transforms",
+          "utils"
+        ],
+        "reference": "README.md",
+        "interface_overrides": {
+          "MLManifest": [
+            "compiled"
+          ],
+          "Manifest": [
+            "compiled"
+          ],
+          "ReconstructionError": [
+            "compiled"
+          ],
+          "RuleBasedManifest": [
+            "compiled"
+          ],
+          "Trainer": [
+            "compiled"
+          ],
+          "sfd": [
+            "compiled"
+          ]
+        }
+      },
+      "limen.backtest": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/__init__.py",
+        "entry_point": "limen.backtest",
+        "names": [
+          "ExecutionResult",
+          "ProductSpec",
+          "TradeInputs",
+          "TradePolicy",
+          "backtest_snapshot",
+          "long_flat_strategy",
+          "trade_execution"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.backtest_snapshot": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/backtest_snapshot.py",
+        "entry_point": "limen.backtest.backtest_snapshot",
+        "names": [
+          "BACKTEST_SNAPSHOT_COLUMNS",
+          "backtest_snapshot"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.execution_events": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/execution_events.py",
+        "entry_point": "limen.backtest.execution_events",
+        "names": [
+          "OBSERVATION_COLUMNS",
+          "SIGNAL_COLUMNS",
+          "execution_events",
+          "validate_observations",
+          "with_predictions"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.funding_adapter": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/funding_adapter.py",
+        "entry_point": "limen.backtest.funding_adapter",
+        "names": [
+          "ADAPTER_VERSION",
+          "FUNDING_KEYS",
+          "FundingAdapter",
+          "FundingCashflow",
+          "FundingContext",
+          "funding_adapter",
+          "prepare_funding",
+          "resolve_adapter",
+          "scheduled_times"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.funding_presets": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/funding_presets.py",
+        "entry_point": "limen.backtest.funding_presets",
+        "names": [
+          "BASELINE_RATE_8H",
+          "FundingPreset",
+          "PRESETS",
+          "PRESET_VERSION"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.long_flat_strategy": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/long_flat_strategy.py",
+        "entry_point": "limen.backtest.long_flat_strategy",
+        "names": [
+          "ExecutionResult",
+          "long_flat_strategy"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.observed_costs": {
+        "interfaces": [
+          "python"
+        ],
+        "project_context": [
+          "python/observed_costs"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/observed_costs.py",
+        "entry_point": "limen.backtest.observed_costs",
+        "names": [
+          "CalibrationReport",
+          "ComparisonReport",
+          "CostCalibration",
+          "CostCandidate",
+          "CostClock",
+          "CostComparison",
+          "CostConditions",
+          "CostDisposition"
+        ],
+        "reference": "docs/Backtest.md"
+      },
+      "limen.backtest.trade_contract": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/trade_contract.py",
+        "entry_point": "limen.backtest.trade_contract",
+        "names": [
+          "BPS",
+          "ExecutionEvent",
+          "FundingPolicy",
+          "JsonScalar",
+          "JsonValue",
+          "NANOSECONDS",
+          "PredictionMode",
+          "ProductSpec",
+          "RULE_VERSION",
+          "SourceBinding",
+          "TradeInputs",
+          "TradeLedger",
+          "TradePolicy",
+          "contract_digest",
+          "export_trade_contract",
+          "finite_number",
+          "json_value",
+          "source_binding"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.backtest.trade_execution": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/trade_execution.py",
+        "entry_point": "limen.backtest.trade_execution",
+        "names": [
+          "trade_execution"
+        ],
+        "reference": "limen/backtest/README.md"
+      },
+      "limen.calibration": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/calibration",
+          "compiled/calibration"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/calibration/__init__.py",
+        "entry_point": "limen.calibration",
+        "names": [
+          "CalibratorProtocol",
+          "ThresholdOptimizerProtocol",
+          "apply_calibrated_predict",
+          "fit_calibrator",
+          "grid_threshold_optimizer",
+          "sklearn_probability_calibrator"
+        ],
+        "reference": "limen/calibration/README.md"
+      },
+      "limen.cli": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/command_line"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/cli/__init__.py",
+        "entry_point": "limen.cli",
+        "names": [
+          "cli"
+        ],
+        "reference": "limen/cli/README.md"
+      },
+      "limen.cohort": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/cohort/__init__.py",
+        "entry_point": "limen.cohort",
+        "names": [
+          "BUILTIN_SELECTORS",
+          "Cohort"
+        ],
+        "reference": "limen/cohort/README.md"
+      },
+      "limen.cohort.sfc": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/cohort/sfc/__init__.py",
+        "entry_point": "limen.cohort.sfc",
+        "names": [
+          "BUILTIN_SELECTORS",
+          "Selector",
+          "SelectorContext",
+          "select_all",
+          "select_backtest_pareto",
+          "select_diverse_metrics",
+          "select_top_n"
+        ],
+        "reference": "limen/cohort/sfc/README.md"
+      },
+      "limen.data": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/__init__.py",
+        "entry_point": "limen.data",
+        "names": [
+          "HistoricalData",
+          "compute_data_bars"
+        ],
+        "reference": "limen/data/README.md"
+      },
+      "limen.data.bars": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/bars/__init__.py",
+        "entry_point": "limen.data.bars",
+        "names": [
+          "liquidity_bars",
+          "trade_bars",
+          "volume_bars"
+        ],
+        "reference": "limen/data/bars/README.md"
+      },
+      "limen.data.utils": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/__init__.py",
+        "entry_point": "limen.data.utils",
+        "names": [
+          "compute_data_bars",
+          "random_slice",
+          "split_by_dates",
+          "split_data_to_prep_output",
+          "split_data_to_rule_based_prep_output",
+          "split_random",
+          "split_sequential",
+          "split_walk_forward"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.data.utils.split_walk_forward": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/data/utils/split_walk_forward.py",
+        "entry_point": "limen.data.utils.split_walk_forward",
+        "names": [
+          "split_walk_forward"
+        ],
+        "reference": "limen/data/utils/README.md"
+      },
+      "limen.experiment": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/__init__.py",
+        "entry_point": "limen.experiment",
+        "names": [
+          "CalibrationConfig",
+          "GridStrategy",
+          "MLManifest",
+          "Manifest",
+          "RandomStrategy",
+          "RuleBasedManifest",
+          "STRATEGY_REGISTRY",
+          "UniversalExperimentLoop"
+        ],
+        "reference": "limen/experiment/README.md",
+        "interface_overrides": {
+          "CalibrationConfig": [
+            "compiled"
+          ],
+          "MLManifest": [
+            "compiled"
+          ],
+          "Manifest": [
+            "compiled"
+          ],
+          "RuleBasedManifest": [
+            "compiled"
+          ]
+        }
+      },
+      "limen.experiment.acceptance_report": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/acceptance_report.py",
+        "entry_point": "limen.experiment.acceptance_report",
+        "names": [
+          "acceptance_report",
+          "read_acceptance"
+        ],
+        "reference": "limen/experiment/README.md"
+      },
+      "limen.experiment.convergence_report": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/convergence_report.py",
+        "entry_point": "limen.experiment.convergence_report",
+        "names": [
+          "convergence_header",
+          "convergence_report",
+          "convergence_warning",
+          "convergence_warnings"
+        ],
+        "reference": "limen/experiment/README.md"
+      },
+      "limen.experiment.family_acceptance_report": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/family_acceptance_report.py",
+        "entry_point": "limen.experiment.family_acceptance_report",
+        "names": [
+          "family_acceptance_report"
+        ],
+        "reference": "limen/experiment/README.md"
+      },
+      "limen.experiment.holdout": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/holdout"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/holdout.py",
+        "entry_point": "limen.experiment.holdout",
+        "names": [
+          "FrozenHoldoutSelection",
+          "final_holdout_report",
+          "freeze_holdout_selection",
+          "read_holdout_report",
+          "release_holdout",
+          "reserve_holdout",
+          "withdraw_holdout"
+        ],
+        "reference": "limen/experiment/README.md"
+      },
+      "limen.experiment.param_search": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/param_search/__init__.py",
+        "entry_point": "limen.experiment.param_search",
+        "names": [
+          "GridStrategy",
+          "RandomStrategy",
+          "STRATEGY_REGISTRY",
+          "SearchStrategy",
+          "SobolStrategy"
+        ],
+        "reference": "limen/experiment/param_search/README.md"
+      },
+      "limen.experiment.param_search.grid_strategy": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/param_search/grid_strategy.py",
+        "entry_point": "limen.experiment.param_search.grid_strategy",
+        "names": [
+          "GridStrategy"
+        ],
+        "reference": "limen/experiment/param_search/README.md"
+      },
+      "limen.experiment.param_search.sobol_strategy": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/param_search/sobol_strategy.py",
+        "entry_point": "limen.experiment.param_search.sobol_strategy",
+        "names": [
+          "SobolStrategy"
+        ],
+        "reference": "limen/experiment/param_search/README.md"
+      },
+      "limen.experiment.reducer": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/reducer/__init__.py",
+        "entry_point": "limen.experiment.reducer",
+        "names": [
+          "ACTION_SUGGEST",
+          "BudgetReducer",
+          "CorrelationReducer",
+          "FILTER_EXCLUDE_VALUE",
+          "FILTER_KEEP_BETWEEN",
+          "FILTER_KEEP_VALUES",
+          "FILTER_SAMPLE",
+          "FocusReducer",
+          "PruningStrategy",
+          "REDUCER_REGISTRY",
+          "SanityReducer",
+          "SaturationReducer",
+          "TRIM_RANDOM",
+          "TRIM_WORST_FIRST"
+        ],
+        "reference": "limen/experiment/reducer/README.md"
+      },
+      "limen.features": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/features/__init__.py",
+        "entry_point": "limen.features",
+        "names": [
+          "absorption_intensity",
+          "active_lines",
+          "active_quantile_count",
+          "amihud_illiquidity",
+          "atr_percent_sma",
+          "atr_sma",
+          "body_to_range",
+          "breakout_features",
+          "breakout_percentile_regime",
+          "bulk_volume_classification",
+          "calendar_time_features",
+          "close_ma_distance_atr",
+          "close_position",
+          "close_position_rolling",
+          "close_to_extremes",
+          "conserved_flux_renormalization",
+          "cusum_filter",
+          "cyclical_time_features",
+          "distance_from_high",
+          "distance_from_low",
+          "distance_from_ma",
+          "dollar_bar_crash_reversal",
+          "dollar_volume",
+          "downside_volatility_ratio",
+          "dynamic_stop_loss",
+          "dynamic_target",
+          "ema_alignment",
+          "entry_score_microstructure",
+          "feature_aliases",
+          "find_min_d",
+          "fractional_diff",
+          "gap_high",
+          "garman_klass_volatility",
+          "hh_hl_structure_regime",
+          "hours_since_big_move",
+          "hours_since_quantile_line",
+          "ichimoku_cloud",
+          "illiquidity_shock",
+          "is_funding_hour",
+          "is_us_open_hour",
+          "jump_variation_proxy",
+          "kaufman_efficiency_ratio",
+          "kline_imbalance",
+          "lag_column",
+          "lag_columns",
+          "lag_range",
+          "lag_range_cols",
+          "liquidity_drop",
+          "liquidity_range",
+          "log_returns",
+          "ma_slope_regime",
+          "maker_liquidity_share",
+          "maker_volume_ratio",
+          "maker_volume_share",
+          "market_regime",
+          "micro_momentum",
+          "momentum_confirmation",
+          "momentum_periods",
+          "momentum_weight",
+          "narrow_range",
+          "order_flow_imbalance",
+          "parkinson_vol_of_vol",
+          "parkinson_volatility",
+          "position_in_candle",
+          "position_in_range",
+          "price_lines",
+          "price_range_position",
+          "price_vs_band_regime",
+          "quantile_line_density",
+          "quantile_price_lines",
+          "range_overlap",
+          "range_pct",
+          "range_per_dollar_volume",
+          "realized_kurtosis",
+          "realized_semivariance",
+          "realized_skewness",
+          "regime_multiplier",
+          "rejection_intensity",
+          "relative_range_seasonality",
+          "relative_volatility_seasonality",
+          "relative_volume_seasonality",
+          "return_autocorrelation",
+          "return_per_dollar_volume",
+          "return_volatility_correlation",
+          "returns_lags",
+          "rogers_satchell_volatility",
+          "rolling_zscore",
+          "sma_crossover",
+          "sma_ratios",
+          "spread",
+          "spread_percent",
+          "stochastic_k_abs",
+          "tail_event_intensity",
+          "taker_imbalance_ratio",
+          "time_to_funding",
+          "trade_density",
+          "trade_imbalance",
+          "trade_size_ratio",
+          "trend_coherence",
+          "trend_strength",
+          "volatility_1h",
+          "volatility_measure",
+          "volatility_of_volatility",
+          "volatility_ratio",
+          "volatility_spike",
+          "volatility_term_structure",
+          "volatility_weight",
+          "volume_ratio",
+          "volume_regime",
+          "volume_spike",
+          "volume_to_range",
+          "volume_trend",
+          "volume_volatility_correlation",
+          "vpin",
+          "vwap",
+          "wick_imbalance",
+          "wick_proportion",
+          "window_return_regime",
+          "yang_zhang_volatility"
+        ],
+        "reference": "limen/features/README.md"
+      },
+      "limen.features.common_strategy_positions": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/features/common_strategy_positions.py",
+        "entry_point": "limen.features.common_strategy_positions",
+        "names": [
+          "POSITION_COLUMN",
+          "common_strategy_positions"
+        ],
+        "reference": "limen/features/README.md"
+      },
+      "limen.features.price_lines": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/features/price_lines.py",
+        "entry_point": "limen.features.price_lines",
+        "names": [
+          "line_active_count",
+          "line_recency",
+          "price_lines"
+        ],
+        "reference": "limen/features/README.md"
+      },
+      "limen.features.volatility_barriers": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/features/volatility_barriers.py",
+        "entry_point": "limen.features.volatility_barriers",
+        "names": [
+          "volatility_barriers"
+        ],
+        "reference": "limen/features/README.md"
+      },
+      "limen.indicators": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/indicators/__init__.py",
+        "entry_point": "limen.indicators",
+        "names": [
+          "ad",
+          "adosc",
+          "apo",
+          "atr",
+          "avgprice",
+          "bbands",
+          "body_pct",
+          "bollinger_bands",
+          "bollinger_position",
+          "bop",
+          "cci",
+          "cdl2crows",
+          "cdl3blackcrows",
+          "cdl3inside",
+          "cdl3linestrike",
+          "cdl3starsinsouth",
+          "cdl3whitesoldiers",
+          "cdlabandonedbaby",
+          "cdladvancedblock",
+          "cdlbelthold",
+          "cdlclosingmarubozu",
+          "cdlconcealbabyswall",
+          "cdlcounterattack",
+          "cdldarkcloudcover",
+          "cdldoji",
+          "cdldragonflydoji",
+          "cdlengulfing",
+          "cdlgravestonedoji",
+          "cdlhammer",
+          "cdlhangingman",
+          "cdlharami",
+          "cdlharamicross",
+          "cdlhighwave",
+          "cdlhikkake",
+          "cdlhikkakemod",
+          "cdlhomingpigeon",
+          "cdlidentical3crows",
+          "cdlinvertedhammer",
+          "cdlladderbottom",
+          "cdllongleggeddoji",
+          "cdllongline",
+          "cdlmarubozu",
+          "cdlmatchinglow",
+          "cdlmathold",
+          "cdlonneck",
+          "cdlpiercing",
+          "cdlrickshawman",
+          "cdlrisefall3methods",
+          "cdlseparatinglines",
+          "cdlshootingstar",
+          "cdlshortline",
+          "cdlspinningtop",
+          "cdlstalledpattern",
+          "cdlsticksandwich",
+          "cdltakuri",
+          "cdlthrusting",
+          "cdltristar",
+          "cdlunique3river",
+          "cmo",
+          "dema",
+          "ema",
+          "ht_dcperiod",
+          "ht_dcphase",
+          "ht_phasor",
+          "ht_sine",
+          "ht_trendline",
+          "ht_trendmode",
+          "kama",
+          "linearreg",
+          "linearreg_angle",
+          "linearreg_intercept",
+          "linearreg_slope",
+          "ma",
+          "macd",
+          "macdext",
+          "macdfix",
+          "mama",
+          "medprice",
+          "mfi",
+          "midpoint",
+          "midprice",
+          "mom",
+          "natr",
+          "obv",
+          "ppo",
+          "price_change_pct",
+          "returns",
+          "roc",
+          "rocp",
+          "rocr",
+          "rocr100",
+          "rolling_volatility",
+          "rsi",
+          "rsi_sma",
+          "sar",
+          "sarext",
+          "sma",
+          "sma_deviation_std",
+          "stddev",
+          "stoch",
+          "stochastic_oscillator",
+          "stochf",
+          "stochrsi",
+          "t3",
+          "tema",
+          "trange",
+          "trima",
+          "trix",
+          "tsf",
+          "typprice",
+          "ultosc",
+          "var",
+          "wclprice",
+          "wilder_rsi",
+          "willr",
+          "window_return",
+          "wma"
+        ],
+        "reference": "limen/indicators/README.md"
+      },
+      "limen.indicators.cdladvancedblock": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/indicators/cdladvancedblock.py",
+        "entry_point": "limen.indicators.cdladvancedblock",
+        "names": [
+          "candle_totals",
+          "cdladvancedblock"
+        ],
+        "reference": "limen/indicators/README.md"
+      },
+      "limen.indicators.linearreg": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/indicators/linearreg.py",
+        "entry_point": "limen.indicators.linearreg",
+        "names": [
+          "linearreg",
+          "linearreg_components"
+        ],
+        "reference": "limen/indicators/README.md"
+      },
+      "limen.indicators.midprice": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/indicators/midprice.py",
+        "entry_point": "limen.indicators.midprice",
+        "names": [
+          "midprice",
+          "window_extrema"
+        ],
+        "reference": "limen/indicators/README.md"
+      },
+      "limen.inference": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/inference/__init__.py",
+        "entry_point": "limen.inference",
+        "names": [
+          "BarPrediction",
+          "ReconstructionError",
+          "Sensor",
+          "Trainer"
+        ],
+        "reference": "limen/inference/README.md",
+        "interface_overrides": {
+          "ReconstructionError": [
+            "compiled"
+          ],
+          "Trainer": [
+            "compiled"
+          ]
+        }
+      },
+      "limen.inference.sensor": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/inference/sensor.py",
+        "entry_point": "limen.inference.sensor",
+        "names": [
+          "BarPrediction",
+          "PredictionReason",
+          "Sensor"
+        ],
+        "reference": "limen/inference/README.md"
+      },
+      "limen.log": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/log/__init__.py",
+        "entry_point": "limen.log",
+        "names": [
+          "experiment_backtest_results",
+          "experiment_confusion_metrics",
+          "experiment_parameter_correlation",
+          "permutation_confusion_metrics",
+          "permutation_prediction_performance"
+        ],
+        "reference": "limen/log/README.md"
+      },
+      "limen.metrics": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/metrics/__init__.py",
+        "entry_point": "limen.metrics",
+        "names": [
+          "balanced_metric",
+          "binary_metrics",
+          "continuous_metrics",
+          "deflated_sharpe_ratio",
+          "multiclass_metrics",
+          "probability_of_backtest_overfitting",
+          "rule_based_metrics",
+          "safe_ovr_auc"
+        ],
+        "reference": "limen/metrics/README.md"
+      },
+      "limen.metrics.deflated_sharpe_ratio": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/metrics/deflated_sharpe_ratio.py",
+        "entry_point": "limen.metrics.deflated_sharpe_ratio",
+        "names": [
+          "deflated_sharpe_ratio"
+        ],
+        "reference": "limen/metrics/README.md"
+      },
+      "limen.metrics.probability_of_backtest_overfitting": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/metrics/probability_of_backtest_overfitting.py",
+        "entry_point": "limen.metrics.probability_of_backtest_overfitting",
+        "names": [
+          "probability_of_backtest_overfitting"
+        ],
+        "reference": "limen/metrics/README.md"
+      },
+      "limen.scalers": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/scalers/__init__.py",
+        "entry_point": "limen.scalers",
+        "names": [
+          "CausalRollingRobustScaler",
+          "LinearScaler",
+          "LogRegScaler",
+          "RankGaussScaler",
+          "RobustScaler",
+          "SCALER_REGISTRY"
+        ],
+        "reference": "limen/scalers/README.md"
+      },
+      "limen.sfd": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/__init__.py",
+        "entry_point": "limen.sfd",
+        "names": [
+          "foundational_rule_based",
+          "foundational_sfd",
+          "logreg_binary",
+          "random_binary",
+          "xgboost_regressor"
+        ],
+        "reference": "limen/sfd/README.md"
+      },
+      "limen.sfd.foundational_sfd": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/__init__.py",
+        "entry_point": "limen.sfd.foundational_sfd",
+        "names": [
+          "common_strategies",
+          "dlinear_regressor",
+          "dollar_bar_crash_reversal",
+          "lightgbm_binary",
+          "logreg_binary",
+          "random_binary",
+          "ridge_regressor",
+          "rule_based",
+          "tabpfn_binary",
+          "xgboost_regressor"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.foundational_sfd.common_strategies": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/common_strategies.py",
+        "entry_point": "limen.sfd.foundational_sfd.common_strategies",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.foundational_sfd.ridge_regressor": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/ridge_regressor.py",
+        "entry_point": "limen.sfd.foundational_sfd.ridge_regressor",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.foundational_sfd.xgboost_regressor": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/foundational_sfd/xgboost_regressor.py",
+        "entry_point": "limen.sfd.foundational_sfd.xgboost_regressor",
+        "names": [
+          "manifest",
+          "params"
+        ],
+        "reference": "limen/sfd/foundational_sfd/README.md"
+      },
+      "limen.sfd.reference_architecture": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/__init__.py",
+        "entry_point": "limen.sfd.reference_architecture",
+        "names": [
+          "DLinearRegressor",
+          "DirectionSizingModel",
+          "LightGBMBinary",
+          "LogRegBinary",
+          "RandomBinary",
+          "ReferenceModel",
+          "RidgeRegressor",
+          "RuleBasedStrategy",
+          "TabPFNBinary",
+          "XGBoostRegressor",
+          "direction_sizing",
+          "dlinear_regressor",
+          "lightgbm_binary",
+          "logreg_binary",
+          "random_binary",
+          "ridge_regressor",
+          "rule_based",
+          "tabpfn_binary",
+          "xgboost_regressor"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md",
+        "interface_overrides": {
+          "DirectionSizingModel": [
+            "compiled"
+          ],
+          "direction_sizing": [
+            "compiled"
+          ]
+        }
+      },
+      "limen.sfd.reference_architecture.direction_sizing": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/direction_sizing.py",
+        "entry_point": "limen.sfd.reference_architecture.direction_sizing",
+        "names": [
+          "ComponentEstimator",
+          "ComponentFactory",
+          "DirectionSizingModel",
+          "FoldFeatures",
+          "FoldPreparation",
+          "direction_sizing"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.reference_architecture.meta_allocation": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/allocation"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/meta_allocation.py",
+        "entry_point": "limen.sfd.reference_architecture.meta_allocation",
+        "names": [
+          "MetaAllocationModel",
+          "meta_allocation"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.reference_architecture.ridge_regressor": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/ridge_regressor.py",
+        "entry_point": "limen.sfd.reference_architecture.ridge_regressor",
+        "names": [
+          "RidgeRegressor",
+          "ridge_regressor"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.reference_architecture.xgboost_regressor": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/reference_architecture/xgboost_regressor.py",
+        "entry_point": "limen.sfd.reference_architecture.xgboost_regressor",
+        "names": [
+          "XGBoostRegressor",
+          "xgboost_regressor"
+        ],
+        "reference": "limen/sfd/reference_architecture/README.md"
+      },
+      "limen.sfd.rule_based": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/rule_based/__init__.py",
+        "entry_point": "limen.sfd.rule_based",
+        "names": [
+          "RuleBasedConfig",
+          "build_predicate"
+        ],
+        "reference": "limen/sfd/rule_based/README.md"
+      },
+      "limen.sfd.rule_based.common_strategies": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/sfd/rule_based/common_strategies.py",
+        "entry_point": "limen.sfd.rule_based.common_strategies",
+        "names": [
+          "STRATEGY_NAMES",
+          "STRATEGY_PARAMETERS",
+          "strategy_signals"
+        ],
+        "reference": "limen/sfd/rule_based/README.md"
+      },
+      "limen.targets": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/targets/__init__.py",
+        "entry_point": "limen.targets",
+        "names": [
+          "EmaBreakoutTarget",
+          "ExitQualityTarget",
+          "ForwardBreakoutTarget",
+          "ForwardVolNormalizedReturnTarget",
+          "IdentityTarget",
+          "NextBarDownTarget",
+          "NextBarUpTarget",
+          "NextReturnTarget",
+          "OutcomeLabels",
+          "QuantileBinaryTarget",
+          "RandomBinaryTarget",
+          "RiskRewardRatioTarget",
+          "ThresholdBinaryTarget",
+          "TradeOutcomeTarget",
+          "TradeTargetContext",
+          "TradelineLongBinaryTarget",
+          "TripleBarrierTarget",
+          "VolNormalizedReturnTarget"
+        ],
+        "reference": "limen/targets/README.md",
+        "interface_overrides": {
+          "TradeOutcomeTarget": [
+            "compiled"
+          ]
+        }
+      },
+      "limen.targets.trade_outcome": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/targets/trade_outcome.py",
+        "entry_point": "limen.targets.trade_outcome",
+        "names": [
+          "OutcomeLabels",
+          "TradeOutcomeTarget",
+          "TradeTargetContext"
+        ],
+        "reference": "limen/targets/README.md"
+      },
+      "limen.transforms": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/bars",
+          "compiled/bars"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/transforms/__init__.py",
+        "entry_point": "limen.transforms",
+        "names": [
+          "mad_transform",
+          "quantile_trim_transform",
+          "shift_column_transform",
+          "winsorize_transform",
+          "zscore_transform"
+        ],
+        "reference": "limen/transforms/README.md"
+      },
+      "limen.utils": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/utils/__init__.py",
+        "entry_point": "limen.utils",
+        "names": [
+          "AdfResult",
+          "ParamSpace",
+          "adf_test",
+          "binary_metrics",
+          "confidence_filtering_system",
+          "continuous_metrics",
+          "data_dict_to_numpy",
+          "filter_lines_by_quantile",
+          "find_price_lines",
+          "format_report_footer",
+          "format_report_header",
+          "format_report_section",
+          "safe_ovr_auc"
+        ],
+        "reference": "limen/utils/README.md"
+      },
+      "limen.utils.find_price_lines": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/utils/find_price_lines.py",
+        "entry_point": "limen.utils.find_price_lines",
+        "names": [
+          "LineArrays",
+          "find_price_lines",
+          "price_line_arrays"
+        ],
+        "reference": "limen/utils/README.md"
+      },
+      "limen.yaml": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/command_line"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/yaml/__init__.py",
+        "entry_point": "limen.yaml",
+        "names": [
+          "CompiledSFD",
+          "GitError",
+          "ProfileResult",
+          "ResolutionError",
+          "VERSION",
+          "ValidationError",
+          "ValidationResult",
+          "YAMLError",
+          "build_manifest",
+          "build_search_strategy",
+          "find_project_root",
+          "get_store_path",
+          "make_covering_array",
+          "parse",
+          "profile",
+          "read_limen_toml",
+          "resolve",
+          "resolve_manifest_uri",
+          "validate"
+        ],
+        "reference": "limen/yaml/README.md"
+      }
+    },
+    "registries": {
+      "search": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/param_search/registry.py",
+        "entry_point": "STRATEGY_REGISTRY",
+        "names": [
+          "grid",
+          "random",
+          "sobol"
+        ],
+        "reference": "docs/Advanced-Search.md"
+      },
+      "scalers": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/selection",
+          "compiled/selection"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/scalers/registry.py",
+        "entry_point": "SCALER_REGISTRY",
+        "names": [
+          "causal_rolling_robust",
+          "linear",
+          "logreg",
+          "rank_gauss",
+          "robust"
+        ],
+        "reference": "docs/Scalers.md"
+      },
+      "reducers": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/search",
+          "compiled/search"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/experiment/reducer/registry.py",
+        "entry_point": "REDUCER_REGISTRY",
+        "names": [
+          "budget",
+          "correlation",
+          "focus",
+          "sanity",
+          "saturation"
+        ],
+        "reference": "docs/Reducers-And-Feedback.md"
+      },
+      "selectors": {
+        "interfaces": [
+          "compiled"
+        ],
+        "project_context": [
+          "compiled/walk_forward"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/cohort/sfc/__init__.py",
+        "entry_point": "BUILTIN_SELECTORS",
+        "names": [
+          "all",
+          "backtest_pareto",
+          "diverse_metrics",
+          "top_n"
+        ],
+        "reference": "docs/Cohort.md"
+      },
+      "funding": {
+        "interfaces": [
+          "python",
+          "compiled"
+        ],
+        "project_context": [
+          "python/execution",
+          "compiled/execution"
+        ],
+        "proof": "public-signature-inventory",
+        "source": "limen/backtest/funding_presets.py",
+        "entry_point": "PRESETS",
+        "names": [
+          "binance_btcusdt",
+          "deribit_btc_usdc",
+          "hyperliquid_btc"
+        ],
+        "reference": "docs/Backtest.md"
+      }
+    },
+    "manifest_fields": {
+      "interfaces": [
+        "compiled"
+      ],
+      "project_context": [
+        "compiled/selection"
+      ],
+      "proof": "public-signature-inventory",
+      "source": "limen/yaml/schema.py",
+      "entry_point": "limen.yaml.validate",
+      "reference": "docs/Experiment-Manifest.md",
+      "field_groups": {
+        "TOP_LEVEL_REQUIRED": [
+          "metadata",
+          "schema_version",
+          "sfd",
+          "uel"
+        ],
+        "METADATA_REQUIRED": [
+          "mode",
+          "name"
+        ],
+        "METADATA_OPTIONAL": [
+          "author",
+          "created_at",
+          "description",
+          "limen_version",
+          "tags"
+        ],
+        "SFD_REQUIRED": [
+          "manifest",
+          "params"
+        ],
+        "MANIFEST_REQUIRED": [
+          "data_source",
+          "reference_architecture",
+          "type"
+        ],
+        "ML_MANIFEST_REQUIRED": [
+          "target"
+        ],
+        "ML_MANIFEST_OPTIONAL": [
+          "bar_formation",
+          "calibration",
+          "data_dict_extension",
+          "decoder_lookback",
+          "feature_ablation",
+          "feature_shims",
+          "features",
+          "metrics_params",
+          "objective",
+          "params_override",
+          "pca_compression",
+          "pre_split_data_selector",
+          "scaler",
+          "strict_mode"
+        ],
+        "RULE_BASED_MANIFEST_REQUIRED": [
+          "strategy"
+        ],
+        "RULE_BASED_MANIFEST_OPTIONAL": [],
+        "DATA_SOURCE_REQUIRED": [
+          "method"
+        ],
+        "DATA_SOURCE_OPTIONAL": [
+          "params"
+        ],
+        "SPLIT_CONFIG_REQUIRED": [
+          "test",
+          "train",
+          "val"
+        ],
+        "SPLIT_DATES_REQUIRED": [
+          "test_end",
+          "test_start",
+          "train_end",
+          "train_start",
+          "val_end",
+          "val_start"
+        ],
+        "SPLIT_DATES_OPTIONAL": [
+          "test_predict_guard",
+          "val_predict_guard"
+        ],
+        "TARGET_REQUIRED": [
+          "class",
+          "name"
+        ],
+        "TARGET_OPTIONAL": [
+          "fit_params",
+          "transform_params"
+        ],
+        "STRATEGY_REQUIRED": [
+          "conditions",
+          "entry"
+        ],
+        "CONDITION_REQUIRED": [
+          "id",
+          "name"
+        ],
+        "CONDITION_OPTIONAL": [
+          "params",
+          "persistence_n",
+          "recency_n"
+        ],
+        "SCALER_EXPLICIT_REQUIRED": [
+          "class"
+        ],
+        "SCALER_EXPLICIT_OPTIONAL": [],
+        "SCALER_FROM_PARAMS_REQUIRED": [
+          "from_params"
+        ],
+        "FEATURE_ABLATION_OPTIONAL": [
+          "drop_count_key",
+          "seed_key"
+        ],
+        "PCA_COMPRESSION_OPTIONAL": [
+          "component_prefix",
+          "enabled_param",
+          "n_components_param",
+          "scaler_param_name"
+        ],
+        "BACKTEST_OPTIONAL": [
+          "barrier_features",
+          "execution_data_source",
+          "execution_lag_seconds",
+          "fee_bps",
+          "flat_threshold",
+          "funding",
+          "initial_equity",
+          "max_exposure",
+          "max_holding_seconds",
+          "max_price_gap_seconds",
+          "notional_rate",
+          "prediction_mode",
+          "product",
+          "signal_change_bps",
+          "slip_bps",
+          "source_interval_seconds",
+          "source_timestamp_role",
+          "stop_loss_bps",
+          "stop_loss_bps_column",
+          "take_profit_bps",
+          "take_profit_bps_column",
+          "timer_interval_seconds",
+          "timer_phase_utc_seconds"
+        ],
+        "CALIBRATION_OPTIONAL": [
+          "probability_calibration",
+          "threshold_function"
+        ],
+        "CALIBRATION_FUNC_REQUIRED": [
+          "func"
+        ],
+        "CALIBRATION_FUNC_OPTIONAL": [
+          "params"
+        ],
+        "UEL_REQUIRED": [
+          "n_permutations"
+        ],
+        "UEL_OPTIONAL": [
+          "checkpoint_interval",
+          "factorize",
+          "feedback_interval",
+          "intra_callback",
+          "output_format",
+          "output_path",
+          "prep_each_round",
+          "pruning_strategies",
+          "record_execution",
+          "record_model_outputs",
+          "recording",
+          "search_strategy",
+          "workers"
+        ],
+        "SEARCH_STRATEGY_REQUIRED": [
+          "type"
+        ],
+        "SEARCH_STRATEGY_OPTIONAL": [
+          "seed",
+          "shuffle"
+        ],
+        "PRUNING_STRATEGY_REQUIRED": [
+          "type"
+        ],
+        "PRUNING_STRATEGY_OPTIONAL": [
+          "params"
+        ]
+      }
+    }
+  },
+  "reference_proofs": {
+    "public-signature-inventory": {
+      "role": "signature/reference",
+      "tests": [
+        "docs/examples/tests/test_docs_examples.py::test_public_surface_catalogue_matches_current_source",
+        "tests/test_docs_surface.py::test_every_package_root_export_is_documented"
+      ],
+      "assertions": [
+        "Export, registry and Manifest-field inventories equal their current declarations; each canonical reference exists.",
+        "Individual alternative helpers are inventoried as reference surfaces. Successful execution belongs to the separately required scenario records."
+      ]
+    }
+  },
+  "scenario_details": {
+    "python/selection": {
+      "interface": "python",
+      "scenario": "selection",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/research.py",
+      "region": "experiment",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: first 1,920 rows; 960 fitting, 480 validation, 480 inference",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Retained evaluated state; independent next-bar costs and selection; all causal prefixes; no inference fitting."
+    },
+    "compiled/selection": {
+      "interface": "compiled",
+      "scenario": "selection",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/research.py",
+      "region": "experiment",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: January 1\u201322 2025, split January 15/18",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics."
+    },
+    "python/search": {
+      "interface": "python",
+      "scenario": "search",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "search",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: first 1,440 rows",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds."
+    },
+    "compiled/search": {
+      "interface": "compiled",
+      "scenario": "search",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "search",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three."
+    },
+    "python/recovery": {
+      "interface": "python",
+      "scenario": "recovery",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "recovery",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: first 1,440 rows",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Two completed rounds become four unique occurrence indices and equal uninterrupted native results after resume; arbitrary fitted state is not restored.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry"
+      ]
+    },
+    "compiled/recovery": {
+      "interface": "compiled",
+      "scenario": "recovery",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "recovery",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: January 1\u201322 2024",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry"
+      ]
+    },
+    "python/walk_forward": {
+      "interface": "python",
+      "scenario": "walk_forward",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "walk_forward",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: first 384 rows; two anchored and two rolling folds",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Exact fold geometry and disjoint chronological clocks; finite caller-owned fitted predictions."
+    },
+    "compiled/walk_forward": {
+      "interface": "compiled",
+      "scenario": "walk_forward",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "walk_forward",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: first 384 rows; two recorded folds",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry",
+        "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local"
+      ]
+    },
+    "python/holdout": {
+      "interface": "python",
+      "scenario": "holdout",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "holdout",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: first 1,920 rows; 479 next-bar final decisions",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Independent final open-to-close return and costs; caller-owned exclusion is not guarded exposure evidence."
+    },
+    "compiled/holdout": {
+      "interface": "compiled",
+      "scenario": "holdout",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "holdout",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: January 1\u20136 2024; reserved January 5\u20136",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_guarded_holdout_excludes_research_and_never_refits"
+      ]
+    },
+    "python/calibration": {
+      "interface": "python",
+      "scenario": "calibration",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "calibration",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: first 1,920 rows",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "All four calibration/threshold choices; independent threshold objective; compatible Python vote cohort; validation reuse disclosed."
+    },
+    "compiled/calibration": {
+      "interface": "compiled",
+      "scenario": "calibration",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "calibration",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: January 1\u201322 2025",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "All four declared modes reconstruct; threshold-only statistics preserve unavailable values."
+    },
+    "python/execution": {
+      "interface": "python",
+      "scenario": "execution",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "execution",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: first 168 rows; recorded January 1\u20138 2024 funding",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Nonempty native ledger; equity/cost reconciliation; each funding payment matches recorded rate, mark and signed quantity.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_integrity.py::test_execution_proof_rejects_early_and_substituted_recorded_fills"
+      ]
+    },
+    "compiled/execution": {
+      "interface": "compiled",
+      "scenario": "execution",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "execution",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: January 2\u20136 2024; overlapping recorded funding",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Distinct dynamic-barrier contracts and actual completed trades; recorded funding cashflows reconcile to native metrics."
+    },
+    "python/bars": {
+      "interface": "python",
+      "scenario": "bars",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "bars",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: first 384 rows; 90-second trade slice May 23 2025",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Complete-bar volume and boundaries; original trade volume/value conserved into three CFR bars; six finite diagnostics."
+    },
+    "compiled/bars": {
+      "interface": "compiled",
+      "scenario": "bars",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "bars",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: January 1\u201322 2025; 90-second trade slice May 23 2025",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "All three post-split formation modes; shared recorded-trade preprocessing; no full ML population claimed for the short slice."
+    },
+    "compiled/allocation": {
+      "interface": "compiled",
+      "scenario": "allocation",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/scenarios.py",
+      "region": "allocation",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "hourly: January 2\u201319 2024; paired recorded funding January 1\u20138 2024",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Original rule/learned primary predictions, independent prefix-fit digests, completed-outcome purging, per-opportunity risk caps and exact source bindings; paired recorded funding effects; batch research only."
+    },
+    "compiled/command_line": {
+      "interface": "compiled",
+      "scenario": "command_line",
+      "role": "executed",
+      "page": "docs/examples/compiled-research/README.md",
+      "source": "docs/examples/compiled-research/command_line.py",
+      "region": "lifecycle",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "quarter-hour: January 1\u201322 2025; local recorded campaign backup",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "Installed CLI exits successfully; parent/child lineage, four unique result rows, CSV/Parquet agreement and exact restored tracked campaign bytes."
+    },
+    "python/observed_costs": {
+      "interface": "python",
+      "scenario": "observed_costs",
+      "role": "executed",
+      "page": "docs/examples/python-research/README.md",
+      "source": "docs/examples/python-research/scenarios.py",
+      "region": "observed_costs",
+      "prerequisites": [
+        "matching Limen wheel and recorded input bundle",
+        "data, stats and boosting extras for the complete project"
+      ],
+      "recorded_window": "recorded Chainticks execution-cost population: June 1, June 29 and August 1 2026; two August 1 benchmark hours",
+      "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
+      "assertions": "One pinned calibration reused by four caller-owned fits; unchanged predictions and fees; distinct frozen inputs and applications; low effective support and unknown historical delivery remain explicit."
+    }
+  },
+  "shared_sources": {
+    "docs/examples/recorded_inputs.py": [
+      "python",
+      "compiled"
+    ],
+    "docs/examples/commands.json": [
+      "python",
+      "compiled"
+    ]
+  }
+}
