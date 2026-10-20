@@ -63,7 +63,7 @@ def children(value: object) -> tuple[object, ...]:
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_payload(value):
-        return (npt.NDArray[np.generic].tolist(cast(npt.NDArray[np.generic], value)) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value)).values())
+        return (npt.NDArray[np.generic].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value)).values())
     metadata = _typing_metadata(value)
     if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)) or metadata is not None:
         parts: tuple[object, ...]
@@ -175,8 +175,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(sorted((node(part) for part in _native_values(cast(object, item))), key=pickle.dumps)), state)
         elif object_payload(item):
-            owner: type[object] = np.ndarray if isinstance(item, np.ndarray) else np.generic
-            result = (kind, native_attribute(cast(object, item), 'shape', owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', owner)).descr, node(npt.NDArray[np.generic].tolist(cast(npt.NDArray[np.generic], item)) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
+            payload_owner: type[object] = np.ndarray if isinstance(item, np.ndarray) else np.generic
+            result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(npt.NDArray[np.generic].tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
         elif isinstance(item, np.ndarray):
             native = cast(object, npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
             result = (kind, pickle.dumps(native, protocol=5), state)
