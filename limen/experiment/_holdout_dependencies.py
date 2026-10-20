@@ -147,7 +147,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
-    function_witness = lru_cache(maxsize=None)(fitted_witness)
+    cached_witness = lru_cache(maxsize=None)(fitted_witness)
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
@@ -174,7 +174,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if type(provider) is not partial:
                 objects.append(provider)
         elif inspect.isfunction(value):
-            evidence.append(function_witness(value))
+            evidence.append(cached_witness(value))
             if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
@@ -232,7 +232,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     if not isinstance(item, ModuleType):
                         try:
                             visit(item)
-                            witness = function_witness(item) if inspect.isfunction(item) else fitted_witness(item)
+                            witness = cached_witness(item) if inspect.isfunction(item) else fitted_witness(item)
                             evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
                         except (ValueError, TypeError, pickle.PickleError) as exc:
                             raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
@@ -272,7 +272,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     method = method.__func__
                 if method is not None:
                     visit(method)
-                    evidence.append((key, function_witness(method) if inspect.isfunction(method) else fitted_witness(method)))
+                    evidence.append((key, cached_witness(method) if inspect.isfunction(method) or (type(method).__module__ == 'builtins' and (inspect.ismethoddescriptor(method) or inspect.isdatadescriptor(method))) else fitted_witness(method)))
 
     for value in values:
         visit(value)
