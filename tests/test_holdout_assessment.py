@@ -940,6 +940,52 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class HiddenSlots:
+        __slots__ = ('offset', 'optional')
+        def __init__(self, offset):
+            self.offset = offset
+        def __getattribute__(self, name):
+            if name == 'offset':
+                raise AttributeError('hidden learned state')
+            return object.__getattribute__(self, name)
+        def adjust(self, values):
+            return np.clip(values + object.__getattribute__(self, 'offset'), 0, 1)
+        def __deepcopy__(self, memo):
+            return type(self)(object.__getattribute__(self, 'offset'))
+    class NonpreservingSlots(HiddenSlots):
+        def __deepcopy__(self, memo):
+            return type(self)(object.__getattribute__(self, 'offset') + 0.1)
+    mapped._model.policy = HiddenSlots(expected_offset)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingSlots(expected_offset)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class AdjustProperty(property):
+        def __get__(self, instance, owner=None):
+            return lambda values: np.clip(values + self.offset + _LATE_RULES['offset'], 0, 1)
+    class PropertyModel(LogRegBinary):
+        @AdjustProperty
+        def adjust(self):
+            return identity_probabilities
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.adjust(result['_probs'])
+            return result
+    descriptor = vars(PropertyModel)['adjust']
+    descriptor.offset = expected_offset
+    described = copy.deepcopy(assessment_case[2][0][0])
+    described._model.__class__ = PropertyModel
+    property_handle = _freeze(described)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(property_handle, assessment_case)
+        assert loader.call_count == 0
+    with patch.object(descriptor, 'offset', expected_offset + 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(property_handle, assessment_case)
+        assert loader.call_count == 0
     class AliasPrediction(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)

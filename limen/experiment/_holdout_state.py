@@ -54,6 +54,8 @@ def children(value: object) -> tuple[object, ...]:
         return (npt.NDArray[np.generic].tolist(value), *_attributes(cast(object, value)).values())
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
+    if isinstance(value, property):
+        return (value.fget, value.fset, value.fdel, _attributes(cast(object, value)))
     if isinstance(value, partial):
         return (value.func, value.args, value.keywords, _attributes(cast(object, value)))
     return tuple(_attributes(value).values())
@@ -77,8 +79,11 @@ def _attributes(value: object) -> dict[str, object]:
                 continue
             name = f'_{cls.__name__.lstrip("_")}{slot}' if slot.startswith('__') and not slot.endswith('__') else slot
             descriptor = cls.__dict__[name]
-            if hasattr(value, name):
-                values[f'{cls.__module__}.{cls.__qualname__}:{name}'] = descriptor.__get__(value, type(value))
+            key = f'{cls.__module__}.{cls.__qualname__}:{name}'
+            try:
+                values[key] = (True, descriptor.__get__(value, type(value)))
+            except AttributeError:
+                values[key] = (False,)
     return values
 
 
@@ -115,6 +120,8 @@ def fitted_witness(value: object) -> bytes:
         elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
+        elif isinstance(item, property):
+            result = (kind, 'property', node(item.fget), node(item.fset), node(item.fdel), node(_attributes(cast(object, item))))
         elif isinstance(item, partial):
             result = (kind, 'partial', node(item.func), node(item.args), node(item.keywords), node(_attributes(cast(object, item))))
         elif isinstance(item, bytearray):

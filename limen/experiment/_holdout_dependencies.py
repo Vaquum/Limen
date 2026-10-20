@@ -170,6 +170,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 method = parent.__dict__[name]
                 evidence.append((key, type(method).__module__, type(method).__qualname__))
                 if isinstance(method, property):
+                    visit(cast(object, method))
+                    evidence.append((key, cached_witness(id(method))))
                     method = method.fget
                 if isinstance(method, (staticmethod, classmethod)):
                     method = cast('staticmethod[..., object] | classmethod[object, ..., object]', method).__func__
