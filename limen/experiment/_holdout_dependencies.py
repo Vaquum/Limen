@@ -69,7 +69,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     module_dynamic: dict[int, bool] = {}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
-    inspected: set[tuple[int, bool, int, int]] = set()
     recorded_mro: set[int] = set()
     reflective_keys: set[str] = set()
     reflected: dict[int, set[str]] = {}
@@ -239,10 +238,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             recorded_mro.add(id(cls))
             evidence.append(('mro', cls.__module__, cls.__qualname__, tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)))
         for parent in cls.__mro__:
-            stamp = (id(parent), isinstance(value, type), len(names), len(parent.__dict__))
-            if stamp in inspected:
-                continue
-            inspected.add(stamp)
             done = processed.setdefault(id(parent), set())
             for name in names.intersection(parent.__dict__) - done:
                 done.add(name)
@@ -270,24 +265,25 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         for value in objects[registered_count:]:
             representatives[(id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type))] = value
         registered_count = len(objects)
-        pending: dict[tuple[int, bool], object] = {}
+        pending: set[tuple[int, bool]] = set()
         for identity, value in representatives.items():
             if isinstance(value, ModuleType):
-                pending[identity] = value
+                pending.add(identity)
                 continue
             cls = value if isinstance(value, type) else type(value)
             stamp = tuple((id(parent), len(parent.__dict__)) for parent in cls.__mro__)
             if indexed_objects.get(identity) != stamp:
                 indexed_objects[identity] = stamp
-                pending[identity] = value
+                pending.add(identity)
                 for parent in cls.__mro__:
                     for name in parent.__dict__:
                         lookup_owners.setdefault(name, set()).add(identity)
         for name in method_names - indexed_names:
-            pending.update((identity, representatives[identity]) for identity in lookup_owners.get(name, ()))
+            pending.update(lookup_owners.get(name, ()))
         indexed_names.update(method_names)
-        for value in pending.values():
-            methods(value)
+        for identity, value in representatives.items():
+            if identity in pending:
+                methods(value)
         if reflective_keys:
             functions = [value for value in seen.values() if inspect.isfunction(value)]
             functions.extend(function for config in exclude for name in ('calibration_func', 'threshold_func') for function in call_functions(getattr(config, name, None)))
