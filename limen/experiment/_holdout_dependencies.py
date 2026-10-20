@@ -47,7 +47,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     processed: dict[int, set[str]] = {}
 
     def visit(value: object) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or (isinstance(cast(object, value), np.generic) and type(value).__module__ == 'numpy'):
+        if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
             return
         if type(value) is logging.Logger:
             evidence.append(fitted_witness(value))
