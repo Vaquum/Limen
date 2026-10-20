@@ -42,6 +42,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         return fitted_witness(seen[identity])
     cached_witness = lru_cache(maxsize=None)(witness)
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
+    module_attributes: set[str] = set()
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
 
@@ -89,6 +90,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 name = str(instruction.argval)
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
+                    module_attributes.add(name)
                 if instruction.opname == 'IMPORT_NAME':
                     chained_import = instructions[index - 1].argval is None
                     level = int(instructions[index - 2].argval)
@@ -149,9 +151,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def methods(value: object) -> None:
         if isinstance(value, ModuleType):
             done = processed.setdefault(id(value), set())
-            for name in attributes.intersection(vars(value)) - done:
+            for name in module_attributes.intersection(vars(value)) - done:
                 done.add(name)
-                part = vars(value)[name]
+                part = cast(object, vars(value)[name])
                 visit(part)
                 evidence.append((value.__name__, name, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
             return
@@ -178,9 +180,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
     for value in values:
         visit(value)
-    previous = (-1, -1)
-    while previous != (len(attributes), len(objects)):
-        previous = (len(attributes), len(objects))
+    previous = (-1, -1, -1)
+    while previous != (len(attributes), len(objects), len(module_attributes)):
+        previous = (len(attributes), len(objects), len(module_attributes))
         for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
     if capture is not None:

@@ -1267,6 +1267,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
         assert record['state'] == 'failed' and record['id'] in str(thread_failure.value)
         assert json.loads(record['error_json'])['stage'] == 'predict'
+    nested._model.policy = configured_provider
     with ThreadPoolExecutor(max_workers=1) as pool:
         assert pool.submit(bool, True).result() is True
         with pytest.raises(ValueError, match='attempted thread dispatch'), readonly_prediction([nested]):
