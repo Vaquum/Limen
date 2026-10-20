@@ -51,6 +51,9 @@ jobs:
       - name: Check bindings without prior execution evidence
         run: python -m pytest --import-mode=importlib docs/examples/tests/test_docs_examples.py -k 'not exact_bindings_and_coverage' -q --docs-evidence .docs-evidence/bindings-only.json
 
+      - name: Prove retained checker selection and failure receipts
+        run: timeout 60s python -m pytest --import-mode=importlib docs/checker/tests -q
+
       - name: Prepare hashed offline research dependencies
         run: python docs/examples/prepare_environment.py
 

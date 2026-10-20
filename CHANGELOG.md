@@ -1881,3 +1881,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Use one reviewed provenance dependency for retained source acquisition, original book tests and reader evidence validation; retain separate checker identities and unchanged product sources.
 - Keep restored pre-PR source bytes candidate when they differ from ordinary merged ancestry, preserving the original evidence guard.
 - Record raised checker failures with their actual exit codes; reuse captured original-head source metadata in bounded regression setup while retaining every assertion.
+- Run retained-checker regressions before research proof in the same required documentation job, preserving test coverage, source checks and existing proof time limits.
