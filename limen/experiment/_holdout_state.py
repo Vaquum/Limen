@@ -185,4 +185,3 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, pickle.dumps(item, protocol=5))
         return result
     return pickle.dumps(node(value), protocol=5)
-
