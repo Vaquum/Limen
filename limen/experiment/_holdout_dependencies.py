@@ -173,7 +173,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 if (name == 'fit_calibrator' and (function_module, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict'))) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
                 for candidate in tuple(references.get(name, ())):
-                    item = cast(object, candidate)
+                    item = candidate
                     following = index + 1
                     while following < len(instructions):
                         attribute = instructions[following]
