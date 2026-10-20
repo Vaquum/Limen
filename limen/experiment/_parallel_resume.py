@@ -13,8 +13,8 @@ import polars as pl
 from limen.experiment._objective_run import finalize_objective_result, run_objective, validate_objective_resume
 from limen.experiment._parallel_commit import context_parameter_keys, failed_parameters
 from limen.experiment._parallel_evidence import mapping as _mapping, values as _values, validate_evidence as _evidence
-from limen.experiment._parallel_evidence import record_context, validate_record, wire_record
-from limen.experiment._parallel_encoding import encode, parameter_matches as _parameter_matches
+from limen.experiment._parallel_evidence import record_context, validate_record, wire_record, parameter_matches as _parameter_matches
+from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_plan import FrozenManifestPlan, legacy_metadata
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager

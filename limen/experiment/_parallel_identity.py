@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import sys
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -47,6 +48,8 @@ def module_identity(name: str) -> list[object]:
 def _read_identity(name: str) -> list[object]:
     spec = util.find_spec(name)
     path = None if spec is None else spec.origin
+    if path in ('built-in', 'frozen'):
+        return [name, path, sys.version]
     if path is None:
         raise ValueError(f'Parallel import has no source file: {name}')
     top = name.split('.', 1)[0]

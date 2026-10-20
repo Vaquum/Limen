@@ -44,7 +44,7 @@ def _value_node(node: object, *, functions: bool = True) -> bool:
         return all(_value_node(item, functions=False) for item in cast(list[object], parts[1]))
     if parts[0] == 'function' and len(parts) == _VALUE_ARITY['function']:
         return functions and _value_node(parts[2]) and parts[3:] == [['null'], ['null'], ['null']]
-    return parts[0] in ('null', 'str', 'bool', 'int', 'float', 'date', 'datetime', 'path', 'import')
+    return parts[0] in ('null', 'str', 'bool', 'int', 'float', 'date', 'datetime', 'path', 'import', 'owner_call')
 
 
 def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[object]:

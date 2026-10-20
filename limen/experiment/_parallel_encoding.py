@@ -4,11 +4,10 @@ import hashlib
 import inspect
 import json
 import math
-from ast import literal_eval
+from collections import defaultdict
 from collections.abc import Mapping
 from dataclasses import fields, is_dataclass
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
 from functools import partial
 from importlib import import_module
 from io import BytesIO
@@ -78,6 +77,10 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
     active |= {id(value)}
     if callable(value):
         return _encode_component(value, active)
+    if isinstance(value, CellType):
+        return ['cell', encode(value.cell_contents, active, ordered=ordered)]
+    if isinstance(value, defaultdict):
+        return _encode_component(value, active, owner_only=True)
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
         if ordered:
@@ -99,7 +102,7 @@ def _encode_component(value: object, active: frozenset[int], *, owner_only: bool
         owner = encode_graph(value.__self__, lambda: _encode_component(value.__self__, active | {id(value.__self__)}, owner_only=True))
         return ['method', owner, value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value):
-        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(tuple(cell.cell_contents for cell in value.__closure__) if value.__closure__ else None, active, ordered=True), encode(vars(value).get('__wrapped__'), active, ordered=True)]
+        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(value.__closure__, active, ordered=True), encode(vars(value).get('__wrapped__'), active, ordered=True)]
     if isinstance(value, type):
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, (type, partial)):
@@ -107,10 +110,20 @@ def _encode_component(value: object, active: frozenset[int], *, owner_only: bool
         if set(component_state(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
-                [[field.name, encode(getattr(value, field.name), active, ordered=True)] for field in fields(value)], encode(None if owner_only else call_implementation(value), active)]
+                [[field.name, encode(getattr(value, field.name), active, ordered=True)] for field in fields(value)], _call_node(value, active, owner_only)]
     if callable(value) or owner_only:
-        return ['instance', reference(type(value)), encode(object_state(value), active, ordered=True), encode(None if owner_only else call_implementation(value), active)]
+        return ['instance', reference(type(value)), encode(object_state(value), active, ordered=True), _call_node(value, active, owner_only)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
+
+
+def _call_node(value: object, active: frozenset[int], owner_only: bool) -> list[object]:
+    implementation = call_implementation(value)
+    return _owner_call(type(value)) if owner_only and implementation is not None else encode(None if owner_only else implementation, active)
+
+
+def _owner_call(cls: type) -> list[object]:
+    implementation = cls.__call__
+    return ['owner_call', reference(cls), module_identity(implementation.__module__), implementation.__qualname__]
 
 
 def _import(node: object) -> object:
@@ -125,7 +138,7 @@ def _import(node: object) -> object:
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
           'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
-          'function': 6, 'method': 4, 'dataclass': 4, 'instance': 4}
+          'function': 6, 'method': 4, 'dataclass': 4, 'instance': 4, 'cell': 2, 'owner_call': 4}
 
 
 def decode(node: object, *, ordered: bool = False, isolate_functions: bool = False) -> object:
@@ -157,6 +170,13 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         return tuple(items) if tag == 'tuple' else items
     if tag in ('map', 'keyed_map', 'state_map') and isinstance(value, list):
         return {cast(str, pair[0]) if tag == 'map' else decode(pair[0], ordered=ordered, isolate_functions=isolate_functions): decode(pair[1], ordered=ordered, isolate_functions=isolate_functions) for pair in cast(list[list[object]], value)}
+    if tag == 'cell':
+        return CellType(decode(value, ordered=ordered, isolate_functions=isolate_functions))
+    if tag == 'owner_call':
+        cls = cast(type, _import(value))
+        if _owner_call(cls) != parts:
+            raise ValueError('Parallel callable implementation changed')
+        return cls.__call__
     if tag == 'import':
         return _import(value)
     if tag == 'function':
@@ -166,7 +186,7 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         defaults, keywords, closure, wrapped = [decode(item, ordered=True, isolate_functions=isolate_functions) for item in parts[2:]]
         function = source
         if isolate_functions or mutable_function(source) or encode(source) != parts:
-            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, defaults), tuple(CellType(item) for item in cast(tuple[object, ...], closure)) if closure is not None else None)
+            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, defaults), cast(tuple[CellType, ...] | None, closure))
             function.__kwdefaults__ = cast(dict[str, object] | None, keywords)
             restore_function_metadata(function, source, wrapped)
         return function
@@ -204,17 +224,6 @@ def digest(value: object) -> str:
     return hashlib.sha256(json.dumps(encode(value), ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 
 
-def parameter_projection(node: list[object]) -> object:
-    tag = node[0]
-    if tag in ('null', 'str', 'bool', 'int', 'float'):
-        return decode(node)
-    if tag == 'map':
-        return {key: parameter_projection(encode(value)) for key, value in cast(dict[str, object], decode(node)).items()}
-    if tag in ('tuple', 'list'):
-        return [parameter_projection(encode(value)) for value in cast(list[object] | tuple[object, ...], decode(node))]
-    return node
-
-
 def checkpoint_payload(data: Mapping[str, object], version: int | None, *, restore: bool = False) -> dict[str, object]:
     result = dict(data)
     if version is None:
@@ -238,21 +247,3 @@ def source_digest(frames: tuple[pl.DataFrame | None, ...]) -> str:
             frame.rechunk().write_ipc(stream, compression='uncompressed')
             identity.append((role, pl.__version__, list(zip(frame.columns, map(str, frame.dtypes), strict=True)), hashlib.sha256(stream.getvalue()).hexdigest()))
     return digest(identity)
-
-
-def parameter_matches(cell: str | None, value: object, *, legacy: bool = False) -> bool:
-    if cell is None or value is None:
-        return cell == ''
-    if type(value) is bool:
-        return cell.lower() == str(value).lower()
-    try:
-        if type(value) is int:
-            return Decimal(cell) == value
-        if type(value) is float:
-            return float(cell) == value
-        if isinstance(value, (list, tuple, dict)):
-            parsed = literal_eval(cell)
-            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(literal_eval(repr(cast(object, value))))
-    except (ValueError, SyntaxError, InvalidOperation) as exc:
-        raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
-    return cell == str(value)

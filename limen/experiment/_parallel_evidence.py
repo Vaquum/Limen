@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from ast import literal_eval
+from decimal import Decimal, InvalidOperation
 import math
 from collections.abc import Mapping
 from datetime import date, datetime
@@ -7,7 +9,7 @@ from typing import Protocol, cast
 
 from limen._parallel_contract import ParallelRoundContract
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
-from limen.experiment._parallel_encoding import VERSION, decode, digest, encode, parameter_projection
+from limen.experiment._parallel_encoding import VERSION, decode, digest, encode
 
 
 class _ArrayValues(Protocol):
@@ -215,3 +217,30 @@ def project_record(record: Mapping[str, object], policy: Mapping[str, bool] | No
     return projected
 
 
+def parameter_projection(node: list[object]) -> object:
+    tag = node[0]
+    if tag in ('null', 'str', 'bool', 'int', 'float'):
+        return decode(node)
+    if tag == 'map':
+        return {key: parameter_projection(encode(value)) for key, value in cast(dict[str, object], decode(node)).items()}
+    if tag in ('tuple', 'list'):
+        return [parameter_projection(encode(value)) for value in cast(list[object] | tuple[object, ...], decode(node))]
+    return node
+
+
+def parameter_matches(cell: str | None, value: object, *, legacy: bool = False) -> bool:
+    if cell is None or value is None:
+        return cell == ''
+    if type(value) is bool:
+        return cell.lower() == str(value).lower()
+    try:
+        if type(value) is int:
+            return Decimal(cell) == value
+        if type(value) is float:
+            return float(cell) == value
+        if isinstance(value, (list, tuple, dict)):
+            parsed = literal_eval(cell)
+            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(literal_eval(repr(cast(object, value))))
+    except (ValueError, SyntaxError, InvalidOperation) as exc:
+        raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
+    return cell == str(value)

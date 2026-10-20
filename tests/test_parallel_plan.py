@@ -8,6 +8,7 @@ import os
 import gzip
 import shutil
 import random
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from collections.abc import Mapping
 from pathlib import Path
@@ -18,11 +19,11 @@ import pytest
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage
-from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, parameter_projection, source_digest
+from limen.experiment._parallel_encoding import decode, digest, encode, source_digest
 from limen.experiment._parallel_plan import ScalerFactory, clone_manifest, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
-from limen.experiment._parallel_evidence import record_context, validate_record, wire_record
+from limen.experiment._parallel_evidence import record_context, validate_record, wire_record, parameter_projection, parameter_matches
 from limen.experiment import _round_storage as storage
 from limen.scalers.robust_scaler import RobustScaler
 from limen.targets.random_binary import RandomBinaryTarget
@@ -87,6 +88,24 @@ def _configured_feature(window):
 _closed_feature = _configured_feature(2)
 
 
+def _counter_features():
+    window = 2
+
+    def increment(data):
+        nonlocal window
+        window += 1
+        return _caller_feature(data, window)
+
+    def read(data):
+        return _caller_feature(data, window)
+
+    increment.__qualname__, read.__qualname__ = '_cell_increment', '_cell_read'
+    return increment, read
+
+
+_cell_increment, _cell_read = _counter_features()
+
+
 
 def _caller_validator(params):
     if type(params.get('window')) is not int or params['window'] < 1:
@@ -108,6 +127,11 @@ class CallerRolling(CallerRollingBase):
 class InheritedCallable(CallerRollingBase):
     def __init__(self, window):
         self.window = window
+
+
+class InheritedCallOwnTransform(InheritedCallable):
+    def transform(self, data):
+        return _caller_feature(data, self.window)
 
 
 @dataclass
@@ -194,6 +218,15 @@ class KeyedRolling:
         assert self.weights[0] is self.weights[1]
         self.weights[0][0] += 1
         return _caller_feature(data, self.weights[1][0])
+
+
+@dataclass
+class DefaultMappingRolling:
+    weights: defaultdict[str, int]
+
+    def __call__(self, data):
+        self.weights['calls'] += 1
+        return _caller_feature(data, self.weights['calls'] + 2)
 
 
 def _target_constructor(window):
@@ -427,12 +460,17 @@ def _repeated_carried_probe(plan, params):
     return first, pid
 
 
-def _shared_carried_probe(plan):
+def _shared_carried_probe(plan, identity='function'):
     from tests.test_parallel_rounds import recorded_source
     before, rounds = digest(plan), []
     for _ in range(2):
         entries = clone_manifest(plan.manifest).feature_transforms[-2:]
-        assert entries[0].func.function is entries[1].func.function
+        if identity == 'cell':
+            assert entries[0].func.__closure__[0] is entries[1].func.__closure__[0]
+        elif identity == 'owner':
+            assert entries[0].func.__self__ is entries[1].func
+        else:
+            assert entries[0].func.function is entries[1].func.function
         data, outputs = recorded_source().head(24).select('close'), []
         for entry in entries:
             data = entry.func(data)
@@ -469,6 +507,23 @@ def _frozen_probe(plan, params):
 
 
 def test_frozen_manifest_round_plan() -> None:
+    defaults = defaultdict(int)
+    transported = decode(encode([defaults, defaults]))
+    assert transported[0] is transported[1] and type(transported[0]) is defaultdict
+    assert transported[0].default_factory is int and transported[0]['missing'] == 0
+    assert not defaults
+    owner = InheritedCallOwnTransform(3)
+    pair = [owner.transform, owner]
+    encoded_pair = encode(pair)
+    transported = decode(encoded_pair)
+    assert transported[0].__self__ is transported[1]
+    from limen.experiment import _parallel_encoding as codec
+    original_identity = codec.module_identity
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(codec, 'module_identity', lambda name: [*original_identity(name), 'changed'] if name == 'tests.test_parallel_rounds' else original_identity(name))
+        assert encode(pair) != encoded_pair
+        with pytest.raises(ValueError, match='callable implementation changed'):
+            decode(encoded_pair)
     shared = [2]
     aliased = {'left': (shared,), 'right': (shared,)}
     transported = decode(encode(aliased))
@@ -615,7 +670,7 @@ def test_frozen_manifest_round_plan() -> None:
         from tests.test_parallel_rounds import recorded_source
         expected_values = _caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()
         shared = [2]
-        for component, window in ((FunctionRolling(_mutable_feature), 2), (AliasedRolling(shared, shared), 3), (KeyedRolling({1: shared, 0: shared}), 3)):
+        for component, window in ((FunctionRolling(_mutable_feature), 2), (AliasedRolling(shared, shared), 3), (KeyedRolling({1: shared, 0: shared}), 3), (DefaultMappingRolling(defaultdict(int)), 3)):
             declare_parallel(component, ParallelRoundContract(deterministic_stage))
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_mutable_feature, '__defaults__', ([2],))
@@ -633,6 +688,18 @@ def test_frozen_manifest_round_plan() -> None:
         expected, _ = _shared_carried_probe(frozen)
         oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (2, 3)]
         assert actual == expected == oracle and pid != os.getpid()
+        for identity, components in (('cell', (_cell_increment, _cell_read)), ('owner', (owner.transform, owner))):
+            for component in components:
+                declare_parallel(component, ParallelRoundContract(deterministic_stage))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(components[0]).add_feature(components[1]), None)
+            actual, pid = pool.submit(_shared_carried_probe, frozen, identity).result(timeout=30)
+            expected, _ = _shared_carried_probe(frozen, identity)
+            oracle = [_caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()] * 2
+            assert actual == expected == oracle and pid != os.getpid()
+            if identity == 'owner':
+                _assert_inherited_identity(frozen)
+        assert _cell_increment.__closure__[0] is _cell_read.__closure__[0]
+        assert _cell_increment.__closure__[0].cell_contents == 2
         declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
         for counter in (RollingCounter(), CallableCounter()):
             with pytest.MonkeyPatch.context() as patch:
