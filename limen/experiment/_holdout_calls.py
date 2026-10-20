@@ -27,7 +27,8 @@ def call_codes(functions: Sequence[FunctionType]) -> Iterator[None]:
 def native_attribute(value: object, name: str) -> object:
     owner: type[object] = partial if isinstance(value, partial) else property if isinstance(value, property) else staticmethod if isinstance(value, staticmethod) else classmethod
     descriptor = cast(GetSetDescriptorType | MemberDescriptorType, vars(owner)[name])
-    return descriptor.__get__(value, type(value))
+    native_value = cast(object, value)
+    return descriptor.__get__(native_value, type(native_value))
 
 
 def receiver_position(value: object) -> int | None:
@@ -51,13 +52,13 @@ def constructor_entry(value: type[object], active: frozenset[int] | None = None)
     active = active | {id(value)}
     new = inspect.getattr_static(value, '__new__', None)
     if type(new) is staticmethod:
-        new = native_attribute(new, '__func__')
+        new = native_attribute(cast(object, new), '__func__')
     if new is not object.__new__:
         index = _call_offset(new, active)
         return _ConstructorEntry(None, False, 0) if index is None else _ConstructorEntry(new, False, index)
     initializer = inspect.getattr_static(value, '__init__', None)
     supported = inspect.isfunction(initializer) or isinstance(initializer, (property, classmethod))
-    index = receiver_position(initializer) if supported else None
+    index = receiver_position(cast(object, initializer)) if supported else None
     return _ConstructorEntry(None, False, 0) if index is None else _ConstructorEntry(initializer, not isinstance(initializer, classmethod), index)
 
 
@@ -104,16 +105,19 @@ def _call_offset(value: object, active: frozenset[int]) -> int | None:
     return 1 if inspect.isfunction(call) else _call_offset(cast(object, call), active) if isinstance(call, (staticmethod, classmethod)) else None
 
 
+def _descriptor_functions(descriptor: 'property | staticmethod[..., object] | classmethod[object, ..., object]') -> tuple[FunctionType, ...]:
+    native: type[object] = property if isinstance(descriptor, property) else staticmethod if isinstance(descriptor, staticmethod) else classmethod
+    if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
+        return ()
+    target = native_attribute(descriptor, 'fget' if isinstance(descriptor, property) else '__func__')
+    if isinstance(descriptor, classmethod) and not inspect.isfunction(target) and inspect.getattr_static(type(target), '__get__', None) is not None:
+        return ()
+    return call_functions(target)
+
+
 def call_functions(value: object) -> tuple[FunctionType, ...]:
     if isinstance(value, (property, staticmethod, classmethod)):
-        native: type[object] = property if isinstance(value, property) else staticmethod if isinstance(value, staticmethod) else classmethod
-        descriptor = cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value)
-        if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
-            return ()
-        target = native_attribute(descriptor, 'fget' if isinstance(descriptor, property) else '__func__')
-        if isinstance(descriptor, classmethod) and not inspect.isfunction(target) and inspect.getattr_static(type(target), '__get__', None) is not None:
-            return ()
-        return call_functions(target)
+        return _descriptor_functions(cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value))
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
@@ -125,7 +129,7 @@ def call_functions(value: object) -> tuple[FunctionType, ...]:
         return call_functions(value.__func__)
     if inspect.isfunction(value):
         return (value,)
-    call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
+    call = inspect.getattr_static(type(value), '__call__', None)
     return call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (property, staticmethod, classmethod)) else ()
 
 

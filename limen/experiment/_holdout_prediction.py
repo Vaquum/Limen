@@ -52,6 +52,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
                 if inspect.getattr_static(cast(type[object], type(provider)), '__call__', None) is not partial[object].__call__:
                     break
                 wrapped = native_attribute(provider, 'func')
+        wrapped_entry: object
         if inspect.ismethod(wrapped):
             wrapped_owner = wrapped.__self__
             wrapped_entry = wrapped
@@ -61,7 +62,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         else:
             wrapped_call = inspect.getattr_static(cast(type[object], type(wrapped)), '__call__', None)
             wrapped_owner = type(wrapped) if isinstance(wrapped_call, classmethod) else None if isinstance(wrapped_call, staticmethod) else wrapped
-            wrapped_entry = wrapped_call
+            wrapped_entry = cast(object, wrapped_call)
         class_target: type[object] | None = wrapped if isinstance(wrapped, type) else method if isinstance(method, type) else None
         for function in functions:
             owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
@@ -70,7 +71,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
                 entry = constructor_entry(class_target)
                 owner, instance, index = class_target, entry.instance, entry.position
             else:
-                source = method if bound_owner is not None else call if function in calls else wrapped_entry
+                source = cast(object, method if bound_owner is not None else call if function in calls else wrapped_entry)
                 index = receiver_position(source) if owner is not None else 0
                 if index is None:
                     raise ValueError('Holdout refuses fitting callbacks without observable Python call protection')
