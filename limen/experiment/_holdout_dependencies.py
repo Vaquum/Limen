@@ -74,6 +74,11 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     reflective_keys: set[str] = set()
     reflected: dict[int, set[str]] = {}
     recorded_bindings: set[tuple[int, str, int]] = set()
+    representatives: dict[tuple[int, bool], object] = {}
+    indexed_objects: dict[tuple[int, bool], tuple[tuple[int, int], ...]] = {}
+    lookup_owners: dict[str, set[tuple[int, bool]]] = {}
+    indexed_names: set[str] = set()
+    registered_count = 0
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
@@ -262,7 +267,26 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1, -1, -1, -1, -1, -1)
     while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0):
         previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys else 0)
-        for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
+        for value in objects[registered_count:]:
+            representatives[(id(value) if isinstance(value, (type, ModuleType)) else id(type(value)), isinstance(value, type))] = value
+        registered_count = len(objects)
+        pending: dict[tuple[int, bool], object] = {}
+        for identity, value in representatives.items():
+            if isinstance(value, ModuleType):
+                pending[identity] = value
+                continue
+            cls = value if isinstance(value, type) else type(value)
+            stamp = tuple((id(parent), len(parent.__dict__)) for parent in cls.__mro__)
+            if indexed_objects.get(identity) != stamp:
+                indexed_objects[identity] = stamp
+                pending[identity] = value
+                for parent in cls.__mro__:
+                    for name in parent.__dict__:
+                        lookup_owners.setdefault(name, set()).add(identity)
+        for name in method_names - indexed_names:
+            pending.update((identity, representatives[identity]) for identity in lookup_owners.get(name, ()))
+        indexed_names.update(method_names)
+        for value in pending.values():
             methods(value)
         if reflective_keys:
             functions = [value for value in seen.values() if inspect.isfunction(value)]
