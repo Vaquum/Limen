@@ -116,3 +116,5 @@ Limen does not define a tox, nox, or Makefile contract; these direct commands ar
 - [Packaging](Packaging.md)
 - [Semantic Versioning](../Semantic-Versioning.md)
 - [Technical Debt](../TechnicalDebt.md)
+
+The [indicator performance evidence](Indicator-Performance.md) retains calculation measurements and the numerical-parity conditions that changes to project preparation must preserve.

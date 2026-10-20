@@ -328,6 +328,10 @@
       "route": "/book/walk-forward/",
       "part": "Book",
       "bookOrder": 8
+    },
+    "docs/Developer/Indicator-Performance.md": {
+      "route": "/developer/indicator-performance/",
+      "part": "Developer"
     }
   }
 }

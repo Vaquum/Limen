@@ -105,7 +105,8 @@ def test_recorded_public_handoff_reproduces_selection_metric(example, recorded):
         assert list(sensor.fitted_state.feature_names_in_) == ['momentum']
         assert sensor.output_id == 'next_bar_return'
     assert stem.with_suffix('.csv').is_file()
-    assert set(stem.parent.iterdir()) == {stem.parent / 'research.py', stem.with_suffix('.csv')}
+    assert Path(api['__file__']).resolve() == ROOT / 'docs/examples/python-research/research.py'
+    assert set(stem.parent.iterdir()) == {stem.with_suffix('.csv')}
     close, opening = recorded['close'].to_numpy(), recorded['open'].to_numpy()
     member_scores = []
     for params, fitted in members:

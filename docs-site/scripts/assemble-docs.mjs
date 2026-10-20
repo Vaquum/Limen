@@ -58,6 +58,7 @@ const sectionCategories = [
 ];
 
 export const docs = [
+  {source: 'docs/Developer/Indicator-Performance.md', dest: 'developer/indicator-performance.md', slug: '/developer/indicator-performance', sidebarPosition: 12},
   {source: 'docs/Walk-Forward.md', dest: 'guides/walk-forward.md', slug: '/guides/walk-forward', sidebarPosition: 25},
   {source: 'docs/Research-Book.md', dest: 'guides/research-book.md', slug: '/guides/research-book', sidebarPosition: 22},
   {source: 'docs/examples/python-research/README.md', dest: 'guides/python-research-project.md', slug: '/guides/python-research-project', sidebarPosition: 23},
