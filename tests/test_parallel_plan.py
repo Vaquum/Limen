@@ -48,6 +48,10 @@ def _caller_feature(data, window=2):
     return data.with_columns(pl.col('close').rolling_mean(window).alias('caller_mean'))
 
 
+def _keyword_feature(data, *, window=2):
+    return _caller_feature(data, window)
+
+
 def _caller_validator(params):
     if type(params.get('window')) is not int or params['window'] < 1:
         raise ValueError('positive integer window required')
@@ -290,7 +294,7 @@ def _frozen_probe(plan, params):
     resolved = manifest_core.__dict__['_resolve_params'](computations[0][2], params)
     scaler = computations[0][1](data, **resolved)
     transformed = scaler.transform(data)
-    caller = next((stage for stage in plan.stages if stage.component is _caller_feature), None)
+    caller = next((stage for stage in plan.stages if getattr(stage.component, '__code__', None) is _caller_feature.__code__), None)
     actual = None if caller is None else caller.component(data, window=params['window'])['caller_mean'].to_list()
     return (plan.pipeline_digest, isinstance(computations[0][1], ScalerFactory),
             hasattr(_caller_feature, '__parallel_round_contract__'), os.getpid(),
@@ -328,7 +332,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
+        for component in (partial(_caller_feature, window=3), partial(CallerRolling(3)), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             if isinstance(component, (DictRolling, ListRolling)):
@@ -364,7 +368,8 @@ def test_frozen_manifest_round_plan() -> None:
                 assert component.window == decode(encode(component)).window == 3
             if isinstance(component, CallerPartial):
                 restored = decode(encode(component))
-                assert type(restored) is CallerPartial and restored.func is _caller_feature
+                assert type(restored) is CallerPartial and restored.func.__code__ is _caller_feature.__code__
+                assert restored.func.__defaults__ == _caller_feature.__defaults__
                 assert restored.keywords == {'window': 3} and (restored.multiplier, restored.bias) == (2, 1)
                 restored.bias += 1
                 declare_parallel(restored, contract)
@@ -385,6 +390,18 @@ def test_frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
+        for component, attribute, defaults in ((_caller_feature, '__defaults__', (3,)), (_keyword_feature, '__kwdefaults__', {'window': 3})):
+            declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
+            baseline = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(component, attribute, defaults)
+                frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+            assert frozen.pipeline_digest != baseline.pipeline_digest and frozen.resource_digest != baseline.resource_digest
+            validate_resources(frozen, _parameters())
+            actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
+            expected, _ = _carried_probe(frozen, _parameters())
+            assert actual == expected and pid != os.getpid()
+            assert frozen.manifest.feature_transforms[-1].func.__defaults__ == ((3,) if attribute == '__defaults__' else None)
         component = CallerRolling(3)
         declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
         vars(component)['cached_result'] = []

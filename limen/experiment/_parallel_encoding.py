@@ -13,6 +13,7 @@ from functools import partial
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
+from types import FunctionType, MethodType
 from typing import cast
 
 import polars as pl
@@ -31,7 +32,8 @@ def reference(value: object) -> list[object]:
     for part in name.split('.'):
         resolved = getattr(resolved, part)
     resolved = resolved.__func__ if inspect.ismethod(resolved) else resolved
-    if resolved is not value:
+    if resolved is not value and not (inspect.isfunction(value) and inspect.isfunction(resolved)
+                                     and value.__code__ is resolved.__code__ and value.__globals__ is resolved.__globals__):
         raise ValueError('Parallel component differs from its importable identity')
     return [module_identity(module), name]
 
@@ -87,7 +89,9 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
 def _encode_component(value: object, active: frozenset[int]) -> list[object]:
     if inspect.ismethod(value):
         return ['method', encode(value.__self__, active), value.__name__, encode(value.__func__, active)]
-    if inspect.isfunction(value) or isinstance(value, type):
+    if inspect.isfunction(value):
+        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True)]
+    if isinstance(value, type):
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, (type, partial)):
         names = {field.name for field in fields(value)}
@@ -113,7 +117,7 @@ def _import(node: object) -> object:
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
           'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
-          'method': 4, 'dataclass': 4, 'instance': 4}
+          'function': 4, 'method': 4, 'dataclass': 4, 'instance': 4}
 
 
 def decode(node: object, *, ordered: bool = False) -> object:
@@ -147,11 +151,21 @@ def _decode_composite(parts: list[object], *, ordered: bool) -> object:
         return {cast(str, pair[0]) if tag == 'map' else decode(pair[0], ordered=ordered): decode(pair[1], ordered=ordered) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
+    if tag == 'function':
+        source = _import(value)
+        if not inspect.isfunction(source):
+            raise ValueError('Parallel function implementation changed')
+        function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True)), source.__closure__)
+        function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True))
+        function.__module__, function.__qualname__ = source.__module__, source.__qualname__
+        function.__annotations__ = source.__annotations__.copy()
+        return function
     if tag == 'method':
         method = getattr(decode(value), cast(str, parts[2]))
-        if not inspect.ismethod(method) or method.__func__ is not decode(parts[3]):
+        function = decode(parts[3])
+        if not inspect.ismethod(method) or not inspect.isfunction(function) or reference(method.__func__) != reference(function):
             raise ValueError('Parallel bound method implementation changed')
-        return method
+        return MethodType(function, method.__self__)
     return _decode_instance(parts)
 
 

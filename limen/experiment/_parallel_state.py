@@ -30,6 +30,7 @@ def component_state(value: object) -> dict[str, object]:
     if issubclass(type(value), partial):
         bound = object_state(value)[2]
         assert bound is not None
+        state |= component_state(bound[0])
         state |= cast(dict[str, object], signature(cast(Callable[..., object], bound[0])).bind_partial(
             *cast(tuple[object, ...], bound[1]), **cast(dict[str, object], bound[2] or {})).arguments)
     native = native_state(value)

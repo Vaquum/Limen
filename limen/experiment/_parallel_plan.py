@@ -119,7 +119,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
     if isinstance(value, (list, tuple)) and not is_component:
         items = [_normalize(item, active) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
-    if issubclass(type(value), partial):
+    if inspect.isfunction(value) or inspect.ismethod(value) or issubclass(type(value), partial):
         clone = decode(encode(value))
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
