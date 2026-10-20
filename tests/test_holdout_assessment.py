@@ -2164,9 +2164,12 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             memo[id(self)] = clone
             vars(clone).update(copy.deepcopy(vars(self), memo))
             if self.break_copy:
-                clone.right = type(self.right)(str(self.right))
+                if type(self.right) in (list, tuple, dict):
+                    clone.right = tuple(list(self.right)) if type(self.right) is tuple else copy.copy(self.right)
+                else:
+                    clone.right = type(self.right)(str(self.right))
             return clone
-    for factory in (float, int):
+    for factory in (float, int, lambda value: [None, True, b'leaf', value, 1], lambda value: (None, True, b'leaf', value, 1), lambda value: {'leaf': value, 'canonical': 1, 'missing': None}):
         reviewed._model.policy = ScalarAliasPolicy(factory)
         _freeze(reviewed)
         reviewed._model.policy.break_copy = True
