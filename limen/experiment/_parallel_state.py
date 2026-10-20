@@ -82,5 +82,5 @@ def call_implementation(value: object) -> object:
 
 def mutable_function(function: FunctionType) -> bool:
     def mutable(value: object) -> bool:
-        return isinstance(value, (dict, list)) or isinstance(value, tuple) and any(mutable(item) for item in cast(tuple[object, ...], value))
+        return isinstance(value, (dict, list)) or (isinstance(value, tuple) and any(mutable(item) for item in cast(tuple[object, ...], value)))
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())

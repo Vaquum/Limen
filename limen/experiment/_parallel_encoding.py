@@ -33,7 +33,7 @@ def reference(value: object) -> list[object]:
         resolved = getattr(resolved, part)
     resolved = resolved.__func__ if inspect.ismethod(resolved) else resolved
     while inspect.isfunction(resolved) and inspect.isfunction(value) and resolved.__code__ is not value.__code__ and hasattr(resolved, '__wrapped__'):
-        name, resolved = name + '.__wrapped__', getattr(resolved, '__wrapped__')
+        name, resolved = name + '.__wrapped__', vars(resolved)['__wrapped__']
     if resolved is not value and not (inspect.isfunction(value) and inspect.isfunction(resolved)
                                      and value.__code__ is resolved.__code__ and value.__globals__ is resolved.__globals__):
         raise ValueError('Parallel component differs from its importable identity')
