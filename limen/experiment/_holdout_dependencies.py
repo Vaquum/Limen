@@ -116,7 +116,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     if not lookup[2:] or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':
                         raise ValueError('Holdout requires a literal key for prediction globals lookup')
                     if lookup[1].argval in value.__globals__:
-                        visit(value.__globals__[lookup[1].argval])
+                        part = cast(object, value.__globals__[lookup[1].argval])
+                        visit(part)
+                        evidence.append((function_module, value.__qualname__, lookup[1].argval, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
                     module_attributes.add(name)
