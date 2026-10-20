@@ -38,7 +38,6 @@ A candidate passes through four stages:
 
 CLI defaults to random search. Grid search is unshuffled by default. From 5.31.0, YAML and Python accept a seeded finite shuffle; YAML `shuffle: true` requires an integer seed. A shuffle declaration on other strategies is rejected. The two project functions make those choices explicit:
 
-
 <!-- example: search-python-traversal source=docs/examples/python-research/scenarios.py region=search scenario=search interface=python role=executed -->
 ```python
 def search(data_dir, output):
