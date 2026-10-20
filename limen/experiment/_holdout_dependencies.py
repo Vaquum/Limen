@@ -23,6 +23,7 @@ __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'depe
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
+_LIBRARIES = ('numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy')
 
 def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
@@ -50,7 +51,7 @@ def _native_annotation(value: object) -> bool:
         return False
     module = sys.modules.get(value.__module__)
     root = value.__module__.split('.')[0]
-    return module is not None and vars(module).get(value.__qualname__) is value and (root in sys.stdlib_module_names or root in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'))
+    return module is not None and vars(module).get(value.__qualname__) is value and (root in sys.stdlib_module_names or root in _LIBRARIES)
 
 
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
@@ -108,7 +109,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 return
             attributes.update(value.__code__.co_names)
             method_names.update(value.__code__.co_names)
-            if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in ('numpy', 'polars', 'sklearn', 'lightgbm', 'scipy'):
+            if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in _LIBRARIES:
                 return
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
