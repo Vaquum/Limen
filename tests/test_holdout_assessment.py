@@ -2041,7 +2041,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         annotated._model.policy = policy
         for field in ('__doc__', '__type_params__'):
             annotated._model.metadata_field = field
-            with patch.object(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities, create=True):
+            with patch.object(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities, create=not hasattr(policy, field)):
                 metadata_handle = _freeze(annotated)
                 with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                     with pytest.raises(ValueError, match='prediction dependency changed'):
