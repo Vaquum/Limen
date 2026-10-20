@@ -11,9 +11,10 @@ _encoded: ContextVar[tuple[dict[int, tuple[int, object]], set[int]] | None] = Co
 _decoded: ContextVar[list[object] | None] = ContextVar('parallel_decoded_graph', default=None)
 _COMPOSITES = frozenset(('list', 'tuple', 'map', 'keyed_map', 'state_map', 'function', 'method', 'dataclass', 'instance'))
 _VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
+_EMPTY_IDS: frozenset[int] = frozenset()
 
 
-def mutable_function(function: FunctionType, active: frozenset[int] = frozenset()) -> bool:
+def mutable_function(function: FunctionType, active: frozenset[int] = _EMPTY_IDS) -> bool:
     if id(function) in active:
         return True
     active |= {id(function)}
