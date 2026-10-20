@@ -10,7 +10,7 @@ import logging
 import marshal
 import pickle
 import typing
-from types import CodeType, GenericAlias, GetSetDescriptorType, ModuleType
+from types import CodeType, GenericAlias, GetSetDescriptorType, MemberDescriptorType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
@@ -94,13 +94,11 @@ def _attributes(value: object) -> dict[str, object]:
     if type(value).__dictoffset__ and not native_dict and _typing_metadata(value) is None:
         raise ValueError('Holdout refuses hidden native instance dictionaries')
     for cls in type(value).__mro__:
-        declaration = cls.__dict__.get('__slots__', ())
-        slots = (declaration,) if isinstance(declaration, str) else declaration
-        for slot in slots:
-            if slot in ('__dict__', '__weakref__'):
+        if '__slots__' not in cls.__dict__:
+            continue
+        for name, descriptor in cls.__dict__.items():
+            if not isinstance(descriptor, MemberDescriptorType) or descriptor.__objclass__ is not cls:
                 continue
-            name = f'_{cls.__name__.lstrip("_")}{slot}' if slot.startswith('__') and not slot.endswith('__') else slot
-            descriptor = cls.__dict__[name]
             key = f'{cls.__module__}.{cls.__qualname__}:{name}'
             try:
                 values[key] = (True, descriptor.__get__(value, type(value)))

@@ -213,6 +213,9 @@ def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (
 
 def call_functions(value: object) -> tuple[FunctionType, ...]:
     if isinstance(value, (staticmethod, classmethod)):
+        native = staticmethod if isinstance(value, staticmethod) else classmethod
+        if inspect.getattr_static(type(value), '__get__') is not native.__get__:
+            return ()
         descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
         return call_functions(descriptor.__func__)
     if isinstance(value, partial):
@@ -225,12 +228,10 @@ def call_functions(value: object) -> tuple[FunctionType, ...]:
     if inspect.ismethod(value):
         value = value.__func__
     if inspect.isfunction(value):
-        unwrapped = inspect.unwrap(value)
-        return (value, *call_functions(unwrapped)) if unwrapped is not value else (value,)
+        return (value,)
     call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
     functions = call_functions(call.fget) if isinstance(call, property) else call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
-    unwrapped = inspect.unwrap(value) if callable(value) else value
-    return (*functions, *call_functions(unwrapped)) if unwrapped is not value else functions
+    return functions
 
 
 def restore_iterations(source: object, memo: Mapping[int, object]) -> None:

@@ -963,6 +963,24 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class IteratorSlots:
+        __slots__ = iter(('offset',))
+        def __init__(self, offset):
+            self.offset = offset
+        def adjust(self, values):
+            return np.clip(values + self.offset, 0, 1)
+        def __deepcopy__(self, memo):
+            return type(self)(self.offset)
+    class NonpreservingIteratorSlots(IteratorSlots):
+        def __deepcopy__(self, memo):
+            return type(self)(self.offset + 0.1)
+    mapped._model.policy = IteratorSlots(expected_offset)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingIteratorSlots(expected_offset)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
     class AdjustProperty(property):
         def __get__(self, instance, owner=None):
             return lambda values: np.clip(values + self.offset + _LATE_RULES['offset'], 0, 1)
@@ -1479,6 +1497,26 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
             _freeze(unsafe_callback)
         assert loader.call_count == 0
+    class NativeThreshold:
+        __call__ = staticmethod(max)
+    class DynamicStaticMethod(staticmethod):
+        def __get__(self, instance, owner=None):
+            return max
+    class DynamicThreshold:
+        __call__ = DynamicStaticMethod(identity_probabilities)
+    class DynamicClassMethod(classmethod):
+        def __get__(self, instance, owner=None):
+            return max
+    class DynamicClassThreshold:
+        __call__ = DynamicClassMethod(identity_probabilities)
+    misleading = NativeThreshold()
+    misleading.__wrapped__ = identity_probabilities
+    for callback in (misleading, DynamicThreshold(), DynamicClassThreshold()):
+        unsafe_callback._model.callback_provider.prediction_calibration_config.threshold_func = callback
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                _freeze(unsafe_callback)
+            assert loader.call_count == 0
     class ReadonlyCallable:
         def __call__(self, values):
             return identity_probabilities(values)
