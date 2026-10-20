@@ -177,7 +177,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         elif not isinstance(value, (pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
             if isinstance(value, type) and type(value) is not type:
                 visit(type(value))
-            if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
+            if type(value) not in (dict, list, tuple, set, frozenset, defaultdict) and not (annotation and type(value).__module__ == 'typing'):
                 objects.append(value)
             if not isinstance(value, type):
                 for part in children(value):
