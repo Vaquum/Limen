@@ -19,7 +19,7 @@ import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage
 from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, source_digest
-from limen.experiment._parallel_plan import ScalerFactory, freeze_manifest
+from limen.experiment._parallel_plan import ScalerFactory, clone_manifest, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
 from limen.experiment._parallel_evidence import record_context, validate_record, wire_record
@@ -305,6 +305,8 @@ def test_frozen_manifest_round_plan() -> None:
     config = _configuration()
     original = build_manifest(config)
     plan = freeze_manifest(original, config)
+    assert plan.manifest.architecture_function is not original.architecture_function
+    assert clone_manifest(plan.manifest).architecture_function is original.architecture_function
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
     assert len(pickle.dumps(plan)) <= 65536
     from limen.experiment import _parallel_identity as identities

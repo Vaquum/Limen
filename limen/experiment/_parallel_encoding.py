@@ -120,7 +120,7 @@ _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'date
           'function': 4, 'method': 4, 'dataclass': 4, 'instance': 4}
 
 
-def decode(node: object, *, ordered: bool = False) -> object:
+def decode(node: object, *, ordered: bool = False, isolate_functions: bool = False) -> object:
     if not isinstance(node, list) or not node or not isinstance(node[0], str):
         raise ValueError('Invalid version1 parallel parameter encoding')
     parts = cast(list[object], node)
@@ -136,53 +136,55 @@ def decode(node: object, *, ordered: bool = False) -> object:
     elif tag in ('date', 'datetime', 'path') and isinstance(value := parts[1], str):
         result = date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
     else:
-        result = _decode_composite(parts, ordered=ordered)
+        result = _decode_composite(parts, ordered=ordered, isolate_functions=isolate_functions)
     if encode(result, ordered=ordered) != parts:
         raise ValueError('Noncanonical parallel parameter encoding')
     return result
 
 
-def _decode_composite(parts: list[object], *, ordered: bool) -> object:
+def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: bool) -> object:
     tag, value = parts[:2]
     if tag in ('list', 'tuple') and isinstance(value, list):
-        items = [decode(item, ordered=ordered) for item in cast(list[object], value)]
+        items = [decode(item, ordered=ordered, isolate_functions=isolate_functions) for item in cast(list[object], value)]
         return tuple(items) if tag == 'tuple' else items
     if tag in ('map', 'keyed_map', 'state_map') and isinstance(value, list):
-        return {cast(str, pair[0]) if tag == 'map' else decode(pair[0], ordered=ordered): decode(pair[1], ordered=ordered) for pair in cast(list[list[object]], value)}
+        return {cast(str, pair[0]) if tag == 'map' else decode(pair[0], ordered=ordered, isolate_functions=isolate_functions): decode(pair[1], ordered=ordered, isolate_functions=isolate_functions) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
     if tag == 'function':
         source = _import(value)
         if not inspect.isfunction(source):
             raise ValueError('Parallel function implementation changed')
-        function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True)), source.__closure__)
-        function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True))
+        if not isolate_functions and encode(source) == parts:
+            return source
+        function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), source.__closure__)
+        function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True, isolate_functions=isolate_functions))
         function.__module__, function.__qualname__ = source.__module__, source.__qualname__
         function.__annotations__ = source.__annotations__.copy()
         if '__parallel_round_contract__' in vars(source):
             vars(function)['__parallel_round_contract__'] = vars(source)['__parallel_round_contract__']
         return function
     if tag == 'method':
-        method = getattr(decode(value), cast(str, parts[2]))
-        function = decode(parts[3])
+        method = getattr(decode(value, isolate_functions=isolate_functions), cast(str, parts[2]))
+        function = decode(parts[3], isolate_functions=isolate_functions)
         if not inspect.ismethod(method) or not inspect.isfunction(function) or reference(method.__func__) != reference(function):
             raise ValueError('Parallel bound method implementation changed')
         return MethodType(function, method.__self__)
-    return _decode_instance(parts)
+    return _decode_instance(parts, isolate_functions=isolate_functions)
 
 
-def _decode_instance(parts: list[object]) -> object:
+def _decode_instance(parts: list[object], *, isolate_functions: bool) -> object:
     tag, value, state, implementation = parts
     if tag == 'dataclass':
         cls = cast(type, _import(value))
-        params = {cast(str, key): decode(item, ordered=True) for key, item in cast(list[list[object]], state)}
+        params = {cast(str, key): decode(item, ordered=True, isolate_functions=isolate_functions) for key, item in cast(list[list[object]], state)}
         if set(params) != {field.name for field in fields(cls)}:
             raise ValueError('Invalid parallel dataclass fields')
         instance = cast(object, object.__new__(cls))
         for field in fields(cls):
             object.__setattr__(instance, field.name, params[field.name])
     elif tag == 'instance':
-        instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state, ordered=True)))
+        instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
     if encode(call_implementation(instance)) != implementation:

@@ -77,8 +77,8 @@ def restore_plan(payload: bytes, providers: Mapping[str, list[str]]) -> FrozenMa
     return plan
 
 
-def clone_manifest(manifest: Manifest) -> Manifest:
-    return cast(Manifest, _normalize(manifest))
+def clone_manifest(manifest: Manifest, *, snapshot: bool = False) -> Manifest:
+    return cast(Manifest, _normalize(manifest, snapshot=snapshot))
 
 
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 7)
@@ -102,7 +102,7 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
 _NO_ANCESTORS: frozenset[int] = frozenset()
 
 
-def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
+def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False) -> object:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
@@ -115,18 +115,18 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
     if isinstance(value, dict) and not is_component:
-        return {key: _normalize(item, active) for key, item in cast(dict[str, object], value).items()}
+        return {key: _normalize(item, active, snapshot=snapshot) for key, item in cast(dict[str, object], value).items()}
     if isinstance(value, (list, tuple)) and not is_component:
-        items = [_normalize(item, active) for item in cast(list[object] | tuple[object, ...], value)]
+        items = [_normalize(item, active, snapshot=snapshot) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
     if inspect.isfunction(value) or inspect.ismethod(value) or issubclass(type(value), partial):
-        clone = decode(encode(value))
+        clone = decode(encode(value), isolate_functions=snapshot)
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
     elif is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
         for field in fields(value):
-            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active))
+            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot))
     else:
         clone = copy.deepcopy(value)
     return clone
@@ -194,8 +194,8 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
                     factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
     from limen.yaml.compiler import build_manifest
 
-    frozen = clone_manifest(manifest)
-    factory_options = cast(Mapping[str, list[object]] | None, _normalize(factory_options))
+    frozen = clone_manifest(manifest, snapshot=True)
+    factory_options = cast(Mapping[str, list[object]] | None, _normalize(factory_options, snapshot=True))
     if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
