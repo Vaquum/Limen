@@ -89,13 +89,13 @@ def validate_fences(root: Path, document: Path) -> None:
     parser = '''import MarkdownIt from 'markdown-it';
 let text = ''; for await (const chunk of process.stdin) text += chunk;
 console.log(JSON.stringify(new MarkdownIt({html:true}).parse(text, {})
-  .filter(token => token.type === 'fence').map(token => token.map[0])));'''
+  .filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0])));'''
     parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=root / 'docs-site',
                             input=text, text=True, capture_output=True, check=True)
     expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE)
                       for match in re.finditer(pattern, text, re.S))
     if json.loads(parsed.stdout) != expected:
-        raise ValueError('Unbound code fence in candidate documentation: ' + str(document))
+        raise ValueError('Unbound code fence or indented block in candidate documentation: ' + str(document))
 
 
 def compare_output(current, retained, tolerances, at='') -> None:

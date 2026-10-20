@@ -69,6 +69,7 @@ def test_missing_catalogue_scenario_fails():
     '> ```python\n> print("unbound")\n> ```',
     '- ```python\n  print("unbound")\n  ```',
     '```python\nprint("unbound")',
+    '    print("unbound")',
 ])
 def test_unmarked_candidate_fence_fails(tmp_path, fence):
     from check_evidence import validate_fences

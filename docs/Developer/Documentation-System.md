@@ -44,7 +44,7 @@ python docs/examples/prepare_environment.py
 python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
 ```
 
-The binding checker uses the reader's locked Markdown parser to identify every rendered fence, including indented, quoted and tilde forms. Each must occupy the exact location of a validated source or output binding. Install the Node dependencies before running binding tests.
+The binding checker uses the reader's locked Markdown parser to identify fenced and indented code blocks, including quoted and tilde forms. Each must occupy the exact location of a validated source or output binding. Install the Node dependencies before running binding tests.
 
 Acquire provenance with full Git history and authenticated read access to GitHub's commit-to-PR associations. Keep its response inventory with the execution evidence. The tests build the actual wheel, install it outside the checkout, unpack the source/input bundle and execute each project's CLI unchanged. They write `.docs-evidence/current.json` as successful only after the required semantic assertions pass. A failed run leaves an explicit running or failed record; it cannot preserve an earlier success.
 
