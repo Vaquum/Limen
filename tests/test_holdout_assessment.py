@@ -1788,6 +1788,26 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(global_handle, assessment_case)
         assert loader.call_count == 0
+    class ConstructorDescriptor(staticmethod):
+        def __call__(self, *args):
+            return identity_probabilities(args[-1])
+    def descriptor_new(cls, values):
+        threshold_selections.append(cls)
+        return np.max(values)
+    class DescriptorConstructor:
+        __new__ = ConstructorDescriptor(descriptor_new)
+    class InitializerDescriptor(classmethod):
+        def __call__(self, *args):
+            return identity_probabilities(args[-1])
+    class DescriptorInitializer:
+        __init__ = InitializerDescriptor(partial(bound_initializer, expected_offset))
+    for constructor in (DescriptorConstructor, DescriptorInitializer):
+        for callback in (constructor, partial(constructor)):
+            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+            _freeze(unsafe_class)
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                callback(unsafe_class._model.model.coef_.ravel())
+            assert threshold_selections == []
     for native_base, field in ((staticmethod, '__func__'), (classmethod, '__func__'), (property, 'fget')):
         class DirectDescriptor(native_base):
             __call__ = staticmethod(max)

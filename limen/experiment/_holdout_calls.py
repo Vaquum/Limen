@@ -125,7 +125,7 @@ def call_functions(value: object) -> tuple[FunctionType, ...]:
         return call_functions(native_attribute(provider, 'func')) if call is partial[object].__call__ else _bound_functions(call)
     if isinstance(value, type):
         call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-        return call_functions(constructor_entry(cast(type[object], value)).target) if call is type.__call__ else _bound_functions(call)
+        return _bound_functions(constructor_entry(cast(type[object], value)).target) if call is type.__call__ else _bound_functions(call)
     if inspect.ismethod(value):
         return call_functions(value.__func__)
     if inspect.isfunction(value):
