@@ -207,7 +207,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             if inspect.ismethod(source):
                 _ = _normalize(source.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
         if hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value):
-            vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
+            vars(clone)['__parallel_round_contract__'] = _normalize(vars(value)['__parallel_round_contract__'], active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     elif is_dataclass(value) and not isinstance(value, type):
         clone = state_memo[id(value)][1] if id(value) in state_memo else copy.deepcopy(value)
         for field in fields(value):
@@ -219,7 +219,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         with shared_copy(state_memo):
             clone = _CapturedCall(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
-        vars(clone)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
+        vars(clone)['__parallel_round_contract__'] = _normalize(getattr(cast(object, value), '__parallel_round_contract__', None), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     return clone
 
 
@@ -230,7 +230,7 @@ def _contract(component: object, path: str) -> ParallelRoundContract:
     if not inspect.isfunction(contract.validate):
         raise ValueError(f'Parallel stage {path}: validator must be an importable function')
     _ = reference(contract.validate)
-    return contract
+    return cast(ParallelRoundContract, _normalize(contract, snapshot=True))
 
 
 def components(manifest: Manifest, factory_options: Mapping[str, list[object]] | None = None) -> list[tuple[str, object]]:

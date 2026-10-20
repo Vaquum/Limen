@@ -120,6 +120,17 @@ def _caller_validator(params):
         raise ValueError('positive integer window required')
 
 
+def _configured_validator(minimum):
+    def validate(params, *, maximum=4):
+        if not minimum <= params['window'] <= maximum:
+            raise ValueError('window outside captured bounds')
+    validate.__qualname__ = '_closed_validator'
+    return validate
+
+
+_closed_validator = _configured_validator(2)
+
+
 @dataclass
 class CallerRolling(CallerRollingBase):
     window: int
@@ -624,6 +635,24 @@ def test_frozen_manifest_round_plan() -> None:
     native = copy.deepcopy(plan.manifest)
     native.add_feature(_caller_feature, window='{window}')
     with startup_limits(), ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as pool:
+        declare_parallel(_caller_feature, ParallelRoundContract(_closed_validator, ('window',)))
+        validator_manifest = copy.deepcopy(plan.manifest).add_feature(_caller_feature, window=3)
+        validator_plan = freeze_manifest(validator_manifest, None)
+        validator_digest = digest(validator_plan)
+        for attribute, owner, changed in [('__kwdefaults__', _closed_validator, {'maximum': 1}),
+                                          ('cell_contents', _closed_validator.__closure__[0], 5)]:
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(owner, attribute, changed)
+                invalid_validator_plan = freeze_manifest(validator_manifest, None)
+                assert (invalid_validator_plan.pipeline_digest, invalid_validator_plan.resource_digest) != (validator_plan.pipeline_digest, validator_plan.resource_digest)
+                with pytest.raises(ValueError, match='window outside captured bounds'):
+                    validate_resources(invalid_validator_plan, _parameters())
+                assert digest(validator_plan) == validator_digest
+                for _ in range(2):
+                    actual = pool.submit(_frozen_probe, validator_plan, _parameters() | {'window': 3}).result(timeout=30)
+                    expected = _frozen_probe(validator_plan, _parameters() | {'window': 3})
+                    assert actual[:3] == expected[:3] and actual[5:] == expected[5:] and actual[3] != os.getpid()
+        declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
         cases = [(native, _parameters()), (native, _parameters() | {'scaler_type': 'rank_gauss'})]
         fixed = copy.deepcopy(native).set_scaler(RobustScaler, extra_params={'quantile_range': (0.1, 0.9)})
         dynamic = copy.deepcopy(native).set_scaler_from_params(extra_params={'quantile_range': '{range}'})
@@ -1140,6 +1169,19 @@ def _assert_factory_resources(plan, params):
             expected, _ = _factory_probe(captured_function, _auxiliary_factory)
             assert actual == expected == _caller_feature(recorded_source().head(24), 4)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(captured_function) == before and _auxiliary_factory.__kwdefaults__ == {'window': 3}
+        for bound in ({}, {'window': 5}):
+            factory = partial(_auxiliary_factory, **bound)
+            declare_parallel(factory, ParallelRoundContract(_caller_validator, ('window',)))
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 4})
+                captured_partial = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+            before = digest(captured_partial)
+            validate_domain(captured_partial, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
+            for _ in range(2):
+                actual, pid = pool.submit(_factory_probe, captured_partial, factory).result(timeout=30)
+                expected, _ = _factory_probe(captured_partial, factory)
+                assert actual == expected == _caller_feature(recorded_source().head(24), bound.get('window', 4))['caller_mean'].to_list() and pid != os.getpid()
+            assert digest(captured_partial) == before and _auxiliary_factory.__kwdefaults__ == {'window': 3}
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 0})
             invalid_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})

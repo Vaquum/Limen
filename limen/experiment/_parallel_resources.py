@@ -5,6 +5,7 @@ from collections.abc import Callable, Mapping
 from itertools import product
 from inspect import Parameter, signature, isfunction, Signature
 from dataclasses import dataclass
+from functools import partial
 from importlib import import_module
 
 import limen.experiment.manifest_core as _manifest
@@ -50,6 +51,12 @@ class FrozenClassFactory:
         return instance
 
 
+def _factory_reference(value: object) -> list[object]:
+    if isinstance(value, partial):
+        return [reference(type(value)), _factory_reference(value.func), encode((value.args, value.keywords))]
+    return reference(value) if isfunction(value) or isinstance(value, type) else [component_digest(value)]
+
+
 def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | None) -> dict[str, list[object]]:
     function = manifest.architecture_function
     if function is None:
@@ -58,11 +65,11 @@ def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | N
     result: dict[str, list[object]] = {}
     for name, values in (defaults | dict(options or {})).items():
         for value in values:
-            if name.endswith('_factory') and (isinstance(value, type) or isfunction(value)) and value is not Parameter.empty:
+            if name.endswith('_factory') and (isinstance(value, (type, partial)) or isfunction(value)) and value is not Parameter.empty:
                 if isinstance(value, type) and type(value).__call__ is not type.__call__:
                     raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
                 component = FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None) if isinstance(value, type) else value
-                result.setdefault(name, []).append((reference(value), component))
+                result.setdefault(name, []).append((_factory_reference(value), component))
     return result
 
 
@@ -70,8 +77,8 @@ def bind_factories(inventory: Mapping[str, list[object]], kwargs: Mapping[str, o
     result = dict(kwargs)
     for name, variants in inventory.items():
         value = kwargs.get(name)
-        if isfunction(value) or isinstance(value, type):
-            identity = reference(value)
+        if isfunction(value) or isinstance(value, (type, partial)):
+            identity = _factory_reference(value)
             result[name] = next((component for source, component in cast(list[tuple[list[object], object]], variants) if source == identity), value)
     return result
 
