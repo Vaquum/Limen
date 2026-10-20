@@ -180,8 +180,8 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
 def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
     if (callable(value) and not isinstance(value, type)) or isinstance(value, defaultdict):
         with shared_copy(state_memo):
-            clone = decode(encode(value), isolate_functions=snapshot)
-        if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
+            clone = decode(encode(cast(object, value)), isolate_functions=snapshot)
+        if hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
     elif is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
