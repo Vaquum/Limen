@@ -7,6 +7,10 @@
 - [Transforms](../../docs/Transforms.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) shifts observations while constructing its next-bar label. The [Compiled project](../../docs/examples/compiled-research/README.md) declares a shifted fitted target. The transform reference explains why a stateless operation does not own the train-fitted state used on later splits.
+
 ## What this package owns
 
 Owns stateless DataFrame transforms. Does **not** own fitted feature scaling, higher-level feature engineering, experiment orchestration, or post-model helpers such as probability calibration and threshold optimization (see `limen.calibration`).
@@ -28,13 +32,24 @@ Owns stateless DataFrame transforms. Does **not** own fitted feature scaling, hi
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `shift_column_transform.py` | Forward-looking target shifts |
+| `zscore_transform.py` | Stateless DataFrame normalization |
+| `winsorize_transform.py` | Percentile clipping |
+| `mad_transform.py` | MAD-based clipping |
+| `quantile_trim_transform.py` | Quantile-based row trimming |
+
+<!-- reference: package-transforms-layout source=limen/transforms/README.md region=layout:package role=layout -->
 ```text
 transforms/
-├── shift_column_transform.py        # Forward-looking target shifts
-├── zscore_transform.py              # Stateless DataFrame normalization
-├── winsorize_transform.py           # Percentile clipping
-├── mad_transform.py                 # MAD-based clipping
-└── quantile_trim_transform.py       # Quantile-based row trimming
+├── README.md
+├── __init__.py
+├── mad_transform.py
+├── quantile_trim_transform.py
+├── shift_column_transform.py
+├── winsorize_transform.py
+└── zscore_transform.py
 ```
 
 ## Things to know

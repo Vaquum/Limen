@@ -6,6 +6,10 @@
 
 - [Cohort](../../../docs/Cohort.md)
 
+## In the research projects
+
+The [Compiled project](../../../docs/examples/compiled-research/README.md) `walk_forward` scenario establishes the recorded fold identities that compatible Cohort members retain. The selectors here operate on recorded experiment results; their reference describes alternatives to that scenario’s explicit member selection.
+
 ## What this package owns
 
 Owns the built-in selector strategies that turn completed-experiment artifacts into a list of permutation ids for `Cohort`, plus the `BUILTIN_SELECTORS` registry that names them.
@@ -28,12 +32,22 @@ Does **not** own cohort aggregation itself (owned by `limen.cohort.Cohort`) or e
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `all.py` | Select every permutation |
+| `top_n.py` | Rank by a numeric results column |
+| `backtest_pareto.py` | Pareto front over trading metrics |
+| `diverse_metrics.py` | Diverse spread across metric space |
+
+<!-- reference: package-cohort-sfc-layout source=limen/cohort/sfc/README.md region=layout:package role=layout -->
 ```text
 sfc/
-├── all.py               # Select every permutation
-├── top_n.py             # Rank by a numeric results column
-├── backtest_pareto.py   # Pareto front over trading metrics
-└── diverse_metrics.py   # Diverse spread across metric space
+├── README.md
+├── __init__.py
+├── all.py
+├── backtest_pareto.py
+├── diverse_metrics.py
+└── top_n.py
 ```
 
 ## Things to know

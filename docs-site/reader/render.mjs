@@ -45,7 +45,7 @@ export function renderMarkdown(page,pages,evidence){
     const lines=renderedLines.map((line,i)=>`<span class="code-line" id="${id}-L${i+1}"><a class="line-number" href="#${id}-L${i+1}" aria-hidden="true" tabindex="-1">${i+1}</a><span class="code-src">${line||' '}</span></span>`).join('');
     const before=tokens[index-1];const marker=before?.type==='html_block'?before.content.match(/<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->/):null;
     const observed=before?.type==='html_block'?before.content.match(/<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->/):null;
-    const reference=before?.type==='html_block'?before.content.match(/<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition) -->/):null;
+    const reference=before?.type==='html_block'?before.content.match(/<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->/):null;
     const display=observed?evidence.displays.find(item=>item.id===observed[1]):null;
     if(observed&&(!display||display.sha256!==hash(source)))throw Error('Changed retained output: '+observed[1]);
     let record=null;if(marker){record=evidence.sources.find(s=>s.path===marker[2]&&s.region===marker[3]);if(!record||record.sha256!==hash(source))throw Error(`Missing or changed executable binding: ${marker[1]}`);}

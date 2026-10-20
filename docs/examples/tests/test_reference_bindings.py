@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 import pytest
 
@@ -51,3 +52,33 @@ def test_reference_source_and_symbol_boundaries(tmp_path):
     with pytest.raises(ValueError, match='module constant'):
         region(ROOT / 'limen/indicators/roc.py', 'definition:roc')
     assert 'SCALER_REGISTRY' in region(ROOT / 'limen/scalers/registry.py', 'definition:SCALER_REGISTRY')
+
+
+def test_package_layout_is_the_actual_tracked_directory(tmp_path):
+    source = ROOT / 'limen/calibration/README.md'
+    layout = region(source, 'layout:package')
+    assert layout.splitlines() == ['calibration/', '├── README.md', '├── __init__.py', '├── _objective_threshold.py', '├── pipeline.py', '├── probability.py', '└── threshold.py']
+    marker = '<!-- reference: calibration-layout-test source=limen/calibration/README.md region=layout:package role=layout -->'
+    document = tmp_path / 'layout.md'
+    document.write_text(marker + '\n```text\n' + layout + '```\n')
+    validate_fences(ROOT, document)
+    assert reference_bindings(ROOT, document)[0]['role'] == 'layout'
+    document.write_text(marker + '\n```text\n' + layout.replace('pipeline.py', 'missing.py') + '```\n')
+    with pytest.raises(ValueError, match='differs from current package'):
+        reference_bindings(ROOT, document)
+    document.write_text(marker + '\n```python\n' + layout + '```\n')
+    with pytest.raises(ValueError, match='requires a text fence'):
+        reference_bindings(ROOT, document)
+    with pytest.raises(ValueError, match='must name its package README'):
+        region(ROOT / 'limen/calibration/pipeline.py', 'layout:package')
+
+
+def test_page_connections_must_be_visible_links_to_each_project(tmp_path):
+    document = tmp_path / 'chapter.md'
+    links = {name: f'[{name}]({os.path.relpath(ROOT / f"docs/examples/{name}-research/README.md", tmp_path)})'
+             for name in ('python', 'compiled')}
+    document.write_text(links['python'] + '\n\n' + links['compiled'] + '\n')
+    validate_fences(ROOT, document, interfaces=('python', 'compiled'))
+    document.write_text(links['python'] + '\n\n<!-- ' + links['compiled'] + ' -->\n')
+    with pytest.raises(ValueError, match='Missing visible canonical project connection: compiled'):
+        validate_fences(ROOT, document, interfaces=('python', 'compiled'))

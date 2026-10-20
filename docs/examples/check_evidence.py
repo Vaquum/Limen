@@ -9,13 +9,14 @@ import re
 import subprocess
 import tarfile
 from pathlib import Path
+from urllib.parse import unquote, urlsplit
 
 from catalogue_surfaces import validate_surface_catalogue
 from catalogue_tests import validate_test_reference
 
 EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
-REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
+REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
 
 
 def digest(value: bytes) -> str:
@@ -25,6 +26,21 @@ def digest(value: bytes) -> str:
 def region(path: Path, name: str) -> str:
     if name == '__file__':
         return path.read_text()
+    if name.startswith('layout:'):
+        if name != 'layout:package' or path.name != 'README.md':
+            raise ValueError('A package layout must name its package README')
+        directory = path.parent.resolve()
+        root = Path(subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], cwd=directory, text=True).strip())
+        tracked = subprocess.check_output(['git', 'ls-files', '-z', '--', str(directory.relative_to(root))], cwd=root, text=True)
+        names = set()
+        for filename in tracked.split('\0'):
+            if filename:
+                parts = (root / filename).relative_to(directory).parts
+                names.add(parts[0] + ('/' if len(parts) > 1 else ''))
+        ordered = sorted(names)
+        if not ordered:
+            raise ValueError('Package layout has no tracked members')
+        return directory.name + '/\n' + ''.join(('└── ' if index == len(ordered) - 1 else '├── ') + member + '\n' for index, member in enumerate(ordered))
     if name.startswith(('signature:', 'definition:')):
         kind, symbol = name.split(':', 1)
         parts = symbol.split('.')
@@ -126,6 +142,8 @@ def reference_bindings(root: Path, document: Path) -> list[dict[str, str]]:
             raise ValueError('Reference source escapes the package')
         if not name.startswith(role + ':') or region(path, name) != excerpt + '\n':
             raise ValueError('Reference differs from current package source: ' + identity)
+        if role == 'layout' and not match.group(0).split('\n', 1)[1].startswith('```text\n'):
+            raise ValueError('A package layout requires a text fence')
         found.append({'id': identity, 'path': source, 'region': name, 'role': role, 'sha256': digest((excerpt + '\n').encode())})
     if len(found) != len(re.findall(r'<!-- reference:', text)) or len({item['id'] for item in found}) != len(found):
         raise ValueError('Missing or duplicate reference bindings')
@@ -140,21 +158,33 @@ def all_reference_bindings(root: Path) -> list[dict[str, str]]:
     return found
 
 
-def validate_fences(root: Path, document: Path) -> None:
+def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] = ()) -> None:
     text = document.read_text()
     bindings(root, document)
     output_bindings(root, document)
     reference_bindings(root, document)
     parser = '''import MarkdownIt from 'markdown-it';
 let text = ''; for await (const chunk of process.stdin) text += chunk;
-console.log(JSON.stringify(new MarkdownIt({html:true}).parse(text, {})
-  .filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0])));'''
+const tokens = new MarkdownIt({html:true}).parse(text, {});
+console.log(JSON.stringify({
+  fences: tokens.filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0]),
+  links: tokens.flatMap(token => token.children || []).filter(token => token.type === 'link_open').map(token => token.attrGet('href'))
+}));'''
     parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=root / 'docs-site',
                             input=text, text=True, capture_output=True, check=True)
     expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE, REFERENCE_FENCE)
                       for match in re.finditer(pattern, text, re.S))
-    if json.loads(parsed.stdout) != expected:
+    parsed_document = json.loads(parsed.stdout)
+    if parsed_document['fences'] != expected:
         raise ValueError('Unbound code fence or indented block in candidate documentation: ' + str(document))
+    for interface in interfaces:
+        if interface not in ('python', 'compiled'):
+            raise ValueError('Unknown project interface: ' + interface)
+        project = (root / f'docs/examples/{interface}-research/README.md').resolve()
+        targets = [(document.parent / unquote(urlsplit(href).path)).resolve() for href in parsed_document['links']
+                   if not urlsplit(href).scheme and not href.startswith(('/', '#'))]
+        if document.resolve() != project and project not in targets:
+            raise ValueError('Missing visible canonical project connection: ' + interface)
 
 
 def compare_output(current, retained, tolerances, at='') -> None:
@@ -301,8 +331,14 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
     validate_surface_catalogue(root, catalogue_data)
-    for page in catalogue_data['candidate_pages']:
-        validate_fences(root, root / page)
+    contexts = catalogue_data['page_contexts']
+    if set(contexts) != set(catalogue_data['candidate_pages']):
+        raise ValueError('Bound page contexts differ from the maintained candidate pages')
+    for page, scenarios in contexts.items():
+        if not scenarios or len(set(scenarios)) != len(scenarios) or any(name not in catalogue_data['scenario_details'] for name in scenarios):
+            raise ValueError('Page has no complete scenario context: ' + page)
+        interfaces = tuple(sorted({catalogue_data['scenario_details'][name]['interface'] for name in scenarios}))
+        validate_fences(root, root / page, interfaces=interfaces)
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:

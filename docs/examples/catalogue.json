@@ -59,7 +59,33 @@
     "docs/Targets.md",
     "docs/Historical-Data.md",
     "docs/Data-Bars.md",
-    "docs/Final-Holdout.md"
+    "docs/Final-Holdout.md",
+    "limen/backtest/README.md",
+    "limen/calibration/README.md",
+    "limen/cli/README.md",
+    "limen/cli/commands/README.md",
+    "limen/cohort/README.md",
+    "limen/cohort/sfc/README.md",
+    "limen/data/README.md",
+    "limen/data/bars/README.md",
+    "limen/data/utils/README.md",
+    "limen/experiment/README.md",
+    "limen/experiment/param_search/README.md",
+    "limen/experiment/reducer/README.md",
+    "limen/features/README.md",
+    "limen/indicators/README.md",
+    "limen/inference/README.md",
+    "limen/log/README.md",
+    "limen/metrics/README.md",
+    "limen/scalers/README.md",
+    "limen/sfd/README.md",
+    "limen/sfd/foundational_sfd/README.md",
+    "limen/sfd/reference_architecture/README.md",
+    "limen/sfd/rule_based/README.md",
+    "limen/targets/README.md",
+    "limen/transforms/README.md",
+    "limen/utils/README.md",
+    "limen/yaml/README.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2338,6 +2364,154 @@
     "docs/examples/commands.json": [
       "python",
       "compiled"
+    ]
+  },
+  "page_contexts": {
+    "docs/Research-Book.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/examples/python-research/README.md": [
+      "python/selection"
+    ],
+    "docs/examples/compiled-research/README.md": [
+      "compiled/selection"
+    ],
+    "docs/Walk-Forward.md": [
+      "python/walk_forward",
+      "compiled/walk_forward"
+    ],
+    "docs/Indicators.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Features.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Transforms.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Scalers.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Targets.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Historical-Data.md": [
+      "python/bars",
+      "compiled/selection"
+    ],
+    "docs/Data-Bars.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "docs/Final-Holdout.md": [
+      "python/holdout",
+      "compiled/holdout"
+    ],
+    "limen/backtest/README.md": [
+      "python/execution",
+      "compiled/execution"
+    ],
+    "limen/calibration/README.md": [
+      "python/calibration",
+      "compiled/calibration"
+    ],
+    "limen/cli/README.md": [
+      "compiled/command_line"
+    ],
+    "limen/cli/commands/README.md": [
+      "compiled/command_line"
+    ],
+    "limen/cohort/README.md": [
+      "python/selection",
+      "compiled/walk_forward"
+    ],
+    "limen/cohort/sfc/README.md": [
+      "compiled/walk_forward"
+    ],
+    "limen/data/README.md": [
+      "python/bars",
+      "compiled/selection"
+    ],
+    "limen/data/bars/README.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "limen/data/utils/README.md": [
+      "python/walk_forward",
+      "compiled/walk_forward"
+    ],
+    "limen/experiment/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/experiment/param_search/README.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "limen/experiment/reducer/README.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "limen/features/README.md": [
+      "python/bars",
+      "compiled/bars"
+    ],
+    "limen/indicators/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/inference/README.md": [
+      "python/selection",
+      "compiled/walk_forward"
+    ],
+    "limen/log/README.md": [
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "limen/metrics/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/scalers/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/sfd/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/sfd/foundational_sfd/README.md": [
+      "python/selection",
+      "compiled/search"
+    ],
+    "limen/sfd/reference_architecture/README.md": [
+      "python/selection",
+      "compiled/search"
+    ],
+    "limen/sfd/rule_based/README.md": [
+      "python/execution",
+      "compiled/allocation"
+    ],
+    "limen/targets/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/transforms/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "limen/utils/README.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "limen/yaml/README.md": [
+      "compiled/command_line"
     ]
   }
 }
