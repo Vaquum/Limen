@@ -137,6 +137,16 @@ class InheritedCallable(CallerRollingBase):
         self.window = window
 
 
+class AllocatedRolling(CallerRollingBase):
+    def __new__(cls, *, seed=None):
+        instance = super().__new__(cls)
+        instance.window = 3 if seed == 42 else 1
+        return instance
+
+    def __call__(self, data):
+        return self.transform(data)
+
+
 class InheritedCallOwnTransform(InheritedCallable):
     def transform(self, data):
         return _caller_feature(data, self.window)
@@ -1065,6 +1075,20 @@ def _assert_factory_resources(plan, params):
             expected, _ = _factory_probe(frozen_class, CallerRolling)
             assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(frozen_class) == before and CallerRolling.__init__.__defaults__ is None
+        declare_parallel(AllocatedRolling, ParallelRoundContract(seeded_stage, ('seed',)))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(AllocatedRolling.__new__, '__kwdefaults__', {'seed': 42})
+            frozen_allocator = freeze_manifest(manifest, None, {'auxiliary_factory': [AllocatedRolling]})
+            validate_domain(frozen_allocator, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [AllocatedRolling]}, None)
+        before = digest(frozen_allocator)
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, frozen_allocator, AllocatedRolling).result(timeout=30)
+            expected, _ = _factory_probe(frozen_allocator, AllocatedRolling)
+            assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        assert digest(frozen_allocator) == before and AllocatedRolling.__new__.__kwdefaults__ == {'seed': None}
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: fixed integer seed required'):
+            validate_domain(freeze_manifest(manifest, None, {'auxiliary_factory': [AllocatedRolling]}),
+                            {key: [value] for key, value in params.items()} | {'auxiliary_factory': [AllocatedRolling]}, None)
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(CallerRolling.__init__, '__defaults__', (0,))
             invalid_class = freeze_manifest(manifest, None, {'auxiliary_factory': [CallerRolling]})

@@ -10,14 +10,18 @@ from string import Formatter
 
 import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
-from typing import cast
+from typing import Protocol, cast
 
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, _TargetClass, component_digest, static_source
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
+
+
+class _TargetClass(Protocol):
+    transform: Callable[..., object]
 
 
 @dataclass
@@ -30,8 +34,8 @@ class FrozenClassFactory:
 
     @property
     def __signature__(self) -> Signature:
-        result = signature(self.initializer or self.factory_class)
-        return result.replace(parameters=list(result.parameters.values())[1:]) if self.initializer is not None else result
+        result = signature(self.initializer or self.allocator or self.factory_class)
+        return result.replace(parameters=list(result.parameters.values())[1:]) if self.initializer is not None or self.allocator is not None else result
 
     @property
     def __parallel_round_contract__(self) -> object:

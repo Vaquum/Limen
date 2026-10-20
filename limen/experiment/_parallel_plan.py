@@ -188,13 +188,13 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
-        elif not inspect.isfunction(cast(object, value)):
-            owner = cast(object, value.__self__ if inspect.ismethod(cast(object, value)) else value)
+        elif not inspect.isfunction(source := cast(object, value)):
+            owner = cast(object, source.__self__ if inspect.ismethod(source) else source)
             restored = clone.__self__ if inspect.ismethod(clone) else clone
             if not isinstance(owner, type):
                 _ = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
-            if inspect.ismethod(cast(object, value)):
-                _ = _normalize(value.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
+            if inspect.ismethod(source):
+                _ = _normalize(source.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
         if hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
     elif is_dataclass(value) and not isinstance(value, type):
