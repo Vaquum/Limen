@@ -927,6 +927,8 @@ def test_profile_replacement_cannot_complete_final_assessment(native_assessment_
     class Config:
         calibration_func = None
         threshold_func = staticmethod(later_probabilities)
+    class Provider:
+        prediction_calibration_config = Config()
     class ReplacesProfile(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
@@ -934,14 +936,14 @@ def test_profile_replacement_cannot_complete_final_assessment(native_assessment_
                 try:
                     sys.setprofile(None)
                 except ValueError:
-                    _ = self.policy.threshold_func(result['_probs'])
+                    _ = self.policy.prediction_calibration_config.threshold_func(result['_probs'])
             return result
     selected = copy.deepcopy(native_assessment_case[2][0][0])
     prepared, _ = selected._get_manifest().sensor_input_prep(selected._fitted_params['_holdout_probe'], selected._fitted_params, selected._round_params)
     columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]
     selected._model.__class__ = ReplacesProfile
     selected._model.research_x = np.asarray(prepared.select(columns).tail(1), dtype=float)
-    selected._model.policy = Config()
+    selected._model.policy = Provider()
     frozen = _freeze(selected)
     previous = sys.getprofile()
     with pytest.raises(ValueError, match='Holdout inference') as failed:
