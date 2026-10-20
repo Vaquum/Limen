@@ -46,13 +46,13 @@ def _dependency_positions(code: CodeType) -> tuple[int, ...]:
 def _native_annotation(value: object) -> bool:
     if not isinstance(value, type):
         return False
-    module, root = sys.modules.get(value.__module__), value.__module__.split('.')[0]
+    module = sys.modules.get(value.__module__)
+    root = value.__module__.split('.')[0]
     return module is not None and vars(module).get(value.__qualname__) is value and (root in sys.stdlib_module_names or root in _LIBRARIES)
 
 
-def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None, declaration: bool = False) -> list[object]:
+def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
     seen: dict[int, object] = {}
-    forced = {id(function): function for value in values for function in call_functions(value)} if declaration else {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__repr__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__', '__round__', '__trunc__', '__floor__', '__ceil__', '__divmod__', '__rdivmod__', '__hash__', '__format__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
@@ -91,7 +91,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             function = value.__func__ if inspect.ismethod(value) else value
             origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
             modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
-            if not declaration and (entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules)):
+            if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
                 raise ValueError('Holdout inference has an unowned random dependency')
             visit(getattr(value, '__name__', None), annotation=True)
         if inspect.ismethod(value):
@@ -113,13 +113,13 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 for part in children(cell):
                     visit(part)
             function_module, function_name = _function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
-            if (fitting_call(function_module, function_name) and id(value) not in forced) or id(value) in sealed:
+            if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
             attributes.update(value.__code__.co_names)
             method_names.update(value.__code__.co_names)
             if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in _LIBRARIES:
                 return
-            if not declaration and any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
+            if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
             instructions = _instructions(value.__code__)
             references = {name: list(children(cell)[1:]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
@@ -299,8 +299,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     return result
 
 
-def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None, declaration: bool = False) -> str:
-    return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved, capture=capture, declaration=declaration), protocol=5)).hexdigest()
+def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:
+    return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved, capture=capture), protocol=5)).hexdigest()
 
 
 

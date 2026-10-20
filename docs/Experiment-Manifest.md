@@ -40,7 +40,8 @@ pipeline. The recorded holdout proof covers genuine external model, scaler,
 calibration factory and threshold components through this complete handoff.
 
 Use `sfd.yaml_reference` when recording. It returns an independent copy containing
-`sfd.components` with the configurator's name and state/code digest. Trainer must
+`sfd.components` with the configurator's name, call-code/global-binding digest
+and configured-pipeline digest. Trainer must
 receive the matching configurator on every reload; missing or mismatched authority
 fails before fetching research data. Sensors retain it for reconstruction and
 owned holdout copies, which compare the fresh configured Manifest with the cached

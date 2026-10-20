@@ -293,6 +293,8 @@ class CompiledSFD:
 
     @property
     def yaml_reference(self) -> dict[str, object]:
+        if self._components is not None:
+            _ = self.manifest()
         return copy.deepcopy(self._yaml)
 
     def params(self) -> dict[str, list[Any]]:
