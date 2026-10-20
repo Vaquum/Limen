@@ -1,6 +1,9 @@
 from pathlib import Path
 import os
 import json
+import hashlib
+import re
+import subprocess
 
 import pytest
 
@@ -109,6 +112,22 @@ def test_current_pages_have_exact_source_and_visible_project_connections():
     for page, contexts in validate_page_catalogue(ROOT, catalogue).items():
         interfaces = tuple(sorted({catalogue['scenario_details'][name]['interface'] for name in contexts}))
         validate_fences(ROOT, ROOT / page, interfaces=interfaces)
+
+    history = json.loads((ROOT / 'docs-site/reader/route-decisions.json').read_text())
+    baseline = history['baseline']
+    assert re.fullmatch(r'[a-f0-9]{40}', baseline)
+    originals = {}
+    for source, digest in history['sources'].items():
+        content = subprocess.check_output(['git', 'show', baseline + ':' + source], cwd=ROOT)
+        assert hashlib.sha256(content).hexdigest() == digest
+        originals[source] = content.decode()
+    assert set(originals) == {'README.md', 'pyproject.toml', 'docs-site/scripts/assemble-docs.mjs'}
+    published = set(re.findall(r'https://docs\.vaquum\.fi[^\s"<>)]*', originals['README.md'] + originals['pyproject.toml']))
+    assert {item['url'] for item in history['published_links']} == published
+    origin = 'https://docs.vaquum.fi'
+    legacy = {origin + '/limen' + slug.rstrip('/') + '/' for slug in re.findall(r"\bslug:\s*'([^']+)'", originals['docs-site/scripts/assemble-docs.mjs'])}
+    legacy.update(url.split('#')[0].rstrip('/') + '/' for url in published)
+    assert {item['url'] for item in history['legacy_routes']} == legacy
 
 
 def test_new_or_removed_pages_cannot_escape_the_complete_catalogue(monkeypatch):
