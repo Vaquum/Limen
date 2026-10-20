@@ -44,10 +44,10 @@ def restore_object(cls: type, state: ObjectState) -> object:
     if bound is None:
         if is_mapping:
             result: object = dict[object, object].__new__(cast(type[dict[object, object]], cls))
-            dict[object, object].update(cast(dict[object, object], result), cast(list[tuple[object, object]], native))
+            dict[object, object].update(result, cast(list[tuple[object, object]], native))
         elif is_sequence:
             result = list[object].__new__(cast(type[list[object]], cls))
-            list[object].extend(cast(list[object], result), cast(list[object], native))
+            list[object].extend(result, cast(list[object], native))
         else:
             result = cast(object, object.__new__(cls))
         if attributes:
