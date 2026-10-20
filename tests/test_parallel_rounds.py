@@ -41,6 +41,9 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CallerRollingBase:
+    def __call__(self, data):
+        return self.transform(data)
+
     def transform(self, data):
         return data.with_columns(pl.col('close').rolling_mean(self.window).alias('caller_mean'))
 FIXTURE = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'

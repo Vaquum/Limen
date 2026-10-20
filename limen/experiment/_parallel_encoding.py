@@ -110,10 +110,10 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
         if set(component_state(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
-                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)]]
+                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)], encode(type(value).__call__ if callable(value) else None, active)]
     if callable(value):
         state = {key: item for key, item in vars(value).items() if key != '__parallel_round_contract__'} if hasattr(value, '__dict__') else {}
-        return ['instance', reference(type(value)), encode((state, slot_state(value)), active)]
+        return ['instance', reference(type(value)), encode((state, slot_state(value)), active), encode(type(value).__call__, active)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
 
 
@@ -130,7 +130,7 @@ def _import(node: object) -> object:
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
           'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'import': 2, 'partial': 4,
-          'method': 4, 'dataclass': 3, 'instance': 3}
+          'method': 4, 'dataclass': 4, 'instance': 4}
 
 
 def decode(node: object) -> object:
@@ -176,7 +176,7 @@ def _decode_composite(parts: list[object]) -> object:
 
 
 def _decode_instance(parts: list[object]) -> object:
-    tag, value, state = parts
+    tag, value, state, implementation = parts
     if tag == 'dataclass':
         cls = cast(type, _import(value))
         params = {cast(str, key): decode(item) for key, item in cast(list[list[object]], state)}
@@ -184,16 +184,18 @@ def _decode_instance(parts: list[object]) -> object:
         for field in fields(cls):
             if not field.init:
                 object.__setattr__(instance, field.name, params[field.name])
-        return instance
-    if tag == 'instance':
+    elif tag == 'instance':
         instance = cast(object, object.__new__(cast(type, _import(value))))
         attributes, slots = cast(tuple[dict[str, object], list[tuple[type, str, object]]], decode(state))
         if attributes:
             vars(instance).update(attributes)
         for cls, name, item in slots:
             vars(cls)[name].__set__(instance, item)
-        return instance
-    raise ValueError('Invalid or unsupported version1 parallel parameter tag')
+    else:
+        raise ValueError('Invalid or unsupported version1 parallel parameter tag')
+    if encode(type(instance).__call__ if callable(instance) else None) != implementation:
+        raise ValueError('Parallel callable implementation changed')
+    return instance
 
 
 def digest(value: object) -> str:
