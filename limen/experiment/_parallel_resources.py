@@ -53,7 +53,8 @@ class FrozenClassFactory:
 
 def _factory_reference(value: object) -> list[object]:
     if isinstance(value, partial):
-        return [reference(type(value)), _factory_reference(value.func), encode((value.args, value.keywords))]
+        bound = cast(partial[object], value)
+        return [reference(type(bound)), _factory_reference(bound.func), encode((bound.args, bound.keywords))]
     return reference(value) if isfunction(value) or isinstance(value, type) else [component_digest(value)]
 
 
@@ -68,8 +69,8 @@ def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | N
             if name.endswith('_factory') and (isinstance(value, (type, partial)) or isfunction(value)) and value is not Parameter.empty:
                 if isinstance(value, type) and type(value).__call__ is not type.__call__:
                     raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-                component = FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None) if isinstance(value, type) else value
-                result.setdefault(name, []).append((_factory_reference(value), component))
+                component = FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None) if isinstance(value, type) else cast(object, value)
+                result.setdefault(name, []).append((_factory_reference(cast(object, value)), component))
     return result
 
 
@@ -78,8 +79,8 @@ def bind_factories(inventory: Mapping[str, list[object]], kwargs: Mapping[str, o
     for name, variants in inventory.items():
         value = kwargs.get(name)
         if isfunction(value) or isinstance(value, (type, partial)):
-            identity = _factory_reference(value)
-            result[name] = next((component for source, component in cast(list[tuple[list[object], object]], variants) if source == identity), value)
+            identity = _factory_reference(cast(object, value))
+            result[name] = next((component for source, component in cast(list[tuple[list[object], object]], variants) if source == identity), cast(object, value))
     return result
 
 
