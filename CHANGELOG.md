@@ -1866,3 +1866,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.12] - 2026-10-20
 
 - Reject null, nonnumeric, boolean and nonfinite compiled Sensor prediction values; preserve valid numeric scores and native Python inference.
+
+## [5.45.13] - 2026-10-20
+
+- Reject YAML resolver traversal outside allowed namespaces and introspective dunder attributes while preserving supported symbols.

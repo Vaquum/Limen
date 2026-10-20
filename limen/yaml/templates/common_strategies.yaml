@@ -2,7 +2,7 @@ schema_version: "1.0"
 
 metadata:
   name: common_strategies
-  limen_version: "5.45.12"
+  limen_version: "5.45.13"
   mode: development
   description: Eight fixed long-flat strategy baselines with causal indicator history
 
