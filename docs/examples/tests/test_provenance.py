@@ -5,7 +5,7 @@ import subprocess
 
 import pytest
 
-from provenance import git, identity, latest_change, merged_pull, tree_objects
+from provenance import git, identity, latest_change, merged_pull, pull_associations, tree_objects
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -51,3 +51,49 @@ def test_source_association_requires_its_exact_merged_main_pr():
             merged_pull(commit, changed)
     with pytest.raises(ValueError, match='unique merged PR'):
         merged_pull(commit, responses + responses)
+
+
+def test_incomplete_github_response_retries_and_retains_exact_association(monkeypatch, capsys):
+    payload = (ROOT / 'docs/examples/tests/fixtures/merged-source-pr.json').read_text()
+    commit = '56b71e68c08fce5a1edbdb002bd0b23e91a6c527'
+    responses = iter([(1, '', 'unexpected end of JSON input\n'), (0, payload, '')])
+    calls, delays = [], []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        status, output, error = next(responses)
+        return subprocess.CompletedProcess(command, status, output, error)
+
+    monkeypatch.setattr('provenance.subprocess.run', run)
+    monkeypatch.setattr('provenance.time.sleep', delays.append)
+    assert merged_pull(commit, pull_associations(commit)) == 'https://github.com/Vaquum/Limen/pull/1055'
+    assert calls == [['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls']] * 2
+    assert delays == [1]
+    assert 'retry 1/2: unexpected end of JSON input' in capsys.readouterr().err
+
+
+@pytest.mark.parametrize('error,attempts,delays', [('unexpected end of JSON input\n', 3, [1, 2]), ('HTTP 401: Bad credentials\n', 1, [])])
+def test_source_association_errors_remain_fatal(monkeypatch, error, attempts, delays):
+    calls, sleeps = [], []
+
+    def run(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 1, '', error)
+
+    monkeypatch.setattr('provenance.subprocess.run', run)
+    monkeypatch.setattr('provenance.time.sleep', sleeps.append)
+    with pytest.raises(subprocess.CalledProcessError) as failure:
+        pull_associations('56b71e68c08fce5a1edbdb002bd0b23e91a6c527')
+    assert failure.value.stderr == error
+    assert len(calls) == attempts
+    assert sleeps == delays
+
+
+@pytest.mark.parametrize('payload,error', [('{', json.JSONDecodeError), ('{}', ValueError)])
+def test_successful_response_requires_a_complete_json_array(monkeypatch, payload, error):
+    def run(command, **kwargs):
+        return subprocess.CompletedProcess(command, 0, payload, '')
+
+    monkeypatch.setattr('provenance.subprocess.run', run)
+    with pytest.raises(error):
+        pull_associations('56b71e68c08fce5a1edbdb002bd0b23e91a6c527')

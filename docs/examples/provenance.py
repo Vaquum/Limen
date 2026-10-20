@@ -3,6 +3,8 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
+import time
 
 
 def git(root, *arguments):
@@ -27,6 +29,22 @@ def merged_pull(commit, responses):
     if len(matches) != 1:
         raise ValueError('Source-changing main commit has no unique merged PR: ' + commit)
     return matches[0]['html_url']
+
+
+def pull_associations(commit):
+    command = ['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls']
+    for attempt in range(3):
+        response = subprocess.run(command, text=True, capture_output=True)
+        if response.returncode == 0:
+            associations = json.loads(response.stdout)
+            if not isinstance(associations, list):
+                raise ValueError('Source PR associations must be a JSON array: ' + commit)
+            return associations
+        if response.stderr.strip() != 'unexpected end of JSON input' or attempt == 2:
+            raise subprocess.CalledProcessError(response.returncode, command, output=response.stdout, stderr=response.stderr)
+        print(f'Incomplete GitHub response for {commit}; retry {attempt + 1}/2: {response.stderr.strip()}', file=sys.stderr)
+        time.sleep(attempt + 1)
+    raise RuntimeError('Source PR association attempts exhausted')
 
 
 def source_paths(root):
@@ -61,7 +79,7 @@ def acquire(root, output):
         pull = None
         if status == 'merged':
             if commit not in responses:
-                responses[commit] = json.loads(subprocess.check_output(['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls'], text=True))
+                responses[commit] = pull_associations(commit)
             pull = merged_pull(commit, responses[commit])
         files.append({'path': path, 'commit': commit, 'status': status, 'merged_pr': pull, 'sha256': hashlib.sha256((root / path).read_bytes()).hexdigest()})
     record = {'schema_version': 1, 'base': base, 'files': files, 'responses': responses}
