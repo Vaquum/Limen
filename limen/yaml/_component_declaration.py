@@ -6,7 +6,6 @@ from typing import cast
 
 from limen.experiment._holdout_calls import call_functions
 from limen.experiment._holdout_state import fitted_witness
-from limen.experiment._holdout_report import digest
 from limen.experiment.manifest_core import Manifest
 
 __all__ = ['Components', 'bind_components', 'configure_manifest']
@@ -35,7 +34,7 @@ def bind_components(reference: Mapping[str, object], components: Components | No
     declared, identity = cast(Mapping[str, object], sfd).get('components'), _identity(components)
     if declared is None and record and 'components' not in sfd:
         marker: dict[str, object] = _Pending(identity)
-    elif isinstance(declared, Mapping) and all(cast(Mapping[str, object], declared).get(key) == value for key, value in identity.items()) and (type(declared) is _Pending or isinstance(cast(Mapping[str, object], declared).get('pipeline_sha256'), str)):
+    elif isinstance(declared, Mapping) and all(cast(Mapping[str, object], declared).get(key) == value for key, value in identity.items()) and (type(cast(object, declared)) is _Pending or isinstance(cast(Mapping[str, object], declared).get('pipeline_sha256'), str)):
         marker = copy.deepcopy(cast(dict[str, object], declared))
     else:
         raise ValueError('Trusted components configurator differs from the recorded declaration')
@@ -51,7 +50,7 @@ def configure_manifest(manifest: Manifest, reference: Mapping[str, object], comp
     if components is not None:
         sfd = cast(dict[str, object], reference['sfd'])
         marker = cast(dict[str, object], sfd['components'])
-        pipeline = digest({field.name: getattr(manifest, field.name) for field in fields(manifest)})
+        pipeline = sha256(fitted_witness({field.name: getattr(manifest, field.name) for field in fields(manifest)})).hexdigest()
         if type(marker) is _Pending:
             sfd['components'] = {**marker, 'pipeline_sha256': pipeline}
         elif marker['pipeline_sha256'] != pipeline:

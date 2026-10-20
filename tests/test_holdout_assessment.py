@@ -928,6 +928,26 @@ def test_trusted_component_implementation_and_globals(native_assessment_case):
             with pytest.raises(ValueError, match='differs from the recorded'):
                 CompiledSFD(stored, components=declaration)
             assert loader.call_count == 0
+    from types import ModuleType
+    settings = ModuleType('trusted-declaration-settings')
+    settings.offset = 0
+    def indirect(manifest):
+        manifest.decoder_lookback = 1 + settings.offset
+    compiled = CompiledSFD(reference, components=indirect)
+    stored = compiled.yaml_reference
+    assert CompiledSFD(stored, components=indirect).manifest().decoder_lookback == 1
+    with patch.object(settings, 'offset', 1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(stored, components=indirect).manifest()
+        assert loader.call_count == 0
+    for fingerprint in (None, 'corrupt'):
+        changed = copy.deepcopy(stored)
+        if fingerprint is None:
+            del changed['sfd']['components']['pipeline_sha256']
+        else:
+            changed['sfd']['components']['pipeline_sha256'] = fingerprint
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(changed, components=indirect).manifest()
 
 
 def test_trusted_components_require_matching_explicit_reload(native_assessment_case):
