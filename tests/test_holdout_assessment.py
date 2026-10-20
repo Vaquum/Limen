@@ -900,9 +900,10 @@ def test_prediction_guard_rejects_empty_cells_and_caught_matcher_errors(native_a
         assert 'matcher failure' in caught[0] if fault else 'attempted fitting' in caught[0]
 
 
-@pytest.mark.parametrize('operation', ['clear', 'replace', 'enable', 'disable'])
+@pytest.mark.parametrize('operation', ['clear', 'replace', 'context', 'roundtrip', 'enable', 'disable', 'partial-enable'])
 def test_prediction_guard_rejects_profile_replacement(native_assessment_case, operation):
     from cProfile import Profile
+    from contextvars import Context
     import sys
     from limen.experiment._holdout_prediction import readonly_prediction
     selected = copy.deepcopy(native_assessment_case[2][0][0])
@@ -911,14 +912,20 @@ def test_prediction_guard_rejects_profile_replacement(native_assessment_case, op
     replace = sys.setprofile
     def replacement(frame, event, arg):
         return None
-    change = partial(replace, None if operation == 'clear' else replacement) if operation in ('clear', 'replace') else getattr(profiler, operation)
+    change = partial(replace, None if operation in ('clear', 'context', 'roundtrip') else replacement) if operation in ('clear', 'replace', 'context', 'roundtrip') else partial(profiler.enable) if operation == 'partial-enable' else getattr(profiler, operation)
     caught = []
     with pytest.raises(ValueError, match='Holdout inference'), readonly_prediction([selected]):
+        guarded = sys.getprofile()
         try:
-            change()
+            if operation == 'context':
+                Context().run(change)
+            else:
+                change()
+            if operation == 'roundtrip':
+                partial(replace, guarded)()
         except ValueError as error:
             caught.append(str(error))
-    assert caught == ['Holdout inference attempted profile replacement']
+    assert caught == ([] if operation == 'partial-enable' else ['Holdout inference attempted profile replacement'])
     assert sys.getprofile() is previous
 
 
