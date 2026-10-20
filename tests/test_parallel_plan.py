@@ -651,7 +651,8 @@ def test_frozen_manifest_round_plan() -> None:
                 for _ in range(2):
                     actual = pool.submit(_frozen_probe, validator_plan, _parameters() | {'window': 3}).result(timeout=30)
                     expected = _frozen_probe(validator_plan, _parameters() | {'window': 3})
-                    assert actual[:3] == expected[:3] and actual[5:] == expected[5:] and actual[3] != os.getpid()
+                    assert actual[:2] == expected[:2] and actual[2] is False and expected[2] is True
+                    assert actual[5:] == expected[5:] and actual[3] != os.getpid() and digest(validator_plan) == validator_digest
         declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
         cases = [(native, _parameters()), (native, _parameters() | {'scaler_type': 'rank_gauss'})]
         fixed = copy.deepcopy(native).set_scaler(RobustScaler, extra_params={'quantile_range': (0.1, 0.9)})
