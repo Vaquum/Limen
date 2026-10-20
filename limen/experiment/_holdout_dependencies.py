@@ -165,7 +165,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def methods(value: object) -> None:
         if isinstance(value, ModuleType):
             done = processed.setdefault(id(value), set())
-            for name in (module_attributes | (fitted_names if module_dynamic[id(value)] else set())).intersection(vars(value)) - done:
+            for name in (module_attributes | (fitted_names if module_dynamic[id(value)] else set[str]())).intersection(vars(value)) - done:
                 done.add(name)
                 part = cast(object, vars(value)[name])
                 visit(part, fitted_module=name in module_attributes)
