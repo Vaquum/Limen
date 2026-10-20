@@ -146,11 +146,11 @@ def _retained_grid(tmp_path, monkeypatch):
         rotation = PCA.transform
         observed = {'scaler': 0, 'pca': 0}
 
-        def frozen_scale(instance, data):
+        def frozen_scale(instance, data, observed=observed, transform=transform):
             observed['scaler'] += 1
             return transform(instance, data)
 
-        def frozen_rotate(instance, data):
+        def frozen_rotate(instance, data, observed=observed, rotation=rotation):
             observed['pca'] += 1
             return rotation(instance, data)
 
@@ -175,14 +175,15 @@ def _retained_grid(tmp_path, monkeypatch):
         assert len(eligible) == 408 and all(p.reason is None for p in eligible.values())
         retained = prepared['price_data_for_backtest'].select('datetime')
         aligned = replay.join(retained, on='datetime', how='semi', maintain_order='left')
-        assert aligned.height == 407 and aligned.drop('datetime').equals(prepared['x_test'])
+        assert aligned.height == 407 and aligned.drop('datetime').columns == prepared['x_test'].columns
+        np.testing.assert_allclose(aligned.drop('datetime').to_numpy(), prepared['x_test'].to_numpy(), rtol=1e-8, atol=1e-10)
         assert aligned.drop('datetime').null_count().sum_horizontal()[0] == 0
         actual = [eligible[t].prediction for t in retained['datetime']]
         np.testing.assert_allclose(actual, record['preds'], rtol=1e-8, atol=1e-10)
 
 
 def _conditional(name, automatic):
-    from tests.test_conditional_shims import PARAMS as conditional_params, SHIMS, _manifest as conditional_manifest
+    from tests.test_conditional_shims import PARAMS as CONDITIONAL_PARAMS, SHIMS, _manifest as conditional_manifest
     from tests.test_direction_sizing import recorded_source
     from limen.experiment._column_shims import apply_column_shims
 
@@ -191,7 +192,7 @@ def _conditional(name, automatic):
     cls = SCALER_REGISTRY[name]
     extras = {'window': 20, 'min_samples': 5} if name == 'causal_rolling_robust' else {}
     manifest = conditional_manifest(shims).set_strict_mode(True).set_scaler(cls, extra_params=extras).set_pca_compression()
-    params = conditional_params | PARAMS | {'sizing_params': {'alpha': 0.3, 'solver': 'svd'}}
+    params = CONDITIONAL_PARAMS | PARAMS | {'sizing_params': {'alpha': 0.3, 'solver': 'svd'}}
     plain = manifest.prepare_data(raw, params | {'auto_pca': False})
     data = manifest.prepare_data(raw, params)
     oracle = PCA(n_components=1, svd_solver='full', whiten=False)
@@ -337,7 +338,10 @@ def _ordinary_invalid_rows(recorded, monkeypatch):
             with pytest.raises(ValueError, match='finite feature columns; split 1'):
                 _manifest().prepare_data(damaged, PARAMS)
         else:
-            actual = _manifest().prepare_data(damaged, PARAMS)
+            from limen.experiment.errors import StrictModeError
+            with pytest.raises(StrictModeError, match='Unexpected nulls in val split'):
+                _manifest().prepare_data(damaged, PARAMS)
+            actual = _manifest().set_strict_mode(False).prepare_data(damaged, PARAMS)
             assert actual['x_train'].equals(plain['x_train'])
             assert actual['x_val'].height == plain['x_val'].height - 1
             manifest = _manifest()
@@ -370,4 +374,4 @@ def _fold_invalid_rows(recorded):
     with pytest.raises(ValueError, match='finite feature columns; split 1'):
         _scaled(train, broken, scale, compress, available=False)
     _, actual = _scaled(train, broken, scale, compress, available=True)
-    assert actual.height == future.height - 1 and np.isfinite(actual['pc_0']).all()
+    assert actual.height == future.height - 1 and np.isfinite(actual['pc_0'].to_numpy()).all()

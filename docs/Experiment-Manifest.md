@@ -905,7 +905,8 @@ use its actual fitted-output key as `scaler_param_name`, and supply numeric,
 finite finalized feature matrices in their existing order. PCA fits only on
 training rows. Invalid finalized values name the split index and offending
 columns before PCA construction; the repair performs no data cleaning.
-Existing upstream NaN-row cleanup and conditional-fold errors remain in place.
+Existing strict null refusals, non-strict NaN-row cleanup and conditional-fold
+errors remain in place.
 Frozen Sensor preprocessing retains its existing null-row/error policy.
 
 PCA weights the matrix produced by the caller's preprocessing. On the recorded
