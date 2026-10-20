@@ -88,7 +88,15 @@
     "limen/yaml/README.md",
     "docs/Advanced-Search.md",
     "docs/Calibration.md",
-    "docs/Reducers-And-Feedback.md"
+    "docs/Reducers-And-Feedback.md",
+    "docs/README.md",
+    "docs/Glossary.md",
+    "docs/Semantic-Versioning.md",
+    "docs/TechnicalDebt.md",
+    "docs/Roadmap.md",
+    "docs/Command-Line-Interface.md",
+    "docs/Single-File-Decoder.md",
+    "docs/End-to-End-Workflow.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2532,6 +2540,60 @@
     "docs/Reducers-And-Feedback.md": [
       "python/search",
       "compiled/search"
+    ],
+    "docs/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Glossary.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Semantic-Versioning.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/TechnicalDebt.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Roadmap.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/search",
+      "compiled/search",
+      "python/walk_forward",
+      "compiled/walk_forward",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Command-Line-Interface.md": [
+      "compiled/command_line"
+    ],
+    "docs/Single-File-Decoder.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/End-to-End-Workflow.md": [
+      "python/selection",
+      "python/search",
+      "python/recovery",
+      "python/walk_forward",
+      "python/holdout",
+      "python/calibration",
+      "python/execution",
+      "python/bars",
+      "python/observed_costs",
+      "compiled/selection",
+      "compiled/search",
+      "compiled/recovery",
+      "compiled/walk_forward",
+      "compiled/holdout",
+      "compiled/calibration",
+      "compiled/execution",
+      "compiled/bars",
+      "compiled/allocation",
+      "compiled/command_line"
     ]
   }
 }
