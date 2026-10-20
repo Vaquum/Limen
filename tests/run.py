@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import logging
+import hashlib
+import json
 import os
 import sys
 import time
+from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +15,9 @@ import pytest
 
 from tests.utils.cleanup import cleanup_csv_files
 from tests.utils.cleanup import setup_cleanup_handlers
+from tests.utils.proof_coverage import RECEIPT_KEY
+from tests.utils.proof_coverage import merge_worker_coverage
+from tests.utils.proof_coverage import worker_coverage
 from tests.utils.runtime_tracking import DEFAULT_SLOWEST_TESTS_LIMIT
 from tests.utils.runtime_tracking import build_runtime_profile
 from tests.utils.runtime_tracking import format_duration
@@ -32,7 +39,86 @@ class RuntimeProfilePlugin:
         self.suite_started_clock = time.perf_counter()
         self.test_started_at: dict[str, str] = {}
         self.test_records: list[dict[str, Any]] = []
-        self._records_by_nodeid: dict[str, dict[str, Any]] = {}
+        self._records_by_execution: dict[tuple[str, str], dict] = {}
+        self._events: dict[tuple[str, str], list[pytest.TestReport]] = {}
+        self._completions: list[tuple[str, str]] = []
+        self.collections: dict[str, tuple[str, ...]] = {}
+        self.workers: dict[str, dict | None] = {}
+        self.errors: list[str] = []
+        self.requested_workers = 0
+        self.distribution = 'no'
+        self.reconciled = False
+        self.combine_seconds = 0.0
+
+    def pytest_configure(self, config: pytest.Config) -> None:
+        self.requested_workers = config.getoption('numprocesses', 0) or 0
+        self.distribution = config.getoption('dist', 'no')
+
+    @pytest.hookimpl(optionalhook=True)
+    def pytest_testnodeready(self, node) -> None:
+        self.workers[node.gateway.id] = None
+
+    @pytest.hookimpl(optionalhook=True)
+    def pytest_xdist_node_collection_finished(self, node, ids) -> None:
+        worker_id = node.gateway.id
+        if worker_id in self.collections:
+            self.errors.append(f'Duplicate worker collection: {worker_id}')
+        self.collections[worker_id] = tuple(ids)
+
+    @pytest.hookimpl(optionalhook=True)
+    def pytest_testnodedown(self, node, error) -> None:
+        worker_id = node.gateway.id
+        self.workers[worker_id] = getattr(node, 'workeroutput', {}).get(RECEIPT_KEY)
+        if error is not None:
+            self.errors.append(f'Worker {worker_id} failed: {error}')
+
+    @property
+    def parallel(self) -> bool:
+        return bool(self.requested_workers or self.workers)
+
+    def assert_complete(self) -> None:
+        if not self.parallel:
+            return
+        if self.requested_workers and len(self.workers) != self.requested_workers:
+            self.errors.append('Worker count differs from the requested process count')
+        if self.workers.keys() != self.collections.keys():
+            self.errors.append('Missing native worker collection')
+        native = next(iter(self.collections.values()), ())
+        if any(ids != native for ids in self.collections.values()):
+            self.errors.append('Workers collected different ordered case lists')
+        if len(native) != len(set(native)):
+            self.errors.append('Native collection contains duplicate node IDs')
+        pids = set()
+        for worker_id, receipt in self.workers.items():
+            if receipt is None:
+                self.errors.append(f'Missing worker receipt: {worker_id}')
+                continue
+            if receipt['id'] != worker_id or not isinstance(receipt['pid'], int) or receipt['pid'] <= 0:
+                self.errors.append(f'Invalid worker identity: {worker_id}')
+            if receipt['pid'] in pids:
+                self.errors.append('Workers reported the same process ID')
+            pids.add(receipt['pid'])
+            completed = [nodeid for worker, nodeid in self._completions if worker == worker_id]
+            if receipt['completed_ids'] != completed or receipt['test_count'] != len(completed):
+                self.errors.append(f'Worker completion receipt differs from phase events: {worker_id}')
+        for (worker_id, nodeid), reports in self._events.items():
+            phases = [report.when for report in reports]
+            expected = ['setup', 'call', 'teardown'] if reports[0].when == 'setup' and reports[0].passed else ['setup', 'teardown']
+            if phases != expected:
+                self.errors.append(f'Incomplete or duplicate phase events: {worker_id} {nodeid}')
+        if self.distribution == 'each':
+            expected_completions = Counter((worker, nodeid) for worker in self.workers for nodeid in native)
+            actual_completions = Counter(self._completions)
+        else:
+            expected_completions = Counter(native)
+            actual_completions = Counter(nodeid for _, nodeid in self._completions)
+        if actual_completions != expected_completions:
+            self.errors.append('Completed case multiplicity differs from native collection')
+        if set(self._events) != set(self._completions):
+            self.errors.append('Execution ledger contains unfinished cases')
+        self.reconciled = not self.errors
+        if self.errors:
+            raise ValueError('; '.join(self.errors))
 
     def pytest_runtest_protocol(
         self,
@@ -42,30 +128,61 @@ class RuntimeProfilePlugin:
         self.test_started_at[item.nodeid] = utc_now_iso()
 
     def pytest_runtest_logreport(self, report: pytest.TestReport) -> None:
-        if report.when == 'call':
-            self._record(report)
+        key = (_worker_id(report), report.nodeid)
+        reports = self._events.setdefault(key, [])
+        duplicate = any(previous.when == report.when for previous in reports)
+        reports.append(report)
+        if report.when == 'teardown':
+            self._completions.append(key)
+        if duplicate:
+            self.errors.append(f'Duplicate phase event: {key} {report.when}')
             return
-
-        if report.when == 'setup' and (report.failed or report.skipped):
+        if (report.when == 'call'
+                or (report.when in ('???', 'teardown') and report.failed)
+                or (report.when == 'setup' and (report.failed or report.skipped))):
             self._record(report)
-            return
-
-        if report.when == 'teardown' and report.failed:
-            self._record(report)
+        if key in self._records_by_execution:
+            record = self._records_by_execution[key]
+            starts = [event.start for event in reports if event.start > 0]
+            stops = [event.stop for event in reports if event.stop > 0]
+            record['started_at'] = _report_time(min(starts)) if starts else ''
+            record['finished_at'] = _report_time(max(stops)) if stops else ''
 
     def build_profile(self) -> dict[str, Any]:
         suite_finished_at = utc_now_iso()
         total_duration_seconds = time.perf_counter() - self.suite_started_clock
-        return build_runtime_profile(
+        profile = build_runtime_profile(
             test_records=self.test_records,
             suite_started_at=self.suite_started_at,
             suite_finished_at=suite_finished_at,
             total_duration_seconds=total_duration_seconds,
         )
+        if self.parallel:
+            native = next(iter(self.collections.values()), ())
+            workers = []
+            for worker_id, receipt in self.workers.items():
+                if receipt is None:
+                    workers.append(dict.fromkeys(('pid', 'backend', 'test_count', 'data_sha256', 'lines_sha256', 'line_count')) | {'id': worker_id})
+                else:
+                    workers.append({key: value for key, value in receipt.items() if key != 'completed_ids'})
+            profile['parallel'] = {
+                'worker_count': len(self.workers),
+                'reconciled': self.reconciled,
+                'collected_count': len(native),
+                'collected_ids_sha256': hashlib.sha256(json.dumps(native, separators=(',', ':')).encode()).hexdigest(),
+                'combine_seconds': round(self.combine_seconds, 6),
+                'distribution': self.distribution,
+                'execution_count': len(self._events),
+                'workers': workers,
+                'errors': self.errors,
+            }
+        return profile
 
     def _record(self, report: pytest.TestReport) -> None:
         status = _report_status(report)
-        record = self._records_by_nodeid.get(report.nodeid)
+        worker_id = _worker_id(report)
+        key = (worker_id, report.nodeid)
+        record = self._records_by_execution.get(key)
         if record is None:
             record = {
                 'test_name': report.nodeid,
@@ -78,7 +195,9 @@ class RuntimeProfilePlugin:
                 ),
                 'finished_at': utc_now_iso(),
             }
-            self._records_by_nodeid[report.nodeid] = record
+            if worker_id:
+                record['worker_id'] = worker_id
+            self._records_by_execution[key] = record
             self.test_records.append(record)
 
         record['status'] = _merge_status(str(record['status']), status)
@@ -96,6 +215,15 @@ class RuntimeProfilePlugin:
             record.pop('error', None)
         if record['status'] != 'skipped':
             record.pop('skip_reason', None)
+
+
+def _worker_id(report: pytest.TestReport) -> str:
+    node = getattr(report, 'node', None)
+    return node.gateway.id if node is not None else getattr(report, 'worker_id', '')
+
+
+def _report_time(timestamp: float) -> str:
+    return datetime.fromtimestamp(timestamp, timezone.utc).isoformat(timespec='milliseconds').replace('+00:00', 'Z')
 
 
 def _report_status(report: pytest.TestReport) -> str:
@@ -157,7 +285,7 @@ def _pytest_args(argv: list[str]) -> list[str]:
     if argv:
         return argv
     # Default discovery includes test_acceptance_gates.py, test_parallel_rounds.py and test_round_signals.py.
-    return ['tests']
+    return ['-n', '2', '--dist', 'loadfile', '--max-worker-restart=0', 'tests']
 
 
 def _write_profile(plugin: RuntimeProfilePlugin, slowest_tests_limit: int) -> None:
@@ -206,7 +334,25 @@ def main() -> int:
 
     plugin = RuntimeProfilePlugin()
     try:
-        return_code = pytest.main(_pytest_args(sys.argv[1:]), plugins=[plugin])
+        with worker_coverage() as directory:
+            return_code = pytest.main(
+                ['-p', 'tests.utils.proof_coverage', *_pytest_args(sys.argv[1:])],
+                plugins=[plugin],
+            )
+            try:
+                plugin.assert_complete()
+                if directory is not None and plugin.parallel:
+                    started = time.perf_counter()
+                    try:
+                        merge_worker_coverage(directory, plugin.workers)
+                    finally:
+                        plugin.combine_seconds = time.perf_counter() - started
+            except (ValueError, OSError) as exc:
+                plugin.reconciled = False
+                if not plugin.errors:
+                    plugin.errors.append(str(exc))
+                logger.error('Incomplete parallel proof: %s', exc)
+                return_code = return_code or 1
     finally:
         _write_profile(plugin, slowest_tests_limit)
         cleanup_csv_files()
