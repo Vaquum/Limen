@@ -117,7 +117,7 @@ def state_digest(selection: Sensor | Cohort) -> str:
     return sha256(fitted_witness((state, aggregate))).hexdigest()
 
 
-def prediction_dependencies(selection: Sensor | Cohort) -> str:
+def prediction_dependencies(selection: Sensor | Cohort, *, capture: list[object] | None = None) -> str:
     values: list[object] = [getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window')]
     if type(selection) is Cohort:
         values.extend(getattr(Cohort, name) for name in ('_aggregate_bar_predictions', '_validate_probability_range', '_fallback_vote_threshold'))
@@ -135,7 +135,7 @@ def prediction_dependencies(selection: Sensor | Cohort) -> str:
                 excluded.append(config)
                 values.extend((config.calibration_params, config.threshold_params))
     # Owned Sensors already hold the validated Manifest; its construction branch cannot run.
-    return dependency_digest(values, exclude=excluded, resolved=(vars(Sensor)['_get_manifest'],))
+    return dependency_digest(values, exclude=excluded, resolved=(vars(Sensor)['_get_manifest'],), capture=capture)
 
 
 def manifest_projection(manifest: MLManifest) -> object:
@@ -324,10 +324,11 @@ def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
         _ = vars(Sensor)['_get_manifest'](member)
     dependencies = prediction_dependencies(selection)
     snapshot = (owned_copy(selection), copy.deepcopy(evaluation_target))
-    if prediction_dependencies(snapshot[0]) != dependencies:
+    providers: list[object] = []
+    if prediction_dependencies(snapshot[0], capture=providers) != dependencies:
         raise ValueError('Holdout copy changed prediction dependencies')
     for member in members(snapshot[0]):
-        validate_prediction(member)
+        validate_prediction(member, providers=providers)
     if prediction_dependencies(snapshot[0]) != dependencies:
         raise ValueError('Holdout inference mutated prediction dependencies')
     spec: dict[str, object] = {'schema_version': 1, 'members': specs, 'context_start': context_start, 'scenarios': declarations,

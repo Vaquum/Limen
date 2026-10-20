@@ -95,24 +95,23 @@ def _tape(selection: Sensor | Cohort, raw: pl.DataFrame, start: int, failures: _
     logger = logging.getLogger('limen.inference.sensor')
     logger.addHandler(failures)
     try:
-        with readonly_prediction(sensors):
-            for index, timestamp in enumerate(raw['datetime'].to_list()):
-                bar_ns = int(raw['datetime'].slice(index, 1).dt.epoch('ns')[0])
-                if bar_ns < start:
-                    continue
-                bars: list[BarPrediction] = []
-                retained: list[dict[str, object]] = []
-                for ordinal, sensor in enumerate(sensors):
-                    failures.member_id, failures.bar_ns = f'{sensor.manifest_id}:{sensor.permutation_id}', bar_ns
-                    bar = sensor.predict(raw.head(index + 1))
-                    if failures.message is not None:
-                        raise ValueError(failures.message)
-                    _valid(bar, timestamp)
-                    bars.append(bar)
-                    retained.append({'index': ordinal, 'id': failures.member_id, 'prediction': int(cast(int, bar.prediction)), 'probability': bar.probability, 'reason': bar.reason})
-                aggregate = bars[0] if type(selection) is Sensor else _aggregate(cast(Cohort, selection), bars)
-                _valid(aggregate, timestamp)
-                result.append({'members': retained, 'prediction': int(cast(int, aggregate.prediction)), 'probability': aggregate.probability, 'reason': aggregate.reason})
+        for index, timestamp in enumerate(raw['datetime'].to_list()):
+            bar_ns = int(raw['datetime'].slice(index, 1).dt.epoch('ns')[0])
+            if bar_ns < start:
+                continue
+            bars: list[BarPrediction] = []
+            retained: list[dict[str, object]] = []
+            for ordinal, sensor in enumerate(sensors):
+                failures.member_id, failures.bar_ns = f'{sensor.manifest_id}:{sensor.permutation_id}', bar_ns
+                bar = sensor.predict(raw.head(index + 1))
+                if failures.message is not None:
+                    raise ValueError(failures.message)
+                _valid(bar, timestamp)
+                bars.append(bar)
+                retained.append({'index': ordinal, 'id': failures.member_id, 'prediction': int(cast(int, bar.prediction)), 'probability': bar.probability, 'reason': bar.reason})
+            aggregate = bars[0] if type(selection) is Sensor else _aggregate(cast(Cohort, selection), bars)
+            _valid(aggregate, timestamp)
+            result.append({'members': retained, 'prediction': int(cast(int, aggregate.prediction)), 'probability': aggregate.probability, 'reason': aggregate.reason})
         return result
     finally:
         logger.removeHandler(failures)
@@ -182,9 +181,11 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 binding = history.ProjectBinding(root, cast(str, declaration['project_id']), cast(int, declaration['revision']), None, interval)
                 raw, source = load_admitted_source(cast(MLManifest, vars(members(selection)[0])['_manifest']), binding, lower_ns=planned['context_start_ns'], upper_ns=planned['end_ns'], complete=True)
                 stage = 'predict'
-                if prediction_dependencies(selection) != frozen_spec['prediction_dependencies']:
+                providers: list[object] = []
+                if prediction_dependencies(selection, capture=providers) != frozen_spec['prediction_dependencies']:
                     raise ValueError('Holdout inference changed prediction dependencies during loading')
-                tape = _tape(selection, raw, planned['start_ns'], failures)
+                with readonly_prediction(members(selection), providers=providers):
+                    tape = _tape(selection, raw, planned['start_ns'], failures)
                 if state_digest(selection) != state_sha:
                     raise ValueError('Holdout inference changed fitted state')
                 if prediction_dependencies(selection) != frozen_spec['prediction_dependencies']:

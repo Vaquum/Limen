@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 import inspect
 from functools import partial
@@ -63,7 +63,7 @@ def _matches(function: FunctionType, frame: FrameType, owner: object | None) -> 
 
 
 @contextmanager
-def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
+def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | None = None) -> Iterator[None]:
     forbidden: dict[CodeType, list[tuple[FunctionType, object | None]]] = {}
     seen: set[int] = set()
     configs: list[object] = []
@@ -108,12 +108,14 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     for sensor in sensors:
         for root in _roots(sensor):
             collect(root)
-    reachable: list[object] = []
-    roots = [root for sensor in sensors for root in _roots(sensor)]
-    roots.extend(getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window'))
-    roots.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
-    _ = inference_evidence(roots, exclude=configs, resolved=(vars(Sensor)['_get_manifest'],), capture=reachable)
-    for value in reachable:
+    if providers is None:
+        reachable: list[object] = []
+        roots = [root for sensor in sensors for root in _roots(sensor)]
+        roots.extend(getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window'))
+        roots.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
+        _ = inference_evidence(roots, exclude=configs, resolved=(vars(Sensor)['_get_manifest'],), capture=reachable)
+        providers = reachable
+    for value in providers:
         collect(value)
     numpy_state, python_state = fitted_witness(np.random.get_state()), random.getstate()
     previous = sys.getprofile()
@@ -158,12 +160,12 @@ def _probe_output(sensor: Sensor) -> object:
     return result
 
 
-def validate_prediction(sensor: Sensor) -> None:
+def validate_prediction(sensor: Sensor, *, providers: Sequence[object] | None = None) -> None:
     roots = _roots(sensor)
     state = fitted_witness(roots)
-    with readonly_prediction([sensor]):
+    with readonly_prediction([sensor], providers=providers):
         first = fitted_witness(_probe_output(sensor))
-    with readonly_prediction([sensor]):
+    with readonly_prediction([sensor], providers=providers):
         second = fitted_witness(_probe_output(sensor))
     if fitted_witness(roots) != state:
         raise ValueError('Holdout inference mutated fitted state')

@@ -178,5 +178,5 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     return evidence
 
 
-def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> str:
-    return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved), protocol=5)).hexdigest()
+def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:
+    return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved, capture=capture), protocol=5)).hexdigest()
