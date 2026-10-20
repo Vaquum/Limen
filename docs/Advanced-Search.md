@@ -57,7 +57,7 @@ def search(data_dir, output):
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
-    return {'runs': runs, 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+    return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
             'feedback': mixed_feedback(data_dir, output / 'feedback')}
 ```
 
@@ -74,7 +74,7 @@ def search(data_dir, output):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
         results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
+    return {'runs': results, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
             'adaptive': adaptive_search(data_dir, output / 'adaptive'),
             'feedback': mixed_feedback(data_dir, output / 'feedback')}
 ```

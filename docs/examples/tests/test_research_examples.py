@@ -166,3 +166,12 @@ def test_preparation_preserves_training_fits_and_target_geometry(python_scenario
         output = tmp_path / interface
         result = scenarios.preparation(inputs, output)
         verify_preparation(interface, result, output, inputs)
+
+
+def test_common_baselines_preserve_signals_and_declared_economics(python_scenarios, compiled_scenarios, tmp_path):
+    from scenario_oracles import verify_common_baselines
+    inputs = ROOT / 'tests/fixtures'
+    for interface, scenarios in [('python', python_scenarios), ('compiled', compiled_scenarios)]:
+        output = tmp_path / interface
+        result = scenarios.common_baselines(inputs, output)
+        verify_common_baselines(interface, result, output, inputs)

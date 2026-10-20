@@ -120,6 +120,27 @@ def preparation(data_dir, output):
 # endregion preparation
 
 
+# region common_baselines
+def common_baselines(data_dir, output):
+    from limen.sfd.rule_based.common_strategies import STRATEGY_NAMES, strategy_signals
+
+    raw = hourly(data_dir, None)
+    train_rows, val_rows = raw.height * 8 // 11, raw.height // 11
+    evaluation = raw[train_rows + val_rows:]
+    output.mkdir(parents=True)
+    rows = []
+    for name in STRATEGY_NAMES:
+        signals = strategy_signals(evaluation, name)
+        # Caller-owned one-bar trades: enter next open, exit that close, 2 bp total cost.
+        net = signals[:-1] * (evaluation['close'].to_numpy()[1:] / evaluation['open'].to_numpy()[1:] - 1 - .0002)
+        evaluation.select('datetime').with_columns(pl.Series('desired_position', signals)).write_parquet(output / (name + '.parquet'))
+        rows.append({'strategy': name, 'mean_net_return': float(net.mean()),
+                     'net': net.tolist(), 'signals': signals.tolist()})
+    return {'rows': rows, 'split_rows': [train_rows, val_rows, evaluation.height],
+            'round_trip_bps': 2., 'execution': 'independent next-open-to-close trades'}
+# endregion common_baselines
+
+
 # region search
 def search(data_dir, output):
     bars = hourly(data_dir, 1440)
@@ -137,7 +158,7 @@ def search(data_dir, output):
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
-    return {'runs': runs, 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+    return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
             'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search
 

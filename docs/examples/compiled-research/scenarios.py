@@ -115,6 +115,31 @@ def preparation(data_dir, output):
 # endregion preparation
 
 
+# region common_baselines
+def common_baselines(data_dir, output):
+    from limen.experiment.param_domain import ParamDomain
+    from limen.experiment.param_search import GridStrategy
+    from limen.sfd.foundational_sfd import common_strategies
+
+    source = configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url']
+    raw = pl.read_parquet(source)
+    directory = output / 'experiment'
+    loop = UniversalExperimentLoop(data=raw, sfd=common_strategies,
+                                   search_strategy=GridStrategy(ParamDomain(common_strategies.params())),
+                                   experiment_dir=directory)
+    loop.run('common-baselines', n_permutations=8, workers=1, record_execution=True,
+             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+             post_processing=False, progress_bar=False)
+    with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    tracks = {record['round_params']['strategy']: record['execution'] for record in records}
+    columns = ['strategy', 'pnl_per_bar_bps_test', 'position_rate_test', 'num_executed_trades_test']
+    return {'rows': research_project.completed_log(loop).select(columns).to_dicts(),
+            'tracks': tracks, 'source_rows': raw.height, 'fee_bps': 10., 'slip_bps': 5.,
+            'execution': 'native lagged long/flat snapshot with per-fill costs'}
+# endregion common_baselines
+
+
 # region search
 def search(data_dir, output):
     results = {}
@@ -127,7 +152,7 @@ def search(data_dir, output):
             config['uel']['search_strategy'].update(shuffle=True, seed=42)
         loop = execute(config, output / kind, factorize=kind == 'factorized')
         results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
+    return {'runs': results, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
             'adaptive': adaptive_search(data_dir, output / 'adaptive'),
             'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search

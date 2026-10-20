@@ -2140,7 +2140,8 @@
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget.",
       "extra_tests": [
-        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry"
+        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
       ]
     },
     "compiled/search": {
@@ -2158,7 +2159,8 @@
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
       "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget.",
       "extra_tests": [
-        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry"
+        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
       ]
     },
     "python/recovery": {

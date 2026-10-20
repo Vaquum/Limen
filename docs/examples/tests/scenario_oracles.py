@@ -98,6 +98,7 @@ def verify_feedback(interface, feedback, inputs):
 def verify(interface, name, result, output, inputs):
     if name == 'search':
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
+        verify_common_baselines(interface, result['common_baselines'], output / 'common-baselines', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
         assert set(result['runs']) == expected
         identities = []
@@ -556,3 +557,62 @@ def verify_preparation(interface, result, output, inputs):
         predicted = (x_test-x_train.mean(axis=0))@coefficients+y.mean()
         np.testing.assert_allclose(case['predictions'], predicted, rtol=1e-9, atol=1e-10)
         assert case['rmse'] == pytest.approx(float(np.sqrt(np.mean((predicted-frames[2]['label'].to_numpy())**2))), rel=1e-10)
+
+
+def verify_common_baselines(interface, result, output, inputs):
+    from limen.sfd.rule_based.common_strategies import strategy_signals
+    names = {'buy_and_hold', 'sma_cross', 'ema_cross', 'macd', 'rsi_mean_reversion',
+             'bollinger_mean_reversion', 'donchian_breakout', 'time_series_momentum'}
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
+    bars = raw[raw.height*8//11 + raw.height//11:]
+    assert bars.height == 1598 and len(result['rows']) == len(names) == 8
+    assert {row['strategy'] for row in result['rows']} == names
+    close, opening = bars['close'].to_numpy(), bars['open'].to_numpy()
+    for row in result['rows']:
+        name = row['strategy']
+        signals = strategy_signals(bars, name)
+        assert len(signals) == bars.height and signals.dtype == np.int8 and set(signals) <= {0, 1}
+        for stop in (201, 401, 801, bars.height-1):
+            np.testing.assert_array_equal(strategy_signals(bars[:stop], name), signals[:stop])
+        if name == 'buy_and_hold':
+            np.testing.assert_array_equal(signals, np.ones(bars.height))
+        elif name == 'sma_cross':
+            expected = np.zeros(bars.height)
+            for i in range(199, bars.height):
+                expected[i] = np.mean(close[i-49:i+1]) > np.mean(close[i-199:i+1])
+            np.testing.assert_array_equal(signals, expected)
+        elif name == 'time_series_momentum':
+            np.testing.assert_array_equal(signals, np.r_[np.zeros(20), close[20:] > close[:-20]])
+        if interface == 'python':
+            assert result['split_rows'] == [6388, 798, 1598] and result['round_trip_bps'] == 2.
+            expected = signals[:-1]*(close[1:]/opening[1:]-1-.0002)
+            np.testing.assert_allclose(row['net'], expected, rtol=1e-12, atol=1e-12)
+            assert row['mean_net_return'] == pytest.approx(float(expected.mean()), rel=1e-12, abs=1e-12)
+            retained = pl.read_parquet(output / (name + '.parquet'))
+            assert retained['datetime'].equals(bars['datetime'])
+            assert retained['desired_position'].to_list() == row['signals'] == signals.tolist()
+        else:
+            assert result['source_rows'] == 8784 and result['fee_bps'] == 10. and result['slip_bps'] == 5.
+            track = result['tracks'][name]
+            position = np.r_[0, signals[:-1]].astype(bool)
+            expected_gross, expected_net = np.zeros(bars.height), np.zeros(bars.height)
+            previous_equity, entry = 1., None
+            trades = 0
+            for index, held in enumerate(position):
+                if not held:
+                    entry, previous_equity = None, 1.
+                    continue
+                if entry is None:
+                    entry = close[index-1]
+                    trades += 1
+                expected_gross[index] = close[index]/close[index-1]-1
+                marked = close[index]/(entry*(1+.0005))
+                exiting = index == bars.height-1 or not position[index+1]
+                equity = marked*(1-.001)*(1-.0005)-.001 if exiting else marked-.001
+                expected_net[index] = equity/previous_equity-1
+                previous_equity = equity
+            np.testing.assert_array_equal(track['pos'], position.astype(float))
+            np.testing.assert_allclose(track['gross'], expected_gross, rtol=1e-11, atol=1e-12)
+            np.testing.assert_allclose(track['net'], expected_net, rtol=1e-11, atol=1e-12)
+            assert row['num_executed_trades_test'] == trades
+            assert row['pnl_per_bar_bps_test'] == pytest.approx(float(expected_net.mean()*10000), abs=1e-9)
