@@ -432,13 +432,15 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         raise ValueError('Installed wheel artifact does not match')
     for item in [*record['displays'], *record['validation']['scenarios']]:
         verified_file(item.get('path', item.get('output_path')), item.get('sha256', item.get('output_sha256')))
+    candidate_base = subprocess.check_output(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=root, text=True).strip() if record['mode'] == 'candidate' else None
+    changed_paths: dict[str, int] = {}
     for source in record['sources']:
         if source['status'] == 'candidate' and source['merged_pr'] is not None:
             raise ValueError('Candidate source cannot claim a merged PR')
-        if record['mode'] == 'candidate':
-            base = subprocess.check_output(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=root, text=True).strip()
-            changed = subprocess.run(['git', 'diff', '--quiet', base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
-            if changed and source['status'] != 'candidate':
+        if candidate_base is not None:
+            if source['path'] not in changed_paths:
+                changed_paths[source['path']] = subprocess.run(['git', 'diff', '--quiet', candidate_base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
+            if changed_paths[source['path']] and source['status'] != 'candidate':
                 raise ValueError('Unmerged source presented as merged')
     if record['mode'] == 'production':
         from publication import validate_production

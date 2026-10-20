@@ -141,7 +141,7 @@ def pytest_sessionfinish(session, exitstatus):
     files = {item['path']: item for item in provenance['files']}
     sources = [item | {'region': '__file__'} for item in provenance['files']]
     excerpts = {(item['path'], item['region']): item for item in [*all_bindings(ROOT), *all_reference_bindings(ROOT)]}
-    sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values()]
+    sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values() if item['region'] != '__file__']
     record = {
         'schema_version': 1, 'mode': 'candidate',
         'revision': {'head': head, 'tested_commit': tested, 'tree': tree, 'dirty': bool(git('status', '--porcelain', '--untracked-files=normal'))},
