@@ -245,18 +245,17 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     continue
                 key = f'{parent.__module__}.{parent.__qualname__}:{name}'
                 method = parent.__dict__[name]
+                evidence.append((key, method))
                 if isinstance(method, (type, ModuleType)):
                     evidence.append((key, type(method).__module__, type(method).__qualname__))
                 if isinstance(method, (property, staticmethod, classmethod)):
                     visit(cast(object, method))
-                    evidence.append((key, cast(object, method)))
                 if isinstance(method, property):
                     method = native_attribute(method, 'fget')
                 if isinstance(method, (staticmethod, classmethod)):
                     method = native_attribute(cast(object, method), '__func__')
                 if method is not None:
                     visit(method, annotation=name in ('__annotations__', '__type_params__', '__parameters__'))
-                    evidence.append((key, method))
 
     for value in values:
         visit(value)

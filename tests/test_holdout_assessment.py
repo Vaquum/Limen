@@ -2138,6 +2138,20 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(reviewed)
         assert loader.call_count == 0
+    class OptionalAttributePolicy:
+        optional = None
+        def adjust(self, values):
+            return np.clip(values + (0 if hasattr(self, 'optional') else 0.1), 0, 1)
+    reviewed._model.policy = OptionalAttributePolicy()
+    optional_handle = _freeze(reviewed)
+    try:
+        del OptionalAttributePolicy.optional
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(optional_handle, assessment_case)
+            assert loader.call_count == 0
+    finally:
+        OptionalAttributePolicy.optional = None
     class PropertyDocument:
         @property
         def offset(self):
