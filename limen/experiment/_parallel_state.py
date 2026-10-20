@@ -33,20 +33,21 @@ def object_state(value: object) -> ObjectState:
     reducer = cast(Callable[[object], tuple[object, ...]], vars(partial)['__reduce__'])
     reduced = reducer(value) if issubclass(type(value), partial) else None
     bound = cast(tuple[object, ...], reduced[2])[:3] if reduced is not None else None
-    native: list[object] | None = ([item for item in dict.items(cast(dict[object, object], value))] if isinstance(value, dict)
-                                 else list(list.__iter__(cast(list[object], value))) if isinstance(value, list) else None)
+    native = (list[object](dict[object, object].items(cast(dict[object, object], value))) if issubclass(type(value), dict)
+              else list[object](list[object].__iter__(cast(list[object], value))) if issubclass(type(value), list) else None)
     return attributes, slot_state(value), bound, native
 
 
 def restore_object(cls: type, state: ObjectState) -> object:
     attributes, slots, bound, native = state
+    is_mapping, is_sequence = issubclass(cls, dict), issubclass(cls, list)
     if bound is None:
-        if issubclass(cls, dict):
-            result: object = dict.__new__(cls)
-            dict.update(cast(dict[object, object], result), cast(list[tuple[object, object]], native))
-        elif issubclass(cls, list):
-            result = list.__new__(cls)
-            list.extend(cast(list[object], result), cast(list[object], native))
+        if is_mapping:
+            result: object = dict[object, object].__new__(cast(type[dict[object, object]], cls))
+            dict[object, object].update(cast(dict[object, object], result), cast(list[tuple[object, object]], native))
+        elif is_sequence:
+            result = list[object].__new__(cast(type[list[object]], cls))
+            list[object].extend(cast(list[object], result), cast(list[object], native))
         else:
             result = cast(object, object.__new__(cls))
         if attributes:
