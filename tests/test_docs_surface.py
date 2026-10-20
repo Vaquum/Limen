@@ -350,9 +350,12 @@ def test_known_semantic_regressions_are_absent() -> None:
         'Previously called SFM',
         'Split-wide normalization',
         'leaks future information within the split',
-        'This guide takes a contributor from a fresh checkout to a benchmarked classifier',
     )
     assert all(contract in docs_text for contract in required_contracts)
+    workflow = _read('docs/End-to-End-Workflow.md')
+    for interface in ('python', 'compiled'):
+        assert f'source=docs/examples/commands.json region={interface}-all scenario=selection interface={interface} role=executed' in workflow
+        assert f'examples/{interface}-research/README.md' in workflow
 
 
 def test_public_risk_and_install_contracts_remain_visible() -> None:
