@@ -9,6 +9,10 @@ New runs use compressed round artifacts; existing JSONL runs remain readable. Se
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 - [Universal Experiment Loop](../../docs/Universal-Experiment-Loop.md)
 
+## In the research projects
+
+The [Compiled project](../../docs/examples/compiled-research/README.md) `command_line` scenario invokes the installed CLI, retains manifest lineage, runs and resumes an experiment, and verifies backup restoration. A CLI-built SFD belongs to Compiled Research.
+
 ## What this package owns
 
 Owns the preferred operator path for YAML manifests: scaffold, validate, profile, dry-run, run, resume, and manage committed manifests.
@@ -35,20 +39,19 @@ Does **not** own manifest semantics, experiment execution internals, model behav
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `main.py` | Click command group and command registration |
+| `git_utils.py` | git helper calls for project commands |
+
+<!-- reference: package-cli-layout source=limen/cli/README.md region=layout:package role=layout -->
 ```text
 cli/
-|-- main.py       # Click command group and command registration
-|-- git_utils.py  # git helper calls for project commands
-`-- commands/
-    |-- validate.py
-    |-- profile.py
-    |-- run.py
-    |-- resume.py
-    |-- init.py
-    |-- list_templates.py
-    |-- commit.py
-    |-- ls.py
-    `-- new.py
+├── README.md
+├── __init__.py
+├── commands/
+├── git_utils.py
+└── main.py
 ```
 
 ## Things to know

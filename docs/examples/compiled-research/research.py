@@ -14,11 +14,13 @@ from limen.yaml import CompiledSFD
 from limen.yaml.compiler import build_search_strategy
 
 
+# region completed_log
 def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
     log = loop.experiment_log
     if log is None:
         raise ValueError("The experiment has no completed result log")
     return log
+# endregion completed_log
 
 
 # region experiment

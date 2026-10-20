@@ -1,11 +1,4 @@
-const SECURITY_HEADERS = {
-  'Content-Security-Policy': "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=()',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-};
+import SECURITY_HEADERS from './security-headers.json';
 
 function withSecurityHeaders(response) {
   const secured = new Response(response.body, response);

@@ -33,17 +33,53 @@ test('complete research chapter',async({page})=>{
   expect(about.match(/<img[^>]+src="https?:/g)).toBeNull();
   const reference=await (await page.request.get('/limen/reference/trainer/')).text();
   const lead=reference.match(/<p class="hero-lead">([^]*?)<\/p>/)[1];
-  expect(lead).toContain('round storage format');expect(lead).not.toContain('[round storage format]');expect(lead).not.toContain('`');
+  expect(lead).toContain('Python project');expect(lead).toContain('Compiled project');expect(lead).not.toContain('[Python project]');expect(lead).not.toContain('`');
+  expect(lead).toContain('href="/limen/book/python-research/"');expect(lead).toContain('href="/limen/book/compiled-research/"');
   await page.getByRole('link',{name:'the two interfaces',exact:true}).click();
   await expect(page).toHaveURL(/about\/#two-interfaces-different-purposes$/);
   await expect(page.locator('#two-interfaces-different-purposes')).toBeInViewport();
+  await expect(page.getByRole('link',{name:'complete Python project',exact:true})).toHaveAttribute('href','/limen/book/python-research/');
+  await expect(page.getByRole('link',{name:'complete Compiled project',exact:true})).toHaveAttribute('href','/limen/book/compiled-research/');
+  await expect(page.getByRole('link',{name:'Python Sensor construction',exact:true})).toHaveAttribute('href','/limen/reference/trainer/#python-construction');
+});
+
+test('published routes agree with robots and sitemap while other products remain outside Limen',async({request})=>{
+  for(const [source,target]of [['/','/limen/'],['/limen','/limen/'],['/robots.txt','/limen/robots.txt'],['/sitemap.xml','/limen/sitemap.xml']]){
+    const response=await request.get(source,{maxRedirects:0});
+    expect(response.status()).toBe(302);expect(new URL(response.headers().location).pathname).toBe(target);
+  }
+  const robots=await request.get('/limen/robots.txt');expect(robots.status()).toBe(200);
+  expect(robots.headers()['content-type']).toContain('text/plain');
+  expect(await robots.text()).toContain('Sitemap: https://docs.vaquum.fi/limen/sitemap.xml');
+  const sitemap=await (await request.get('/limen/sitemap.xml')).text();
+  const routes=await (await request.get('/limen/routes.json')).json();
+  expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>new URL(match[1]).pathname).sort()).toEqual(routes.map(route=>route.url).sort());
+  const htmlByUrl=new Map();
+  for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
+  const decisions=await (await request.get('/limen/route-decisions.json')).json();
+  expect(decisions).toEqual(JSON.parse(await fs.readFile(path.join(root,'docs-site/reader/route-decisions.json'),'utf8')));
+  for(const item of decisions.legacy_routes){
+    const legacy=new URL(item.url),replacement=new URL(item.replacement);
+    expect(htmlByUrl.has(replacement.pathname),item.replacement).toBe(true);
+    const response=await request.get(legacy.pathname,{maxRedirects:0});
+    expect(response.status(),item.url).toBe(item.status==='retained'?200:404);
+  }
+  for(const item of decisions.published_links){
+    const replacement=new URL(item.replacement),html=htmlByUrl.get(replacement.pathname);
+    expect(html,item.replacement).toBeDefined();
+    if(replacement.hash)expect(html,item.replacement).toContain('id="'+replacement.hash.slice(1)+'"');
+  }
+  const missing=await request.get('/limen/absent-chapter/');expect(missing.status()).toBe(404);expect(await missing.text()).toContain('Page unavailable');
+  expect((await request.get('/another-product/')).status()).toBe(404);
 });
 
 test('reference returns to the same passage and focus',async({page})=>{
   await open(page);const link=page.getByRole('link',{name:'Python Sensor construction',exact:true});
   await link.focus();await link.scrollIntoViewIfNeeded();const before=await link.evaluate(el=>({id:el.id,top:el.getBoundingClientRect().top}));
   await link.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
-  await expect(page.locator('[data-reference-body] h1')).toHaveText('Trainer');
+  await expect(page.locator('[data-reference-body] h1')).toHaveText('Carry selected behavior into inference');
+  await expect(page.locator('[data-reference-body] .reference-intro').getByRole('link',{name:'Python project',exact:true})).toHaveAttribute('href','/limen/book/python-research/');
+  await expect(page.locator('[data-reference-body] .reference-intro').getByRole('link',{name:'Compiled project',exact:true})).toHaveAttribute('href','/limen/book/compiled-research/');
   await page.getByRole('button',{name:'Return to chapter',exact:true}).click();
   await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
   expect(Math.abs((await link.boundingBox()).y-before.top)).toBeLessThan(3);
@@ -109,7 +145,7 @@ test('reference fragments retain the panel and canonical history',async({page})=
   await page.getByRole('button',{name:'Return to chapter',exact:true}).click();await expect(page).toHaveURL(chapter);
   await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(opener).toBeFocused();
   await page.goForward();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
-  await fragment.click();await page.reload();await expect(page.getByRole('heading',{level:1})).toHaveText('Cohort');
+  await fragment.click();await page.reload();await expect(page.getByRole('heading',{level:1})).toHaveText('Combine compatible Sensors');
   await expect(page).toHaveURL(/reference\/cohort\/#recorded-walk-forward-members$/);
 });
 
@@ -150,6 +186,19 @@ test('search and keyboard reach the same reference',async({page})=>{
   await page.keyboard.press('Escape');await expect(page.getByRole('dialog',{name:'Search Limen'})).not.toBeVisible();
   const link=page.getByRole('link',{name:'Python Sensor construction',exact:true});await link.focus();await page.keyboard.press('Enter');
   await expect(page.locator('[data-reference-dialog]')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
+});
+
+test('reference lookup uses API names while the page keeps its narrative title',async({page})=>{
+  await page.goto('/limen/reference/');
+  const trainer=page.locator('main').getByRole('link',{name:'Trainer and Sensor',exact:true});
+  await expect(trainer).toHaveAttribute('href','/limen/reference/trainer/');
+  await trainer.click();
+  await expect(page.getByRole('heading',{level:1})).toHaveText('Carry selected behavior into inference');
+  const phone=test.info().project.name==='phone';
+  if(phone)await page.locator('.mobile-nav summary').click();
+  const navigation=page.locator(phone?'.mobile-nav':'.chapter-nav');
+  await expect(navigation.getByRole('link',{name:'Log',exact:true})).toHaveAttribute('href','/limen/reference/log/');
+  await expect(navigation.getByRole('link',{name:'Trainer and Sensor',exact:true})).toHaveAttribute('aria-current','page');
 });
 
 test('color preferences preserve the fixed composition',async({page})=>{
@@ -205,7 +254,7 @@ test('without JavaScript both interfaces and proof links remain readable',async(
   const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
   await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
   if(test.info().project.name==='phone'){await page.locator('.mobile-nav summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
-  const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Trainer');await context.close();
+  const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
 });
 
 test('a place within code survives reload and non-wheel scrolling',async({page})=>{

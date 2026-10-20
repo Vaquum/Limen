@@ -2,6 +2,8 @@
 
 This page is the repo-local contract for what may publish Limen, what a release must carry, and what may never happen twice. [Making a Release](Making-Release.md) describes the operational sequence; this page defines the controls that sequence runs under.
 
+The [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md) distinguish their latest merged source commit from current released-package validation. Publication must preserve both identities rather than treating a tag or package lookup as execution proof.
+
 ## Prerequisites
 
 - the operational release sequence in [Making a Release](Making-Release.md)
@@ -17,7 +19,7 @@ The publish path is gated as strongly as the merge path. Every control is mechan
 
 | Control | Mechanism |
 | --- | --- |
-| merge to `main` | required status checks on the `Protect-Main` ruleset, including the `pr_checks_supply` dependency vulnerability gate |
+| merge to `main` | required status checks on the `Protect-Main` ruleset, including dependency vulnerability checking inside `pr_checks_lint` |
 | tag creation | a `v*` tag ruleset restricts creating, updating, and deleting release tags to the GitHub Actions integration; no user account can tag a release |
 | tag shape | `scripts/create_release.py` computes the tag from `pyproject.toml` and validates it against `TAG_RE`; `pr_publish_pypi.yml` re-validates the resolved tag and cross-checks it against the built version |
 | PyPI upload | trusted publishing (OIDC) only, from the `publish_to_pypi` job running in the `pypi` GitHub environment; the PyPI trusted-publisher configuration names that environment |
@@ -44,11 +46,11 @@ Assets attach only after the PyPI publish succeeds, so a release with assets is 
 
 Any consumer can verify that a distribution is exactly what CI built from this repository:
 
-```bash
-gh attestation verify vaquum_limen-*.whl --repo Vaquum/Limen
-gh attestation verify vaquum_limen-*.whl --repo Vaquum/Limen --bundle provenance.intoto.jsonl
-sha256sum vaquum_limen-*.whl
-```
+| Step | Command |
+|---|---|
+| 1 | `gh attestation verify vaquum_limen-*.whl --repo Vaquum/Limen` |
+| 2 | `gh attestation verify vaquum_limen-*.whl --repo Vaquum/Limen --bundle provenance.intoto.jsonl` |
+| 3 | `sha256sum vaquum_limen-*.whl` |
 
 The first command checks the artifact against the attestation the GitHub API serves. The second performs the same check offline against the downloaded `provenance.intoto.jsonl` release asset. The third must reproduce the digest recorded in the release body's `Artifact SHA-256` block. PyPI serves the same files with PEP 740 attestations through its integrity API.
 
@@ -56,7 +58,7 @@ Recovery from a partial release is asymmetric: when the PyPI publish succeeded b
 
 ## Dependency vulnerability gate
 
-`pr_checks_supply` runs `governance/check_dependency_vulnerabilities.py`: pip-audit over `[project.dependencies]`. A finding blocks merge unless `.github/vuln_exceptions.json` carries an entry with `id`, `reason`, and `expiry`; an expired exception fails again. Dependabot (pip and github-actions ecosystems, weekly) proposes the upgrades that keep the gate green.
+`pr_checks_lint` runs `governance/check_dependency_vulnerabilities.py`: pip-audit over `[project.dependencies]`. A finding blocks merge unless `.github/vuln_exceptions.json` carries an entry with `id`, `reason`, and `expiry`; an expired exception fails again. Dependabot (pip and github-actions ecosystems, weekly) proposes the upgrades that keep the gate green.
 
 ## Workflow hardening invariants
 
