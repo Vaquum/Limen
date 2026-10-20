@@ -123,17 +123,25 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
-        if (event == 'call' and (frame.f_globals.get('__name__'), frame.f_code.co_name) in (('threading', 'start'), ('concurrent.futures.thread', 'submit'))) or (event == 'c_call' and getattr(arg, '__module__', None) == '_thread' and getattr(arg, '__name__', None) == 'start_new_thread'):
-            violation = 'Holdout inference attempted thread dispatch'
-            raise ValueError(violation)
-        if event == 'c_call' and entropy_call(arg):
-            violation = 'Holdout inference consumed unowned randomness'
-            raise ValueError(violation)
-        fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
-        matched = event == 'call' and id(frame.f_code) in observed and any(_matches(observed[id(frame.f_code)][0], frame, owner, instance, index) for owner, instance, index in observed[id(frame.f_code)][1])
-        if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
-            violation = 'Holdout inference attempted fitting/calibration/threshold search'
-            raise ValueError(violation)
+        if event == 'call':
+            module, code = frame.f_globals.get('__name__', ''), frame.f_code
+            if (module, code.co_name) in (('threading', 'start'), ('concurrent.futures.thread', 'submit')):
+                violation = 'Holdout inference attempted thread dispatch'
+                raise ValueError(violation)
+            fixed_labels = module == 'sklearn.preprocessing._label' and code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
+            entry = observed.get(id(code))
+            matched = entry is not None and any(_matches(entry[0], frame, owner, instance, index) for owner, instance, index in entry[1])
+            if not fixed_labels and (matched or fitting_call(str(module), getattr(code, 'co_qualname', code.co_name))):
+                violation = 'Holdout inference attempted fitting/calibration/threshold search'
+                raise ValueError(violation)
+        elif event == 'c_call':
+            name = getattr(arg, '__name__', None)
+            if name == 'start_new_thread' and getattr(arg, '__module__', None) == '_thread':
+                violation = 'Holdout inference attempted thread dispatch'
+                raise ValueError(violation)
+            if name in ('urandom', 'getrandom') and entropy_call(arg):
+                violation = 'Holdout inference consumed unowned randomness'
+                raise ValueError(violation)
         if callable(previous):
             _ = previous(frame, event, arg)
 
