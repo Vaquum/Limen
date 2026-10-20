@@ -278,7 +278,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
                     for j, cls in enumerate(classes):
                         result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config) if cls is selected else {}
         if manifest.data_dict_extension is not None:
-            result['data_dict_extension'] = {'round_params': dict(params)}
+            result['data_dict_extension'] = _defaults(manifest.data_dict_extension, {'round_params': dict(params)}, skip=0, runtime=('data_dict', 'split_data', 'fitted_params'))
         if manifest.ablation_config is not None:
             seed = params.get(manifest.ablation_config.seed_key)
             result['ablation'] = {'random_state': 0 if seed is None else seed}

@@ -130,6 +130,23 @@ def _other_auxiliary_factory(*, window=3):
     return CallerRolling(window)
 
 
+@dataclass
+class CallerExtension:
+    random_state: int = 42
+
+    def __call__(self, *, data_dict, split_data, round_params, fitted_params):
+        return data_dict | {'caller_close': split_data[0]['close'].to_list(),
+                            'caller_seed': self.random_state, 'caller_round_params': round_params}
+
+
+def _extension_probe(plan, params):
+    from tests.test_parallel_rounds import recorded_source
+    from limen.experiment._parallel_plan import clone_manifest
+    validate_resources(plan, params)
+    result = clone_manifest(plan.manifest).prepare_data(recorded_source(), params)
+    return {key: result[key] for key in ('caller_close', 'caller_seed', 'caller_round_params')}, os.getpid()
+
+
 class CallerTarget(RandomBinaryTarget):
     '''Importable caller target using the native seeded noise benchmark.'''
 
@@ -250,6 +267,22 @@ def test_frozen_manifest_round_plan() -> None:
         frozen = freeze_manifest(target, None)
         params = _parameters() | {'target_seed': 42}
         assert pool.submit(_target_probe, frozen, params).result(timeout=30) == _target_probe(frozen, params)
+        extension = CallerExtension()
+        declare_parallel(extension, ParallelRoundContract(seeded_stage, ('random_state',)))
+        extended = copy.deepcopy(target).add_to_data_dict(extension)
+        frozen = freeze_manifest(extended, None)
+        validate_domain(frozen, {key: [value] for key, value in params.items()}, None)
+        actual, pid = pool.submit(_extension_probe, frozen, params).result(timeout=30)
+        expected, _ = _extension_probe(frozen, params)
+        assert actual == expected and actual['caller_seed'] == 42 and actual['caller_close'] and pid != os.getpid()
+        invalid = copy.deepcopy(extended)
+        invalid.data_dict_extension.random_state = None
+        rejected = freeze_manifest(invalid, None)
+        assert rejected.pipeline_digest != frozen.pipeline_digest and rejected.resource_digest != frozen.resource_digest
+        for validate, arguments in ((validate_resources, (rejected, params)),
+                                    (validate_domain, (rejected, {key: [value] for key, value in params.items()}, None))):
+            with pytest.raises(ValueError, match='data_dict_extension: fixed integer seed'):
+                validate(*arguments)
     original.split_config = (2, 1, 1)
     assert plan.manifest.split_config != original.split_config
     with pytest.raises(ValueError, match='unchanged compiled YAML'):
