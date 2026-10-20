@@ -1791,8 +1791,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     for native_base, field in ((staticmethod, '__func__'), (classmethod, '__func__'), (property, 'fget')):
         class DirectDescriptor(native_base):
             __call__ = staticmethod(max)
-            def __deepcopy__(self, memo):
-                return type(self)(native_base.__dict__[field].__get__(self, type(self)))
+            def __deepcopy__(self, memo, descriptor=native_base.__dict__[field]):
+                return type(self)(descriptor.__get__(self, type(self)))
         unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = DirectDescriptor(identity_probabilities)
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
