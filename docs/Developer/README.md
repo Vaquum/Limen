@@ -77,7 +77,11 @@ python scripts/package_audit.py
 ruff check .
 ```
 
-`python -m tests.run` delegates to pytest collection and adds the CI runtime profile artifact. It is not a separate curated test list.
+`python -m tests.run` delegates to complete pytest collection in two separate worker processes, groups each file on one worker, and disables automatic worker restart. All explicit arguments pass through unchanged: a file path alone retains pytest's serial selection, `-n 0 tests` selects the complete serial suite, and explicit worker counts or distribution modes remain caller-owned.
+
+The existing `python -m coverage run -m tests.run` command starts real coverage collectors before worker collection and merges their databases after workers terminate. Python 3.12 CI with `LIMEN_COVERAGE_RUN=1 COVERAGE_CORE=sysmon` requires actual SysMonitor collectors. The profile retains native collection and execution counts, worker PIDs, backend names, database and executed-line digests, and combination time. Default file distribution requires exactly one completion per collected case; explicit `--dist each` retains each worker's execution separately. Failed or interrupted runs retain their nonzero result and partial profile.
+
+Covered idle workers and workers executing only data-independent test utilities can have genuine empty package coverage. Their databases and receipts are still required. A temporary `no-data-collected` option is confined to each collector's empty-data save or merge boundary and restored immediately; project warning policy remains unchanged. The complete proof still requires the existing 240-second runtime ceiling and 92-percent coverage floor. An individual timing establishes that run's result, without a future-runtime guarantee.
 
 Docs-site validation:
 
