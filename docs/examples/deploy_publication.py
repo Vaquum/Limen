@@ -24,9 +24,16 @@ def cloudflare(path: str):
 
 
 def require_disconnected_builds() -> None:
-    worker = cloudflare('/workers/services/limen')
-    tag = worker['default_environment']['script']['tag']
-    if cloudflare('/builds/workers/' + tag + '/triggers'):
+    workers = cloudflare('/workers/scripts')
+    if not isinstance(workers, list):
+        raise ValueError('Cloudflare returned no complete Worker inventory')
+    selected = [worker for worker in workers if worker['id'] == 'limen']
+    if len(selected) != 1 or not selected[0]['tag']:
+        raise ValueError('Cloudflare returned no unique Limen Worker identity')
+    triggers = cloudflare('/builds/workers/' + selected[0]['tag'] + '/triggers')
+    if not isinstance(triggers, list):
+        raise ValueError('Cloudflare returned no complete build-trigger inventory')
+    if triggers:
         raise ValueError('Disconnect independent Cloudflare Git builds before activating release-bound documentation')
 
 

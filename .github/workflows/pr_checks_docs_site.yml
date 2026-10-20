@@ -92,17 +92,6 @@ jobs:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
         run: npm run check:reader -- --evidence ../.docs-evidence/current.json --head "$LIMEN_EXPECTED_HEAD" --tested "$(git rev-parse HEAD)" --tree "$(git rev-parse HEAD^{tree})"
 
-      - name: Retain research and browser evidence
-        if: ${{ always() && hashFiles('.docs-evidence/**') != '' }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: research-book-evidence
-          include-hidden-files: true
-          if-no-files-found: error
-          path: |
-            .docs-evidence/
-            !.docs-evidence/wheelhouse/**
-
       - name: Set up the isolated deployment toolchain runtime
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -116,3 +105,14 @@ jobs:
           npm ci
           npm run security:audit
           npm run check:config
+
+      - name: Retain research and browser evidence
+        if: ${{ always() && hashFiles('.docs-evidence/**') != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: research-book-evidence
+          include-hidden-files: true
+          if-no-files-found: error
+          path: |
+            .docs-evidence/
+            !.docs-evidence/wheelhouse/**

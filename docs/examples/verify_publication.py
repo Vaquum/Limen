@@ -156,7 +156,7 @@ def verify(base_url: str, release: str):
             raise ValueError('Publication advertises unmerged source')
         if source['region'] == '__file__' and sha256(site['source/' + relative_path(source['path'])]) != source['sha256']:
             raise ValueError('Publication source file differs from its evidence')
-    verify_site(base_url, site)
+    verify_site(base_url, rollback)
     return {'release': release, 'merged_commit': commit, 'artifacts': len(files), 'source_records': len(record['sources'])}
 
 
