@@ -106,7 +106,15 @@
     "README.md",
     "docs/Log.md",
     "docs/Benchmark.md",
-    "docs/Universal-Experiment-Loop.md"
+    "docs/Universal-Experiment-Loop.md",
+    "docs/Backtest.md",
+    "docs/Developer/README.md",
+    "docs/Developer/Packaging.md",
+    "docs/Developer/Making-Release.md",
+    "docs/Developer/Release-Policy.md",
+    "docs/Developer/Security-Assurance-Case.md",
+    "docs/Developer/Writing-Docstrings.md",
+    "docs/Developer/Contributing-Foundational-SFDs.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2658,6 +2666,39 @@
       "compiled/search",
       "python/recovery",
       "compiled/recovery"
+    ],
+    "docs/Backtest.md": [
+      "python/execution",
+      "compiled/execution",
+      "python/observed_costs",
+      "compiled/allocation"
+    ],
+    "docs/Developer/README.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Packaging.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Making-Release.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Release-Policy.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Security-Assurance-Case.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Writing-Docstrings.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Contributing-Foundational-SFDs.md": [
+      "compiled/selection"
     ]
   }
 }

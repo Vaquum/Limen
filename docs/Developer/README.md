@@ -2,6 +2,8 @@
 
 This page routes Limen contribution work to the matching maintenance path before code, docs, or release metadata changes.
 
+Follow changes through the [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md). They carry the shared source, documentation and execution contract; update the affected case with the behavior it explains.
+
 For cross-product Vaquum process and organization-wide norms, see the external [Vaquum Developer Docs](https://dev-docs.vaquum.fi/#/). Limen release and versioning contracts live in this repository.
 
 ## Prerequisites
@@ -15,7 +17,7 @@ Before opening or updating a Limen PR:
 
 - read the relevant Limen page for the task
 - check the repo PR template and satisfy every applicable item
-- update docs, changelog, tests, and version metadata when the change requires it
+- update the affected project source, docs and tests together; bump the version and changelog on every PR
 
 ## Route by task
 
@@ -46,7 +48,7 @@ For research behavior changes:
 5. Declare Compiled Research search spaces through Manifest/YAML params; preserve caller-owned parameter and search choices in Python Research.
 6. Run compiled experiments through CLI/Manifest, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
 7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
-8. Make code, docs, tests, changelog, and version changes together when they belong together.
+8. Make affected code, canonical examples, docs and tests change together. Every PR also updates changelog and version metadata.
 9. Review the full GitHub diff before requesting review.
 10. Confirm the PR template items are true, not just checked.
 
@@ -54,28 +56,28 @@ Complete single-interface delivery may ship while another interface remains unav
 
 Material contract edits require renewed semantic review of the current head and declaration. Static proof references do not establish passing execution or methodological completeness. Manual parent closure has no automatic evidence guard and must not bypass review. If a corrected PR remains blocked by a stale API-posted sweep verdict, run the existing sweep from the trusted default branch:
 
-```bash
-gh workflow run pr_checks_slice_sweep.yml --ref main
-```
+| Step | Command |
+|---|---|
+| 1 | `gh workflow run pr_checks_slice_sweep.yml --ref main` |
 
 Canonical bootstrap:
 
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
-```
+| Step | Command |
+|---|---|
+| 1 | `python3 -m venv .venv` |
+| 2 | `source .venv/bin/activate` |
+| 3 | `python -m pip install --upgrade pip` |
+| 4 | `python -m pip install -e ".[dev]"` |
 
-Canonical validation paths:
+Package validation commands (run from the repository root; the exact required planes are listed in [CLAUDE.md](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#the-laws)):
 
-```bash
-python -m pytest
-python -m tests.run
-python -m build
-python scripts/package_audit.py
-ruff check .
-```
+| Step | Command |
+|---|---|
+| 1 | `python -m pytest` |
+| 2 | `python -m tests.run` |
+| 3 | `python -m build` |
+| 4 | `python scripts/package_audit.py` |
+| 5 | `ruff check limen governance tests` |
 
 `python -m tests.run` delegates to complete pytest collection in two separate worker processes, groups each file on one worker, and disables automatic worker restart. All explicit arguments pass through unchanged: a file path alone retains pytest's serial selection, `-n 0 tests` selects the complete serial suite, and explicit worker counts or distribution modes remain caller-owned.
 
@@ -83,13 +85,12 @@ The existing `python -m coverage run -m tests.run` command starts real coverage 
 
 Covered idle workers and workers executing only data-independent test utilities can have genuine empty package coverage. Their databases and receipts are still required. A temporary `no-data-collected` option is confined to each collector's empty-data save or merge boundary and restored immediately; project warning policy remains unchanged. The complete proof still requires the existing 240-second runtime ceiling and 92-percent coverage floor. An individual timing establishes that run's result, without a future-runtime guarantee.
 
-Docs-site validation:
+Docs-site validation also needs the successful same-head Python research evidence produced by the [documentation workflow](https://github.com/Vaquum/Limen/blob/main/.github/workflows/pr_checks_docs_site.yml). Its offline wheel preparation, source-provenance acquisition and project proof precede the reader build; `npm run check` alone does not replace that proof. From `docs-site/`:
 
-```bash
-cd docs-site
-npm ci
-npm run check
-```
+| Step | Command |
+|---|---|
+| 1 | `npm ci` |
+| 2 | `npm run check` |
 
 Limen does not define a tox, nox, or Makefile contract; these direct commands are the authoritative local workflow.
 
