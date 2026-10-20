@@ -1854,3 +1854,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Reduce repeated Markdown parser starts and immutable Git-history queries while retaining current source, provenance and execution checks.
 - Retain every npm audit response and bound retries for temporary registry gateway failures; preserve fatal advisory, authentication and malformed-report handling.
 - Reject package supersession at the activation boundary and restore the predecessor when a release changes during deployment or production verification.
+
+## [5.45.9] - 2026-10-20
+
+- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit behavior-identical subclasses by effective member identity.
