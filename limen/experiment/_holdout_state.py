@@ -59,12 +59,14 @@ def object_payload(value: object) -> TypeGuard[npt.NDArray[np.generic] | np.gene
     return isinstance(value, (np.ndarray, np.generic)) and cast(np.dtype[np.generic], native_attribute(cast(object, value), 'dtype', np.ndarray if isinstance(value, np.ndarray) else np.generic)).hasobject
 
 
+def _cell_parts(value: CellType) -> tuple[object, ...]:
+    try:
+        return (True, value.cell_contents)
+    except ValueError:
+        return (False,)
+
+
 def children(value: object) -> tuple[object, ...]:
-    if type(value) is CellType:
-        try:
-            return (True, value.cell_contents)
-        except ValueError:
-            return (False,)
     if isinstance(value, Mapping):
         entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
         return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
@@ -88,7 +90,7 @@ def children(value: object) -> tuple[object, ...]:
         return (*parts, _attributes(cast(object, value)))
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
-    return tuple(_attributes(value).values())
+    return _cell_parts(value) if type(value) is CellType else tuple(_attributes(value).values())
 
 def _attributes(value: object) -> dict[str, object]:
     if type(value) in _FORM_TYPES:
