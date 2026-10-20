@@ -128,7 +128,8 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
         for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3)):
-            declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
+            imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
+            declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',), imports))
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
             assert digest(decode(encode(frozen))) == digest(frozen)
@@ -244,6 +245,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     params = _parameters()
     validate_resources(plan, params)
     validate_domain(plan, {key: [value] for key, value in params.items()}, None)
+    _assert_resource_projection(plan, params)
     class_weights = {0: 1, 1: 2}
     assert decode(encode(class_weights)) == class_weights
     validate_resources(plan, params | {'class_weight': class_weights})
@@ -346,6 +348,26 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     _assert_recovery_faults(configuration, directory, tmp_path)
     _assert_legacy_recovery(configuration, directory, tmp_path)
     _assert_native_output_forms()
+
+
+def _assert_resource_projection(plan, params):
+    from limen.experiment import _parallel_resources as resources
+    original = vars(resources)['_validate_stage']
+    calls = 0
+    def counted(*args):
+        nonlocal calls
+        calls += 1
+        assert calls <= 500, 'unrelated grid axes multiplied resource validation'
+        return original(*args)
+    domain = {key: [value] for key, value in params.items()}
+    domain.update({f'unconsumed_{index}': list(range(10)) for index in range(10)})
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(resources, '_validate_stage', counted)
+        validate_domain(plan, domain, None)
+    conditional = copy.deepcopy(plan.manifest).add_feature(_caller_feature, include_if='optional', window='{candidate_window}')
+    domain = {key: [value] for key, value in params.items()} | {'optional': [False, True], 'candidate_window': [2, 0]}
+    with pytest.raises(ValueError, match=r'feature_transforms.*positive integer window'):
+        validate_domain(freeze_manifest(conditional, None), domain, None)
 
 
 def _assert_dispatch_refusal(plan, seeded, params):

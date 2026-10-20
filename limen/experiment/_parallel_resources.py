@@ -2,13 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from itertools import product
+from inspect import signature
 from string import Formatter
 
-from limen.experiment.manifest_core import DataSourceConfig
+from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
 from limen.experiment._parallel_encoding import encode
-from limen.experiment._parallel_plan import FrozenManifestPlan, configurations
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, configurations
 
 
 def deterministic_stage(params: Mapping[str, object]) -> None:
@@ -64,18 +65,77 @@ def unfrozen_stage(_params: Mapping[str, object]) -> None:
 def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -> None:
     configs = configurations(plan.manifest, params)
     for stage in plan.stages:
-        if stage.path not in configs:
-            continue  # The native Manifest skips this conditional stage for this candidate.
-        if stage.path.startswith('architecture.') and configs['architecture'].get(stage.path.split('.', 1)[1]) is not stage.component:
-            raise ValueError(f'Parallel stage {stage.path}: frozen independence contract differs')
-        config = configs[stage.path]
-        for key in stage.contract.parameter_keys:
-            if key not in config:
-                raise ValueError(f'Parallel stage {stage.path}: unresolved parameter {key}')
-        try:
-            stage.contract.validate(config)
-        except (ValueError, TypeError) as exc:
-            raise ValueError(f'Parallel stage {stage.path}: {exc}') from exc
+        _validate_stage(stage, configs)
+
+
+def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]) -> None:
+    if stage.path not in configs:
+        return  # The native Manifest skips this conditional stage for this candidate.
+    if stage.path.startswith('architecture.') and configs['architecture'].get(stage.path.split('.', 1)[1]) is not stage.component:
+        raise ValueError(f'Parallel stage {stage.path}: frozen independence contract differs')
+    config = configs[stage.path]
+    for key in stage.contract.parameter_keys:
+        if key not in config:
+            raise ValueError(f'Parallel stage {stage.path}: unresolved parameter {key}')
+    try:
+        stage.contract.validate(config)
+    except (ValueError, TypeError) as exc:
+        raise ValueError(f'Parallel stage {stage.path}: {exc}') from exc
+
+
+def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
+    if isinstance(value, str):
+        result = {value} if value in domain else set()
+        if '{' in value and '}' in value:
+            for _, field, spec, _ in Formatter().parse(value):
+                if field is not None:
+                    result.add(field.split('.', 1)[0].split('[', 1)[0])
+                result.update(_references(spec, domain))
+        return result.intersection(domain)
+    if isinstance(value, Mapping):
+        return set().union(*(_references(item, domain) for item in cast(Mapping[object, object], value).values()))
+    if isinstance(value, (tuple, list)):
+        return set().union(*(_references(item, domain) for item in cast(tuple[object, ...] | list[object], value)))
+    return set()
+
+
+def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]]) -> tuple[dict[str, object], tuple[str, ...]]:
+    if path == 'architecture':
+        return dict.fromkeys(domain, None), ()
+    if path.startswith('architecture.'):
+        factory = path.split('.', 1)[1]
+        key = factory.removesuffix('_factory') + '_params'
+        function = manifest.architecture_function
+        assert function is not None
+        parameter = signature(function).parameters.get(key)
+        default = None if parameter is None else parameter.default
+        variants = [value for value in domain.get(key, [default]) if isinstance(value, dict)]
+        names = {name for value in variants for name in cast(dict[str, object], value)}
+        return {name: [cast(dict[str, object], value).get(name) for value in variants] for name in names} | {'seed': 'seed'}, (key, factory)
+    if path.startswith('feature_transforms.'):
+        entry = manifest.feature_transforms[int(path.split('.')[1])]
+        return dict(entry.params), tuple(key for key in (entry.include_if, 'feature_groups' if entry.group is not None else None) if key is not None)
+    if path.startswith('target') and manifest.target_class_config is not None:
+        target = manifest.target_class_config
+        return dict(target.fit_params) | {'transform_params': target.transform_params}, ()
+    if path in ('pre_split_data_selector', 'bar_formation'):
+        step = getattr(manifest, path)
+        return dict(step[1]), ('bar_type',) if path == 'bar_formation' else ()
+    if isinstance(manifest, MLManifest):
+        if path.startswith('scaler.') and manifest.scaler is not None:
+            if path == 'scaler.transform':
+                return dict(manifest.scaler[2]), ()
+            _, function, arguments = manifest.scaler[0][int(path.split('.')[2])]
+            if isinstance(function, ScalerFactory):
+                return function.static_params | dict(arguments), (function.dynamic_selector,) if function.dynamic_selector is not None else ()
+            return dict(arguments), ()
+        if path in ('calibration', 'threshold') and manifest.prediction_calibration_config is not None:
+            return dict(getattr(manifest.prediction_calibration_config, f'{path}_params')), ('use_calibration', 'use_threshold')
+        if path == 'ablation' and manifest.ablation_config is not None:
+            return {'random_state': manifest.ablation_config.seed_key}, ()
+        if path in ('data_dict_extension', 'feature_shims'):
+            return {'round_params': {key: key for key in domain}}, ()
+    return {}, ()
 
 
 def backend_imports(plan: FrozenManifestPlan) -> tuple[str, ...]:
@@ -110,5 +170,16 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
             if not isinstance(source, DataSourceConfig):
                 raise ValueError('Parallel rounds require reconstructable declared sources')
             _static_source(source.params, effective)
-    for candidate in product(*effective.values()):
-        validate_resources(plan, dict(zip(effective, candidate, strict=True)))
+    baseline = {key: values[0] for key, values in effective.items()}
+    baseline_configs = configurations(plan.manifest, baseline)
+    for stage in plan.stages:
+        keys = stage.contract.parameter_keys if stage.contract.validation_keys is None else stage.contract.validation_keys
+        arguments, selectors = _bindings(plan.manifest, stage.path, effective)
+        inputs = set(keys) | set(stage.contract.parameter_keys)
+        dependencies = inputs | set(selectors)
+        for key in inputs:
+            dependencies.update(_references(arguments.get(key), effective))
+        projected = {key: values for key, values in effective.items() if key in dependencies}
+        for index, values in enumerate(product(*projected.values())):
+            candidate = baseline | dict(zip(projected, values, strict=True))
+            _validate_stage(stage, baseline_configs if index == 0 else configurations(plan.manifest, candidate))
