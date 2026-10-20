@@ -13,6 +13,17 @@ _COMPOSITES = frozenset(('list', 'tuple', 'map', 'keyed_map', 'state_map', 'func
 _VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
 
 
+def mutable_function(function: FunctionType, active: frozenset[int] = frozenset()) -> bool:
+    if id(function) in active:
+        return True
+    active |= {id(function)}
+    def mutable(value: object) -> bool:
+        if isinstance(value, FunctionType):
+            return mutable_function(value, active)
+        return any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not isinstance(value, (type(None), str, bool, int, float, date, Path, type))
+    return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
+
+
 def _value_only(value: object, *, functions: bool = True) -> bool:
     if isinstance(value, tuple):
         return all(_value_only(item, functions=False) for item in cast(tuple[object, ...], value))

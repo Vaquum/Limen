@@ -19,8 +19,8 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_graph import decode_graph, encode_graph
-from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
+from limen.experiment._parallel_graph import decode_graph, encode_graph, mutable_function
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, object_state, restore_function_metadata, restore_object
 
 VERSION = 1
 

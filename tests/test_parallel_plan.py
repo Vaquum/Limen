@@ -453,6 +453,7 @@ def test_frozen_manifest_round_plan() -> None:
     plan = freeze_manifest(original, config)
     assert plan.manifest.architecture_function is not original.architecture_function
     assert clone_manifest(plan.manifest).architecture_function is original.architecture_function
+    assert clone_manifest(plan.manifest).prediction_calibration_config.threshold_func is original.prediction_calibration_config.threshold_func
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
     assert len(pickle.dumps(plan)) <= 65536
     from limen.experiment import _parallel_identity as identities
