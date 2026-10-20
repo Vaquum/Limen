@@ -224,7 +224,7 @@ def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1,
     for i, (key, value) in enumerate(signature.parameters.items()):
         if i < skip or value.kind in (inspect.Parameter.VAR_KEYWORD, inspect.Parameter.VAR_POSITIONAL) or key in runtime:
             continue
-        if key not in result:
+        if key not in params:
             if value.default is inspect.Parameter.empty:
                 raise ValueError(f'Parallel stage {path}: unresolved parameter {key}')
             result[key] = value.default

@@ -7,6 +7,7 @@ import copy
 import os
 import gzip
 import shutil
+import random
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from dataclasses import dataclass, fields, is_dataclass
@@ -79,6 +80,19 @@ class NormalizedRolling(CallerRollingBase):
 
     def __post_init__(self):
         self.window += 1
+
+
+@dataclass
+class ShadowedSeedRolling:
+    random_state: int | None = 42
+
+    def __call__(self, data, random_state=None):
+        return _caller_feature(data, window=random.Random(random_state).randint(1, 3))
+
+
+class SignatureSeedRolling(ShadowedSeedRolling):
+    def __call__(self, data, random_state=42):
+        return super().__call__(data, random_state)
 
 
 class CallerPartial(partial):
@@ -163,8 +177,8 @@ def _carried_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     data = recorded_source().head(24).select('close')
     from limen.experiment._parallel_plan import clone_manifest
-    component = clone_manifest(plan.manifest).feature_transforms[-1].func
-    return component(data)['caller_mean'].to_list(), os.getpid()
+    entry = clone_manifest(plan.manifest).feature_transforms[-1]
+    return entry.func(data, **entry.params)['caller_mean'].to_list(), os.getpid()
 
 
 def _frozen_probe(plan, params):
@@ -267,6 +281,27 @@ def test_frozen_manifest_round_plan() -> None:
         frozen = freeze_manifest(target, None)
         params = _parameters() | {'target_seed': 42}
         assert pool.submit(_target_probe, frozen, params).result(timeout=30) == _target_probe(frozen, params)
+        shadowed = ShadowedSeedRolling()
+        signature = SignatureSeedRolling(None)
+        for component in (shadowed, signature):
+            declare_parallel(component, ParallelRoundContract(seeded_stage, ('random_state',)))
+        unsafe = copy.deepcopy(plan.manifest).add_feature(shadowed)
+        rejected = freeze_manifest(unsafe, None)
+        with pytest.raises(ValueError, match='feature_transforms.*fixed integer seed'):
+            validate_resources(rejected, params)
+        with pytest.raises(ValueError, match='feature_transforms.*fixed integer seed'):
+            validate_domain(rejected, {key: [value] for key, value in params.items()}, None)
+        for component, arguments in ((shadowed, {'random_state': 42}), (signature, {})):
+            seeded = copy.deepcopy(plan.manifest).add_feature(component, **arguments)
+            frozen = freeze_manifest(seeded, None)
+            validate_domain(frozen, {key: [value] for key, value in params.items()}, None)
+            actual, pid = pool.submit(_carried_probe, frozen, params).result(timeout=30)
+            expected, _ = _carried_probe(frozen, params)
+            assert actual == expected and pid != os.getpid()
+        aliased = copy.deepcopy(plan.manifest).add_feature(shadowed, random_state='{caller_seed}')
+        with pytest.raises(ValueError, match='feature_transforms.*fixed integer seed'):
+            validate_domain(freeze_manifest(aliased, None),
+                            {key: [value] for key, value in params.items()} | {'caller_seed': [42, None]}, None)
         extension = CallerExtension()
         declare_parallel(extension, ParallelRoundContract(seeded_stage, ('random_state',)))
         extended = copy.deepcopy(target).add_to_data_dict(extension)
