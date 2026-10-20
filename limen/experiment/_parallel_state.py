@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
-from inspect import ismethod, signature
+from inspect import Parameter, ismethod, signature
 from types import FunctionType, MemberDescriptorType
 from typing import cast
 
@@ -33,8 +33,9 @@ def component_state(value: object) -> dict[str, object]:
         bound = object_state(value)[2]
         assert bound is not None
         state |= component_state(bound[0])
-        state |= cast(dict[str, object], signature(cast(Callable[..., object], bound[0])).bind_partial(
-            *cast(tuple[object, ...], bound[1]), **cast(dict[str, object], bound[2] or {})).arguments)
+        binding = signature(cast(Callable[..., object], bound[0])).bind_partial(
+            *cast(tuple[object, ...], bound[1]), **cast(dict[str, object], bound[2] or {}))
+        state |= {name: item for name, item in cast(dict[str, object], binding.arguments).items() if binding.signature.parameters[name].kind != Parameter.VAR_KEYWORD} | binding.kwargs
     native = native_state(value)
     return state | ({'__parallel_native_state__': native} if native is not None else {})
 

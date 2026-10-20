@@ -60,6 +60,10 @@ def _wrapped_feature(data, window=2):
     return _caller_feature(data, window)
 
 
+def _kwargs_feature(data, **kwargs):
+    return _caller_feature(data, kwargs.get('window', 2))
+
+
 def _keyword_feature(data, *, window=2):
     return _caller_feature(data, window)
 
@@ -125,6 +129,18 @@ class ShadowedSeedRolling:
 
     def __call__(self, data, random_state=None):
         return _caller_feature(data, window=random.Random(random_state).randint(1, 3))
+
+
+def _closed_implementation(windows):
+    def implementation(self, data):
+        windows[0] += 1
+        return _caller_feature(data, windows[0])
+    implementation.__qualname__ = 'ClosureRolling.__call__'
+    return implementation
+
+
+class ClosureRolling:
+    __call__ = _closed_implementation([2])
 
 
 class SignatureSeedRolling(ShadowedSeedRolling):
@@ -377,7 +393,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (_wrapped_feature, partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
+        for component in (_wrapped_feature, partial(_kwargs_feature, n_jobs=1, window=3), partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             if isinstance(component, (DictRolling, ListRolling)):
@@ -464,6 +480,19 @@ def test_frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _repeated_carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid() and digest(frozen) == before
+        component = ClosureRolling()
+        declare_parallel(component, ParallelRoundContract(deterministic_stage))
+        frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+        actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+        expected, _ = _repeated_carried_probe(frozen, _parameters())
+        assert actual == expected and pid != os.getpid()
+        component = partial(_kwargs_feature, n_jobs=2)
+        declare_parallel(component, ParallelRoundContract(deterministic_stage))
+        frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+        with pytest.raises(ValueError, match='effective n_jobs=1 required'):
+            validate_resources(frozen, _parameters())
+        with pytest.raises(ValueError, match='effective n_jobs=1 required'):
+            validate_domain(frozen, {key: [value] for key, value in _parameters().items()}, None)
         component = CallerRolling(3)
         declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
         vars(component)['cached_result'] = []
