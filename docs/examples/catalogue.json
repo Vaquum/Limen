@@ -118,7 +118,10 @@
     "docs/Developer/Pruning-Strategies.md",
     "docs/Developer/Documentation-System.md",
     "docs/Developer/Indicator-Performance.md",
-    "docs/Backtest-Benchmarks.md"
+    "docs/Backtest-Benchmarks.md",
+    "docs/Fractional-Differentiation.md",
+    "docs/Triple-Barrier-Method.md",
+    "docs/Perturbation-Strategies.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2727,6 +2730,18 @@
     "docs/Backtest-Benchmarks.md": [
       "python/execution",
       "compiled/execution"
+    ],
+    "docs/Fractional-Differentiation.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Triple-Barrier-Method.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Perturbation-Strategies.md": [
+      "python/search",
+      "compiled/search"
     ]
   }
 }
