@@ -27,10 +27,11 @@ def call_codes(functions: Sequence[FunctionType]) -> Iterator[None]:
 class _ConstructorEntry(NamedTuple):
     target: object
     instance: bool
-    index: int
+    position: int
 
 
-def constructor_entry(value: type[object], active: frozenset[int] = frozenset()) -> _ConstructorEntry:
+def constructor_entry(value: type[object], active: frozenset[int] | None = None) -> _ConstructorEntry:
+    active = frozenset() if active is None else active
     if id(value) in active:
         return _ConstructorEntry(None, False, 0)
     active = active | {id(value)}
@@ -45,34 +46,39 @@ def constructor_entry(value: type[object], active: frozenset[int] = frozenset())
     return _ConstructorEntry(initializer if supported else None, not isinstance(initializer, classmethod), 0)
 
 
+def _class_offset(value: type[object], active: frozenset[int]) -> int | None:
+    call = inspect.getattr_static(type(value), '__call__', None)
+    if call is type.__call__:
+        entry = constructor_entry(value, active)
+        return entry.position + 1 if entry.target is not None else None
+    offset = _call_offset(call, active | {id(value)})
+    return None if offset is None else offset + int(inspect.isfunction(call))
+
+
+def _descriptor_offset(descriptor: 'staticmethod[..., object] | classmethod[object, ..., object]', active: frozenset[int]) -> int | None:
+    native: type[object] = staticmethod if isinstance(descriptor, staticmethod) else classmethod
+    if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
+        return None
+    offset = _call_offset(descriptor.__func__, active)
+    return None if offset is None else offset + int(isinstance(descriptor, classmethod))
+
+
 def _call_offset(value: object, active: frozenset[int]) -> int | None:
     if id(value) in active:
         return None
     if isinstance(value, type):
-        call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-        if call is type.__call__:
-            entry = constructor_entry(cast(type[object], value), active)
-            return entry.index + 1 if entry.target is not None else None
-        offset = _call_offset(call, active | {id(value)})
-        return None if offset is None else offset + int(inspect.isfunction(call))
+        return _class_offset(cast(type[object], value), active)
     active = active | {id(value)}
-    if inspect.isfunction(value):
-        return 0
-    if inspect.ismethod(value):
-        return 1
+    if inspect.isfunction(value) or inspect.ismethod(value):
+        return int(inspect.ismethod(value))
     if isinstance(value, (staticmethod, classmethod)):
-        native: type[object] = staticmethod if isinstance(value, staticmethod) else classmethod
-        descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
-        if inspect.getattr_static(type(descriptor), '__get__') is not inspect.getattr_static(native, '__get__'):
-            return None
-        offset = _call_offset(descriptor.__func__, active)
-        return None if offset is None else offset + int(isinstance(descriptor, classmethod))
-    call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
+        return _descriptor_offset(cast('staticmethod[..., object] | classmethod[object, ..., object]', value), active)
+    call = inspect.getattr_static(type(value), '__call__', None)
     if isinstance(value, partial) and call is partial[object].__call__:
         provider = cast(partial[object], value)
         offset = _call_offset(provider.func, active)
         return None if offset is None else offset + len(provider.args)
-    return 1 if inspect.isfunction(call) else _call_offset(call, active) if isinstance(call, (staticmethod, classmethod)) else None
+    return 1 if inspect.isfunction(call) else _call_offset(cast(object, call), active) if isinstance(call, (staticmethod, classmethod)) else None
 
 
 def call_functions(value: object) -> tuple[FunctionType, ...]:
@@ -105,7 +111,8 @@ def matches(function: FunctionType, frame: FrameType, owner: object | None, inst
         elif code.co_flags & inspect.CO_VARARGS:
             arguments = frame.f_locals.get(code.co_varnames[code.co_argcount + code.co_kwonlyargcount], ())
             position = index - code.co_argcount
-            receiver = cast(tuple[object, ...], arguments)[position] if isinstance(arguments, tuple) and len(arguments) > position else None
+            values = cast(tuple[object, ...], arguments) if isinstance(arguments, tuple) else ()
+            receiver = values[position] if len(values) > position else None
         else:
             return False
         if (type(receiver) if instance else receiver) is not owner:
