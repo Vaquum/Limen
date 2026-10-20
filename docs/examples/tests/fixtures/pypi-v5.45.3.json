@@ -1,0 +1,56 @@
+{
+  "source_url": "https://pypi.org/pypi/vaquum-limen/5.45.3/json",
+  "metadata_sha256": "9bf450ad5d63e076c3ad87f7b028e2a5c2915653ad89f6db5b0960a6e04f7e71",
+  "info": {
+    "name": "vaquum-limen",
+    "version": "5.45.3"
+  },
+  "urls": [
+    {
+      "comment_text": null,
+      "core-metadata": {
+        "sha256": "3f731b6a38d1d676a08b7d66c82867c32fa6ac5718c355ec5a85e9744cf84efa"
+      },
+      "digests": {
+        "blake2b_256": "276478a54acf465eefb288faa1c5c7e4ad85aab1817a5a9707e29882a334077c",
+        "md5": "6a9995929218d3d33cc6ae6aaaf5dbfe",
+        "sha256": "ce4576c25493bb9bed77d6ff7e0b718da31111c465576badac91a33362d103fe"
+      },
+      "downloads": -1,
+      "filename": "vaquum_limen-5.45.3-py3-none-any.whl",
+      "has_sig": false,
+      "md5_digest": "6a9995929218d3d33cc6ae6aaaf5dbfe",
+      "packagetype": "bdist_wheel",
+      "python_version": "py3",
+      "requires_python": "<3.14,>=3.10",
+      "size": 1119368,
+      "upload_time": "2026-10-20T01:03:23",
+      "upload_time_iso_8601": "2026-10-20T01:03:23.745314Z",
+      "url": "https://files.pythonhosted.org/packages/27/64/78a54acf465eefb288faa1c5c7e4ad85aab1817a5a9707e29882a334077c/vaquum_limen-5.45.3-py3-none-any.whl",
+      "yanked": false,
+      "yanked_reason": null
+    },
+    {
+      "comment_text": null,
+      "core-metadata": false,
+      "digests": {
+        "blake2b_256": "c1df42a974e704a36d25a5c3b46dd146a8e34d5a413d27654767966b4958189b",
+        "md5": "a710a01648a9d1418f6b238617696a43",
+        "sha256": "bb5f00f66678f7911f0476904d086a2151eb26cda9991ffd62e2bc8746cc9918"
+      },
+      "downloads": -1,
+      "filename": "vaquum_limen-5.45.3.tar.gz",
+      "has_sig": false,
+      "md5_digest": "a710a01648a9d1418f6b238617696a43",
+      "packagetype": "sdist",
+      "python_version": "source",
+      "requires_python": "<3.14,>=3.10",
+      "size": 6582486,
+      "upload_time": "2026-10-20T01:03:26",
+      "upload_time_iso_8601": "2026-10-20T01:03:26.797668Z",
+      "url": "https://files.pythonhosted.org/packages/c1/df/42a974e704a36d25a5c3b46dd146a8e34d5a413d27654767966b4958189b/vaquum_limen-5.45.3.tar.gz",
+      "yanked": false,
+      "yanked_reason": null
+    }
+  ]
+}

@@ -1,26 +1,71 @@
 # Reserve and assess final observations
 
-Reserve a project's final time window before running research. Supported experiments, Trainer refits and Log reconstruction then admit only native bars ending at or before the earliest active reservation. The exclusion applies before selectors, splitting and fitted preparation, including caller-supplied or reassigned frames.
+A final window is assessed after preparation, model fitting and selection have stopped changing. The [Python project](examples/python-research/README.md) owns that exclusion in its research code. The [Compiled project](examples/compiled-research/README.md) uses a guarded local reservation and a frozen selected Cohort.
+
+Reserve a guarded project's final time window before running research. Supported experiments, Trainer refits and Log reconstruction then admit only native bars ending at or before the earliest active reservation. The exclusion applies before selectors, splitting and fitted preparation, including caller-supplied or reassigned frames.
 
 This records local workflow protection. It cannot establish that a person, another project or an external process has never read these observations. Physical source materialization can exceed the admitted research prefix; provenance records both quantities.
 
 ## Prerequisites
 
-Use a Git project containing `limen.toml`, supported native OHLC data and serial built-in research. Preserve its local history as described below before cloning or restoring the project.
+Use the matching wheel and recorded input bundle for both projects. The guarded Compiled path additionally requires a Git project containing `limen.toml`, supported native OHLC data and serial built-in research. Preserve its local history as described below before cloning or restoring the project.
+
+## Assess caller-owned final observations
+
+The Python scenario selects on the first 1,440 quarter-hour rows, then assesses 479 next-bar decisions from the remaining observations. It reuses the evaluated fitted state. Its exclusion is a property of this code and its recorded input; it does not create reservation or exposure-history evidence.
+
+<!-- example: holdout-python-assessment source=docs/examples/python-research/scenarios.py region=holdout scenario=holdout interface=python role=executed -->
+```python
+def holdout(data_dir, output):
+    bars = quarter_hour(data_dir)
+    cohort, _, selected, retained = project.run_research(bars, str(output / 'selection'))
+    tape = cohort.predict_all(bars[1428:1920])[12:]
+    # A decision at the current completed close trades the next open-to-close.
+    predictions = []
+    for point in tape[:-1]:
+        if point.prediction is None:
+            raise ValueError('A final assessment decision is unavailable: ' + str(point.reason))
+        predictions.append(point.prediction)
+    positions = np.sign(np.asarray(predictions, dtype=np.float64))
+    next_returns = bars['close'].to_numpy()[1441:1920] / bars['open'].to_numpy()[1441:1920] - 1
+    net = positions * next_returns - abs(positions) * .0002
+    pl.DataFrame({'decision': [point.datetime for point in tape[:-1]], 'position': positions, 'net_return': net}).write_parquet(output / 'assessment.parquet')
+    return {'selected': selected, 'retained_models': len(retained), 'assessment_rows': len(net), 'mean_net_return': float(net.mean()), 'fitting_cutoff': bars['datetime'][960].isoformat(), 'selection_cutoff': bars['datetime'][1440].isoformat(), 'protection': 'caller-owned exclusion; no project reservation or exposure-history guarantee'}
+```
+
+## Reserve and freeze a Compiled selection
+
+The Compiled scenario creates its project before reservation, runs research ending before January 5, 2024, reconstructs the selected round, and freezes its Cohort before assessing January 5–6. It verifies that the retained report matches the completed assessment. The local input keeps exposure classification `unknown`; a reservation cannot establish prior access outside the local project.
+
+<!-- example: holdout-compiled-assessment source=docs/examples/compiled-research/scenarios.py region=holdout scenario=holdout interface=compiled role=executed -->
+```python
+def holdout(data_dir, output):
+    project = output / 'project'
+    project.mkdir(parents=True)
+    (project / 'limen.toml').write_text('[project]\nname="book-final-observations"\n')
+    subprocess.run(['git', 'init', '--quiet', str(project)], check=True, timeout=10)
+    reservation = reserve_holdout(project, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    config = configuration('holdout', data_dir)
+    directory = project / 'experiment'
+    loop = execute(config, directory, project_root=project)
+    selected_ids = research_project.completed_log(loop)['id'].head(1).to_list()
+    selected = Trainer(directory, project_root=project).train(selected_ids)
+    cohort = Cohort(experiment_log_path=str(directory), permutation_ids=selected_ids)
+    cohort.set_members(selected)
+    frozen = freeze_holdout_selection(cohort, context_start='2024-01-04', scenarios=[dict(fee_bps=5.0, slip_bps=2.0, notional_rate=.25, execution_lag_bars=1, take_profit_bps=None, stop_loss_bps=None)], evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up'))
+    report = final_holdout_report(frozen, project_root=project, reservation_id=reservation)
+    attempt_id = report['attempt_id']
+    if not isinstance(attempt_id, str):
+        raise ValueError('The final report must have an attempt identity')
+    if read_holdout_report(project, attempt_id) != report:
+        raise ValueError('Retained final report differs')
+    (output / 'retained-report.json').write_text(json.dumps(report, indent=2, allow_nan=False))
+    return {'rounds': research_project.completed_log(loop).height, 'planned': report['planned'], 'classification': report['classification'], 'scenarios': report['scenarios'], 'exposure': report['exposure'], 'rows_sha256': report['rows_sha256'], 'source': report['source']}
+```
 
 ## Reservation lifecycle
 
-Run from a Git project containing `limen.toml`:
-
-```python
-from pathlib import Path
-from limen.experiment.holdout import reserve_holdout, release_holdout, withdraw_holdout
-
-root = Path.cwd()
-reservation_id = reserve_holdout(
-    root, '2024-12-01', '2025-01-01', interval_seconds=3600,
-)
-```
+The guarded scenario calls `reserve_holdout()` before starting research in its Git project.
 
 Dates must be valid `YYYY-MM-DD` UTC midnights. Windows are half-open and immutable. The interval must be an integer dividing one UTC day; the source must supply that native interval without local aggregation. Active windows are disjoint and share one interval. Their earliest start excludes the entire subsequent suffix from research, including gaps between later reservations.
 
@@ -62,25 +107,7 @@ This is local coordination, not tamper-proof storage or shared-filesystem coordi
 
 ## Final assessment
 
-After protected research and a validated Trainer refit, freeze the selected Sensor or populated Cohort before accessing the final window:
-
-```python
-from limen.experiment.holdout import (
-    freeze_holdout_selection, final_holdout_report, read_holdout_report,
-)
-
-# selected is an already fitted Sensor or Cohort from this project's Trainer.
-frozen = freeze_holdout_selection(
-    selected,
-    context_start='2024-11-01',
-    scenarios=[dict(fee_bps=5.0, slip_bps=5.0, notional_rate=0.25,
-                    execution_lag_bars=1, take_profit_bps=None,
-                    stop_loss_bps=None)],
-)
-report = final_holdout_report(frozen, project_root=root,
-                              reservation_id=reservation_id)
-retained = read_holdout_report(root, report['attempt_id'])
-```
+The Compiled scenario freezes the validated Trainer selection with `freeze_holdout_selection()`, computes `final_holdout_report()`, and verifies the retained report through `read_holdout_report()`.
 
 Context is an explicit UTC date strictly before the final start. Optional `start`/`end` narrow the reservation, retaining half-open bounds. Final start must follow every member's test end. The entire context and final interval must have complete native support. Each final bar uses the same context anchor and only observations through that bar. Each member predicts once; scenarios share that tape. No fitting, calibration, threshold selection or model promotion occurs.
 

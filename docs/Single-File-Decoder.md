@@ -19,20 +19,13 @@ Limen supports two SFD styles.
 | manifest-driven | standard Limen experiments, reproducible shared research, built-in workflows | `params()`, `manifest()` | data can be fetched automatically from the manifest |
 | custom functions | non-standard prep logic, external libraries, experimental flows | `params()`, `prep()`, `model()` | caller passes `data=` explicitly to `UniversalExperimentLoop` |
 
-The manifest-driven path is the default. Use the custom path only when the declarative pipeline is too restrictive for the job.
+Choose by methodological ownership. The [Python project](examples/python-research/README.md) supplies ordinary functions and retains its evaluated fitted models. The [Compiled project](examples/compiled-research/README.md) adopts the Manifest contract and reconstructs selected recorded rounds. Neither requires the other interface as a preliminary step.
 
 ## What every SFD must expose
 
 Every SFD must expose `params()`.
 
-```python
-def params():
-    return {
-        'shift': [-1, -2, -3],
-        'roc_period': [4, 8, 12],
-        'C': [0.1, 1.0, 5.0],
-    }
-```
+The Python project's `run_research` function below supplies a four-candidate `space` through `params=lambda: space`. A normal module-level `params()` can return the same dictionary; the callable boundary is unchanged.
 
 `params()` returns the search space dictionary. Each key is a parameter name and each value must be a list, even when only one value is present.
 
@@ -47,103 +40,84 @@ def params():
 
 Manifest-driven SFDs expose `manifest()` instead of custom `prep()` and `model()` functions.
 
+<!-- example: sfd-compiled-definition source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
 ```python
-from limen.data import HistoricalData
-from limen.experiment import Manifest
-from limen.experiment import MLManifest
-from limen.indicators import roc
-from limen.scalers import LogRegScaler
-from limen.sfd.reference_architecture import logreg_binary
-from limen.targets import QuantileBinaryTarget
-
-def params():
-    return {
-        'roc_period': [4, 8, 12],
-        'q': [0.35, 0.40, 0.45],
-        'shift': [-1, -2, -3],
-        'C': [0.1, 1.0, 5.0],
-        'class_weight': [0.45, 0.65, 0.85],
-    }
-
-def manifest() -> Manifest:
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-        )
-        .set_test_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 7200, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_indicator(roc, period='roc_period')
-        .with_target_label(
-            'quantile_flag',
-            QuantileBinaryTarget,
-            fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
-            transform_params={'shift': 'shift'},
-        )
-        .set_scaler(LogRegScaler)
-        .with_reference_architecture(logreg_binary)
+def run_research(data_dir, output_dir):
+    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
+    source = data_dir / "spot_15m_20250101_20250531.parquet"
+    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
+    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+        raise ValueError("Recorded quarter-hour input digest differs")
+    # Resolve the driver's public --data-dir argument into the recorded run definition.
+    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
+    compiled = CompiledSFD(config)
+    loop = UniversalExperimentLoop(
+        sfd=compiled, search_strategy=build_search_strategy(config),
+        experiment_dir=output_dir, yaml_reference=config,
     )
+    loop.run("compiled-selection", n_permutations=2, workers=1,
+             post_processing=True, progress_bar=False)
+    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
+    sensors = Trainer(output_dir).train(selected)
+    return loop, sensors, selected
 ```
 
-This style is how Limen's foundational SFDs are built.
+This project uses `CompiledSFD` to translate its YAML definition into a Manifest-based SFD. Packaged foundational SFDs expose the same boundary through native `params()` and `manifest()` functions.
 
 ### What the manifest path provides
 
 - declarative data fetching
-- split-first prep with train-only fitting
-- automatic prep/model wiring inside the CLI-backed UEL engine
-- reproducible collaboration surface
+- split-first preparation with train-only fitting
+- automatic preparation/model wiring inside UEL
+- an inspectable definition for reconstruction and collaboration
 
 ### Runtime rules for manifest-driven SFDs
 
-- the ordinary MSQ path prepares data for every candidate, using the manifest's preparation and model functions
-- configure the parameter domain through the search strategy and the pipeline through the manifest
-- when `data=` is omitted, Limen fetches data from the manifest
-
-The [legacy execution reference](Universal-Experiment-Loop.md#legacy-execution-reference) records the older `prep_each_round` and callable-override rules.
+The ordinary MSQ path prepares data for every candidate using the Manifest's preparation and model functions. The search strategy owns the parameter domain; the Manifest owns the pipeline. When `data=` is omitted, Limen fetches data from the Manifest. The [legacy execution reference](Universal-Experiment-Loop.md#legacy-execution-reference) records the older `prep_each_round` and callable-override rules.
 
 ## Custom SFDs
 
-Custom SFDs expose `prep()` and `model()` directly. Use this path for full control over data preparation or workflows that do not fit the manifest pipeline.
+Python Research supplies `prep()` and `model()` directly. The complete project constructs its own parameter domain, evaluates caller-owned Ridge pipelines and retains those same fitted objects for inference:
 
+<!-- example: sfd-python-definition source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
 ```python
-import polars as pl
+def run_research(bars, experiment_name):
+    research = bars[:1440]
+    space = {"window": [4, 12], "alpha": [0.1, 1.0]}
+    retained = {}
 
-from limen.data.utils import split_data_to_prep_output, split_sequential
-from limen.sfd.reference_architecture import logreg_binary as base_model
+    def model(data, round_params):
+        fitted = fit(data["train"], round_params)
+        forecasts = fitted.predict(data["validation"].select("momentum"))
+        score = backtest(data["validation"], forecasts)
+        retained[(round_params["window"], round_params["alpha"])] = fitted
+        return {"validation_net_return": score}
 
-def params():
-    return {
-        'shift': [-1, -2, -3],
-        'C': [0.1, 1.0, 5.0],
-        'class_weight': [0.45, 0.65, 0.85],
-    }
-
-def prep(data: pl.DataFrame, round_params: dict):
-    all_datetimes = data['datetime'].to_list()
-
-    prepared = data.with_columns([
-        pl.col('close').pct_change().alias('return_1'),
-        ((pl.col('close').shift(round_params['shift']) > pl.col('close')).cast(pl.Int8)).alias('target'),
-    ]).drop_nulls()
-
-    splits = split_sequential(prepared, (8, 1, 2))
-    return split_data_to_prep_output(splits, prepared.columns, all_datetimes)
-
-def model(data: dict, round_params: dict):
-    results = base_model(
-        data,
-        C=round_params['C'],
-        class_weight=round_params['class_weight'],
+    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+    uel = UniversalExperimentLoop(
+        data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
     )
-    return results
+    # An absolute filename stem writes only this CSV; no persisted round artifacts.
+    uel.run(experiment_name, n_permutations=4, workers=1,
+            post_processing=False, progress_bar=False)
+    selected = (
+        completed_log(uel).sort(
+            ["window", "validation_net_return", "alpha"],
+            descending=[False, True, False],
+        ).unique(subset="window", keep="first", maintain_order=True)
+        .select("window", "alpha").to_dicts()
+    )
+    sensors = [
+        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
+                          params=p, fitting_cutoff=bars["datetime"][960],
+                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
+        for p in selected
+    ]
+    cohort = Cohort.from_python(sensors)
+    return cohort, uel, selected, retained
 ```
 
-Save these functions in your SFD module and follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run), supplying that module as `sfd`, your dataframe as `data`, and a strategy built from the module's `params()`. Custom functions do not require a YAML manifest or a built-in architecture.
+The function supplies caller-owned `prep` and `model` callables through a namespace. Its model returns an explicit validation net return and retains the exact fitted pipeline later wrapped in a Sensor. Use the complete project for its imports, feature/target preparation, fitting and input checks.
 
 ## Function Contracts
 
@@ -160,23 +134,9 @@ Defaults:
 
 ### `model(data, round_params)`
 
-Custom `model()` receives the prepared `data_dict` and the round parameters. It must return a results dictionary produced by one of:
+Custom `model()` receives whatever prepared value the caller's `prep()` returns, plus the round parameters. It returns a results dictionary. The Python project supplies `validation_net_return`; callers may use Limen's binary, multiclass or continuous metrics when those measures fit their model outputs.
 
-- `limen.metrics.binary_metrics`
-- `limen.metrics.multiclass_metrics`
-- `limen.metrics.continuous_metrics`
-
-For predictions available through `uel.preds` and `Log`, include:
-
-```python
-round_results['_preds'] = preds
-```
-
-Fitted prep-stage objects that should be preserved belong in the data dict under:
-
-```python
-data_dict['_scaler'] = fitted_scaler
-```
+Include `_preds` when native prediction recording or downstream analysis needs predictions. Include fitted preprocessing objects under the supported data keys, such as `_scaler`, when using helpers that consume that state. Neither an arbitrary score dictionary nor a retained Python object creates a reconstructible Compiled experiment. The project retains its evaluated scaler inside the same sklearn pipeline as its fitted Ridge model.
 
 ## Foundational versus custom
 
@@ -198,7 +158,7 @@ For example:
 - `limen.sfd.foundational_sfd.logreg_binary` packages the experiment
 - `limen.sfd.reference_architecture.logreg_binary` owns the model implementation
 
-This is why [Trainer](Trainer.md) can promote a finished experiment round back into a trained `ReferenceModel`.
+For reconstructible Compiled runs, [Trainer](Trainer.md) replays a selected recorded round with its declared architecture and preprocessing. Python Research instead wraps its retained evaluated fitted state directly.
 
 Execution checks optional dependencies at the model boundary. Importing the SFD catalog does not require every model extra.
 

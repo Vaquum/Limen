@@ -4,6 +4,13 @@ Pruning strategies, also called reducers, analyze completed rounds in a CLI or P
 
 Use this page when implementing or reviewing a reducer. For user-facing configuration and behavior, start with [Reducers and Feedback](../Reducers-And-Feedback.md).
 
+The [Python project](../examples/python-research/README.md) and
+[Compiled project](../examples/compiled-research/README.md) both exercise a
+three-candidate budget and mixed reducer/callback/file feedback. Maintain their
+ordering, actual injected-candidate scores and checkpoint assertions when
+changing the controller or queue. The full functions below use their projects'
+imports and recorded-data helpers.
+
 ## Prerequisites
 
 - a CLI or Python/MSQ run with a `SearchStrategy`; persistence is needed only for saved checkpoints or audit entries
@@ -15,11 +22,25 @@ Use this page when implementing or reviewing a reducer. For user-facing configur
 
 Every reducer subclasses `PruningStrategy` and implements three methods:
 
+<!-- reference: pruning-analyze_and_intervene source=limen/experiment/reducer/pruning_strategy.py region=signature:PruningStrategy.analyze_and_intervene role=signature -->
 ```python
-class PruningStrategy:
-    def analyze_and_intervene(self, log, msq) -> list[dict]: ...
-    def get_state(self) -> dict: ...
-    def set_state(self, state: dict) -> None: ...
+@abstractmethod
+def analyze_and_intervene(self, log: Any, msq: Any) -> list[dict[str, Any]]:
+    ...
+```
+
+<!-- reference: pruning-get_state source=limen/experiment/reducer/pruning_strategy.py region=signature:PruningStrategy.get_state role=signature -->
+```python
+@abstractmethod
+def get_state(self) -> dict[str, Any]:
+    ...
+```
+
+<!-- reference: pruning-set_state source=limen/experiment/reducer/pruning_strategy.py region=signature:PruningStrategy.set_state role=signature -->
+```python
+@abstractmethod
+def set_state(self, state: dict[str, Any]) -> None:
+    ...
 ```
 
 `analyze_and_intervene()` may inspect `msq` for observability but must not mutate it. It returns zero or more intervention dictionaries. `get_state()` and `set_state()` make reducer state resumable through checkpoints. Setting `active=False` makes a reducer return no interventions.
@@ -42,129 +63,147 @@ There is no `ManualReducer`. Manual control uses the callback or intervention-fi
 
 ### `BudgetReducer`
 
+<!-- reference: pruning-budget source=limen/experiment/reducer/budget_reducer.py region=signature:BudgetReducer.__init__ role=signature -->
 ```python
-BudgetReducer(
-    start_time=None,
-    max_walltime_hours=None,
-    max_permutations=None,
-    trim_strategy='random',
-    check_after_pct=0.1,
-    metric=None,
-    maximize=True,
-    active=True,
-)
+def __init__(self, *, start_time: float | None=None, max_walltime_hours: float | None=None, max_permutations: int | None=None, trim_strategy: str='random', check_after_pct: float=0.1, metric: str | None=None, maximize: bool=True, active: bool=True) -> None:
+    ...
 ```
 
 `trim_strategy` is `random` or `worst_first`. The latter requires `metric`. The reducer emits a final `trim` intervention even when it also removes values first, and it fires at most once.
 
 ### `CorrelationReducer`
 
+<!-- reference: pruning-correlation source=limen/experiment/reducer/correlation_reducer.py region=signature:CorrelationReducer.__init__ role=signature -->
 ```python
-CorrelationReducer(
-    metric='auc',
-    method='spearman',
-    min_observations=50,
-    prune_threshold=0.05,
-    sign_stability_threshold=0.8,
-    n_boot=300,
-    negative_correlation_threshold=-0.3,
-    maximize=True,
-    random_state=0,
-    active=True,
-)
+def __init__(self, *, metric: str, method: str='spearman', min_observations: int=50, prune_threshold: float=0.05, sign_stability_threshold: float=0.8, n_boot: int=300, negative_correlation_threshold: float=-0.3, maximize: bool=True, random_state: int=0, active: bool=True) -> None:
+    ...
 ```
 
 Supported methods are `spearman`, `pearson`, and `kendall`. Non-numeric, all-null, and constant parameter columns are skipped.
 
 ### `FocusReducer`
 
+<!-- reference: pruning-focus source=limen/experiment/reducer/focus_reducer.py region=signature:FocusReducer.__init__ role=signature -->
 ```python
-FocusReducer(
-    metric='auc',
-    breakthrough_threshold=0.8,
-    maximize=True,
-    focus_range_pct=0.2,
-    focus_timeout=5,
-    variation_count=5,
-    min_observations=10,
-    active=True,
-)
+def __init__(self, *, metric: str, breakthrough_threshold: float, maximize: bool=True, focus_range_pct: float=0.2, focus_timeout: int=5, variation_count: int=5, min_observations: int=10, active: bool=True) -> None:
+    ...
 ```
 
 On activation it emits `set_filter` and `inject_value` interventions around the best combination. After `focus_timeout` rounds without improvement it emits `clear_filter` and returns to the unfocused domain.
 
 ### `SanityReducer`
 
+<!-- reference: pruning-sanity source=limen/experiment/reducer/sanity_reducer.py region=signature:SanityReducer.__init__ role=signature -->
 ```python
-SanityReducer(
-    metric='auc',
-    nan_threshold=0.1,
-    min_observations=1,
-    zero_metric_threshold=None,
-    execution_time_column='execution_time',
-    execution_time_threshold=None,
-    timeout_rate_threshold=0.5,
-    warning_threshold=None,
-    active=True,
-)
+def __init__(self, *, metric: str, nan_threshold: float=0.1, min_observations: int=1, zero_metric_threshold: float | None=None, execution_time_column: str='execution_time', execution_time_threshold: float | None=None, timeout_rate_threshold: float=0.5, warning_threshold: float | None=None, active: bool=True) -> None:
+    ...
 ```
 
 Only the null-rate path dispatches removals. Zero-metric, slow-run, and warning-rate checks are optional suggestions: they are written to the audit trail but not applied to `MSQ`.
 
 ### `SaturationReducer`
 
+<!-- reference: pruning-saturation source=limen/experiment/reducer/saturation_reducer.py region=signature:SaturationReducer.__init__ role=signature -->
 ```python
-SaturationReducer(
-    metric='auc',
-    cv_threshold=0.01,
-    window_size=100,
-    min_samples_per_value=20,
-    retain_fraction=0.1,
-    active=True,
-)
+def __init__(self, *, metric: str, cv_threshold: float=0.01, window_size: int=100, min_samples_per_value: int=20, retain_fraction: float=0.1, active: bool=True) -> None:
+    ...
 ```
 
 The reducer measures recent coefficient of variation per parameter value. It emits `set_filter` when a value saturates and `clear_filter` if variation later recovers.
 
 ## YAML configuration
 
-The CLI compiles `uel.pruning_strategies` through `REDUCER_REGISTRY` and passes the instances to both new and resumed runs:
+The CLI compiles `uel.pruning_strategies` through `REDUCER_REGISTRY`. This is the Compiled project's actual four-candidate declaration with a three-candidate budget:
 
+<!-- example: pruning-compiled-definition source=docs/examples/compiled-research/adaptive.yaml region=__file__ scenario=search interface=compiled role=executed -->
 ```yaml
+schema_version: '1.0'
+metadata:
+  name: book_compiled_adaptive
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type:
+    - logreg
+    C:
+    - 0.1
+    - 0.5
+    - 1.0
+    - 2.0
+    random_state:
+    - 42
+# region budget_config
 uel:
-  n_permutations: 200
-  feedback_interval: 20
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
   pruning_strategies:
-    - type: sanity
-      params:
-        metric: auc
-        min_observations: 10
-    - type: budget
-      params:
-        max_permutations: 100
-        check_after_pct: 0.25
+  - type: budget
+    params:
+      max_permutations: 3
+  feedback_interval: 1
+# endregion budget_config
 ```
 
 Each entry must be a mapping with a registered `type`. `params` is optional but, when present, must be a mapping of constructor arguments. Unknown reducer keys, malformed entries, and invalid constructor values fail validation or compilation before the run starts.
 
 ## Python configuration
 
+The Python project supplies its own SFD and puts the same budget on its queue:
+
+<!-- example: pruning-python-budget source=docs/examples/python-research/scenarios.py region=adaptive_search scenario=search interface=python role=executed -->
 ```python
-from limen.experiment.reducer import BudgetReducer, SanityReducer
-from limen import UniversalExperimentLoop
+def adaptive_search(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
 
-reducers = [
-    SanityReducer(metric='auc', min_observations=10),
-    BudgetReducer(max_permutations=100),
-]
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
 
-uel = UniversalExperimentLoop(
-    sfd=my_sfd,
-    experiment_dir='results/example',
-    search_strategy=strategy,
-    feedback_interval=20,
-    pruning_strategies=reducers,
-)
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd, search_strategy=GridStrategy(ParamDomain(space)),
+                                   experiment_dir=output, checkpoint_interval=1, feedback_interval=1,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-adaptive-search', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 ```
 
 Reducers run in list order against the same pre-trigger log and queue state. Their returned interventions are dispatched in that order; conflicting changes therefore require deliberate composition.
@@ -175,23 +214,61 @@ Two mechanisms exist; neither is a reducer class.
 
 ### In-process callback
 
-`intra_callback(log, msq)` receives direct `MSQ` access and mutates it itself. The controller records new `msq.intervention_log` entries after the callback returns. Callback failures are isolated and logged.
+`intra_callback(log, msq)` receives direct `MSQ` access and mutates it itself. The controller records new `msq.intervention_log` entries after the callback returns. Callback failures are isolated and logged. The Python project keeps one parameter value, then writes the intervention file during that same feedback cycle:
 
+<!-- example: pruning-python-callback source=docs/examples/python-research/scenarios.py region=mixed_feedback scenario=search interface=python role=executed -->
 ```python
-def manual_callback(log, msq):
-    if log.height >= 20:
-        msq.remove_is('learning_rate', 1.0)
+def mixed_feedback(data_dir, output):
+    space = {'window': [4, 12], 'alpha': [.1, 1.]}
+
+    def steer(log, msq):
+        if log.height == 2:
+            msq.keep_is('alpha', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'alpha', 'value': 2.0}]))
+
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
+        return {'validation_net_return': project.backtest(data['validation'], fitted.predict(data['validation'].select('momentum')))}
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model)
+    loop = UniversalExperimentLoop(data=hourly(data_dir, 1440), sfd=sfd,
+                                   search_strategy=GridStrategy(ParamDomain(space)), experiment_dir=output,
+                                   checkpoint_interval=1, feedback_interval=1, intra_callback=steer,
+                                   pruning_strategies=[BudgetReducer(max_permutations=3)])
+    loop.run('python-feedback', n_permutations=4, workers=1, progress_bar=False)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())
+    return {'rows': project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
+            'remaining': checkpoint['msq_state']['trim_budget']}
 ```
 
 ### Intervention file
 
-Artifact-backed runs poll `interventions.json` in the experiment directory. When its modification time changes, the controller expects a JSON array of ordinary intervention dictionaries. Missing `source` fields are filled with `intervention_file`.
+Artifact-backed runs poll `interventions.json` in the experiment directory. When its modification time changes, the controller expects a JSON array of ordinary intervention dictionaries. Missing `source` fields are filled with `intervention_file`. The Compiled project's callback writes a real injection after the fresh-run guard; the following file poll applies it once. Precreating the file in a new experiment directory would fail that guard:
 
-```json
-[
-  {"op": "remove_is", "param": "learning_rate", "value": 1.0},
-  {"op": "trim", "target_count": 50}
-]
+<!-- example: pruning-compiled-file source=docs/examples/compiled-research/scenarios.py region=mixed_feedback scenario=search interface=compiled role=executed -->
+```python
+def mixed_feedback(data_dir, output):
+    config = configuration('adaptive', data_dir)
+    config['uel']['recording'] = {'predictions': True, 'alignment': True, 'trade_ledger': False, 'fold_details': False}
+
+    def steer(log, msq):
+        if log.height == 2:
+            msq.keep_is('C', .1)
+            (output / 'interventions.json').write_text(json.dumps([
+                {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
+
+    loop = execute(config, output, callback=steer)
+    checkpoint = json.loads((output / 'checkpoint.json').read_text())
+    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
+        records = [json.loads(line) for line in stream]
+    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
+            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
+            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
+            'remaining': checkpoint['msq_state']['trim_budget'], 'records': records,
+            'predictions': {record['round_id']: recorded_predictions(output, record) for record in records}}
 ```
 
 ## Intervention operations
@@ -230,9 +307,7 @@ Reducer changes must prove:
 
 Run the focused coverage with:
 
-```bash
-python -m pytest -q tests/test_*_reducer.py tests/test_reducer_factory.py tests/test_yaml.py
-```
+The focused repository command is `python -m pytest -q tests/test_*_reducer.py tests/test_reducer_factory.py tests/test_yaml.py`. These reducer/unit tests complement the two recorded-data project cases; a constructor reference does not claim that all five strategies ran in the small project.
 
 ## Read next
 

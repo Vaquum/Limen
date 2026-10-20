@@ -6,6 +6,10 @@
 
 - [Reducers And Feedback](../../../docs/Reducers-And-Feedback.md)
 
+## In the research projects
+
+The `search` scenarios in the [Python project](../../../docs/examples/python-research/README.md) and the [Compiled project](../../../docs/examples/compiled-research/README.md) each run a separate four-candidate grid with a three-round `BudgetReducer`. Their audit and checkpoint records establish the actual trim; they do not claim that pruning improves model quality.
+
 ## What this package owns
 
 Owns the reducer strategies that consume in-flight experiment results and mutate the search — trimming to budget, pruning correlated or saturated regions, and refocusing on promising areas — plus the registry and shared filter/action constants.
@@ -31,16 +35,30 @@ Does **not** own the parameter domain or the search strategies it steers.
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `budget_reducer.py` | BudgetReducer (+ TRIM_* constants) |
+| `correlation_reducer.py` | CorrelationReducer |
+| `focus_reducer.py` | FocusReducer |
+| `saturation_reducer.py` | SaturationReducer |
+| `sanity_reducer.py` | SanityReducer |
+| `pruning_strategy.py` | PruningStrategy (+ ACTION_SUGGEST) |
+| `filter_types.py` | FILTER_* constants |
+| `registry.py` | REDUCER_REGISTRY |
+
+<!-- reference: package-experiment-reducer-layout source=limen/experiment/reducer/README.md region=layout:package role=layout -->
 ```text
 reducer/
-├── budget_reducer.py       # BudgetReducer (+ TRIM_* constants)
-├── correlation_reducer.py  # CorrelationReducer
-├── focus_reducer.py        # FocusReducer
-├── saturation_reducer.py   # SaturationReducer
-├── sanity_reducer.py       # SanityReducer
-├── pruning_strategy.py     # PruningStrategy (+ ACTION_SUGGEST)
-├── filter_types.py         # FILTER_* constants
-└── registry.py             # REDUCER_REGISTRY
+├── README.md
+├── __init__.py
+├── budget_reducer.py
+├── correlation_reducer.py
+├── filter_types.py
+├── focus_reducer.py
+├── pruning_strategy.py
+├── registry.py
+├── sanity_reducer.py
+└── saturation_reducer.py
 ```
 
 ## Things to know

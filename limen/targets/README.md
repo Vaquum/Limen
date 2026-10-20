@@ -8,6 +8,10 @@
 - [Experiment Manifest](../../docs/Experiment-Manifest.md#target-configuration)
 - [Transforms](../../docs/Transforms.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) computes next-bar return separately inside each split. The [Compiled project](../../docs/examples/compiled-research/README.md) fits a quantile target on training observations and reuses its cutoff. The target reference preserves each alternative’s parameters, source columns and forward-label boundary.
+
 ## What this package owns
 
 `TradeOutcomeTarget` consumes the shared execution contract through an injected `TradeTargetContext` and exposes private `OutcomeLabels`. See [simulated trade outcomes](../../docs/Targets.md#simulated-trade-outcomes) for configuration, completion masks and feature isolation.
@@ -37,18 +41,27 @@ Does **not** own feature engineering, model fitting, calibration, or execution s
 
 ## Quick orientation
 
+<!-- reference: package-targets-layout source=limen/targets/README.md region=layout:package role=layout -->
 ```text
 targets/
-|-- quantile_binary.py
-|-- threshold_binary.py
-|-- next_bar_up.py / next_bar_down.py
-|-- next_return.py
-|-- vol_normalized_return.py / forward_vol_normalized_return.py
-|-- forward_breakout.py / ema_breakout.py / tradeline_long_binary.py
-|-- triple_barrier.py
-|-- risk_reward_ratio.py / exit_quality.py
-|-- identity.py
-`-- random_binary.py
+├── README.md
+├── __init__.py
+├── ema_breakout.py
+├── exit_quality.py
+├── forward_breakout.py
+├── forward_vol_normalized_return.py
+├── identity.py
+├── next_bar_down.py
+├── next_bar_up.py
+├── next_return.py
+├── quantile_binary.py
+├── random_binary.py
+├── risk_reward_ratio.py
+├── threshold_binary.py
+├── trade_outcome.py
+├── tradeline_long_binary.py
+├── triple_barrier.py
+└── vol_normalized_return.py
 ```
 
 ## Things to know

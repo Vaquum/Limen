@@ -4,6 +4,8 @@ Your functions own preparation, fitting, backtesting and selection. The selected
 
 The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the proof required before this candidate is published as the complete book.
 
+The search scenario also compares baseline and compressed preparation on 1,440 recorded hourly bars. It retains each prepared train/validation/test matrix, a fixed-order fractional feature, ternary forward-close labels, training-fitted robust statistics, an explicit feature drop and optional two-component PCA. Independent tests reconstruct the labels, differenced values, scaler statistics, PCA subspace and Ridge forecasts. The Python case owns separate partition preparation; the native Manifest case retains its admitted CCO context. These are preparation checks, not a feature-importance ranking or profitability claim.
+
 ## Prerequisites
 
 Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats]`; Sobol uses statistics.
@@ -21,19 +23,21 @@ From a repository checkout, work in `docs/examples/`, use `--data-dir ../../test
 
 ## Continue through the research decisions
 
+Search also executes all eight [common strategy baselines](../../Common-Strategies.md) on the recorded 2024 hourly source. Their desired signals share the same assessment window. The Python case owns next-open-to-close one-bar trades with a declared 2 bp round-trip cost; the Compiled case uses the native lagged held-position snapshot with 10 bp fee and 5 bp slippage per fill. Independent assertions check causal signals and each policy's arithmetic; these are different trading interpretations, not a cross-engine return ranking.
+
 `--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.
 
 The execution scenario compares cash spot with a linear perpetual using the recorded funding history, realized rates and mark prices. The shared `recorded_inputs.py` checks and normalizes those records; the native funding ledger exposes each payment. Both runs retain their execution contract. Tests require signal fills to follow its one-hour delay and compare every displayed fill with the native Parquet record. The bar scenario also forms three CFR diagnostic bars from the pinned 90-second trade slice. This is shared preprocessing on recorded events, not a claim that the short slice can support model selection.
 
-Search also runs a separate resource-controlled grid. `BudgetReducer(max_permutations=3)` reduces a four-candidate budget to three completed rounds through the shared feedback controller. Its audit and checkpoint retain the intervention and remaining queue state. This changes the amount of research performed; it is not evidence that the reduced search selects a better model.
+Search also runs a separate resource-controlled grid. `BudgetReducer(max_permutations=3)` reduces a four-candidate budget to three completed rounds through the shared feedback controller. Its audit and checkpoint retain the intervention and remaining queue state. A separate mixed run combines that reducer with a callback and a file-driven injection. The proof checks ordering, deduplication, resulting domain and independently computed scores. These controls change the observations collected; they do not establish better selection.
 
-Search and recovery use the first 1,440 recorded hourly observations. Recovery compares the completed resumed run with a separate uninterrupted run. Walk-forward uses the first 384 hourly observations; its inference callback declares their one-hour availability interval. Selection, ordinary final assessment and classifier calibration retain their quarter-hour population.
+Traversal, preparation and recovery use the first 1,440 recorded hourly observations. The separate common-baseline case uses all 8,784 recorded hourly bars and their 1,598-bar assessment partition. Recovery compares the completed resumed run with a separate uninterrupted run. Walk-forward uses the first 384 hourly observations; its inference callback declares their one-hour availability interval. Selection, ordinary final assessment and classifier calibration retain their quarter-hour population.
 
 The observed-cost scenario creates one immutable calibration from the recorded Chainticks population and pins its digest separately. Four caller-owned fits compare original and calibrated ledgers across two hours and both binary and signed exposure. Prices are recorded midpoints encoded as points; capital and strategy exposure are software scenarios. The calibration archive postdates evaluation, historical delivery is unknown and sell support is concentrated. These are retrospective stress results. The bundle retains the source attribution, CC BY 4.0 license and reproduction files. The [Backtest reference](../../Backtest.md#frozen-candidates-in-custom-python-research) uses the exact same model source.
 
 | Scenario | Decision and output |
 |---|---|
-| `search` | Compare grid, seeded random, Sobol and shuffled traversal over a bounded domain. |
+| `search` | Compare traversal, preparation, eight common rules, budget reduction and mixed feedback under their declared populations. |
 | `recovery` | Interrupt after two rounds, retain a checkpoint, resume without repeating a completed round. |
 | `walk_forward` | Keep each test window after its fitting/validation observations, with purge and embargo. |
 | `holdout` | Assess final observations only after selection; retain the assessment and its exposure limits. |

@@ -1,20 +1,20 @@
 # Limen docs
 
-This page routes Limen docs by task.
+Read the book through one research question, two complete projects and the decisions between recorded observations and reusable predictions. Use the Reference and Developer appendices when a chapter needs a deeper contract or a maintenance procedure.
 
 ## Limen in one page
 
 Limen is a research engine for Bitcoin traders. Python Research gives you control of data, preparation, models, backtesting and selection in ordinary Python. Compiled Research adopts the Manifest contract through the CLI or Python, with the configured pipeline checks and recorded evidence. Both use Universal Experiment Loop (UEL) with Mutable Search Queue (MSQ). Choose the interface by who should own the research methodology.
 
-Limen does not perform downstream trade decisioning or execution. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
+Limen does not place venue orders or manage downstream trading decisions. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
 
 ## Start here
 
 ### New to Limen
 
 1. Read the [product home page](../README.md) and choose Python Research or Compiled Research.
-2. For Python Research, start with the [worked Python workflow](Universal-Experiment-Loop.md#direct-python-run) and [custom SFDs](Single-File-Decoder.md#custom-sfds).
-3. For Compiled Research, run the [End-to-End Workflow](End-to-End-Workflow.md) and inspect the [Manifest contract](Experiment-Manifest.md).
+2. Read [From a research question to a Sensor](Research-Book.md), then run the [Python project](examples/python-research/README.md) with its recorded input bundle.
+3. Run the [Compiled project](examples/compiled-research/README.md) against its declared splits and inspect the [Manifest contract](Experiment-Manifest.md).
 4. Learn how data enters Limen in [Historical Data](Historical-Data.md).
 5. Review outcomes in [Log](Log.md), [Benchmark](Benchmark.md) and [Backtest](Backtest.md).
 6. Continue to [Trainer and Sensors](Trainer.md) and [Cohort](Cohort.md) for the selected interface's inference handoff.
@@ -80,12 +80,12 @@ Limen does not perform downstream trade decisioning or execution. In the wider V
 ## Docs map
 
 - `Overview`: [Product Home](../README.md), [this docs hub](README.md), [Roadmap](Roadmap.md)
-- `Guides`: [End-to-End Workflow](End-to-End-Workflow.md), [Command-Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Perturbation Strategies](Perturbation-Strategies.md), [Fractional Differentiation](Fractional-Differentiation.md), [Triple-Barrier Method](Triple-Barrier-Method.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
+- `Book chapters`: [End-to-End Workflow](End-to-End-Workflow.md), [Command-Line Interface](Command-Line-Interface.md), [Experiment Manifest](Experiment-Manifest.md), [Historical Data](Historical-Data.md), [Data Bars](Data-Bars.md), [Single-File Decoder](Single-File-Decoder.md), [Built-In SFDs](Built-In-SFDs.md), [Universal Experiment Loop](Universal-Experiment-Loop.md), [Advanced Search](Advanced-Search.md), [Reducers And Feedback](Reducers-And-Feedback.md), [Perturbation Strategies](Perturbation-Strategies.md), [Fractional Differentiation](Fractional-Differentiation.md), [Triple-Barrier Method](Triple-Barrier-Method.md), [Log](Log.md), [Benchmark](Benchmark.md), [Backtest](Backtest.md), [Trainer](Trainer.md), [Cohort](Cohort.md), [Conserved Flux Renormalization](Conserved-Flux-Renormalization.md)
 - `Reference`: [Glossary](Glossary.md), [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), [Standard Metrics Library](Standard-Metrics-Library.md), [Reference Architecture](Reference-Architecture.md), [Utilities](Utilities.md)
 - `Developer`: [Developer Guidelines](Developer/README.md), [Documentation System](Developer/Documentation-System.md), [Pruning Strategies](Developer/Pruning-Strategies.md), [Writing Docstrings](Developer/Writing-Docstrings.md), [Contributing Foundational SFDs](Developer/Contributing-Foundational-SFDs.md), [Making Release](Developer/Making-Release.md), [Packaging](Developer/Packaging.md), [Release Policy](Developer/Release-Policy.md), [Security Assurance Case](Developer/Security-Assurance-Case.md), [Semantic Versioning](Semantic-Versioning.md), and [Technical Debt](TechnicalDebt.md)
 - `Packages`: package `README`s under `/limen` for `data`, `experiment`, `inference`, `sfd`, `indicators`, `features`, `transforms`, `scalers`, `metrics`, `log`, `cohort`, `backtest`, `utils`, `calibration`, `cli`, `targets`, and `yaml`, plus their nested package references
 
-The documentation is being developed as a book around two complete executable research projects. Reference and Developer remain available for drill-down and direct lookup. The sections above route the current published pages; the [documentation system contract](Developer/Documentation-System.md) defines the book and the evidence required for its examples.
+Both projects continue through search, feedback, recovery, calibration, execution and final assessment. Each chapter takes the relevant part of the same source. The [documentation system contract](Developer/Documentation-System.md) defines how its source, tests, recorded inputs and publication evidence stay connected.
 
 ## Product boundary
 
@@ -94,10 +94,10 @@ The documentation is being developed as a book around two complete executable re
 - experiment-oriented data access
 - indicator, feature, transform, and scaler composition
 - target construction, calibration, and CLI-driven YAML experiment execution
-- manifest-driven and custom SFD-based research units
+- caller-owned Python SFDs and Manifest-based research units
 - parameter sweep and experiment logging
-- benchmark-style analytics and backtesting
-- round reconstruction and cohort construction
+- recorded-result analysis, advisory statistical reports and backtesting
+- retained Python fitted state, Compiled round reconstruction and Cohort composition
 
 ### Limen does not own
 

@@ -6,6 +6,10 @@
 
 - [Command-Line Interface](../../../docs/Command-Line-Interface.md)
 
+## In the research projects
+
+The [Compiled project](../../../docs/examples/compiled-research/README.md) `command_line` scenario exercises the installed handlers through their public commands. Its assertions check exit status, parent/child lineage, completed result identities and restored campaign bytes.
+
 ## What this package owns
 
 Owns the implementation body behind each `limen` subcommand: argument handling, calls into `limen.yaml` and `limen.experiment`, and console output.
@@ -30,23 +34,44 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `_constants.py` | Shared command constants |
+| `_load_yaml.py` | Shared YAML loading helper |
+| `run.py` | limen run |
+| `resume.py` | limen run --resume |
+| `validate.py` | limen validate |
+| `profile.py` | limen profile |
+| `init.py` | limen init |
+| `new.py` | limen new |
+| `list_templates.py` | limen list-templates |
+| `commit.py` | limen commit |
+| `ls.py` | limen ls |
+| `fork.py` | limen fork |
+| `lineage.py` | limen lineage |
+| `backup.py` | limen backup |
+| `reindex.py` | limen reindex |
+
+<!-- reference: package-cli-commands-layout source=limen/cli/commands/README.md region=layout:package role=layout -->
 ```text
 commands/
-├── _constants.py        # Shared command constants
-├── _load_yaml.py        # Shared YAML loading helper
-├── run.py               # limen run
-├── resume.py            # limen run --resume
-├── validate.py          # limen validate
-├── profile.py           # limen profile
-├── init.py              # limen init
-├── new.py               # limen new
-├── list_templates.py    # limen list-templates
-├── commit.py            # limen commit
-├── ls.py                # limen ls
-├── fork.py              # limen fork
-├── lineage.py           # limen lineage
-├── backup.py            # limen backup
-└── reindex.py           # limen reindex
+├── README.md
+├── __init__.py
+├── _constants.py
+├── _load_yaml.py
+├── backup.py
+├── commit.py
+├── fork.py
+├── init.py
+├── lineage.py
+├── list_templates.py
+├── ls.py
+├── new.py
+├── profile.py
+├── reindex.py
+├── resume.py
+├── run.py
+└── validate.py
 ```
 
 ## Things to know

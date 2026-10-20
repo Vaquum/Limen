@@ -1,0 +1,149 @@
+from pathlib import Path
+import os
+import json
+import hashlib
+import re
+import subprocess
+
+import pytest
+
+from check_evidence import reference_bindings, region, validate_fences, validate_page_catalogue
+from provenance import source_paths
+
+ROOT = Path(__file__).resolve().parents[3]
+ROC = "def roc(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataFrame:\n    ...\n"
+MARKER = '<!-- reference: checked-roc source=limen/indicators/roc.py region=signature:roc role=signature -->'
+
+
+def test_public_signature_uses_current_source_and_parameters(tmp_path):
+    from limen.indicators import roc
+    from inspect import signature
+    assert signature(roc).parameters['period'].default == 10
+    assert region(ROOT / 'limen/indicators/roc.py', 'signature:roc') == ROC
+    document = tmp_path / 'reference.md'
+    document.write_text(MARKER + '\n```python\n' + ROC + '```\n')
+    assert reference_bindings(ROOT, document)[0]['role'] == 'signature'
+    validate_fences(ROOT, document)
+    assert 'limen/indicators/roc.py' in source_paths(ROOT)
+
+
+def test_changed_signature_or_reference_role_fails(tmp_path):
+    document = tmp_path / 'reference.md'
+    for changed in (ROC.replace('period: int=10', 'period: int=20'), ROC.replace('price_col', 'unknown_column')):
+        document.write_text(MARKER + '\n```python\n' + changed + '```\n')
+        with pytest.raises(ValueError, match='differs from current package'):
+            reference_bindings(ROOT, document)
+    document.write_text(MARKER.replace('role=signature', 'role=definition') + '\n```python\n' + ROC + '```\n')
+    with pytest.raises(ValueError, match='differs from current package'):
+        reference_bindings(ROOT, document)
+
+
+def test_a_changed_package_file_cannot_reuse_its_previous_signature(tmp_path):
+    original = (ROOT / 'limen/indicators/roc.py').read_text()
+    source = tmp_path / 'roc.py'
+    source.write_text(original)
+    assert region(source, 'signature:roc') == ROC
+    changed = original.replace('period: int = 10', 'period: int = 20')
+    assert changed != original
+    source.write_text(changed)
+    assert region(source, 'signature:roc') == ROC.replace('period: int=10', 'period: int=20')
+    source.write_text(original)
+    assert region(source, 'signature:roc') == ROC
+
+
+def test_signature_marker_inside_unbound_code_cannot_certify_it(tmp_path):
+    document = tmp_path / 'reference.md'
+    document.write_text('~~~~markdown\n' + MARKER + '\n```python\n' + ROC + '```\n~~~~\n')
+    with pytest.raises(ValueError, match='Unbound code fence'):
+        validate_fences(ROOT, document)
+
+
+def test_reference_source_and_symbol_boundaries(tmp_path):
+    document = tmp_path / 'reference.md'
+    document.write_text(MARKER.replace('limen/indicators/roc.py', 'pyproject.toml') + '\n```python\n' + ROC + '```\n')
+    with pytest.raises(ValueError, match='escapes the package'):
+        reference_bindings(ROOT, document)
+    for symbol in ('_private', 'unknown_function', 'roc.unknown_member'):
+        with pytest.raises(ValueError, match='Invalid reference symbol|Missing or ambiguous|require a class'):
+            region(ROOT / 'limen/indicators/roc.py', 'signature:' + symbol)
+    with pytest.raises(ValueError, match='module constant'):
+        region(ROOT / 'limen/indicators/roc.py', 'definition:roc')
+    assert 'SCALER_REGISTRY' in region(ROOT / 'limen/scalers/registry.py', 'definition:SCALER_REGISTRY')
+
+
+def test_package_layout_is_the_actual_tracked_directory(tmp_path):
+    source = ROOT / 'limen/calibration/README.md'
+    layout = region(source, 'layout:package')
+    assert layout.splitlines() == ['calibration/', '├── README.md', '├── __init__.py', '├── _objective_threshold.py', '├── pipeline.py', '├── probability.py', '└── threshold.py']
+    marker = '<!-- reference: calibration-layout-test source=limen/calibration/README.md region=layout:package role=layout -->'
+    document = tmp_path / 'layout.md'
+    document.write_text(marker + '\n```text\n' + layout + '```\n')
+    validate_fences(ROOT, document)
+    assert reference_bindings(ROOT, document)[0]['role'] == 'layout'
+    document.write_text(marker + '\n```text\n' + layout.replace('pipeline.py', 'missing.py') + '```\n')
+    with pytest.raises(ValueError, match='differs from current package'):
+        reference_bindings(ROOT, document)
+    document.write_text(marker + '\n```python\n' + layout + '```\n')
+    with pytest.raises(ValueError, match='requires a text fence'):
+        reference_bindings(ROOT, document)
+    with pytest.raises(ValueError, match='must name its package README'):
+        region(ROOT / 'limen/calibration/pipeline.py', 'layout:package')
+
+
+def test_page_connections_must_be_visible_links_to_each_project(tmp_path):
+    document = tmp_path / 'chapter.md'
+    links = {name: f'[{name}]({os.path.relpath(ROOT / f"docs/examples/{name}-research/README.md", tmp_path)})'
+             for name in ('python', 'compiled')}
+    document.write_text(links['python'] + '\n\n' + links['compiled'] + '\n')
+    validate_fences(ROOT, document, interfaces=('python', 'compiled'))
+    document.write_text(links['python'] + '\n\n<!-- ' + links['compiled'] + ' -->\n')
+    with pytest.raises(ValueError, match='Missing visible canonical project connection: compiled'):
+        validate_fences(ROOT, document, interfaces=('python', 'compiled'))
+    public = 'https://github.com/Vaquum/Limen/blob/main/docs/examples/'
+    document.write_text('[Python](' + public + 'python-research/README.md)\n\n[Compiled](' + public + 'compiled-research/README.md)\n')
+    validate_fences(ROOT, document, interfaces=('python', 'compiled'))
+    document.write_text(document.read_text().replace('/Vaquum/Limen/', '/another/repository/'))
+    with pytest.raises(ValueError, match='Missing visible canonical project connection: python'):
+        validate_fences(ROOT, document, interfaces=('python', 'compiled'))
+
+
+def test_current_pages_have_exact_source_and_visible_project_connections():
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    for page, contexts in validate_page_catalogue(ROOT, catalogue).items():
+        interfaces = tuple(sorted({catalogue['scenario_details'][name]['interface'] for name in contexts}))
+        validate_fences(ROOT, ROOT / page, interfaces=interfaces)
+
+    history = json.loads((ROOT / 'docs-site/reader/route-decisions.json').read_text())
+    baseline = history['baseline']
+    assert re.fullmatch(r'[a-f0-9]{40}', baseline)
+    originals = {}
+    for source, digest in history['sources'].items():
+        content = subprocess.check_output(['git', 'show', baseline + ':' + source], cwd=ROOT)
+        assert hashlib.sha256(content).hexdigest() == digest
+        originals[source] = content.decode()
+    assert set(originals) == {'README.md', 'pyproject.toml', 'docs-site/scripts/assemble-docs.mjs'}
+    published = set(re.findall(r'https://docs\.vaquum\.fi[^\s"<>)]*', originals['README.md'] + originals['pyproject.toml']))
+    assert {item['url'] for item in history['published_links']} == published
+    origin = 'https://docs.vaquum.fi'
+    legacy = {origin + '/limen' + slug.rstrip('/') + '/' for slug in re.findall(r"\bslug:\s*'([^']+)'", originals['docs-site/scripts/assemble-docs.mjs'])}
+    legacy.update(url.split('#')[0].rstrip('/') + '/' for url in published)
+    assert {item['url'] for item in history['legacy_routes']} == legacy
+
+
+def test_new_or_removed_pages_cannot_escape_the_complete_catalogue(monkeypatch):
+    from copy import deepcopy
+    import check_evidence
+    catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
+    changed = deepcopy(catalogue)
+    page = changed['candidate_pages'].pop()
+    del changed['page_contexts'][page]
+    with pytest.raises(ValueError, match='every maintained document exactly once'):
+        validate_page_catalogue(ROOT, changed)
+    changed = deepcopy(catalogue)
+    changed['candidate_pages'].append(changed['candidate_pages'][0])
+    with pytest.raises(ValueError, match='every maintained document exactly once'):
+        validate_page_catalogue(ROOT, changed)
+    original = check_evidence.maintained_documents(ROOT)
+    monkeypatch.setattr(check_evidence, 'maintained_documents', lambda root: [*original, root / 'docs/new-chapter.md'])
+    with pytest.raises(ValueError, match='every maintained document exactly once'):
+        validate_page_catalogue(ROOT, catalogue)

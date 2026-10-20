@@ -36,6 +36,7 @@ sfd:
     scaler:
       from_params: scaler_type
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
+# region calibration_config
     calibration:
       probability_calibration:
         func: limen.calibration.sklearn_probability_calibrator
@@ -45,17 +46,20 @@ sfd:
         func: limen.calibration.grid_threshold_optimizer
         params:
           metric: limen.metrics.balanced_metric.balanced_metric
+# endregion calibration_config
   params:
     scaler_type: [logreg]
     C:
     - 1.0
     random_state: [42]
+# region calibration_modes
     use_calibration:
     - false
     - true
     use_threshold:
     - false
     - true
+# endregion calibration_modes
 uel:
   n_permutations: 4
   search_strategy:
