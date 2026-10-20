@@ -7,7 +7,6 @@ import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from functools import partial
-from types import FunctionType, MethodType
 from importlib import import_module
 from typing import Protocol, cast
 
@@ -131,8 +130,9 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     else:
         clone = copy.deepcopy(value)
     implementation = call_implementation(value)
+    implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__):
-        clone = partial(MethodType(cast(FunctionType, decode(encode(implementation), isolate_functions=True)), clone))
+        clone = partial(cast(Callable[..., object], decode(encode(getattr(clone, '__call__')), isolate_functions=True)))
         vars(clone)['__parallel_round_contract__'] = getattr(value, '__parallel_round_contract__', None)
     return clone
 
