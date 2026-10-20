@@ -42,7 +42,6 @@ from limen.data.utils import split_data_to_prep_output
 from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
 from limen.experiment.errors import StrictModeError
-from limen.scalers.robust_scaler import RobustScaler
 from limen.scalers.registry import SCALER_REGISTRY
 logger = logging.getLogger(__name__)
 
@@ -949,7 +948,7 @@ class MLManifest(Manifest):
         Args:
             enabled_param (str): round_params key that enables PCA when True
             n_components_param (str): round_params key for PCA component count
-            scaler_param_name (str): fitted RobustScaler key in data_dict
+            scaler_param_name (str): configured fitted-scaler key in data_dict
             component_prefix (str): Prefix for emitted component columns
 
         Returns:
@@ -1791,15 +1790,16 @@ def _apply_pca_compression(
             f"round_params['{config.n_components_param}'] is required when round_params['{config.enabled_param}'] is True"
         )
 
-    scaler = all_fitted_params.get(config.scaler_param_name)
-    if scaler is None:
-        raise ValueError(
-            f"PCA compression could not find a fitted scaler at all_fitted_params['{config.scaler_param_name}']. Configure .set_scaler(RobustScaler), or pass a matching scaler_param_name to .set_pca_compression()."
-        )
-    if not isinstance(scaler, RobustScaler):
-        raise ValueError(
-            f"PCA compression requires a fitted RobustScaler at all_fitted_params['{config.scaler_param_name}'], got {type(scaler).__name__}."
-        )
+    if manifest.scaler is None:
+        raise ValueError('PCA compression requires a configured fitted scaler')
+    key = config.scaler_param_name
+    if key not in {name for name, _, _ in manifest.scaler[0]}:
+        raise ValueError(f"PCA scaler key '{key}' is not a configured scaler output")
+    if key not in all_fitted_params:
+        raise ValueError(f"PCA compression could not find a fitted scaler at '{key}'; configure .set_scaler() with the matching PCA key")
+    scaler = all_fitted_params[key]
+    if not callable(getattr(scaler, 'transform', None)):
+        raise ValueError(f"PCA fitted scaler at '{key}' requires a callable transform")
 
     target_col = manifest.target_column
     excluded_cols = {'datetime', target_col}
@@ -1857,14 +1857,14 @@ def _validate_pca_feature_columns(
     for split_idx, split in enumerate(split_data):
         if split.height == 0:
             continue
-        non_numeric = [
-            col for col in feature_cols
-            if not split[col].dtype.is_numeric()
-        ]
+        non_numeric = [col for col in feature_cols if not split[col].dtype.is_numeric()]
         if non_numeric:
             raise ValueError(
                 f"PCA compression requires numeric feature columns; split {split_idx} has non-numeric columns: {non_numeric}"
             )
+        nonfinite = [col for col in feature_cols if not split[col].cast(pl.Float64).is_finite().fill_null(False).all()]
+        if nonfinite:
+            raise ValueError(f"PCA compression requires finite feature columns; split {split_idx} has nonfinite columns: {nonfinite}")
 
 
 def _build_pca_split(

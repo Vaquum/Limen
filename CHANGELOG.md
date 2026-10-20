@@ -1843,4 +1843,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.7] - 2026-10-20
 
+<<<<<<< HEAD
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
+=======
+- Admit compatible fitted-scaler matrices to full-SVD PCA and diagnose finalized nonfinite inputs while preserving training ownership and frozen inference.
+>>>>>>> origin/main
