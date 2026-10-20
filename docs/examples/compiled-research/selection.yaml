@@ -5,10 +5,12 @@ metadata:
 sfd:
   manifest:
     type: ml
+# region recorded_source
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
         file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+# endregion recorded_source
     split_dates:
       train_start: "2025-01-01"
       train_end: "2025-01-15"

@@ -35,11 +35,13 @@ INPUTS = {
 }
 
 
+# region recorded_input
 def recorded(data_dir, name, rows):
     source = data_dir / name
     if hashlib.sha256(source.read_bytes()).hexdigest() != INPUTS[name]:
         raise ValueError('Recorded input digest differs: ' + name)
     return pl.read_parquet(source, n_rows=rows)
+# endregion recorded_input
 
 
 def quarter_hour(data_dir):

@@ -56,7 +56,10 @@
     "docs/Features.md",
     "docs/Transforms.md",
     "docs/Scalers.md",
-    "docs/Targets.md"
+    "docs/Targets.md",
+    "docs/Historical-Data.md",
+    "docs/Data-Bars.md",
+    "docs/Final-Holdout.md"
   ],
   "model_families": {
     "logreg_binary": {
