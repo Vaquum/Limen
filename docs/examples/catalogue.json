@@ -50,7 +50,8 @@
   "candidate_pages": [
     "docs/Research-Book.md",
     "docs/examples/python-research/README.md",
-    "docs/examples/compiled-research/README.md"
+    "docs/examples/compiled-research/README.md",
+    "docs/Walk-Forward.md"
   ],
   "model_families": {
     "logreg_binary": {
