@@ -15,7 +15,9 @@ import polars as pl
 from sklearn import metrics as _metrics
 
 from limen.experiment import _holdout_history as history
-from limen.experiment._holdout_spec import normalized as normalized, encoded, digest
+from limen.experiment._holdout_spec import normalized, encoded, digest
+
+__all__ = ['Metric', 'artifacts', 'classification', 'digest', 'encoded', 'exposure', 'metric', 'normalized', 'read_holdout_report', 'retained_rows', 'return_metrics']
 
 roc_auc_score = cast(Callable[[Sequence[int], Sequence[float]], float], vars(_metrics)['roc_auc_score'])
 _BINARY_CLASSES = 2

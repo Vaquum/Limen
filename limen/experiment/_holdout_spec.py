@@ -13,7 +13,7 @@ from typing import cast
 
 from limen.experiment._holdout_state import fitted_witness
 
-__all__ = ['normalized', 'encoded', 'digest']
+__all__ = ['digest', 'encoded', 'normalized']
 
 
 def normalized(value: object) -> object:
