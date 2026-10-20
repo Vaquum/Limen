@@ -108,9 +108,9 @@ def pytest_sessionstart(session: pytest.Session) -> None:
 @pytest.hookimpl(wrapper=True)
 def pytest_runtest_protocol(item: pytest.Item, nextitem: pytest.Item | None):
     worker = item.config.stash.get(_WORKER, None)
-    if worker is not None and worker.measurement is not None:
-        if coverage.Coverage.current() is not worker.measurement:
-            raise RuntimeError('Worker lost its active coverage collector before execution')
+    if (worker is not None and worker.measurement is not None
+            and coverage.Coverage.current() is not worker.measurement):
+        raise RuntimeError('Worker lost its active coverage collector before execution')
     result = yield
     if worker is not None:
         if worker.measurement is not None and coverage.Coverage.current() is not worker.measurement:

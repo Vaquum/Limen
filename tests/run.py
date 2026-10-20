@@ -137,11 +137,9 @@ class RuntimeProfilePlugin:
         if duplicate:
             self.errors.append(f'Duplicate phase event: {key} {report.when}')
             return
-        if report.when == 'call' or (report.when == '???' and report.failed):
-            self._record(report)
-        elif report.when == 'setup' and (report.failed or report.skipped):
-            self._record(report)
-        elif report.when == 'teardown' and report.failed:
+        if (report.when == 'call'
+                or (report.when in ('???', 'teardown') and report.failed)
+                or (report.when == 'setup' and (report.failed or report.skipped))):
             self._record(report)
         if key in self._records_by_execution:
             record = self._records_by_execution[key]
