@@ -167,7 +167,7 @@ reportConstantRedefinition = "error"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["-ra", "--no-loadscope-reorder"]
+addopts = ["-ra"]
 filterwarnings = [
   "error",
   # Dependency warning filters are version-sensitive; re-check them on dependency bumps.
