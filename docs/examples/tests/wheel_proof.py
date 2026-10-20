@@ -1,5 +1,7 @@
 import hashlib
 import json
+import csv
+import math
 import os
 from pathlib import Path
 import subprocess
@@ -10,6 +12,7 @@ import zipfile
 
 from build_bundle import INPUTS, build, build_results
 from prepare_environment import verify_wheelhouse
+from released_wheel import verify_download
 from scenario_oracles import verify
 
 
@@ -69,32 +72,60 @@ def unpack(bundle: Path, target: Path, root: Path):
                     raise ValueError('Candidate project source differs: ' + str(relative))
 
 
-def prove_wheel(root: Path, temporary: Path):
+def compare_selection_logs(original_directory, command_directory):
+    comparisons = []
+    for directory in (original_directory, command_directory):
+        with (directory / 'results.csv').open(newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        assert len(rows) == 2
+        comparisons.append({row['id']: float(row['val_backtest_total_return']) for row in rows})
+    original, command_line = comparisons
+    assert len(original) == len(command_line) == 2 and original.keys() == command_line.keys()
+    for key in original:
+        assert math.isclose(original[key], command_line[key], rel_tol=1e-10, abs_tol=1e-12), key
+
+
+def prove_wheel(root: Path, temporary: Path, *, released_wheel: Path | None = None, released_bundle: Path | None = None):
     output = root / '.docs-evidence'
     output.mkdir(exist_ok=True)
     bundle = output / 'examples.tar.gz'
     bundle_sha = build(root, bundle)
+    if released_bundle is not None:
+        if released_wheel is None or hashlib.sha256(released_bundle.read_bytes()).hexdigest() != bundle_sha:
+            raise ValueError('The public project bundle differs from the released research source')
+        bundle.write_bytes(released_bundle.read_bytes())
+    canonical_commands = json.loads((root / 'docs/examples/commands.json').read_text())
     offline = verify_wheelhouse(root)
     isolated = temporary / 'isolated'
     venv.EnvBuilder(with_pip=True).create(isolated)
     python = isolated / 'bin/python'
     run([python, '-m', 'pip', 'install', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
          '--require-hashes', '-r', root / offline['runtime_lock'], '-r', root / 'docs/examples/requirements-build.txt'], cwd=temporary)
-    wheel_dir = temporary / 'wheels'
-    environment = dict(os.environ)
-    environment['SOURCE_DATE_EPOCH'] = subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=root, text=True).strip()
-    environment['PIP_NO_INDEX'] = '1'
-    run([python, '-m', 'build', '--wheel', '--no-isolation', '--outdir', wheel_dir], cwd=root, env=environment)
-    wheels = list(wheel_dir.glob('*.whl'))
-    assert len(wheels) == 1
-    wheel = wheels[0]
+    if released_wheel is None:
+        wheel_dir = temporary / 'wheels'
+        environment = dict(os.environ)
+        environment['SOURCE_DATE_EPOCH'] = subprocess.check_output(['git', 'show', '-s', '--format=%ct', 'HEAD'], cwd=root, text=True).strip()
+        environment['PIP_NO_INDEX'] = '1'
+        run([python, '-m', 'build', '--wheel', '--no-isolation', '--outdir', wheel_dir], cwd=root, env=environment)
+        wheels = list(wheel_dir.glob('*.whl'))
+        assert len(wheels) == 1
+        wheel = wheels[0]
+    else:
+        import re
+        version = re.search(r'^version = "([^"]+)"$', (root / 'pyproject.toml').read_text(), re.M)
+        if version is None:
+            raise ValueError('Package version is unavailable')
+        wheel = verify_download(released_wheel.resolve(), version[1])
     with zipfile.ZipFile(wheel) as archive:
         shipped = {name for name in archive.namelist() if name.startswith('limen/') and name.endswith('.py')}
         expected = {str(path.relative_to(root)) for path in (root / 'limen').rglob('*.py')}
         assert shipped == expected
         for name in shipped:
             assert archive.read(name) == (root / name).read_bytes()
-    run([python, '-m', 'pip', 'install', '--no-index', '--no-deps', wheel], cwd=temporary)
+    runtime_environment = dict(os.environ, PATH=str(python.parent) + os.pathsep + os.environ['PATH'])
+    installation_environment = dict(runtime_environment, PIP_NO_INDEX='1',
+                                    PIP_FIND_LINKS=wheel.parent.resolve().as_uri() + ' ' + (root / '.docs-evidence/wheelhouse').resolve().as_uri())
+    run(shlex.split(canonical_commands['install']), cwd=temporary, env=installation_environment)
     project = temporary / 'bundle'
     project.mkdir()
     unpack(bundle, project, root)
@@ -105,13 +136,15 @@ info={"version":m.version("vaquum-limen"),"import_location":str(Path(limen.__fil
 Path(sys.argv[1]).write_text(json.dumps(info))'''
     run([python, '-I', '-c', inspect, info_file], cwd=project)
     info = json.loads(info_file.read_text())
+    assert info['version'] == wheel.name.split('-')[1]
+    if released_wheel is not None:
+        assert info['version'] == json.loads(released_wheel.read_text())['version']
     assert Path(info['import_location']).is_relative_to(isolated)
     assert Path(info['distribution_location']).is_relative_to(isolated)
     assert not any(Path(entry or project).resolve() == root.resolve() for entry in info['sys_path'])
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
-    canonical_commands = json.loads((project / 'commands.json').read_text())
-    runtime_environment = dict(os.environ, PATH=str(python.parent) + os.pathsep + os.environ['PATH'])
+    assert json.loads((project / 'commands.json').read_text()) == canonical_commands
     for interface in ('python', 'compiled'):
         command = shlex.split(canonical_commands[interface + '-selection'])
         run(command, cwd=project, env=runtime_environment)
@@ -127,6 +160,9 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
         summaries[interface] = {'summary': summary, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
         commands[interface] = [str(arg) for arg in command]
         scenario_reports[(interface, 'selection')] = summaries[interface] | {'command': commands[interface]}
+        if interface == 'compiled':
+            run(shlex.split(canonical_commands['compiled-yaml']), cwd=project, env=runtime_environment)
+            compare_selection_logs(project / 'results/compiled', project / 'results/dev/compiled-cli')
         command = shlex.split(canonical_commands[interface + '-all'])
         run(command, cwd=project, env=runtime_environment)
         report = json.loads((project / f'results/{interface}-all/summary.json').read_text())

@@ -7,13 +7,13 @@ In practical Limen terms, CFR turns raw trades into:
 - a kline-like frame
 - plus six additional columns that describe multi-scale flow stability and entropy behavior
 
-CFR provides a compact diagnostic for scale-stable or anomalous trade flow inside each bar.
+The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) each run the same CFR diagnostic in their `bars` scenario. They use 90 recorded seconds of BTCUSDT trades, aggregate three 30-second bars and retain the resulting profile. This diagnostic is separate from the Compiled model-fitting population; three bars do not establish a trained CFR strategy.
 
 ## Prerequisites
 
 - trade-level `datetime`, `price`, and `quantity` columns
 - enough events for the chosen bar interval and scale set
-- a downstream plan for the synthetic kline and six CFR diagnostic columns
+- a downstream use for the formed bars and six CFR diagnostic columns
 
 ## Input And Output
 
@@ -43,15 +43,50 @@ It returns a kline-style dataframe containing:
 
 ## Usage
 
-```python
-from limen.features.conserved_flux_renormalization import conserved_flux_renormalization
+Use the complete project entry points and recorded input bundle. Both calls below execute the same shared helper; the input loader checks its recorded trade-file digest before forming the profile.
 
-cfr_df = conserved_flux_renormalization(
-    trades_df,
-    kline_interval='1h',
-    base_window_s=60,
-    levels=6,
-)
+### Python Research
+
+<!-- example: cfr-python-profile source=docs/examples/recorded_inputs.py region=trade_profile scenario=bars interface=python role=executed -->
+```python
+def trade_profile(data_dir, output):
+    historical = HistoricalData()
+    historical.get_any_file(str(checked_path(data_dir, TRADES)), has_header=False,
+                            columns=['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker', '_null'])
+    trades = historical.data
+    if not isinstance(trades, pl.DataFrame):
+        raise ValueError('The recorded trade source did not produce a dataframe')
+    profile = conserved_flux_renormalization(trades, kline_interval='30s', base_window_s=5, levels=3)
+    profile.write_parquet(output / 'trade-profile.parquet')
+    rows = [{**row, 'datetime': row['datetime'].isoformat()} for row in profile.to_dicts()]
+    return {'trade_rows': trades.height, 'bars': rows, 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
+```
+
+### Compiled Research
+
+<!-- example: cfr-compiled-profile source=docs/examples/recorded_inputs.py region=trade_profile scenario=bars interface=compiled role=executed -->
+```python
+def trade_profile(data_dir, output):
+    historical = HistoricalData()
+    historical.get_any_file(str(checked_path(data_dir, TRADES)), has_header=False,
+                            columns=['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker', '_null'])
+    trades = historical.data
+    if not isinstance(trades, pl.DataFrame):
+        raise ValueError('The recorded trade source did not produce a dataframe')
+    profile = conserved_flux_renormalization(trades, kline_interval='30s', base_window_s=5, levels=3)
+    profile.write_parquet(output / 'trade-profile.parquet')
+    rows = [{**row, 'datetime': row['datetime'].isoformat()} for row in profile.to_dicts()]
+    return {'trade_rows': trades.height, 'bars': rows, 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
+```
+
+The assertions independently reconstruct each bar's OHLC, volume, traded value and VWAP from the original trades. They check that the complete population is accounted for and all six diagnostics are finite and nonnegative. They do not turn the observed deviation measures into predictive or acceptance thresholds.
+
+The current API is:
+
+<!-- reference: cfr-public-api source=limen/features/conserved_flux_renormalization.py region=signature:conserved_flux_renormalization role=signature -->
+```python
+def conserved_flux_renormalization(trades_df: pl.DataFrame, *, kline_interval: str='1h', base_window_s: int=60, levels: int=6) -> pl.DataFrame:
+    ...
 ```
 
 ### Parameters
@@ -110,15 +145,13 @@ Poor fits:
 
 ## The Intuition
 
-The conserved-flux idea treats traded value as conserved "stuff." Renormalization then asks:
+CFR aggregates the recorded trades over progressively longer windows. The worked profile uses three levels within each 30-second bar:
 
-CFR measures how that flow changes under repeated time-scale aggregation.
-
-The function starts from a base window such as 60 seconds and repeatedly coarse-grains the trade stream:
-
-```text
-60s -> 120s -> 240s -> 480s
-```
+| Level | Recorded example window |
+|---|---|
+| 0 | 5 seconds |
+| 1 | 10 seconds |
+| 2 | 20 seconds |
 
 At each scale it measures two things:
 

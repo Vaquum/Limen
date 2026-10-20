@@ -2,7 +2,7 @@
 
 Utilities are the smaller helper surfaces that support Limen workflows without defining one primary subsystem of their own.
 
-They support the package, but they are not the main workflow. New Limen readers should start with [Universal Experiment Loop](Universal-Experiment-Loop.md), [Experiment Manifest](Experiment-Manifest.md), and [Log](Log.md).
+The [Python project](examples/python-research/README.md) keeps its chronological preparation, fitted scaler and validation score in caller-owned functions. The [Compiled project](examples/compiled-research/README.md) obtains prepared split dictionaries from its Manifest and uses reference architectures that convert them for model fitting. These utilities support those boundaries; they do not define another research interface or replace the projects' complete workflows.
 
 ## Current public utility surface
 
@@ -19,17 +19,13 @@ They support the package, but they are not the main workflow. New Limen readers 
 
 `ParamSpace` is the legacy permutation helper used by the standard non-MSQ run path.
 
+<!-- reference: utilities-paramspace-constructor source=limen/utils/param_space.py region=signature:ParamSpace.__init__ role=signature -->
 ```python
-from limen.utils import ParamSpace
-
-ps = ParamSpace(
-    {'alpha': [0.1, 0.2], 'beta': ['x', 'y'], 'gamma': [1, 2]},
-    n_permutations=3,
-    seed=42,
-)
+def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None=None, *, sample: bool=True) -> None:
+    ...
 ```
 
-This declares a total Cartesian space of `8` combinations and samples `3` permutations.
+The constructor distinguishes a sampled pool from deterministic prefix enumeration. This is an API reference; neither canonical project uses the legacy `ParamSpace` path.
 
 By default, `generate(random_search=False)` consumes the sampled pool in order. Construct with `sample=False` to select the first `n_permutations` combinations from the declared grid; then `generate(random_search=False)` enumerates that prefix, with the first parameter varying fastest. Standard `UniversalExperimentLoop.run(random_search=False)` selects and consumes this deterministic prefix.
 
@@ -41,10 +37,10 @@ By default, `generate(random_search=False)` consumes the sampled pool in order. 
 
 `data_dict_to_numpy()` converts the standard split keys from polars or pandas into numpy arrays.
 
+<!-- reference: utilities-numpy-conversion source=limen/utils/data_dict_to_numpy.py region=signature:data_dict_to_numpy role=signature -->
 ```python
-from limen.utils import data_dict_to_numpy
-
-arrays = data_dict_to_numpy(data_dict)
+def data_dict_to_numpy(data: dict[str, Any], keys: list[str] | None=None) -> dict[str, Any]:
+    ...
 ```
 
 The first dimension follows each split's row count; feature arrays retain the prepared feature width.
@@ -59,10 +55,20 @@ This helper supports sklearn-style or numpy-first model code.
 
 Install the statistical extra first: `pip install "vaquum-limen[stats]"`. The helper imports `statsmodels` lazily, so the rest of `limen.utils` remains available without it.
 
+<!-- reference: utilities-adf source=limen/utils/adf_test.py region=signature:adf_test role=signature -->
 ```python
-from limen.utils import adf_test
+def adf_test(series: pl.Series, significance_level: float=0.05) -> AdfResult:
+    ...
+```
 
-result = adf_test(series)
+<!-- reference: utilities-adf-result source=limen/utils/adf_test.py region=signature:AdfResult role=signature -->
+```python
+@dataclass
+class AdfResult:
+    stationary: bool
+    p_value: float
+    test_statistic: float
+    critical_values: dict[str, float]
 ```
 
 The structured result contains:
@@ -92,18 +98,13 @@ It returns:
 2. a detailed polars results frame
 3. calibration statistics
 
-In a live synthetic-model run in this repo with `target_confidence=0.8`, it returned:
+The detailed results frame describes each test observation with `datetime`, `prediction`, `uncertainty`, `is_confident`, `confidence_threshold`, `actual_value` and `confidence_score`. Coverage depends on the caller's validation population, target confidence and model agreement; this reference supplies no invented coverage result.
 
-- coverage value `0.867`
-- a threshold near zero on that particular synthetic setup
-- a results frame with columns:
-  - `datetime`
-  - `prediction`
-  - `uncertainty`
-  - `is_confident`
-  - `confidence_threshold`
-  - `actual_value`
-  - `confidence_score`
+<!-- reference: utilities-confidence-filtering source=limen/utils/confidence_filtering_system.py region=signature:confidence_filtering_system role=signature -->
+```python
+def confidence_filtering_system(models: list[Any], data: dict[str, Any], target_confidence: float=0.8) -> tuple[dict[str, Any], pl.DataFrame, dict[str, Any]]:
+    ...
+```
 
 Use this as an optional downstream helper, not as part of the core UEL contract.
 
@@ -111,16 +112,10 @@ Use this as an optional downstream helper, not as part of the core UEL contract.
 
 `split_by_dates()` partitions a datetime-indexed `polars.DataFrame` into train, val, and test by half-open `[start, end)` datetime windows. It is the helper that `Manifest.set_split_dates` calls when `split_dates` is configured; it is also exported for direct use when the splitter is needed outside the manifest pipeline.
 
+<!-- reference: utilities-date-splits source=limen/data/utils/splits.py region=signature:split_by_dates role=signature -->
 ```python
-from datetime import datetime
-from limen.data.utils import split_by_dates
-
-train, val, test = split_by_dates(
-    df,
-    datetime(2024, 1, 1), datetime(2024, 7, 1),
-    datetime(2024, 7, 1), datetime(2024, 10, 1),
-    datetime(2024, 10, 1), datetime(2025, 1, 1),
-)
+def split_by_dates(data: pl.DataFrame, train_start: date | Any, train_end: date | Any, val_start: date | Any, val_end: date | Any, test_start: date | Any, test_end: date | Any) -> list[pl.DataFrame]:
+    ...
 ```
 
 Behavior rules:

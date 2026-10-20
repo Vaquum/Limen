@@ -1,6 +1,6 @@
 # Reference Architecture
 
-The reference architecture is Limen's class-based model layer. It sits underneath the foundational SFDs and underneath `Trainer`.
+Reference architectures define the native model contract used by Compiled Research and Trainer. The [Compiled project](examples/compiled-research/README.md) exercises logistic selection, native Ridge preparation and the recorded model-family cases. The [Python project](examples/python-research/README.md) instead owns its estimator and score; ordinary Python models need not subclass `ReferenceModel`.
 
 This page covers:
 
@@ -24,18 +24,47 @@ The current public reference-architecture exports are:
 - `XGBoostRegressor`
 - `TabPFNBinary`
 
-Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`.
+Each model module also exposes a function-style wrapper with the same behavioral surface used by foundational manifests. The TabPFN symbols are importable without the optional dependency; constructing or training `TabPFNBinary` requires `vaquum-limen[tabpfn]`. The canonical projects do not claim TabPFN execution; its real-model validation remains tracked in [#628](https://github.com/Vaquum/Limen/issues/628).
 
 The function exports are `direction_sizing`, `dlinear_regressor`, `lightgbm_binary`, `logreg_binary`, `random_binary`, `ridge_regressor`, `rule_based`, `tabpfn_binary`, and `xgboost_regressor`.
+
+## Caller-owned fitting
+
+The Python project fits and retains its own scaler/estimator pipeline. Its
+selection score, fitted-state identity and Sensor output meaning remain the
+caller's decisions:
+
+<!-- example: architecture-python-fit source=docs/examples/python-research/research.py region=fitted_scaler scenario=selection interface=python role=executed -->
+```python
+def fit(train, round_params):
+    return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
+        train.select("momentum"), train["next_return"].to_numpy()
+    )
+```
 
 ## `ReferenceModel`
 
 `ReferenceModel` is the base contract. Every subclass must implement:
 
+<!-- reference: architecture-base-train source=limen/sfd/reference_architecture/base.py region=signature:ReferenceModel.train role=signature -->
 ```python
-train(data, **params)
-predict(data)
-evaluate(data, inline_metrics=True)
+@abstractmethod
+def train(self, data: dict[str, Any], **params: Any) -> 'ReferenceModel':
+    ...
+```
+
+<!-- reference: architecture-base-predict source=limen/sfd/reference_architecture/base.py region=signature:ReferenceModel.predict role=signature -->
+```python
+@abstractmethod
+def predict(self, data: dict[str, Any]) -> dict[str, Any]:
+    ...
+```
+
+<!-- reference: architecture-base-evaluate source=limen/sfd/reference_architecture/base.py region=signature:ReferenceModel.evaluate role=signature -->
+```python
+@abstractmethod
+def evaluate(self, data: dict[str, Any], inline_metrics: bool=True) -> dict[str, Any]:
+    ...
 ```
 
 ### Data expectations
@@ -116,25 +145,79 @@ normal Trainer reconstruction. Scaling belongs to the manifest, not the model.
 
 `DirectionSizingModel` owns two fitted components and emits one signed exposure in `[-1, 1]`. Its native wrapper is `direction_sizing`; default components are sklearn LogisticRegression for direction and Ridge for magnitude. It requires [private simulated-trade outcomes](Targets.md#simulated-trade-outcomes) and `prediction_mode='target_exposure'`.
 
-```python
-from limen.experiment.manifest_core import MLManifest, ProductConfig
-from limen.sfd.reference_architecture import direction_sizing
-from limen.targets import TradeOutcomeTarget
-
-def sized_trade_manifest(recorded_source):
-    manifest = MLManifest().set_data_source(recorded_source, params={'klines_size': 900})
-    manifest.set_split_config(6, 2, 2)
-    manifest.with_target_label('outcome', TradeOutcomeTarget)
-    manifest.with_reference_architecture(direction_sizing)
-    manifest.set_backtest_config(
-        prediction_mode='target_exposure',
-        product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 0.001, 5),
-        max_holding_seconds='holding_seconds', fee_bps=5, slip_bps=5,
-    )
-    return manifest
+<!-- example: architecture-direction-sizing source=docs/examples/compiled-research/family_direction_sizing.yaml region=__file__ scenario=search interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_direction_sizing
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: outcome
+      class: limen.targets.TradeOutcomeTarget
+    backtest:
+      prediction_mode: target_exposure
+      product:
+        kind: linear_perpetual
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-09
+        min_notional: 0
+      source_interval_seconds: 900
+      fee_bps: 1
+      slip_bps: 0
+      max_holding_seconds: 1800
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.direction_sizing
+  params:
+    direction_params:
+    - max_iter: 1000
+      C: 0.5
+    sizing_params:
+    - alpha: 1.0
+    conditional_size:
+    - false
+    - true
+    folds:
+    - 3
+    min_train_samples:
+    - 2
+    seed:
+    - 42
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
-The source must return recorded OHLC and UTC datetime with the declared regular interval, or explicit causal interval metadata. Run `prepare_data(recorded_data, params)` and `run_model(prepared, params)` with, for example, `params={'holding_seconds': 3600, 'direction_params': {'C': 0.5}, 'sizing_params': {'alpha': 1.0}, 'seed': 42}`. Funding is optional and independently [tunable](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+This is the Compiled project's actual direction/sizing definition. Its model-family driver binds the recorded input path and executes both `conditional_size` candidates. The declared source interval is 900 seconds and the holding limit is 1,800 seconds. Inputs require recorded OHLC and UTC datetime with that regular interval, or explicit causal interval metadata. Funding is optional and independently [tunable](Backtest.md#signed-exposure-elapsed-exits-and-funding).
 
 When both candidates complete, direction is the strictly better positive side. Equal returns and neither side profitable map to flat. Magnitude is the better return divided by positive `return_scale` (default `0.01`), clipped to `max_size` (default `1`). One unavailable side excludes that row from paired fitting/metrics. Predictions still cover every feature-valid inference row.
 
@@ -156,9 +239,9 @@ Architectures that expose valid P(1) may use Cohort's probability-weighted aggre
 |---|---:|---|---|
 | `LogRegBinary` | yes | probability | `predict()` returns `_probs = predict_proba(x_test)[:, 1]`, which is directly the class-1 probability P(1). |
 | `LightGBMBinary` | yes | probability | `predict()` returns `_probs` from the classifier or fitted calibrator. |
-| `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are synthetic confidence values (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
+| `RandomBinary` | yes | probability | `predict()` returns `_probs`, but they are fixed surrogate scores (`0.9` for predicted 1, `0.1` for predicted 0), not model-derived calibrated probabilities. Still usable as P(1)-shaped output if Cohort accepts implementation-defined probability-like outputs. |
 | `TabPFNBinary` | yes | probability | `predict()` returns `_probs` as positive-class probability. When a `CalibrationConfig` is configured, probabilities are optionally recalibrated and the threshold optimized before `_preds` are produced. This is compatible with P(1). |
-| `RidgeRegressor` | no | fallback | Continuous `_preds` only; no class probabilities. |
+| `RidgeRegressor` | no | fallback | Continuous `_preds` only; no class probabilities. Ordinary unqualified regressor Cohorts vote up at `prediction > 0`; qualified folds keep their separate contract. |
 | `XGBoostRegressor` | no | fallback | `predict()` returns only `_preds` and does not expose `_probs`. Since this is a regressor, any Cohort use would have to fall back unless a separate binary-probability wrapper is introduced. |
 | `DLinearRegressor` | no | fallback | `predict()` returns only `_preds`. Same regressor caveat as `XGBoostRegressor`. |
 | `RuleBasedStrategy` | no | fallback | `predict()` returns positions as `_preds`; `_probs` is intentionally absent. |
@@ -213,32 +296,73 @@ For `LogRegBinary`, inline evaluation can add keys such as:
 
 That is why the reference-architecture layer is the bridge between raw model output and the experiment-level analytics surfaces.
 
-## Example: Class-Based Usage
+## Class-based usage in the project
 
+<!-- example: architecture-native-class source=docs/examples/compiled-research/scenarios.py region=preparation scenario=search interface=compiled role=executed -->
 ```python
-from limen.sfd.reference_architecture import LogRegBinary
+def preparation(data_dir, output):
+    from limen.experiment import MLManifest
+    from limen.features import fractional_diff
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.sfd.reference_architecture import RidgeRegressor
+    from limen.targets import TripleBarrierTarget
 
-model = LogRegBinary().train(
-    data,
-    solver='lbfgs',
-    penalty='l2',
-    C=0.1,
-    class_weight=0.55,
-    max_iter=60,
-)
+    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
 
-pred = model.predict({'x_test': data['x_test']})
-results = model.evaluate(data, inline_metrics=True)
+        def surface(data):
+            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
+
+        def capture(data_dict, split_data, round_params, fitted_params):
+            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
+                frame.write_parquet(directory / (split + '.parquet'))
+            return data_dict
+
+        manifest = MLManifest()
+        (manifest.set_split_config(6, 2, 2)
+                    .add_indicator(roc, period=3, group='momentum')
+                    .add_indicator(roc, period=12, group='momentum')
+                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
+                    .add_feature(surface)
+                    .with_target_label('label', TripleBarrierTarget, fit_params={
+                        'upper_multiple': 1.5, 'lower_multiple': 1.,
+                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
+        (manifest.set_scaler(RobustScaler).set_feature_ablation()
+                    .set_pca_compression().add_to_data_dict(capture))
+        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
+                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
+        data = manifest.prepare_data(raw, params)
+        model = RidgeRegressor().train(data, alpha=1., solver='svd')
+        scored = model.evaluate(data, inline_metrics=False)
+        scaler = data['_scaler']
+        pca = data.get('_pca')
+        cases.append({'name': name,
+                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
+                      'dropped': params.get('_dropped_features', []),
+                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
+            'fixed_d': .4, 'weight_threshold': .05}
 ```
 
-This is the same contract that `Trainer` replays before it wraps finished experiment rounds in `Sensor` objects.
+This complete native preparation function uses its project imports/data helpers, constructs its Manifest and trains `RidgeRegressor` directly. It retains the matrices used by its independent closed-form prediction tests. The selection and model-family cases separately exercise Trainer reconstruction; direct class fitting alone does not create a saved round identity.
 
 ## Function Wrappers Versus Classes
 
-Foundational manifests call the function wrapper:
+Foundational manifests call a function wrapper through `with_reference_architecture`. The current Ridge wrapper signature is:
 
-```python-fragment
-.with_reference_architecture(logreg_binary)
+<!-- reference: architecture-wrapper source=limen/sfd/reference_architecture/ridge_regressor.py region=signature:ridge_regressor role=signature -->
+```python
+def ridge_regressor(data: dict[str, object], alpha: float=1.0, fit_intercept: bool=True, copy_X: bool=True, max_iter: int | None=None, tol: float=0.0001, solver: str='auto', positive: bool=False, random_state: int | None=42) -> dict[str, object]:
+    ...
 ```
 
 That wrapper:
@@ -272,7 +396,10 @@ Deterministic models use near-exact metric tolerance; stochastic models use a wi
 - **Target shape** — scalar per bar: `NextReturnTarget(periods=horizon, scale=100.0)`, the percentage return over the next `horizon` bars.
 - **Direction mapping** — `evaluate()` mirrors `XGBoostRegressor`: `preds > 0` becomes the long/flat signal for the inline confusion and backtest metrics.
 
-`DLinearRegressor` is a reference baseline, not an alpha source. On the measured reference window (1h BTCUSDT spot klines from 2025-01-01, split 8:1:2, 5 bps fee + 5 bps slip per fill, 1-bar execution lag), gross `edge_bps_p50` was −0.3 to 0.0 bps, the best actively-trading config netted −1.4 bps/bar against −0.4 bps/bar for always-long, and out-of-sample r² was ≈ 0.000 — at parity with `XGBoostRegressor` on the same window. No sign-honest configuration cleared 10 bps/side costs at these frequencies.
+The Compiled project's recorded family case checks its prediction/target
+alignment, recomputes RMSE and reconstructs the selected round. Those assertions
+establish the declared case; they do not establish predictive edge or transfer a
+historical performance number to a new window.
 
 ## `RuleBasedStrategy`
 
@@ -283,19 +410,11 @@ Deterministic models use near-exact metric tolerance; stochastic models use a wi
 
 It expects a `data_dict` produced by a manifest configured with `with_strategy()`:
 
-```python
-{
-    'train': pl.DataFrame,  # with pre-computed boolean predicate columns
-    'val':   pl.DataFrame,
-    'test':  pl.DataFrame,
-    'strategy': {
-        'conditions': [
-            {'id': 'entry_id', 'type': 'threshold', 'column': 'wilder_rsi_14', 'operator': '<', 'value': 30},
-        ],
-        'entry': 'entry_id',
-    },
-}
-```
+| Prepared key | Rule-based input |
+|---|---|
+| `train`, `val`, `test` | Prepared frames containing predicate columns. |
+| `strategy.conditions` | Resolved condition definitions. |
+| `strategy.entry` | The root condition ID to evaluate. |
 
 The strategy walks the boolean logic tree defined in `strategy['conditions']`, resolves each leaf condition by reading its pre-computed boolean column from the split DataFrame, and folds compound conditions via AND/OR/NOT. Positions are 0 (flat) or 1 (long) per bar.
 

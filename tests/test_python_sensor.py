@@ -41,8 +41,9 @@ def example(recorded, tmp_path_factory):
     marked = document.split('<!-- python-sensor-example -->', 1)[1]
     source = marked.split('```python\n', 1)[1].split('\n```', 1)[0]
     directory = tmp_path_factory.mktemp('python_sensor_example')
-    script = directory / 'research.py'
-    script.write_text(source)
+    script = ROOT / 'docs/examples/python-research/research.py'
+    canonical = script.read_text().split('# region experiment\n', 1)[1].split('# endregion experiment', 1)[0].rstrip()
+    assert source == canonical
     api = runpy.run_path(str(script))
     stem = directory / 'research'
     fitted_objects = []
@@ -104,7 +105,8 @@ def test_recorded_public_handoff_reproduces_selection_metric(example, recorded):
         assert list(sensor.fitted_state.feature_names_in_) == ['momentum']
         assert sensor.output_id == 'next_bar_return'
     assert stem.with_suffix('.csv').is_file()
-    assert set(stem.parent.iterdir()) == {stem.parent / 'research.py', stem.with_suffix('.csv')}
+    assert Path(api['__file__']).resolve() == ROOT / 'docs/examples/python-research/research.py'
+    assert set(stem.parent.iterdir()) == {stem.with_suffix('.csv')}
     close, opening = recorded['close'].to_numpy(), recorded['open'].to_numpy()
     member_scores = []
     for params, fitted in members:

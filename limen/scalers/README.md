@@ -7,6 +7,10 @@
 - [Scalers](../../docs/Scalers.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) fits a StandardScaler/Ridge pipeline and reuses those evaluated objects. The [Compiled project](../../docs/examples/compiled-research/README.md) fits its declared LogRegScaler on training features and reconstructs it with the selected round. The scaler reference distinguishes these fitted paths from stateless transforms.
+
 ## What this package owns
 
 Owns fitted scaler classes, the scaler registry, and the rule-based logic that decides how columns should be transformed.
@@ -32,14 +36,26 @@ Does **not** own raw feature creation or the experiment loop itself.
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `linear_scaler.py` | LinearScaler, rule helpers, inverse transform |
+| `logreg_scaler.py` | Logistic-regression tuned scaling |
+| `robust_scaler.py` | Median and IQR scaling |
+| `causal_rolling_robust_scaler.py` | Causal trailing-window median and IQR scaling |
+| `rank_gauss_scaler.py` | Rank-based Gaussianization |
+| `registry.py` | SCALER_REGISTRY |
+
+<!-- reference: package-scalers-layout source=limen/scalers/README.md region=layout:package role=layout -->
 ```text
 scalers/
-├── linear_scaler.py                 # LinearScaler, rule helpers, inverse transform
-├── logreg_scaler.py                 # Logistic-regression tuned scaling
-├── robust_scaler.py                 # Median and IQR scaling
-├── causal_rolling_robust_scaler.py  # Causal trailing-window median and IQR scaling
-├── rank_gauss_scaler.py             # Rank-based Gaussianization
-└── registry.py                      # SCALER_REGISTRY
+├── README.md
+├── __init__.py
+├── causal_rolling_robust_scaler.py
+├── linear_scaler.py
+├── logreg_scaler.py
+├── rank_gauss_scaler.py
+├── registry.py
+└── robust_scaler.py
 ```
 
 ## Things to know

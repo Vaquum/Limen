@@ -36,6 +36,7 @@ sfd:
     scaler:
       from_params: scaler_type
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
+# region bar_formation
     bar_formation:
       func: limen.data.utils.compute_data_bars
       params:
@@ -43,6 +44,7 @@ sfd:
         volume_threshold: '{volume_threshold}'
         trade_threshold: '{trade_threshold}'
         liquidity_threshold: '{liquidity_threshold}'
+# endregion bar_formation
   params:
     scaler_type: [logreg]
     C:

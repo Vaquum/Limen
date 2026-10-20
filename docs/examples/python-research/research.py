@@ -20,37 +20,47 @@ from limen.experiment.param_search import GridStrategy
 
 
 # region preparation
+# region momentum_feature
 def features(bars, window):
     return bars.with_columns(
         (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
     )
+# endregion momentum_feature
 
 
+# region next_return_target
 def prepare_split(bars, round_params):
     return features(bars, round_params["window"]).with_columns(
         (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
         .alias("next_return")
     ).slice(12).drop_nulls(["momentum", "next_return"])
+# endregion next_return_target
 
 
+# region split_preparation
 def prep(bars, round_params):
     # Split before features and labels; no target crosses a boundary.
     return {
         "train": prepare_split(bars[:960], round_params),
         "validation": prepare_split(bars[960:1440], round_params),
     }
+# endregion split_preparation
 
 
+# region fitted_scaler
 def fit(train, round_params):
     return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
         train.select("momentum"), train["next_return"].to_numpy()
     )
+# endregion fitted_scaler
 
 
+# region validation_score
 def backtest(validation, forecasts):
     positions = np.sign(forecasts)
     net = positions * validation["next_return"].to_numpy() - abs(positions) * 0.0002
     return float(np.mean(net))
+# endregion validation_score
 
 
 def prepare_live(history, params):
@@ -62,11 +72,13 @@ def prepare_live(history, params):
 # endregion preparation
 
 
+# region completed_log
 def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
     log = loop.experiment_log
     if log is None:
         raise ValueError("The experiment has no completed result log")
     return log
+# endregion completed_log
 
 
 # region experiment

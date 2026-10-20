@@ -8,6 +8,10 @@
 - [Command-Line Interface](../../docs/Command-Line-Interface.md)
 - [Advanced Search](../../docs/Advanced-Search.md)
 
+## In the research projects
+
+The [Compiled project](../../docs/examples/compiled-research/README.md) `command_line` scenario validates, commits, forks, runs and restores its declared experiment. Its source keeps the installed CLI and the compiler on the same definition; a YAML declaration invoked through Python remains Compiled Research.
+
 ## What this package owns
 
 Owns the declarative manifest surface behind the preferred CLI path: YAML schema constants, parsing, validation, object resolution, manifest compilation, profiling, and committed-manifest lookup.
@@ -36,18 +40,40 @@ The package also owns `parser.py`, `schema.py`, `validator.py`, `resolver.py`, `
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `parser.py` | YAML text to Python data |
+| `schema.py` | version, modes, manifest types, and allowed values |
+| `rules.py` | validation rule implementations |
+| `validator.py` | validation orchestration and result objects |
+| `resolver.py` | limen.* dotted-reference resolution |
+| `compiler.py` | YAML config to executable manifest-backed SFD |
+| `profiler.py` | parameter-space profiling |
+| `store.py` | committed manifest store and URI resolution |
+| `config.py` | project-root and limen.toml helpers |
+| `templates/` | bundled starter YAML manifests |
+
+<!-- reference: package-yaml-layout source=limen/yaml/README.md region=layout:package role=layout -->
 ```text
 yaml/
-|-- parser.py     # YAML text to Python data
-|-- schema.py     # version, modes, manifest types, and allowed values
-|-- rules.py      # validation rule implementations
-|-- validator.py  # validation orchestration and result objects
-|-- resolver.py   # limen.* dotted-reference resolution
-|-- compiler.py   # YAML config to executable manifest-backed SFD
-|-- profiler.py   # parameter-space profiling
-|-- store.py      # committed manifest store and URI resolution
-|-- config.py     # project-root and limen.toml helpers
-`-- templates/    # bundled starter YAML manifests
+├── README.md
+├── __init__.py
+├── _backtest_spec.py
+├── _feature_shim_spec.py
+├── _objective_spec.py
+├── _recording_spec.py
+├── _temporal_spec.py
+├── compiler.py
+├── config.py
+├── errors.py
+├── parser.py
+├── profiler.py
+├── resolver.py
+├── rules.py
+├── schema.py
+├── store.py
+├── templates/
+└── validator.py
 ```
 
 ## Things to know

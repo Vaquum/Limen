@@ -7,6 +7,10 @@
 - [Cohort](../../docs/Cohort.md)
 - [Trainer](../../docs/Trainer.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) composes selected, already evaluated fitted objects through `Cohort.from_python`. The [Compiled project](../../docs/examples/compiled-research/README.md) `walk_forward` scenario binds reconstructed qualified folds. Member identity, output units and available context must agree before aggregation.
+
 ## What this package owns
 
 This package owns the cohort-level inference surface:
@@ -33,15 +37,26 @@ It does **not** own:
 
 ## Package map
 
+| Module or family | Responsibility |
+|---|---|
+| `cohort.py` | Cohort entry points + compiled aggregation |
+| `_python_cohort.py` | Live composition and callback boundary |
+| `sfc/` | Single-file cohort strategies |
+| `all.py` | select(context) -> ids |
+| `top_n.py` | select(context, *, column, n) -> ids |
+| `backtest_pareto.py` | select(context, *, target_count) -> ids |
+| `diverse_metrics.py` | select(context, *, target_count) -> ids |
+
+<!-- reference: package-cohort-layout source=limen/cohort/README.md region=layout:package role=layout -->
 ```text
 cohort/
-├── cohort.py                # Cohort entry points + compiled aggregation
-├── _python_cohort.py         # Live composition and callback boundary
-└── sfc/                     # Single-file cohort strategies
-    ├── all.py               # select(context) -> ids
-    ├── top_n.py             # select(context, *, column, n) -> ids
-    ├── backtest_pareto.py   # select(context, *, target_count) -> ids
-    └── diverse_metrics.py   # select(context, *, target_count) -> ids
+├── README.md
+├── __init__.py
+├── _fold_sources.py
+├── _python_cohort.py
+├── _round_sources.py
+├── cohort.py
+└── sfc/
 ```
 
 ## Cohort quick behavior
