@@ -226,7 +226,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 if isinstance(method, (staticmethod, classmethod)):
                     method = native_attribute(cast(object, method), '__func__')
                 if method is not None:
-                    visit(method)
+                    visit(method, annotation=name in ('__annotations__', '__type_params__', '__parameters__'))
                     evidence.append((key, method))
 
     for value in values:
