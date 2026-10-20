@@ -261,7 +261,7 @@ class FrozenHoldoutSelection:
 
 
 def _copy_witness(selection: Sensor | Cohort) -> bytes:
-    return fitted_witness(tuple(_member_state(item) for item in members(selection)))
+    return fitted_witness(tuple(_member_state(item) for item in members(selection)), class_aliases=True)
 
 
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:

@@ -107,8 +107,9 @@ def _attributes(value: object) -> dict[str, object]:
     return values
 
 
-def fitted_witness(value: object) -> bytes:
+def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     seen: dict[int, tuple[int, object]] = {}
+    classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
         if item is None or type(item) in (str, bool, int, float, bytes):
@@ -117,6 +118,8 @@ def fitted_witness(value: object) -> bytes:
             return ('module', item.__name__) if isinstance(item, ModuleType) else ('class', item.__module__, item.__qualname__)
         if id(item) in seen:
             return ('ref', seen[id(item)][0])
+        if class_aliases and type(item).__module__ != 'builtins':
+            classes[id(type(item))] = type(item)
         seen[id(item)] = (len(seen), item)
         return structure(item)
 
@@ -184,4 +187,6 @@ def fitted_witness(value: object) -> bytes:
         else:
             result = (kind, pickle.dumps(item, protocol=5))
         return result
-    return pickle.dumps(node(value), protocol=5)
+    result = node(value)
+    aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)][0]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
+    return pickle.dumps((result, aliases) if class_aliases else result, protocol=5)

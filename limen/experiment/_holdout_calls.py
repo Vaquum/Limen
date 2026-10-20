@@ -116,21 +116,27 @@ def _descriptor_functions(descriptor: 'property | staticmethod[..., object] | cl
 
 
 def call_functions(value: object) -> tuple[FunctionType, ...]:
+    if isinstance(value, staticmethod) and inspect.getattr_static(type(value), '__call__', None) is not staticmethod.__call__:
+        return _bound_functions(inspect.getattr_static(type(value), '__call__', None))
     if isinstance(value, (property, staticmethod, classmethod)):
         return _descriptor_functions(cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value))
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
-        return call_functions(native_attribute(provider, 'func')) if call is partial[object].__call__ else call_functions(call)
+        return call_functions(native_attribute(provider, 'func')) if call is partial[object].__call__ else _bound_functions(call)
     if isinstance(value, type):
         call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-        return call_functions(constructor_entry(cast(type[object], value)).target) if call is type.__call__ else call_functions(call)
+        return call_functions(constructor_entry(cast(type[object], value)).target) if call is type.__call__ else _bound_functions(call)
     if inspect.ismethod(value):
         return call_functions(value.__func__)
     if inspect.isfunction(value):
         return (value,)
     call = inspect.getattr_static(type(value), '__call__', None)
-    return call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (property, staticmethod, classmethod)) else ()
+    return _bound_functions(cast(object, call)) if inspect.isfunction(call) or inspect.ismethod(call) or isinstance(call, (property, staticmethod, classmethod)) else ()
+
+
+def _bound_functions(value: object) -> tuple[FunctionType, ...]:
+    return _descriptor_functions(cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value)) if isinstance(value, (property, staticmethod, classmethod)) else call_functions(value)
 
 
 def matches(function: FunctionType, frame: FrameType, owner: object | None, instance: bool, index: int) -> bool:

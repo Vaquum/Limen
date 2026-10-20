@@ -60,6 +60,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
     recorded_mro: set[int] = set()
+    method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'}
 
     def visit(value: object, *, fitted_module: bool = True) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
@@ -191,9 +192,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 evidence.append((value.__name__, name, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
             return
         cls = value if isinstance(value, type) else type(value)
-        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
-        if isinstance(value, type):
-            names.update(('__new__', '__init__'))
+        names = method_names | {'__new__', '__init__'} if isinstance(value, type) else method_names
         if id(cls) not in recorded_mro:
             recorded_mro.add(id(cls))
             evidence.append(('mro', cls.__module__, cls.__qualname__, tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)))
@@ -222,6 +221,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1, -1, -1, -1)
     while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values())):
         previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()))
+        method_names.update(attributes)
         for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
     if capture is not None:
