@@ -4,7 +4,8 @@ import copy
 import inspect
 import json
 import zlib
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass, field, fields, is_dataclass
 from functools import partial
 from importlib import import_module
@@ -15,7 +16,7 @@ from typing_extensions import override
 
 from limen._parallel_contract import ParallelRoundContract, attach
 from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
-from limen.experiment._parallel_graph import shared_copy
+from limen.experiment._parallel_graph import copy_context
 from limen.experiment._parallel_state import call_implementation, component_state
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
@@ -98,6 +99,15 @@ def restore_plan(payload: bytes, providers: Mapping[str, list[str]]) -> FrozenMa
     if not isinstance(plan, FrozenManifestPlan):
         raise ValueError('Invalid frozen parallel plan transport')
     return plan
+
+
+@contextmanager
+def shared_copy(memo: dict[int, tuple[object, object]]) -> Iterator[None]:
+    token = copy_context.set((memo, {}))
+    try:
+        yield
+    finally:
+        copy_context.reset(token)
 
 
 def clone_manifest(manifest: Manifest, *, snapshot: bool = False) -> Manifest:

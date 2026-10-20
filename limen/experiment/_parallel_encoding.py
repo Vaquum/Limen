@@ -19,7 +19,7 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_graph import decode_graph, encode_graph
+from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
 
 VERSION = 1
@@ -84,7 +84,9 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
             return ['state_map', [[encode(key, active, ordered=True), encode(item, active, ordered=True)] for key, item in mapping.items()]]
         if all(isinstance(key, str) for key in mapping):
             return ['map', [[key, encode(mapping[key], active)] for key in sorted(cast(Mapping[str, object], mapping))]]
-        return ['keyed_map', sorted([[encode(key, active), encode(item, active)] for key, item in mapping.items()], key=lambda pair: json.dumps(pair[0], separators=(',', ':'))) ]
+        with isolated_encoding():
+            keys = sorted(mapping, key=lambda key: json.dumps(encode(key), separators=(',', ':')))
+        return ['keyed_map', [[encode(key, active), encode(mapping[key], active)] for key in keys]]
     if isinstance(value, (list, tuple)):
         return ['tuple' if isinstance(value, tuple) else 'list',
                 [encode(item, active, ordered=ordered) for item in cast(list[object] | tuple[object, ...], value)]]
@@ -138,16 +140,15 @@ def _decode(node: object, *, ordered: bool, isolate_functions: bool) -> object:
     if tag not in _ARITY or len(parts) != _ARITY[tag]:
         raise ValueError('Invalid version1 parallel parameter payload')
     if tag == 'null':
-        result: object = None
+        return None
     elif tag in ('str', 'bool') and type(parts[1]) is (str if tag == 'str' else bool):
-        result = parts[1]
+        return parts[1]
     elif tag in ('int', 'float') and isinstance(value := parts[1], str):
-        result = int(value) if tag == 'int' else float.fromhex(value)
+        return int(value) if tag == 'int' else float.fromhex(value)
     elif tag in ('date', 'datetime', 'path') and isinstance(value := parts[1], str):
-        result = date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
+        return date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
     else:
-        result = _decode_composite(parts, ordered=ordered, isolate_functions=isolate_functions)
-    return result
+        return _decode_composite(parts, ordered=ordered, isolate_functions=isolate_functions)
 
 
 def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: bool) -> object:

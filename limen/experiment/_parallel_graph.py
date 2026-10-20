@@ -10,18 +10,20 @@ from typing import cast
 
 _encoded: ContextVar[tuple[dict[int, tuple[int, object]], set[int]] | None] = ContextVar('parallel_encoded_graph', default=None)
 _decoded: ContextVar[list[object] | None] = ContextVar('parallel_decoded_graph', default=None)
-_copy: ContextVar[tuple[dict[int, tuple[object, object]], dict[int, object]] | None] = ContextVar('parallel_shared_copy', default=None)
+copy_context: ContextVar[tuple[dict[int, tuple[object, object]], dict[int, object]] | None] = ContextVar('parallel_shared_copy', default=None)
 _VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
 EMPTY_IDS: frozenset[int] = frozenset()
 
 
 @contextmanager
-def shared_copy(memo: dict[int, tuple[object, object]]) -> Iterator[None]:
-    token = _copy.set((memo, {}))
+def isolated_encoding() -> Iterator[None]:
+    token = _encoded.set(None)
+    copy_token = copy_context.set(None)
     try:
         yield
     finally:
-        _copy.reset(token)
+        _encoded.reset(token)
+        copy_context.reset(copy_token)
 
 
 def value_only(value: object, *, functions: bool = True) -> bool:
@@ -59,7 +61,7 @@ def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[objec
         if key in memo:
             return ['ref', memo[key][0]]
         memo[key] = (len(memo), value)
-        if (copy := _copy.get()) is not None:
+        if (copy := copy_context.get()) is not None:
             _ = copy[1].setdefault(len(memo) - 1, value)
         active.add(key)
         try:
@@ -87,7 +89,7 @@ def decode_graph(node: object, visit: Callable[[], object], verify: Callable[[ob
                 memo.append(None)
             result = visit()
             if index is not None:
-                if (copy := _copy.get()) is not None:
+                if (copy := copy_context.get()) is not None:
                     original = copy[1][index]
                     result = copy[0].setdefault(id(original), (original, result))[1]
                     copy[0][id(result)] = (result, result)

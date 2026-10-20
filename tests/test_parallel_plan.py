@@ -186,6 +186,16 @@ class AliasedRolling:
         return _caller_feature(data, self.right[0])
 
 
+@dataclass
+class KeyedRolling:
+    weights: dict[int, list[int]]
+
+    def __call__(self, data):
+        assert self.weights[0] is self.weights[1]
+        self.weights[0][0] += 1
+        return _caller_feature(data, self.weights[1][0])
+
+
 def _target_constructor(window):
     def implementation(self, train_data, target_name):
         self.target_name, self.window = target_name, window
@@ -464,6 +474,11 @@ def test_frozen_manifest_round_plan() -> None:
     transported = decode(encode(aliased))
     assert transported['left'][0] is transported['right'][0]
     assert parameter_projection(encode(aliased)) == {'left': [[2]], 'right': [[2]]}
+    for mapping in ({1: shared, 0: shared}, {(1, 'key'): shared, (0, 'key'): shared}):
+        transported = decode(encode(mapping))
+        values = list(transported.values())
+        assert values[0] is values[1]
+        assert digest(mapping) == digest(dict(reversed(list(mapping.items()))))
     for invalid in (['ref', 0], ['ref', -1], ['list', [['ref', 0]]], [[]]):
         with pytest.raises(ValueError):
             decode(invalid)
@@ -600,7 +615,7 @@ def test_frozen_manifest_round_plan() -> None:
         from tests.test_parallel_rounds import recorded_source
         expected_values = _caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()
         shared = [2]
-        for component, window in ((FunctionRolling(_mutable_feature), 2), (AliasedRolling(shared, shared), 3)):
+        for component, window in ((FunctionRolling(_mutable_feature), 2), (AliasedRolling(shared, shared), 3), (KeyedRolling({1: shared, 0: shared}), 3)):
             declare_parallel(component, ParallelRoundContract(deterministic_stage))
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_mutable_feature, '__defaults__', ([2],))
