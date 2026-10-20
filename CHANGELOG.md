@@ -1854,3 +1854,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Reduce repeated Markdown parser starts and immutable Git-history queries while retaining current source, provenance and execution checks.
 - Retain every npm audit response and bound retries for temporary registry gateway failures; preserve fatal advisory, authentication and malformed-report handling.
 - Reject package supersession at the activation boundary and restore the predecessor when a release changes during deployment or production verification.
+
+## [5.45.9] - 2026-10-20
+
+- Allow Worker deployments to propagate before verifying released documentation or rollback; recheck the active version and retain exact public proof.
