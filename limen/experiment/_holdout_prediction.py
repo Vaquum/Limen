@@ -46,6 +46,8 @@ def _roots(sensor: Sensor) -> list[object]:
 
 
 def _call_functions(value: object) -> tuple[FunctionType, ...]:
+    if isinstance(value, (staticmethod, classmethod)):
+        return _call_functions(value.__func__)
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         return (*_call_functions(provider.func), *_call_functions(type(provider).__call__))
@@ -57,7 +59,7 @@ def _call_functions(value: object) -> tuple[FunctionType, ...]:
         unwrapped = inspect.unwrap(value)
         return (value, *_call_functions(unwrapped)) if unwrapped is not value else (value,)
     call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-    functions = _call_functions(call.fget) if isinstance(call, property) else _call_functions(call) if inspect.isfunction(call) else ()
+    functions = _call_functions(call.fget) if isinstance(call, property) else _call_functions(call) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
     unwrapped = inspect.unwrap(value) if callable(value) else value
     return (*functions, *_call_functions(unwrapped)) if unwrapped is not value else functions
 
@@ -87,12 +89,13 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     def forbid(method: object) -> None:
         if not callable(method):
             return
-        calls = () if inspect.isfunction(method) or inspect.ismethod(method) else _call_functions(inspect.getattr_static(cast(type[object], type(method)), '__call__', None))
+        call = None if inspect.isfunction(method) or inspect.ismethod(method) else inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
+        calls = _call_functions(call)
         for function in _call_functions(method):
             if inspect.ismethod(method):
                 owner = cast(object, method.__self__)
             elif function in calls:
-                owner = method
+                owner = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
             elif isinstance(method, partial) and inspect.ismethod(method.func):
                 owner = cast(object, method.func.__self__)
             else:

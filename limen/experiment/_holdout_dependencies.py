@@ -224,8 +224,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             break
                         item = getattr(item, str(attribute.argval))
                         following += 1
-                    if isinstance(item, ModuleType) and index > 0 and instructions[index - 1].argval == 'getattr' and following < len(instructions) and instructions[following].opname == 'LOAD_CONST' and isinstance(instructions[following].argval, str) and hasattr(item, str(instructions[following].argval)):
-                        item = getattr(item, str(instructions[following].argval))
+                    if isinstance(item, ModuleType) and index > 0 and instructions[index - 1].argval == 'getattr':
+                        for attribute in attributes.intersection(vars(item)):
+                            visit(getattr(item, attribute))
                     if following < len(instructions) and instructions[following].opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME'):
                         aliases = references.setdefault(str(instructions[following].argval), [])
                         if all(part is not item for part in aliases):
@@ -256,6 +257,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def methods(value: object) -> None:
         cls = value if isinstance(value, type) else type(value)
         names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__len__', '__contains__'} | attributes
+        names.update(f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or'))
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
         done = processed.setdefault(id(value), set())

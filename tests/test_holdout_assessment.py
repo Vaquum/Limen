@@ -909,7 +909,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         def predict(self, data):
             import limen.calibration as helpers
             result = super().predict(data)
-            result['_probs'] = getattr(helpers, 'f17_later_probabilities', None)(result['_probs'])
+            name = 'f17_later_probabilities'
+            result['_probs'] = getattr(helpers, name)(result['_probs'])
             return result
     class BranchImports(LogRegBinary):
         def predict(self, data):
@@ -976,9 +977,17 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.policy(result['_probs'])
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities)):
+    class ArithmeticPolicy:
+        def __add__(self, values):
+            return later_probabilities(values)
+    class Arithmetic(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy + result['_probs']
+            return result
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1015,10 +1024,20 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     nested = copy.deepcopy(assessment_case[2][0][0])
     nested._model.policy = nested._model.model.coef_.copy().view(NumericCallbacks)
     nested._model.policy.prediction_calibration_config = SimpleNamespace(calibration_func=None, threshold_func=nested_threshold)
-    with pytest.raises(ValueError, match='attempted fitting'):
-        with readonly_prediction([nested]):
-            nested._model.policy.prediction_calibration_config.threshold_func()
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+        nested._model.policy.prediction_calibration_config.threshold_func()
     assert callback_calls == []
+    class StaticThreshold:
+        __call__ = staticmethod(nested_threshold)
+    class ClassThreshold:
+        @classmethod
+        def __call__(cls, *args):
+            nested_threshold(*args)
+    for callback in (partial(StaticThreshold()), partial(ClassThreshold())):
+        nested._model.policy.prediction_calibration_config.threshold_func = callback
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+            callback()
+        assert callback_calls == []
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
