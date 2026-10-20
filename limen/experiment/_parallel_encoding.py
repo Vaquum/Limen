@@ -209,9 +209,9 @@ def parameter_projection(node: list[object]) -> object:
     if tag in ('null', 'str', 'bool', 'int', 'float'):
         return decode(node)
     if tag == 'map':
-        return {cast(str, key): parameter_projection(cast(list[object], value)) for key, value in cast(list[list[object]], node[1])}
+        return {key: parameter_projection(encode(value)) for key, value in cast(dict[str, object], decode(node)).items()}
     if tag in ('tuple', 'list'):
-        return [parameter_projection(cast(list[object], value)) for value in cast(list[object], node[1])]
+        return [parameter_projection(encode(value)) for value in cast(list[object] | tuple[object, ...], decode(node))]
     return node
 
 

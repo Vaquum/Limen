@@ -65,7 +65,7 @@ def decode_graph(node: object, visit: Callable[[], object], verify: Callable[[ob
                 raise ValueError('Invalid parallel shared-state reference')
             result = memo[node[1]]
         else:
-            index = len(memo) if isinstance(node, list) and node and node[0] in _COMPOSITES and not _value_node(node) else None
+            index = len(memo) if isinstance(node, list) and node and isinstance(node[0], str) and node[0] in _COMPOSITES and not _value_node(node) else None
             if index is not None:
                 memo.append(None)
             result = visit()

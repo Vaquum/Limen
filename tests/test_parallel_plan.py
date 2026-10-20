@@ -18,7 +18,7 @@ import pytest
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage
-from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, source_digest
+from limen.experiment._parallel_encoding import decode, digest, encode, parameter_matches, parameter_projection, source_digest
 from limen.experiment._parallel_plan import ScalerFactory, clone_manifest, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
@@ -436,6 +436,14 @@ def _frozen_probe(plan, params):
 
 
 def test_frozen_manifest_round_plan() -> None:
+    shared = [2]
+    aliased = {'left': (shared,), 'right': (shared,)}
+    transported = decode(encode(aliased))
+    assert transported['left'][0] is transported['right'][0]
+    assert parameter_projection(encode(aliased)) == {'left': [[2]], 'right': [[2]]}
+    for invalid in (['ref', 0], ['ref', -1], ['list', [['ref', 0]]], [[]]):
+        with pytest.raises(ValueError):
+            decode(invalid)
     config = _configuration()
     original = build_manifest(config)
     plan = freeze_manifest(original, config)
