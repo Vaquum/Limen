@@ -70,6 +70,20 @@ class _StaticmethodStore(_CleanSubclass):
     _store = staticmethod(vars(HistoricalData)['_store'])
 
 
+class _GetattributeStore(_CleanSubclass):
+    def __getattribute__(self, name):
+        if name == '_store':
+            return lambda data: data
+        return super().__getattribute__(name)
+
+
+class _GetattrStore(_CleanSubclass):
+    def __getattr__(self, name):
+        if name == '_store':
+            return lambda data: data
+        raise AttributeError(name)
+
+
 def test_holdout_source_subclass_matrix(tmp_path):
     file_params = {'file_path_or_url': str(_FIXTURE)}
     kind, _, _ = source_spec(_manifest(_CleanSubclass().get_any_file, file_params), _binding(tmp_path))
@@ -82,6 +96,10 @@ def test_holdout_source_subclass_matrix(tmp_path):
         source_spec(_manifest(_ClassmethodStore().get_any_file, file_params), _binding(tmp_path))
     with pytest.raises(ValueError, match='overrides/subclasses'):
         source_spec(_manifest(_StaticmethodStore().get_any_file, file_params), _binding(tmp_path))
+    with pytest.raises(ValueError, match='overrides/subclasses'):
+        source_spec(_manifest(_GetattributeStore().get_any_file, file_params), _binding(tmp_path))
+    with pytest.raises(ValueError, match='overrides/subclasses'):
+        source_spec(_manifest(_GetattrStore().get_any_file, file_params), _binding(tmp_path))
     dirty = _CleanSubclass()
     dirty.extra_state = 1
     with pytest.raises(ValueError, match='overrides/subclasses'):
