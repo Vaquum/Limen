@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import pytest
-import yaml
 
 from limen.data.historical_data import _aggregate_spot_klines
 from limen.experiment.experiment_core import UniversalExperimentLoop
@@ -16,7 +15,7 @@ from limen.log import ConfusionNotApplicableError
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from limen.sfd.foundational_sfd import ridge_regressor as ridge_sfd
-from limen.yaml import CompiledSFD, build_search_strategy
+from limen.yaml import CompiledSFD, build_search_strategy, parse
 from tests.test_direction_sizing import YAML_SPEC
 from tests.test_dynamic_barriers import FIXTURE
 from tests.test_meta_allocation import _config as _allocation_config
@@ -79,7 +78,8 @@ def test_recorded_regressor_confusion_unavailable() -> None:
 
 
 def test_recorded_direction_sizing_confusion_unavailable() -> None:
-    config = yaml.safe_load(YAML_SPEC)
+    config, errors = parse(YAML_SPEC)
+    assert errors == []
     backtest = config['sfd']['manifest']['backtest']
     backtest['max_holding_seconds'] = 1800
     backtest['funding']['params']['rate'] = 0.0001
