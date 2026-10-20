@@ -116,10 +116,9 @@ def _descriptor_functions(descriptor: 'property | staticmethod[..., object] | cl
 
 
 def call_functions(value: object) -> tuple[FunctionType, ...]:
-    if isinstance(value, staticmethod) and inspect.getattr_static(type(cast(object, value)), '__call__', None) is not inspect.getattr_static(staticmethod, '__call__'):
-        return _bound_functions(inspect.getattr_static(type(cast(object, value)), '__call__', None))
     if isinstance(value, (property, staticmethod, classmethod)):
-        return _descriptor_functions(cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value))
+        call = inspect.getattr_static(type(cast(object, value)), '__call__', None)
+        return _bound_functions(call) if isinstance(value, staticmethod) and call is not inspect.getattr_static(staticmethod, '__call__') else _descriptor_functions(cast('property | staticmethod[..., object] | classmethod[object, ..., object]', value))
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
