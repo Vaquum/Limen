@@ -272,8 +272,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 if isinstance(method, (staticmethod, classmethod)):
                     method = method.__func__
                 if method is not None:
-                    evidence.append((key, function_witness(method) if inspect.isfunction(method) else fitted_witness(method)))
                     visit(method)
+                    evidence.append((key, function_witness(method) if inspect.isfunction(method) else fitted_witness(method)))
 
     for value in values:
         visit(value)
