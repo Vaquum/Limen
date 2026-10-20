@@ -920,15 +920,15 @@ Existing strict null refusals, non-strict NaN-row cleanup and conditional-fold
 errors remain in place.
 Frozen Sensor preprocessing retains its existing null-row/error policy.
 
-PCA weights the matrix produced by the caller's preprocessing. On the recorded
-first 336 hourly observations from January 2024 used by the proof, LogRegScaler
-leaves `mean`, `std`, `liquidity_sum`, `maker_volume` and `maker_liquidity` raw.
-Their approximate training standard deviations are 886, 71, 83 million, 996 and
-43 million; the first component has loadings about 0.890 and 0.456 on the two
-liquidity columns. LinearScaler covers this fixture differently, with features
-approximately at unit scale. Acceptance preserves that weighting; it does not
-establish comparable scaling or strategy quality. Rolling scalers still need
-their declared historical context, including at both future split boundaries.
+PCA weights the matrix produced by the caller's preprocessing. A scaler may
+leave some columns in their original units; numeric admission does not make
+those columns comparably scaled or establish strategy quality. The canonical
+preparation case retains its `RobustScaler` training medians and interquartile
+ranges, prepared matrices and fitted PCA projection. Its independent proof
+checks those values and the unchanged training fit used on validation and test.
+Rolling scalers still need their declared historical context, including at
+both future split boundaries. See [Scalers](Scalers.md) for each scaler's
+transformed and preserved columns.
 PCA does not test stationarity. Optional [feature shims](#feature-shims) transform
 selected columns upstream; their training evidence does not guarantee stationarity.
 
