@@ -5,7 +5,7 @@ backend-path = ["."]
 
 [project]
 name = "vaquum-limen"
-version = "5.45.2"
+version = "5.45.3"
 description = "Manifest-driven Bitcoin research software for YAML-defined experiments, benchmark artifacts, backtest ledgers, and decoder cohorts."
 readme = "README.md"
 authors = [
@@ -64,7 +64,7 @@ all = [
   "tabpfn>=6,<7",
   "xgboost>=2.1,<4",
 ]
-test = ["coverage[toml]>=7,<8", "hypothesis>=6,<7", "pytest>=8,<10"]
+test = ["coverage[toml]>=7,<8", "hypothesis>=6,<7", "pytest>=8,<10", "pytest-xdist>=3.8,<4"]
 release = ["anthropic>=0.54,<1"]
 dev = [
   "build>=1,<2",
@@ -78,6 +78,7 @@ dev = [
   "pyright>=1.1.408,<1.1.409",
   "pyroma>=5,<6",
   "pytest>=8,<10",
+  "pytest-xdist>=3.8,<4",
   "ruff>=0.15.21,<0.15.22",
   "scipy-stubs>=1.15,<1.16",
   "tomli>=2.0,<3",

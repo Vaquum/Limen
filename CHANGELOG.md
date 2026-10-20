@@ -1822,3 +1822,9 @@ Preserve NumPy scalar penetration precision; document that scalar floating-point
 ## [5.45.2] - 2026-10-20
 
 Infer nullable allocation opportunity fields across all observed labels so late censored opportunities retain their text reason after the first 100 rows; preserve strict conversion and causal supervision.
+
+## [5.45.3] - 2026-10-20
+
+- Run complete pytest collection in two file-grouped workers by default while preserving explicit caller arguments.
+- Merge measured worker coverage into the existing outer proof, retain process and execution receipts, and reject incomplete case accounting.
+- Isolate shared test diagnostic and holdout CSV output paths while retaining the original tests, fixtures and proof limits.
