@@ -12,10 +12,10 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import Protocol, cast
 
-from limen.experiment._parallel_encoding import encode, reference
-from limen.experiment._parallel_state import component_state
+from limen.experiment._parallel_encoding import encode
+from limen.experiment._parallel_state import component_state, object_state, restore_object
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source, parameter_references
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source, parameter_references, factory_reference, factory_allocator
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -51,11 +51,18 @@ class FrozenClassFactory:
         return instance
 
 
-def _factory_reference(value: object) -> list[object]:
+def _factory_component(value: object) -> object:
+    if isinstance(value, type):
+        if type(value).__call__ is not type.__call__:
+            raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
+        return FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None)
     if isinstance(value, partial):
-        bound = cast(partial[object], value)
-        return [reference(type(bound)), _factory_reference(bound.func), encode((bound.args, bound.keywords))]
-    return reference(value) if isfunction(value) or isinstance(value, type) else [component_digest(value)]
+        attributes, slots, bound, native = object_state(cast(partial[object], value))
+        assert bound is not None
+        result = restore_object(type(cast(object, value)), (attributes, slots, (_factory_component(bound[0]), *bound[1:]), native))
+        vars(result)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
+        return result
+    return value
 
 
 def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | None) -> dict[str, list[object]]:
@@ -67,10 +74,8 @@ def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | N
     for name, values in (defaults | dict(options or {})).items():
         for value in values:
             if name.endswith('_factory') and (isinstance(value, (type, partial)) or isfunction(value)) and value is not Parameter.empty:
-                if isinstance(value, type) and type(value).__call__ is not type.__call__:
-                    raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-                component = FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None) if isinstance(value, type) else cast(object, value)
-                result.setdefault(name, []).append((_factory_reference(cast(object, value)), component))
+                source, imported = factory_reference(cast(object, value))
+                result.setdefault(name, []).append((source, component_digest(cast(object, value)), imported, _factory_component(cast(object, value))))
     return result
 
 
@@ -79,8 +84,15 @@ def bind_factories(inventory: Mapping[str, list[object]], kwargs: Mapping[str, o
     for name, variants in inventory.items():
         value = kwargs.get(name)
         if isfunction(value) or isinstance(value, (type, partial)):
-            identity = _factory_reference(cast(object, value))
-            result[name] = next((component for source, component in cast(list[tuple[list[object], object]], variants) if source == identity), cast(object, value))
+            source, imported = factory_reference(cast(object, value))
+            fingerprint = component_digest(cast(object, value))
+            choices = cast(list[tuple[list[object], str, bool, object]], variants)
+            exact = [component for _, key, _, component in choices if key == fingerprint or component_digest(component) == fingerprint]
+            matches = [component for identity, _, live, component in choices if identity == source and live and imported]
+            candidates = {component_digest(component): component for component in exact or matches}
+            if len(candidates) != 1:
+                raise ValueError(f'Parallel stage architecture.{name}: missing frozen independence contract or ambiguous factory selection')
+            result[name] = next(iter(candidates.values()))
     return result
 
 
@@ -293,8 +305,8 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
             if 'seed' in resolved:
                 arguments['seed'] = resolved['seed']
             result[f'architecture.{key}'] = _defaults(factory, arguments, skip=0)
-            if isinstance(factory, FrozenClassFactory) and factory.allocator is not None:
-                result[f'architecture.{key}.allocate'] = _defaults(factory.allocator, arguments, skip=1)
+            if (allocator := factory_allocator(factory)) is not None:
+                result[f'architecture.{key}.allocate'] = _defaults(allocator, arguments, skip=0)
     for path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         if step is not None and (path != 'bar_formation' or params.get('bar_type', 'base') != 'base'):

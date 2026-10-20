@@ -125,6 +125,32 @@ def component_digest(component: object) -> str:
     return digest(_normalize(component, snapshot=True))
 
 
+def factory_reference(value: object) -> tuple[list[object], bool]:
+    if isinstance(value, partial):
+        bound = cast(partial[object], value)
+        state = object_state(bound)
+        source, imported = factory_reference(bound.func)
+        return [reference(type(bound)), source, encode((state[0], state[1], bound.args, bound.keywords, state[3]))], imported
+    if not (inspect.isfunction(value) or isinstance(value, type)):
+        return [component_digest(value)], False
+    identity = reference(value)
+    original: object = import_module(cast(list[str], identity[0])[0])
+    for part in cast(str, identity[1]).split('.'):
+        original = getattr(original, part)
+    return identity, original is value
+
+
+def factory_allocator(value: object) -> Callable[..., object] | None:
+    if isinstance(value, partial):
+        bound = cast(partial[object], value)
+        allocator = factory_allocator(bound.func)
+        return None if allocator is None else partial(cast(Callable[..., object], allocator), *bound.args, **bound.keywords)
+    if isinstance(value, cast(type, vars(import_module('limen.experiment._parallel_resources'))['FrozenClassFactory'])):
+        allocator = cast(Callable[..., object] | None, getattr(value, 'allocator'))
+        return None if allocator is None else partial(allocator, getattr(value, 'factory_class'))
+    return None
+
+
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 8)
 
 
@@ -300,9 +326,8 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))
                    for path, original in components(frozen, factory_options)
                    for component in [bind_factories(cast(dict[str, list[object]], vars(frozen)['_parallel_factory_options']), {path.removeprefix('architecture.'): original})[path.removeprefix('architecture.')]])
-    factory_class = cast(type, resources['FrozenClassFactory'])
     stages += tuple(FrozenStage(stage.path + '.allocate', stage.component, stage.contract) for stage in stages
-                    if stage.path.startswith('architecture.') and isinstance(stage.component, factory_class) and getattr(stage.component, 'allocator', None) is not None)
+                    if stage.path.startswith('architecture.') and factory_allocator(stage.component) is not None)
     for stage in stages:
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):

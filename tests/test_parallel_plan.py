@@ -1117,6 +1117,10 @@ def _factory_probe(plan, factory, extra=None):
     return result['caller_mean'].to_list(), os.getpid()
 
 
+def _factory_encoded_probe(plan, factory, extra=None):
+    return _factory_probe(plan, decode(factory, isolate_functions=True), extra)
+
+
 def _assert_factory_resources(plan, params):
     from limen.experiment._parallel_resources import unfrozen_stage
     from limen.experiment._parallel_resources import deterministic_stage
@@ -1170,6 +1174,43 @@ def _assert_factory_resources(plan, params):
             expected, _ = _factory_probe(captured_function, _auxiliary_factory)
             assert actual == expected == _caller_feature(recorded_source().head(24), 4)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(captured_function) == before and _auxiliary_factory.__kwdefaults__ == {'window': 3}
+        variants = [decode(encode(_auxiliary_factory), isolate_functions=True) for _ in range(2)]
+        for factory, window in zip(variants, (4, 5), strict=True):
+            factory.__kwdefaults__ = {'window': window}
+        captured_variants = freeze_manifest(manifest, None, {'auxiliary_factory': variants})
+        before = digest(captured_variants)
+        validate_domain(captured_variants, {key: [value] for key, value in params.items()} | {'auxiliary_factory': variants}, None)
+        for factory, window in zip(variants, (4, 5), strict=True):
+            for _ in range(2):
+                actual, pid = pool.submit(_factory_encoded_probe, captured_variants, encode(factory)).result(timeout=30)
+                expected, _ = _factory_probe(captured_variants, factory)
+                assert actual == expected == _caller_feature(recorded_source().head(24), window)['caller_mean'].to_list() and pid != os.getpid()
+        undeclared = decode(encode(_auxiliary_factory), isolate_functions=True)
+        undeclared.__kwdefaults__ = {'window': 6}
+        with pytest.raises(ValueError, match='missing frozen independence contract'):
+            validate_resources(captured_variants, params | {'auxiliary_factory': undeclared})
+        assert digest(captured_variants) == before
+        factory = partial(CallerRolling)
+        declare_parallel(factory, ParallelRoundContract(_caller_validator, ('window',)))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(CallerRolling.__init__, '__defaults__', (3,))
+            captured_partial_class = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+        before = digest(captured_partial_class)
+        validate_domain(captured_partial_class, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, captured_partial_class, factory).result(timeout=30)
+            expected, _ = _factory_probe(captured_partial_class, factory)
+            assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        assert digest(captured_partial_class) == before and CallerRolling.__init__.__defaults__ is None
+        allocated = partial(DualSeedRolling)
+        declare_parallel(allocated, ParallelRoundContract(seeded_stage))
+        partial_allocator = freeze_manifest(manifest, None, {'auxiliary_factory': [allocated]})
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):
+            validate_resources(partial_allocator, params | {'auxiliary_factory': allocated})
+        extra = {'auxiliary_params': {'seed': 42}}
+        actual, pid = pool.submit(_factory_probe, partial_allocator, allocated, extra).result(timeout=30)
+        expected, _ = _factory_probe(partial_allocator, allocated, extra)
+        assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         for bound in ({}, {'window': 5}):
             factory = partial(_auxiliary_factory, **bound)
             declare_parallel(factory, ParallelRoundContract(_caller_validator, ('window',)))
