@@ -29,7 +29,9 @@ export function renderMarkdown(page,pages,evidence){
   md.renderer.rules.paragraph_open=(tokens,index,options,env,renderer)=>{const text=tokens[index+1]?.content||'';const id=`p-${hash(text).slice(0,12)}`;const count=seen.get(id)||0;seen.set(id,count+1);tokens[index].attrSet('id',count?`${id}-${count}`:id);tokens[index].attrSet('data-passage','');return renderer.renderToken(tokens,index,options);};
   const originalLink=md.renderer.rules.link_open||((tokens,index,options,env,renderer)=>renderer.renderToken(tokens,index,options));
   md.renderer.rules.link_open=(tokens,index,options,env,renderer)=>{const token=tokens[index],href=token.attrGet('href');let target=null,anchor='';
-    if(href&&!/^(https?:|mailto:|#)/.test(href)){const split=href.split('#');anchor=split[1]||'';const resolved=new URL(split[0],`https://source.invalid/${page.source}`).pathname.slice(1);target=pages.find(p=>p.source===resolved);}
+    const sourcePrefix=content.product.repository+'/blob/main/';
+    const sourceHref=href?.startsWith(sourcePrefix)?href.slice(sourcePrefix.length):href;
+    if(sourceHref&&!/^(https?:|mailto:|#)/.test(sourceHref)){const split=sourceHref.split('#');anchor=split[1]||'';const base=href.startsWith(sourcePrefix)?'https://source.invalid/':`https://source.invalid/${page.source}`;const resolved=new URL(split[0],base).pathname.slice(1);target=pages.find(p=>p.source===resolved);}
     if(target){token.attrSet('href',target.url+(anchor?`#${anchor}`:''));token.attrSet('id',`link-${hash(page.source+':'+href+':'+linkCount++).slice(0,12)}`);if(page.part==='Book'&&target.part==='Reference')token.attrSet('data-reference','');}
     else if(href&&!/^(https?:|mailto:|#|\/)/.test(href))token.attrSet('href',`${content.product.repository}/blob/${evidence.revision.head}/${new URL(href,`https://source.invalid/${page.source}`).pathname.slice(1)}`);
     return originalLink(tokens,index,options,env,renderer);

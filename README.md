@@ -62,7 +62,7 @@ Requires Python `>=3.10,<3.14` (3.10–3.13) on macOS or Linux. Optional extras:
 
 Bring your own data and define the experiment in ordinary Python. Your functions own the research methodology, including features, targets, backtesting strategies and cohort selection.
 
-The path is **your data → experiment → search → selection → fitted models → Sensor**. The [complete Python project](docs/examples/python-research/README.md) defines every research component explicitly. Replace any function with your own Python or compose it with Limen's built-in tools. These excerpts belong to that complete source, including its imports, entry point and recorded input checks.
+The path is **your data → experiment → search → selection → fitted models → Sensor**. The [complete Python project](https://github.com/Vaquum/Limen/blob/main/docs/examples/python-research/README.md) defines every research component explicitly. Replace any function with your own Python or compose it with Limen's built-in tools. These excerpts belong to that complete source, including its imports, entry point and recorded input checks.
 
 ### Define your experiment
 
@@ -172,21 +172,21 @@ The command checks the recorded source digest and writes `research.csv` and `sum
 
 The function above wraps each selected evaluated pipeline with `Sensor.from_model`. The Sensor reuses the fitted scaler and model without refitting, selects the feature names recorded during fitting, and blocks null or nonfinite features and decisions before the selection cutoff. Pass completed history to `sensor.predict(history)` for its latest numeric forecast or explicit unavailable reason. Availability remains a separate declared clock.
 
-Your Python still owns preparation and causality. Custom prediction and output mapping remain available, while `Sensor.from_python` accepts arbitrary fitted state and inference logic. See [Python Sensor construction](docs/Trainer.md#python-construction).
+Your Python still owns preparation and causality. Custom prediction and output mapping remain available, while `Sensor.from_python` accepts arbitrary fitted state and inference logic. See [Python Sensor construction](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md#python-construction).
 
 ### Create a sensor cohort
 
-Your own Python selects any number of candidates from the results. The project combines its two selected Sensors with `Cohort.from_python`, averaging compatible next-bar return forecasts. Call `cohort.predict(history)` just like a Sensor. Members declare the same `output_id` to identify compatible meanings; Limen checks timestamp alignment and preserves unavailable results. Binary voting and custom aggregation are also available. See [Python cohorts](docs/Cohort.md#python-cohorts).
+Your own Python selects any number of candidates from the results. The project combines its two selected Sensors with `Cohort.from_python`, averaging compatible next-bar return forecasts. Call `cohort.predict(history)` just like a Sensor. Members declare the same `output_id` to identify compatible meanings; Limen checks timestamp alignment and preserves unavailable results. Binary voting and custom aggregation are also available. See [Python cohorts](https://github.com/Vaquum/Limen/blob/main/docs/Cohort.md#python-cohorts).
 
 This recorded case fits on the first 960 observations, compares candidates on the next 480 and reserves the final 480 for later inference and assessment. The project continues through search, feedback, recovery, walk-forward, calibration, execution and holdout decisions. Replace any research component with your own Python; the one-feature model and one-bar score are the starting point.
 
-Continue with [custom SFDs](docs/Single-File-Decoder.md#custom-sfds), [UEL](docs/Universal-Experiment-Loop.md#direct-python-run), or [search and feedback](docs/Advanced-Search.md).
+Continue with [custom SFDs](https://github.com/Vaquum/Limen/blob/main/docs/Single-File-Decoder.md#custom-sfds), [UEL](https://github.com/Vaquum/Limen/blob/main/docs/Universal-Experiment-Loop.md#direct-python-run), or [search and feedback](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md).
 
 ## Compiled Research
 
 Declare the experiment and let Limen enforce its pipeline contract. The Manifest specifies the data, chronological splits, preparation, model and parameter space; the CLI validates and compiles that definition before executing it. Invoking the same Manifest from Python remains Compiled Research.
 
-The [complete Compiled project](docs/examples/compiled-research/README.md) starts with a recorded-data logistic experiment. Its selection declaration fixes the source, dates, train-fitted target/scaler, execution policy and validation objective:
+The [complete Compiled project](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/README.md) starts with a recorded-data logistic experiment. Its selection declaration fixes the source, dates, train-fitted target/scaler, execution policy and validation objective:
 
 <details>
 <summary>Read the full YAML manifest</summary>
@@ -272,7 +272,7 @@ From the example bundle root, run that exact declaration through the installed C
 limen run --no-progress-bar compiled-research/selection.yaml
 ```
 
-The command validates and compiles the declaration, executes two candidates and writes `results/dev/compiled-cli`. The [CLI lifecycle](docs/Command-Line-Interface.md#first-yaml-run) also exercises template initialization, explicit validation/profiling, dry compilation, immutable committed definitions, recovery and project backup.
+The command validates and compiles the declaration, executes two candidates and writes `results/dev/compiled-cli`. The [CLI lifecycle](https://github.com/Vaquum/Limen/blob/main/docs/Command-Line-Interface.md#first-yaml-run) also exercises template initialization, explicit validation/profiling, dry compilation, immutable committed definitions, recovery and project backup.
 
 The Compiled project's Python selection driver runs the same declared candidate comparison, selects by validation return and reconstructs the chosen recorded round through `Trainer`. The proof checks the direct CLI's candidate identities and validation returns against that driver. Reconstruction refits under the recorded pipeline and checks replayed metrics; it does not restore arbitrary saved weights.
 
@@ -283,9 +283,9 @@ The Compiled project's Python selection driver runs the same declared candidate 
 | `results.csv` | Candidate results. |
 | `round_data.jsonl.gz` | Round identities, parameters and payloads selected by the recording policy. |
 
-Row evidence and recovery depend on the [recording policy](docs/Universal-Experiment-Loop.md#recording-policy). Choose it before a run when later replay or continuation needs those payloads.
+Row evidence and recovery depend on the [recording policy](https://github.com/Vaquum/Limen/blob/main/docs/Universal-Experiment-Loop.md#recording-policy). Choose it before a run when later replay or continuation needs those payloads.
 
-Continue with the [CLI workflow](docs/Command-Line-Interface.md), [Manifest contract](docs/Experiment-Manifest.md), or [end-to-end workflow](docs/End-to-End-Workflow.md).
+Continue with the [CLI workflow](https://github.com/Vaquum/Limen/blob/main/docs/Command-Line-Interface.md), [Manifest contract](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md), or [end-to-end workflow](https://github.com/Vaquum/Limen/blob/main/docs/End-to-End-Workflow.md).
 
 ## Shared safety
 
@@ -293,7 +293,7 @@ Both interfaces share the search engine and reusable research components. Python
 
 ### Common foundations
 
-MSQ and UEL provide parameter-domain checks, parameter identities, explicit budgets, round results and convergence-warning records. Seeded built-in search supports repeatable candidate ordering. Optional persistence adds checkpoint and artifact-integrity checks; recovery requires a compatible checkpoint and full recording. Search seeds do not freeze models, data or environments. See [search and recovery](docs/Advanced-Search.md).
+MSQ and UEL provide parameter-domain checks, parameter identities, explicit budgets, round results and convergence-warning records. Seeded built-in search supports repeatable candidate ordering. Optional persistence adds checkpoint and artifact-integrity checks; recovery requires a compatible checkpoint and full recording. Search seeds do not freeze models, data or environments. See [search and recovery](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md).
 
 In both interfaces, native Sensors wrap fitted state and distinguish usable predictions from unavailable decisions. Native Cohorts check member timestamp alignment before aggregation. Python callers supply their own preparation, selection cutoff and output meanings; these declarations do not create compiled provenance or methodological proof.
 
@@ -314,13 +314,13 @@ The CLI validates schema, component references, parameter links, split declarati
 | Impossible fills, unavailable prices or incorrect funding charges | Configured event execution checks availability clocks, source coverage, exposure, quantity and collateral rules. Funding adapters validate units, schedules and valuation evidence and separate accrual from settlement. |
 | Research and inference quietly using different pipelines | Trainer reconstructs the declared pipeline and checks replayed results and recorded bindings where available. Compiled Sensors carry manifest and permutation identities and reuse fitted preprocessing; artifact-backed Cohorts bind the selected member identities. |
 
-See the [preparation contract](docs/Experiment-Manifest.md#how-a-manifest-executes), [backtest mechanics](docs/Backtest.md) and [inference contract](docs/Trainer.md#sensor) for each control's scope.
+See the [preparation contract](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md#how-a-manifest-executes), [backtest mechanics](https://github.com/Vaquum/Limen/blob/main/docs/Backtest.md) and [inference contract](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md#sensor) for each control's scope.
 
 ### Additional validation, when enabled
 
-- [Walk-forward validation](docs/Experiment-Manifest.md#walk-forward-sweeps) refits each fold with declared purge and embargo gaps. Choose gaps that cover your label horizon.
-- A [validation-return objective](docs/Calibration.md#shared-validation-return-objective) binds supported threshold tuning and reducers to validation execution. [DSR and PBO reports](docs/Benchmark.md#walk-forward-selection-report) assess retained research evidence; failed or unavailable criteria are reported rather than stopping the run.
-- Opt-in [project holdout reservations](docs/Final-Holdout.md) exclude reserved observations from supported research and replay. Active reservations reject custom SFDs and unsupported modes; see the workflow's restrictions.
+- [Walk-forward validation](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md#walk-forward-sweeps) refits each fold with declared purge and embargo gaps. Choose gaps that cover your label horizon.
+- A [validation-return objective](https://github.com/Vaquum/Limen/blob/main/docs/Calibration.md#shared-validation-return-objective) binds supported threshold tuning and reducers to validation execution. [DSR and PBO reports](https://github.com/Vaquum/Limen/blob/main/docs/Benchmark.md#walk-forward-selection-report) assess retained research evidence; failed or unavailable criteria are reported rather than stopping the run.
+- Opt-in [project holdout reservations](https://github.com/Vaquum/Limen/blob/main/docs/Final-Holdout.md) exclude reserved observations from supported research and replay. Active reservations reject custom SFDs and unsupported modes; see the workflow's restrictions.
 
 Compilation does not establish arbitrary feature causality, data correctness or future performance. Validation used for tuning is selection evidence; statistical reports do not create an untouched holdout.
 
@@ -358,18 +358,18 @@ See how to [verify a release](https://github.com/Vaquum/Limen/blob/main/docs/Dev
 
 | Path | Guides |
 |---|---|
-| Python Research | [Search and feedback](docs/Advanced-Search.md), [custom SFDs](docs/Single-File-Decoder.md#custom-sfds), [UEL](docs/Universal-Experiment-Loop.md). |
-| Compiled Research | [CLI](docs/Command-Line-Interface.md), [Manifest](docs/Experiment-Manifest.md), [end-to-end workflow](docs/End-to-End-Workflow.md). |
-| Research tools | [Features](docs/Features.md), [targets](docs/Targets.md), [backtesting](docs/Backtest.md), [analysis](docs/Log.md). |
-| Model reuse | [Trainer](docs/Trainer.md), [Cohort](docs/Cohort.md). |
+| Python Research | [Search and feedback](https://github.com/Vaquum/Limen/blob/main/docs/Advanced-Search.md), [custom SFDs](https://github.com/Vaquum/Limen/blob/main/docs/Single-File-Decoder.md#custom-sfds), [UEL](https://github.com/Vaquum/Limen/blob/main/docs/Universal-Experiment-Loop.md). |
+| Compiled Research | [CLI](https://github.com/Vaquum/Limen/blob/main/docs/Command-Line-Interface.md), [Manifest](https://github.com/Vaquum/Limen/blob/main/docs/Experiment-Manifest.md), [end-to-end workflow](https://github.com/Vaquum/Limen/blob/main/docs/End-to-End-Workflow.md). |
+| Research tools | [Features](https://github.com/Vaquum/Limen/blob/main/docs/Features.md), [targets](https://github.com/Vaquum/Limen/blob/main/docs/Targets.md), [backtesting](https://github.com/Vaquum/Limen/blob/main/docs/Backtest.md), [analysis](https://github.com/Vaquum/Limen/blob/main/docs/Log.md). |
+| Model reuse | [Trainer](https://github.com/Vaquum/Limen/blob/main/docs/Trainer.md), [Cohort](https://github.com/Vaquum/Limen/blob/main/docs/Cohort.md). |
 
-See the [documentation hub](docs/README.md), [Roadmap](docs/Roadmap.md), and [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md).
+See the [documentation hub](https://github.com/Vaquum/Limen/blob/main/docs/README.md), [Roadmap](https://github.com/Vaquum/Limen/blob/main/docs/Roadmap.md), and [Security Assurance Case](https://github.com/Vaquum/Limen/blob/main/docs/Developer/Security-Assurance-Case.md).
 
 ## Contributing
 
 Contribution starts through [CONTRIBUTING.md](https://github.com/Vaquum/Limen/blob/main/CONTRIBUTING.md), [docs changes](https://github.com/Vaquum/Limen/tree/main/docs), or [open issues](https://github.com/Vaquum/Limen/issues).
 
-Before contributing, start with the [Developer docs](docs/Developer/README.md).
+Before contributing, start with the [Developer docs](https://github.com/Vaquum/Limen/blob/main/docs/Developer/README.md).
 
 ## Support
 

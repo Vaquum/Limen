@@ -37,6 +37,9 @@ test('complete research chapter',async({page})=>{
   await page.getByRole('link',{name:'the two interfaces',exact:true}).click();
   await expect(page).toHaveURL(/about\/#two-interfaces-different-purposes$/);
   await expect(page.locator('#two-interfaces-different-purposes')).toBeInViewport();
+  await expect(page.getByRole('link',{name:'complete Python project',exact:true})).toHaveAttribute('href','/limen/book/python-research/');
+  await expect(page.getByRole('link',{name:'complete Compiled project',exact:true})).toHaveAttribute('href','/limen/book/compiled-research/');
+  await expect(page.getByRole('link',{name:'Python Sensor construction',exact:true})).toHaveAttribute('href','/limen/reference/trainer/#python-construction');
 });
 
 test('reference returns to the same passage and focus',async({page})=>{

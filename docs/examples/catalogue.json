@@ -103,7 +103,10 @@
     "docs/Trainer.md",
     "docs/Cohort.md",
     "docs/Conserved-Flux-Renormalization.md",
-    "README.md"
+    "README.md",
+    "docs/Log.md",
+    "docs/Benchmark.md",
+    "docs/Universal-Experiment-Loop.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2638,6 +2641,23 @@
     "README.md": [
       "python/selection",
       "compiled/selection"
+    ],
+    "docs/Log.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Benchmark.md": [
+      "python/calibration",
+      "compiled/calibration",
+      "compiled/walk_forward"
+    ],
+    "docs/Universal-Experiment-Loop.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
     ]
   }
 }

@@ -72,11 +72,13 @@ def prepare_live(history, params):
 # endregion preparation
 
 
+# region completed_log
 def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
     log = loop.experiment_log
     if log is None:
         raise ValueError("The experiment has no completed result log")
     return log
+# endregion completed_log
 
 
 # region experiment

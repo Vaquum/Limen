@@ -178,12 +178,18 @@ console.log(JSON.stringify({
     parsed_document = json.loads(parsed.stdout)
     if parsed_document['fences'] != expected:
         raise ValueError('Unbound code fence or indented block in candidate documentation: ' + str(document))
+    repository = json.loads((root / 'docs-site/reader/content.json').read_text())['product']['repository']
+    source_prefix = repository + '/blob/main/'
+    targets = []
+    for href in parsed_document['links']:
+        if href.startswith(source_prefix):
+            targets.append((root / unquote(urlsplit(href[len(source_prefix):]).path)).resolve())
+        elif not urlsplit(href).scheme and not href.startswith(('/', '#')):
+            targets.append((document.parent / unquote(urlsplit(href).path)).resolve())
     for interface in interfaces:
         if interface not in ('python', 'compiled'):
             raise ValueError('Unknown project interface: ' + interface)
         project = (root / f'docs/examples/{interface}-research/README.md').resolve()
-        targets = [(document.parent / unquote(urlsplit(href).path)).resolve() for href in parsed_document['links']
-                   if not urlsplit(href).scheme and not href.startswith(('/', '#'))]
         if document.resolve() != project and project not in targets:
             raise ValueError('Missing visible canonical project connection: ' + interface)
 

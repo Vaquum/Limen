@@ -112,6 +112,7 @@ def mixed_feedback(data_dir, output):
 # endregion mixed_feedback
 
 
+# region recorded_predictions
 def recorded_predictions(directory: Path, record):
     metadata = json.loads((directory / 'metadata.json').read_text())
     if metadata['round_storage'] != 'gzip-jsonl-v2':
@@ -128,6 +129,7 @@ def recorded_predictions(directory: Path, record):
     if not isinstance(values, list) or len(values) != reference['count']:
         raise ValueError('Recorded prediction count differs')
     return values
+# endregion recorded_predictions
 
 
 # region model_comparisons
