@@ -144,10 +144,10 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
     if isinstance(value, partial):
         bound = cast(partial[object], value)
         allocator = factory_allocator(bound.func)
-        return None if allocator is None else partial(cast(Callable[..., object], allocator), *bound.args, **bound.keywords)
+        return None if allocator is None else partial(allocator, *bound.args, **bound.keywords)
     if isinstance(value, cast(type, vars(import_module('limen.experiment._parallel_resources'))['FrozenClassFactory'])):
-        allocator = cast(Callable[..., object] | None, getattr(value, 'allocator'))
-        return None if allocator is None else partial(allocator, getattr(value, 'factory_class'))
+        allocator = cast(Callable[..., object] | None, vars(value)['allocator'])
+        return None if allocator is None else partial(allocator, vars(value)['factory_class'])
     return None
 
 
