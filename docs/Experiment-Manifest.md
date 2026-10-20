@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.45.6"
+  limen_version: "5.45.7"
   mode: development
 
 sfd:
@@ -459,7 +459,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.45.6"
+  limen_version: "5.45.7"
   mode: development
 sfd:
   manifest:
@@ -516,7 +516,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.45.6"
+  limen_version: "5.45.7"
   mode: development
 sfd:
   manifest:
@@ -898,7 +898,26 @@ manifest fits full-SVD PCA on the train split only, then applies that frozen
 rotation to validation and test. `x_train`, `x_val`, and `x_test` are replaced
 with `pc_*` columns; no parallel raw-feature dataset is retained.
 
-PCA compression requires the configured fitted scaler to be `RobustScaler`.
+`RobustScaler` above is one valid example. Fixed or parameter-selected
+`LogRegScaler`, `LinearScaler`, `RankGaussScaler`, `CausalRollingRobustScaler`
+and caller scalers also work. Configure a scaler with a fitted `transform`,
+use its actual fitted-output key as `scaler_param_name`, and supply numeric,
+finite finalized feature matrices in their existing order. PCA fits only on
+training rows. Invalid finalized values name the split index and offending
+columns before PCA construction; the repair performs no data cleaning.
+Existing strict null refusals, non-strict NaN-row cleanup and conditional-fold
+errors remain in place.
+Frozen Sensor preprocessing retains its existing null-row/error policy.
+
+PCA weights the matrix produced by the caller's preprocessing. On the recorded
+first 336 hourly observations from January 2024 used by the proof, LogRegScaler
+leaves `mean`, `std`, `liquidity_sum`, `maker_volume` and `maker_liquidity` raw.
+Their approximate training standard deviations are 886, 71, 83 million, 996 and
+43 million; the first component has loadings about 0.890 and 0.456 on the two
+liquidity columns. LinearScaler covers this fixture differently, with features
+approximately at unit scale. Acceptance preserves that weighting; it does not
+establish comparable scaling or strategy quality. Rolling scalers still need
+their declared historical context, including at both future split boundaries.
 PCA does not test stationarity. Optional [feature shims](#feature-shims) transform
 selected columns upstream; their training evidence does not guarantee stationarity.
 
