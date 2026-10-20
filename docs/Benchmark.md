@@ -1,4 +1,4 @@
-# Benchmark
+# Assess the evidence behind a score
 
 In Limen, benchmark is the prediction-quality layer between the raw experiment log and the trading backtest.
 
@@ -26,17 +26,62 @@ The main surfaces are:
 - `uel._log.experiment_confusion_metrics('price_change')`
 - `uel._log.permutation_confusion_metrics(x='price_change', round_id=0)`
 
-The first two are the same analysis surfaced in two places: UEL computes the experiment-wide confusion table automatically at the end of a run.
+With `post_processing=True` and compatible native retained results, the first two expose the same explicit row analysis. Calling `Log.experiment_confusion_metrics()` without `x` instead reads captured metrics and preserves fraction units. It is a separate view; see [Log](Log.md#benchmark-surfaces).
 
 ## Benchmark workflow
 
-```python
-benchmark = uel.experiment_confusion_metrics
+The [Python project](examples/python-research/README.md) controls its validation
+score in ordinary Python. Its classifier scenario separately retains labels,
+probabilities and decision thresholds for all four calibration/tuning modes.
+The [Compiled project](examples/compiled-research/README.md) records the native
+classifier metrics and uses a declared validation-return objective. A caller's
+continuous return score does not acquire binary confusion semantics merely by
+entering the same loop.
 
-round0 = uel._log.permutation_confusion_metrics(
-    x='price_change',
-    round_id=0,
-)
+### Python Research
+
+<!-- example: benchmark-python-calibration source=docs/examples/python-research/scenarios.py region=calibration scenario=calibration interface=python role=executed -->
+```python
+def calibration(data_dir, output):
+    bars = quarter_hour(data_dir)
+    params = {'window': 4, 'alpha': .1}
+    train, validation = project.prep(bars, params).values()
+    model = make_pipeline(StandardScaler(), LogisticRegression(C=1, random_state=42)).fit(train.select('momentum'), train['next_return'].to_numpy() > 0)
+    modes = []
+    for calibrate in (False, True):
+        fitted = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method='sigmoid') if calibrate else model
+        probabilities = fitted.predict_proba(validation.select('momentum'))[:, 1]
+        for tune in (False, True):
+            threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric) if tune else (.5, None)
+            state = SimpleNamespace(model=fitted, threshold=threshold)
+            sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows, state_id=f'sigmoid={calibrate};threshold={tune}', fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+            cohort = Cohort.from_python([sensor], aggregate='vote')
+            tape = cohort.predict_all(bars[1428:1920])[12:]
+            if any(point.prediction not in (0, 1) for point in tape):
+                raise ValueError('Classifier inference must provide a binary decision for every assessment row')
+            modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
+    return {'modes': modes, 'validation_reused': True}
+```
+
+### Compiled Research
+
+<!-- example: benchmark-compiled-calibration source=docs/examples/compiled-research/scenarios.py region=calibration scenario=calibration interface=compiled role=executed -->
+```python
+def calibration(data_dir, output):
+    config = configuration('calibration', data_dir)
+    loop = execute(config, output / 'experiment')
+    sensors = Trainer(output / 'experiment').train(research_project.completed_log(loop)['id'].to_list())
+    return {'modes': research_project.completed_log(loop).select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
+```
+
+These executed functions use helpers from their complete projects. The tests
+recompute classifier decisions and the validation threshold score. Use the
+source-bound `Log` reference below when inspecting native retained row evidence.
+
+<!-- reference: benchmark-round-confusion source=limen/log/_permutation_confusion_metrics.py region=signature:permutation_confusion_metrics role=signature -->
+```python
+def permutation_confusion_metrics(self: Any, x: str, round_id: int, *, pred_col: str='predictions', actual_col: str='actuals', proba_col: str | None=None, threshold: float=0.5, outlier_quantiles: Sequence[float]=(0.01, 0.99), outlier_mode: str='filter', id_cols: dict[str, Any] | None=None) -> pd.DataFrame:
+    ...
 ```
 
 Use the experiment-wide table to compare rounds. Use the single-round table when one permutation deserves a closer look.
@@ -102,6 +147,26 @@ Limen exposes both layers so one score does not hide either prediction quality o
 
 ## Walk-forward selection report
 
+The [Compiled project's recorded acceptance case](Experiment-Manifest.md#recorded-acceptance-example)
+executes two rule-based trials and retains their complete return tracks and reports.
+It runs inside the project's walk-forward scenario:
+
+<!-- example: benchmark-recorded-acceptance source=docs/examples/compiled-research/scenarios.py region=acceptance scenario=walk_forward interface=compiled role=executed -->
+```python
+def acceptance(data_dir, output):
+    config = configuration('acceptance', data_dir)
+    loop = execute(config, output)
+    report = json.loads((output / 'acceptance_report.json').read_text())
+    return {'rounds': research_project.completed_log(loop).height, 'report': report,
+            'artifacts': {name: hashlib.sha256((output / name).read_bytes()).hexdigest() for name in (
+                'trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+```
+
+Its independent proof derives DSR and PBO from the retained returns and ordered
+fold timestamps. These are native sweep reports. The Python project owns its
+selection criteria and return ledger; it does not acquire native report artifacts
+merely by using UEL or MSQ.
+
 [Manifest-backed walk-forward validation](Experiment-Manifest.md#walk-forward-sweeps) fits each fold independently, purges rows before validation and test, and excludes embargoed rows from later training pools. Choose the purge to cover the target's forward label horizon. Each successful trial retains its test net-return track in `trial_returns.parquet`.
 
 At sweep conclusion, Limen reads that artifact and writes `acceptance_report.json` and `acceptance_report.md` beside it. Without the artifact, no report is written. The report computes two statistics over the recorded per-trial out-of-sample return matrix:
@@ -115,7 +180,7 @@ The Sharpe units are per bar, with no annualization. The report uses net returns
 
 The partition is frozen; thresholds remain caller-supplied on regeneration, as today. Reassess `max_pbo` before changing S: a threshold is relative to partition resolution, so the same numeric threshold need not express the same selection criterion. Omitted or thresholds-only direct mappings inherit saved S; omission drops verdicts. Count conflicts and invalid saved counts raise before report writes. See [acceptance configuration](Experiment-Manifest.md#acceptance-thresholds) for admission and legacy rules.
 
-The JSON and Markdown show `pbo_combinations`, `pbo_resolution` (nominal counting step), and `pbo_block_bars` (null only for invalid/unknown geometry). These are geometry, not proof that enumeration succeeded. Blocks partition stitched retained rows and may cross fold boundaries without extra purge/embargo; each half still has `n_bars/2` observations. More combinations do not add independent evidence. Sparse rule-based trials can keep finite full-track DSR while finer half samples have zero variance. For example, the recorded acceptance example with `entry_return: [0.0, 0.004]` has PBO 0 at S=2 and unavailable PBO at S=8; the chosen count is not changed to rescue a verdict. Null is not pass.
+The JSON and Markdown show `pbo_combinations`, `pbo_resolution` (nominal counting step), and `pbo_block_bars` (null only for invalid/unknown geometry). These are geometry, not proof that enumeration succeeded. Blocks partition stitched retained rows and may cross fold boundaries without extra purge/embargo; each half still has `n_bars/2` observations. More combinations do not add independent evidence. Sparse rule-based trials can keep finite full-track DSR while finer half samples have zero variance. A finer partition can make PBO unavailable when a half sample has zero variance; the chosen count is not changed to rescue a verdict. Null is not pass.
 
 The public metrics are `limen.metrics.deflated_sharpe_ratio(returns, n_trials=..., trial_sharpe_variance=...)` and `limen.metrics.probability_of_backtest_overfitting(returns_matrix, n_blocks=...)`; the matrix has one row per trial and one column per bar. Sharpe uses the arithmetic mean divided by sample standard deviation (`ddof=1`). DSR requires at least four finite returns with positive variance. Its skewness and Pearson kurtosis use centered returns standardized by population standard deviation; excess kurtosis is Pearson kurtosis minus three. The supplied trial-Sharpe variance must be finite and nonnegative. One trial or zero trial-Sharpe variance sets the comparison benchmark to zero.
 
@@ -125,25 +190,19 @@ These statistics reuse the sweep's test observations to assess selection. They a
 
 ### Comparing a recorded experiment family
 
-`limen.experiment.family_acceptance_report.family_acceptance_report` assesses explicitly supplied walk-forward runs together. Set `run_directories` to their existing experiment-directory `Path` objects and `project_root` to the project containing their committed-manifest store:
+`limen.experiment.family_acceptance_report.family_acceptance_report` assesses explicitly supplied walk-forward runs together. Supply existing experiment-directory `Path` objects and the project containing their committed-manifest store. The current reference signature is:
 
+<!-- reference: benchmark-family-report source=limen/experiment/family_acceptance_report.py region=signature:family_acceptance_report role=signature -->
 ```python
-from limen.experiment.family_acceptance_report import family_acceptance_report
-
-report = family_acceptance_report(run_directories, project_root=project_root)
+def family_acceptance_report(directories: Sequence[Path], *, project_root: Path, n_blocks: int=2) -> dict[str, object]:
+    ...
 ```
 
 The returned dictionary is JSON-serializable and reads artifacts without modifying them. `runs` lists resolved source directories, recorded **run-start** times, runtime geometry, recording flags, implementation versions and available committed-manifest ancestry. Known starts sort ascending, unknown starts last, then resolved directory and persisted logical trial order. This report order governs winner ties and evidence-match references; it does not establish global trial occurrence or when results were inspected. Missing ancestors remain explicit, and the manifest index is not authoritative.
 
 Retain the following profile when recording runs intended for this report:
 
-```yaml
-uel:
-  record_execution: true
-  recording:
-    alignment: true
-    fold_details: true
-```
+Enable `uel.record_execution`, `uel.recording.alignment` and `uel.recording.fold_details` together. The complete [walk-forward project definition](examples/compiled-research/walk_forward.yaml) declares those settings.
 
 The normal YAML runner passes these settings to execution. For a direct `UniversalExperimentLoop.run()` call, pass the same `record_execution` and `recording` arguments explicitly. Default lean recording omits folds/alignment; folds without execution recording omit snapshot market observations. Those trials remain in the inventory with unavailable reasons and their actual recording flags. Valid per-run statistics do not imply sufficient cross-run evidence.
 
@@ -163,13 +222,7 @@ These are conditional assessments of supplied retained successful tracks. Delete
 
 `permutation_confusion_metrics()` and `experiment_confusion_metrics()` work on a chosen column `x`.
 
-The default analysis column is:
-
-```python
-'price_change'
-```
-
-because it is available in the reconstructed prediction-performance table and gives a straightforward economic interpretation.
+The default analysis column is `price_change` because it is available in the reconstructed prediction-performance table and gives a straightforward economic interpretation.
 
 Other numeric columns are valid when they exist in the reconstructed round table and match the analysis question.
 

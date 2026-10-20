@@ -20,15 +20,10 @@ recursive-include docs *.md *.yaml
 recursive-include docs/benchmarks *.csv *.json *.txt
 include docs/examples/xgboost_sweep.py
 include docs-site/CLOUDFLARE.md
-include docs-site/docusaurus.config.js
-include docs-site/product-docs.json
 include docs-site/package.json
 include docs-site/package-lock.json
-include docs-site/sidebars.js
-include docs-site/wrangler.jsonc
-include docs-site/docs/.gitkeep
 recursive-include docs-site/scripts *.mjs
-recursive-include docs-site/src *.js *.css
+recursive-include docs-site/src *.js *.css *.json
 recursive-include .github *.md *.yml
 recursive-include limen *.md
 include limen/py.typed
@@ -41,9 +36,6 @@ recursive-include tests *.py *.json
 recursive-include tests/fixtures *.csv *.zip
 recursive-include tests/fixtures *.parquet
 prune examples
-prune docs-site/.docusaurus
-prune docs-site/.generated
-prune docs-site/build
 prune docs-site/node_modules
 prune .venv
 prune .mypy_cache
@@ -55,5 +47,11 @@ recursive-include docs/examples *.py *.json *.txt *.in
 recursive-include docs-site/reader *.mjs *.css *.json
 recursive-include docs-site/tests *.mjs *.json
 include docs-site/playwright.config.mjs
+include docs-site/publisher/package.json
+include docs-site/publisher/package-lock.json
+include docs-site/publisher/wrangler.json
+include docs-site/publisher/audit.mjs
+prune docs-site/publisher/node_modules
+prune docs-site/publisher/.wrangler
 
 recursive-exclude docs-site/reader/reference *.jpg

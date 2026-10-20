@@ -7,6 +7,10 @@
 - [Built-In SFDs](../../../docs/Built-In-SFDs.md)
 - [Single-File Decoder](../../../docs/Single-File-Decoder.md)
 
+## In the research projects
+
+The [Python project](../../../docs/examples/python-research/README.md) defines its own SFD functions. The [Compiled project](../../../docs/examples/compiled-research/README.md) selection and `search` scenarios use the declared model families wrapped here. The family reference separates those definitions from the model implementations they call.
+
 ## What this package owns
 
 Owns the production-oriented, packaged SFD modules — each defining an experiment shape via `params()` and a `manifest()` that wires the data pipeline together.
@@ -33,16 +37,26 @@ Does **not** own model training logic (owned by the matching `limen.sfd.referenc
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `tabpfn_binary.py` | Optional |
+
+<!-- reference: package-sfd-foundational_sfd-layout source=limen/sfd/foundational_sfd/README.md region=layout:package role=layout -->
 ```text
 foundational_sfd/
-├── logreg_binary.py
+├── README.md
+├── __init__.py
+├── _xgboost_features.py
+├── common_strategies.py
 ├── dlinear_regressor.py
+├── dollar_bar_crash_reversal.py
 ├── lightgbm_binary.py
-├── xgboost_regressor.py
+├── logreg_binary.py
 ├── random_binary.py
 ├── ridge_regressor.py
 ├── rule_based.py
-└── tabpfn_binary.py     # Optional
+├── tabpfn_binary.py
+└── xgboost_regressor.py
 ```
 
 ## Things to know

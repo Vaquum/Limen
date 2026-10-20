@@ -81,20 +81,34 @@ Return behavior:
 
 Transforms appear in manifest target construction or as callable helpers inside a custom SFD prep path. The important split-safety rule is that stateless transforms do not remember train statistics. If validation and test must use train-fitted parameters, use [Scalers](Scalers.md) or a target class that fits on train in `__init__`.
 
-## Target-building example
+## Target construction in the projects
 
+The [Python project](examples/python-research/README.md) computes next-bar return separately inside each split. The forward shift constructs a label; it never becomes an inference feature. The final row has no next-bar outcome and is dropped from fitting or validation.
+
+<!-- example: transforms-python-label source=docs/examples/python-research/research.py region=next_return_target scenario=selection interface=python role=executed -->
 ```python
-from limen.targets import QuantileBinaryTarget
-
-manifest.with_target_label(
-    'quantile_flag',
-    QuantileBinaryTarget,
-    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
-    transform_params={'shift': 'shift'},
-)
+def prepare_split(bars, round_params):
+    return features(bars, round_params["window"]).with_columns(
+        (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
+        .alias("next_return")
+    ).slice(12).drop_nulls(["momentum", "next_return"])
 ```
 
-The important detail is that `QuantileBinaryTarget.__init__` computes the cutoff on the training split only; `transform()` reuses the stored cutoff on validation and test without refitting.
+The [Compiled project](examples/compiled-research/README.md) asks `QuantileBinaryTarget` to fit a cutoff on training momentum and reuse it on later splits. Its negative shift assigns the next observation's flag to the current training row. This is a different outcome from next-bar return.
+
+<!-- example: transforms-compiled-label source=docs/examples/compiled-research/selection.yaml region=fitted_target scenario=selection interface=compiled role=executed -->
+```yaml
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+```
+
+A stateless shift and a fitted target have different responsibilities. The shift moves observations; it does not decide which data may fit the cutoff. The Manifest's split-first preparation owns that boundary. The [target reference](Targets.md) describes each fitted target and its input requirements.
 
 ## Boundaries
 

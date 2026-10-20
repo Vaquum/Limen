@@ -1,17 +1,19 @@
 # Experiment Manifest
 
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-The Experiment Manifest is Limen's declarative experiment definition. The canonical operator form is YAML: define the manifest, validate it, profile it, run it through CLI, then inspect the generated artifacts.
+A Manifest declares the preparation and model contract Limen will apply. It
+belongs to **Compiled Research**, whether supplied through YAML, a native Python
+builder or `CompiledSFD`. The [Compiled project](examples/compiled-research/README.md)
+shows both its recorded-data YAML run and native preparation cases.
 
-Use YAML manifests for Limen's opinionated pipeline. Use Python builders, custom `prep()`, and custom `model()` only when the workflow cannot fit the declarative operator path.
+The [Python project](examples/python-research/README.md) instead owns preparation,
+fitting, backtesting and selection as ordinary functions. It can use shared
+Limen helpers without adopting a Manifest. Choose the boundary your research
+needs; Python is not a fallback for experiments that fail to fit YAML.
 
-The default path provides:
-
-- split-first execution
-- train-only fitting for targets and scalers
-- automatic data fetching
-- cleaner collaboration surfaces
-- reproducible experiment definitions and saved CLI/MSQ run artifacts
+The native contract supplies split-first preparation, training-fitted target and
+scaler state, declared execution policies and reconstructible recorded runs.
+These checks do not establish the causality of an arbitrary user feature or the
+correctness of its provider's data.
 
 ## Prerequisites
 
@@ -19,71 +21,88 @@ The default path provides:
 - a YAML file created with `limen init` or a concrete Python `MLManifest`/`RuleBasedManifest`
 - the optional model extra required by the selected reference architecture
 
-## YAML First Run
+## Run the recorded YAML project
 
+<!-- example: manifest-command source=docs/examples/commands.json region=compiled-yaml scenario=selection interface=compiled role=executed -->
 ```bash
-limen init logreg-first.yaml --template logreg_binary
-limen validate logreg-first.yaml
-limen profile logreg-first.yaml
-limen run --dry-run logreg-first.yaml
-limen run logreg-first.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
 ```
 
 The run writes a result directory containing the copied YAML manifest, `metadata.json`, `results.csv`, and `round_data.jsonl.gz`.
 
 ## YAML Shape
 
-This minimal shape shows the same pieces as the Python builder API:
+This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the project driver binds its explicit input/output arguments separately:
 
+<!-- example: manifest-selection source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
 ```yaml
 schema_version: "1.0"
-
 metadata:
-  name: logreg-first
-  limen_version: "5.45.9"
+  name: book_compiled_selection
   mode: development
-
 sfd:
   manifest:
     type: ml
+# region recorded_source
     data_source:
-      method: limen.data.HistoricalData.get_spot_klines
+      method: limen.data.HistoricalData.get_any_file
       params:
-        kline_size: 3600
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+# endregion recorded_source
     split_dates:
-      train_start: "2024-01-01"
-      train_end: "2024-09-30"
-      val_start: "2024-10-01"
-      val_end: "2024-11-30"
-      test_start: "2024-12-01"
-      test_end: "2024-12-31"
+      train_start: "2025-01-01"
+      train_end: "2025-01-15"
+      val_start: "2025-01-15"
+      val_end: "2025-01-18"
+      test_start: "2025-01-18"
+      test_end: "2025-01-22"
+# region momentum_indicator
     indicators:
       - func: limen.indicators.roc
         params:
-          period: "{roc_period}"
+          period: 1
+          group: momentum
+# endregion momentum_indicator
+# region fitted_target
     target:
       name: quantile_flag
       class: limen.targets.QuantileBinaryTarget
       fit_params:
-        source_column: "roc_{roc_period}"
-        quantile: "{q}"
+        source_column: roc_1
+        quantile: 0.5
       transform_params:
-        shift: "{shift}"
+        shift: -1
+# endregion fitted_target
+# region validation_objective
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+# endregion validation_objective
+    backtest:
+      source_interval_seconds: 900
+      fee_bps: 1.0
+      slip_bps: 0.0
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+# region fitted_scaler
     scaler:
       from_params: scaler_type
+# endregion fitted_scaler
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
   params:
-    roc_period: [1, 4, 12]
-    q: [0.35, 0.40, 0.45]
-    shift: [-1, -2, -3]
     scaler_type: [logreg]
-    C: [0.1, 1.0, 5.0]
-
+    C: [1.0, 0.5]
+    random_state: [42]
 uel:
-  n_permutations: 25
+  output_path: compiled-cli
+  n_permutations: 2
   search_strategy:
-    type: random
-  prep_each_round: true
+    type: grid
   output_format: csv
 ```
 
@@ -200,64 +219,68 @@ There are two manifest subclasses under the YAML and Python surfaces:
 
 Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass. `Manifest` itself is not meant to be instantiated directly — its `prepare_data()` raises `NotImplementedError`.
 
-## Python Builder Equivalent
+## Native builder from Python
 
-The Python builder API is the equivalent surface for foundational SFD authors and custom integrations.
+The Compiled project also constructs a native Manifest directly. This complete function compares baseline and compressed preparation, retains its actual matrices, and fits a native Ridge class to ternary labels. It uses the project's recorded-data and configuration helpers:
 
+<!-- example: manifest-native-preparation source=docs/examples/compiled-research/scenarios.py region=preparation scenario=search interface=compiled role=executed -->
 ```python
-from limen.data import HistoricalData
-from limen.experiment import Manifest
-from limen.experiment import MLManifest
-from limen.features import kline_imbalance, vwap
-from limen.indicators import atr, ppo, roc, wilder_rsi
-from limen.scalers import LogRegScaler
-from limen.sfd.reference_architecture import logreg_binary
-from limen.targets import QuantileBinaryTarget
+def preparation(data_dir, output):
+    from limen.experiment import MLManifest
+    from limen.features import fractional_diff
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.sfd.reference_architecture import RidgeRegressor
+    from limen.targets import TripleBarrierTarget
 
-def params():
-    return {
-        'shift': [-1, -2, -3],
-        'q': [0.35, 0.40, 0.45],
-        'roc_period': [1, 4, 12, 24],
-        'class_weight': [0.45, 0.65, 0.85],
-        'C': [0.1, 1.0, 5.0],
-        'max_iter': [60, 120, 180],
-        'solver': ['lbfgs', 'newton-cg'],
-        'tol': [0.001, 0.01],
-    }
+    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
 
-def manifest() -> Manifest:
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-        )
-        .set_test_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 7200, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_indicator(roc, period='roc_period')
-        .add_indicator(atr, period=14)
-        .add_indicator(ppo)
-        .add_indicator(wilder_rsi)
-        .add_feature(vwap)
-        .add_feature(kline_imbalance)
-        .with_target_label(
-            'quantile_flag',
-            QuantileBinaryTarget,
-            fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
-            transform_params={'shift': 'shift'},
-        )
-        .set_scaler(LogRegScaler)
-        .with_reference_architecture(logreg_binary)
-    )
+        def surface(data):
+            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
+
+        def capture(data_dict, split_data, round_params, fitted_params):
+            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
+                frame.write_parquet(directory / (split + '.parquet'))
+            return data_dict
+
+        manifest = MLManifest()
+        (manifest.set_split_config(6, 2, 2)
+                    .add_indicator(roc, period=3, group='momentum')
+                    .add_indicator(roc, period=12, group='momentum')
+                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
+                    .add_feature(surface)
+                    .with_target_label('label', TripleBarrierTarget, fit_params={
+                        'upper_multiple': 1.5, 'lower_multiple': 1.,
+                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
+        (manifest.set_scaler(RobustScaler).set_feature_ablation()
+                    .set_pca_compression().add_to_data_dict(capture))
+        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
+                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
+        data = manifest.prepare_data(raw, params)
+        model = RidgeRegressor().train(data, alpha=1., solver='svd')
+        scored = model.evaluate(data, inline_metrics=False)
+        scaler = data['_scaler']
+        pca = data.get('_pca')
+        cases.append({'name': name,
+                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
+                      'dropped': params.get('_dropped_features', []),
+                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
+            'fixed_d': .4, 'weight_threshold': .05}
 ```
 
-To run a Python-built SFD, follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run). Construct a search strategy from the SFD's `params()` and pass both the SFD and strategy to UEL. A manifest-driven SFD can fetch its own data when `data=` is omitted.
+To run a Manifest-built SFD through UEL, follow the [Compiled construction](Universal-Experiment-Loop.md#compiled-construction). This remains Compiled Research. Construct a search strategy from the SFD's `params()` and pass both the SFD and strategy to UEL. A manifest-driven SFD can fetch its own data when `data=` is omitted.
 
-For ordinary runs, keep the manifest in YAML and use `limen run`.
+YAML and the native builder are both supported Compiled entry points. Use the complete project instructions for their exact dependencies, recorded inputs and working directory.
 
 ## How A Manifest Executes
 
@@ -271,14 +294,15 @@ The execution order is:
 4. optionally form bars inside each split
 5. apply indicators and features
 6. compute fitted target parameters on train, then apply target transforms across splits
-7. optionally perform feature ablation
+7. apply configured feature shims and ablation
 8. fit the scaler on train, then apply it across splits
-9. finalize a standard `data_dict`
-10. run the configured model with round-specific parameters
+9. align the feature schema and optionally fit PCA on training
+10. finalize a standard `data_dict` and apply its optional extension
+11. run the configured model with round-specific parameters
 
-This ordering is one of the main reasons to use a manifest: the leak-prevention rules come built in.
+This ordering establishes the native fitting boundary. It cannot repair a feature function that already reads future observations.
 
-The manifest is deliberately opinionated. It forces split-first execution, train-only fitting, and immutable dataframe-style transforms because those guardrails prevent leakage-prone financial-ML mistakes.
+The Manifest controls its declared preparation stages. Keep feature causality, source availability and the intended label horizon explicit alongside those controls.
 
 There is one more protection step after feature engineering: non-empty splits are aligned to a shared column set before the final `data_dict` is built. If a transform such as `fractional_diff` produces a column in one split but not another because the shorter split lacks enough history, Limen drops that extra column from the non-empty splits so the downstream model still receives a consistent schema.
 
@@ -288,24 +312,20 @@ There is one more protection step after feature engineering: non-empty splits ar
 
 Configure the production data source for the manifest.
 
-```python-fragment
-from limen.data import HistoricalData
-
-.set_data_source(
-    method=HistoricalData.get_spot_klines,
-    params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-)
+<!-- reference: manifest-source source=limen/experiment/manifest_core.py region=signature:Manifest.set_data_source role=signature -->
+```python
+def set_data_source(self, method: Callable[..., Any], params: dict[str, Any] | None=None) -> 'Manifest':
+    ...
 ```
 
 ### `set_test_data_source(method, params=None)`
 
 Configure the test data source used when `test_mode=True` is passed to `UniversalExperimentLoop`.
 
-```python-fragment
-.set_test_data_source(
-    method=HistoricalData.get_spot_klines,
-    params={'kline_size': 7200, 'row_count_limit': 5000},
-)
+<!-- reference: manifest-test-source source=limen/experiment/manifest_core.py region=signature:Manifest.set_test_data_source role=signature -->
+```python
+def set_test_data_source(self, method: Callable[..., Any], params: dict[str, Any] | None=None) -> 'Manifest':
+    ...
 ```
 
 ### Data source selection
@@ -322,8 +342,10 @@ To keep local runs bounded, configure `set_test_data_source()` with explicit `kl
 
 Configure the relative split sizes.
 
-```python-fragment
-.set_split_config(8, 1, 2)
+<!-- reference: manifest-split-ratio source=limen/experiment/manifest_core.py region=signature:Manifest.set_split_config role=signature -->
+```python
+def set_split_config(self, train: int, val: int, test: int) -> 'Manifest':
+    ...
 ```
 
 This means 8/11 train, 1/11 validation, and 2/11 test.
@@ -340,14 +362,10 @@ Allowing zeros supports explicit workflows where validation or test data is inte
 
 Pin the train, val, and test windows to absolute `datetime` bounds, in preference to ratio-based splits whose absolute boundary depends on the input row count.
 
-```python-fragment
-from datetime import datetime
-
-.set_split_dates(
-    datetime(2024, 1, 1), datetime(2024, 7, 1),
-    datetime(2024, 7, 1), datetime(2024, 10, 1),
-    datetime(2024, 10, 1), datetime(2025, 1, 1),
-)
+<!-- reference: manifest-split-dates source=limen/experiment/manifest_core.py region=signature:Manifest.set_split_dates role=signature -->
+```python
+def set_split_dates(self, train_start: date | Any, train_end: date | Any, val_start: date | Any, val_end: date | Any, test_start: date | Any, test_end: date | Any, *, val_predict_guard: bool | Any=True, test_predict_guard: bool | Any=True) -> 'Manifest':
+    ...
 ```
 
 Behavior rules:
@@ -363,41 +381,97 @@ Use this when the train / val / test boundaries must land on specific datetimes 
 
 In a YAML manifest the same windows and flags live in the `split_dates` block. `val_predict_guard` and `test_predict_guard` are optional and default to `true`; a `train_predict_guard` key (or a non-boolean value for either flag) fails `limen validate`:
 
-```yaml
-split_dates:
-  train_start: "2024-01-01"
-  train_end:   "2024-07-01"
-  val_start:   "2024-07-01"
-  val_end:     "2024-10-01"
-  test_start:  "2024-10-01"
-  test_end:    "2025-01-01"
-  val_predict_guard:  false   # val window emits real predictions
-  test_predict_guard: false   # test window emits real predictions
-```
+| Guard field | Behavior |
+|---|---|
+| `val_predict_guard` | True keeps pre-test validation inference guarded; explicitly false allows the validation window. |
+| `test_predict_guard` | True keeps pre-test inference guarded; explicitly false allows earlier inference under the caller's declared protocol. |
 
 ### Walk-forward sweeps
 
 Use `sfd.manifest.split_walk_forward` instead of `split_dates` to evaluate every parameter trial across successive test windows:
 
+<!-- example: manifest-walk-definition source=docs/examples/compiled-research/walk_forward.yaml region=__file__ scenario=walk_forward interface=compiled role=executed -->
 ```yaml
-split_walk_forward:
-  n_folds: 3
-  test_bars: 168
-  purge_bars: 1
-  embargo_bars: 1
-  anchored: true
+schema_version: '1.0'
+metadata:
+  name: book_compiled_walk_forward
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-09
+        min_notional: 0
+      source_interval_seconds: 3600
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 48
+      purge_bars: 4
+      embargo_bars: 3
+      anchored: true
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: sigmoid
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params: {}
+    objective:
+      metric: backtest_total_return
+      direction: maximize
+  params:
+    scaler_type: [logreg]
+    C:
+    - 1.0
+    random_state: [42]
+uel:
+  n_permutations: 1
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 The native equivalent is:
 
-```python-fragment
-.set_split_walk_forward(
-    n_folds=3,
-    test_bars=168,
-    purge_bars=1,
-    embargo_bars=1,
-    anchored=True,
-)
+<!-- reference: manifest-walk-method source=limen/experiment/manifest_core.py region=signature:Manifest.set_split_walk_forward role=signature -->
+```python
+def set_split_walk_forward(self: _TManifest, *, n_folds: int, test_bars: int, purge_bars: int, embargo_bars: int, anchored: bool) -> _TManifest:
+    ...
 ```
 
 All five fields are required. `n_folds` must be at least `2`, `test_bars` at least `1`, and `purge_bars` and `embargo_bars` nonnegative integers; booleans are not integers here. `anchored` must be a boolean. The declaration cannot coexist with `split_dates` and cannot contain parameter references or extra fields. Data-source date limits belong in `data_source.params`; they are not derived from fold positions.
@@ -424,19 +498,18 @@ These folds provide recorded out-of-sample evaluations. The selection report bel
 
 Walk-forward runs with `trial_returns.parquet` produce `acceptance_report.json` and `acceptance_report.md` beside that artifact. To add threshold verdicts, declare `sfd.manifest.acceptance`:
 
-```yaml
-acceptance:
-  min_deflated_sharpe_probability: 0.95
-  max_pbo: 0.20
-```
+| Acceptance field | Meaning |
+|---|---|
+| `min_deflated_sharpe_probability` | Finite minimum probability in `[0, 1]`. |
+| `max_pbo` | Finite maximum probability in `[0, 1]`. |
+| `pbo_blocks` | Literal partition count: 2, 4, 6 or 8. |
 
 The native equivalent, after `set_split_walk_forward(...)`, is:
 
-```python-fragment
-.set_acceptance(
-    min_deflated_sharpe_probability=0.95,
-    max_pbo=0.20,
-)
+<!-- reference: manifest-acceptance source=limen/experiment/manifest_core.py region=signature:Manifest.set_acceptance role=signature -->
+```python
+def set_acceptance(self: _TManifest, *, min_deflated_sharpe_probability: float | None=None, max_pbo: float | None=None, pbo_blocks: int | None=None) -> _TManifest:
+    ...
 ```
 
 Each key is optional, but the block must contain a probability threshold or `pbo_blocks`. Thresholds must be finite literal numbers in `[0, 1]`. The optional partition count must be a literal integer in `{2, 4, 6, 8}`; booleans, floats, strings, parameter references and larger counts reject. Omission defaults to two; there is no automatic choice or fallback. An acceptance declaration requires `split_walk_forward`.
@@ -453,70 +526,46 @@ New walk-forward metadata saves effective `pbo_blocks`; the report calls that va
 
 `pbo_combinations` and `pbo_resolution` describe nominal enumeration, even when evidence makes PBO unavailable. Block size is null only for unknown or invalid retained geometry. Sparse trials can have supported DSR but zero variance in a finer half sample; PBO and its verdict then remain null, with no count fallback. Null is not pass.
 
-Save this example as `walk-forward.yaml` in a repository checkout. It uses the recorded hourly BTCUSDT fixture and runs two logistic-regression trials across three one-week test windows:
+The canonical Compiled walk-forward case uses its complete project definition
+shown above. It restricts the source to 384 recorded hourly bars, executes the
+configured folds, reconstructs each selected fold and binds a qualified Cohort:
 
-```yaml
-schema_version: "1.0"
-metadata:
-  name: recorded_walk_forward
-  limen_version: "5.45.9"
-  mode: development
-sfd:
-  manifest:
-    type: ml
-    data_source:
-      method: limen.data.HistoricalData.get_any_file
-      params:
-        file_path_or_url: tests/fixtures/spot_1h_20240101_20241231.parquet
-    split_walk_forward:
-      n_folds: 3
-      test_bars: 168
-      purge_bars: 1
-      embargo_bars: 1
-      anchored: true
-    indicators:
-      - func: limen.indicators.window_return
-        params:
-          period: 1
-    target:
-      name: quantile_flag
-      class: limen.targets.QuantileBinaryTarget
-      fit_params:
-        source_column: ret_1
-        quantile: 0.5
-      transform_params:
-        shift: -1
-    scaler:
-      class: limen.scalers.RobustScaler
-    reference_architecture: limen.sfd.reference_architecture.logreg_binary
-    backtest:
-      fee_bps: 5.0
-      slip_bps: 5.0
-      notional_rate: 1.0
-  params:
-    C: [0.1, 1.0]
-    solver: [lbfgs]
-    random_state: [42]
-    max_iter: [200]
-uel:
-  n_permutations: 2
-  search_strategy:
-    type: grid
-  prep_each_round: true
-  output_format: parquet
+<!-- example: manifest-walk-execution source=docs/examples/compiled-research/scenarios.py region=walk_forward scenario=walk_forward interface=compiled role=executed -->
+```python
+def walk_forward(data_dir, output):
+    config = configuration('walk_forward', data_dir)
+    bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
+    loop = execute(config, output / 'experiment', bars=bars)
+    round_id = research_project.completed_log(loop)['id'][0]
+    trainer = Trainer(output / 'experiment', data=bars)
+    sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
+    cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
+    cohort.set_members(sensors)
+    metadata = [fold_metadata(sensor) for sensor in sensors]
+    round_records = output / 'experiment/round_data.jsonl.gz'
+    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
+            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
+            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
+            'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
+            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
 ```
-
-Run `limen validate walk-forward.yaml`, then `limen run walk-forward.yaml`. Local fixture paths resolve from the working directory. For a hosted `HistoricalData.get_spot_klines` source, set its explicit `start_date_limit` and `end_date_limit` in `data_source.params` to fix the fetched window.
 
 ### Recorded acceptance example
 
-Save this as `acceptance.yaml` in the repository checkout. It runs two rule-based trials against the recorded fixture, with two test folds. Their retained tracks have 96 bars, forming two equal CSCV blocks. The thresholds below are declared research criteria; they do not predict which verdicts will pass.
+The Compiled project's walk-forward scenario also executes this rule-based
+comparison on the complete recorded hourly source. Two entry thresholds produce
+two trials with two folds each. The retained tracks contain 96 returns per trial;
+the default CSCV partition uses two blocks of 48 returns.
 
+The YAML keeps the repository fixture path so it can also run from a checkout.
+The project driver resolves that filename through its explicit `--data-dir`
+argument and checks the recorded input digest before execution.
+
+<!-- example: manifest-recorded-acceptance source=docs/examples/compiled-research/acceptance.yaml region=__file__ scenario=walk_forward interface=compiled role=executed -->
 ```yaml
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.45.9"
   mode: development
 sfd:
   manifest:
@@ -565,22 +614,22 @@ uel:
   output_format: parquet
 ```
 
-Run `limen validate acceptance.yaml`, then `limen run acceptance.yaml`. Read the JSON or Markdown report beside `trial_returns.parquet`; failed verdicts leave the run's results available for inspection.
+The driver retains `trial_returns.parquet`, `acceptance_report.json`,
+`acceptance_report.md` and the fold records under `walk_forward/acceptance/`.
+The independent project proof checks the timestamp population, recomputes the
+selected trial's Deflated Sharpe probability and both CSCV rankings, and compares
+the JSON and Markdown verdicts. Failed verdicts leave the research results
+available. Null statistics remain unavailable rather than passing.
+For report definitions and family comparisons, continue to [Benchmark](Benchmark.md#walk-forward-selection-report).
 
 ### `set_pre_split_data_selector(func, **params)`
 
 Optionally select or reduce the raw dataset before splitting.
 
-```python-fragment
-from limen.data.utils import random_slice
-
-.set_pre_split_data_selector(
-    random_slice,
-    rows='random_slice_size',
-    safe_range_low='random_slice_min_pct',
-    safe_range_high='random_slice_max_pct',
-    seed='random_seed',
-)
+<!-- reference: manifest-pre-selector source=limen/experiment/manifest_core.py region=signature:Manifest.set_pre_split_data_selector role=signature -->
+```python
+def set_pre_split_data_selector(self, func: Callable[..., pl.DataFrame], **params: Any) -> 'Manifest':
+    ...
 ```
 
 Use this for smaller or controlled slices of the raw dataset before the normal split-first pipeline begins.
@@ -591,14 +640,10 @@ Use this for smaller or controlled slices of the raw dataset before the normal s
 
 Configure threshold-bar formation inside each split.
 
-```python-fragment
-from limen.data.utils import compute_data_bars
-
-.set_bar_formation(
-    compute_data_bars,
-    bar_type='bar_type',
-    volume_threshold='volume_threshold',
-)
+<!-- reference: manifest-bars source=limen/experiment/manifest_core.py region=signature:Manifest.set_bar_formation role=signature -->
+```python
+def set_bar_formation(self, func: Callable[..., pl.DataFrame], **params: Any) -> 'Manifest':
+    ...
 ```
 
 See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
@@ -607,16 +652,10 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 Declare the downstream columns that bar preparation must retain. After any configured bar formation completes, or directly for base bars, preparation first reads `datetime`, whether or not it was declared; its absence raises Polars `ColumnNotFoundError`. If that read succeeds, any missing declared column raises `AssertionError` under both normal Python and `python -O`.
 
-```python-fragment
-.set_required_bar_columns([
-    'datetime',
-    'open',
-    'high',
-    'low',
-    'close',
-    'volume',
-    'no_of_trades',
-])
+<!-- reference: manifest-required-bars source=limen/experiment/manifest_core.py region=signature:Manifest.set_required_bar_columns role=signature -->
+```python
+def set_required_bar_columns(self, columns: list[str]) -> 'Manifest':
+    ...
 ```
 
 This assertion protects model or backtest paths that require OHLC fields after bar formation.
@@ -627,16 +666,18 @@ This assertion protects model or backtest paths that require OHLC fields after b
 
 ### `add_indicator(func, group=None, include_if=None, **params)`
 
-```python-fragment
-.add_indicator(roc, period='roc_period')
-.add_indicator(wilder_rsi)
+<!-- reference: manifest-indicator source=limen/experiment/manifest_core.py region=signature:Manifest.add_indicator role=signature -->
+```python
+def add_indicator(self, func: Callable[..., Any], group: str | None=None, include_if: str | None=None, **params: Any) -> 'Manifest':
+    ...
 ```
 
 ### `add_feature(func, group=None, include_if=None, **params)`
 
-```python-fragment
-.add_feature(vwap)
-.add_feature(kline_imbalance)
+<!-- reference: manifest-feature source=limen/experiment/manifest_core.py region=signature:Manifest.add_feature role=signature -->
+```python
+def add_feature(self, func: Callable[..., Any], group: str | None=None, include_if: str | None=None, **params: Any) -> 'Manifest':
+    ...
 ```
 
 ### Parameter resolution
@@ -650,15 +691,11 @@ Manifest parameters are resolved at run time:
 
 That means this:
 
-```python-fragment
-.add_indicator(roc, period='roc_period')
-```
+A native parameter value such as `period="roc_period"` resolves through the current round's `roc_period` key.
 
 becomes:
 
-```python
-roc(data, period=round_params['roc_period'])
-```
+The resolved value is passed to the indicator's `period` argument before that transform runs.
 
 for each round.
 
@@ -666,11 +703,10 @@ for each round.
 
 Use `group=` to tag transforms into families, then filter by `feature_groups` in `round_params`.
 
-```python-fragment
-.add_indicator(roc, group='momentum', period='roc_period')
-.add_indicator(wilder_rsi, group='momentum')
-.add_feature(vwap, group='microstructure')
-```
+| Group declaration | Selection |
+|---|---|
+| `group="momentum"` | Included by `feature_groups="momentum"` or `all`. |
+| ungrouped | Always included. |
 
 If `round_params['feature_groups']` is present, only transforms whose group is in that string are applied. Ungrouped transforms always run. The value is a pipe-delimited string of active group names, or `'all'` to include every group.
 
@@ -678,9 +714,7 @@ If `round_params['feature_groups']` is present, only transforms whose group is i
 
 Use `include_if=` when a transform should only run if a boolean round parameter is true. Missing control keys are treated as false.
 
-```python-fragment
-.add_feature(vwap, include_if='use_vwap')
-```
+Set `include_if` to the boolean round-parameter key that controls the feature.
 
 ## Parameter-Controlled Perturbations
 
@@ -690,16 +724,11 @@ The manifest builder supports perturbation-style workflows directly in the decla
 
 Use `group=` on indicators or features, then pass `feature_groups` in `round_params`.
 
-```python-fragment
-.add_indicator(roc, group='momentum', period='roc_period')
-.add_feature(vwap, group='microstructure')
-```
+Tag indicators/features through the source-bound methods above; select active tags through the pipe-delimited `feature_groups` round value.
 
 At run time:
 
-```python
-round_params = {'feature_groups': 'momentum'}
-```
+`feature_groups="momentum"` selects momentum-tagged and ungrouped transforms.
 
 Use `|` to activate multiple groups: `'momentum|microstructure'`. Use `'all'` to include every group.
 
@@ -709,15 +738,11 @@ Only grouped transforms in the selected families run. Ungrouped transforms alway
 
 Use `include_if=` for boolean on/off switches:
 
-```python-fragment
-.add_feature(vwap, include_if='use_vwap')
-```
+The feature's `include_if` names its boolean controlling parameter.
 
 At run time:
 
-```python
-round_params = {'use_vwap': False}
-```
+`use_vwap=False` disables a feature declared with `include_if="use_vwap"`.
 
 The transform is skipped.
 
@@ -725,18 +750,18 @@ The transform is skipped.
 
 Use `set_feature_ablation()` to let the manifest randomly drop feature columns after transforms and before scaling.
 
+<!-- reference: manifest-ablation-introduction source=limen/experiment/manifest_core.py region=signature:MLManifest.set_feature_ablation role=signature -->
 ```python
-manifest.set_feature_ablation()
+def set_feature_ablation(self, drop_count_key: str='feature_drop_count', seed_key: str='feature_drop_seed') -> 'MLManifest':
+    ...
 ```
 
 Then control it from round parameters:
 
-```python
-round_params = {
-    'feature_drop_count': 1,
-    'feature_drop_seed': 42,
-}
-```
+| Round key | Project value |
+|---|---|
+| `feature_drop_count` | Baseline 0, compressed case 1. |
+| `feature_drop_seed` | 7. |
 
 Important behavior:
 
@@ -752,12 +777,10 @@ In saved CLI or Python/MSQ runs, that `_dropped_features` payload is stored into
 
 Use `set_scaler_from_params()` when scaler selection itself is part of the search space.
 
+<!-- reference: manifest-dynamic-scaler-introduction source=limen/experiment/manifest_core.py region=signature:MLManifest.set_scaler_from_params role=signature -->
 ```python
-manifest.set_scaler_from_params('scaler_type')
-
-params = {
-    'scaler_type': ['logreg', 'robust', 'rank_gauss'],
-}
+def set_scaler_from_params(self, param_name: str='scaler_type', extra_params: dict[str, Any] | None=None) -> 'MLManifest':
+    ...
 ```
 
 The registry resolves:
@@ -779,25 +802,16 @@ Round parameters handle search-time variation. `with_params_override(split_confi
 
 Then in `params()`:
 
-```python
-{
-    'use_vwap': [True, False],
-}
-```
+Declare boolean candidates for the controlled feature; use a derived Manifest for build-time source/split changes.
 
 ## Target Configuration
 
 Target construction uses `Manifest.with_target_label()` with a class from `limen.targets`. The class is fitted once on the training split and then applied to validation and test without refitting.
 
-```python-fragment
-from limen.targets import QuantileBinaryTarget
-
-.with_target_label(
-    'quantile_flag',
-    QuantileBinaryTarget,
-    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
-    transform_params={'shift': 'shift'},
-)
+<!-- reference: manifest-target source=limen/experiment/manifest_core.py region=signature:Manifest.with_target_label role=signature -->
+```python
+def with_target_label(self, target_name: str, target_class: type, fit_params: dict[str, Any] | None=None, transform_params: dict[str, Any] | None=None) -> 'Manifest':
+    ...
 ```
 
 `fit_params` are forwarded to `__init__` on the training split. `transform_params` are forwarded to `transform()` on every split. Both support round-param references (`'q'` resolves to the current round's `q` value).
@@ -812,10 +826,10 @@ See [Targets](Targets.md) for the full reference including all built-in target c
 
 Configure a fitted scaler that is instantiated on train and then applied across the splits.
 
-```python-fragment
-from limen.scalers import LogRegScaler
-
-.set_scaler(LogRegScaler)
+<!-- reference: manifest-scaler source=limen/experiment/manifest_core.py region=signature:MLManifest.set_scaler role=signature -->
+```python
+def set_scaler(self, transform_class: Any, param_name: str='_scaler', extra_params: dict[str, Any] | None=None) -> 'MLManifest':
+    ...
 ```
 
 The fitted scaler is stored in the resulting `data_dict` under `_scaler`.
@@ -824,26 +838,25 @@ Pass `extra_params` to forward constructor arguments. String values are treated 
 
 Underscore-prefixed strings, such as `_scaler`, resolve to fitted parameters only when that key is available in the current fitted-parameter map. Otherwise they remain literal strings.
 
-```python-fragment
-# window swept as a param; min_samples fixed
-.set_scaler(CausalRollingRobustScaler, extra_params={'window': 'scaler_window', 'min_samples': 25})
+<!-- reference: manifest-causal-scaler source=limen/scalers/causal_rolling_robust_scaler.py region=signature:CausalRollingRobustScaler.__init__ role=signature -->
+```python
+def __init__(self, x_train: pl.DataFrame, window: int=1000, quantile_range: tuple[float, float]=(0.25, 0.75), clip: float=8.0, min_samples: int=50) -> None:
+    ...
 ```
 
 ### `set_scaler_from_params(param_name='scaler_type', extra_params=None)`
 
 Select a scaler dynamically from `SCALER_REGISTRY` using a round parameter.
 
-```python-fragment
-.set_scaler_from_params('scaler_type')
+<!-- reference: manifest-scaler-choice source=limen/experiment/manifest_core.py region=signature:MLManifest.set_scaler_from_params role=signature -->
+```python
+def set_scaler_from_params(self, param_name: str='scaler_type', extra_params: dict[str, Any] | None=None) -> 'MLManifest':
+    ...
 ```
 
 Then in `params()`:
 
-```python
-{
-    'scaler_type': ['logreg', 'linear', 'robust'],
-}
-```
+Declare scaler registry names as candidates for the selected round key; use [Scalers](Scalers.md) for all supported names and fitting behavior.
 
 Use this when scaler choice is itself part of the search space. Pass `extra_params` to forward constructor arguments using the same static/dynamic resolution as `set_scaler()`.
 
@@ -851,8 +864,10 @@ Use this when scaler choice is itself part of the search space. Pass `extra_para
 
 Enable strict null checking after the Context Carry-Over (CCO) pipeline.
 
-```python-fragment
-.set_strict_mode(True)
+<!-- reference: manifest-strict source=limen/experiment/manifest_core.py region=signature:MLManifest.set_strict_mode role=signature -->
+```python
+def set_strict_mode(self, strict_mode: bool) -> 'MLManifest':
+    ...
 ```
 
 #### Background: Context Carry-Over
@@ -880,14 +895,10 @@ All foundational ML SFDs and YAML templates ship with `strict_mode=True`. New SF
 
 Configure optional PCA feature compression for ML manifests.
 
+<!-- reference: manifest-pca source=limen/experiment/manifest_core.py region=signature:MLManifest.set_pca_compression role=signature -->
 ```python
-from limen.scalers import RobustScaler
-
-manifest = (
-    MLManifest()
-    .set_scaler(RobustScaler)
-    .set_pca_compression()
-)
+def set_pca_compression(self, enabled_param: str | Any='auto_pca', n_components_param: str | Any='pca_k', scaler_param_name: str | Any='_scaler', component_prefix: str | Any='pc_') -> 'MLManifest':
+    ...
 ```
 
 When `round_params[enabled_param]` is absent or `False`, the manifest uses the
@@ -898,26 +909,26 @@ manifest fits full-SVD PCA on the train split only, then applies that frozen
 rotation to validation and test. `x_train`, `x_val`, and `x_test` are replaced
 with `pc_*` columns; no parallel raw-feature dataset is retained.
 
-`RobustScaler` above is one valid example. Fixed or parameter-selected
+The canonical project uses `RobustScaler`. Fixed or parameter-selected
 `LogRegScaler`, `LinearScaler`, `RankGaussScaler`, `CausalRollingRobustScaler`
 and caller scalers also work. Configure a scaler with a fitted `transform`,
 use its actual fitted-output key as `scaler_param_name`, and supply numeric,
 finite finalized feature matrices in their existing order. PCA fits only on
 training rows. Invalid finalized values name the split index and offending
-columns before PCA construction; the repair performs no data cleaning.
+columns before PCA construction. PCA does not clean the supplied matrix.
 Existing strict null refusals, non-strict NaN-row cleanup and conditional-fold
 errors remain in place.
 Frozen Sensor preprocessing retains its existing null-row/error policy.
 
-PCA weights the matrix produced by the caller's preprocessing. On the recorded
-first 336 hourly observations from January 2024 used by the proof, LogRegScaler
-leaves `mean`, `std`, `liquidity_sum`, `maker_volume` and `maker_liquidity` raw.
-Their approximate training standard deviations are 886, 71, 83 million, 996 and
-43 million; the first component has loadings about 0.890 and 0.456 on the two
-liquidity columns. LinearScaler covers this fixture differently, with features
-approximately at unit scale. Acceptance preserves that weighting; it does not
-establish comparable scaling or strategy quality. Rolling scalers still need
-their declared historical context, including at both future split boundaries.
+PCA weights the matrix produced by the caller's preprocessing. A scaler may
+leave some columns in their original units; numeric admission does not make
+those columns comparably scaled or establish strategy quality. The canonical
+preparation case retains its `RobustScaler` training medians and interquartile
+ranges, prepared matrices and fitted PCA projection. Its independent proof
+checks those values and the unchanged training fit used on validation and test.
+Rolling scalers still need their declared historical context, including at
+both future split boundaries. See [Scalers](Scalers.md) for each scaler's
+transformed and preserved columns.
 PCA does not test stationarity. Optional [feature shims](#feature-shims) transform
 selected columns upstream; their training evidence does not guarantee stationarity.
 
@@ -929,23 +940,10 @@ Use `with_strategy()` when the strategy is expressed as boolean predicate logic 
 
 Configure a rule-based strategy from a list of condition config dicts and an entry signal id.
 
+<!-- reference: manifest-strategy source=limen/experiment/manifest_core.py region=signature:RuleBasedManifest.with_strategy role=signature -->
 ```python
-from limen.experiment import RuleBasedManifest
-from limen.sfd.reference_architecture.rule_based import rule_based
-
-conditions = [
-    {'id': 'rsi_oversold', 'type': 'threshold', 'column': 'wilder_rsi_{rsi_period}', 'operator': '<', 'value': '{rsi_threshold}'},
-    {'id': 'above_ema',    'type': 'relative',   'column': 'close', 'operator': '>', 'other_column': 'ema_{ema_period}'},
-    {'id': 'entry',        'operator': 'and',     'operands': ['rsi_oversold', 'above_ema']},
-]
-
-manifest = (
-    RuleBasedManifest()
-    .add_indicator(wilder_rsi, period='rsi_period')
-    .add_indicator(ema, period='ema_period')
-    .with_strategy(conditions, entry='entry')
-    .with_reference_architecture(rule_based)
-)
+def with_strategy(self, conditions: list[dict[str, Any]], entry: str) -> 'RuleBasedManifest':
+    ...
 ```
 
 `with_strategy()` validates the config at construction time — it raises `ValueError` if any condition is missing an `id`, if ids are not unique, if `entry` does not refer to a known id, or if compound conditions reference unknown operand ids.
@@ -966,11 +964,10 @@ Each condition is a dict with an `id` field. There are two kinds:
 
 **Compound conditions** — combine leaf or other compound conditions using boolean logic:
 
-```python
-{'id': 'entry', 'operator': 'and', 'operands': ['rsi_oversold', 'above_ema']}
-{'id': 'exit',  'operator': 'or',  'operands': ['condition_a', 'condition_b']}
-{'id': 'not_high_vol', 'operator': 'not', 'operands': ['high_vol']}
-```
+| Compound operator | Fields |
+|---|---|
+| `and`, `or` | `id`, `operator`, list of referenced condition IDs in `operands`. |
+| `not` | `id`, `operator`, one referenced condition ID in `operands`. |
 
 Supported operators: `and`, `or`, `not`. The `not` operator requires exactly one operand.
 
@@ -978,33 +975,14 @@ Supported operators: `and`, `or`, `not`. The `not` operator requires exactly one
 
 Any leaf condition can be wrapped with a temporal modifier by adding an optional field:
 
-```python
-{'id': 'rsi_oversold', 'type': 'threshold', 'column': 'wilder_rsi_14', 'operator': '<', 'value': 30, 'persistence_n': 3}
-# True only if RSI has been below 30 for 3 consecutive bars
-
-{'id': 'macd_cross', 'type': 'crossover', 'column': 'macd', 'other_column': 'signal', 'recency_n': 5}
-# True if the crossover happened within the last 5 bars
-```
+| Modifier | Meaning |
+|---|---|
+| `persistence_n` | Condition holds for the declared consecutive-bar count. |
+| `recency_n` | A qualifying event occurred within the declared trailing-bar count. |
 
 `persistence_n` and `recency_n` apply only to leaves and are mutually exclusive. Each accepts a positive integer literal or an exact bare `{identifier}` reference to one round parameter:
 
-```yaml
-sfd:
-  manifest:
-    type: rule_based
-    strategy:
-      conditions:
-        - id: rsi_oversold
-          name: RSI oversold
-          type: threshold
-          column: wilder_rsi_14
-          operator: "<"
-          value: 30
-          persistence_n: "{hold_bars}"
-      entry: rsi_oversold
-  params:
-    hold_bars: [1, 3]
-```
+In YAML, put the temporal modifier on its condition under `sfd.manifest.strategy.conditions`; a braced reference binds to a declared integer candidate list in `sfd.params`.
 
 This fragment extends a manifest that produces `wilder_rsi_14`. MSQ draws the scalar `hold_bars` normally; each round resolves its own window without modifying the condition declaration. Use `recency_n: "{hold_bars}"` for the equivalent recency sweep.
 
@@ -1016,9 +994,7 @@ Windows count rows within each prepared split; they do not carry predicate histo
 
 Column names and values can reference round parameters using `{param}` placeholders:
 
-```python
-{'id': 'rsi_oversold', 'type': 'threshold', 'column': 'wilder_rsi_{rsi_period}', 'operator': '<', 'value': '{rsi_threshold}'}
-```
+Column names may contain embedded braced parameter names; threshold values may be whole braced references. Both resolve from the current round before predicate calculation.
 
 These are resolved per round from `round_params`. The corresponding indicator must be added to the manifest so the column is present in the data.
 
@@ -1026,24 +1002,72 @@ These are resolved per round from `round_params`. The corresponding indicator mu
 
 A rule-based transform can emit its complete long/flat position directly. The strategy then needs only one threshold leaf over that output:
 
+<!-- example: manifest-rule-execution-definition source=docs/examples/compiled-research/execution.yaml region=__file__ scenario=execution interface=compiled role=executed -->
 ```yaml
-indicators:
-  - func: limen.features.dollar_bar_crash_reversal
-    params:
-      momentum_threshold_bps: "{momentum_threshold_bps}"
-      flow_z_threshold: "{flow_z_threshold}"
-      hold_minutes: "{hold_minutes}"
-strategy:
-  conditions:
-    - id: crash_reversal_position
-      type: threshold
-      column: dollar_bar_crash_reversal_position
-      operator: ">"
-      value: 0
-  entry: crash_reversal_position
-backtest:
-  fee_bps: 10.0
-  slip_bps: 5.0
+schema_version: '1.0'
+metadata:
+  name: book_compiled_execution
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-02'
+      train_end: '2024-01-03'
+      val_start: '2024-01-04'
+      val_end: '2024-01-05'
+      test_start: '2024-01-05'
+      test_end: '2024-01-06'
+    backtest:
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-05
+        min_notional: 5
+      source_interval_seconds: 3600
+      fee_bps: 10
+      slip_bps: 5
+      take_profit_bps_column: volatility_take_profit_bps
+      stop_loss_bps_column: volatility_stop_loss_bps
+      barrier_features:
+        method: limen.features.volatility_barriers.volatility_barriers
+        params:
+          span: '{risk_span}'
+          regime_span: 24
+          min_periods: 3
+    reference_architecture: 
+      limen.sfd.reference_architecture.rule_based.rule_based
+    strategy:
+      conditions:
+      - id: entry
+        name: Recorded close above open
+        type: relative
+        column: close
+        operator: '>'
+        other_column: open
+      entry: entry
+  params:
+    risk_span:
+    - 6
+    - 12
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  prep_each_round: true
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 This is the shape used by the bundled `dollar_bar_crash_reversal` template. `RuleBasedStrategy` evaluates the position with the declared costs and reports `pnl_per_trade_bps_{split}` with its `num_executed_trades_{split}` denominator in addition to the generic snapshot metrics.
@@ -1059,24 +1083,11 @@ Rule-based manifests cannot use scalers or feature ablation. Both will raise `Va
 
 The rule-based path produces a different `data_dict` than the ML path:
 
-```python
-{
-    'train': pl.DataFrame,   # full indicator DataFrame, no x/y split
-    'val':   pl.DataFrame,
-    'test':  pl.DataFrame,
-    'strategy': {
-        'conditions': [
-            {'id': 'entry', 'type': 'threshold', 'column': 'wilder_rsi_14', 'operator': '<', 'value': 30},
-        ],
-        'entry': 'entry',
-    },
-    '_alignment': {
-        'first_test_datetime': None,
-        'last_test_datetime': None,
-        'missing_datetimes': [],
-    },
-}
-```
+| Prepared key | Type and responsibility |
+|---|---|
+| `train`, `val`, `test` | Full prepared split frames, with predicate columns. |
+| `strategy` | Resolved condition definitions and entry condition ID. |
+| `_alignment` | Retained source-row alignment and test bounds. |
 
 Predicate boolean columns are added to each split DataFrame before the dict is assembled. The model receives the full DataFrames and applies the boolean logic tree at evaluation time.
 
@@ -1084,12 +1095,12 @@ Predicate boolean columns are added to each split DataFrame before the dict is a
 
 The `sql_expr` predicate type parses a SQL expression string via `pl.sql_expr()`. Column names are referenced directly without wrappers:
 
-```python
-{'id': 'volume_spike', 'type': 'sql_expr', 'expr': 'volume > avg_volume_20 * {multiplier}'}
-{'id': 'ratio_check',  'type': 'sql_expr', 'expr': '(close - sma_200) / sma_200 > {pct_threshold}'}
-```
+| Predicate field | Meaning |
+|---|---|
+| `type` | `sql_expr` |
+| `expr` | Polars SQL expression over declared columns; braced round parameters resolve before parsing. |
 
-This is the safe alternative to writing Python code — the polars SQL parser rejects IO operations and arbitrary function calls by design. Parameter substitution works identically to other predicate types using `{param}` placeholders.
+This is an expression surface parsed by Polars, not a research-code sandbox. Treat the complete Manifest and its importable implementations as code in the operator's trust domain. Parameter substitution works identically to other predicate types using `{param}` placeholders.
 
 ## Model Configuration
 
@@ -1097,31 +1108,23 @@ This is the safe alternative to writing Python code — the polars SQL parser re
 
 Configure the final model function.
 
-```python-fragment
-from limen.sfd.reference_architecture import logreg_binary
-
-.with_reference_architecture(logreg_binary)
+<!-- reference: manifest-architecture source=limen/experiment/manifest_core.py region=signature:Manifest.with_reference_architecture role=signature -->
+```python
+def with_reference_architecture(self: _TManifest, architecture_function: Callable[..., dict[str, Any]]) -> _TManifest:
+    ...
 ```
 
 The model function must accept the prepared `data_dict` as its first argument.
 
 All remaining parameters are auto-mapped from `round_params` by signature inspection. For a model function with this signature:
 
+<!-- reference: manifest-logreg-wrapper source=limen/sfd/reference_architecture/logreg_binary.py region=signature:logreg_binary role=signature -->
 ```python
-from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
-
-def logreg_binary(data, C=1.0, class_weight=None, max_iter=100, solver='lbfgs'):
-    model = LogRegBinary().train(
-        data,
-        C=C,
-        class_weight=class_weight,
-        max_iter=max_iter,
-        solver=solver,
-    )
-    return model.evaluate(data, inline_metrics=True)
+def logreg_binary(data: dict[str, Any], solver: str='lbfgs', penalty: str='l2', dual: bool=False, tol: float=0.0001, C: float=1.0, fit_intercept: bool=True, intercept_scaling: float=1, class_weight: float | str | dict[int, float] | None=None, random_state: int=42, max_iter: int=100, multi_class: str='deprecated', verbose: int=0, warm_start: bool=False, n_jobs: int | None=None, l1_ratio: float | None=None, prediction_calibration_config: 'CalibrationConfig | None'=None) -> dict[str, Any]:
+    ...
 ```
 
-then manifest execution will automatically pull `C`, `class_weight`, `max_iter`, and `solver` from the current round when those keys exist in `round_params`.
+Manifest execution maps matching round keys to the current wrapper signature, using its defaults where no round value is supplied.
 
 The built-in `logreg_binary` SFD uses this same path for the full sklearn logistic-regression constructor surface, so model tuning stays in `params()` rather than hidden inside the architecture.
 
@@ -1133,15 +1136,22 @@ Required model parameters with no defaults must be present in the round params o
 
 Opens a `CalibrationBuilder` for configuring probability calibration and threshold optimization. Call `.done()` to finalize and return to the manifest.
 
-```python-fragment
-from limen.calibration import grid_threshold_optimizer, sklearn_probability_calibrator
-from limen.metrics.balanced_metric import balanced_metric
+<!-- reference: manifest-calibration-probability_calibration source=limen/experiment/manifest_core.py region=signature:CalibrationBuilder.probability_calibration role=signature -->
+```python
+def probability_calibration(self, func: CalibratorProtocol, **params: Any) -> 'CalibrationBuilder':
+    ...
+```
 
-.with_reference_architecture(logreg_binary)
-.with_calibration()
-.probability_calibration(func=sklearn_probability_calibrator, method='isotonic')
-.threshold_function(func=grid_threshold_optimizer, metric=balanced_metric)
-.done()
+<!-- reference: manifest-calibration-threshold_function source=limen/experiment/manifest_core.py region=signature:CalibrationBuilder.threshold_function role=signature -->
+```python
+def threshold_function(self, func: ThresholdOptimizerProtocol, **params: Any) -> 'CalibrationBuilder':
+    ...
+```
+
+<!-- reference: manifest-calibration-done source=limen/experiment/manifest_core.py region=signature:CalibrationBuilder.done role=signature -->
+```python
+def done(self) -> 'MLManifest':
+    ...
 ```
 
 ### `CalibrationBuilder.probability_calibration(func, **params)`
@@ -1173,12 +1183,7 @@ Both flags default to `True`. Add `'use_calibration': [True, False]` and `'use_t
 
 Calibration params support the same resolution convention as the rest of the manifest. String values are looked up from `round_params` at runtime; non-string values pass through unchanged:
 
-```python-fragment
-.probability_calibration(func=sklearn_probability_calibrator, method='cal_method')
-.threshold_function(func=grid_threshold_optimizer,
-                    metric=balanced_metric,          # callable — passes through unchanged
-                    threshold_min='threshold_min')   # string → round_params lookup
-```
+String calibration settings resolve through matching round keys; callable settings, such as the threshold metric, pass through unchanged. The [Compiled calibration case](Calibration.md) exercises all four flag combinations.
 
 See [Calibration](Calibration.md) for the full reference including custom calibrators and threshold optimizers.
 
@@ -1188,18 +1193,15 @@ See [Calibration](Calibration.md) for the full reference including custom calibr
 
 Configure deterministic drop-N feature ablation after target construction.
 
-```python-fragment
-.set_feature_ablation()
+<!-- reference: manifest-ablation source=limen/experiment/manifest_core.py region=signature:MLManifest.set_feature_ablation role=signature -->
+```python
+def set_feature_ablation(self, drop_count_key: str='feature_drop_count', seed_key: str='feature_drop_seed') -> 'MLManifest':
+    ...
 ```
 
 Then in `params()`:
 
-```python
-{
-    'feature_drop_count': [0, 1, 2],
-    'feature_drop_seed': [42],
-}
-```
+Declare drop-count and seed candidate lists in the SFD parameter domain. The canonical native preparation case above compares zero and one drop at seed 7.
 
 This makes feature robustness part of the search itself.
 
@@ -1207,25 +1209,15 @@ This makes feature robustness part of the search itself.
 
 `MLManifest.set_feature_shims(shims)` applies explicit transformations to selected numeric feature or indicator output columns, after their creation and before feature ablation, scaling and PCA. Selected values replace their raw model-input values; original indicator/feature APIs and unselected columns remain unchanged. The declaration is optional and applies to every ordinary MSQ round.
 
-```python-fragment
-.set_feature_shims([
-    {'columns': ['sma_{sma_period}', 'close_sma_{sma_period}'],
-     'method': 'ratio', 'reference': 'close'},
-    {'columns': ['close'], 'method': 'fractional_diff', 'd': '{shim_d}'},
-])
+<!-- reference: manifest-shims source=limen/experiment/_column_shims.py region=signature:set_feature_shims role=signature -->
+```python
+def set_feature_shims(self: _TManifest, shims: list[dict[str, object]]) -> _TManifest:
+    ...
 ```
 
 The YAML equivalent belongs to `sfd.manifest`:
 
-```yaml
-feature_shims:
-  - columns: ["sma_{sma_period}", "close_sma_{sma_period}"]
-    method: ratio
-    reference: close
-  - columns: [close]
-    method: fractional_diff
-    d: "{shim_d}"
-```
+The YAML declaration lives at `sfd.manifest.feature_shims`: a sequence of mappings with selected `columns`, `method` and its method-specific fields. Column templates and braced scalar settings bind to declared round parameters.
 
 These columns must be produced by the configured features/indicators. Column-name templates resolve from that same round. Shim scalar settings may reference existing `sfd.params`; for example `shim_d: [0.2, 0.4, 0.6]` sweeps three declared differentiation orders. The column declaration itself stays manifest configuration. MSQ uses its existing search, parameter identity and feedback interfaces.
 
@@ -1250,12 +1242,10 @@ Ordinary sequential preparation remains fresh for each permutation. The current 
 
 Append custom entries to the finalized `data_dict`.
 
-```python-fragment
-def extend_data_dict(data_dict, split_data, round_params, fitted_params):
-    data_dict['train_rows'] = split_data[0].height
-    return data_dict
-
-.add_to_data_dict(extend_data_dict)
+<!-- reference: manifest-extension source=limen/experiment/manifest_core.py region=signature:MLManifest.add_to_data_dict role=signature -->
+```python
+def add_to_data_dict(self, func: Callable[..., dict[str, Any]]) -> 'MLManifest':
+    ...
 ```
 
 Use this when the model needs additional structured inputs that are not part of Limen's standard `x_*` / `y_*` schema.
@@ -1266,8 +1256,10 @@ Use this when the model needs additional structured inputs that are not part of 
 
 Create a deep-copied manifest with selected overrides.
 
+<!-- reference: manifest-override source=limen/experiment/manifest_core.py region=signature:Manifest.with_params_override role=signature -->
 ```python
-manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
+def with_params_override(self, **overrides: Any) -> 'Manifest':
+    ...
 ```
 
 This supports caller-owned variants, including an explicit change from train/validation/test mode to all-data training. It is not part of `Trainer.train()`, which preserves the original manifest configuration for metric reconstruction.
@@ -1280,10 +1272,7 @@ Supported override behavior today:
 
 Example:
 
-```python
-manifest_small = manifest.with_params_override(row_count_limit=1000)
-manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
-```
+Use `split_config` for a derived train/validation/test ratio, or an admitted source-method parameter such as `row_count_limit` for a different data selection. Neither modifies the source Manifest.
 
 The original manifest remains unchanged.
 
@@ -1355,49 +1344,23 @@ If the model returns `_preds`, UEL stores them in `uel.preds` and the `Log` laye
 
 ### Binary target from a fitted quantile cutoff
 
-```python-fragment
-from limen.targets import QuantileBinaryTarget
-
-.with_target_label(
-    'quantile_flag',
-    QuantileBinaryTarget,
-    fit_params={'source_column': 'roc_{roc_period}', 'quantile': 'q'},
-    transform_params={'shift': 'shift'},
-)
+<!-- reference: manifest-quantile-target source=limen/targets/quantile_binary.py region=signature:QuantileBinaryTarget.__init__ role=signature -->
+```python
+def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: str, quantile: float) -> None:
+    ...
 ```
 
 ### Search over feature families
 
-```python
-def params():
-    return {
-        'feature_groups': ['momentum', 'momentum|microstructure'],
-        'roc_period': [4, 8, 12],
-    }
-
-manifest = (
-    MLManifest()
-    .add_indicator(roc, group='momentum', period='roc_period')
-    .add_feature(vwap, group='microstructure')
-)
-```
+The canonical native preparation case tags ROC features as `momentum` and the fractional feature as `price`, then activates both through `feature_groups="momentum|price"`.
 
 ### Search over scaler choice
 
-```python
-def params():
-    return {
-        'scaler_type': ['logreg', 'robust'],
-    }
-
-manifest = MLManifest().set_scaler_from_params('scaler_type')
-```
+The Compiled selection declares its scaler through `from_params: scaler_type`; its parameter domain supplies the registered `logreg` value. A different scaler candidate is a different preparation choice.
 
 ### Build an explicit all-data variant
 
-```python
-manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
-```
+Use the source-bound `with_params_override` method above for an explicit all-data variant; an all-training split does not provide an independent validation or test result.
 
 This is a separate workflow from [Trainer](Trainer.md). Trainer preserves the original split to reproduce logged metrics.
 

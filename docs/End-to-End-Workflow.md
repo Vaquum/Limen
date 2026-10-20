@@ -1,170 +1,88 @@
-# End-to-End Workflow
+# Carry the experiment through to inference
 
-New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-For a native direction/sizing model trained from simulated trade outcomes, use the [direction/sizing workflow](Reference-Architecture.md#direction-and-sizing). It preserves signed exposure through experiment export, Trainer and Sensor; downstream execution parity requires the corresponding integration.
+A complete run must preserve the connection between the question, observations, selection rule and fitted state used for later decisions. The [Python project](examples/python-research/README.md) owns those connections in its functions. The [Compiled project](examples/compiled-research/README.md) adopts the declared pipeline and its recorded reconstruction contract.
 
-This guide takes a contributor from a fresh checkout to a benchmarked classifier using the current YAML-first surface.
+The opening [research chapter](Research-Book.md) develops selection. This chapter brings the later scenarios together. Run either project independently; their models and evaluation populations differ, so their raw scores are not a head-to-head model comparison.
 
 ## Prerequisites
 
+Use the matching Limen wheel, optional dependencies and recorded input bundle described on each project page. Run the following commands from the bundle root. From a repository checkout, work in `docs/examples/` and follow the project pages' input/output path adjustments.
+
+## Run the Python research
+
+<!-- example: workflow-python-selection source=docs/examples/commands.json region=python-selection scenario=selection interface=python role=executed -->
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
 ```
 
-## Create the experiment YAML
-
-Start from the packaged logistic-regression SFD template:
-
+<!-- example: workflow-python-all source=docs/examples/commands.json region=python-all scenario=selection interface=python role=executed -->
 ```bash
-limen init logreg-first.yaml --template logreg_binary
+python python-research/research.py --scenario all --data-dir inputs --output-dir results/python-all
 ```
 
-That file is the editable Design of Experiment surface. Its pipeline flows through:
+The first command runs selection; the second executes search, recovery, walk-forward, holdout assessment, calibration, event execution, bar formation and observed-cost stress comparisons. It checks recorded input digests before research and writes a `summary.json` alongside native outputs.
 
-1. `data_source`: fetch OHLCV bars with `limen.data.HistoricalData.get_spot_klines`
-2. `indicators`: add `roc`, `atr`, `ppo`, and `wilder_rsi`
-3. `features`: add fractional differencing, `vwap`, and `kline_imbalance`
-4. `target`: fit a train-only quantile target and shift it forward
-5. `scaler`: resolve scaler choice from `params.scaler_type`
-6. `params`: define target, feature, calibration, and classifier hyperparameter grids
-7. `uel`: define permutation count, search strategy, optional recording, and output format
+Selection fits four Ridge candidates and retains their fitted scaler/model pipelines in memory. It chooses the best validation result per feature window and builds a Cohort from the selected Sensors. No fit consumes the final assessment partition. `holdout` then evaluates next-bar decisions on that excluded partition; exclusion remains caller-owned and supplies no project reservation or earlier-exposure guarantee.
 
-The minimal runnable shape is:
+The base selection's CSV and summary do not serialize arbitrary fitted models. To continue inference in the same process, import `run_research` and use the returned Cohort and retained state. Recovery is a separate scenario that persists queue/results and compares resumed and uninterrupted runs.
 
-```yaml
-schema_version: "1.0"
+## Run the Compiled research
 
-metadata:
-  name: logreg_first
-  limen_version: "5.45.9"
-  mode: development
-  description: First logistic-regression binary classifier
-
-sfd:
-  manifest:
-    type: ml
-    data_source:
-      method: limen.data.HistoricalData.get_spot_klines
-      params:
-        kline_size: 3600
-    split_dates:
-      train_start: "2024-01-01"
-      train_end: "2024-09-30"
-      val_start: "2024-10-01"
-      val_end: "2024-11-30"
-      test_start: "2024-12-01"
-      test_end: "2024-12-31"
-    indicators:
-      - func: limen.indicators.roc
-        params:
-          period: "{roc_period}"
-          group: momentum
-      - func: limen.indicators.atr
-        params:
-          period: 14
-          group: volatility
-    features:
-      - func: limen.features.vwap
-        params:
-          group: volume
-      - func: limen.features.kline_imbalance
-        params:
-          group: volume
-    target:
-      name: quantile_flag
-      class: limen.targets.QuantileBinaryTarget
-      fit_params:
-        source_column: "roc_{roc_period}"
-        quantile: "{q}"
-      transform_params:
-        shift: "{shift}"
-    scaler:
-      from_params: scaler_type
-    strict_mode: true
-    reference_architecture: limen.sfd.reference_architecture.logreg_binary.logreg_binary
-  params:
-    shift: [-1]
-    q: [0.50]
-    roc_period: [12]
-    scaler_type: [robust]
-    solver: [lbfgs]
-    penalty: [l2]
-    dual: [false]
-    tol: [0.01]
-    C: [1.0]
-    fit_intercept: [true]
-    intercept_scaling: [1.0]
-    class_weight: [0.55]
-    random_state: [42]
-    max_iter: [120]
-    multi_class: [deprecated]
-    verbose: [0]
-    warm_start: [false]
-    n_jobs: [null]
-    l1_ratio: [null]
-
-uel:
-  n_permutations: 1
-  search_strategy:
-    type: grid
-  prep_each_round: true
-  output_format: csv
-```
-
-## Validate, profile, and run
-
+<!-- example: workflow-compiled-selection source=docs/examples/commands.json region=compiled-selection scenario=selection interface=compiled role=executed -->
 ```bash
-limen validate logreg-first.yaml
-limen profile logreg-first.yaml
-limen run --dry-run logreg-first.yaml
-limen run logreg-first.yaml
+python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
 ```
 
-`validate` checks schema and reference resolution. `profile` samples the real data path and estimates runtime. `--dry-run` compiles without executing permutations. `run` trains the classifier and writes the result directory.
+<!-- example: workflow-compiled-all source=docs/examples/commands.json region=compiled-all scenario=selection interface=compiled role=executed -->
+```bash
+python compiled-research/research.py --scenario all --data-dir inputs --output-dir results/compiled-all
+```
 
-For parallel CPU classification rounds, set every model `n_jobs` value to `1`
-and run `limen run logreg-first.yaml --workers 4`. YAML `uel.workers` supplies the
-default; the CLI overrides it. Runs created with full
-[recording evidence](Universal-Experiment-Loop.md#recording-policy) can resume with
-`limen run --resume RESULTS_DIR`, reusing the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
-for admission, feedback ordering and stop/recovery limits. The example above has
-one permutation; a larger search is needed to occupy several workers.
+The first command runs selection; the second executes search, recovery, walk-forward, final holdout, calibration, event execution, bar formation, batch allocation and command-line project operations. It validates declarations, preserves native artifacts and reconstructs selected recorded rounds through `Trainer`.
+
+The selection declaration applies chronological splits before preparation, fits target/scaler state on training and ranks two logistic candidates by validation event-ledger return. Trainer reconstructs the selected recorded round using the original splits and checks replayed metrics. Reconstruction is a refit under the recorded contract, rather than restoration of arbitrary model weights.
+
+Its `command_line` scenario validates, profiles, compiles, commits and executes the same recorded configuration through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
+
+## Review the evidence by decision
+
+| Decision | Python project | Compiled project | Contract |
+|---|---|---|---|
+| Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison and model families; shared feedback | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
+| Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Reconstruct declaration, queue/results and a selected Sensor; compare complete artifacts | [Recovery](Advanced-Search.md#resume-flow) |
+| Evaluate across time | Own fold fitting, validation selection and later Sensor decisions | Declared folds, purge/embargo and qualified fold reconstruction | [Walk-forward](Walk-Forward.md) |
+| Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four configured modes and recorded Sensor reconstruction | [Calibration](Calibration.md) |
+| Assess a selected result | Exclude the final partition from fitting and selection in code | Reserve, freeze and assess with native project records; earlier exposure remains unknown for local files | [Final holdout](Final-Holdout.md) |
+| Measure execution | Direct event inputs, policy, source clocks, costs and recorded funding | Declared event policy, ledgers, source bindings and funded comparison | [Backtest](Backtest.md) |
+| Form alternate bars | Call the shared bar helper over recorded observations | Form bars separately after each chronological split | [Data bars](Data-Bars.md) |
+| Reuse fitted behavior | Wrap the evaluated models and compose compatible native Sensors | Reconstruct recorded rounds or qualified folds, then bind compatible members | [Sensors](Trainer.md), [Cohorts](Cohort.md) |
 
 ## Review outputs
 
-The run writes a timestamped directory under `results/dev/` because `metadata.mode` is `development`.
-
-Key artifacts:
-
-| File | Use |
+| Artifact | Meaning |
 |---|---|
-| copied YAML manifest | Exact run definition. |
-| `metadata.json` | Manifest reference and run metadata used by downstream tools. |
-| `results.csv` | One row per completed permutation. |
-| `round_data.jsonl.gz` | Round identity, params and payloads selected by the [recording policy](Universal-Experiment-Loop.md#recording-policy). |
-| `checkpoint.json` | Resume state when checkpointing has run. |
-| `audit.jsonl` | Feedback-cycle trail when feedback has run. |
+| `summary.json` | Project report of the scenarios requested by the entry point. |
+| Python selection CSV | Candidate validation scores; fitted models remain in memory. |
+| Compiled `metadata.json` and copied definition | Declared configuration and provenance used for reconstruction. |
+| `results.csv` | Completed parameter rounds for a persisted experiment. |
+| `round_data.jsonl.gz` and signal payloads | Round identities and the payloads selected by the [recording policy](Universal-Experiment-Loop.md#recording-policy). |
+| `checkpoint.json` | Persisted queue/domain/reducer state when checkpointing ran. |
+| `audit.jsonl` | Applied feedback, suggestions, source errors and queue state when feedback ran. |
+| Scenario Parquet ledgers/reports | Recorded execution or assessment details emitted by that scenario. |
 
-## Benchmark the classifier
+Keep the definition, recorded input identities, package/environment identity and applicable artifacts together. A summary alone cannot reconstruct caller-owned state or establish that unrecorded payloads existed.
 
-For a CLI-created run, use the generated `results.csv` for first inspection:
+## Choose parallel execution deliberately
 
-```python
-import pandas as pd
+For parallel CPU classification rounds, set every model `n_jobs` value to `1`
+and supply `--workers 4` to `limen run` for a compatible declaration. YAML `uel.workers` supplies the
+default; the CLI overrides it. Runs created with full
+[recording evidence](Universal-Experiment-Loop.md#recording-policy) can resume with
+`limen run --resume RESULTS_DIR`, reusing the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
+for admission, feedback ordering and stop/recovery limits. The canonical projects use one worker to keep their proof population explicit; a larger search is needed to occupy several workers.
 
-results = pd.read_csv("results/dev/logreg_first_<timestamp>/results.csv")
-print(results.sort_values("auc", ascending=False).head())
-```
+## Interpret the result
 
-For full benchmark tables on a live Python object, follow the [Python/MSQ run](Universal-Experiment-Loop.md#direct-python-run) with `post_processing=True`, then inspect `uel.experiment_confusion_metrics` and `uel.experiment_backtest_results`.
+A successful run establishes the behavior asserted for its recorded inputs and configuration. Selection, calibration, search adaptation and repeated research consume evidence; their best score is not an untouched estimate. Trading assumptions, source clocks, unavailable decisions and exposure history remain part of the result.
 
-## Read next
-
-- [Command-Line Interface](Command-Line-Interface.md)
-- [Experiment Manifest](Experiment-Manifest.md)
-- [Log](Log.md)
-- [Benchmark](Benchmark.md)
-- [Backtest](Backtest.md)
+Continue to [Log](Log.md), [Benchmark](Benchmark.md) and [Backtest](Backtest.md) for analysis. The Reference and Developer appendices supply API detail and maintenance procedures without changing who owns the research methodology.

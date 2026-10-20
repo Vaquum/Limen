@@ -2,6 +2,8 @@
 
 Limen release publication is automated and destructive: a qualifying push to `main` can create and push a tag, publish a GitHub release, build distributions, attach provenance, and publish to PyPI. Review the release candidate before merge; the release script has no approval prompt or dry-run mode.
 
+Release validation must run the [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md) against the actual published wheel. A successful upload alone does not establish that the displayed research still runs.
+
 ## Prerequisites
 
 - maintainer authority for the repository, GitHub release, and PyPI project
@@ -33,15 +35,15 @@ Confirm that one candidate commit contains:
 - green tests, docs-site, packaging, lint, type, and security checks
 - reviewed dependency licenses, including the separate optional TabPFN surface when relevant
 
-The automation does not verify these conditions. They are pre-merge review obligations.
+Required merge checks verify version coherence, changelog presence, tests and package contracts. Release creation separately checks the version/tag and matching changelog entry. Semantic review of the release scope and dependency licenses remains a pre-merge obligation; automation does not establish that judgment.
 
 ## Automated sequence
 
 After a push to `main`, `pr_post_release.yml` installs the `release` extra and runs:
 
-```bash
-python scripts/create_release.py
-```
+| Step | Command |
+|---|---|
+| 1 | `python scripts/create_release.py` |
 
 The script:
 

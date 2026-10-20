@@ -2,6 +2,8 @@
 
 This page is the Limen-local packaging contract.
 
+The [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md) are installed-wheel acceptance cases. Their source, dependency and input identities must agree with the artifact being tested.
+
 ## Prerequisites
 
 - a clean Limen repository checkout
@@ -22,13 +24,23 @@ Every runtime dependency and extra must have a lower bound and an upper bound. `
 
 Build distributions with a fixed `SOURCE_DATE_EPOCH`. `limen_build_backend.py` delegates to setuptools and then normalizes sdist tar and gzip metadata so repeated sdists hash identically when file contents match.
 
-```bash
-SOURCE_DATE_EPOCH=1704067200 python -m build
-```
+| Step | Command |
+|---|---|
+| 1 | `SOURCE_DATE_EPOCH=1704067200 python -m build` |
 
 ## Required Proof
 
-Packaging changes must run `python scripts/package_audit.py`, `python -m build`, `twine check`, `check-wheel-contents`, `check-manifest`, and an install/import smoke test from the built wheel. The current publish workflow adds GitHub build-provenance attestations and release assets. It does not generate dependency-license reports, an SBOM, or an artifact-hash manifest; create those explicitly when required, including separate license review for the optional `tabpfn` extra.
+Packaging changes must run `python scripts/package_audit.py`, `python -m build`, `twine check`, `check-wheel-contents`, `check-manifest`, and an install/import smoke test from the built wheel. Packaging CI also generates dependency-license and CycloneDX reports as Actions artifacts. After successful PyPI publication, the publish workflow attaches the distributions, a released-wheel-environment `sbom.json` and `provenance.intoto.jsonl` to the GitHub Release and appends SHA-256 digests to its body. A release dependency-license report and optional TabPFN license approval are separate obligations; do not infer them from the SBOM. [Making a Release](Making-Release.md) names the sequence and partial-release limits.
+
+## Research-example install proof
+
+The two projects use a fresh isolated environment, hash-checked dependencies and
+the actual candidate wheel or verified released wheel. Their proof executes the
+published installation command, then runs the canonical Python and Compiled
+entry points from the unpacked recorded-input bundle. Distribution metadata,
+import location and all shipped Python source must match the intended tree.
+Neither an editable install nor a PyPI metadata lookup substitutes for this
+installed-wheel proof.
 
 ## Footprint
 

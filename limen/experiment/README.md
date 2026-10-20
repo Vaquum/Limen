@@ -9,6 +9,10 @@
 - [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 
+## In the research projects
+
+The [Python project](../../docs/examples/python-research/README.md) supplies its own SFD functions and bounded parameter domain. The [Compiled project](../../docs/examples/compiled-research/README.md) supplies a Manifest-backed SFD and saved definition. Both execute through UEL/MSQ; Manifest construction through Python remains Compiled Research.
+
 ## What this package owns
 
 Owns `Manifest`, `MLManifest`, `RuleBasedManifest`, the Universal Experiment Loop, parameter-search strategies, mutable search state, reducers, feedback, and checkpointing.
@@ -32,17 +36,75 @@ Does **not** own inference reconstruction (`limen.inference`), model architectur
 
 ## Quick orientation
 
+| Module or family | Responsibility |
+|---|---|
+| `experiment_core.py` | UniversalExperimentLoop |
+| `manifest_core.py` | Manifest and builder components |
+| `checkpoint_manager.py` | Persist and restore advanced-run state |
+| `feedback_controller.py` | Mid-run adaptive callbacks |
+| `msq.py` | Mutable Search Queue |
+| `param_domain.py` | Mutable parameter domain |
+| `pruning_strategy.py` | Pruning interfaces and implementations |
+| `param_search/` | SearchStrategy, GridStrategy, RandomStrategy |
+
+<!-- reference: package-experiment-layout source=limen/experiment/README.md region=layout:package role=layout -->
 ```text
 experiment/
-├── experiment_core.py       # UniversalExperimentLoop
-├── manifest_core.py         # Manifest and builder components
-├── checkpoint_manager.py    # Persist and restore advanced-run state
-├── feedback_controller.py   # Mid-run adaptive callbacks
-├── msq.py                   # Mutable Search Queue
-├── param_domain.py          # Mutable parameter domain
-├── reducer/
-│   └── pruning_strategy.py  # Pruning interfaces and implementations
-└── param_search/            # SearchStrategy, GridStrategy, RandomStrategy
+├── README.md
+├── __init__.py
+├── _acceptance_settings.py
+├── _allocation.py
+├── _allocation_folds.py
+├── _backtest_provenance.py
+├── _column_shims.py
+├── _dynamic_barriers.py
+├── _factorize.py
+├── _factorized_prep.py
+├── _family_evidence.py
+├── _fixed_trade_sources.py
+├── _fold_evidence.py
+├── _fold_fingerprint.py
+├── _fold_partitions.py
+├── _fold_preparation.py
+├── _grid_resume.py
+├── _holdout_assessment.py
+├── _holdout_attempts.py
+├── _holdout_freeze.py
+├── _holdout_history.py
+├── _holdout_report.py
+├── _holdout_research.py
+├── _holdout_source.py
+├── _manifest_preparation.py
+├── _objective.py
+├── _objective_run.py
+├── _parallel_commit.py
+├── _parallel_resume.py
+├── _parallel_rounds.py
+├── _parallel_sources.py
+├── _parallel_worker.py
+├── _prepare_backtest_data.py
+├── _prepare_trade_context.py
+├── _recording.py
+├── _resolve_backtest_config.py
+├── _resolve_trade_policy.py
+├── _round_signals.py
+├── _round_storage.py
+├── _shim_fractional_diff.py
+├── _walk_forward_run.py
+├── _walk_forward_split.py
+├── acceptance_report.py
+├── checkpoint_manager.py
+├── convergence_report.py
+├── errors.py
+├── experiment_core.py
+├── family_acceptance_report.py
+├── feedback_controller.py
+├── holdout.py
+├── manifest_core.py
+├── msq.py
+├── param_domain.py
+├── param_search/
+└── reducer/
 ```
 
 ## Things to know
