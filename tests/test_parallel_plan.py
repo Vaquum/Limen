@@ -73,6 +73,32 @@ class InheritedDataclass(CallerRollingBase):
     window: int
 
 
+@dataclass
+class NormalizedRolling(CallerRollingBase):
+    window: int
+
+    def __post_init__(self):
+        self.window += 1
+
+
+class CallerPartial(partial):
+    __slots__ = ('bias',)
+
+    def __call__(self, data):
+        return super().__call__(data).with_columns((pl.col('caller_mean') * self.multiplier + self.bias).alias('caller_mean'))
+
+
+def _partial_stage():
+    value = CallerPartial(_caller_feature, window=3)
+    value.multiplier, value.bias = 2, 1
+    return value
+
+
+def _partial_validator(params):
+    if params.get('multiplier') != 2 or type(params.get('bias')) is not int:
+        raise ValueError('partial configuration required')
+
+
 class SlottedRollingBase:
     __slots__ = ('window',)
 
@@ -119,7 +145,8 @@ def _carried_probe(plan, params):
     validate_resources(plan, params)
     from tests.test_parallel_rounds import recorded_source
     data = recorded_source().head(24).select('close')
-    component = plan.manifest.feature_transforms[-1].func
+    from limen.experiment._parallel_plan import clone_manifest
+    component = clone_manifest(plan.manifest).feature_transforms[-1].func
     return component(data)['caller_mean'].to_list(), os.getpid()
 
 
@@ -155,6 +182,13 @@ def test_frozen_manifest_round_plan() -> None:
     plan = freeze_manifest(original, config)
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
     assert len(pickle.dumps(plan)) <= 65536
+    from limen.experiment import _parallel_identity as identities
+    def no_discovery():
+        raise AssertionError('plan transport repeated provider discovery')
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(identities, 'package_distributions', no_discovery)
+        transported = pickle.loads(pickle.dumps(plan))
+        assert (transported.pipeline_digest, transported.resource_digest) == (plan.pipeline_digest, plan.resource_digest)
     declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
     native = copy.deepcopy(plan.manifest)
     native.add_feature(_caller_feature, window='{window}')
@@ -172,12 +206,23 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3)):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
-            declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',), imports))
+            contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
+            declare_parallel(component, contract)
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
             assert digest(decode(encode(frozen))) == digest(frozen)
+            if isinstance(component, NormalizedRolling):
+                assert component.window == decode(encode(component)).window == 3
+            if isinstance(component, CallerPartial):
+                restored = decode(encode(component))
+                assert type(restored) is CallerPartial and restored.func is _caller_feature
+                assert restored.keywords == {'window': 3} and (restored.multiplier, restored.bias) == (2, 1)
+                restored.bias += 1
+                declare_parallel(restored, contract)
+                altered = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(restored), None)
+                assert altered.pipeline_digest != frozen.pipeline_digest and altered.resource_digest != frozen.resource_digest
             if isinstance(component, SlottedRolling):
                 validate_resources(frozen, _parameters())
                 changed = copy.deepcopy(component)
@@ -188,7 +233,7 @@ def test_frozen_manifest_round_plan() -> None:
                 restored = decode(encode(component))
                 assert (restored.window, restored.offset, restored.label) == (2, 1, 'caller')
                 assert not hasattr(restored, 'unused')
-            if getattr(component, '__name__', None) == 'transform' or isinstance(component, (InheritedCallable, InheritedDataclass)):
+            if getattr(component, '__name__', None) == 'transform' or isinstance(component, (InheritedCallable, InheritedDataclass, NormalizedRolling)):
                 _assert_inherited_identity(frozen)
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())

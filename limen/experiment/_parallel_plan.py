@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import copy
 import inspect
+import json
+import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, fields, is_dataclass
+from functools import partial
 from importlib import import_module
 from typing import Protocol, cast
 
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, attach
-from limen.experiment._parallel_encoding import component_state, digest, encode, reference, source_digest
-from limen.experiment._parallel_identity import identity_snapshot, module_identity, package_distributions
+from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
+from limen.experiment._parallel_state import component_state
+from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
@@ -57,6 +61,23 @@ class FrozenManifestPlan:
     resource_digest: str
     distribution_providers: dict[str, list[str]]
 
+    def __reduce__(self) -> tuple[Callable[..., object], tuple[bytes, dict[str, list[str]]]]:
+        with distribution_providers(self.distribution_providers), identity_snapshot():
+            payload = zlib.compress(json.dumps(encode(self), ensure_ascii=False, separators=(',', ':')).encode())
+        return restore_plan, (payload, self.distribution_providers)
+
+
+def restore_plan(payload: bytes, providers: Mapping[str, list[str]]) -> FrozenManifestPlan:
+    with distribution_providers(providers), identity_snapshot():
+        plan = decode(json.loads(zlib.decompress(payload)))
+    if not isinstance(plan, FrozenManifestPlan):
+        raise ValueError('Invalid frozen parallel plan transport')
+    return plan
+
+
+def clone_manifest(manifest: Manifest) -> Manifest:
+    return cast(Manifest, _normalize(manifest))
+
 
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 4)
 
@@ -95,6 +116,11 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
     if isinstance(value, (list, tuple)):
         items = [_normalize(item, active) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
+    if callable(value) and not (inspect.isfunction(value) or isinstance(value, type)) and (isinstance(value, partial) or not is_dataclass(value)):
+        clone = decode(encode(value))
+        if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
+            vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
+        return clone
     if is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
         for field in fields(value):
@@ -165,7 +191,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
                     factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
     from limen.yaml.compiler import build_manifest
 
-    frozen = cast(Manifest, _normalize(manifest))
+    frozen = clone_manifest(manifest)
     if yaml_reference is not None and digest(frozen) != digest(_normalize(build_manifest(dict(yaml_reference)))):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
     stages = tuple(FrozenStage(path, component, _contract(frozen.target_class_config.target_class if path.startswith('target.') and frozen.target_class_config is not None else component, path))

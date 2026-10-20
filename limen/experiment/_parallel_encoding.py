@@ -13,12 +13,12 @@ from functools import partial
 from importlib import import_module
 from io import BytesIO
 from pathlib import Path
-from types import MemberDescriptorType
 from typing import cast
 
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, object_state, restore_object
 
 VERSION = 1
 
@@ -78,47 +78,19 @@ def _encode_composite(value: object, active: frozenset[int]) -> list[object]:
 
 
 
-def slot_state(value: object) -> list[tuple[type, str, object]]:
-    result: list[tuple[type, str, object]] = []
-    missing = object()
-    for cls in type(value).__mro__:
-        for name, descriptor in vars(cls).items():
-            if isinstance(descriptor, MemberDescriptorType):
-                try:
-                    item = descriptor.__get__(value, type(value))
-                except AttributeError:
-                    item = missing
-                if item is not missing:
-                    result.append((cls, name, item))
-    return result
-
-
-def component_state(value: object) -> dict[str, object]:
-    state = dict(vars(value)) if hasattr(value, '__dict__') else {}
-    return state | {name: item for _, name, item in reversed(slot_state(value))}
-
-
-
-def _call_implementation(value: object) -> object:
-    return type(value).__call__ if callable(value) else None
-
-
 def _encode_component(value: object, active: frozenset[int]) -> list[object]:
-    if isinstance(value, partial):
-        return ['partial', encode(value.func, active), encode(value.args, active), encode(value.keywords, active)]
     if inspect.ismethod(value):
         return ['method', encode(value.__self__, active), value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value) or isinstance(value, type):
         return ['import', reference(value)]
-    if is_dataclass(value) and not isinstance(value, type):
+    if is_dataclass(value) and not isinstance(value, (type, partial)):
         names = {field.name for field in fields(value)}
         if set(component_state(value)) - names - {'__parallel_round_contract__'}:
             raise ValueError('Parallel transport rejects undeclared runtime state')
         return ['dataclass', reference(type(value)),
-                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)], encode(_call_implementation(value), active)]
+                [[field.name, encode(getattr(value, field.name), active)] for field in fields(value)], encode(call_implementation(value), active)]
     if callable(value):
-        state = {key: item for key, item in vars(value).items() if key != '__parallel_round_contract__'} if hasattr(value, '__dict__') else {}
-        return ['instance', reference(type(value)), encode((state, slot_state(value)), active), encode(_call_implementation(value), active)]
+        return ['instance', reference(type(value)), encode(object_state(value), active), encode(call_implementation(value), active)]
     raise ValueError(f'Parallel encoding rejects unsupported or fitted state: {type(value).__name__}')
 
 
@@ -134,7 +106,7 @@ def _import(node: object) -> object:
 
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
-          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'import': 2, 'partial': 4,
+          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'import': 2,
           'method': 4, 'dataclass': 4, 'instance': 4}
 
 
@@ -169,9 +141,6 @@ def _decode_composite(parts: list[object]) -> object:
         return {cast(str, pair[0]) if tag == 'map' else decode(pair[0]): decode(pair[1]) for pair in cast(list[list[object]], value)}
     if tag == 'import':
         return _import(value)
-    if tag == 'partial':
-        return partial(cast(type, decode(value)), *cast(tuple[object, ...], decode(parts[2])),
-                       **cast(dict[str, object], decode(parts[3])))
     if tag == 'method':
         method = getattr(decode(value), cast(str, parts[2]))
         if not inspect.ismethod(method) or method.__func__ is not decode(parts[3]):
@@ -185,20 +154,16 @@ def _decode_instance(parts: list[object]) -> object:
     if tag == 'dataclass':
         cls = cast(type, _import(value))
         params = {cast(str, key): decode(item) for key, item in cast(list[list[object]], state)}
-        instance = cls(**{field.name: params[field.name] for field in fields(cls) if field.init})
+        if set(params) != {field.name for field in fields(cls)}:
+            raise ValueError('Invalid parallel dataclass fields')
+        instance = object.__new__(cls)
         for field in fields(cls):
-            if not field.init:
-                object.__setattr__(instance, field.name, params[field.name])
+            object.__setattr__(instance, field.name, params[field.name])
     elif tag == 'instance':
-        instance = cast(object, object.__new__(cast(type, _import(value))))
-        attributes, slots = cast(tuple[dict[str, object], list[tuple[type, str, object]]], decode(state))
-        if attributes:
-            vars(instance).update(attributes)
-        for cls, name, item in slots:
-            vars(cls)[name].__set__(instance, item)
+        instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
-    if encode(_call_implementation(instance)) != implementation:
+    if encode(call_implementation(instance)) != implementation:
         raise ValueError('Parallel callable implementation changed')
     return instance
 

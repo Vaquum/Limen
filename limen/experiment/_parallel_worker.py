@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import copy
 import signal
 import time
 import traceback
@@ -17,7 +16,7 @@ import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
 from limen.experiment._parallel_identity import distribution_providers
-from limen.experiment._parallel_plan import FrozenManifestPlan, freeze_manifest, plan_identity, plan_digests
+from limen.experiment._parallel_plan import FrozenManifestPlan, clone_manifest, freeze_manifest, plan_identity, plan_digests
 from limen.experiment._parallel_evidence import round_record
 from limen.experiment._parallel_resources import backend_imports, validate_resources, validate_domain
 from limen.experiment.convergence_report import convergence_warning
@@ -160,7 +159,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
     try:
         with limit(limits=1), warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
-            manifest = copy.deepcopy(_worker_plan.manifest)
+            manifest = clone_manifest(_worker_plan.manifest)
             validate_resources(_worker_plan, params)
             _ = _native_pools()
             vars(manifest).update(_frozen_trade_sources=(_worker_sources.execution, _worker_sources.funding), _parallel_evidence=True)
