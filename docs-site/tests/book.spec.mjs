@@ -1,11 +1,19 @@
 import {test,expect} from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {spawnSync} from 'node:child_process';
 const root=path.resolve(process.cwd(),'..');
 const failures=new WeakMap();
 test.beforeEach(async({page})=>{const errors=[];failures.set(page,errors);page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});page.on('requestfailed',request=>errors.push(request.url()+': '+request.failure()?.errorText));});
 test.afterEach(async({page})=>{expect(failures.get(page)).toEqual([]);});
 async function open(page){await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);await expect(page.getByRole('button',{name:'Search',exact:true})).toBeVisible();}
+
+test('reader command rejects substituted expected identities',()=>{
+  for(const [option,message]of [['head','Reader build does not match'],['tested','Expected checkout identity differs'],['tree','Expected checkout identity differs']]){
+    const result=spawnSync(process.execPath,['scripts/check-reader.mjs','--'+option,'0'.repeat(40)],{encoding:'utf8',timeout:5000});
+    expect(result.error).toBeUndefined();expect(result.status).not.toBe(0);expect(result.stderr).toContain(message);
+  }
+});
 
 test('complete research chapter',async({page})=>{
   await open(page);await expect(page.getByRole('heading',{level:1})).toHaveText('From a research question to a Sensor');
