@@ -359,11 +359,11 @@ def _assert_resource_projection(plan, params):
         calls += 1
         assert calls <= 500, 'unrelated grid axes multiplied resource validation'
         return original(*args)
-    domain = {key: [value] for key, value in params.items()}
-    domain.update({f'unconsumed_{index}': list(range(10)) for index in range(10)})
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(resources, '_validate_stage', counted)
-        validate_domain(plan, domain, None)
+        for additions in ({f'unconsumed_{index}': list(range(10)) for index in range(10)},
+                          {key: list(range(10)) for key in ('nthread', 'num_threads', 'device', 'device_type', 'seed')}):
+            validate_domain(plan, {key: [value] for key, value in params.items()} | additions, None)
     conditional = copy.deepcopy(plan.manifest).add_feature(_caller_feature, include_if='optional', window='{candidate_window}')
     domain = {key: [value] for key, value in params.items()} | {'optional': [False, True], 'candidate_window': [2, 0]}
     with pytest.raises(ValueError, match=r'feature_transforms.*positive integer window'):

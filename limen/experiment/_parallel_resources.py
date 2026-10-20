@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from itertools import product
-from inspect import signature
+from inspect import Parameter, signature
 from string import Formatter
 
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
@@ -100,6 +100,12 @@ def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
 
 
 def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]]) -> tuple[Mapping[str, object], tuple[str, ...]]:
+    if path == 'architecture':
+        function = manifest.architecture_function
+        assert function is not None
+        parameters = signature(function).parameters
+        names_to_bind = domain if any(value.kind == Parameter.VAR_KEYWORD for value in parameters.values()) else parameters
+        return {key: key for key in names_to_bind if key != 'data'}, ()
     if path.startswith('architecture.'):
         factory = path.split('.', 1)[1]
         key = factory.removesuffix('_factory') + '_params'
@@ -123,9 +129,7 @@ def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]])
     if path in ('pre_split_data_selector', 'bar_formation'):
         step = getattr(manifest, path)
         return dict(step[1]), ('bar_type',) if path == 'bar_formation' else ()
-    if isinstance(manifest, MLManifest):
-        return _ml_bindings(manifest, path, domain)
-    return {}, ()
+    return _ml_bindings(manifest, path, domain) if isinstance(manifest, MLManifest) else ({}, ())
 
 
 def _ml_bindings(manifest: MLManifest, path: str, domain: Mapping[str, list[object]]) -> tuple[Mapping[str, object], tuple[str, ...]]:
@@ -188,7 +192,7 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
         keys = stage.contract.parameter_keys if stage.contract.validation_keys is None else stage.contract.validation_keys
         arguments, selectors = _bindings(plan.manifest, stage.path, effective)
         inputs = set(keys) | set(stage.contract.parameter_keys)
-        dependencies = inputs | set(selectors)
+        dependencies = set(selectors)
         for key in inputs:
             dependencies.update(_references(arguments.get(key), effective))
         projected = {key: values for key, values in effective.items() if key in dependencies}
