@@ -46,7 +46,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     processed: dict[int, set[str]] = {}
 
     def visit(value: object) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or isinstance(value, np.generic):
+        if value is None or type(value) in (str, bool, int, float, bytes) or (isinstance(value, np.generic) and type(value).__module__ == 'numpy'):
             return
         if type(value) is logging.Logger:
             evidence.append(fitted_witness(value))
@@ -135,7 +135,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 visit(part)
             if type(value) is not np.ndarray:
                 objects.append(value)
-        elif not isinstance(value, (ModuleType, pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
+        elif isinstance(value, ModuleType):
+            objects.append(value)
+        elif not isinstance(value, (pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
             if isinstance(value, type) and type(value) is not type:
                 visit(type(value))
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict):
@@ -145,8 +147,16 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     visit(part)
 
     def methods(value: object) -> None:
+        if isinstance(value, ModuleType):
+            done = processed.setdefault(id(value), set())
+            for name in attributes.intersection(vars(value)) - done:
+                done.add(name)
+                part = vars(value)[name]
+                visit(part)
+                evidence.append((value.__name__, name, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
+            return
         cls = value if isinstance(value, type) else type(value)
-        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__len__', '__contains__'} | attributes
+        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
         done = processed.setdefault(id(cls), set())
@@ -171,7 +181,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     previous = (-1, -1)
     while previous != (len(attributes), len(objects)):
         previous = (len(attributes), len(objects))
-        for value in {(id(item) if isinstance(item, type) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
+        for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
     if capture is not None:
         capture.extend(seen.values())

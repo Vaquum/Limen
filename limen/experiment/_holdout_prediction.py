@@ -119,15 +119,18 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         collect(value)
     numpy_state, python_state = fitted_witness(np.random.get_state()), random.getstate()
     previous = sys.getprofile()
-    violation = False
+    violation: str | None = None
 
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
+        if (event == 'call' and (frame.f_globals.get('__name__'), frame.f_code.co_name) in (('threading', 'start'), ('concurrent.futures.thread', 'submit'))) or (event == 'c_call' and getattr(arg, '__module__', None) == '_thread' and getattr(arg, '__name__', None) == 'start_new_thread'):
+            violation = 'Holdout inference attempted thread dispatch'
+            raise ValueError(violation)
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
         matched = event == 'call' and frame.f_code in forbidden and any(_matches(function, frame, owner) for function, owner in forbidden[frame.f_code])
         if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
-            violation = True
-            raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
+            violation = 'Holdout inference attempted fitting/calibration/threshold search'
+            raise ValueError(violation)
         if previous is not None:
             _ = previous(frame, event, arg)
 
@@ -136,8 +139,8 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         yield
     finally:
         sys.setprofile(previous)
-        if violation:
-            raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
+        if violation is not None:
+            raise ValueError(violation)
         if fitted_witness(np.random.get_state()) != numpy_state or random.getstate() != python_state:
             raise ValueError('Holdout inference consumed randomness')
 

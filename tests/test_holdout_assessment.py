@@ -1,5 +1,6 @@
 import copy
 from contextlib import ExitStack, contextmanager
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial, wraps
 import json
 import logging
@@ -1108,6 +1109,17 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.policy + result['_probs']
             return result
+    class NativeFloatPolicy(np.float64):
+        def adjust(self, values):
+            return later_probabilities(np.clip(values + float(self), 0, 1))
+    class IteratorPolicy:
+        def __next__(self):
+            return _LATE_RULES['offset']
+    class Iterated(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + next(self.policy), 0, 1)
+            return result
     class ComparisonPolicy:
         def __gt__(self, other):
             return _LATE_RULES['offset'] > other
@@ -1124,9 +1136,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), ConversionPolicy()):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1138,7 +1150,13 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(callable_selection)
         assert loader.call_count == 0
-    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState):
+    class ModuleAttribute(LogRegBinary):
+        helpers = manifest_core
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.helpers.f17_later_probabilities(result['_probs'])
+            return result
+    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
         selection._model.research_x = late._model.research_x.copy()
@@ -1147,7 +1165,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         if implementation is PartialState:
             selection._model.policy = partial(identity_probabilities)
             selection._model.policy.adjust = later_probabilities
-        with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True), patch('tests.test_holdout_research.f17_later_probabilities', identity_probabilities, create=True):
+        with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True), patch('tests.test_holdout_research.f17_later_probabilities', identity_probabilities, create=True), patch.object(manifest_core, 'f17_later_probabilities', later_probabilities, create=True):
             selected = _freeze(selection)
             with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
@@ -1229,6 +1247,31 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
             assert record['state'] == 'failed' and record['id'] in str(global_failure.value)
             assert json.loads(record['error_json'])['stage'] == 'predict'
+    class ThreadedCallbackModel(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                worker = Thread(target=self.policy.prediction_calibration_config.threshold_func)
+                worker.start()
+                worker.join()
+            return result
+    threaded = copy.deepcopy(assessment_case[2][0][0])
+    threaded._model.__class__ = ThreadedCallbackModel
+    threaded._model.research_x = late._model.research_x.copy()
+    threaded._model.policy = configured_provider
+    threaded_handle = _freeze(threaded)
+    with pytest.raises(ValueError, match='attempted thread dispatch') as thread_failure:
+        _report(threaded_handle, assessment_case)
+    assert callback_calls == []
+    with history.connection(assessment_case[0] / history._HISTORY) as db:
+        record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+        assert record['state'] == 'failed' and record['id'] in str(thread_failure.value)
+        assert json.loads(record['error_json'])['stage'] == 'predict'
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        assert pool.submit(bool, True).result() is True
+        with pytest.raises(ValueError, match='attempted thread dispatch'), readonly_prediction([nested]):
+            pool.submit(nested_threshold).result()
+        assert callback_calls == []
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
