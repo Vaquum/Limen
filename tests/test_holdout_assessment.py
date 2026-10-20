@@ -2152,6 +2152,30 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             assert loader.call_count == 0
     finally:
         OptionalAttributePolicy.optional = None
+    class ScalarAliasPolicy:
+        def __init__(self, factory):
+            self.left = factory('1000')
+            self.right = self.left
+            self.break_copy = False
+        def adjust(self, values):
+            return np.clip(values + (0 if self.left is self.right else 0.1), 0, 1)
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            if self.break_copy:
+                clone.right = type(self.right)(str(self.right))
+            return clone
+    for factory in (float, int):
+        reviewed._model.policy = ScalarAliasPolicy(factory)
+        _freeze(reviewed)
+        reviewed._model.policy.break_copy = True
+        broken = copy.deepcopy(reviewed._model.policy)
+        assert broken.left == broken.right and broken.left is not broken.right
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(reviewed)
+            assert loader.call_count == 0
     class PropertyDocument:
         @property
         def offset(self):
@@ -2170,6 +2194,22 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             assert loader.call_count == 0
     finally:
         descriptor.__doc__ = str(expected_offset)
+    class NamedDispatch(LogRegBinary):
+        def function_named_offset(self, values):
+            return np.clip(values + _LATE_RULES['offset'], 0, 1)
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = getattr(self, self.policy.__name__)(result['_probs'])
+            return result
+    reviewed._model.__class__ = NamedDispatch
+    for policy in (identity_probabilities, LogisticRegression.predict_proba):
+        reviewed._model.policy = policy
+        with patch.object(policy, '__name__', 'function_named_offset'):
+            name_handle = _freeze(reviewed)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(name_handle, assessment_case)
+                assert loader.call_count == 0
     class AnnotationDispatch(LogRegBinary):
         def annotation_selected_offset(self, values):
             return np.clip(values + _LATE_RULES['offset'], 0, 1)

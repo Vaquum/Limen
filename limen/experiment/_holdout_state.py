@@ -116,7 +116,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
-        if item is None or type(item) in (str, bool, int, float, bytes):
+        if item is None or type(item) in (str, bool, bytes):
             return item
         if isinstance(item, ModuleType):
             return ('module', item.__name__)
@@ -125,6 +125,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         if class_aliases and type(item).__module__ != 'builtins':
             classes[id(type(item))] = type(item)
         seen[id(item)] = (len(seen), item)
+        if type(item) in (int, float):
+            return ('scalar', type(item).__name__, item)
         if isinstance(item, type):
             return ('class', item.__module__, item.__qualname__)
         return structure(item)
