@@ -11,7 +11,7 @@ from ruamel.yaml import YAML
 from limen.cli.commands.run import run_experiment
 from limen.data import HistoricalData
 from limen.experiment._resolve_trade_policy import BacktestConfig, ProductConfig, TRADE_NUMBERS, resolve_trade_policy
-from limen.experiment.manifest_core import MLManifest
+from limen.experiment.manifest_core import DataSourceResolver, MLManifest
 from limen.targets import IdentityTarget
 from limen.yaml._backtest_spec import check_backtest_spec
 
@@ -36,7 +36,9 @@ def target_exposure(data):
     return {'_preds': np.full(len(data['x_test']), 0.5), '_prediction_mode': 'target_exposure'}
 
 
-def recorded_yaml_source(klines_size=900, start_date_limit=None, end_date_limit=None):
+def recorded_yaml_source(config):
+    assert config.method is HistoricalData.get_spot_klines
+    klines_size = config.params['klines_size']
     assert klines_size == 900
     return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(288)
 
@@ -95,7 +97,7 @@ def test_nullable_controls_reject_missing_references(field, reference):
 @pytest.mark.parametrize('field', OPTIONAL)
 @pytest.mark.parametrize('candidates', ([None, 1800], [1800, None]))
 def test_nullable_yaml_search_completes_both_rounds(field, candidates, monkeypatch, tmp_path):
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(recorded_yaml_source))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(recorded_yaml_source))
     manifest = {
         'type': 'rule_based',
         'data_source': {'method': 'limen.data.HistoricalData.get_spot_klines', 'params': {'klines_size': 900}},
