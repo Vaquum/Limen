@@ -114,7 +114,11 @@
     "docs/Developer/Release-Policy.md",
     "docs/Developer/Security-Assurance-Case.md",
     "docs/Developer/Writing-Docstrings.md",
-    "docs/Developer/Contributing-Foundational-SFDs.md"
+    "docs/Developer/Contributing-Foundational-SFDs.md",
+    "docs/Developer/Pruning-Strategies.md",
+    "docs/Developer/Documentation-System.md",
+    "docs/Developer/Indicator-Performance.md",
+    "docs/Backtest-Benchmarks.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2699,6 +2703,24 @@
     ],
     "docs/Developer/Contributing-Foundational-SFDs.md": [
       "compiled/selection"
+    ],
+    "docs/Developer/Pruning-Strategies.md": [
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Developer/Documentation-System.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Developer/Indicator-Performance.md": [
+      "python/search",
+      "compiled/search"
+    ],
+    "docs/Backtest-Benchmarks.md": [
+      "python/execution",
+      "compiled/execution"
     ]
   }
 }

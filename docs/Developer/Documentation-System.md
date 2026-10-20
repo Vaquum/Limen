@@ -4,6 +4,11 @@ Limen's documentation is a research book built around two complete, executable p
 
 This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md#research-interface-contract) establishes the research interfaces. Documentation must describe their current behavior and make the evidence behind its examples inspectable.
 
+The [Python project](../examples/python-research/README.md) and
+[Compiled project](../examples/compiled-research/README.md) are the canonical
+programs governed here. Their entry points, recorded inputs and named scenarios
+supply chapter examples; the appendix procedures below maintain their proof.
+
 ## Prerequisites
 
 - a Limen checkout and its Python development environment
@@ -28,7 +33,7 @@ The candidate first chapter binds exact source regions and retained observations
 
 Integrity tests record native fitting and calibration inputs and forbid fitting after final selection is frozen. The archived CLI commands run in a separate process with the installed wheel. Native result files, checkpoints, round records, audits, final assessment rows and the installed dependency inventory remain available in the evidence archive.
 
-Most existing pages still need their examples classified and connected to the projects. Their source footers identify reference excerpts without claiming execution. The first complete chapter is a checkpoint; it does not complete the book. Keep the existing renderer and its source checks until the complete-book publication delivery replaces it.
+The remaining migration is the difference between the maintained source inventory and `catalogue.json`'s bound pages. Each migrated page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. The first complete chapter is a checkpoint; it does not complete the book. Keep the existing renderer and its source checks until the complete-book publication delivery replaces it.
 
 ## Validating the candidate reader
 
@@ -36,13 +41,13 @@ Use Python 3.10–3.13 and Node.js 20 or later. CI uses the policy-pinned Python
 
 From the repository root, after publishing the candidate PR:
 
-```bash
-npm --prefix docs-site ci
-python docs/examples/check_sources.py
-python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
-python docs/examples/prepare_environment.py
-python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
-```
+| Step | Command |
+|---|---|
+| 1 | `npm --prefix docs-site ci` |
+| 2 | `python docs/examples/check_sources.py` |
+| 3 | `python docs/examples/provenance.py --output .docs-evidence/source-provenance.json` |
+| 4 | `python docs/examples/prepare_environment.py` |
+| 5 | `python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short` |
 
 The binding checker uses the reader's locked Markdown parser to identify fenced and indented code blocks, including quoted and tilde forms. Each must occupy the exact location of a validated source or output binding. Install the Node dependencies before running binding tests.
 
@@ -50,24 +55,24 @@ Acquire provenance with full Git history and authenticated read access to GitHub
 
 Then, from `docs-site/`:
 
-```bash
-npm run check
-npm run security:audit
-npm run build:reader
-npx --no-install playwright install chromium
-npm run check:reader
-```
+| Step | Command |
+|---|---|
+| 1 | `npm run check` |
+| 2 | `npm run security:audit` |
+| 3 | `npm run build:reader` |
+| 4 | `npx --no-install playwright install chromium` |
+| 5 | `npm run check:reader` |
 
 The reader build requires a clean source tree, matching package and current execution evidence. Browser verification checks that evidence and every built file before opening the pages. Use the repository's managed validation runner when it owns the PR; record the necessary commands there and run them in the required order. A background start is not a passing result.
 
 Change canonical project code first, synchronize its marked chapter regions and run the affected proof. Keep displayed observations under their recorded run identity unless their meaning or comparison bounds require a new capture. Never hand-edit a successful current-validation record. Extend the model and scenario catalogue when the public surface changes; a newly exported family cannot silently disappear from the documentation's coverage inventory.
 
-Two deployment defects also remain open in the current source and build:
+The retained legacy Docusaurus path has two recorded deployment defects:
 
 - `docs-site/src/worker.js` redirects `/robots.txt` to `/limen/robots.txt`, but the build emits no `robots.txt` asset at that destination.
 - The Google Fonts import in `docs-site/src/css/custom.css` conflicts with the Worker's CSP: its style and font directives do not admit the required Google origins.
 
-The reader delivery must self-host the selected fonts and prove that they load under the CSP. The publication delivery must emit and verify the canonical robots resource. Retain both defect records until their rendered-build and deployment checks pass.
+The owned reader self-hosts Archivo/Plex and its browser checks verify loading under the Worker CSP. Production activation must also verify the canonical robots resource. A candidate browser pass does not establish that the legacy production deployment changed.
 
 ## Ownership
 
@@ -133,7 +138,7 @@ The README's language must remain coherent across the whole system.
 - Keep measurements tied to their data and environment. Do not turn them into performance promises.
 - Distinguish implemented, historical, planned and unproved behavior.
 - Author each explanation once; summarize and link from adjacent pages.
-- Use relative links between maintained source documents.
+- Use relative links between maintained source documents. The root README uses public repository source URLs so its PyPI/package description remains usable; the reader resolves those known source URLs through the same canonical route map.
 - Omit praise, intensifiers, ornamental transitions and claims of capability unsupported by source and execution.
 
 The book may be extensive. Each paragraph, table, example and visual must earn its place through the information it carries.
@@ -300,11 +305,11 @@ Retain the previous validated site and its evidence through cutover and post-dep
 
 For the current renderer, run the existing commands after publishing the useful first commit and non-draft PR, following repository workflow:
 
-```bash
-python -m pytest tests/test_docs_surface.py -q
-npm --prefix docs-site run security:audit
-npm --prefix docs-site run check
-```
+| Step | Command |
+|---|---|
+| 1 | `python -m pytest tests/test_docs_surface.py -q` |
+| 2 | `npm --prefix docs-site run security:audit` |
+| 3 | `npm --prefix docs-site run check` |
 
 These commands prove their current scope. They do not establish the future reader, comprehensive examples or evidence-bound production.
 

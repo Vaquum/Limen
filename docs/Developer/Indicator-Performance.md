@@ -2,6 +2,13 @@
 
 Changes to an indicator must preserve the values and clocks that a research decision uses. The [Python project](../examples/python-research/README.md) owns a decimal momentum expression; the [Compiled project](../examples/compiled-research/README.md) declares the package's percent-valued rate of change. Re-run their selection and inference assertions when changing shared preparation. Calculation timings answer a separate question from research results.
 
+The [Python project](../examples/python-research/README.md) owns its momentum
+calculation; the [Compiled project](../examples/compiled-research/README.md)
+consumes registered indicators such as ROC. Preparation optimizations must
+preserve each path's rows, warm-up, fitted-state boundaries and numerical
+meaning. The campaigns below measure particular recorded workloads separately
+from the projects' current execution proof.
+
 ## Prerequisites
 
 Use a Limen development checkout with its recorded fixtures and test dependencies. The historical measurements below identify their source revisions, data, interpreter and thread settings. Keep those identities when interpreting a replay; a timing measured on another host is another observation.
@@ -14,13 +21,10 @@ Limen 5.29.2 reduces the calculation cost of the existing Hilbert, MAMA, CCI, th
 
 ### Reproduce
 
-```bash
-python -m tests.benchmark_indicators \
-  --input /path/to/btcusdt_15m_kline_20200101_to_20261003.parquet \
-  --reference fe27656c \
-  --output /tmp/limen-indicator-measurements
-python -m pytest tests/test_indicator_performance.py
-```
+| Step | Command |
+|---|---|
+| 1 | `python -m tests.benchmark_indicators --input /path/to/btcusdt_15m_kline_20200101_to_20261003.parquet --reference fe27656c --output /tmp/limen-indicator-measurements` |
+| 2 | `python -m pytest tests/test_indicator_performance.py` |
 
 The input is the recorded BTCUSDT 15-minute snapshot from `vaquum/binance_btcusdt_15m_klines`, with its first 20,000 and 83,136 rows used unchanged for both implementations. The benchmark fails on unequal outputs/schemas or a latency regression. It reuses measured baseline results only when the input, resolved reference commit, runtime versions, hardware, repeat count and thread settings match; candidate code changes invalidate candidate results.
 
@@ -141,13 +145,9 @@ CI structurally compares every predicate, arithmetic update and output assignmen
 
 Reproduce all 44 pairs at both sizes using the committed real-data prefix:
 
-```sh
-LIMEN_BENCHMARK_CASES=tests/fixtures/candles_performance_cases.json \
-python tests/fixtures/candles_performance_replay.py \
-  --input tests/fixtures/indicator_equivalence_long.parquet \
-  --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 \
-  --output /tmp/limen-candles-replay --repeats 3
-```
+| Step | Command |
+|---|---|
+| 1 | `LIMEN_BENCHMARK_CASES=tests/fixtures/candles_performance_cases.json python tests/fixtures/candles_performance_replay.py --input tests/fixtures/indicator_equivalence_long.parquet --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 --output /tmp/limen-candles-replay --repeats 3` |
 
 The replay supplies named cases to the existing benchmark; it adds no package runtime code. Each side runs in a fresh process with all six numerical thread limits set to one. RSS is sampled after warm calls, before the separate allocation-tracing probe; tracing does not enter timing. The committed input has the same 20k/83k OHLCV digests as the original cached snapshot, although its whole-file hash differs.
 
@@ -176,13 +176,9 @@ Extrema seed each output from its oldest element and apply strict comparisons in
 
 Reproduce the five parameter sets at both sizes through the shared replay, using the committed real-data prefix:
 
-```sh
-LIMEN_BENCHMARK_CASES=tests/fixtures/extrema_performance_cases.json \
-python tests/fixtures/candles_performance_replay.py \
-  --input tests/fixtures/indicator_equivalence_long.parquet \
-  --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 \
-  --output /tmp/limen-extrema-replay --repeats 3
-```
+| Step | Command |
+|---|---|
+| 1 | `LIMEN_BENCHMARK_CASES=tests/fixtures/extrema_performance_cases.json python tests/fixtures/candles_performance_replay.py --input tests/fixtures/indicator_equivalence_long.parquet --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 --output /tmp/limen-extrema-replay --repeats 3` |
 
 The replay uses the existing benchmark. Each implementation runs in a fresh process with six numerical thread limits pinned to one. RSS is sampled before the separate allocation-tracing probe. CPU medians measure execution cost; desktop wall values remain indicative.
 
@@ -215,13 +211,9 @@ CPU medians are the performance measure; contended desktop wall samples are indi
 
 Reproduce the seven parameter sets at both sizes with the committed real-data prefix (the OHLCV hashes above match the original snapshot):
 
-```sh
-LIMEN_BENCHMARK_CASES=tests/fixtures/smoothing_performance_cases.json \
-python tests/fixtures/candles_performance_replay.py \
-  --input tests/fixtures/indicator_equivalence_long.parquet \
-  --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 \
-  --output /tmp/limen-smoothing-replay --repeats 3
-```
+| Step | Command |
+|---|---|
+| 1 | `LIMEN_BENCHMARK_CASES=tests/fixtures/smoothing_performance_cases.json python tests/fixtures/candles_performance_replay.py --input tests/fixtures/indicator_equivalence_long.parquet --reference 728a6eefc19cde2cb0fa3f5312b185e2877bc330 --output /tmp/limen-smoothing-replay --repeats 3` |
 
 The replay uses the existing benchmark with named parameter sets. It runs each implementation in a fresh process, pins all six thread limits to one, checks every recorded output and schema, and includes input conversion in timing. RSS is the process high-water mark after warm calls; allocation tracing runs afterwards and does not enter timing or RSS.
 
