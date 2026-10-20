@@ -1882,3 +1882,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Keep restored pre-PR source bytes candidate when they differ from ordinary merged ancestry, preserving the original evidence guard.
 - Record raised checker failures with their actual exit codes; reuse captured original-head source metadata in bounded regression setup while retaining every assertion.
 - Run retained-checker regressions before research proof in the same required documentation job, preserving test coverage, source checks and existing proof time limits.
+- Include checker regressions in source distributions and update markdown-it to 14.3.3 for GHSA-vfgh-jcmw-g37q.
