@@ -1298,6 +1298,7 @@
         "source": "limen/log/__init__.py",
         "entry_point": "limen.log",
         "names": [
+          "ConfusionNotApplicableError",
           "experiment_backtest_results",
           "experiment_confusion_metrics",
           "experiment_parameter_correlation",

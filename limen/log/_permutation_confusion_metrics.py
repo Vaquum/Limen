@@ -1,9 +1,23 @@
 import pandas as pd
 import numpy as np
 import numpy.typing as npt
-from typing import Any
+from typing import Any, cast
 from collections.abc import Sequence
 from math import sqrt
+
+
+class ConfusionNotApplicableError(ValueError):
+    '''Recorded outputs carry no binary classification interpretation.'''
+
+
+def _declared_output_modes(manifest: object, alignment: object, round_id: int) -> set[str]:
+    modes = {mode for mode in (getattr(getattr(manifest, 'backtest_config', None), 'prediction_mode', None),) if isinstance(mode, str)}
+    rows: list[object] = cast(list[object], alignment) if isinstance(alignment, list) else []
+    node: object = rows[round_id] if -len(rows) <= round_id < len(rows) else None
+    for key in ('trade_contract', 'policy', 'prediction_mode'):
+        mapping = cast(dict[object, object], node) if isinstance(node, dict) else None
+        node = mapping.get(key) if mapping is not None else None
+    return modes | {node} if isinstance(node, str) else modes
 
 
 def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
@@ -53,8 +67,11 @@ def confusion_mean_return_pct(pred: pd.Series | npt.NDArray[Any],
         np.isfinite(return_pct)
     )
 
-    pred_arr = pred_arr[valid].astype(int)
-    actual_arr = actual_arr[valid].astype(int)
+    pred_arr, actual_arr = pred_arr[valid], actual_arr[valid]
+    if ((pred_arr != 0) & (pred_arr != 1)).any() or ((actual_arr != 0) & (actual_arr != 1)).any():
+        raise ValueError('confusion_mean_return_pct requires binary predictions and actuals')
+    pred_arr = pred_arr.astype(int)
+    actual_arr = actual_arr.astype(int)
     return_pct = return_pct[valid]
 
     def _mean(mask: npt.NDArray[np.bool_]) -> float:
@@ -117,8 +134,16 @@ def permutation_confusion_metrics(self: Any,
         if col not in df:
             raise ValueError(f'permutation_confusion_metrics column "{col}" not found')
 
-    df[pred_col] = df[pred_col].astype(int)
-    df[actual_col] = df[actual_col].astype(int)
+    foreign = _declared_output_modes(getattr(self, 'manifest', None), getattr(self, '_alignment', None), round_id) - {'binary'}
+    if foreign:
+        raise ConfusionNotApplicableError(f'permutation_confusion_metrics inapplicable to {sorted(foreign)} outputs')
+
+    pred_num = cast(pd.Series, pd.to_numeric(df[pred_col], errors='coerce'))
+    actual_num = cast(pd.Series, pd.to_numeric(df[actual_col], errors='coerce'))
+    eligible = pred_num.notna() & actual_num.notna()
+    paired = pd.concat([pred_num[eligible], actual_num[eligible]])
+    if paired.empty or ((paired != 0) & (paired != 1)).any():
+        raise ConfusionNotApplicableError('permutation_confusion_metrics requires binary predictions and actuals')
 
     mean_return_pct = confusion_mean_return_pct(
         df[pred_col],
@@ -126,6 +151,9 @@ def permutation_confusion_metrics(self: Any,
         df['open'],
         df['price_change'],
     )
+    df = df.loc[eligible].copy()
+    df[pred_col] = df[pred_col].astype(int)
+    df[actual_col] = df[actual_col].astype(int)
 
     q_lo, q_hi = df[x].quantile(outlier_quantiles)
     if outlier_mode == 'filter':
