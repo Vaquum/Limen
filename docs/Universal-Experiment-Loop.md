@@ -92,9 +92,14 @@ Post-processing retains:
 ### Promote caller-owned fitted state
 
 Promote evaluated fitted models with `Sensor.from_model`, then compose them with
-`Cohort.from_python(selected_sensors)`. This example requires a repository checkout: the recorded
-fixture is not included in the wheel. Save the following block as a Python file
-and run it from the checkout root.
+`Cohort.from_python(selected_sensors)`. Use the [complete Python project](examples/python-research/README.md), its matching wheel and recorded-input bundle. The project includes the imports, preparation and inference helpers used by the selection function below. From the bundle root, run:
+
+<!-- example: uel-python-selection-command source=docs/examples/commands.json region=python-selection scenario=selection interface=python role=executed -->
+```bash
+python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python
+```
+
+The project instructions also give the working directory, input path and output directory for a repository checkout. Recorded fixtures are not installed inside the wheel.
 
 The caller defines one-bar trades: a decision at bar `t` enters at the next open
 and exits at that bar's close, with a declared 2 bp total round-trip cost. Search
@@ -102,7 +107,7 @@ sees only the first 1,440 bars. It selects the best validation return per window
 breaking ties by alpha, then reuses those exact evaluated models. The native
 Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
-The excerpt below is the selection function from the [complete Python project](examples/python-research/README.md). Its preparation, fitting and inference helpers remain in that source; use the project entry point and recorded-input instructions to run it.
+The excerpt below is the project's selection function. Execute it through the project entry point above; the function uses helpers from its complete source file.
 
 <!-- python-sensor-example -->
 <!-- example: uel-python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
