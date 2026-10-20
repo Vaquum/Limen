@@ -2165,7 +2165,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             vars(clone).update(copy.deepcopy(vars(self), memo))
             if self.break_copy:
                 if type(self.right) in (list, tuple, dict):
-                    clone.right = tuple(list(self.right)) if type(self.right) is tuple else copy.copy(self.right)
+                    clone.right = tuple(iter(self.right)) if type(self.right) is tuple else copy.copy(self.right)
                 else:
                     clone.right = type(self.right)(str(self.right))
             return clone
