@@ -1855,6 +1855,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Retain every npm audit response and bound retries for temporary registry gateway failures; preserve fatal advisory, authentication and malformed-report handling.
 - Reject package supersession at the activation boundary and restore the predecessor when a release changes during deployment or production verification.
 
+## [5.45.9] - 2026-10-20
+
+- Allow Worker deployments to propagate before verifying released documentation or rollback; recheck the active version and retain exact public proof.
+
 ## [5.45.11] - 2026-10-20
 
 - Restore compatible callable Manifest sources and override diagnostics while preserving native stateful and holdout admission behavior.
