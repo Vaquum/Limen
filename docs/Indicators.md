@@ -1,6 +1,6 @@
 # Indicators
 
-Indicators are Limen's lowest-level signal helpers. They take a kline-style `pl.DataFrame`, append one or more derived columns, and return the same frame shape back for the rest of the manifest pipeline.
+Indicators are Limen's lowest-level signal helpers. They take a kline-style `pl.DataFrame`, append one or more derived columns, and return the resulting frame for ordinary Python preparation or the declared Compiled pipeline.
 
 This page covers indicator selection, naming conventions, and default added columns. For higher-level derived signals, see [Features](Features.md).
 
@@ -13,32 +13,39 @@ This page covers indicator selection, naming conventions, and default added colu
 - Candlestick pattern helpers add a same-named integer column following TA-Lib's positive bullish, negative bearish, zero neutral convention.
 - Legacy compatibility helpers intentionally expose legacy behavior. `sma` adds both `sma_{period}` and `{price_col}_sma_{period}`.
 
-## Quick example
+## Use an indicator in the projects
 
+Python Research can compute a column directly or call a Limen indicator. The [Python project](examples/python-research/README.md) owns this decimal momentum expression and uses it in fitting, validation and inference:
+
+<!-- example: indicators-python-momentum source=docs/examples/python-research/research.py region=momentum_feature scenario=selection interface=python role=executed -->
 ```python
-from limen.data import HistoricalData
-from limen.experiment import MLManifest
-from limen.indicators import atr, ppo, wilder_rsi
-from limen.sfd.reference_architecture import logreg_binary
-
-
-def manifest():
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-        )
-        .set_test_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 7200, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_indicator(atr, period=14)
-        .add_indicator(ppo)
-        .add_indicator(wilder_rsi)
-        .with_reference_architecture(logreg_binary)
+def features(bars, window):
+    return bars.with_columns(
+        (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
     )
+```
+
+The [Compiled project](examples/compiled-research/README.md) declares a one-period rate of change in its recorded pipeline. The indicator returns percent units; it is not the Python project's decimal return column.
+
+<!-- example: indicators-compiled-momentum source=docs/examples/compiled-research/selection.yaml region=momentum_indicator scenario=selection interface=compiled role=executed -->
+```yaml
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: 1
+          group: momentum
+```
+
+Both excerpts belong to the complete selection programs. Their source footers lead to the inputs, current wheel execution and semantic assertions. A helper's presence does not make the research Compiled: a Manifest invoked from Python still adopts the Compiled contract.
+
+### Rate-of-change signature
+
+The function below is a current package signature. It describes an interface; it is not a standalone research program.
+
+<!-- reference: indicators-roc-signature source=limen/indicators/roc.py region=signature:roc role=signature -->
+```python
+def roc(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataFrame:
+    ...
 ```
 
 ## Family index

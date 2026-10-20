@@ -20,10 +20,12 @@ from limen.experiment.param_search import GridStrategy
 
 
 # region preparation
+# region momentum_feature
 def features(bars, window):
     return bars.with_columns(
         (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
     )
+# endregion momentum_feature
 
 
 def prepare_split(bars, round_params):

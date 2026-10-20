@@ -30,7 +30,9 @@ def merged_pull(commit, responses):
 
 
 def source_paths(root):
-    return sorted({'README.md', *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json') and 'tests' not in path.parts]})
+    from check_evidence import all_reference_bindings
+    references = {item['path'] for item in all_reference_bindings(root)}
+    return sorted({'README.md', *references, *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json') and 'tests' not in path.parts]})
 
 
 def identity(root, base, path):

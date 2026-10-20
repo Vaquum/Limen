@@ -16,11 +16,13 @@ sfd:
       val_end: "2025-01-18"
       test_start: "2025-01-18"
       test_end: "2025-01-22"
+# region momentum_indicator
     indicators:
       - func: limen.indicators.roc
         params:
           period: 1
           group: momentum
+# endregion momentum_indicator
     target:
       name: quantile_flag
       class: limen.targets.QuantileBinaryTarget

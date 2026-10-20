@@ -41,8 +41,9 @@ def example(recorded, tmp_path_factory):
     marked = document.split('<!-- python-sensor-example -->', 1)[1]
     source = marked.split('```python\n', 1)[1].split('\n```', 1)[0]
     directory = tmp_path_factory.mktemp('python_sensor_example')
-    script = directory / 'research.py'
-    script.write_text(source)
+    script = ROOT / 'docs/examples/python-research/research.py'
+    canonical = script.read_text().split('# region experiment\n', 1)[1].split('# endregion experiment', 1)[0].rstrip()
+    assert source == canonical
     api = runpy.run_path(str(script))
     stem = directory / 'research'
     fitted_objects = []

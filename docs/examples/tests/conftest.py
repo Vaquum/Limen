@@ -114,7 +114,7 @@ def pytest_sessionfinish(session, exitstatus):
     import os
     import platform
     import subprocess
-    from check_evidence import all_bindings, digest, validate_evidence
+    from check_evidence import all_bindings, all_reference_bindings, digest, validate_evidence
     from build_bundle import INPUTS
     catalogue = json.loads((ROOT / 'docs/examples/catalogue.json').read_text())
     details = catalogue['scenario_details']
@@ -138,7 +138,7 @@ def pytest_sessionfinish(session, exitstatus):
     validate_provenance(ROOT, provenance)
     files = {item['path']: item for item in provenance['files']}
     sources = [item | {'region': '__file__'} for item in provenance['files']]
-    excerpts = {(item['path'], item['region']): item for item in all_bindings(ROOT)}
+    excerpts = {(item['path'], item['region']): item for item in [*all_bindings(ROOT), *all_reference_bindings(ROOT)]}
     sources += [{key: item[key] for key in ('path', 'region', 'sha256')} | {key: files[item['path']][key] for key in ('commit', 'status', 'merged_pr')} for item in excerpts.values()]
     record = {
         'schema_version': 1, 'mode': 'candidate',

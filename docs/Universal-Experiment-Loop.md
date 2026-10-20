@@ -102,62 +102,11 @@ sees only the first 1,440 bars. It selects the best validation return per window
 breaking ties by alpha, then reuses those exact evaluated models. The native
 Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
+The excerpt below is the selection function from the [complete Python project](examples/python-research/README.md). Its preparation, fitting and inference helpers remain in that source; use the project entry point and recorded-input instructions to run it.
+
 <!-- python-sensor-example -->
+<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
 ```python
-from pathlib import Path
-from tempfile import TemporaryDirectory
-from types import SimpleNamespace
-
-import numpy as np
-import polars as pl
-from sklearn.linear_model import Ridge
-from sklearn.pipeline import make_pipeline
-from sklearn.preprocessing import StandardScaler
-
-from limen import Cohort, Sensor, UniversalExperimentLoop
-from limen.experiment.param_domain import ParamDomain
-from limen.experiment.param_search import GridStrategy
-
-
-def features(bars, window):
-    return bars.with_columns(
-        (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
-    )
-
-
-def prepare_split(bars, round_params):
-    return features(bars, round_params["window"]).with_columns(
-        (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
-        .alias("next_return")
-    ).slice(12).drop_nulls(["momentum", "next_return"])
-
-
-def prep(bars, round_params):
-    # Split before features and labels; no target crosses a boundary.
-    return {
-        "train": prepare_split(bars[:960], round_params),
-        "validation": prepare_split(bars[960:1440], round_params),
-    }
-
-
-def fit(train, round_params):
-    return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
-        train.select("momentum"), train["next_return"].to_numpy()
-    )
-
-
-def backtest(validation, forecasts):
-    positions = np.sign(forecasts)
-    net = positions * validation["next_return"].to_numpy() - abs(positions) * 0.0002
-    return float(np.mean(net))
-
-
-def prepare_live(history, params):
-    return features(history, params["window"]).with_columns(
-        (pl.col("datetime").dt.epoch("ns") + 900_000_000_000).alias("available_at_ns"),
-    )
-
-
 def run_research(bars, experiment_name):
     research = bars[:1440]
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
@@ -178,7 +127,7 @@ def run_research(bars, experiment_name):
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
     selected = (
-        uel.experiment_log.sort(
+        completed_log(uel).sort(
             ["window", "validation_net_return", "alpha"],
             descending=[False, True, False],
         ).unique(subset="window", keep="first", maintain_order=True)
@@ -192,19 +141,6 @@ def run_research(bars, experiment_name):
     ]
     cohort = Cohort.from_python(sensors)
     return cohort, uel, selected, retained
-
-
-if __name__ == "__main__":
-    bars = pl.read_parquet(
-        "tests/fixtures/spot_15m_20250101_20250531.parquet", n_rows=1920
-    )
-    with TemporaryDirectory() as directory:
-        cohort, uel, selected, retained = run_research(
-            bars, str(Path(directory) / "python-research")
-        )
-        # Twelve prior bars supply context for all 480 held-out decisions.
-        predictions = cohort.predict_all(bars[1428:1920])
-        print(predictions[-1])
 ```
 
 Each partition loses twelve warm-up rows and its final forward-label row:

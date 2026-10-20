@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from copy import deepcopy
 import hashlib
 import json
 import math
@@ -14,6 +15,7 @@ from catalogue_tests import validate_test_reference
 
 EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
+REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
 
 
 def digest(value: bytes) -> str:
@@ -23,6 +25,37 @@ def digest(value: bytes) -> str:
 def region(path: Path, name: str) -> str:
     if name == '__file__':
         return path.read_text()
+    if name.startswith(('signature:', 'definition:')):
+        kind, symbol = name.split(':', 1)
+        parts = symbol.split('.')
+        if path.suffix != '.py' or any(not part.isidentifier() or part.startswith('_') and part not in ('__init__', '__call__') for part in parts):
+            raise ValueError('Invalid reference symbol: ' + symbol)
+        scope = ast.parse(path.read_text()).body
+        selected = None
+        for index, part in enumerate(parts):
+            matches: list[ast.stmt] = [node for node in scope if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == part]
+            if kind == 'definition' and len(parts) == 1:
+                matches += [node for node in scope if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == part for target in node.targets)]
+                matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
+            if len(matches) != 1:
+                raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
+            selected = deepcopy(matches[0])
+            if index < len(parts) - 1:
+                if not isinstance(selected, ast.ClassDef):
+                    raise ValueError('Reference members require a class: ' + symbol)
+                scope = selected.body
+        if selected is None:
+            raise ValueError('Missing reference symbol: ' + symbol)
+        if kind == 'signature':
+            if isinstance(selected, ast.ClassDef):
+                selected.body = [node for node in selected.body if isinstance(node, ast.AnnAssign)] or [ast.Expr(value=ast.Constant(value=Ellipsis))]
+            elif isinstance(selected, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                selected.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
+            else:
+                raise ValueError('A signature requires a function or class')
+        elif not isinstance(selected, (ast.Assign, ast.AnnAssign)):
+            raise ValueError('A definition requires a module constant')
+        return ast.unparse(ast.fix_missing_locations(selected)) + '\n'
     if path.suffix == '.json':
         command = json.loads(path.read_text())[name]
         if not isinstance(command, str) or '\n' in command or not command.strip():
@@ -82,17 +115,43 @@ def output_bindings(root: Path, document: Path) -> list[dict[str, str]]:
     return found
 
 
+def reference_bindings(root: Path, document: Path) -> list[dict[str, str]]:
+    text = document.read_text()
+    found = []
+    for match in re.finditer(REFERENCE_FENCE, text, re.S):
+        identity, source, name, role, excerpt = match.groups()
+        requested = root / source
+        path = requested.resolve()
+        if not path.is_relative_to((root / 'limen').resolve()) or any(part.is_symlink() for part in (requested, *requested.parents)):
+            raise ValueError('Reference source escapes the package')
+        if not name.startswith(role + ':') or region(path, name) != excerpt + '\n':
+            raise ValueError('Reference differs from current package source: ' + identity)
+        found.append({'id': identity, 'path': source, 'region': name, 'role': role, 'sha256': digest((excerpt + '\n').encode())})
+    if len(found) != len(re.findall(r'<!-- reference:', text)) or len({item['id'] for item in found}) != len(found):
+        raise ValueError('Missing or duplicate reference bindings')
+    return found
+
+
+def all_reference_bindings(root: Path) -> list[dict[str, str]]:
+    found = [item for document in maintained_documents(root) for item in reference_bindings(root, document)]
+    identities = [item['id'] for item in [*all_bindings(root), *found]]
+    if len(set(identities)) != len(identities):
+        raise ValueError('Duplicate source binding across maintained documents')
+    return found
+
+
 def validate_fences(root: Path, document: Path) -> None:
     text = document.read_text()
     bindings(root, document)
     output_bindings(root, document)
+    reference_bindings(root, document)
     parser = '''import MarkdownIt from 'markdown-it';
 let text = ''; for await (const chunk of process.stdin) text += chunk;
 console.log(JSON.stringify(new MarkdownIt({html:true}).parse(text, {})
   .filter(token => ['fence', 'code_block'].includes(token.type)).map(token => token.map[0])));'''
     parsed = subprocess.run(['node', '--input-type=module', '-e', parser], cwd=root / 'docs-site',
                             input=text, text=True, capture_output=True, check=True)
-    expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE)
+    expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE, REFERENCE_FENCE)
                       for match in re.finditer(pattern, text, re.S))
     if json.loads(parsed.stdout) != expected:
         raise ValueError('Unbound code fence or indented block in candidate documentation: ' + str(document))
@@ -280,6 +339,10 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             raise ValueError('Stale executable binding')
         if not any(item['id'] == binding['scenario'] and item['interface'] == binding['interface'] and item['status'] == 'passed' for item in record['validation']['scenarios']):
             raise ValueError('Unexecuted example binding')
+    for binding in all_reference_bindings(root):
+        source = next((item for item in record['sources'] if item['path'] == binding['path'] and item['region'] == binding['region']), None)
+        if source is None or source['sha256'] != binding['sha256']:
+            raise ValueError('Stale package reference binding')
 
     tested = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip()
     if record['revision']['tested_commit'] != tested:
