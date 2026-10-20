@@ -5,7 +5,7 @@ import inspect
 import json
 import zlib
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
 from functools import partial
 from importlib import import_module
 from typing import Protocol, cast
@@ -45,6 +45,17 @@ class ScalerFactory:
 
 
 attach(ScalerFactory)
+
+
+@dataclass
+class _FrozenTargetConfig(_manifest.TargetClassConfig):
+    _parallel_fit_defaults: dict[str, object] = field(default_factory=dict[str, object])
+    _parallel_transform_defaults: dict[str, object] = field(default_factory=dict[str, object])
+
+
+def _target_defaults(component: object, skip: int) -> dict[str, object]:
+    return {name: parameter.default for index, (name, parameter) in enumerate(inspect.signature(cast(Callable[..., object], component)).parameters.items())
+            if index >= skip and parameter.default is not inspect.Parameter.empty and parameter.kind in (inspect.Parameter.POSITIONAL_OR_KEYWORD, inspect.Parameter.KEYWORD_ONLY)}
 
 
 @dataclass(frozen=True)
@@ -107,6 +118,9 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         raise ValueError('Parallel encoding rejects cycles')
     active |= {id(value)}
     is_component = callable(value)
+    if type(value) is _manifest.TargetClassConfig:
+        value = _FrozenTargetConfig(value.target_class, value.fit_params, value.transform_params,
+                                    _target_defaults(value.target_class, 2), _target_defaults(cast(_TargetClass, value.target_class).transform, 2))
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -166,7 +180,7 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
     result.extend((f'feature_transforms.{i}', entry.func) for i, entry in enumerate(manifest.feature_transforms))
     if manifest.target_class_config is not None:
         result.append(('target', manifest.target_class_config.target_class))
-        result.extend((f'target.{name}', getattr(manifest.target_class_config.target_class, method))
+        result.extend((f'target.{name}', _normalize(getattr(manifest.target_class_config.target_class, method), snapshot=True))
                       for name, method in (('fit', '__init__'), ('transform', 'transform')))
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
@@ -271,8 +285,8 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         runtime = ('trade_context',) if getattr(target.target_class, 'requires_trade_context', False) else ()
         if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
-        result['target'] = _configured('target', target.target_class, target.fit_params, params, skip=2, runtime=runtime)
-        transform_config = _configured('target.transform', cast(_TargetClass, target.target_class).transform, target.transform_params, params, skip=2, runtime=runtime)
+        result['target'] = _defaults(target.target_class, dict(getattr(target, '_parallel_fit_defaults', {})) | _resolve_params(target.fit_params, params), skip=2, path='target', runtime=runtime)
+        transform_config = _defaults(cast(_TargetClass, target.target_class).transform, dict(getattr(target, '_parallel_transform_defaults', {})) | _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})
     if isinstance(manifest, MLManifest):

@@ -19,7 +19,7 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
 
 VERSION = 1
 
@@ -94,7 +94,7 @@ def _encode_component(value: object, active: frozenset[int]) -> list[object]:
             owner[-1] = ['null']  # The owner supplies state; the separately captured method is invoked.
         return ['method', owner, value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value):
-        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(tuple(cell.cell_contents for cell in value.__closure__) if value.__closure__ else None, active, ordered=True)]
+        return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(tuple(cell.cell_contents for cell in value.__closure__) if value.__closure__ else None, active, ordered=True), encode(vars(value).get('__wrapped__'), active, ordered=True)]
     if isinstance(value, type):
         return ['import', reference(value)]
     if is_dataclass(value) and not isinstance(value, (type, partial)):
@@ -120,7 +120,7 @@ def _import(node: object) -> object:
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
           'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
-          'function': 5, 'method': 4, 'dataclass': 4, 'instance': 4}
+          'function': 6, 'method': 4, 'dataclass': 4, 'instance': 4}
 
 
 def decode(node: object, *, ordered: bool = False, isolate_functions: bool = False) -> object:
@@ -162,10 +162,7 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         if isolate_functions or mutable_function(source) or encode(source) != parts:
             function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), tuple(CellType(item) for item in cast(tuple[object, ...], decode(parts[4], ordered=True, isolate_functions=isolate_functions))) if parts[4] != ['null'] else None)
             function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True, isolate_functions=isolate_functions))
-            function.__module__, function.__qualname__ = source.__module__, source.__qualname__
-            function.__annotations__ = source.__annotations__.copy()
-            if '__parallel_round_contract__' in vars(source):
-                vars(function)['__parallel_round_contract__'] = vars(source)['__parallel_round_contract__']
+            restore_function_metadata(function, source, decode(parts[5], ordered=True, isolate_functions=isolate_functions))
         return function
     if tag == 'method':
         owner = (_decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True)

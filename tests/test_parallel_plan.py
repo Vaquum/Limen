@@ -12,7 +12,7 @@ from concurrent.futures import ProcessPoolExecutor
 from collections.abc import Mapping
 from pathlib import Path
 from dataclasses import dataclass, fields, is_dataclass
-from functools import partial
+from functools import partial, wraps
 
 import pytest
 import polars as pl
@@ -46,6 +46,18 @@ def _parameters():
 
 def _caller_feature(data, window=2):
     return data.with_columns(pl.col('close').rolling_mean(window).alias('caller_mean'))
+
+
+def _feature_decorator(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        return function(*args, **kwargs)
+    return wrapper
+
+
+@_feature_decorator
+def _wrapped_feature(data, window=2):
+    return _caller_feature(data, window)
 
 
 def _keyword_feature(data, *, window=2):
@@ -365,7 +377,7 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
+        for component in (_wrapped_feature, partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
             if isinstance(component, (DictRolling, ListRolling)):
@@ -474,6 +486,15 @@ def test_frozen_manifest_round_plan() -> None:
         actual, pid = pool.submit(_carried_probe, frozen, params).result(timeout=30)
         expected, _ = _carried_probe(frozen, params)
         assert actual == expected and pid != os.getpid()
+        declare_parallel(TransformSeedTarget, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(TransformSeedTarget.transform, '__defaults__', (42,))
+            manifest = build_manifest(parallel_config()).with_target_label('noise', TransformSeedTarget, fit_params={'random_state': 42})
+            frozen = freeze_manifest(manifest, None)
+            before = digest(frozen)
+        assert digest(frozen) == before
+        validate_resources(frozen, params)
+        assert pool.submit(_target_probe, frozen, params).result(timeout=30) == _target_probe(frozen, params)
         shadowed = ShadowedSeedRolling()
         signature = SignatureSeedRolling(None)
         for component in (shadowed, signature):

@@ -84,3 +84,10 @@ def mutable_function(function: FunctionType) -> bool:
     def mutable(value: object) -> bool:
         return isinstance(value, (dict, list)) or (isinstance(value, tuple) and any(mutable(item) for item in cast(tuple[object, ...], value)))
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
+
+
+def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:
+    function.__module__, function.__qualname__, function.__annotations__ = source.__module__, source.__qualname__, source.__annotations__.copy()
+    for name, value in {'__wrapped__': wrapped, '__parallel_round_contract__': vars(source).get('__parallel_round_contract__')}.items():
+        if value is not None:
+            vars(function)[name] = value
