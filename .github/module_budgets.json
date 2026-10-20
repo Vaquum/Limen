@@ -340,7 +340,7 @@
   "limen/log/_experiment_backtest_results.py": 70,
   "limen/log/_experiment_confusion_metrics.py": 20,
   "limen/log/_experiment_parameter_correlation.py": 150,
-  "limen/log/_permutation_confusion_metrics.py": 202,
+  "limen/log/_permutation_confusion_metrics.py": 210,
   "limen/log/_permutation_prediction_performance.py": 30,
   "limen/log/_read_from_file.py": 40,
   "limen/log/log.py": 90,

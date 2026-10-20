@@ -13,6 +13,7 @@ from limen.experiment.param_domain import ParamDomain
 from limen.experiment.param_search import RandomStrategy
 from limen.log import ConfusionNotApplicableError
 from limen.log._permutation_confusion_metrics import confusion_mean_return_pct
+from limen.log._permutation_confusion_metrics import _declared_output_modes
 from limen.sfd.foundational_sfd import logreg_binary as logreg_sfd
 from limen.sfd.foundational_sfd import ridge_regressor as ridge_sfd
 from limen.yaml import CompiledSFD, build_search_strategy, parse
@@ -135,6 +136,28 @@ def test_caller_owned_binary_sfd_confusion_reported() -> None:
     uel = _caller_owned_run(logreg_sfd)
     assert uel.experiment_confusion_metrics is not None
     assert len(uel.experiment_confusion_metrics) == 1
+
+
+def test_caller_owned_sizing_confusion_unavailable() -> None:
+    config, errors = parse(YAML_SPEC)
+    assert errors == []
+    config['sfd']['manifest']['backtest']['max_holding_seconds'] = 1800
+    config['sfd']['manifest']['backtest']['funding']['params']['rate'] = 0.0001
+    manifest = CompiledSFD(config).manifest()
+    grid = config['sfd']['params']
+    sfd = SimpleNamespace(params=lambda: grid, prep=manifest.prepare_data, model=manifest.run_model)
+    bars = pl.read_parquet(QUARTER_HOUR).filter(pl.col('datetime').dt.date() < pl.date(2025, 1, 5))
+    uel = UniversalExperimentLoop(
+        data=bars, sfd=sfd,
+        search_strategy=RandomStrategy(ParamDomain(grid), seed=42),
+        test_mode=True,
+    )
+    assert uel.manifest is None
+    with TemporaryDirectory() as tmpdir:
+        uel.run(experiment_name=str(Path(tmpdir) / 'test'), n_permutations=1, post_processing=True)
+    assert uel.experiment_confusion_metrics is None
+    assert _declared_output_modes(uel._log.manifest, uel._log._alignment, 0) == {'target_exposure'}
+    assert uel.experiment_backtest_results is not None
 
 
 def test_confusion_helper_rejects_fractional() -> None:
