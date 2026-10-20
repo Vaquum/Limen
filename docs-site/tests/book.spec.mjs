@@ -34,6 +34,7 @@ test('complete research chapter',async({page})=>{
   const reference=await (await page.request.get('/limen/reference/trainer/')).text();
   const lead=reference.match(/<p class="hero-lead">([^]*?)<\/p>/)[1];
   expect(lead).toContain('Python project');expect(lead).toContain('Compiled project');expect(lead).not.toContain('[Python project]');expect(lead).not.toContain('`');
+  expect(lead).toContain('href="/limen/book/python-research/"');expect(lead).toContain('href="/limen/book/compiled-research/"');
   await page.getByRole('link',{name:'the two interfaces',exact:true}).click();
   await expect(page).toHaveURL(/about\/#two-interfaces-different-purposes$/);
   await expect(page.locator('#two-interfaces-different-purposes')).toBeInViewport();
@@ -63,6 +64,8 @@ test('reference returns to the same passage and focus',async({page})=>{
   await link.focus();await link.scrollIntoViewIfNeeded();const before=await link.evaluate(el=>({id:el.id,top:el.getBoundingClientRect().top}));
   await link.click();await expect(page.locator('[data-reference-dialog]')).toBeVisible();
   await expect(page.locator('[data-reference-body] h1')).toHaveText('Carry selected behavior into inference');
+  await expect(page.locator('[data-reference-body] .reference-intro').getByRole('link',{name:'Python project',exact:true})).toHaveAttribute('href','/limen/book/python-research/');
+  await expect(page.locator('[data-reference-body] .reference-intro').getByRole('link',{name:'Compiled project',exact:true})).toHaveAttribute('href','/limen/book/compiled-research/');
   await page.getByRole('button',{name:'Return to chapter',exact:true}).click();
   await expect(page.locator('[data-reference-dialog]')).not.toBeVisible();await expect(link).toBeFocused();
   expect(Math.abs((await link.boundingBox()).y-before.top)).toBeLessThan(3);
