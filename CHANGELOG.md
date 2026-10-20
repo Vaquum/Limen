@@ -1826,3 +1826,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.3] - 2026-10-20
 
 - Add the owned research reader, executable Python and Compiled projects, and source-bound documentation proof while retaining the current production renderer.
+
+## [5.45.4] - 2026-10-20
+
+- Route Ridge Cohorts through existing zero-threshold majority voting; Ridge cohort IDs change because the aggregation mode is part of their identity.
