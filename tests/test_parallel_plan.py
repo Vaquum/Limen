@@ -287,9 +287,9 @@ def test_frozen_manifest_round_plan() -> None:
             declare_parallel(component, ParallelRoundContract(seeded_stage, ('random_state',)))
         unsafe = copy.deepcopy(plan.manifest).add_feature(shadowed)
         rejected = freeze_manifest(unsafe, None)
-        with pytest.raises(ValueError, match='feature_transforms.*fixed integer seed'):
+        with pytest.raises(ValueError, match=r'feature_transforms.*fixed integer seed'):
             validate_resources(rejected, params)
-        with pytest.raises(ValueError, match='feature_transforms.*fixed integer seed'):
+        with pytest.raises(ValueError, match=r'feature_transforms.*fixed integer seed'):
             validate_domain(rejected, {key: [value] for key, value in params.items()}, None)
         for component, arguments in ((shadowed, {'random_state': 42}), (signature, {})):
             seeded = copy.deepcopy(plan.manifest).add_feature(component, **arguments)
@@ -299,7 +299,7 @@ def test_frozen_manifest_round_plan() -> None:
             expected, _ = _carried_probe(frozen, params)
             assert actual == expected and pid != os.getpid()
         aliased = copy.deepcopy(plan.manifest).add_feature(shadowed, random_state='{caller_seed}')
-        with pytest.raises(ValueError, match='feature_transforms.*fixed integer seed'):
+        with pytest.raises(ValueError, match=r'feature_transforms.*fixed integer seed'):
             validate_domain(freeze_manifest(aliased, None),
                             {key: [value] for key, value in params.items()} | {'caller_seed': [42, None]}, None)
         extension = CallerExtension()
