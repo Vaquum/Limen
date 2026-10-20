@@ -965,7 +965,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         def __call__(self, values):
             return later_probabilities(super().__call__(values))
     class SlottedPartial(PartialPolicy):
-        __slots__ = 'offset'
+        __slots__ = ('offset',)
         def __call__(self, values):
             return np.clip(super().__call__(values) + self.offset, 0, 1)
         def __deepcopy__(self, memo):
