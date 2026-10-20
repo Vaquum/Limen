@@ -1871,7 +1871,11 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Reject YAML resolver traversal outside allowed namespaces and introspective dunder attributes while preserving supported symbols.
 
-## [5.45.14] - 2026-10-20
+## [5.45.15] - 2026-10-20
+
+- Report post-experiment confusion only for binary classification; record explicit unavailability for exposure, continuous, and unclassifiable outputs while preserving backtests, correlation, and the convergence report.
+
+## [5.45.16] - 2026-10-20
 
 - Admit cyclic fitted mappings and sequences once per object, and preserve logger settings that affect selected prediction.
 

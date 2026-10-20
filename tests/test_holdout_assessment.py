@@ -226,6 +226,25 @@ def assessment_case(tmp_path_factory):
         aliases.close()
 
 
+@pytest.fixture(scope='module')
+def native_assessment_case(tmp_path_factory):
+    root = _project(tmp_path_factory.mktemp('holdout-native') / 'project')
+    config = _configuration(root)
+    config['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}}
+    config['sfd']['params'] = {'C': [1.0], 'use_calibration': [True], 'use_threshold': [False]}
+    config['uel']['n_permutations'] = 1
+    reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
+    directory = root / 'native'
+    loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root, experiment_dir=directory,
+        search_strategy=build_search_strategy(config), yaml_reference=config)
+    loop.run('native', n_permutations=1, progress_bar=False, post_processing=True)
+    from limen.experiment import _round_storage
+    with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
+        ids = [json.loads(line)['round_id'] for line in stream if line.strip()]
+    trained = Trainer(directory, project_root=root).train(ids)
+    return root, reservation, [trained], None
+
+
 def _freeze(selection, *, context='2024-01-04', target=True, scenarios=None):
     return freeze_holdout_selection(selection, context_start=context, scenarios=[_SCENARIO] if scenarios is None else scenarios,
         evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up') if target else None)
@@ -606,7 +625,8 @@ def test_readonly_prediction_restores_native_profiler(assessment_case):
     assert any(entry.code is retained_shape.__code__ for entry in profiler.getstats())
 
 
-def test_frozen_namespace_and_closure_identity(assessment_case):
+def test_frozen_namespace_and_closure_identity(native_assessment_case):
+    assessment_case = native_assessment_case
     from types import CellType, FunctionType
     from limen.experiment._holdout_state import fitted_witness
 
@@ -665,7 +685,8 @@ def test_frozen_namespace_and_closure_identity(assessment_case):
     assert fitted_witness((CellType(), CellType())) != fitted_witness((CellType(), CellType(None)))
 
 
-def test_frozen_default_bindings_and_provider_identity(assessment_case):
+def test_frozen_default_bindings_and_provider_identity(native_assessment_case):
+    assessment_case = native_assessment_case
     from limen.experiment._holdout_dependencies import dependency_digest
     from limen.experiment._holdout_prediction import readonly_prediction
     from limen.experiment._holdout_state import fitted_witness
@@ -729,7 +750,8 @@ def test_frozen_default_bindings_and_provider_identity(assessment_case):
         assert loader.call_count == 0
 
 
-def test_frozen_library_namespace_metaclass_and_config_binding(assessment_case):
+def test_frozen_library_namespace_metaclass_and_config_binding(native_assessment_case):
+    assessment_case = native_assessment_case
     from types import FunctionType
     from sklearn.linear_model import LogisticRegression
     from limen.experiment._holdout_prediction import readonly_prediction
@@ -794,7 +816,8 @@ def test_frozen_library_namespace_metaclass_and_config_binding(assessment_case):
         selected._model.effect_provider.prediction_calibration_config.threshold_func(selected._model.model.coef_.ravel())
 
 
-def test_frozen_cyclic_fitted_containers(assessment_case):
+def test_frozen_cyclic_fitted_containers(native_assessment_case):
+    assessment_case = native_assessment_case
     class MappingCalibrator(dict):
         def predict_proba(self, values):
             return self['estimator'].predict_proba(np.asarray(values))
@@ -820,7 +843,8 @@ def test_frozen_cyclic_fitted_containers(assessment_case):
         assert read_holdout_report(assessment_case[0], report['attempt_id']) == report
 
 
-def test_frozen_logger_prediction_settings(assessment_case):
+def test_frozen_logger_prediction_settings(native_assessment_case):
+    assessment_case = native_assessment_case
     class LoggerPrediction(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
