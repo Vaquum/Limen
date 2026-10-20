@@ -403,6 +403,9 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
             changed = subprocess.run(['git', 'diff', '--quiet', base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
             if changed and source['status'] != 'candidate':
                 raise ValueError('Unmerged source presented as merged')
+    if record['mode'] == 'production':
+        from publication import validate_production
+        validate_production(root, record)
 
 
 if __name__ == '__main__':
