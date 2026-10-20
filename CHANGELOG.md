@@ -1836,4 +1836,3 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.5] - 2026-10-20
 
 - Preserve owned fitted binary prediction, native iteration limits and preparation/calibration dependencies through final holdout assessment.
-

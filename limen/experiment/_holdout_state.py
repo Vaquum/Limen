@@ -51,7 +51,7 @@ def children(value: object) -> tuple[object, ...]:
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_array(value):
-        return (value.tolist(), *_attributes(cast(object, value)).values())
+        return (np.ndarray.tolist(value), *_attributes(cast(object, value)).values())
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value):
         return ()
     if isinstance(value, partial):
@@ -122,7 +122,7 @@ def fitted_witness(value: object) -> bytes:
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(sorted((node(part) for part in _native_values(cast(object, item))), key=pickle.dumps)), state)
         elif object_array(item):
-            result = (kind, item.shape, item.dtype.descr, node(item.tolist()), state)
+            result = (kind, item.shape, item.dtype.descr, node(np.ndarray.tolist(item)), state)
         elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
         elif kind[0].split('.')[0] == 'numpy' and kind[1] == '_ArrayFunctionDispatcher':

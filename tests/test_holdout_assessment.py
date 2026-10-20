@@ -884,6 +884,27 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class HiddenArray(np.ndarray):
+        def tolist(self):
+            return []
+        def adjust(self, values):
+            return np.clip(values + np.ndarray.__getitem__(self, 0), 0, 1)
+        def __deepcopy__(self, memo):
+            clone = np.ndarray.copy(self)
+            memo[id(self)] = clone
+            return clone
+    class NonpreservingArray(HiddenArray):
+        def __deepcopy__(self, memo):
+            clone = super().__deepcopy__(memo)
+            clone[0] += 0.1
+            return clone
+    mapped._model.policy = np.asarray([expected_offset], dtype=object).view(HiddenArray)
+    _freeze(mapped)
+    mapped._model.policy = np.asarray([expected_offset], dtype=object).view(NonpreservingArray)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
     class AliasPrediction(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
@@ -1087,6 +1108,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.policy + result['_probs']
             return result
+    class ComparisonPolicy:
+        def __gt__(self, other):
+            return _LATE_RULES['offset'] > other
+    class Compared(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + (0.1 if self.policy > 0 else 0), 0, 1)
+            return result
     class ConversionPolicy:
         def __float__(self):
             return _LATE_RULES['offset']
@@ -1095,9 +1124,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ConversionPolicy()):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:

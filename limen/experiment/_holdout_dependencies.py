@@ -41,7 +41,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def witness(identity: int) -> bytes:
         return fitted_witness(seen[identity])
     cached_witness = lru_cache(maxsize=None)(witness)
-    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
+    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
 
