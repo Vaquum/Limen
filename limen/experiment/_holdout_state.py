@@ -125,10 +125,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
-        if item is None:
-            return item
         item_type = type(item)
-        if item_type in _ATOMIC_TYPES or (item_type is int and item is _CANONICAL_INTS.get(item)):
+        if item is None or item_type in _ATOMIC_TYPES or (item_type is int and item is _CANONICAL_INTS.get(item)):
             return item
         if id(item) in seen:
             return ('ref', seen[id(item)])

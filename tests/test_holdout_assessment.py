@@ -870,12 +870,13 @@ def test_frozen_logger_prediction_settings(native_assessment_case):
 
 def test_prediction_guard_rejects_empty_cells_and_caught_matcher_errors(native_assessment_case):
     from limen.experiment import _holdout_prediction as prediction
+    from types import CellType, FunctionType
     unused = None
     def threshold(values):
         if values.size < 0:
             return unused
         return float(np.mean(values))
-    del unused
+    threshold = FunctionType(threshold.__code__, threshold.__globals__, closure=(CellType(),))
     with pytest.raises(ValueError):
         _ = threshold.__closure__[0].cell_contents
     class Config:
