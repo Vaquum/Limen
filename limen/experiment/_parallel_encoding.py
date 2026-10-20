@@ -50,6 +50,10 @@ def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool 
 def _encode(value: object, active: frozenset[int], *, ordered: bool) -> list[object]:
     if callable(value):
         return _encode_composite(value, active, ordered=ordered)
+    if isinstance(value, CellType):
+        return ['cell', encode(value.cell_contents, active, ordered=ordered)]
+    if isinstance(value, defaultdict):
+        return _encode_component(value, active | {id(value)}, owner_only=True)
     if value is None:
         node: list[object] = ['null']
     elif isinstance(value, str):
@@ -77,10 +81,6 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
     active |= {id(value)}
     if callable(value):
         return _encode_component(value, active)
-    if isinstance(value, CellType):
-        return ['cell', encode(value.cell_contents, active, ordered=ordered)]
-    if isinstance(value, defaultdict):
-        return _encode_component(value, active, owner_only=True)
     if isinstance(value, Mapping):
         mapping = cast(Mapping[object, object], value)
         if ordered:
@@ -170,15 +170,8 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         return tuple(items) if tag == 'tuple' else items
     if tag in ('map', 'keyed_map', 'state_map') and isinstance(value, list):
         return {cast(str, pair[0]) if tag == 'map' else decode(pair[0], ordered=ordered, isolate_functions=isolate_functions): decode(pair[1], ordered=ordered, isolate_functions=isolate_functions) for pair in cast(list[list[object]], value)}
-    if tag == 'cell':
-        return CellType(decode(value, ordered=ordered, isolate_functions=isolate_functions))
-    if tag == 'owner_call':
-        cls = cast(type, _import(value))
-        if _owner_call(cls) != parts:
-            raise ValueError('Parallel callable implementation changed')
-        return cls.__call__
-    if tag == 'import':
-        return _import(value)
+    if tag in ('cell', 'owner_call', 'import'):
+        return _decode_reference(parts, ordered=ordered, isolate_functions=isolate_functions)
     if tag == 'function':
         source = _import(value)
         if not inspect.isfunction(source):
@@ -198,6 +191,18 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
             raise ValueError('Parallel bound method implementation changed')
         return MethodType(function, owner)
     return _decode_instance(parts, isolate_functions=isolate_functions)
+
+
+def _decode_reference(parts: list[object], *, ordered: bool, isolate_functions: bool) -> object:
+    tag, value = parts[:2]
+    if tag == 'cell':
+        return CellType(decode(value, ordered=ordered, isolate_functions=isolate_functions))
+    if tag == 'owner_call':
+        cls = cast(type, _import(value))
+        if _owner_call(cls) != parts:
+            raise ValueError('Parallel callable implementation changed')
+        return cls.__call__
+    return _import(value)
 
 
 def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only: bool = False) -> object:
