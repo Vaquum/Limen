@@ -15,7 +15,9 @@ def git(root, *arguments):
 def base_revision(root):
     if git(root, 'rev-parse', '--is-shallow-repository') != 'false':
         raise ValueError('Source provenance requires full Git history')
-    return git(root, 'merge-base', 'HEAD', 'origin/main')
+    main = git(root, 'rev-parse', 'origin/main')
+    changes = git(root, 'rev-list', '--first-parent', '--reverse', main, '--not', 'HEAD').splitlines()
+    return git(root, 'rev-parse', changes[0] + '^1') if changes else main
 
 
 @lru_cache(maxsize=4096)
@@ -113,11 +115,17 @@ def validate_provenance(root, record):
             raise ValueError('Source PR identity differs')
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Bind canonical source changes to merged PRs on main.')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[2],
+                        help='Inspect this full-history checkout without changing its source or revision.')
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[2]
+    root = args.root.resolve()
     result = acquire(root, args.output)
     validate_provenance(root, result)
     print(f"Bound {len(result['files'])} sources to first-parent main history and explicit candidate changes.")
+
+
+if __name__ == '__main__':
+    main()

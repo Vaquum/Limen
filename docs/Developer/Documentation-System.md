@@ -200,6 +200,8 @@ Limen owns the versioned schema and checker under `docs/examples/`. The reader c
 
 Resolve a production file’s latest changing commit along the first-parent history of the published main revision, comparing each commit with its first parent. Associate that commit with the merged PR whose base is this repository’s main branch. Branch synchronization merges do not establish publication provenance. A file with no verifiable merged changing PR has unavailable provenance and cannot receive a successful production footer.
 
+For a retained original PR head, use its latest shared ancestor on main’s first-parent history. Merging the PR does not turn its side-branch commits into mainline commits; its changed sources remain candidate evidence until the merged revision is tested. The provenance command accepts `--root PATH` to inspect another full-history checkout without changing that checkout’s source or revision; `--output` retains its path relative to the invoking directory.
+
 Generate source footers from actual Git and merged-PR history during the build. Do not commit a source file's own final commit hash into that file. A candidate preview identifies unmerged source explicitly. Candidate evidence records the PR head, tested merge commit and executed tree separately; the checkout used by a pull-request workflow may be the test merge rather than the head. Production records the published main commit/tag and actual released wheel digest. Production requires the real merged changing PR and passing validation for the package and tree being published.
 
 Keep the source commit/PR visible with each example. Make the complete project, input, environment, test and retained output evidence reachable from it without an authenticated browser session.

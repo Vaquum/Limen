@@ -5,9 +5,67 @@ import subprocess
 
 import pytest
 
-from provenance import git, identity, latest_change, merged_pull, pull_associations, tree_objects
+from provenance import base_revision, git, identity, latest_change, main, merged_pull, pull_associations, tree_objects
 
 ROOT = Path(__file__).resolve().parents[3]
+
+
+@pytest.fixture
+def recorded_history(tmp_path):
+    tmp_path = tmp_path / 'checkout'
+    tmp_path.mkdir()
+    def run(*args):
+        subprocess.run(['git', '-c', 'user.name=Research book test', '-c', 'user.email=research-book@example.invalid', *args], cwd=tmp_path, check=True, capture_output=True)
+    original = (ROOT / 'docs/Research-Book.md').read_text()
+    source = tmp_path / 'page.md'
+    run('init', '-q', '-b', 'main')
+    source.write_text(original);run('add', 'page.md');run('commit', '-qm', 'docs: retain recorded chapter')
+    base = git(tmp_path, 'rev-parse', 'HEAD')
+    run('update-ref', 'refs/remotes/origin/main', base)
+    run('checkout', '-qb', 'chapter')
+    source.write_text(original + (ROOT / 'docs/examples/python-research/README.md').read_text())
+    run('commit', '-qam', 'docs: add project continuation')
+    return tmp_path, run, base, git(tmp_path, 'rev-parse', 'HEAD')
+
+
+@pytest.mark.parametrize('fast_forward', [False, True])
+def test_original_head_uses_shared_first_parent_main_boundary(recorded_history, fast_forward):
+    root, run, base, candidate = recorded_history
+    assert base_revision(root) == base
+    assert identity(root, base, 'page.md', tree_objects(root, candidate), tree_objects(root, base)) == (candidate, 'candidate')
+    run('checkout', '-q', 'main')
+    run('merge', '--ff-only' if fast_forward else '--no-ff', 'chapter', '-qm', 'merge: integrate chapter')
+    merged = git(root, 'rev-parse', 'HEAD')
+    run('update-ref', 'refs/remotes/origin/main', merged)
+    assert base_revision(root) == merged
+    current = tree_objects(root, merged)
+    assert identity(root, merged, 'page.md', current, current) == (merged, 'merged')
+    (root / 'later.md').write_text((ROOT / 'docs/examples/compiled-research/README.md').read_text())
+    run('add', 'later.md');run('commit', '-qm', 'docs: retain later project source')
+    run('update-ref', 'refs/remotes/origin/main', 'HEAD')
+    run('checkout', '-q', '--detach', candidate)
+    assert git(root, 'merge-base', 'HEAD', 'origin/main') == candidate
+    expected = candidate if fast_forward else base
+    assert base_revision(root) == expected
+    assert git(root, 'rev-parse', 'HEAD') == candidate
+    expected_status = 'merged' if fast_forward else 'candidate'
+    assert identity(root, expected, 'page.md', tree_objects(root, candidate), tree_objects(root, expected)) == (candidate, expected_status)
+    run('checkout', '-q', '--detach', base)
+    assert base_revision(root) == base
+
+
+def test_provenance_cli_inspects_explicit_checkout_without_changing_it(recorded_history, tmp_path, monkeypatch):
+    root, _, base, candidate = recorded_history
+    output = tmp_path / 'provenance.json'
+    monkeypatch.setattr('provenance.source_paths', lambda selected: ['page.md'])
+    monkeypatch.setattr('sys.argv', ['provenance.py', '--root', str(root), '--output', str(output)])
+    before = git(root, 'status', '--porcelain', '--untracked-files=normal')
+    main()
+    record = json.loads(output.read_text())
+    assert record['base'] == base
+    assert [(item['path'], item['commit'], item['status'], item['merged_pr']) for item in record['files']] == [('page.md', candidate, 'candidate', None)]
+    assert git(root, 'rev-parse', 'HEAD') == candidate
+    assert git(root, 'status', '--porcelain', '--untracked-files=normal') == before
 
 
 def test_first_parent_change_includes_merge_and_later_revert(tmp_path):
