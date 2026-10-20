@@ -58,7 +58,7 @@ class FrozenManifestPlan:
     distribution_providers: dict[str, list[str]]
 
 
-_PARALLEL_EVIDENCE_SINCE = (5, 45, 3)
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 4)
 
 
 def legacy_metadata(metadata: Mapping[str, object]) -> bool:
