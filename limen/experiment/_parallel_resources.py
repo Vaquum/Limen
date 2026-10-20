@@ -85,7 +85,7 @@ def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]
 
 def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
     if isinstance(value, str):
-        result = {value} if value in domain else set()
+        result: set[str] = {value} if value in domain else set()
         if '{' in value and '}' in value:
             for _, field, spec, _ in Formatter().parse(value):
                 if field is not None:
@@ -93,25 +93,27 @@ def _references(value: object, domain: Mapping[str, list[object]]) -> set[str]:
                 result.update(_references(spec, domain))
         return result.intersection(domain)
     if isinstance(value, Mapping):
-        return set().union(*(_references(item, domain) for item in cast(Mapping[object, object], value).values()))
+        return set[str]().union(*(_references(item, domain) for item in cast(Mapping[object, object], value).values()))
     if isinstance(value, (tuple, list)):
-        return set().union(*(_references(item, domain) for item in cast(tuple[object, ...] | list[object], value)))
+        return set[str]().union(*(_references(item, domain) for item in cast(tuple[object, ...] | list[object], value)))
     return set()
 
 
-def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]]) -> tuple[dict[str, object], tuple[str, ...]]:
-    if path == 'architecture':
-        return dict.fromkeys(domain, None), ()
+def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]]) -> tuple[Mapping[str, object], tuple[str, ...]]:
     if path.startswith('architecture.'):
         factory = path.split('.', 1)[1]
         key = factory.removesuffix('_factory') + '_params'
         function = manifest.architecture_function
         assert function is not None
         parameter = signature(function).parameters.get(key)
-        default = None if parameter is None else parameter.default
-        variants = [value for value in domain.get(key, [default]) if isinstance(value, dict)]
-        names = {name for value in variants for name in cast(dict[str, object], value)}
-        return {name: [cast(dict[str, object], value).get(name) for value in variants] for name in names} | {'seed': 'seed'}, (key, factory)
+        default: object = None if parameter is None else parameter.default
+        variants: list[Mapping[str, object]] = []
+        for option in domain.get(key, [default]):
+            if isinstance(option, Mapping):
+                variants.append(cast(Mapping[str, object], option))
+        names = {name for value in variants for name in value}
+        arguments: dict[str, object] = {name: [value.get(name) for value in variants] for name in names}
+        return arguments | {'seed': 'seed'}, (key, factory)
     if path.startswith('feature_transforms.'):
         entry = manifest.feature_transforms[int(path.split('.')[1])]
         return dict(entry.params), tuple(key for key in (entry.include_if, 'feature_groups' if entry.group is not None else None) if key is not None)
@@ -122,20 +124,30 @@ def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]])
         step = getattr(manifest, path)
         return dict(step[1]), ('bar_type',) if path == 'bar_formation' else ()
     if isinstance(manifest, MLManifest):
-        if path.startswith('scaler.') and manifest.scaler is not None:
-            if path == 'scaler.transform':
-                return dict(manifest.scaler[2]), ()
-            _, function, arguments = manifest.scaler[0][int(path.split('.')[2])]
-            if isinstance(function, ScalerFactory):
-                return function.static_params | dict(arguments), (function.dynamic_selector,) if function.dynamic_selector is not None else ()
-            return dict(arguments), ()
-        if path in ('calibration', 'threshold') and manifest.prediction_calibration_config is not None:
-            return dict(getattr(manifest.prediction_calibration_config, f'{path}_params')), ('use_calibration', 'use_threshold')
-        if path == 'ablation' and manifest.ablation_config is not None:
-            return {'random_state': manifest.ablation_config.seed_key}, ()
-        if path in ('data_dict_extension', 'feature_shims'):
-            return {'round_params': {key: key for key in domain}}, ()
+        return _ml_bindings(manifest, path, domain)
     return {}, ()
+
+
+def _ml_bindings(manifest: MLManifest, path: str, domain: Mapping[str, list[object]]) -> tuple[Mapping[str, object], tuple[str, ...]]:
+    if path.startswith('scaler.') and manifest.scaler is not None:
+        return _scaler_bindings(manifest, path)
+    if path in ('calibration', 'threshold') and manifest.prediction_calibration_config is not None:
+        return dict(getattr(manifest.prediction_calibration_config, f'{path}_params')), ('use_calibration', 'use_threshold')
+    if path == 'ablation' and manifest.ablation_config is not None:
+        return {'random_state': manifest.ablation_config.seed_key}, ()
+    if path in ('data_dict_extension', 'feature_shims'):
+        return {'round_params': {key: key for key in domain}}, ()
+    return {}, ()
+
+
+def _scaler_bindings(manifest: MLManifest, path: str) -> tuple[Mapping[str, object], tuple[str, ...]]:
+    assert manifest.scaler is not None
+    if path == 'scaler.transform':
+        return dict(manifest.scaler[2]), ()
+    _, function, arguments = manifest.scaler[0][int(path.split('.')[2])]
+    if isinstance(function, ScalerFactory):
+        return function.static_params | dict(arguments), (function.dynamic_selector,) if function.dynamic_selector is not None else ()
+    return dict(arguments), ()
 
 
 def backend_imports(plan: FrozenManifestPlan) -> tuple[str, ...]:

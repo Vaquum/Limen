@@ -7,12 +7,12 @@ from inspect import ismethod
 from typing import Literal, Protocol, cast
 
 _CPU_KEYS = ('n_jobs', 'nthread', 'num_threads', 'device', 'device_type')
-_SEED_KEYS = _CPU_KEYS + ('random_state', 'seed')
+_SEED_KEYS = (*_CPU_KEYS, 'random_state', 'seed')
 _VALIDATION_KEYS = {
     'deterministic_stage': _CPU_KEYS, 'seeded_stage': _SEED_KEYS,
-    'sklearn_stage': _SEED_KEYS + ('solver',), 'lightgbm_stage': _SEED_KEYS,
-    'xgboost_stage': _SEED_KEYS + ('tree_method', 'grow_policy', 'sampling_method', 'multi_strategy', 'booster', 'num_parallel_tree'),
-    'composed_stage': _CPU_KEYS + ('seed',), 'unfrozen_stage': (),
+    'sklearn_stage': (*_SEED_KEYS, 'solver'), 'lightgbm_stage': _SEED_KEYS,
+    'xgboost_stage': (*_SEED_KEYS, 'tree_method', 'grow_policy', 'sampling_method', 'multi_strategy', 'booster', 'num_parallel_tree'),
+    'composed_stage': (*_CPU_KEYS, 'seed'), 'unfrozen_stage': (),
 }
 
 
