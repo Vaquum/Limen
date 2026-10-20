@@ -1005,6 +1005,20 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(selected, assessment_case)
                 assert loader.call_count == 0
+    from types import SimpleNamespace
+    from limen.experiment._holdout_prediction import readonly_prediction
+    class NumericCallbacks(np.ndarray):
+        prediction_calibration_config = None
+    callback_calls = []
+    def nested_threshold(*args):
+        callback_calls.append('threshold')
+    nested = copy.deepcopy(assessment_case[2][0][0])
+    nested._model.policy = nested._model.model.coef_.copy().view(NumericCallbacks)
+    nested._model.policy.prediction_calibration_config = SimpleNamespace(calibration_func=None, threshold_func=nested_threshold)
+    with pytest.raises(ValueError, match='attempted fitting'):
+        with readonly_prediction([nested]):
+            nested._model.policy.prediction_calibration_config.threshold_func()
+    assert callback_calls == []
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)

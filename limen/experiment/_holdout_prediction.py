@@ -85,8 +85,9 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     seen: set[int] = set()
 
     def forbid(method: object) -> None:
-        call = inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
-        calls = _call_functions(call)
+        if not callable(method):
+            return
+        calls = () if inspect.isfunction(method) or inspect.ismethod(method) else _call_functions(inspect.getattr_static(cast(type[object], type(method)), '__call__', None))
         for function in _call_functions(method):
             if inspect.ismethod(method):
                 owner = cast(object, method.__self__)
@@ -99,7 +100,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             forbidden.setdefault(function.__code__, []).append((function, owner))
 
     def collect(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (issubclass(type(value), np.ndarray) and not object_array(value)):
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (type(value) is np.ndarray and not object_array(cast(object, value))):
             return
         if id(value) in seen:
             return
