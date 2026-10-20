@@ -13,7 +13,8 @@ import numpy as np
 import polars as pl
 import pytest
 
-from limen.experiment.manifest_core import FundingConfig, MLManifest, ProductConfig
+from limen.data import HistoricalData
+from limen.experiment.manifest_core import DataSourceResolver, FundingConfig, MLManifest, ProductConfig
 from limen.sfd.reference_architecture.direction_sizing import direction_sizing
 from limen.targets import TradeOutcomeTarget
 
@@ -22,7 +23,9 @@ def recorded_source(klines_size=900, limit=40):
     return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet').head(limit)
 
 
-def recorded_yaml_source(row_count_limit=None, kline_size=60, start_date_limit=None, end_date_limit=None, *, n_rows=None):
+def recorded_yaml_source(config):
+    assert config.method is HistoricalData.get_spot_klines
+    kline_size = config.params['kline_size']
     assert kline_size == 900
     return recorded_source(limit=200)
 
@@ -266,12 +269,11 @@ uel:
 @pytest.fixture(scope='module')
 def yaml_experiment(tmp_path_factory):
     from limen.cli.commands.run import run_experiment
-    from limen.data.historical_data import HistoricalData
 
     tmp_path = tmp_path_factory.mktemp('direction_sizing_campaign')
     yaml_path = tmp_path / 'strategy.yaml'
     yaml_path.write_text(YAML_SPEC)
-    with patch.object(HistoricalData, 'get_spot_klines', new=staticmethod(recorded_yaml_source)):
+    with patch.object(DataSourceResolver, 'resolve', new=staticmethod(recorded_yaml_source)):
         assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False)
     return next(tmp_path.rglob('metadata.json')).parent
 

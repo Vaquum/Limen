@@ -15,6 +15,7 @@ from limen.cli.commands.run import run_experiment
 from limen.cohort import Cohort
 from limen.cohort.sfc.top_n import select as select_top_n
 from limen.data import historical_data
+from limen.experiment.manifest_core import DataSourceResolver
 from limen.inference import ReconstructionError
 from limen.inference import Trainer
 from limen.inference.sensor import BarPrediction
@@ -265,6 +266,11 @@ _E2E_REPRO_YAML = dedent('''\
 ''')
 
 
+def _fixture_data_source(config):
+    assert config.method is historical_data.HistoricalData.get_spot_klines
+    return _make_e2e_data(**config.params)
+
+
 def _make_e2e_data(kline_size: int = 3600,
                    n_rows: int | None = None,
                    start_date_limit: object = None,
@@ -285,8 +291,8 @@ def _make_e2e_data(kline_size: int = 3600,
 
 def _run_e2e_experiment(experiment_dir: Path, yaml_text: str) -> list[int]:
     experiment_dir = Path(experiment_dir).resolve()
-    original = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_e2e_data)
+    original = DataSourceResolver.resolve
+    DataSourceResolver.resolve = staticmethod(_fixture_data_source)
     try:
         with TemporaryDirectory() as tmpdir, patch('click.echo'), patch('click.secho'):
             yaml_path = Path(tmpdir) / 'exp.yaml'
@@ -296,7 +302,7 @@ def _run_e2e_experiment(experiment_dir: Path, yaml_text: str) -> list[int]:
             ))
             run_experiment(yaml_path)
     finally:
-        historical_data.HistoricalData.get_spot_klines = original
+        DataSourceResolver.resolve = staticmethod(original)
     round_ids: list[int] = []
     with _storage.open_text(_storage.round_path(experiment_dir)) as f:
         for raw_line in f:
@@ -308,13 +314,13 @@ def _run_e2e_experiment(experiment_dir: Path, yaml_text: str) -> list[int]:
 
 
 def _train_e2e(experiment_dir: Path, pids: list[int]) -> tuple[Trainer, list]:
-    original = historical_data.HistoricalData.get_spot_klines
-    historical_data.HistoricalData.get_spot_klines = staticmethod(_make_e2e_data)
+    original = DataSourceResolver.resolve
+    DataSourceResolver.resolve = staticmethod(_fixture_data_source)
     try:
         trainer = Trainer(experiment_dir)
         sensors = trainer.train(pids)
     finally:
-        historical_data.HistoricalData.get_spot_klines = original
+        DataSourceResolver.resolve = staticmethod(original)
     return trainer, sensors
 
 
@@ -520,14 +526,14 @@ def test_trainer_yaml_reconstruction_error_stochastic() -> None:
         round_ids = _run_e2e_experiment(exp_dir, _E2E_RANDOM_YAML)
         assert len(round_ids) == 1
 
-        original = historical_data.HistoricalData.get_spot_klines
-        historical_data.HistoricalData.get_spot_klines = staticmethod(_make_e2e_data)
+        original = DataSourceResolver.resolve
+        DataSourceResolver.resolve = staticmethod(_fixture_data_source)
         try:
             trainer = Trainer(exp_dir)
             with pytest.raises(ReconstructionError, match='metric mismatch'):
                 trainer.train(round_ids)
         finally:
-            historical_data.HistoricalData.get_spot_klines = original
+            DataSourceResolver.resolve = staticmethod(original)
 
 
 def test_trainer_yaml_reconstruction_error_tampered_log() -> None:

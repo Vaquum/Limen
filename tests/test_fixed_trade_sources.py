@@ -13,7 +13,7 @@ from threadpoolctl import threadpool_limits
 
 from limen.data import HistoricalData
 from limen.experiment import UniversalExperimentLoop
-from limen.experiment.manifest_core import DataSourceConfig, MLManifest, RuleBasedManifest
+from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, MLManifest, RuleBasedManifest
 from limen.sfd.reference_architecture import LogRegBinary
 from limen.yaml import CompiledSFD, build_search_strategy
 from tests.test_record_model_outputs import _config as _binary_config
@@ -57,7 +57,14 @@ def recorded_learning_bars():
 @pytest.fixture(autouse=True)
 def _source_calls_and_native_limit(monkeypatch):
     SOURCE_CALLS.clear()
-    monkeypatch.setattr(HistoricalData, 'get_any_file', staticmethod(recorded_source))
+    original = DataSourceResolver.resolve
+
+    def execute(config):
+        if config.method is HistoricalData.get_any_file:
+            return recorded_source(**config.params)
+        return original(config)
+
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(execute))
     with threadpool_limits(limits=1):
         yield
 
