@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import inspect
 import pickle
 import multiprocessing
 import copy
@@ -1255,6 +1256,18 @@ def _assert_factory_resources(plan, params):
         expected, _ = _factory_probe(frozen_factory, factory)
         from tests.test_parallel_rounds import recorded_source
         assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(DefaultRollingFactory.__call__, '__kwdefaults__', {'n_jobs': 2})
+            captured_instance = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+            validate_domain(captured_instance, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
+        before = digest(captured_instance)
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, captured_instance, factory).result(timeout=30)
+            expected, _ = _factory_probe(captured_instance, factory)
+            bound = captured_instance.manifest.resolve_model_kwargs(params | {'auxiliary_factory': factory})['auxiliary_factory']
+            assert inspect.signature(bound).parameters['n_jobs'].default == 2
+            assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
+        assert digest(captured_instance) == before and DefaultRollingFactory.__call__.__kwdefaults__ == {'n_jobs': 1}
         declare_parallel(CallerRolling, ParallelRoundContract(_caller_validator, ('window',)))
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(CallerRolling.__init__, '__defaults__', (3,))

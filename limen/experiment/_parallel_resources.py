@@ -73,7 +73,7 @@ def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | N
     result: dict[str, list[object]] = {}
     for name, values in (defaults | dict(options or {})).items():
         for value in values:
-            if name.endswith('_factory') and (isinstance(value, (type, partial)) or isfunction(value)) and value is not Parameter.empty:
+            if name.endswith('_factory') and callable(value) and value is not Parameter.empty:
                 source, imported = factory_reference(cast(object, value))
                 result.setdefault(name, []).append((source, component_digest(cast(object, value)), imported, _factory_component(cast(object, value))))
     return result
@@ -83,7 +83,7 @@ def bind_factories(inventory: Mapping[str, list[object]], kwargs: Mapping[str, o
     result = dict(kwargs)
     for name, variants in inventory.items():
         value = kwargs.get(name)
-        if isfunction(value) or isinstance(value, (type, partial)):
+        if callable(value):
             source, imported = factory_reference(cast(object, value))
             fingerprint = component_digest(cast(object, value))
             choices = cast(list[tuple[list[object], str, bool, object]], variants)

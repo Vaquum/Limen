@@ -18,7 +18,7 @@ import polars as pl
 from typing_extensions import override
 
 from limen._parallel_contract import ParallelRoundContract, attach
-from limen.experiment._parallel_encoding import _import, decode, digest, encode, reference, source_digest
+from limen.experiment._parallel_encoding import import_reference, decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import copy_context
 from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
@@ -132,7 +132,7 @@ def factory_reference(value: object) -> tuple[list[object], bool]:
         source, imported = factory_reference(bound.func)
         return [reference(type(bound)), source, encode((state[0], state[1], bound.args, bound.keywords, state[3]))], imported
     if not (inspect.isfunction(value) or isinstance(value, type)):
-        return [component_digest(value)], False
+        return [reference(type(value)), encode(object_state(value))], callable(value)
     identity = reference(value)
     original: object = import_module(cast(list[str], identity[0])[0])
     for part in cast(str, identity[1]).split('.'):
@@ -219,8 +219,8 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
 
 def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
     if (callable(value) and not isinstance(value, type)) or isinstance(value, defaultdict):
-        imported = _import(reference(value.__func__ if isinstance(value, MethodType) else value)) if not snapshot and isinstance(value, (FunctionType, MethodType)) else None
-        isolate = snapshot or imported is not None and encode(getattr(imported, '__parallel_round_contract__', None)) != encode(getattr(cast(object, value), '__parallel_round_contract__', None))
+        imported = import_reference(reference(value.__func__ if isinstance(value, MethodType) else value)) if not snapshot and isinstance(value, (FunctionType, MethodType)) else None
+        isolate = snapshot or (imported is not None and encode(getattr(imported, '__parallel_round_contract__', None)) != encode(getattr(cast(object, value), '__parallel_round_contract__', None)))
         with shared_copy(state_memo):
             clone = decode(encode(cast(object, value)), isolate_functions=isolate)
         if isinstance(value, FunctionType) and clone is not value and (snapshot or mutable_function(value)):

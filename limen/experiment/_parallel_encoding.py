@@ -126,7 +126,7 @@ def _owner_call(cls: type) -> list[object]:
     return ['owner_call', reference(cls), module_identity(implementation.__module__), implementation.__qualname__]
 
 
-def _import(node: object) -> object:
+def import_reference(node: object) -> object:
     identity, name = cast(list[object], node)
     if module_identity(module_name := cast(list[str], identity)[0]) != identity:
         raise ValueError('Parallel imported source or dependency identity changed')
@@ -173,7 +173,7 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
     if tag in ('cell', 'owner_call', 'import'):
         return _decode_reference(parts, ordered=ordered, isolate_functions=isolate_functions)
     if tag == 'function':
-        source = _import(value)
+        source = import_reference(value)
         if not inspect.isfunction(source):
             raise ValueError('Parallel function implementation changed')
         defaults, keywords, closure, wrapped = [decode(item, ordered=True, isolate_functions=isolate_functions) for item in parts[2:]]
@@ -205,17 +205,17 @@ def _decode_reference(parts: list[object], *, ordered: bool, isolate_functions: 
     if tag == 'cell':
         return CellType(decode(value, ordered=ordered, isolate_functions=isolate_functions))
     if tag == 'owner_call':
-        cls = cast(type, _import(value))
+        cls = cast(type, import_reference(value))
         if _owner_call(cls) != parts:
             raise ValueError('Parallel callable implementation changed')
         return cls.__call__
-    return _import(value)
+    return import_reference(value)
 
 
 def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only: bool = False) -> object:
     tag, value, state, implementation = parts
     if tag == 'dataclass':
-        cls = cast(type, _import(value))
+        cls = cast(type, import_reference(value))
         params = {cast(str, key): decode(item, ordered=True, isolate_functions=isolate_functions) for key, item in cast(list[list[object]], state)}
         if set(params) != {field.name for field in fields(cls)}:
             raise ValueError('Invalid parallel dataclass fields')
@@ -223,7 +223,7 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only
         for field in fields(cls):
             object.__setattr__(instance, field.name, params[field.name])
     elif tag == 'instance':
-        instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
+        instance = restore_object(cast(type, import_reference(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
     captured = decode(implementation, isolate_functions=isolate_functions)
