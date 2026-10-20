@@ -118,9 +118,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
-        if type(item) is int and item is _CANONICAL_INTS.get(item):
-            return item
-        if item is None or type(item) in (str, bool, bytes):
+        if item is None or type(item) in (str, bool, bytes) or (type(item) is int and item is _CANONICAL_INTS.get(item)):
             return item
         if isinstance(item, ModuleType):
             return ('module', item.__name__)
