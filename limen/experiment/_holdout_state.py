@@ -126,7 +126,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     def structure(item: object) -> object:
         kind = (type(item).__module__, type(item).__qualname__)
         if type(item) is dict:
-            return (kind, None, tuple((node(key), node(part)) for key, part in item.items()), None)
+            return (kind, None, tuple((node(key), node(part)) for key, part in cast(dict[object, object], item).items()), None)
         if type(item) in (list, tuple):
             return (kind, tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         if type(item) in (set, frozenset):
