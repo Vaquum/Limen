@@ -6,7 +6,6 @@ from itertools import product
 from inspect import Parameter, signature, isfunction, Signature
 from dataclasses import dataclass
 from importlib import import_module
-from string import Formatter
 
 import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest

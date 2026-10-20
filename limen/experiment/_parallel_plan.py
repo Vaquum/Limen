@@ -35,6 +35,7 @@ class _CapturedCall(partial[object]):
     def __getattr__(self, name: str) -> object:
         return getattr(cast(MethodType, self.func).__self__, name)
 
+    @override
     def __setattr__(self, name: str, value: object) -> None:
         if name == '__parallel_round_contract__':
             vars(self)[name] = value
