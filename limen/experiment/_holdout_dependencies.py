@@ -127,7 +127,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 name = str(instruction.argval)
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') and name == '__globals__':
                     lookup = instructions[index + 1:index + 3]
-                    if len(lookup) != 2 or lookup[0].opname != 'LOAD_CONST' or not isinstance(lookup[0].argval, str) or lookup[1].opname != 'BINARY_SUBSCR':
+                    if not lookup[1:] or lookup[0].opname != 'LOAD_CONST' or not isinstance(lookup[0].argval, str) or lookup[1].opname != 'BINARY_SUBSCR':
                         raise ValueError('Holdout requires a literal key for reflective function globals')
                     reflective_keys.add(lookup[0].argval)
                 if instruction.opname == 'LOAD_GLOBAL' and name == 'globals' and name not in value.__globals__:
