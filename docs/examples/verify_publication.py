@@ -1,10 +1,12 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import io
 import json
 from pathlib import Path, PurePosixPath
 import re
 import tarfile
+from urllib.error import HTTPError
 from urllib.parse import urljoin, urlparse
 from urllib.request import urlopen
 
@@ -25,6 +27,31 @@ def manifest_name(payload: bytes) -> str:
 def verify_release_manifest(release_url: str, payload: bytes) -> None:
     if fetch(urljoin(release_url.rstrip('/') + '/', manifest_name(payload))) != payload:
         raise ValueError('The active manifest differs from the public GitHub Release')
+
+
+def verify_site(base_url: str, files: dict[str, bytes]) -> None:
+    def member(item):
+        name, expected = item
+        relative_path(name)
+        route = name.removesuffix('index.html') if name.endswith('index.html') else name
+        url = urljoin(base_url, route)
+        anonymous_url(url)
+        with urlopen(url, timeout=30) as response:
+            anonymous_url(response.geturl())
+            if response.read() != expected:
+                raise ValueError('The active site member differs from its sealed payload: ' + name)
+            if name.endswith('.html'):
+                for header in ('Content-Security-Policy', 'Permissions-Policy', 'Referrer-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options', 'X-Frame-Options'):
+                    if not response.headers.get(header):
+                        raise ValueError('A published document lost its security header: ' + header)
+    with ThreadPoolExecutor(max_workers=8) as readers:
+        list(readers.map(member, ((name, data) for name, data in files.items() if name != '404.html')))
+    try:
+        with urlopen(urljoin(base_url, '__missing-docs-acceptance__/'), timeout=30):
+            raise ValueError('An unknown documentation route did not return 404')
+    except HTTPError as error:
+        if error.code != 404 or error.read() != files['404.html']:
+            raise ValueError('The deployed 404 differs from the sealed reader') from error
 
 
 def relative_path(value: str) -> str:
@@ -129,8 +156,7 @@ def verify(base_url: str, release: str):
             raise ValueError('Publication advertises unmerged source')
         if source['region'] == '__file__' and sha256(site['source/' + relative_path(source['path'])]) != source['sha256']:
             raise ValueError('Publication source file differs from its evidence')
-    if fetch(base_url) != site['index.html']:
-        raise ValueError('The active site differs from the validated release')
+    verify_site(base_url, site)
     return {'release': release, 'merged_commit': commit, 'artifacts': len(files), 'source_records': len(record['sources'])}
 
 

@@ -10,7 +10,7 @@ import pytest
 
 from build_bundle import write_archive
 from publication import restore, validated_site_files
-from verify_publication import ROLES, archive_files, fetch, manifest_name, relative_path, retrieve, sha256, verify_release_manifest
+from verify_publication import ROLES, archive_files, fetch, manifest_name, relative_path, retrieve, sha256, verify_release_manifest, verify_site
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -65,6 +65,51 @@ def test_publication_manifest_rebuild_preserves_the_previous_release_identity(tm
         (tmp_path / manifest_name(previous)).write_bytes(current)
         with pytest.raises(ValueError, match='manifest differs'):
             verify_release_manifest(base, previous)
+    finally:
+        server.shutdown()
+        server.server_close()
+        worker.join(timeout=3)
+
+
+def test_every_published_member_and_the_404_must_match_the_sealed_bytes(tmp_path):
+    source = (ROOT / 'docs/examples/python-research/research.py').read_bytes()
+    observation = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
+    missing = (ROOT / 'docs/examples/retained/compiled-selection.json').read_bytes()
+    files = {'index.html': observation, 'chapter/index.html': observation, 'source/research.py': source, '404.html': missing}
+    for name, data in files.items():
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+
+    class Handler(SimpleHTTPRequestHandler):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, directory=str(tmp_path), **kwargs)
+
+        def end_headers(self):
+            for name, value in [('Content-Security-Policy', "default-src 'self'; frame-ancestors 'none'"),
+                                ('Permissions-Policy', 'camera=(), microphone=()'), ('Referrer-Policy', 'strict-origin-when-cross-origin'),
+                                ('Strict-Transport-Security', 'max-age=31536000'), ('X-Content-Type-Options', 'nosniff'), ('X-Frame-Options', 'DENY')]:
+                self.send_header(name, value)
+            super().end_headers()
+
+        def send_error(self, code, message=None, explain=None):
+            self.send_response(code)
+            self.send_header('Content-Length', str(len(missing)))
+            self.end_headers()
+            self.wfile.write(missing)
+
+    server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+    worker = Thread(target=server.serve_forever, daemon=True)
+    worker.start()
+    try:
+        base = f'http://127.0.0.1:{server.server_port}/'
+        verify_site(base, files)
+        (tmp_path / 'source/research.py').write_bytes(observation)
+        with pytest.raises(ValueError, match='member differs.*source/research.py'):
+            verify_site(base, files)
+        (tmp_path / 'source/research.py').write_bytes(source)
+        with pytest.raises(ValueError, match='404 differs'):
+            verify_site(base, files | {'404.html': observation})
     finally:
         server.shutdown()
         server.server_close()
