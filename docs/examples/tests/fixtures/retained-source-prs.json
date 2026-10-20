@@ -1,0 +1,527 @@
+{
+  "head": "f1d78fb436e6e92c3b645eb2ac773ab52f0d30a4",
+  "base": "dadf6be64548e03d00d20d7d757191297db34002",
+  "captured_source_record_sha256": "7cd0c82876e9347bafac567b376cf00a076ac0a191e6aa5925d31e19eb2d1675",
+  "responses": {
+    "05d3ca3e46c9a5887487e253f604ccfb382b80e7": [
+      {
+        "merged_at": "2026-07-13T14:35:46Z",
+        "merge_commit_sha": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+        "html_url": "https://github.com/Vaquum/Limen/pull/682",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "12e7ef4e9a982d0570cc236ea16836bf577b7ad0": [
+      {
+        "merged_at": "2026-10-16T22:28:11Z",
+        "merge_commit_sha": "12e7ef4e9a982d0570cc236ea16836bf577b7ad0",
+        "html_url": "https://github.com/Vaquum/Limen/pull/929",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "158376c276d462711ce0ddbfd4e612f9343aac4e": [
+      {
+        "merged_at": "2026-06-06T07:04:07Z",
+        "merge_commit_sha": "158376c276d462711ce0ddbfd4e612f9343aac4e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/566",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "15bf95279275ee12a13edc2b6dbe463c2aa740f5": [
+      {
+        "merged_at": "2026-10-18T17:45:14Z",
+        "merge_commit_sha": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+        "html_url": "https://github.com/Vaquum/Limen/pull/967",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "17b73d57f602e19c01e3efce9148c5b7c1c34a0e": [
+      {
+        "merged_at": "2026-10-19T22:36:13Z",
+        "merge_commit_sha": "17b73d57f602e19c01e3efce9148c5b7c1c34a0e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1076",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "294b2a3d38231eefc14500077bb8a8e9de373e2a": [
+      {
+        "merged_at": "2026-07-10T13:38:23Z",
+        "merge_commit_sha": "294b2a3d38231eefc14500077bb8a8e9de373e2a",
+        "html_url": "https://github.com/Vaquum/Limen/pull/666",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2": [
+      {
+        "merged_at": "2026-07-13T20:32:15Z",
+        "merge_commit_sha": "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2",
+        "html_url": "https://github.com/Vaquum/Limen/pull/679",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "2bb55d1892233cc2501b290e653b3a05ee1ff682": [
+      {
+        "merged_at": "2026-10-18T23:12:09Z",
+        "merge_commit_sha": "2bb55d1892233cc2501b290e653b3a05ee1ff682",
+        "html_url": "https://github.com/Vaquum/Limen/pull/977",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da": [
+      {
+        "merged_at": "2026-10-20T01:01:10Z",
+        "merge_commit_sha": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1068",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "367e4a41a6bc680b5a664952b5e22772360fbd0f": [
+      {
+        "merged_at": "2026-10-20T06:04:11Z",
+        "merge_commit_sha": "367e4a41a6bc680b5a664952b5e22772360fbd0f",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1095",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "3b30e18643e976840572c11498344eb73c23d3b0": [
+      {
+        "merged_at": "2026-10-13T12:33:10Z",
+        "merge_commit_sha": "3b30e18643e976840572c11498344eb73c23d3b0",
+        "html_url": "https://github.com/Vaquum/Limen/pull/916",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "405029b9cecc1b79c325c95944eebe03bf618804": [
+      {
+        "merged_at": "2026-10-19T11:23:19Z",
+        "merge_commit_sha": "405029b9cecc1b79c325c95944eebe03bf618804",
+        "html_url": "https://github.com/Vaquum/Limen/pull/998",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "4606dfd0323f641d482f21c509438dc0de296b09": [
+      {
+        "merged_at": "2026-10-17T18:03:12Z",
+        "merge_commit_sha": "4606dfd0323f641d482f21c509438dc0de296b09",
+        "html_url": "https://github.com/Vaquum/Limen/pull/954",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "52ce3eeca53987fc5c3e6fc81c0d675f406327f2": [
+      {
+        "merged_at": "2026-10-20T03:32:11Z",
+        "merge_commit_sha": "52ce3eeca53987fc5c3e6fc81c0d675f406327f2",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1088",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "563ad03410aeb2faf32355e7623af14c838f2080": [
+      {
+        "merged_at": "2026-10-18T15:49:13Z",
+        "merge_commit_sha": "563ad03410aeb2faf32355e7623af14c838f2080",
+        "html_url": "https://github.com/Vaquum/Limen/pull/963",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "5fd2edf297176cdad46c337af17789076ea6640a": [
+      {
+        "merged_at": "2026-05-21T06:35:25Z",
+        "merge_commit_sha": "5fd2edf297176cdad46c337af17789076ea6640a",
+        "html_url": "https://github.com/Vaquum/Limen/pull/528",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "65b613d48bc1076a17ebac79cde13224c9efd9b1": [
+      {
+        "merged_at": "2026-10-09T09:39:10Z",
+        "merge_commit_sha": "65b613d48bc1076a17ebac79cde13224c9efd9b1",
+        "html_url": "https://github.com/Vaquum/Limen/pull/862",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "724a4ebf7896f93ea0f8beaa3dc42a3f0b9a8a22": [
+      {
+        "merged_at": "2026-09-16T10:12:24Z",
+        "merge_commit_sha": "724a4ebf7896f93ea0f8beaa3dc42a3f0b9a8a22",
+        "html_url": "https://github.com/Vaquum/Limen/pull/813",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "792dfed5c9a527c4c33bcf4f0c5020e17ce6af92": [
+      {
+        "merged_at": "2026-10-14T08:14:11Z",
+        "merge_commit_sha": "792dfed5c9a527c4c33bcf4f0c5020e17ce6af92",
+        "html_url": "https://github.com/Vaquum/Limen/pull/921",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "872d1c8af6f11e5e80f919f1977d634ef05223a8": [
+      {
+        "merged_at": "2026-10-19T17:00:13Z",
+        "merge_commit_sha": "872d1c8af6f11e5e80f919f1977d634ef05223a8",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1040",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "94445fdccdb0a645bd90d558541da3209c1d0681": [
+      {
+        "merged_at": "2026-10-19T19:27:12Z",
+        "merge_commit_sha": "94445fdccdb0a645bd90d558541da3209c1d0681",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1041",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "98767d50970ae852cfbaf6d4c62701fc667a8ba9": [
+      {
+        "merged_at": "2026-10-19T19:46:13Z",
+        "merge_commit_sha": "98767d50970ae852cfbaf6d4c62701fc667a8ba9",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1053",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "9be1234d891087f5a7f13c5d0142c8e73d436c01": [
+      {
+        "merged_at": "2026-10-20T19:35:25Z",
+        "merge_commit_sha": "9be1234d891087f5a7f13c5d0142c8e73d436c01",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1115",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "ad5b70f2c5ad9be39d0cc4d4b89fb726b857354d": [
+      {
+        "merged_at": "2026-10-19T14:25:10Z",
+        "merge_commit_sha": "ad5b70f2c5ad9be39d0cc4d4b89fb726b857354d",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1010",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "b8a8c5594155b0052d4269465cf9a505b03839c7": [
+      {
+        "merged_at": "2026-10-18T21:25:09Z",
+        "merge_commit_sha": "b8a8c5594155b0052d4269465cf9a505b03839c7",
+        "html_url": "https://github.com/Vaquum/Limen/pull/974",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "bd7a901f2ed4c6c182bb80fe0517833cbbb18fa1": [
+      {
+        "merged_at": "2026-07-09T10:51:23Z",
+        "merge_commit_sha": "bd7a901f2ed4c6c182bb80fe0517833cbbb18fa1",
+        "html_url": "https://github.com/Vaquum/Limen/pull/665",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "bf2df33f97f1f7ca551fc43dde01ffa7d3be063d": [
+      {
+        "merged_at": "2026-10-05T06:22:13Z",
+        "merge_commit_sha": "bf2df33f97f1f7ca551fc43dde01ffa7d3be063d",
+        "html_url": "https://github.com/Vaquum/Limen/pull/843",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38": [
+      {
+        "merged_at": "2026-07-08T14:28:11Z",
+        "merge_commit_sha": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+        "html_url": "https://github.com/Vaquum/Limen/pull/657",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "ce77964bffdc6e4b015277cec207d707d779688d": [
+      {
+        "merged_at": "2026-10-10T20:30:57Z",
+        "merge_commit_sha": "ce77964bffdc6e4b015277cec207d707d779688d",
+        "html_url": "https://github.com/Vaquum/Limen/pull/907",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "dadf6be64548e03d00d20d7d757191297db34002": [
+      {
+        "merged_at": "2026-10-20T19:43:19Z",
+        "merge_commit_sha": "dadf6be64548e03d00d20d7d757191297db34002",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1117",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "dde4ba0e0f81ce498c2185e258358c409d4434d6": [
+      {
+        "merged_at": "2026-07-11T12:34:36Z",
+        "merge_commit_sha": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+        "html_url": "https://github.com/Vaquum/Limen/pull/675",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "e0c18671239bd39289730f6426cbf183c916e86e": [
+      {
+        "merged_at": "2026-10-19T07:17:13Z",
+        "merge_commit_sha": "e0c18671239bd39289730f6426cbf183c916e86e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/988",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "ec254c73f0ff47cfcc2017e262458b2d5f671fb0": [
+      {
+        "merged_at": "2026-10-18T20:09:10Z",
+        "merge_commit_sha": "ec254c73f0ff47cfcc2017e262458b2d5f671fb0",
+        "html_url": "https://github.com/Vaquum/Limen/pull/970",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f07daaee76e3a787481792bf332b27c045b2caf9": [
+      {
+        "merged_at": "2026-05-24T11:07:37Z",
+        "merge_commit_sha": "f07daaee76e3a787481792bf332b27c045b2caf9",
+        "html_url": "https://github.com/Vaquum/Limen/pull/546",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f0c121a44f811a9d5a49554c38d6da89fa84ebe8": [
+      {
+        "merged_at": "2026-10-19T22:11:14Z",
+        "merge_commit_sha": "f0c121a44f811a9d5a49554c38d6da89fa84ebe8",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1072",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f1804ec1c599027d751909999f08d18a8b2a65b6": [
+      {
+        "merged_at": "2026-03-31T20:59:29Z",
+        "merge_commit_sha": "f1804ec1c599027d751909999f08d18a8b2a65b6",
+        "html_url": "https://github.com/Vaquum/Limen/pull/423",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f323297d8c0ac46380f742ab2e115acdb8decad2": [
+      {
+        "merged_at": "2026-10-14T07:33:10Z",
+        "merge_commit_sha": "f323297d8c0ac46380f742ab2e115acdb8decad2",
+        "html_url": "https://github.com/Vaquum/Limen/pull/920",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f45023322470e49eb3e12c8c5a49a3210cde203c": [
+      {
+        "merged_at": "2026-10-10T06:47:02Z",
+        "merge_commit_sha": "f45023322470e49eb3e12c8c5a49a3210cde203c",
+        "html_url": "https://github.com/Vaquum/Limen/pull/893",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f78356f49496ccbe90a4b1da9929b8d890369fcb": [
+      {
+        "merged_at": "2026-10-20T13:49:23Z",
+        "merge_commit_sha": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1085",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "fb5dc4f26ccc1cbb5667258e4531e63b51da569e": [
+      {
+        "merged_at": "2026-10-19T18:02:14Z",
+        "merge_commit_sha": "fb5dc4f26ccc1cbb5667258e4531e63b51da569e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1044",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ]
+  }
+}

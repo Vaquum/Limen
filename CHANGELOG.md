@@ -1875,6 +1875,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Report post-experiment confusion only for binary classification; record explicit unavailability for exposure, continuous, and unclassifiable outputs while preserving backtests, correlation, and the convergence report.
 
-## [5.45.16] - 2026-10-20
+## [5.45.16] - 2026-10-21
 
 - Preserve the mainline provenance boundary when qualifying original PR heads after merge; allow the reviewed checker to inspect an explicit retained checkout.
+- Use one reviewed provenance dependency for retained source acquisition, original book tests and reader evidence validation; retain separate checker identities and unchanged product sources.
