@@ -155,14 +155,14 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         source = _import(value)
         if not inspect.isfunction(source):
             raise ValueError('Parallel function implementation changed')
-        if not isolate_functions and encode(source) == parts:
-            return source
-        function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), source.__closure__)
-        function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True, isolate_functions=isolate_functions))
-        function.__module__, function.__qualname__ = source.__module__, source.__qualname__
-        function.__annotations__ = source.__annotations__.copy()
-        if '__parallel_round_contract__' in vars(source):
-            vars(function)['__parallel_round_contract__'] = vars(source)['__parallel_round_contract__']
+        function = source
+        if isolate_functions or encode(source) != parts:
+            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), source.__closure__)
+            function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True, isolate_functions=isolate_functions))
+            function.__module__, function.__qualname__ = source.__module__, source.__qualname__
+            function.__annotations__ = source.__annotations__.copy()
+            if '__parallel_round_contract__' in vars(source):
+                vars(function)['__parallel_round_contract__'] = vars(source)['__parallel_round_contract__']
         return function
     if tag == 'method':
         method = getattr(decode(value, isolate_functions=isolate_functions), cast(str, parts[2]))
