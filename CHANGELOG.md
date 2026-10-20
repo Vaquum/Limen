@@ -1861,4 +1861,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.10] - 2026-10-20
 
+- Admit fixed-threshold binary evaluation targets over OHLC columns with horizon one to final holdout assessment; pin the shift in the frozen spec and validate binary labels with per-row availability.
+
+## [5.45.12] - 2026-10-20
+
 - Reject null, nonnumeric, boolean and nonfinite compiled Sensor prediction values; preserve valid numeric scores and native Python inference.
