@@ -10,6 +10,7 @@ from ruamel.yaml import YAML
 
 from limen.cli.main import cli
 from limen.data import HistoricalData
+from limen.experiment.manifest_core import DataSourceResolver
 from limen.experiment import CalibrationConfig, UniversalExperimentLoop
 from limen.inference import Trainer
 from limen.sfd.reference_architecture import LightGBMBinary, LogRegBinary, TabPFNBinary, XGBoostRegressor
@@ -24,6 +25,11 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture(scope='module')
 def recorded_bars():
     return recorded_source()
+
+
+def _recorded_data_source(config):
+    assert config.method is HistoricalData.get_spot_klines
+    return recorded_source(**config.params)
 
 
 def recorded_source(**kwargs):
@@ -300,7 +306,7 @@ def test_cli_records_and_resumes_independently_of_execution(record_execution, re
     yaml_path = tmp_path / 'experiment.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(recorded_source))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_data_source))
     original_run = UniversalExperimentLoop.run
 
     def interrupted_run(loop, *args, **kwargs):
@@ -333,7 +339,7 @@ def test_cli_records_and_resumes_independently_of_execution(record_execution, re
 def test_cli_resume_uses_python_effective_setting(recorded_bars, tmp_path, monkeypatch):
     config = _config()
     assert 'record_model_outputs' not in config['uel']
-    monkeypatch.setattr(HistoricalData, 'get_spot_klines', staticmethod(recorded_source))
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_data_source))
     first = _loop(config, recorded_bars, tmp_path)
     _stop_after_first(first)
     _run(first, record_model_outputs=True)
