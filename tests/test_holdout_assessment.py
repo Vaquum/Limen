@@ -1219,6 +1219,17 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + round(self.policy, 2), 0, 1)
             return result
+    class ContextPolicy:
+        def __enter__(self):
+            return _LATE_RULES['offset']
+        def __exit__(self, *args):
+            return False
+    class Contextual(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            with self.policy as offset:
+                result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
     class ComparisonPolicy:
         def __gt__(self, other):
             return _LATE_RULES['offset'] > other
@@ -1235,9 +1246,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ConversionPolicy()):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ContextPolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Contextual if isinstance(provider, ContextPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1436,6 +1447,30 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         assert loader.call_count == 0
     with pytest.raises(ValueError, match='unowned randomness'), readonly_prediction([nested]):
         os.urandom(1)
+    class NativePartial(partial):
+        __call__ = staticmethod(max)
+    unsafe_callback = copy.deepcopy(assessment_case[2][0][0])
+    unsafe_callback._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativePartial(identity_probabilities)))
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+            _freeze(unsafe_callback)
+        assert loader.call_count == 0
+    class ReadonlyCallable:
+        def __call__(self, values):
+            return identity_probabilities(values)
+    class UsesReadonlyCallable(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy(result['_probs'])
+            return result
+    distinct = copy.deepcopy(assessment_case[2][0][0])
+    distinct._model.__class__ = UsesReadonlyCallable
+    distinct._model.policy = ReadonlyCallable()
+    distinct._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=partial(ReadonlyCallable())))
+    distinct_handle = _freeze(distinct)
+    assert _report(distinct_handle, assessment_case)['rows_sha256']
+    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
+        distinct._model.callback_provider.prediction_calibration_config.threshold_func(distinct._model.model.coef_.ravel())
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)

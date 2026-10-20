@@ -12,8 +12,7 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_array
-from limen.experiment._holdout_state import restore_iterations
+from limen.experiment._holdout_dependencies import FITTING_METHODS, call_functions, children, fitted_witness, fitting_call, entropy_call, inference_evidence, object_array, restore_iterations
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
@@ -23,26 +22,6 @@ _EFFECTS = FITTING_METHODS
 
 def _roots(sensor: Sensor) -> list[object]:
     return [vars(sensor)['_model'], vars(sensor)['_fitted_params']]
-
-
-def _call_functions(value: object) -> tuple[FunctionType, ...]:
-    if isinstance(value, (staticmethod, classmethod)):
-        descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
-        return _call_functions(descriptor.__func__)
-    if isinstance(value, partial):
-        provider = cast(partial[object], value)
-        return (*_call_functions(provider.func), *_call_functions(type(provider).__call__))
-    if isinstance(value, type):
-        return (*_call_functions(value.__init__), *_call_functions(value.__new__), *_call_functions(type(value).__call__))
-    if inspect.ismethod(value):
-        value = value.__func__
-    if inspect.isfunction(value):
-        unwrapped = inspect.unwrap(value)
-        return (value, *_call_functions(unwrapped)) if unwrapped is not value else (value,)
-    call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-    functions = _call_functions(call.fget) if isinstance(call, property) else _call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
-    unwrapped = inspect.unwrap(value) if callable(value) else value
-    return (*functions, *_call_functions(unwrapped)) if unwrapped is not value else functions
 
 
 def _matches(function: FunctionType, frame: FrameType, owner: object | None) -> bool:
@@ -72,14 +51,27 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         if not callable(method):
             return
         call = None if inspect.isfunction(method) or inspect.ismethod(method) else inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
-        calls = _call_functions(call)
-        functions = _call_functions(method)
+        calls = call_functions(call)
+        functions = call_functions(method)
         if not functions:
             raise ValueError('Holdout refuses fitting callbacks without observable Python call protection')
         bound_owner = method.__self__ if inspect.ismethod(method) else None
         call_owner: object | None = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
         wrapped = cast(partial[object], method).func if isinstance(method, partial) else None
-        wrapped_owner = wrapped.__self__ if inspect.ismethod(wrapped) else None
+        while isinstance(wrapped, (partial, staticmethod)):
+            if isinstance(wrapped, staticmethod):
+                wrapped = cast('staticmethod[..., object]', wrapped).__func__
+            elif inspect.getattr_static(cast(type[object], type(wrapped)), '__call__', None) is partial[object].__call__:
+                wrapped = cast(partial[object], wrapped).func
+            else:
+                break
+        if inspect.ismethod(wrapped):
+            wrapped_owner = wrapped.__self__
+        elif wrapped is None or inspect.isfunction(wrapped) or isinstance(wrapped, type):
+            wrapped_owner = None
+        else:
+            wrapped_call = inspect.getattr_static(cast(type[object], type(wrapped)), '__call__', None)
+            wrapped_owner = type(wrapped) if isinstance(wrapped_call, classmethod) else None if isinstance(wrapped_call, staticmethod) else wrapped
         for function in functions:
             owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
             forbidden.setdefault(function.__code__, []).append((function, owner))

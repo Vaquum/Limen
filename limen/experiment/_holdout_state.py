@@ -9,6 +9,7 @@ from io import IOBase
 import logging
 import marshal
 import pickle
+import typing
 from types import CodeType, GenericAlias, GetSetDescriptorType, ModuleType
 from typing import TypeGuard, cast
 
@@ -16,7 +17,16 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-__all__ = ['children', 'code_digest', 'fitted_witness', 'object_array', 'restore_iterations']
+__all__ = ['children', 'code_digest', 'fitted_witness', 'object_array']
+
+
+_PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
+
+
+def _typing_metadata(value: object) -> dict[str, object] | None:
+    if type(value) not in _PARAMETER_TYPES:
+        return None
+    return {name: getattr(value, name) for name in ('__name__', '__bound__', '__constraints__', '__covariant__', '__contravariant__', '__infer_variance__', '__default__', '__origin__') if hasattr(value, name)}
 
 
 @lru_cache(maxsize=2048)
@@ -52,9 +62,12 @@ def children(value: object) -> tuple[object, ...]:
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_array(value):
         return (npt.NDArray[np.generic].tolist(value), *_attributes(cast(object, value)).values())
-    if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)):
+    metadata = _typing_metadata(value)
+    if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)) or metadata is not None:
         parts: tuple[object, ...]
-        if isinstance(value, (staticmethod, classmethod)):
+        if metadata is not None:
+            parts = tuple(metadata.values())
+        elif isinstance(value, (staticmethod, classmethod)):
             descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
             parts = (descriptor.__func__,)
         elif isinstance(value, GenericAlias):
@@ -77,7 +90,7 @@ def _attributes(value: object) -> dict[str, object]:
         if isinstance(descriptor, GetSetDescriptorType):
             values.update(cast(dict[str, object], descriptor.__get__(value, type(value))))
             native_dict = True
-    if type(value).__dictoffset__ and not native_dict:
+    if type(value).__dictoffset__ and not native_dict and _typing_metadata(value) is None:
         raise ValueError('Holdout refuses hidden native instance dictionaries')
     for cls in type(value).__mro__:
         declaration = cls.__dict__.get('__slots__', ())
@@ -131,6 +144,8 @@ def fitted_witness(value: object) -> bytes:
         elif inspect.isfunction(item):
             closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
             result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
+        elif (metadata := _typing_metadata(item)) is not None:
+            result = (kind, 'typing-parameter', node(metadata), node(_attributes(item)))
         elif isinstance(item, GenericAlias):
             metadata = {name: vars(GenericAlias)[name].__get__(item, type(item)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
             result = (kind, 'generic-alias', node(metadata), node(_attributes(cast(object, item))))
@@ -171,26 +186,3 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, pickle.dumps(item, protocol=5))
         return result
     return pickle.dumps(node(value), protocol=5)
-
-
-def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
-    seen: set[int] = set()
-
-    def visit(value: object) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or id(value) in seen:
-            return
-        seen.add(id(value))
-        if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
-            from lightgbm import Booster
-            original = cast(Booster, value)
-            prediction = inspect.getattr_static(cast(type[object], type(original)), 'predict', None)
-            if 'predict' in vars(original) or not inspect.isfunction(prediction) or (prediction.__module__, prediction.__qualname__) != ('lightgbm.basic', 'Booster.predict'):
-                raise ValueError('Holdout refuses replaced Booster prediction methods')
-            copied = cast(Booster, memo[id(value)])
-            copied.best_iteration = original.best_iteration
-        for part in children(value):
-            visit(part)
-
-    visit(source)
-
-

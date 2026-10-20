@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from functools import lru_cache, partial
 from hashlib import sha256
 import inspect
@@ -10,7 +10,7 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, ModuleType
+from types import CodeType, FunctionType, ModuleType
 from typing import cast
 
 import numpy as np
@@ -18,7 +18,7 @@ import polars as pl
 
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_array
 
-__all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array']
+__all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array', 'restore_iterations']
 
 
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
@@ -167,7 +167,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 evidence.append((value.__name__, name, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
             return
         cls = value if isinstance(value, type) else type(value)
-        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
+        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
         done = processed.setdefault(id(cls), set())
@@ -204,3 +204,45 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
 def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:
     return sha256(pickle.dumps(inference_evidence(values, exclude=exclude, resolved=resolved, capture=capture), protocol=5)).hexdigest()
+
+
+def call_functions(value: object) -> tuple[FunctionType, ...]:
+    if isinstance(value, (staticmethod, classmethod)):
+        descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
+        return call_functions(descriptor.__func__)
+    if isinstance(value, partial):
+        provider = cast(partial[object], value)
+        call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
+        return call_functions(provider.func) if call is partial[object].__call__ else call_functions(call)
+    if isinstance(value, type):
+        return (*call_functions(value.__init__), *call_functions(value.__new__), *call_functions(type(value).__call__))
+    if inspect.ismethod(value):
+        value = value.__func__
+    if inspect.isfunction(value):
+        unwrapped = inspect.unwrap(value)
+        return (value, *call_functions(unwrapped)) if unwrapped is not value else (value,)
+    call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
+    functions = call_functions(call.fget) if isinstance(call, property) else call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
+    unwrapped = inspect.unwrap(value) if callable(value) else value
+    return (*functions, *call_functions(unwrapped)) if unwrapped is not value else functions
+
+
+def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
+    seen: set[int] = set()
+
+    def visit(value: object) -> None:
+        if value is None or type(value) in (str, bool, int, float, bytes) or id(value) in seen:
+            return
+        seen.add(id(value))
+        if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
+            from lightgbm import Booster
+            original = cast(Booster, value)
+            prediction = inspect.getattr_static(cast(type[object], type(original)), 'predict', None)
+            if 'predict' in vars(original) or not inspect.isfunction(prediction) or (prediction.__module__, prediction.__qualname__) != ('lightgbm.basic', 'Booster.predict'):
+                raise ValueError('Holdout refuses replaced Booster prediction methods')
+            copied = cast(Booster, memo[id(value)])
+            copied.best_iteration = original.best_iteration
+        for part in children(value):
+            visit(part)
+
+    visit(source)
