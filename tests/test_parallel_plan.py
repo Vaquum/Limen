@@ -12,13 +12,13 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from collections.abc import Mapping
 from pathlib import Path
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, fields, is_dataclass, replace
 from functools import partial, wraps
 
 import pytest
 import polars as pl
 
-from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage
+from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage, unfrozen_stage
 from limen.experiment._parallel_encoding import decode, digest, encode, source_digest
 from limen.experiment._parallel_plan import ScalerFactory, clone_manifest, freeze_manifest
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
@@ -619,9 +619,21 @@ def test_frozen_manifest_round_plan() -> None:
     original = build_manifest(config)
     plan = freeze_manifest(original, config)
     assert plan.manifest.architecture_function is not original.architecture_function
-    assert clone_manifest(plan.manifest).architecture_function is original.architecture_function
-    assert clone_manifest(plan.manifest).prediction_calibration_config.threshold_func is original.prediction_calibration_config.threshold_func
+    assert clone_manifest(plan.manifest).architecture_function is not original.architecture_function
+    assert clone_manifest(plan.manifest).prediction_calibration_config.threshold_func is not original.prediction_calibration_config.threshold_func
     assert plan.pipeline_digest == freeze_manifest(build_manifest(config), config).pipeline_digest
+    for component in (original.architecture_function, original.prediction_calibration_config.threshold_func):
+        revoked = replace(component.__parallel_round_contract__, validate=unfrozen_stage)
+        captured = digest(plan)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(component, '__parallel_round_contract__', revoked)
+            restored = clone_manifest(plan.manifest)
+            assert component.__parallel_round_contract__ is revoked
+            validate_resources(plan, _parameters())
+            validate_resources(freeze_manifest(restored, None), _parameters())
+            with pytest.raises(ValueError, match='unfrozen external state'):
+                validate_resources(freeze_manifest(original, None), _parameters())
+            assert component.__parallel_round_contract__ is revoked and digest(plan) == captured
     assert len(pickle.dumps(plan)) <= 65536
     from limen.experiment import _parallel_identity as identities
     def no_discovery():
@@ -1470,7 +1482,7 @@ def _assert_recovery_faults(configuration, directory, temporary):
         elif fault == 'version':
             metadata['limen_version'] = 'unknown'
         elif fault == 'downgraded':
-            metadata['limen_version'] = '5.45.7'
+            metadata['limen_version'] = '5.45.9'
         elif fault == 'worker':
             metadata['worker_native_threads'] = 2
         elif fault == 'marker':
@@ -1487,22 +1499,23 @@ def _assert_recovery_faults(configuration, directory, temporary):
 def _assert_legacy_recovery(configuration, directory, temporary):
     from limen.experiment.checkpoint_manager import CheckpointManager
     from tests.test_parallel_rounds import records, run_loop
-    legacy = temporary / 'legacy'
-    shutil.copytree(directory, legacy)
-    path = legacy / 'metadata.json'
-    metadata = json.loads(path.read_text())
-    metadata.update(limen_version='5.45.7')
-    metadata.pop('parallel_plan')
-    path.write_text(json.dumps(metadata))
-    checkpoint = CheckpointManager().load(legacy)
-    checkpoint.pop('parameter_encoding')
-    checkpoint['metadata']['content_hash'] = CheckpointManager.compute_content_hash(configuration['sfd']['params'])
-    (legacy / 'checkpoint.json').write_text(json.dumps(checkpoint))
-    converted = [wire_record(record, legacy=True) for record in records(directory)]
-    storage.round_path(legacy).write_bytes(b''.join(gzip.compress((json.dumps(record)+'\n').encode(),mtime=0) for record in converted))
-    resumed = run_loop(configuration, legacy, resume=True)
-    assert resumed.experiment_log.height == 2
-    assert all('parallel_plan' not in record and record['round_params']['tuple_tag'] in [[1,2],[3,4]] for record in records(legacy))
+    for version in ('5.45.7', '5.45.8', '5.45.9'):
+        legacy = temporary / ('legacy-' + version)
+        shutil.copytree(directory, legacy)
+        path = legacy / 'metadata.json'
+        metadata = json.loads(path.read_text())
+        metadata.update(limen_version=version)
+        metadata.pop('parallel_plan')
+        path.write_text(json.dumps(metadata))
+        checkpoint = CheckpointManager().load(legacy)
+        checkpoint.pop('parameter_encoding')
+        checkpoint['metadata']['content_hash'] = CheckpointManager.compute_content_hash(configuration['sfd']['params'])
+        (legacy / 'checkpoint.json').write_text(json.dumps(checkpoint))
+        converted = [wire_record(record, legacy=True) for record in records(directory)]
+        storage.round_path(legacy).write_bytes(b''.join(gzip.compress((json.dumps(record)+'\n').encode(),mtime=0) for record in converted))
+        resumed = run_loop(configuration, legacy, resume=True)
+        assert resumed.experiment_log.height == 2
+        assert all('parallel_plan' not in record and record['round_params']['tuple_tag'] in [[1,2],[3,4]] for record in records(legacy))
 
 
 def _assert_native_output_forms():
