@@ -148,7 +148,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
-    cached_witness = lru_cache(maxsize=None)(cast(Callable[[int], bytes], lambda identity: fitted_witness(seen[identity])))
+    witness: Callable[[int], bytes] = lambda identity: fitted_witness(seen[identity])
+    cached_witness = lru_cache(maxsize=None)(witness)
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
@@ -169,11 +170,10 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(value.__func__)
             visit(value.__self__)
         elif isinstance(value, partial):
-            provider = cast(object, value)
-            for part in children(provider):
+            for part in children(cast(object, value)):
                 visit(part)
-            if type(provider) is not partial:
-                objects.append(provider)
+            if type(value) is not partial:
+                objects.append(cast(object, value))
         elif inspect.isfunction(value):
             evidence.append(cached_witness(id(value)))
             if fitting_call(value.__module__, value.__qualname__) or id(value) in sealed:
@@ -270,7 +270,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 if isinstance(method, property):
                     method = method.fget
                 if isinstance(method, (staticmethod, classmethod)):
-                    method = method.__func__
+                    method = cast('staticmethod[..., object] | classmethod[object, ..., object]', method).__func__
                 if method is not None:
                     visit(method)
                     evidence.append((key, cached_witness(id(method)) if id(method) in seen else fitted_witness(method)))
