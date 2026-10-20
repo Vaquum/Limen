@@ -9,7 +9,7 @@ from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifes
 from typing import cast
 
 from limen.experiment._parallel_encoding import digest, encode
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, configurations
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, configurations
 
 
 def deterministic_stage(params: Mapping[str, object]) -> None:
@@ -70,7 +70,7 @@ def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -
 
 
 def _same_component(left: object, right: object) -> bool:
-    return left is right or digest(left) == digest(right)
+    return left is right or component_digest(left) == component_digest(right)
 
 
 def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> dict[str, dict[str, object]]:

@@ -162,6 +162,14 @@ class CallableCounter(RollingCounter):
         return self.window
 
 
+@dataclass
+class DefaultRollingFactory:
+    window: int = 3
+
+    def __call__(self, *, n_jobs=1):
+        return CallerRolling(self.window)
+
+
 def _object_default_feature(data, counter=None):
     counter.window += 1
     return _caller_feature(data, counter.window)
@@ -409,6 +417,21 @@ def _repeated_carried_probe(plan, params):
     return first, pid
 
 
+def _shared_carried_probe(plan):
+    from tests.test_parallel_rounds import recorded_source
+    before, rounds = digest(plan), []
+    for _ in range(2):
+        entries = clone_manifest(plan.manifest).feature_transforms[-2:]
+        assert entries[0].func.function is entries[1].func.function
+        data, outputs = recorded_source().head(24).select('close'), []
+        for entry in entries:
+            data = entry.func(data)
+            outputs.append(data['caller_mean'].to_list())
+        rounds.append(outputs)
+    assert rounds[0] == rounds[1] and digest(plan) == before
+    return rounds[0], os.getpid()
+
+
 def _frozen_probe(plan, params):
     from limen.experiment import _parallel_identity as identities
     from limen.experiment._parallel_plan import plan_digests
@@ -585,6 +608,16 @@ def test_frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _repeated_carried_probe(frozen, _parameters())
             assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() and pid != os.getpid()
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_mutable_feature, '__defaults__', ([2],))
+            first, second = FunctionRolling(_mutable_feature), FunctionRolling(_mutable_feature)
+            for component in (first, second):
+                declare_parallel(component, ParallelRoundContract(deterministic_stage))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(first).add_feature(second), None)
+        actual, pid = pool.submit(_shared_carried_probe, frozen).result(timeout=30)
+        expected, _ = _shared_carried_probe(frozen)
+        oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (2, 3)]
+        assert actual == expected == oracle and pid != os.getpid()
         declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
         for counter in (RollingCounter(), CallableCounter()):
             with pytest.MonkeyPatch.context() as patch:
@@ -907,6 +940,14 @@ def _assert_factory_resources(plan, params):
             actual, pid = pool.submit(_factory_probe, frozen, factory).result(timeout=30)
             expected, _ = _factory_probe(frozen, factory)
             assert actual == expected and pid != os.getpid()
+        factory = DefaultRollingFactory()
+        declare_parallel(factory, ParallelRoundContract(_caller_validator, ('window',)))
+        frozen_factory = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+        validate_domain(frozen_factory, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
+        actual, pid = pool.submit(_factory_probe, frozen_factory, factory).result(timeout=30)
+        expected, _ = _factory_probe(frozen_factory, factory)
+        from tests.test_parallel_rounds import recorded_source
+        assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
     declare_parallel(_other_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
     with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: unfrozen external state'):
         validate_domain(freeze_manifest(manifest, None, options),
@@ -935,6 +976,9 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     validate_resources(plan, params | {'class_weight': class_weights})
     assert parameter_matches('(1, 2)', [1, 2], legacy=True)
     assert not parameter_matches('(1, 2)', [1, 2])
+    shared = [1]
+    assert parameter_matches('[[1], [1]]', [shared, shared])
+    assert not parameter_matches('[[2], [1]]', [shared, shared])
     ablation = copy.deepcopy(plan.manifest).set_feature_ablation()
     validate_resources(freeze_manifest(ablation, None), params | {'feature_drop_seed': None})
     disabled = copy.deepcopy(plan.manifest).add_feature(_caller_feature, include_if='optional', window='{unused_window}')
@@ -982,6 +1026,7 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     configuration = parallel_config()
     configuration['uel']['n_permutations'] = 2
     configuration['sfd']['params']['tuple_tag'] = [(1, 2), (3, 4)]
+    configuration['sfd']['params']['alias_tag'] = [[shared, shared]]
     configuration['sfd']['params']['target_seed'] = [42]
     configuration['sfd']['manifest']['target'] = {'name': 'noise', 'class': 'limen.targets.RandomBinaryTarget',
                                                'fit_params': {'random_state': '{target_seed}'}}
@@ -1029,6 +1074,8 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     from limen.experiment.checkpoint_manager import CheckpointManager
     checkpoint = CheckpointManager().load(directory)
     assert checkpoint['domain_state']['tuple_tag'] == [(1, 2), (3, 4)]
+    aliases = checkpoint['domain_state']['alias_tag'][0]
+    assert aliases == [[1], [1]] and aliases[0] is aliases[1]
     _assert_recovery_faults(configuration, directory, tmp_path)
     _assert_legacy_recovery(configuration, directory, tmp_path)
     _assert_native_output_forms()

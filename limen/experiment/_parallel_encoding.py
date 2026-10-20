@@ -19,8 +19,8 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_graph import decode_graph, encode_graph, mutable_function
-from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, object_state, restore_function_metadata, restore_object
+from limen.experiment._parallel_graph import decode_graph, encode_graph
+from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
 
 VERSION = 1
 
@@ -252,7 +252,7 @@ def parameter_matches(cell: str | None, value: object, *, legacy: bool = False) 
             return float(cell) == value
         if isinstance(value, (list, tuple, dict)):
             parsed = literal_eval(cell)
-            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(cast(object, value))
+            return json.loads(json.dumps(parsed)) == value if legacy else encode(parsed) == encode(literal_eval(repr(value)))
     except (ValueError, SyntaxError, InvalidOperation) as exc:
         raise ValueError('Cannot resume parallel run with malformed CSV parameter evidence') from exc
     return cell == str(value)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date
 from pathlib import Path
@@ -9,20 +10,18 @@ from typing import cast
 
 _encoded: ContextVar[tuple[dict[int, tuple[int, object]], set[int]] | None] = ContextVar('parallel_encoded_graph', default=None)
 _decoded: ContextVar[list[object] | None] = ContextVar('parallel_decoded_graph', default=None)
-_COMPOSITES = frozenset(('list', 'tuple', 'map', 'keyed_map', 'state_map', 'function', 'method', 'dataclass', 'instance'))
+_copy: ContextVar[tuple[dict[int, tuple[object, object]], dict[int, object]] | None] = ContextVar('parallel_shared_copy', default=None)
 _VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
 _EMPTY_IDS: frozenset[int] = frozenset()
 
 
-def mutable_function(function: FunctionType, active: frozenset[int] = _EMPTY_IDS) -> bool:
-    if id(function) in active:
-        return True
-    active |= {id(function)}
-    def mutable(value: object) -> bool:
-        if isinstance(value, FunctionType):
-            return mutable_function(value, active)
-        return any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not isinstance(value, (type(None), str, bool, int, float, date, Path, type))
-    return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
+@contextmanager
+def shared_copy(memo: dict[int, tuple[object, object]]) -> Iterator[None]:
+    token = _copy.set((memo, {}))
+    try:
+        yield
+    finally:
+        _copy.reset(token)
 
 
 def _value_only(value: object, *, functions: bool = True) -> bool:
@@ -45,8 +44,7 @@ def _value_node(node: object, *, functions: bool = True) -> bool:
 
 
 def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[object]:
-    context = _encoded.get()
-    token = _encoded.set(({}, set())) if context is None else None
+    token = _encoded.set(({}, set())) if _encoded.get() is None else None
     try:
         context = _encoded.get()
         assert context is not None
@@ -59,6 +57,8 @@ def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[objec
         if key in memo:
             return ['ref', memo[key][0]]
         memo[key] = (len(memo), value)
+        if (copy := _copy.get()) is not None:
+            _ = copy[1].setdefault(len(memo) - 1, value)
         active.add(key)
         try:
             return visit()
@@ -70,8 +70,7 @@ def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[objec
 
 
 def decode_graph(node: object, visit: Callable[[], object], verify: Callable[[object], list[object]]) -> object:
-    context = _decoded.get()
-    token = _decoded.set([]) if context is None else None
+    token = _decoded.set([]) if _decoded.get() is None else None
     try:
         memo = _decoded.get()
         assert memo is not None
@@ -81,11 +80,15 @@ def decode_graph(node: object, visit: Callable[[], object], verify: Callable[[ob
                 raise ValueError('Invalid parallel shared-state reference')
             result = memo[parts[1]]
         else:
-            index = len(memo) if parts and isinstance(parts[0], str) and parts[0] in _COMPOSITES and not _value_node(parts) else None
+            index = len(memo) if parts and not _value_node(parts) else None
             if index is not None:
                 memo.append(None)
             result = visit()
             if index is not None:
+                if (copy := _copy.get()) is not None:
+                    original = copy[1][index]
+                    result = copy[0].setdefault(id(original), (original, result))[1]
+                    copy[0][id(result)] = (result, result)
                 memo[index] = result
     finally:
         if token is not None:

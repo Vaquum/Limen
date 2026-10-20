@@ -15,6 +15,7 @@ from typing_extensions import override
 
 from limen._parallel_contract import ParallelRoundContract, attach
 from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
+from limen.experiment._parallel_graph import shared_copy
 from limen.experiment._parallel_state import call_implementation, component_state
 from limen.experiment._parallel_identity import distribution_providers, identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
@@ -103,6 +104,10 @@ def clone_manifest(manifest: Manifest, *, snapshot: bool = False) -> Manifest:
     return cast(Manifest, _normalize(manifest, snapshot=snapshot))
 
 
+def component_digest(component: object) -> str:
+    return digest(_normalize(component, snapshot=True))
+
+
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 8)
 
 
@@ -124,13 +129,17 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
 _NO_ANCESTORS: frozenset[int] = frozenset()
 
 
-def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None) -> object:
+def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None,
+               state_memo: dict[int, tuple[object, object]] | None = None) -> object:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     memo = {} if memo is None else memo
+    state_memo = {} if state_memo is None else state_memo
     key = id(value)
     if key in memo:
         return memo[key][1]
+    if not callable(value) and key in state_memo:
+        return state_memo[key][1]
     active |= {id(value)}
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
@@ -145,31 +154,34 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
     if isinstance(value, dict) and not is_component:
-        clone: object = {name: _normalize(item, active, snapshot=snapshot, memo=memo) for name, item in cast(dict[str, object], value).items()}
+        clone: object = {name: _normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for name, item in cast(dict[str, object], value).items()}
     elif isinstance(value, (list, tuple)) and not is_component:
-        items = [_normalize(item, active, snapshot=snapshot, memo=memo) for item in cast(list[object] | tuple[object, ...], value)]
+        items = [_normalize(item, active, snapshot=snapshot, memo=memo, state_memo=state_memo) for item in cast(list[object] | tuple[object, ...], value)]
         clone = tuple(items) if isinstance(value, tuple) else items
     else:
-        clone = _normalize_component(cast(object, value), active, snapshot=snapshot, memo=memo)
+        clone = _normalize_component(cast(object, value), active, snapshot=snapshot, memo=memo, state_memo=state_memo)
     memo[key] = (value, clone)
+    _ = state_memo.setdefault(key, (value, clone))
     return clone
 
 
-def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]]) -> object:
+def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
     if callable(value) and not isinstance(value, type):
-        clone = decode(encode(value), isolate_functions=snapshot)
+        with shared_copy(state_memo):
+            clone = decode(encode(value), isolate_functions=snapshot)
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
     elif is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
         for field in fields(value):
-            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo))
+            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
     else:
         clone = copy.deepcopy(cast(object, value))
     implementation = call_implementation(cast(object, value))
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
     if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
-        clone = partial(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
+        with shared_copy(state_memo):
+            clone = partial(cast(Callable[..., object], decode(encode(cast(Callable[..., object], clone).__call__), isolate_functions=True)))
         vars(clone)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
     return clone
 

@@ -6,6 +6,8 @@ from inspect import Parameter, ismethod, signature
 from types import FunctionType, MemberDescriptorType
 from typing import cast
 
+from limen.experiment._parallel_graph import _EMPTY_IDS, _value_only
+
 ObjectState = tuple[dict[str, object], list[tuple[type, str, object]], tuple[object, ...] | None, list[object] | None]
 
 
@@ -86,3 +88,12 @@ def restore_function_metadata(function: FunctionType, source: FunctionType, wrap
     for name, value in {'__wrapped__': wrapped, '__parallel_round_contract__': vars(source).get('__parallel_round_contract__')}.items():
         if value is not None:
             vars(function)[name] = value
+
+
+def mutable_function(function: FunctionType, active: frozenset[int] = _EMPTY_IDS) -> bool:
+    if id(function) in active:
+        return True
+    active |= {id(function)}
+    def mutable(value: object) -> bool:
+        return mutable_function(value, active) if isinstance(value, FunctionType) else any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not _value_only(value, functions=False)
+    return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
