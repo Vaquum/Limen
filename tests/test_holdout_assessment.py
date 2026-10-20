@@ -2137,7 +2137,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     class IndirectNamespace(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + getattr(self.policy, '__globals__')['holdout_rules']['offset'], 0, 1)
+            result['_probs'] = np.clip(result['_probs'] + getattr(self.policy, '__globals__', None)['holdout_rules']['offset'], 0, 1)
             return result
     reviewed._model.__class__ = IndirectNamespace
     for policy in (identity_probabilities, LogisticRegression.predict_proba):
@@ -2160,9 +2160,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             _report(builtin_handle, assessment_case)
         assert loader.call_count == 0
         builtin_handle = _freeze(reviewed)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}):
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(builtin_handle, assessment_case)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(builtin_handle, assessment_case)
         assert loader.call_count == 0
     class DynamicNamespace(NativeNamespace):
         def predict(self, data):
