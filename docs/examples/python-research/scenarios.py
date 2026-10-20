@@ -66,6 +66,60 @@ def recordable_prep(raw, round_params):
     return data
 
 
+# region preparation
+def preparation(data_dir, output):
+    from sklearn.decomposition import PCA
+    from sklearn.linear_model import Ridge
+    from limen.features import fractional_diff, find_min_d
+    from limen.indicators import roc
+    from limen.scalers import RobustScaler
+    from limen.targets import TripleBarrierTarget
+    from limen.utils import adf_test
+
+    raw = hourly(data_dir, 1440)
+    partitions = [raw[:864], raw[864:1152], raw[1152:1440]]
+    d = find_min_d(partitions[0], 'close', d_end=.4, step=.2, threshold=.05)
+    stationarity = adf_test(fractional_diff(partitions[0], d=d, cols=['close'], threshold=.05)['close_fracdiff'])
+    cases = []
+    for compressed in (False, True):
+        name = 'compressed' if compressed else 'baseline'
+        directory = output / name
+        directory.mkdir(parents=True)
+        target = TripleBarrierTarget(partitions[0], 'label', upper_multiple=1.5,
+                                     lower_multiple=1., max_horizon=3, span=8, min_periods=8)
+        columns = ['close', 'roc_3', 'roc_12', 'close_fracdiff']
+        dropped = ['roc_12'] if compressed else []
+        features = [column for column in columns if column not in dropped]
+        prepared = []
+        for partition in partitions:
+            frame = fractional_diff(roc(roc(partition, period=3), period=12),
+                                    d=.4, cols=['close'], threshold=.05)
+            prepared.append(target.transform(frame).select('datetime', *features, 'label').drop_nulls())
+        scaler = RobustScaler(prepared[0].select(features))
+        scaled = [scaler.transform(frame.select(features)) for frame in prepared]
+        pca = PCA(n_components=2, svd_solver='full') if compressed else None
+        matrices = ([pca.fit_transform(scaled[0].to_numpy()),
+                     *[pca.transform(frame.to_numpy()) for frame in scaled[1:]]]
+                    if pca is not None else [frame.to_numpy() for frame in scaled])
+        names = ['pc_0', 'pc_1'] if compressed else features
+        model = Ridge(alpha=1., solver='svd').fit(matrices[0], prepared[0]['label'].to_numpy())
+        predictions = model.predict(matrices[2])
+        for split, frame, matrix in zip(('train', 'val', 'test'), prepared, matrices, strict=True):
+            pl.DataFrame(matrix, schema=names, orient='row').with_columns(
+                frame['datetime'], frame['label']).write_parquet(directory / (split + '.parquet'))
+        cases.append({'name': name, 'features': features, 'dropped': dropped,
+                      'rows': [frame.height for frame in prepared],
+                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
+                      'pca_mean': None if pca is None else pca.mean_.tolist(),
+                      'components': None if pca is None else pca.components_.tolist(),
+                      'predictions': predictions.tolist(),
+                      'rmse': float(np.sqrt(np.mean((predictions-prepared[2]['label'].to_numpy())**2)))})
+    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': False,
+            'fixed_d': .4, 'weight_threshold': .05, 'adf_grid_result': d,
+            'adf_stationary': stationarity.stationary, 'adf_p_value': stationarity.p_value}
+# endregion preparation
+
+
 # region search
 def search(data_dir, output):
     bars = hourly(data_dir, 1440)
@@ -83,7 +137,7 @@ def search(data_dir, output):
         loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model), search_strategy=strategy)
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
-    return {'runs': runs, 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
+    return {'runs': runs, 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
             'feedback': mixed_feedback(data_dir, output / 'feedback')}
 # endregion search
 

@@ -157,3 +157,12 @@ def test_direct_yaml_selection_matches_python_driver(compiled_project, tmp_path)
     environment = dict(os.environ, PATH=str(Path(sys.executable).parent) + os.pathsep + os.environ['PATH'])
     subprocess.run(shlex.split(command), cwd=tmp_path, env=environment, check=True, timeout=30)
     compare_selection_logs(compiled_project[1], tmp_path / 'results/dev/compiled-cli')
+
+
+def test_preparation_preserves_training_fits_and_target_geometry(python_scenarios, compiled_scenarios, tmp_path):
+    from scenario_oracles import verify_preparation
+    inputs = ROOT / 'tests/fixtures'
+    for interface, scenarios in [('python', python_scenarios), ('compiled', compiled_scenarios)]:
+        output = tmp_path / interface
+        result = scenarios.preparation(inputs, output)
+        verify_preparation(interface, result, output, inputs)

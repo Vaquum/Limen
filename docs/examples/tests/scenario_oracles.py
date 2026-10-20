@@ -97,6 +97,7 @@ def verify_feedback(interface, feedback, inputs):
 
 def verify(interface, name, result, output, inputs):
     if name == 'search':
+        verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
         assert set(result['runs']) == expected
         identities = []
@@ -466,3 +467,92 @@ def verify(interface, name, result, output, inputs):
             assert hashlib.sha256((restored / name).read_bytes()).hexdigest() == expected
     else:
         raise AssertionError('Unproved scenario: ' + name)
+
+
+def verify_preparation(interface, result, output, inputs):
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    assert result['partition_rows'] == [864, 288, 288]
+    assert result['carried_context'] is (interface == 'compiled')
+    assert result['fixed_d'] == .4 and result['weight_threshold'] == .05
+    assert [case['name'] for case in result['cases']] == ['baseline', 'compressed']
+    if interface == 'python':
+        assert result['adf_grid_result'] in (0., .2, .4)
+        assert 0 <= result['adf_p_value'] <= 1
+        assert result['adf_stationary'] is (result['adf_p_value'] <= .05)
+    weights = [1.]
+    while True:
+        candidate = -weights[-1] * (.4-len(weights)+1) / len(weights)
+        if abs(candidate) < .05:
+            break
+        weights.append(candidate)
+    for case in result['cases']:
+        compressed = case['name'] == 'compressed'
+        columns = ['close', 'roc_3', 'close_fracdiff'] if compressed else ['close', 'roc_3', 'roc_12', 'close_fracdiff']
+        assert case['features'] == columns and case['dropped'] == (['roc_12'] if compressed else [])
+        frames = [pl.read_parquet(output / case['name'] / (split + '.parquet')) for split in ('train', 'val', 'test')]
+        assert [frame.height for frame in frames] == case['rows']
+        assert all(frame.height > 200 for frame in frames)
+        expected_surfaces = []
+        fit_population = None
+        for split, (start, end), frame in zip(('train', 'val', 'test'), ((0, 864), (864, 1152), (1152, 1440)), frames, strict=True):
+            context = (8 if compressed else 12) if interface == 'compiled' and split != 'train' else 0
+            source = raw[start-context:end]
+            close = source['close'].to_numpy()
+            clock = source['datetime'].dt.epoch('ns').to_list()
+            indices = [clock.index(value) for value in frame['datetime'].dt.epoch('ns').to_list()]
+            assert indices == sorted(set(indices))
+            assert all(start <= start-context+index < end for index in indices)
+            feature_values = {'close': close, 'roc_3': np.r_[np.full(3, np.nan), (close[3:]/close[:-3]-1)*100],
+                              'roc_12': np.r_[np.full(12, np.nan), (close[12:]/close[:-12]-1)*100]}
+            feature_values['close_fracdiff'] = np.r_[np.full(len(weights)-1, np.nan), np.convolve(close, weights, mode='valid')]
+            unscaled = np.column_stack([feature_values[column][indices] for column in columns])
+            assert np.isfinite(unscaled).all()
+            scaled = (unscaled-np.array([case['medians'][column] for column in columns])) / np.array([case['iqrs'][column] for column in columns])
+            expected_surfaces.append(scaled)
+            expected_matrix = (scaled-np.asarray(case['pca_mean'])) @ np.asarray(case['components']).T if compressed else scaled
+            actual_columns = ['pc_0', 'pc_1'] if compressed else columns
+            assert frame.columns == [*actual_columns, 'datetime', 'label'] or frame.columns == ['datetime', *actual_columns, 'label']
+            np.testing.assert_allclose(frame.select(actual_columns).to_numpy(), expected_matrix, rtol=1e-10, atol=1e-9)
+            returns = close[1:]/close[:-1]-1
+            labels = []
+            for index in indices:
+                assert index >= 8
+                decay = (1-2/9)**np.arange(index-1, -1, -1)
+                mean = np.average(returns[:index], weights=decay)
+                variance = np.average((returns[:index]-mean)**2, weights=decay) / (1-np.sum(decay**2)/np.sum(decay)**2)
+                sigma = math.sqrt(variance)
+                label = None
+                for ahead in range(1, min(3, len(close)-1-index)+1):
+                    move = close[index+ahead]/close[index]-1
+                    if move >= 1.5*sigma:
+                        label = 1
+                        break
+                    if move <= -sigma:
+                        label = -1
+                        break
+                if label is None and index+3 < len(close):
+                    label = 0
+                labels.append(label)
+            assert labels == frame['label'].to_list(), 'Labels differ from the independently scanned forward-close geometry'
+            if split == 'train':
+                fit_indices = range(indices[0], len(close)) if interface == 'compiled' else indices
+                fit_population = np.column_stack([feature_values[column][list(fit_indices)] for column in columns])
+        assert fit_population is not None
+        for index, column in enumerate(columns):
+            values = fit_population[:, index]
+            assert case['medians'][column] == pytest.approx(float(np.median(values)), rel=1e-12)
+            lo, hi = np.quantile(values, [.25, .75], method='nearest')
+            assert case['iqrs'][column] == pytest.approx(float(hi-lo) if hi != lo else 1., rel=1e-12)
+        if compressed:
+            components = np.asarray(case['components'])
+            np.testing.assert_allclose(case['pca_mean'], expected_surfaces[0].mean(axis=0), rtol=1e-10, atol=1e-10)
+            _, _, vectors = np.linalg.svd(expected_surfaces[0]-expected_surfaces[0].mean(axis=0), full_matrices=False)
+            np.testing.assert_allclose(components.T@components, vectors[:2].T@vectors[:2], rtol=1e-9, atol=1e-9)
+        x_train = frames[0].drop('datetime', 'label').to_numpy()
+        x_test = frames[2].drop('datetime', 'label').to_numpy()
+        y = frames[0]['label'].to_numpy()
+        centered = x_train-x_train.mean(axis=0)
+        coefficients = np.linalg.solve(centered.T@centered+np.eye(centered.shape[1]), centered.T@(y-y.mean()))
+        predicted = (x_test-x_train.mean(axis=0))@coefficients+y.mean()
+        np.testing.assert_allclose(case['predictions'], predicted, rtol=1e-9, atol=1e-10)
+        assert case['rmse'] == pytest.approx(float(np.sqrt(np.mean((predicted-frames[2]['label'].to_numpy())**2))), rel=1e-10)

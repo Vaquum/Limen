@@ -2133,7 +2133,10 @@
       ],
       "recorded_window": "hourly: first 1,440 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget."
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry"
+      ]
     },
     "compiled/search": {
       "interface": "compiled",
@@ -2148,7 +2151,10 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget."
+      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry"
+      ]
     },
     "python/recovery": {
       "interface": "python",
