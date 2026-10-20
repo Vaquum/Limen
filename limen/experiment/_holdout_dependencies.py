@@ -10,7 +10,7 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, FunctionType, ModuleType
+from types import CodeType, FunctionType, GetSetDescriptorType, MemberDescriptorType, ModuleType
 from typing import cast
 
 import numpy as np
@@ -56,6 +56,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     module_dynamic: dict[int, bool] = {}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
+    inspected: set[tuple[int, bool, int, int]] = set()
     recorded_mro: set[int] = set()
     method_names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
 
@@ -66,7 +67,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 method_names.add(value)
                 fitted_names.add(value)
             return
-        if type(value) is logging.Logger:
+        if type(value) is logging.Logger or type(value) in (GetSetDescriptorType, MemberDescriptorType):
             evidence.append(value)
             return
         if isinstance(value, ModuleType):
@@ -196,6 +197,10 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             recorded_mro.add(id(cls))
             evidence.append(('mro', cls.__module__, cls.__qualname__, tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)))
         for parent in cls.__mro__:
+            stamp = (id(parent), isinstance(value, type), len(names), len(parent.__dict__))
+            if stamp in inspected:
+                continue
+            inspected.add(stamp)
             done = processed.setdefault(id(parent), set())
             for name in names.intersection(parent.__dict__) - done:
                 done.add(name)
