@@ -24,7 +24,7 @@ _providers: ContextVar[Mapping[str, list[str]] | None] = ContextVar('parallel_di
 
 
 @cache
-def _distributions() -> Mapping[str, list[str]]:
+def package_distributions() -> Mapping[str, list[str]]:
     return metadata.packages_distributions()
 
 
@@ -44,7 +44,7 @@ def module_identity(name: str) -> list[object]:
         raise ValueError(f'Parallel import has no source file: {name}')
     top = name.split('.', 1)[0]
     providers = _providers.get()
-    distributions = (providers if providers is not None else _distributions()).get(top, []) if top not in ('limen', 'tests') else []
+    distributions = (providers if providers is not None else package_distributions()).get(top, []) if top not in ('limen', 'tests') else []
     return [name, hashlib.sha256(Path(path).read_bytes()).hexdigest(),
             [[name, metadata.version(name)] for name in sorted(distributions)]]
 

@@ -86,7 +86,7 @@ def _frozen_probe(plan, params):
     def no_discovery():
         raise AssertionError('worker repeated parent distribution discovery')
     with pytest.MonkeyPatch.context() as patch, codec.distribution_providers(plan.distribution_providers):
-        patch.setattr(codec, '_distributions', no_discovery)
+        patch.setattr(codec, 'package_distributions', no_discovery)
         assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
         version = codec.metadata.version
         patch.setattr(codec.metadata, 'version', lambda name: version(name) + '-changed')
