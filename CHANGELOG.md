@@ -1849,3 +1849,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Develop the research book around both recorded projects, explicit chapter routes and released-package publication.
 - Bind documentation publication to the successful package run, immutable public artifacts and an anonymously verified inactive Worker version; retain and verify the previous deployment on activation failure.
+- Replace the Docusaurus build and dependencies with the sole evidence-consuming research reader; retain the deployed predecessor through first-release cutover.

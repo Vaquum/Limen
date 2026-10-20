@@ -3,7 +3,6 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {execFileSync} from 'node:child_process';
-import {docs} from './assemble-docs.mjs';
 import {content,renderPage,hash,pageLabel} from '../reader/render.mjs';
 const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),root=path.dirname(site);
 const {values}=parseArgs({options:{evidence:{type:'string',default:'../.docs-evidence/current.json'},output:{type:'string',default:'reader-build'}}});
@@ -17,14 +16,13 @@ const packageText=await fs.readFile(path.join(root,'pyproject.toml'),'utf8');con
 if(evidence.package.version!==version)throw Error('Reader evidence belongs to a different package version');
 execFileSync(process.env.LIMEN_PYTHON||'python3',[path.join(root,'docs/examples/check_evidence.py'),'--evidence',evidencePath,'--head',expectedHead,'--tree',expectedTree,'--version',version],{cwd:root,stdio:'inherit'});
 const overrides=content.pages;
-if(Object.keys(overrides).length!==docs.length||docs.some(doc=>!overrides[doc.source]))throw Error('The canonical reader map must account for every maintained source');
 const routes=Object.values(overrides).map(page=>page.route);
 if(new Set(routes).size!==routes.length||routes.some(route=>!route.startsWith('/')||!route.endsWith('/')||route.includes('..')))throw Error('Canonical reader routes must be unique absolute directory paths');
 if(Object.values(overrides).some(page=>page.navigationTitle!==undefined&&(typeof page.navigationTitle!=='string'||!page.navigationTitle.trim()||page.navigationTitle!==page.navigationTitle.trim())))throw Error('Navigation titles must be nonempty plain labels');
-const pages=await Promise.all(docs.map(async doc=>{const markdown=await fs.readFile(path.join(root,doc.source),'utf8');const chosen=overrides[doc.source]||{};const route=chosen.route||(doc.slug.replace(/^\/guides\//,'/book/').replace(/^\/packages\//,'/reference/packages/')+'/');return {...doc,...chosen,markdown,route,url:content.product.basePath+route,title:markdown.match(/^# (.+)$/m)?.[1]?.replaceAll('`','')||doc.sidebarLabel||content.product.name,part:chosen.part};}));
+const pages=await Promise.all(Object.entries(overrides).map(async([source,chosen])=>{const markdown=await fs.readFile(path.join(root,source),'utf8');return {source,...chosen,markdown,url:content.product.basePath+chosen.route,title:markdown.match(/^# (.+)$/m)?.[1]?.replaceAll('`','')||content.product.name};}));
 const referenceLinks=pages.filter(p=>p.part==='Reference').sort((a,b)=>pageLabel(a).localeCompare(pageLabel(b))).map(p=>`- [${pageLabel(p)}](${p.url})`).join('\n');
 pages.push({source:null,route:'/reference/',url:content.product.basePath+'/reference/',part:'Reference',title:'Reference',markdown:'# Reference\n\nNames, parameters, return values and the boundaries of the two research interfaces.\n\n'+referenceLinks+'\n'});
-const output=path.resolve(site,values.output);if(output===path.join(site,'build')||!output.startsWith(site+path.sep))throw Error('Candidate output must be separate from production');
+const output=path.resolve(site,values.output);if(output===site||!output.startsWith(site+path.sep))throw Error('Reader output must be inside the site directory');
 await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'assets/fonts'),{recursive:true});
 for(const page of pages){const target=path.join(output,page.route,'index.html');await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,renderPage(page,pages,evidence));}
 await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'},pages,evidence));

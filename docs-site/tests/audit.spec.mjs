@@ -3,11 +3,15 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {inspectAudit} from '../scripts/audit-security.mjs';
 
-// Retained output of npm audit on the committed complete dependency graph.
+// Retained registry report from the removed renderer; its former exception must fail.
 const retained=JSON.parse(fs.readFileSync(new URL('./fixtures/npm-audit.json',import.meta.url),'utf8'));
 const result=report=>({status:1,stdout:JSON.stringify(report),stderr:''});
-test('complete retained report admits only the dated exception',()=>{
-  assert.equal(inspectAudit(result(retained)),30);
+test('the removed renderer advisory is no longer exempt',()=>{
+  assert.throws(()=>inspectAudit(result(retained)),/Untracked/);
+});
+test('the current complete graph has no vulnerabilities',()=>{
+  const current=JSON.parse(fs.readFileSync(new URL('./fixtures/npm-audit-current.json',import.meta.url),'utf8'));
+  assert.equal(inspectAudit({status:0,stdout:JSON.stringify(current),stderr:''}),0);
 });
 test('transport, missing data and malformed reports fail closed',()=>{
   for(const value of [{status:1,stdout:'',stderr:'network failed'}, {status:null,error:Error('timeout')}, {status:0,stdout:'not json'},result({}),result({...retained,error:{code:'EAI_AGAIN'}})])assert.throws(()=>inspectAudit(value));
@@ -15,7 +19,7 @@ test('transport, missing data and malformed reports fail closed',()=>{
     const report=structuredClone(retained);mutate(report);assert.throws(()=>inspectAudit(result(report)));
   }
 });
-test('a tracked descendant does not excuse a second advisory',()=>{
+test('a dependency path does not excuse a second advisory',()=>{
   const report=structuredClone(retained);
   const parent=Object.values(report.vulnerabilities).find(item=>item.via.some(via=>typeof via==='string'));
   parent.via.push({url:'https://github.com/advisories/GHSA-xxxx-xxxx-xxxx'});

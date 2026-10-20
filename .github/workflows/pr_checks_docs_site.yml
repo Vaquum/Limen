@@ -72,15 +72,11 @@ jobs:
         working-directory: docs-site
         run: npm run security:audit
 
-      - name: Build docs site
-        working-directory: docs-site
-        run: npm run check
-
-      - name: Assemble the candidate reader
+      - name: Lint and build the research book
         working-directory: docs-site
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: timeout 60s npm run build:reader
+        run: timeout 60s npm run check
 
       - name: Provision the locked browser
         working-directory: docs-site

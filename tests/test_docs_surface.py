@@ -17,7 +17,7 @@ from ruamel.yaml import YAML
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSEMBLER = ROOT / 'docs-site' / 'scripts' / 'assemble-docs.mjs'
+CONTENT = ROOT / 'docs-site' / 'reader' / 'content.json'
 
 
 def _read(path: str | Path) -> str:
@@ -32,25 +32,8 @@ def _public_markdown_paths() -> list[Path]:
     ]
 
 
-def _parse_doc_blocks(script: str) -> list[dict[str, str | int]]:
-    blocks: list[dict[str, str | int]] = []
-    for match in re.finditer(r'\{(?P<body>[^{}]*)}', script, re.S):
-        body = match.group('body')
-        source = re.search(r'''\bsource\s*:\s*['"]([^'"]+)['"]''', body)
-        dest = re.search(r'''\bdest\s*:\s*['"]([^'"]+)['"]''', body)
-        if source is None or dest is None:
-            continue
-        position = re.search(r'\bsidebarPosition\s*:\s*(\d+)', body)
-        blocks.append({
-            'source': source.group(1),
-            'dest': dest.group(1),
-            'position': int(position.group(1)) if position else -1,
-        })
-    return blocks
-
-
-def _doc_blocks() -> list[dict[str, str | int]]:
-    return _parse_doc_blocks(ASSEMBLER.read_text(encoding='utf-8'))
+def _doc_blocks() -> list[dict]:
+    return [dict(source=source, **page) for source, page in json.loads(CONTENT.read_text())['pages'].items()]
 
 
 def _fences(path: Path, language: str) -> Iterator[tuple[int, str]]:
@@ -99,57 +82,26 @@ def test_documentation_corpus_is_fully_routed_into_the_site() -> None:
     assert 'docs/Audit-Closeout.md' not in mapped
     assert not (ROOT / 'docs' / 'Audit-Closeout.md').exists()
 
-    positions: dict[str, list[int]] = {}
-    for block in blocks:
-        position = int(block['position'])
-        if position < 0:
-            continue
-        section = str(Path(str(block['dest'])).parent)
-        positions.setdefault(section, []).append(position)
-    assert all(len(values) == len(set(values)) for values in positions.values())
-
-
-def test_doc_block_parser_ignores_formatting() -> None:
-    script = '''const docs = [
-      { source : "README.md", dest: 'overview/readme.md', sidebarPosition : 1 },
-    ];'''
-    assert _parse_doc_blocks(script) == [{
-        'source': 'README.md',
-        'dest': 'overview/readme.md',
-        'position': 1,
-    }]
+    routes = [str(block['route']) for block in blocks]
+    assert len(routes) == len(set(routes))
+    assert all(route.startswith('/') and route.endswith('/') and '..' not in route for route in routes)
+    positions = [block['bookOrder'] for block in blocks if 'bookOrder' in block]
+    assert len(positions) == len(set(positions))
 
 
 def test_site_assembly_preserves_authoring_and_navigation_contracts() -> None:
-    script = ASSEMBLER.read_text(encoding='utf-8')
-    assert "repoEditBaseUrl = 'https://github.com/Vaquum/Limen/edit/main'" in script
-    assert 'custom_edit_url: ${repoEditBaseUrl}/${doc.source}' in script
-    assert 'collapsed: true' in script
-    assert "source: 'docs/Command-Line-Interface.md'" in script
-    assert "dest: 'guides/command-line-interface.md'" in script
-    assert "source: 'docs/Developer/Packaging.md'" in script
-    assert "source: 'docs/Roadmap.md'" in script
-    assert "source: 'docs/Developer/Security-Assurance-Case.md'" in script
-    assert "dir: 'packages/internals'" in script
-
-    guide_sources = [
-        str(block['source'])
-        for block in _doc_blocks()
-        if str(block['dest']).startswith('guides/')
-    ]
-    assert guide_sources
-    assert all('## Prerequisites' in _read(source) for source in guide_sources)
-    developer_sources = [
-        str(block['source'])
-        for block in _doc_blocks()
-        if str(block['dest']).startswith('developer/')
-    ]
-    assert developer_sources
-    assert all('## Prerequisites' in _read(source) for source in developer_sources)
-
-    mobile_css = _read('docs-site/src/css/custom.css').split('@media (max-width: 996px)', maxsplit=1)[1]
-    assert '.theme-doc-markdown table' in mobile_css
-    assert 'overflow-x: auto' in mobile_css
+    pages = {block['source']: block for block in _doc_blocks()}
+    assert pages['docs/Command-Line-Interface.md']['part'] == 'Book'
+    assert pages['docs/Developer/Packaging.md']['part'] == 'Developer'
+    assert pages['docs/Roadmap.md']['part'] == 'Book'
+    assert pages['docs/Developer/Security-Assurance-Case.md']['part'] == 'Developer'
+    assert pages['limen/cli/commands/README.md']['part'] == 'Reference'
+    for part in ('Book', 'Developer'):
+        sources = [source for source, page in pages.items() if page['part'] == part and (part == 'Developer' or 'bookOrder' in page)]
+        assert sources
+        assert all('## Prerequisites' in _read(source) for source in sources)
+    assert 'Edit this source' in _read('docs-site/reader/render.mjs')
+    assert 'overflow-x:auto' in _read('docs-site/reader/book.css').replace(' ', '')
 
 
 def test_local_markdown_links_and_anchors_resolve() -> None:

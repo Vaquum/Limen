@@ -1,6 +1,6 @@
 # Cloudflare deployment
 
-The existing Docusaurus renderer still serves [docs.vaquum.fi/limen/](https://docs.vaquum.fi/limen/). The replacement research reader and release-bound publisher live in Limen. Their first production cutover remains an acceptance obligation; candidate execution does not establish deployment.
+The retained predecessor Worker still serves [docs.vaquum.fi/limen/](https://docs.vaquum.fi/limen/). The replacement research reader and release-bound publisher live in Limen. Their first production cutover remains an acceptance obligation; candidate execution does not establish deployment.
 
 ## Serving boundary
 
@@ -8,7 +8,7 @@ The `limen` Worker serves `/limen/*` through `ASSETS`. It redirects `/` and `/li
 
 The Worker imports `src/security-headers.json`. The build retains that exact policy in its hashed site payload. Verification compares every response's six security-header values with that release's policy, including the 404 response. Rollback retains the previous release's policy.
 
-The legacy [wrangler.jsonc](wrangler.jsonc) reads `build/`. The replacement [publisher/wrangler.json](publisher/wrangler.json) reads the sealed `reader-build/`. The replacement pins Wrangler and its complete dependency graph in `publisher/package-lock.json`; it requires Node.js 22 or later. Reader checks continue to run under Node.js 20 in the required Docs Site job.
+The sole [publisher/wrangler.json](publisher/wrangler.json) reads the sealed `reader-build/`. The publisher pins Wrangler and its complete dependency graph in `publisher/package-lock.json`; it requires Node.js 22 or later. Reader checks continue to run under Node.js 20 in the required Docs Site job.
 
 ## Release-bound publication
 
@@ -26,9 +26,9 @@ Enable Preview URLs for the `limen` Worker before staging. Its normal `workers.d
 
 Use a user-scoped Cloudflare API token restricted to the Limen account, with Workers Scripts Edit and Workers Builds Configuration Read. The latter permits the activation guard to inspect build triggers; it does not modify them. Store it as `CLOUDFLARE_DOCS_API_TOKEN` in the GitHub `documentation` environment. Do not commit or print the token.
 
-Keep the existing Git-integrated build until the replacement and its rollback are concrete. At cutover, open the `limen` Worker in Cloudflare, select **Settings → Builds → Disconnect**, and verify that its trigger inventory is empty. Disconnect only this Worker's repository integration. Do not uninstall the account's Cloudflare GitHub application.
+Before merging the first reader release, retain the current production Worker version and home-page digest. Open the `limen` Worker in Cloudflare, select **Settings → Builds → Disconnect**, and verify that its trigger inventory is empty. Disconnect only this Worker's repository integration. The existing Worker keeps serving; the account's Cloudflare GitHub application remains installed.
 
-The publisher refuses activation while any independent trigger remains. A missing credential or failed guard preserves the existing production deployment. Once the replacement passes live acceptance, remove the obsolete renderer and its build configuration; the temporary parallel configurations are not the final state.
+The publisher refuses activation while any independent trigger remains. A missing credential or failed guard preserves the existing production deployment. BOOK-LIMEN removes the obsolete renderer sources and build configuration before merge. Its merged release then supplies the actual PyPI wheel for proof and cutover. Parent #1045 remains open until the released site, public artifacts and rollback pass live acceptance.
 
 ## Evidence and recovery
 

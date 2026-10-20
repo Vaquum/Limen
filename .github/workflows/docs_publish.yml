@@ -117,8 +117,7 @@ jobs:
       - name: Build and verify the released reader
         working-directory: docs-site
         run: |
-          npm run lint
-          npm run build:reader
+          npm run check
           npx --no-install playwright install --with-deps chromium
           npm run check:reader
 

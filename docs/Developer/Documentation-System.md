@@ -27,13 +27,13 @@ The owned reader and research projects are candidates in this repository. Their 
 | [Reader and projects](https://github.com/Vaquum/Limen/issues/1052) | Build the reader inside Limen, both comprehensive projects, their semantic tests and bindings, and the first complete chapter. |
 | [Complete book and publication](https://github.com/Vaquum/Limen/issues/1047) | Complete the maintained corpus and reference coverage, prove released-package reproduction, activate validated publication and retain rollback. |
 
-The current production renderer is Docusaurus. `docs-site/scripts/assemble-docs.mjs` maps maintained sources into Overview, Guides, Reference, Developer and Packages. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the static build. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
+The owned reader is the sole renderer in this checkout. `docs-site/reader/content.json` maps every maintained source into Book, Reference and Developer. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the evidence-consuming static build. The retained production Worker still serves the predecessor until the first released-book proof passes. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
 
 The complete candidate corpus binds exact source regions and retained observations to both projects. The scenario catalogue defines required executions; the evidence checker rejects missing, skipped or stale proof. Selected tests can run independently, but their incomplete evidence cannot publish a reader. The complete suite must execute every required scenario and integrity test before producing successful publication evidence. The reader consumes the tested wheel, input bundle, source identities and current results. Browser checks exercise the real base path and Worker policy, including keyboard use, reduced motion, saved passages, code copying, reference return and mobile navigation. Retained screenshots record the candidate's rendered state.
 
 Integrity tests record native fitting and calibration inputs and forbid fitting after final selection is frozen. The archived CLI commands run in a separate process with the installed wheel. Native result files, checkpoints, round records, audits, final assessment rows and the installed dependency inventory remain available in the evidence archive.
 
-The maintained source inventory equals `catalogue.json`'s bound pages. Each page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. Complete source migration does not establish production publication. Keep the existing renderer and its source checks until the complete-book publication delivery replaces it.
+The maintained source inventory equals `catalogue.json`'s bound pages. Each page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. Complete source migration does not establish production publication. Preserve the source checks while replacing the renderer. The first-release sequence below retains the deployed predecessor until released-book acceptance.
 
 ## Validating the candidate reader
 
@@ -59,20 +59,14 @@ Then, from `docs-site/`:
 |---|---|
 | 1 | `npm run check` |
 | 2 | `npm run security:audit` |
-| 3 | `npm run build:reader` |
-| 4 | `npx --no-install playwright install chromium` |
-| 5 | `npm run check:reader` |
+| 3 | `npx --no-install playwright install chromium` |
+| 4 | `npm run check:reader` |
 
 The reader build requires a clean source tree, matching package and current execution evidence. Browser verification checks that evidence and every built file before opening the pages. Use the repository's managed validation runner when it owns the PR; record the necessary commands there and run them in the required order. A background start is not a passing result.
 
 Change canonical project code first, synchronize its marked chapter regions and run the affected proof. Keep displayed observations under their recorded run identity unless their meaning or comparison bounds require a new capture. Never hand-edit a successful current-validation record. Extend the model and scenario catalogue when the public surface changes; a newly exported family cannot silently disappear from the documentation's coverage inventory.
 
-The retained legacy Docusaurus path has two recorded deployment defects:
-
-- `docs-site/src/worker.js` redirects `/robots.txt` to `/limen/robots.txt`, but the build emits no `robots.txt` asset at that destination.
-- The Google Fonts import in `docs-site/src/css/custom.css` conflicts with the Worker's CSP: its style and font directives do not admit the required Google origins.
-
-The owned reader self-hosts Archivo/Plex and its browser checks verify loading under the Worker CSP. Production activation must also verify the canonical robots resource. A candidate browser pass does not establish that the legacy production deployment changed.
+The owned reader emits the canonical robots resource and self-hosts Archivo/Plex under the Worker CSP. Both are checked before publication and over anonymous HTTP before activation. The predecessor remains deployed until the first released-book proof passes; removing its build sources does not replace its live Worker version.
 
 ## Ownership
 
@@ -289,7 +283,9 @@ Preserve HSTS, CSP, permissions, referrer, content-type and frame protections. B
 
 ## Publication and rollback
 
-The existing Cloudflare Git-integrated build runs independently of GitHub checks. Keep it through the reader checkpoint. Before merging the first removal of the production renderer, prepare and activate its replacement, record the actual cutover and disable the independent deployment path. Required credentials or dashboard actions must be resolved at that concrete deployment boundary.
+The first migration keeps three delivery slices. Before merging BOOK-LIMEN, retain the current production Worker version and home-page digest, disconnect its independent Git-integrated build, prove the complete candidate, provision the release publisher and remove the Docusaurus sources and configuration in the same PR. The deployed predecessor keeps serving while the merged package is released.
+
+After merge, the publisher must obtain and execute that actual released wheel, retain its public evidence, verify an inactive preview and activate it or restore the predecessor. Parent #1045 remains open until the actual cutover, anonymous artifact verification and rollback acceptance are recorded. This ordering permits the publisher to use its own merged release; candidate proof cannot satisfy the post-merge obligations.
 
 Production publication follows successful package publication. Resolve the merged release and available wheel, obtain the pinned example/input bundle, and execute the documented commands against that wheel outside the source checkout. Build the site from the resulting exact-release evidence. A push to `main` alone is not publication approval.
 
@@ -307,7 +303,7 @@ The publisher pins Wrangler in its own lockfile and requires Node.js 22 or later
 
 Prove anonymous HTTP retrieval and digests for the advertised source, results, validation and rollback artifacts. Exercise pending or failed proof, wrong revisions, PR-versus-merged identities and missing or failed package publication. These conditions must retain the previous validated deployment. A unit test of a JSON record alone cannot prove ordering between release, execution and deployment.
 
-Retain the previous validated site and its evidence through cutover and post-deployment smoke checks. Verify the candidate preview before activation and the deployed routes, headers, assets and proof afterward. Remove the replaced build path after acceptance; do not leave permanent competing production renderers.
+Retain the previous validated site and its evidence through cutover and post-deployment smoke checks. Verify the candidate preview before activation and the deployed routes, headers, assets and proof afterward. The obsolete build path is removed in BOOK-LIMEN before merge; its deployed Worker and rollback identity survive through actual cutover acceptance. Keep one production publisher.
 
 ## Verification and completion
 
@@ -319,9 +315,9 @@ For the current renderer, run the existing commands after publishing the useful 
 | 2 | `npm --prefix docs-site run security:audit` |
 | 3 | `npm --prefix docs-site run check` |
 
-These commands prove their current scope. They do not establish the future reader, comprehensive examples or evidence-bound production.
+These commands prove source integrity, dependency security and the owned reader build. The build requires the complete same-head project proof above; local commands do not establish a production deployment.
 
-The reader delivery adds executing project/binding tests under `docs/examples/tests/` and browser/build checks under `docs-site/`. The final delivery applies them to the complete corpus and actual publication. Keep every existing required package, security, typing, coverage, runtime, install and packaging check effective.
+The reader delivery supplies executing project/binding tests under `docs/examples/tests/` and browser/build checks under `docs-site/`. The final delivery applies them to the complete corpus and actual publication. Keep every existing required package, security, typing, coverage, runtime, install and packaging check effective.
 
 The acceptance matrix covers:
 
