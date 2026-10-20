@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
+from inspect import signature
 from types import MemberDescriptorType
 from typing import cast
 
@@ -25,8 +26,14 @@ def slot_state(value: object) -> list[tuple[type, str, object]]:
 
 def component_state(value: object) -> dict[str, object]:
     state = dict(vars(value)) if hasattr(value, '__dict__') else {}
+    state |= {name: item for _, name, item in reversed(slot_state(value))}
+    if issubclass(type(value), partial):
+        bound = object_state(value)[2]
+        assert bound is not None
+        state |= cast(dict[str, object], signature(cast(Callable[..., object], bound[0])).bind_partial(
+            *cast(tuple[object, ...], bound[1]), **cast(dict[str, object], bound[2] or {})).arguments)
     native = native_state(value)
-    return state | {name: item for _, name, item in reversed(slot_state(value))} | ({'__parallel_native_state__': native} if native is not None else {})
+    return state | ({'__parallel_native_state__': native} if native is not None else {})
 
 
 def native_state(value: object) -> list[object] | None:

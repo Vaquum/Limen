@@ -203,11 +203,12 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
         if ((stage.path == 'architecture' and stage.contract.prediction_kind not in ('binary', 'continuous', 'target_exposure'))
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):
             raise ValueError(f'Parallel stage {stage.path}: invalid prediction-kind declaration')
-    # Force transport validation even when a stage validator consumes no parameters.
-    with identity_snapshot():
-        _ = decode(encode(frozen))
     pipeline, resources = plan_digests(frozen, stages)
-    return FrozenManifestPlan(frozen, stages, pipeline, resources, copy.deepcopy(dict(package_distributions())))
+    plan = FrozenManifestPlan(frozen, stages, pipeline, resources, copy.deepcopy(dict(package_distributions())))
+    # Include factory variants that exist only in the stage inventory.
+    with identity_snapshot():
+        _ = decode(encode(plan))
+    return plan
 
 
 def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[str, str]:

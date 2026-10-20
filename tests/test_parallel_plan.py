@@ -96,6 +96,15 @@ class SignatureSeedRolling(ShadowedSeedRolling):
         return super().__call__(data, random_state)
 
 
+def _seed_first_feature(random_state, data):
+    return ShadowedSeedRolling()(data, random_state)
+
+
+class OpaqueFactory(tuple):
+    def __call__(self, *, window=3):
+        return CallerRolling(self[0] + window)
+
+
 class MappingRolling(Mapping[str, int]):
     def __init__(self, window):
         self.window = window
@@ -404,6 +413,19 @@ def test_frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_carried_probe, frozen, params).result(timeout=30)
             expected, _ = _carried_probe(frozen, params)
             assert actual == expected and pid != os.getpid()
+        for seed in (42, None):
+            component = partial(_seed_first_feature, seed)
+            component.random_state = None if seed == 42 else 42
+            declare_parallel(component, ParallelRoundContract(seeded_stage, ('random_state',)))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+            if seed is None:
+                with pytest.raises(ValueError, match=r'feature_transforms.*fixed integer seed'):
+                    validate_domain(frozen, {key: [value] for key, value in params.items()}, None)
+            else:
+                validate_resources(frozen, params)
+                actual, pid = pool.submit(_carried_probe, frozen, params).result(timeout=30)
+                expected, _ = _carried_probe(frozen, params)
+                assert actual == expected and pid != os.getpid()
         aliased = copy.deepcopy(plan.manifest).add_feature(shadowed, random_state='{caller_seed}')
         with pytest.raises(ValueError, match=r'feature_transforms.*fixed integer seed'):
             validate_domain(freeze_manifest(aliased, None),
@@ -617,6 +639,10 @@ def _assert_factory_resources(plan, params):
     manifest = copy.deepcopy(plan.manifest).with_reference_architecture(_optional_factory_architecture)
     candidate = params | {'auxiliary_factory': _auxiliary_factory}
     options = {'auxiliary_factory': [_auxiliary_factory, _other_auxiliary_factory]}
+    opaque = OpaqueFactory((1,))
+    declare_parallel(opaque, ParallelRoundContract(_caller_validator, ('window',)))
+    with pytest.raises(TypeError, match=r'object\.__new__.*not safe'):
+        freeze_manifest(manifest, None, {'auxiliary_factory': [opaque]})
     with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: missing frozen independence contract'):
         validate_resources(freeze_manifest(manifest, None), candidate)
     declare_parallel(_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
