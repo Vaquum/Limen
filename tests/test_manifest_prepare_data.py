@@ -468,25 +468,13 @@ def test_pca_compression_fits_on_train_only() -> None:
     assert data_a['x_train'].equals(data_b['x_train'])
 
 
-def test_pca_compression_requires_robust_scaler() -> None:
-
-    manifest = (MLManifest()
-        .set_split_config(3, 1, 1)
-        .set_scaler(LinearScaler)
-        .set_pca_compression()
-        .with_target_label(
-            'target',
-            ThresholdBinaryTarget,
-            fit_params={'source_column': 'close', 'threshold': 108.0},
-            transform_params={'shift': 0},
-        )
-    )
-
-    try:
-        manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
-        assert False, 'Expected ValueError'
-    except ValueError as e:
-        assert 'RobustScaler' in str(e)
+def test_pca_compression_admits_linear_scaler() -> None:
+    from tests.test_column_shims import FIXTURE, _native
+    source = pl.read_parquet(FIXTURE, n_rows=336)
+    manifest = _native().set_strict_mode(True).set_scaler(LinearScaler).set_pca_compression()
+    data = manifest.prepare_data(source, {'auto_pca': True, 'pca_k': 2})
+    assert data['x_train'].shape == (167, 2)
+    assert np.isfinite(data['x_train'].to_numpy()).all()
 
 
 def test_pca_compression_requires_configured_scaler() -> None:
@@ -506,8 +494,7 @@ def test_pca_compression_requires_configured_scaler() -> None:
         manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
         assert False, 'Expected ValueError'
     except ValueError as e:
-        assert "all_fitted_params['_scaler']" in str(e)
-        assert 'set_scaler(RobustScaler)' in str(e)
+        assert 'configured fitted scaler' in str(e)
 
 
 def test_pca_compression_reports_scaler_param_mismatch() -> None:
@@ -528,8 +515,8 @@ def test_pca_compression_reports_scaler_param_mismatch() -> None:
         manifest.prepare_data(_make_pca_raw_data(), {'auto_pca': True, 'pca_k': 2})
         assert False, 'Expected ValueError'
     except ValueError as e:
-        assert "all_fitted_params['_scaler']" in str(e)
-        assert 'scaler_param_name' in str(e)
+        assert "PCA scaler key '_scaler'" in str(e)
+        assert 'not a configured scaler output' in str(e)
 
 
 def test_pca_compression_rejects_invalid_k() -> None:
