@@ -23,6 +23,7 @@ sfd:
           period: 1
           group: momentum
 # endregion momentum_indicator
+# region fitted_target
     target:
       name: quantile_flag
       class: limen.targets.QuantileBinaryTarget
@@ -31,6 +32,7 @@ sfd:
         quantile: 0.5
       transform_params:
         shift: -1
+# endregion fitted_target
     objective:
       metric: backtest_total_return
       direction: maximize
@@ -45,8 +47,10 @@ sfd:
         quote_currency: USDT
         quantity_step: 1.0e-9
         min_notional: 0.0
+# region fitted_scaler
     scaler:
       from_params: scaler_type
+# endregion fitted_scaler
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
   params:
     scaler_type: [logreg]

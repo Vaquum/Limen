@@ -12,35 +12,30 @@ This page covers feature-helper selection, input requirements, and added columns
 - Regime helpers output compact categorical-style columns such as `regime_ma_slope` or `regime_price_band`.
 - `find_min_d` returns a scalar value instead of a frame; it searches for a stationarity-preserving fractional-differentiation order.
 
-## Quick example
+## A feature in each project
 
+The [Python project](examples/python-research/README.md) computes decimal momentum in caller-owned preparation. The same expression runs before fitting and during inference. Changing the expression changes the meaning of the model's input; retain that equality when extending it.
+
+<!-- example: features-python-momentum source=docs/examples/python-research/research.py region=momentum_feature scenario=selection interface=python role=executed -->
 ```python
-from limen.data import HistoricalData
-from limen.experiment import MLManifest
-from limen.features import kline_imbalance, vwap
-from limen.indicators import atr, roc
-from limen.sfd.reference_architecture import logreg_binary
-
-
-def manifest():
-    return (
-        MLManifest()
-        .set_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 3600, 'start_date_limit': '2025-01-01'},
-        )
-        .set_test_data_source(
-            method=HistoricalData.get_spot_klines,
-            params={'kline_size': 7200, 'row_count_limit': 5000},
-        )
-        .set_split_config(8, 1, 2)
-        .add_indicator(roc, period='roc_period')
-        .add_indicator(atr, period=14)
-        .add_feature(vwap)
-        .add_feature(kline_imbalance, window='imbalance_window')
-        .with_reference_architecture(logreg_binary)
+def features(bars, window):
+    return bars.with_columns(
+        (pl.col("close") / pl.col("close").shift(window) - 1).alias("momentum")
     )
 ```
+
+The [Compiled project](examples/compiled-research/README.md) declares `roc` in its Manifest. It produces percent-valued momentum as `roc_1`, then the Manifest carries that feature through fitting and reconstruction. These two projects use different units and models; their scores are not a controlled comparison.
+
+<!-- example: features-compiled-momentum source=docs/examples/compiled-research/selection.yaml region=momentum_indicator scenario=selection interface=compiled role=executed -->
+```yaml
+    indicators:
+      - func: limen.indicators.roc
+        params:
+          period: 1
+          group: momentum
+```
+
+The excerpts belong to the complete selection runs, with the dependencies and recorded inputs described in each project. The helper tables below describe alternatives; a listed helper is not a claim that the selection run invokes it. Trade-derived helpers require the columns named in their notes.
 
 ## Kline-derived position and volatility features
 

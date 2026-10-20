@@ -28,11 +28,13 @@ def features(bars, window):
 # endregion momentum_feature
 
 
+# region next_return_target
 def prepare_split(bars, round_params):
     return features(bars, round_params["window"]).with_columns(
         (pl.col("close").shift(-1) / pl.col("open").shift(-1) - 1)
         .alias("next_return")
     ).slice(12).drop_nulls(["momentum", "next_return"])
+# endregion next_return_target
 
 
 def prep(bars, round_params):
@@ -43,10 +45,12 @@ def prep(bars, round_params):
     }
 
 
+# region fitted_scaler
 def fit(train, round_params):
     return make_pipeline(StandardScaler(), Ridge(alpha=round_params["alpha"])).fit(
         train.select("momentum"), train["next_return"].to_numpy()
     )
+# endregion fitted_scaler
 
 
 def backtest(validation, forecasts):

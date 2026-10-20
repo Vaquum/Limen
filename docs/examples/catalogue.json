@@ -52,7 +52,11 @@
     "docs/examples/python-research/README.md",
     "docs/examples/compiled-research/README.md",
     "docs/Walk-Forward.md",
-    "docs/Indicators.md"
+    "docs/Indicators.md",
+    "docs/Features.md",
+    "docs/Transforms.md",
+    "docs/Scalers.md",
+    "docs/Targets.md"
   ],
   "model_families": {
     "logreg_binary": {
