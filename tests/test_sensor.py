@@ -1,14 +1,21 @@
 from __future__ import annotations
 
+import copy
+from dataclasses import replace
 from datetime import date
 from datetime import datetime
+from hashlib import sha256
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
 import numpy as np
 import polars as pl
+import pytest
 
+from limen.backtest.trade_contract import contract_digest
 from limen.experiment import MLManifest
+from limen.experiment.manifest_core import ProductConfig
 from limen.experiment.manifest_core import PCACompressionConfig
 from limen.experiment.manifest_core import _apply_sensor_pca
 from limen.experiment.manifest_core import _count_leading_nulls
@@ -446,8 +453,12 @@ def test_extract_scalar_returns_python_float() -> None:
     assert isinstance(_extract_scalar(0.7), float)
 
 
-def test_extract_scalar_rejects_bool() -> None:
-    assert _extract_scalar(True) is None
+@pytest.mark.parametrize('value', (True, False))
+def test_extract_scalar_preserves_bool(value) -> None:
+    assert _extract_scalar(value) is value
+    assert _extract_scalar(np.bool_(value)) is value
+    assert _extract_scalar([value]) is value
+    assert _extract_scalar(np.array([value])) is value
 
 
 def test_extract_scalar_from_numpy_array() -> None:
@@ -557,3 +568,173 @@ def test_set_split_dates_stores_guard_flags() -> None:
         assert False, 'Expected TypeError for non-bool test_predict_guard'
     except TypeError as e:
         assert 'test_predict_guard' in str(e)
+
+
+def _recorded_compiled_source(klines_size=900):
+    assert klines_size == 900
+    path = Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet'
+    assert sha256(path.read_bytes()).hexdigest() == 'eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a'
+    return pl.read_parquet(path).head(500)
+
+
+@pytest.fixture(scope='module')
+def compiled_recording():
+    raw = _recorded_compiled_source()
+    manifest, _ = _make_lag_manifest(lag=3)
+    manifest.set_data_source(_recorded_compiled_source, params={'klines_size': 900})
+    manifest.set_backtest_config(
+        prediction_mode='binary',
+        product=ProductConfig('cash_spot', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0),
+    )
+    params = {'bar_type': 'base'}
+    fitted = manifest.prepare_data(raw, params)
+    manifest.set_split_dates(
+        date(2025, 1, 2), date(2025, 1, 3),
+        date(2025, 1, 3), date(2025, 1, 4),
+        date(2025, 1, 4), date(2025, 1, 5),
+    )
+    manifest.add_indicator(lambda df: df.with_columns(
+        pl.when(pl.col('datetime') == raw['datetime'][388])
+        .then(None).otherwise(pl.col('lag_3')).alias('lag_3'),
+    ))
+    prepared, lookback = manifest.sensor_input_prep(raw, fitted['_fitted_params'], params)
+    availability = raw['datetime'].dt.epoch('ns') + 900_000_000_000
+    assert lookback == 3
+    assert prepared['datetime'].equals(raw['datetime'])
+    assert prepared['__trade_available_at_ns__'].equals(availability, check_names=False)
+    digest = contract_digest(fitted['trade_contract'])
+    assert digest == fitted['trade_contract_digest']
+    expected = []
+    for i, dt in enumerate(raw['datetime']):
+        if date(2025, 1, 2) <= dt.date() < date(2025, 1, 5):
+            reason = 'inside-training-window'
+        elif i < 3:
+            reason = 'warm-up'
+        elif i == 388:
+            reason = 'null-features'
+        else:
+            expected.append(BarPrediction(dt, -0.25, 0.5, None, int(availability[i]), digest))
+            continue
+        expected.append(BarPrediction(dt, None, None, reason))
+    assert all(row.datetime is not None and row.available_at_ns is not None
+               and row.trade_contract_digest for row in expected if row.reason is None)
+    return raw, manifest, fitted, expected
+
+
+@pytest.fixture
+def compiled_sensor(compiled_recording):
+    raw, manifest, fitted, expected = compiled_recording
+    sensor = _make_sensor(copy.deepcopy(manifest), fitted_params=fitted['_fitted_params'])
+    sensor._trade_contract = copy.deepcopy(fitted['trade_contract'])
+    sensor._trade_digest = contract_digest(sensor._trade_contract)
+    sensor._model.predict.side_effect = None
+    return sensor, raw, expected
+
+
+def _compiled_results(sensor, raw, single_output, batch_output):
+    sensor._model.predict.return_value = batch_output
+    results = sensor.predict_all(raw)
+    sensor._model.predict.return_value = single_output
+    return sensor.predict(raw), results
+
+
+@pytest.mark.parametrize('array_output', (False, True))
+@pytest.mark.parametrize('prediction,probability', [
+    pair
+    for scalar in (float, np.float64)
+    for value in ('nan', 'inf', '-inf')
+    for pair in ((scalar(value), 0.5), (-0.25, scalar(value)))
+] + [
+    (-0.25, scalar(value))
+    for scalar in (float, np.float64)
+    for value in (-0.1, 1.1)
+] + [
+    pair
+    for scalar in (bool, np.bool_)
+    for value in (True, False)
+    for pair in ((scalar(value), 0.5), (-0.25, scalar(value)))
+] + [(None, 0.5)])
+def test_compiled_sensor_invalid_output_pairs(compiled_sensor, prediction, probability, array_output):
+    sensor, raw, expected = compiled_sensor
+    count = sum(row.reason is None for row in expected)
+    pair = {'_preds': prediction, '_probs': probability}
+    single = {key: np.array([value]) for key, value in pair.items()} if array_output else pair
+    batch = {key: np.array([value] * count) if array_output else [value] * count
+             for key, value in pair.items()}
+    last, results = _compiled_results(sensor, raw, single, batch)
+    rejected = [replace(row, prediction=None, probability=None, reason='sensor-error')
+                if row.reason is None else row for row in expected]
+    assert results == rejected
+    assert last == rejected[-1]
+
+
+@pytest.mark.parametrize('array_output', (False, True))
+@pytest.mark.parametrize('prediction,probability,optional', [
+    (-0.25, None, 'omitted'),
+    (-0.25, None, 'none'),
+    (-0.25, None, 'aligned'),
+    (0, 0, 'aligned'),
+    (1.25, 1, 'aligned'),
+    (np.float64(-0.75), np.float64(0.2), 'aligned'),
+    (np.int64(-1), np.int64(0), 'aligned'),
+    (np.float32(0), np.float32(1), 'aligned'),
+    (10 ** 40, None, 'aligned'),
+    (-10 ** 40, None, 'aligned'),
+])
+def test_compiled_sensor_valid_output_pairs(compiled_sensor, prediction, probability, optional, array_output):
+    sensor, raw, expected = compiled_sensor
+    count = sum(row.reason is None for row in expected)
+    pair = {'_preds': prediction, '_probs': probability}
+    single = {key: np.array([value]) for key, value in pair.items()} if array_output else pair
+    batch = {key: np.array([value] * count) if array_output else [value] * count
+             for key, value in pair.items()}
+    if optional == 'omitted':
+        del single['_probs']
+        del batch['_probs']
+    elif optional == 'none':
+        single['_probs'] = batch['_probs'] = None
+    last, results = _compiled_results(sensor, raw, single, batch)
+    accepted = [replace(row, prediction=prediction, probability=probability)
+                if row.reason is None else row for row in expected]
+    assert results == accepted
+    assert last == accepted[-1]
+
+
+@pytest.mark.parametrize('omitted', (False, True))
+def test_compiled_sensor_missing_prediction_outputs(compiled_sensor, omitted):
+    sensor, raw, expected = compiled_sensor
+    single = {'_probs': 0.5}
+    batch = {'_probs': [0.5] * sum(row.reason is None for row in expected)}
+    if not omitted:
+        single['_preds'] = batch['_preds'] = None
+    last, results = _compiled_results(sensor, raw, single, batch)
+    rejected = [replace(row, prediction=None, probability=None, reason='sensor-error')
+                if row.reason is None else row for row in expected]
+    assert results == rejected
+    assert last == rejected[-1]
+
+
+@pytest.mark.parametrize('bad_pair', [
+    (None, 0.5), (float('nan'), 0.5), (-0.25, float('inf')),
+    (False, 0.5), (-0.25, True), (-0.25, 1.1),
+])
+def test_compiled_sensor_mixed_output_alignment(compiled_sensor, bad_pair):
+    sensor, raw, expected = compiled_sensor
+    valid = [i for i, row in enumerate(expected) if row.reason is None]
+    assert valid[94] == 385
+    preds = [j - 0.5 for j in range(len(valid))]
+    probs = [j % 2 for j in range(len(valid))]
+    aligned = list(expected)
+    for j, i in enumerate(valid):
+        aligned[i] = replace(expected[i], prediction=preds[j], probability=probs[j])
+    preds[94], probs[94] = bad_pair
+    aligned[385] = replace(expected[385], prediction=None, probability=None, reason='sensor-error')
+    last, results = _compiled_results(
+        sensor, raw, {'_preds': preds[-1], '_probs': probs[-1]},
+        {'_preds': preds, '_probs': probs},
+    )
+    assert results == aligned
+    assert last == aligned[-1]
+    assert sensor.predict(raw.head(2)).reason == 'warm-up'
+    assert sensor.predict(raw.head(100)).reason == 'inside-training-window'
+    assert sensor.predict(raw.head(389)).reason == 'null-features'
