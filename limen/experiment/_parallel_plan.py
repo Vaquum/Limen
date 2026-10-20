@@ -11,6 +11,7 @@ from importlib import import_module
 from typing import Protocol, cast
 
 import polars as pl
+from typing_extensions import override
 
 from limen._parallel_contract import ParallelRoundContract, attach
 from limen.experiment._parallel_encoding import decode, digest, encode, reference, source_digest
@@ -61,6 +62,7 @@ class FrozenManifestPlan:
     resource_digest: str
     distribution_providers: dict[str, list[str]]
 
+    @override
     def __reduce__(self) -> tuple[Callable[..., object], tuple[bytes, dict[str, list[str]]]]:
         with distribution_providers(self.distribution_providers), identity_snapshot():
             payload = zlib.compress(json.dumps(encode(self), ensure_ascii=False, separators=(',', ':')).encode())
@@ -116,17 +118,17 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS) -> object:
     if isinstance(value, (list, tuple)):
         items = [_normalize(item, active) for item in cast(list[object] | tuple[object, ...], value)]
         return tuple(items) if isinstance(value, tuple) else items
-    if callable(value) and not (inspect.isfunction(value) or isinstance(value, type)) and (isinstance(value, partial) or not is_dataclass(value)):
+    if issubclass(type(value), partial):
         clone = decode(encode(value))
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
-        return clone
-    if is_dataclass(value) and not isinstance(value, type):
+    elif is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
         for field in fields(value):
             object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active))
-        return clone
-    return copy.deepcopy(value)
+    else:
+        clone = copy.deepcopy(value)
+    return clone
 
 
 def _contract(component: object, path: str) -> ParallelRoundContract:

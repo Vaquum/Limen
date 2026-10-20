@@ -187,7 +187,8 @@ def test_frozen_manifest_round_plan() -> None:
         raise AssertionError('plan transport repeated provider discovery')
     with pytest.MonkeyPatch.context() as patch:
         patch.setattr(identities, 'package_distributions', no_discovery)
-        transported = pickle.loads(pickle.dumps(plan))
+        restore, arguments = plan.__reduce__()
+        transported = restore(*arguments)
         assert (transported.pipeline_digest, transported.resource_digest) == (plan.pipeline_digest, plan.resource_digest)
     declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
     native = copy.deepcopy(plan.manifest)

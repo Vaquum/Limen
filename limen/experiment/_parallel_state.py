@@ -30,7 +30,8 @@ def component_state(value: object) -> dict[str, object]:
 
 def object_state(value: object) -> ObjectState:
     attributes = {key: item for key, item in vars(value).items() if key != '__parallel_round_contract__'} if hasattr(value, '__dict__') else {}
-    reduced = cast(tuple[object, ...], partial.__reduce__(value)) if isinstance(value, partial) else None
+    reducer = cast(Callable[[object], tuple[object, ...]], vars(partial)['__reduce__'])
+    reduced = reducer(value) if issubclass(type(value), partial) else None
     bound = cast(tuple[object, ...], reduced[2])[:3] if reduced is not None else None
     return attributes, slot_state(value), bound
 
@@ -38,7 +39,7 @@ def object_state(value: object) -> ObjectState:
 def restore_object(cls: type, state: ObjectState) -> object:
     attributes, slots, bound = state
     if bound is None:
-        result: object = object.__new__(cls)
+        result: object = cast(object, object.__new__(cls))
         if attributes:
             vars(result).update(attributes)
     else:
@@ -52,4 +53,4 @@ def restore_object(cls: type, state: ObjectState) -> object:
 
 def call_implementation(value: object) -> object:
     implementation = type(value).__call__ if callable(value) else None
-    return None if implementation is partial.__call__ else implementation
+    return None if implementation is vars(partial)['__call__'] else implementation

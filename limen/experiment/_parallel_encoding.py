@@ -156,7 +156,7 @@ def _decode_instance(parts: list[object]) -> object:
         params = {cast(str, key): decode(item) for key, item in cast(list[list[object]], state)}
         if set(params) != {field.name for field in fields(cls)}:
             raise ValueError('Invalid parallel dataclass fields')
-        instance = object.__new__(cls)
+        instance = cast(object, object.__new__(cls))
         for field in fields(cls):
             object.__setattr__(instance, field.name, params[field.name])
     elif tag == 'instance':
