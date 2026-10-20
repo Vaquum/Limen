@@ -8,7 +8,7 @@ from limen.experiment._prepare_trade_context import validate_inference_contract
 from limen.experiment._dynamic_barriers import research_reference
 import logging
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import numpy as np
 import polars as pl
@@ -44,7 +44,7 @@ class Sensor:
         super().__init__()
         _fold_guard.reject_manual(yaml_reference, self)
         self._components = components
-        self._yaml_reference = research_reference(yaml_reference if yaml_reference is None and components is None else bind_components(yaml_reference, components))
+        self._yaml_reference = research_reference(yaml_reference if cast(object, yaml_reference) is None and components is None else bind_components(yaml_reference, components))
         self._model = model
         self._fitted_params = dict(fitted_params)
         self._round_params = dict(round_params)

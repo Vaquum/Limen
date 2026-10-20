@@ -33,9 +33,7 @@ _CANONICAL_INTS = MappingProxyType({value: int(str(value)) for value in range(-5
 def _typing_metadata(value: object) -> dict[str, object] | None:
     if type(value) in _FORM_TYPES:
         return {'name': str(value)}
-    if type(value) not in _PARAMETER_TYPES:
-        return None
-    return {name: getattr(value, name) for name in ('__name__', '__bound__', '__constraints__', '__covariant__', '__contravariant__', '__infer_variance__', '__default__', '__origin__') if hasattr(value, name)}
+    return {name: getattr(value, name) for name in ('__name__', '__bound__', '__constraints__', '__covariant__', '__contravariant__', '__infer_variance__', '__default__', '__origin__') if hasattr(value, name)} if type(value) in _PARAMETER_TYPES else None
 
 
 @lru_cache(maxsize=2048)
@@ -127,7 +125,10 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
-        if item is None or type(item) in _ATOMIC_TYPES or (type(item) is int and item is _CANONICAL_INTS.get(item)):
+        if item is None:
+            return item
+        item_type = type(item)
+        if item_type in _ATOMIC_TYPES or (item_type is int and item is _CANONICAL_INTS.get(item)):
             return item
         if id(item) in seen:
             return ('ref', seen[id(item)])
@@ -137,20 +138,20 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         retained.append(item)
         if isinstance(item, ModuleType):
             return ('module', item.__name__)
-        if type(item) in (int, float):
-            return ('scalar', type(item).__name__, item)
+        if item_type is int or item_type is float:
+            return ('scalar', item_type.__name__, item)
         if isinstance(item, type):
             return ('class', item.__module__, item.__qualname__)
-        return structure(item)
+        return structure(item, item_type)
 
-    def structure(item: object) -> object:
+    def structure(item: object, item_type: type[object]) -> object:
+        if item_type is dict:
+            return ((item_type.__module__, item_type.__qualname__, node(item_type)), None, tuple((node(key), node(part)) for key, part in cast(dict[object, object], item).items()), None)
+        if item_type is list or item_type is tuple:
+            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
+        if item_type is set or item_type is frozenset:
+            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple(node(part) for part in cast(set[object] | frozenset[object], item)), None)
         kind = (type(item).__module__, type(item).__qualname__, node(type(item)))
-        if type(item) is dict:
-            return (kind, None, tuple((node(key), node(part)) for key, part in cast(dict[object, object], item).items()), None)
-        if type(item) in (list, tuple):
-            return (kind, tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
-        if type(item) in (set, frozenset):
-            return (kind, tuple(node(part) for part in cast(set[object] | frozenset[object], item)), None)
         attributes = _attributes(item) if issubclass(type(item), _CONTAINER_TYPES) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
