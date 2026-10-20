@@ -136,6 +136,12 @@ uel._log.experiment_confusion_metrics('price_change')
 
 automatically at the end of the run.
 
+Rounds whose effective outputs are not binary classification — a non-binary
+`prediction_mode`, fractional predictions, or no classifiable labels — raise
+`ConfusionNotApplicableError`. UEL finalization then records
+`experiment_confusion_metrics` as `None` and still populates backtests,
+parameter correlation, and the convergence report.
+
 ### `permutation_confusion_metrics(x, round_id)`
 
 Produces the same style of summary for one specific round.
