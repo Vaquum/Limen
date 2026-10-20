@@ -283,12 +283,12 @@ class CompiledSFD:
         super().__init__()
 
         self._components = components
-        if components is not None:
-            yaml_dict = copy.deepcopy(yaml_dict)
-            yaml_dict.update(bind_components(yaml_dict, components, record=True))
-        else:
-            _ = bind_components(yaml_dict, components)
         self._yaml, self._holdout_project_root, self.__name__ = initialize_compiled(yaml_dict, project_root)
+        if components is not None:
+            self._yaml = copy.deepcopy(self._yaml)
+            self._yaml.update(bind_components(self._yaml, components, record=True))
+        else:
+            _ = bind_components(self._yaml, components)
         self._manifest_cache: Manifest | None = None
 
     @property
