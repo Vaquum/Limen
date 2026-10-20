@@ -10,6 +10,7 @@ import limen.data.historical_data as _historical
 
 import numpy as np
 import polars as pl
+from polars.exceptions import ComputeError
 
 from limen.data.historical_data import HistoricalData
 from limen.experiment._holdout_history import ProjectBinding, utc_day
@@ -65,7 +66,10 @@ def _normal(frame: pl.DataFrame) -> pl.DataFrame:
     dtype = frame.schema.get('datetime')
     if isinstance(dtype, pl.Datetime) and dtype.time_zone not in (None, 'UTC'):
         raise ValueError('Holdout source datetime timezone must be UTC')
-    frame = _normalize_datetime_column(_normalize_timestamp_column(frame))
+    try:
+        frame = _normalize_datetime_column(_normalize_timestamp_column(frame))
+    except ComputeError as exc:
+        raise ValueError('Holdout source requires recorded nonnull UTC datetimes') from exc
     dtype = frame.schema.get('datetime')
     if not isinstance(dtype, pl.Datetime) or dtype.time_zone != 'UTC' or frame['datetime'].null_count():
         raise ValueError('Holdout source requires recorded nonnull UTC datetimes')
@@ -90,7 +94,10 @@ def admit_frame(frame: pl.DataFrame, *, interval: int, lower_ns: int | None, upp
         raise ValueError('Holdout final context/window lacks complete native support')
     if not {'open', 'high', 'low', 'close'} <= set(frame.columns):
         raise ValueError('Holdout native bars require open/high/low/close')
-    prices = frame.select('open', 'high', 'low', 'close').to_numpy()
+    ohlc = frame.select('open', 'high', 'low', 'close')
+    if any(not dtype.is_numeric() for dtype in ohlc.schema.values()):
+        raise ValueError('Holdout OHLC must be numeric')
+    prices = ohlc.to_numpy()
     if not np.isfinite(prices).all() or (prices <= 0).any() or np.any(prices[:, 2] > np.minimum(prices[:, 0], prices[:, 3])) or np.any(prices[:, 1] < np.maximum(prices[:, 0], prices[:, 3])):
         raise ValueError('Holdout OHLC must be finite, positive and internally consistent')
     return frame
@@ -103,20 +110,29 @@ def source_spec(manifest: SourceManifest, binding: ProjectBinding) -> tuple[str,
     params = dict(config.params)
     method = getattr(config.method, '__func__', config.method)
     owner = getattr(config.method, '__self__', None)
-    if owner is not None and type(owner) is not HistoricalData:
+    if owner is not None and not isinstance(owner, HistoricalData):
         raise ValueError('Holdout source overrides/subclasses are unsupported')
     if any(params.get(name) is not None for name in ('row_count_limit', 'n_rows')):
         raise ValueError('Holdout research does not support source row limits')
     if method is _GET_FILE:
         if set(params) - {'file_path_or_url', 'has_header', 'columns', 'row_count_limit', 'n_rows'}:
-            raise ValueError('Holdout Parquet source has unsupported parameters')
+            raise ValueError('Holdout file source has unsupported parameters')
+        store = getattr(owner, '_store', None) if owner is not None else None
+        if store is not None and getattr(store, '__func__', store) is not HistoricalData._store:
+            raise ValueError('Holdout source overrides/subclasses are unsupported')
+        if owner is not None and type(owner) is not HistoricalData and set(vars(owner)) - {'data', 'data_columns'}:
+            raise ValueError('Holdout source overrides/subclasses are unsupported')
+        if type(params.get('has_header', True)) is not bool:
+            raise ValueError('Holdout file source has_header must be a boolean')
         value = params.get('file_path_or_url')
-        if not isinstance(value, str) or '://' in value or '{' in value or Path(value).suffix.lower() != '.parquet':
-            raise ValueError('Holdout file source must be a literal local Parquet path')
+        if not isinstance(value, str) or '://' in value or '{' in value or Path(value).suffix.lower() not in ('.parquet', '.csv'):
+            raise ValueError('Holdout file source must be a literal local Parquet or CSV path')
         params['file_path_or_url'] = str(Path(value).resolve())
         return 'local_file', params, binding.interval_seconds
     if method is not _GET_SPOT or set(params) - {'kline_size', 'start_date_limit', 'end_date_limit', 'row_count_limit', 'n_rows'}:
-        raise ValueError('Holdout source must be native default spot klines or local Parquet')
+        raise ValueError('Holdout source must be native default spot klines or a local Parquet or CSV file')
+    if owner is not None and type(owner) is not HistoricalData:
+        raise ValueError('Holdout source overrides/subclasses are unsupported')
     interval = params.get('kline_size', 60)
     if type(interval) is not int or interval not in _NATIVE or interval != binding.interval_seconds:
         raise ValueError('Holdout hosted interval must match a supported native dataset')
@@ -143,7 +159,7 @@ def load_admitted_source(manifest: SourceManifest, binding: ProjectBinding, *, l
         columns = params.get('columns')
         if columns is not None and (not isinstance(columns, list) or not all(isinstance(item, str) for item in cast(list[object], columns))):
             raise ValueError('Holdout source columns must be literal names')
-        raw = _read_any_file(path, columns=cast(list[str] | None, columns))
+        raw = _read_any_file(path, columns=cast(list[str] | None, columns), has_header=cast(bool, params.get('has_header', True)))
     else:
         if not complete:
             declared_start = _date_limit(params.get('start_date_limit'), 'start_date_limit')
