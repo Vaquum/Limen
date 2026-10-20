@@ -10,7 +10,7 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, FunctionType, GetSetDescriptorType, MemberDescriptorType, ModuleType
+from types import CodeType, FunctionType, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, ModuleType
 from typing import Literal, Union, cast
 
 import numpy as np
@@ -153,11 +153,16 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 for candidate in tuple(references.get(name, ())):
                     item = cast(object, candidate)
                     following = index + 1
-                    for attribute in instructions[following:]:
-                        if attribute.opname not in ('LOAD_ATTR', 'LOAD_METHOD') or not hasattr(item, str(attribute.argval)):
+                    while following < len(instructions):
+                        attribute = instructions[following]
+                        if attribute.opname in ('LOAD_ATTR', 'LOAD_METHOD') and hasattr(item, str(attribute.argval)):
+                            item = getattr(item, str(attribute.argval))
+                            following += 1
+                        elif type(item) in (dict, MappingProxyType) and attribute.opname == 'LOAD_CONST' and isinstance(attribute.argval, str) and following + 1 < len(instructions) and instructions[following + 1].opname == 'BINARY_SUBSCR' and attribute.argval in cast(Mapping[object, object], item):
+                            item = cast(Mapping[object, object], item)[attribute.argval]
+                            following += 2
+                        else:
                             break
-                        item = getattr(item, str(attribute.argval))
-                        following += 1
                     if isinstance(item, ModuleType) and index > 0 and instructions[index - 1].argval == 'getattr':
                         for attribute in attributes.intersection(vars(item)):
                             visit(getattr(item, attribute))
