@@ -47,7 +47,8 @@ def _roots(sensor: Sensor) -> list[object]:
 
 def _call_functions(value: object) -> tuple[FunctionType, ...]:
     if isinstance(value, (staticmethod, classmethod)):
-        return _call_functions(value.__func__)
+        descriptor = cast('staticmethod[..., object] | classmethod[object, ..., object]', value)
+        return _call_functions(descriptor.__func__)
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         return (*_call_functions(provider.func), *_call_functions(type(provider).__call__))
@@ -59,7 +60,7 @@ def _call_functions(value: object) -> tuple[FunctionType, ...]:
         unwrapped = inspect.unwrap(value)
         return (value, *_call_functions(unwrapped)) if unwrapped is not value else (value,)
     call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
-    functions = _call_functions(call.fget) if isinstance(call, property) else _call_functions(call) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
+    functions = _call_functions(call.fget) if isinstance(call, property) else _call_functions(cast(object, call)) if inspect.isfunction(call) or isinstance(call, (staticmethod, classmethod)) else ()
     unwrapped = inspect.unwrap(value) if callable(value) else value
     return (*functions, *_call_functions(unwrapped)) if unwrapped is not value else functions
 
@@ -91,19 +92,17 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             return
         call = None if inspect.isfunction(method) or inspect.ismethod(method) else inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
         calls = _call_functions(call)
-        for function in _call_functions(method):
-            if inspect.ismethod(method):
-                owner = cast(object, method.__self__)
-            elif function in calls:
-                owner = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
-            elif isinstance(method, partial) and inspect.ismethod(method.func):
-                owner = cast(object, method.func.__self__)
-            else:
-                owner = None
+        functions = _call_functions(method)
+        bound_owner = method.__self__ if inspect.ismethod(method) else None
+        call_owner: object | None = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
+        wrapped = cast(partial[object], method).func if isinstance(method, partial) else None
+        wrapped_owner = wrapped.__self__ if inspect.ismethod(wrapped) else None
+        for function in functions:
+            owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
             forbidden.setdefault(function.__code__, []).append((function, owner))
 
     def collect(value: object) -> None:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (type(value) is np.ndarray and not object_array(cast(object, value))):
+        if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (type(value).__module__ == 'numpy' and type(value).__name__ == 'ndarray' and not object_array(value)):
             return
         if id(value) in seen:
             return
