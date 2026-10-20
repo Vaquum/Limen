@@ -1110,6 +1110,8 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result['_probs'] = self.policy + result['_probs']
             return result
     class NativeFloatPolicy(np.float64):
+        def __deepcopy__(self, memo):
+            return type(self)(float(self))
         def adjust(self, values):
             return later_probabilities(np.clip(values + float(self), 0, 1))
     class IteratorPolicy:
