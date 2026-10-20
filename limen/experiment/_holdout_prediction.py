@@ -64,7 +64,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             owner = bound_owner if bound_owner is not None else call_owner if function in calls else wrapped_owner
             instance = False
             if class_target is not None and function not in calls and inspect.getattr_static(type(class_target), '__call__', None) is type.__call__:
-                owner, instance = class_target, constructor_entry(cast(type[object], class_target))[1]
+                owner, instance = class_target, constructor_entry(class_target)[1]
             forbidden.setdefault(function, []).append((owner, instance))
 
     def collect(value: object) -> None:
