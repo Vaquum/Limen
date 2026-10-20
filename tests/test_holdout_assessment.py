@@ -1713,6 +1713,79 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(hidden_partial)
         assert loader.call_count == 0
+    class ThresholdReceiver:
+        def choose(self, values):
+            threshold_selections.append(self)
+            return np.max(values)
+    threshold_receiver = ThresholdReceiver()
+    class BoundMeta(type):
+        __call__ = threshold_receiver.choose
+    class BoundMetaCallback(metaclass=BoundMeta):
+        pass
+    for callback in (BoundMetaCallback, partial(BoundMetaCallback)):
+        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+        _freeze(unsafe_class)
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+            callback(unsafe_class._model.model.coef_.ravel())
+        assert threshold_selections == []
+    class HiddenDtype(np.ndarray):
+        @property
+        def dtype(self):
+            return np.dtype(float)
+        def __deepcopy__(self, memo):
+            return np.ndarray.copy(self)
+    keyed._model.__class__ = Keyed
+    keyed._model.adjustments = np.asarray([later_probabilities], dtype=object).view(HiddenDtype)
+    hidden_dtype_handle = _freeze(keyed)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(hidden_dtype_handle, assessment_case)
+        assert loader.call_count == 0
+    class HiddenFactory(defaultdict):
+        @property
+        def default_factory(self):
+            return identity_probabilities
+        def adjust(self, values):
+            return self['provider'](values)
+        def __deepcopy__(self, memo):
+            return type(self)(defaultdict.__dict__['default_factory'].__get__(self, type(self)))
+    class NonpreservingFactory(HiddenFactory):
+        def __deepcopy__(self, memo):
+            return type(self)(later_probabilities)
+    mapped._model.policy = HiddenFactory(lambda: identity_probabilities)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingFactory(lambda: identity_probabilities)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class HiddenCapacity(deque):
+        @property
+        def maxlen(self):
+            return 1
+        def adjust(self, values):
+            return np.clip(values + deque.__dict__['maxlen'].__get__(self, type(self)) / 100, 0, 1)
+        def __deepcopy__(self, memo):
+            return type(self)(maxlen=deque.__dict__['maxlen'].__get__(self, type(self)))
+    class NonpreservingCapacity(HiddenCapacity):
+        def __deepcopy__(self, memo):
+            return type(self)(maxlen=deque.__dict__['maxlen'].__get__(self, type(self)) + 1)
+    mapped._model.policy = HiddenCapacity(maxlen=1)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingCapacity(maxlen=1)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    def global_lookup(values):
+        return np.clip(values + globals()['_LATE_RULES']['offset'], 0, 1)
+    distinct._model.__class__ = UsesReadonlyCallable
+    distinct._model.policy = global_lookup
+    global_handle = _freeze(distinct)
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(global_handle, assessment_case)
+        assert loader.call_count == 0
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):

@@ -111,6 +111,12 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             binding: object = None
             for index, instruction in enumerate(instructions):
                 name = str(instruction.argval)
+                if instruction.opname == 'LOAD_GLOBAL' and name == 'globals' and name not in value.__globals__:
+                    lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
+                    if len(lookup) < 3 or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':
+                        raise ValueError('Holdout requires a literal key for prediction globals lookup')
+                    if lookup[1].argval in value.__globals__:
+                        visit(value.__globals__[lookup[1].argval])
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
                     module_attributes.add(name)

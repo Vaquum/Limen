@@ -24,8 +24,8 @@ def call_codes(functions: Sequence[FunctionType]) -> Iterator[None]:
                 function.__code__ = code
 
 
-def native_attribute(value: object, name: str) -> object:
-    owner: type[object] = partial if isinstance(value, partial) else property if isinstance(value, property) else staticmethod if isinstance(value, staticmethod) else classmethod
+def native_attribute(value: object, name: str, owner: type[object] | None = None) -> object:
+    owner = owner or (partial if isinstance(value, partial) else property if isinstance(value, property) else staticmethod if isinstance(value, staticmethod) else classmethod)
     descriptor = cast(GetSetDescriptorType | MemberDescriptorType, vars(owner)[name])
     native_value = cast(object, value)
     return descriptor.__get__(native_value, type(native_value))

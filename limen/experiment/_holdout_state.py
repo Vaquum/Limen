@@ -53,13 +53,13 @@ def _booster(value: object) -> bool:
 
 
 def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
-    return isinstance(value, np.ndarray) and cast(npt.NDArray[np.generic], value).dtype.hasobject
+    return isinstance(value, np.ndarray) and npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], value), type=np.ndarray).dtype.hasobject
 
 
 def children(value: object) -> tuple[object, ...]:
     if isinstance(value, Mapping):
         entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
-        return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
+        return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
     if object_array(value):
@@ -157,14 +157,15 @@ def fitted_witness(value: object) -> bytes:
             payload = str.__str__(item) if isinstance(item, str) else int.__int__(item) if isinstance(item, int) else float.__float__(item) if isinstance(item, float) else bytes.__repr__(item)
             result = (kind, payload, node(_attributes(item)))
         elif isinstance(item, Mapping):
-            factory = node(item.default_factory) if isinstance(item, defaultdict) else None
+            factory = node(native_attribute(cast(object, item), 'default_factory', defaultdict)) if isinstance(item, defaultdict) else None
             result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
         elif isinstance(item, (tuple, list, deque)):
-            result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), item.maxlen if isinstance(item, deque) else None, state)
+            result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), native_attribute(cast(object, item), 'maxlen', deque) if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(sorted((node(part) for part in _native_values(cast(object, item))), key=pickle.dumps)), state)
         elif object_array(item):
-            result = (kind, item.shape, item.dtype.descr, node(npt.NDArray[np.generic].tolist(item)), state)
+            native = npt.NDArray[np.generic].view(item, type=np.ndarray)
+            result = (kind, native.shape, native.dtype.descr, node(npt.NDArray[np.generic].tolist(item)), state)
         elif isinstance(item, np.ndarray):
             native = cast(object, npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
             result = (kind, pickle.dumps(native, protocol=5), state)

@@ -41,7 +41,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         if not functions:
             raise ValueError('Holdout refuses fitting callbacks without observable Python call protection')
         bound_owner = method.__self__ if inspect.ismethod(method) else None
-        call_owner: object | None = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
+        call_owner: object | None = call.__self__ if inspect.ismethod(call) else type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
         wrapped = native_attribute(cast(object, method), 'func') if isinstance(method, partial) else None
         while isinstance(wrapped, (partial, staticmethod)):
             if isinstance(wrapped, staticmethod):
@@ -61,7 +61,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             wrapped_entry = wrapped
         else:
             wrapped_call = inspect.getattr_static(cast(type[object], type(wrapped)), '__call__', None)
-            wrapped_owner = type(wrapped) if isinstance(wrapped_call, classmethod) else None if isinstance(wrapped_call, staticmethod) else wrapped
+            wrapped_owner = wrapped_call.__self__ if inspect.ismethod(wrapped_call) else type(wrapped) if isinstance(wrapped_call, classmethod) else None if isinstance(wrapped_call, staticmethod) else wrapped
             wrapped_entry = cast(object, wrapped_call)
         class_target: type[object] | None = wrapped if isinstance(wrapped, type) else method if isinstance(method, type) else None
         for function in functions:
