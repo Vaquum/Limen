@@ -114,26 +114,35 @@ def lineage_block(data: dict[str, Any]) -> dict[str, Any]:
     return lineage if is_mapping(lineage) else {}
 
 
+def _verify_committed_manifest(document: dict[str, object],
+                               expected_id: str,
+                               name: str) -> None:
+
+    '''Require stored lineage and canonical content to match the full expected ID.'''
+
+    if lineage_block(document).get('id') != expected_id:
+        raise ValueError(f"Integrity check failed: '{name}' lineage.id does not match expected '{expected_id}'")
+    try:
+        actual_id = canonical_manifest_id(document)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Integrity check failed: '{name}' content cannot be canonicalized") from exc
+    if actual_id != expected_id:
+        raise ValueError(f"Integrity check failed: '{name}' content does not match expected '{expected_id}'")
+
+
 def commit_manifest(yaml_path: Path,
                     project_root: Path,
                     parent_id: str | None = None) -> tuple[str, bool]:
 
     '''
-    Content-address and store a YAML manifest in the committed store.
+    Store a source manifest and return (full_id, already_existed).
 
-    Reads the source YAML, computes its SHA256, injects a lineage block,
-    writes to manifests/committed/<hex>.yaml, and updates index.json.
-
-    Args:
-        yaml_path (Path): Path to the source YAML file
-        project_root (Path): Root directory of the limen project
-        parent_id (str | None): Parent manifest ID for lineage tracking
-
-    Returns:
-        tuple[str, bool]: (manifest_id, already_existed). manifest_id is
-            "sha256:<hex>". already_existed is True if the manifest was
-            already in the store (idempotent).
-
+    Fresh commits inject lineage and write YAML/index under project_root;
+    parent_id overrides source lineage. Before reuse/index update, verify
+    stored lineage and canonical content against the source's full ID.
+    Integrity failures raise ValueError with "Integrity check failed",
+    chaining stored canonicalization TypeError/ValueError.
+    Verification covers this read, not concurrent or later file changes.
     '''
 
     content = yaml_path.read_text(encoding='utf-8')
@@ -178,6 +187,7 @@ def commit_manifest(yaml_path: Path,
             raise ValueError(f"Cannot read committed manifest '{dest.name}': {exc}") from exc
         if not is_mapping(existing):
             raise ValueError(f"Invalid committed manifest format in '{dest.name}': expected a mapping")
+        _verify_committed_manifest(existing, manifest_id, dest.name)
         name = manifest_name(existing, fallback=dest.stem)
         existing_lineage = lineage_block(existing)
         committed_at = existing_lineage.get('committed_at', '')
@@ -191,23 +201,13 @@ def commit_manifest(yaml_path: Path,
 def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
 
     '''
-    Resolve a manifest:// URI to a filesystem path.
+    Return (manifest_path, project_root) for a full or unique short URI.
 
-    Verifies that lineage.id in the committed file matches the URI hash,
-    catching cases where the wrong file is at the expected path.
-
-    Args:
-        uri (str): URI of the form manifest://sha256:<hex>
-        start (Path): Directory to start searching for the project root
-
-    Returns:
-        tuple[Path, Path]: (manifest_path, project_root) — resolved path to the
-            committed manifest file and the limen project root
-
-    Raises:
-        ValueError: If the URI is malformed, the project root is not found,
-            the manifest is not in the store, or lineage.id does not match
-
+    Search from start and verify stored lineage and canonical content against
+    the complete filename ID. Malformed input, missing project/files and
+    ambiguity raise ValueError. Integrity failures use "Integrity check failed",
+    chaining stored canonicalization TypeError/ValueError.
+    Verification covers this read, not later changes to the returned path.
     '''
 
     if not uri.startswith(MANIFEST_URI_SCHEME):
@@ -251,11 +251,7 @@ def resolve_manifest_uri(uri: str, start: Path) -> tuple[Path, Path]:
     if not is_mapping(data):
         raise ValueError(f"Invalid manifest format in '{candidate.name}'")
     expected_id = f'{SHA256_PREFIX}{full_hex}'
-    actual_id = lineage_block(data).get('id')
-    if actual_id != expected_id:
-        raise ValueError(
-            f"Integrity check failed: '{candidate.name}' lineage.id does not match expected '{expected_id}'"
-        )
+    _verify_committed_manifest(data, expected_id, candidate.name)
 
     return candidate, project_root
 
