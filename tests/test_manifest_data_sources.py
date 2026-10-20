@@ -61,9 +61,9 @@ class _Source:
         type(self).calls += 1
         self.data = _recorded(rows=args)
 
-    def positional(receiver, /, **kwargs):
-        type(receiver).calls += 1
-        receiver.data = _recorded(rows=kwargs['receiver'])
+    def positional(self, /, **kwargs):
+        type(self).calls += 1
+        self.data = _recorded(rows=kwargs['self'])
 
     @staticmethod
     def static(*, rows=3):
@@ -158,7 +158,7 @@ def test_manifest_callable_sources(manifest_type, api, form):
         elif form.startswith('variadic'):
             params = {'args': 3}
         elif form.startswith('positional'):
-            params = {'receiver': 3}
+            params = {'self': 3}
     manifest = manifest_type()
     if form.startswith('native_spot'):
         with patch('limen.data.historical_data._read_any_file', return_value=quarter) as transport:
@@ -171,7 +171,7 @@ def test_manifest_callable_sources(manifest_type, api, form):
     assert config.method is method
     assert config.params is params
     key = ('row_count_limit' if form.startswith('native') else 'n_rows' if form == 'parquet_partial'
-           else 'args' if form.startswith('variadic') else 'receiver' if form.startswith('positional') else 'rows')
+           else 'args' if form.startswith('variadic') else 'self' if form.startswith('positional') else 'rows')
     assert params[key] == 3
     if form in ('local', 'selective_wrapper'):
         assert calls == [3]
