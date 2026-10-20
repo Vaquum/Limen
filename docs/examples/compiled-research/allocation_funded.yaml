@@ -1,0 +1,83 @@
+schema_version: '1.0'
+metadata:
+  name: book_compiled_funded_allocation
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-05'
+      val_start: '2024-01-05'
+      val_end: '2024-01-06'
+      test_start: '2024-01-06'
+      test_end: '2024-01-08'
+    backtest:
+      product:
+        kind: linear_perpetual
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-09
+        min_notional: 0
+      source_interval_seconds: 3600
+      fee_bps: 0
+      slip_bps: 0
+      take_profit_bps_column: volatility_take_profit_bps
+      stop_loss_bps_column: volatility_stop_loss_bps
+      barrier_features:
+        method: limen.features.volatility_barriers.volatility_barriers
+        params:
+          span: '{risk_span}'
+          regime_span: 24
+          min_periods: 3
+      prediction_mode: target_exposure
+      max_holding_seconds: 7200
+      funding:
+        preset: binance_btcusdt
+        data_source:
+          method: limen.data.HistoricalData.get_any_file
+          params:
+            file_path_or_url: derived/recorded-funding.parquet
+    reference_architecture: 
+      limen.sfd.reference_architecture.rule_based.rule_based
+    strategy:
+      conditions:
+      - id: entry
+        name: Recorded close above open
+        type: relative
+        column: close
+        operator: '>'
+        other_column: open
+      entry: entry
+    allocation:
+      method: limen.sfd.reference_architecture.meta_allocation.meta_allocation
+      params:
+        folds: 3
+        min_train_samples: 2
+        features:
+        - open
+        - close
+        probability_threshold: 0.1
+        max_size: 0.8
+        risk_budget_fraction: 0.002
+  params:
+    risk_span:
+    - 6
+    - 12
+uel:
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  prep_each_round: true
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true

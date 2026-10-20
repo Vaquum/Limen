@@ -267,7 +267,9 @@ def test_supply_chain_surfaces() -> None:
     site_package = json.loads((ROOT / 'docs-site' / 'package.json').read_text(encoding='utf-8'))
     assert site_package['overrides']['js-yaml@^4'] == '^4.3.2'
     assert site_package['overrides']['js-yaml@^3'] == '^3.15.2'
-    assert site_package['overrides']['markdown-it'] == '^14.2.0'
+    markdown_it_pin = site_package['dependencies']['markdown-it']
+    assert re.fullmatch(r'\d+\.\d+\.\d+', markdown_it_pin)
+    assert site_package['overrides']['markdown-it'] == '$markdown-it'
     assert site_package['overrides']['body-parser'] == '^1.20.6'
     assert site_package['overrides']['brace-expansion'] == '5.0.12'
     assert site_package['overrides']['shell-quote'] == '^1.8.5'
@@ -293,6 +295,7 @@ def test_supply_chain_surfaces() -> None:
     }
     assert markdown_it_versions
     assert all(v >= (14, 2, 0) for v in markdown_it_versions)
+    assert markdown_it_versions == {tuple(int(part) for part in markdown_it_pin.split('.'))}
     advisory_floors = {
         'body-parser': (1, 20, 6),
         'brace-expansion': (5, 0, 12),
