@@ -12,9 +12,10 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
+from limen.experiment._parallel_scaler import ScalerFactory
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
-from limen.experiment._parallel_plan import TargetClass, FrozenManifestPlan, FrozenStage, ScalerFactory, component_digest, static_source, parameter_references, factory_reference, factory_allocator
+from limen.experiment._parallel_plan import TargetClass, FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -46,7 +47,7 @@ class FrozenClassFactory:
         return instance
 
 
-def _factory_component(value: object) -> object:
+def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
@@ -54,15 +55,10 @@ def _factory_component(value: object) -> object:
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None
-        result = restore_object(type(cast(object, value)), (attributes, slots, (_factory_component(bound[0]), *bound[1:]), native))
+        result = restore_object(type(cast(object, value)), (attributes, slots, (factory_component(bound[0]), *bound[1:]), native))
         vars(result)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
         return result
     return value
-
-
-def scaler_factory(cls: object, params: dict[str, object], selector: str | None) -> ScalerFactory:
-    from limen.scalers.registry import SCALER_REGISTRY
-    return ScalerFactory(_factory_component(cls) if selector is None else {name: _factory_component(value) for name, value in SCALER_REGISTRY.items()}, params, selector)
 
 
 def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | None) -> dict[str, list[object]]:
@@ -75,7 +71,7 @@ def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | N
         for value in values:
             if name.endswith('_factory') and callable(value) and value is not Parameter.empty:
                 source, imported = factory_reference(cast(object, value))
-                result.setdefault(name, []).append((source, component_digest(cast(object, value)), imported, _factory_component(cast(object, value))))
+                result.setdefault(name, []).append((source, component_digest(cast(object, value)), imported, factory_component(cast(object, value))))
     return result
 
 
@@ -337,9 +333,11 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
                     selected = function.selected(config)
                     classes = (function.transform_class,) if function.dynamic_selector is None else tuple(cast(dict[str, object], function.transform_class).values())
                     for j, cls in enumerate(classes):
-                        result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config) if cls is selected else {}
-                        if (allocator := factory_allocator(cls)) is not None:
-                            result[f'scaler.class.{i}.{j}.allocate'] = _defaults(allocator, function.static_params | config) if cls is selected else {}
+                        if cls is selected:
+                            result[f'scaler.class.{i}.{j}'] = _defaults(cls, function.static_params | config)
+                            result[f'scaler.class.{i}.{j}.transform'] = result[f'scaler.class.{i}.{j}'] | _defaults(function.transforms[cast(type, vars(cls)['factory_class'])], {})
+                            if (allocator := factory_allocator(cls)) is not None:
+                                result[f'scaler.class.{i}.{j}.allocate'] = _defaults(allocator, function.static_params | config)
         if manifest.data_dict_extension is not None:
             result['data_dict_extension'] = _defaults(manifest.data_dict_extension, {'round_params': dict(params)}, skip=0, runtime=('data_dict', 'split_data', 'fitted_params'))
         if manifest.ablation_config is not None:

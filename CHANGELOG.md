@@ -1881,3 +1881,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve legacy parallel recovery through 5.45.15 and isolate captured callable declarations from newer caller contracts.
 - Retain compatible built-in callable identity when captured declarations are unchanged.
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
+- Freeze scaler transformation behavior without changing fitted scaler objects.

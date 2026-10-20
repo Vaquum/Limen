@@ -17,7 +17,7 @@ from typing import Protocol, cast
 import polars as pl
 from typing_extensions import override
 
-from limen._parallel_contract import ParallelRoundContract, attach
+from limen._parallel_contract import ParallelRoundContract
 from limen.experiment._parallel_encoding import import_reference, decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import copy_context
 from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
@@ -26,6 +26,7 @@ from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
+from limen.experiment._parallel_scaler import ScalerFactory, scaler_factory
 
 class TargetClass(Protocol):
     transform: Callable[..., object]
@@ -41,23 +42,6 @@ class _CapturedCall(partial[object]):
             vars(self)[name] = value
         else:
             setattr(cast(MethodType, self.func).__self__, name, value)
-
-
-@dataclass(frozen=True)
-class ScalerFactory:
-    transform_class: object
-    static_params: dict[str, object]
-    dynamic_selector: str | None
-
-    def selected(self, params: Mapping[str, object]) -> object:
-        return self.transform_class if self.dynamic_selector is None else cast(dict[str, object], self.transform_class)[cast(str, params['scaler_type'])]
-
-    def __call__(self, data: pl.DataFrame, **params: object) -> object:
-        extras = {key: value for key, value in params.items() if self.dynamic_selector is None or key != 'scaler_type'}
-        return cast(Callable[..., object], self.selected(params))(data, **self.static_params, **extras)
-
-
-attach(ScalerFactory)
 
 
 @dataclass
@@ -171,7 +155,7 @@ _NO_ANCESTORS: frozenset[int] = frozenset()
 
 
 def _scaler_factory(cls: object, params: dict[str, object], selector: str | None) -> ScalerFactory:
-    return cast(Callable[[object, dict[str, object], str | None], ScalerFactory], vars(import_module('limen.experiment._parallel_resources'))['scaler_factory'])(cls, params, selector)
+    return scaler_factory(cls, params, selector, cast(Callable[[object], object], vars(import_module('limen.experiment._parallel_resources'))['factory_component']))
 
 
 def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None,
@@ -243,6 +227,8 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         clone = state_memo[id(value)][1] if id(value) in state_memo else copy.deepcopy(value)
         for field in fields(value):
             object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
+        if isinstance(clone, MLManifest) and clone.scaler is not None and isinstance(factory := clone.scaler[0][0][1], ScalerFactory):
+            clone.scaler = (clone.scaler[0], factory.transform, clone.scaler[2])
     else:
         clone = copy.deepcopy(cast(object, value))
     implementation = call_implementation(cast(object, value))
@@ -294,6 +280,7 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
                 if isinstance(compute, ScalerFactory):
                     classes = (compute.transform_class,) if compute.dynamic_selector is None else tuple(cast(dict[str, object], compute.transform_class).values())
                     result.extend((f'scaler.class.{i}.{j}', cls) for j, cls in enumerate(classes))
+                    result.extend((f'scaler.class.{i}.{j}.transform', compute.transforms[cast(type, vars(cls)['factory_class'])]) for j, cls in enumerate(classes))
         if manifest.data_dict_extension is not None:
             result.append(('data_dict_extension', manifest.data_dict_extension))
         from limen.experiment._column_shims import apply_column_shims

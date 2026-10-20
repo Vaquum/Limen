@@ -21,7 +21,8 @@ import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage, unfrozen_stage
 from limen.experiment._parallel_encoding import decode, digest, encode, source_digest
-from limen.experiment._parallel_plan import ScalerFactory, clone_manifest, freeze_manifest
+from limen.experiment._parallel_plan import clone_manifest, freeze_manifest
+from limen.experiment._parallel_scaler import ScalerFactory
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
 from limen.experiment._parallel_evidence import record_context, validate_record, wire_record, parameter_projection, parameter_matches
@@ -500,6 +501,38 @@ class CallerScalerTransform:
         return _caller_scaler(data, self.n_jobs)
 
 
+_original_scaler_transform = RobustScaler.transform
+
+
+def _scaler_transform_implementation(weights):
+    def transform(self, data, *, n_jobs=1):
+        return _original_scaler_transform(self, data).with_columns((pl.col('close') * weights[0] * n_jobs).alias('close'))
+    transform.__qualname__ = 'ConfiguredScaler.transform'
+    return transform
+
+
+class ConfiguredScaler(RobustScaler):
+    transform = _scaler_transform_implementation([1])
+
+
+class StaticScaler(RobustScaler):
+    @staticmethod
+    def transform(data):
+        return data.with_columns((pl.col('close') * 2).alias('close'))
+
+
+class ClassScaler(RobustScaler):
+    @classmethod
+    def transform(cls, data):
+        return data.with_columns((pl.col('close') * 3).alias('close'))
+
+
+class InstanceTransformScaler(RobustScaler):
+    def __init__(self, data):
+        super().__init__(data)
+        self.transform = partial(_original_scaler_transform, self)
+
+
 def _prepared_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     from limen.experiment._parallel_plan import clone_manifest
@@ -573,7 +606,7 @@ def _frozen_probe(plan, params):
     from limen.experiment import manifest_core
     resolved = manifest_core.__dict__['_resolve_params'](computations[0][2], params)
     scaler = computations[0][1](data, **resolved)
-    transformed = scaler.transform(data)
+    transformed = plan.manifest.scaler[1](data, fitted_transform=scaler)
     caller = next((stage for stage in plan.stages if getattr(stage.component, '__code__', None) is _caller_feature.__code__), None)
     actual = None if caller is None else caller.component(data, window=params['window'])['caller_mean'].to_list()
     return (plan.pipeline_digest, isinstance(computations[0][1], ScalerFactory),
@@ -699,6 +732,38 @@ def test_frozen_manifest_round_plan() -> None:
                 actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
+        for scaler_class in (StaticScaler, ClassScaler, InstanceTransformScaler):
+            frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
+            from tests.test_parallel_rounds import recorded_source
+            data = recorded_source().head(24).select('close')
+            control = scaler_class(data).transform(data).to_dict(as_series=False)
+            actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+            assert actual[5] == control and actual[3] != os.getpid()
+        weights = ConfiguredScaler.transform.__closure__[0].cell_contents
+        for dynamic in (False, True):
+            manifest = copy.deepcopy(native).set_scaler_from_params() if dynamic else copy.deepcopy(native).set_scaler(ConfiguredScaler)
+            baseline = freeze_manifest(manifest, None)
+            with pytest.MonkeyPatch.context() as patch:
+                if dynamic:
+                    patch.setattr(RobustScaler, 'transform', ConfiguredScaler.transform)
+                weights[:] = [2]
+                try:
+                    captured_transform = freeze_manifest(manifest, None)
+                    control = _frozen_probe(captured_transform, _parameters())[5]
+                finally:
+                    weights[:] = [1]
+            assert captured_transform.pipeline_digest != baseline.pipeline_digest and captured_transform.resource_digest != baseline.resource_digest
+            assert control != _frozen_probe(baseline, _parameters())[5]
+            before = digest(captured_transform)
+            for _ in range(2):
+                actual = pool.submit(_frozen_probe, captured_transform, _parameters()).result(timeout=30)
+                assert actual[5] == control and actual[3] != os.getpid() and digest(captured_transform) == before
+            assert weights == [1]
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(ConfiguredScaler.transform, '__kwdefaults__', {'n_jobs': 2})
+            unsafe_transform = freeze_manifest(copy.deepcopy(native).set_scaler(ConfiguredScaler), None)
+        with pytest.raises(ValueError, match=r'scaler\.class\.0\.0\.transform: effective n_jobs=1'):
+            validate_resources(unsafe_transform, _parameters())
         for component in (_wrapped_feature, MethodOnlyRolling(3).transform, OpaqueUnusedCallRolling(3).transform, partial(_kwargs_feature, n_jobs=1, window=3), partial(_caller_feature, window=3), partial(CallerRolling(3)), partial(CallerRolling(3).transform), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform, SlottedRolling(2), InheritedCallable(3), InheritedDataclass(3), NormalizedRolling(2), MappingRolling(3), OrderedRolling(3), DictRolling(window=3), ListRolling([3]), _partial_stage()):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             contract = ParallelRoundContract(_partial_validator, ('multiplier', 'bias')) if isinstance(component, CallerPartial) else ParallelRoundContract(_caller_validator, ('window',), imports)
