@@ -50,9 +50,6 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
-    def witness(identity: int) -> bytes:
-        return fitted_witness(seen[identity])
-    cached_witness = lru_cache(maxsize=None)(witness)
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__', '__round__', '__trunc__', '__floor__', '__ceil__', '__divmod__', '__rdivmod__', '__hash__', '__format__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     module_attributes: set[str] = set()
     fitted_names: set[str] = set()
@@ -70,7 +67,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 fitted_names.add(value)
             return
         if type(value) is logging.Logger:
-            evidence.append(fitted_witness(value))
+            evidence.append(value)
             return
         if isinstance(value, ModuleType):
             module_dynamic[id(value)] = module_dynamic.get(id(value), False) or fitted_module
@@ -91,7 +88,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if type(cast(object, value)) is not partial:
                 objects.append(cast(object, value))
         elif inspect.isfunction(value):
-            evidence.append(cached_witness(id(value)))
+            evidence.append(value)
             function_module, function_name = _function_module(value), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
             if fitting_call(function_module, function_name) or id(value) in sealed:
                 return
@@ -121,7 +118,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                     if lookup[1].argval in value.__globals__:
                         part = cast(object, value.__globals__[lookup[1].argval])
                         visit(part)
-                        evidence.append((function_module, value.__qualname__, lookup[1].argval, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
+                        evidence.append((function_module, value.__qualname__, lookup[1].argval, part))
                 if instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)):
                     attributes.add(name)
                     method_names.add(name)
@@ -160,12 +157,11 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             aliases.append(item)
                     try:
                         visit(item)
-                        witness = cached_witness(id(item)) if id(item) in seen else fitted_witness(item)
-                        evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
+                        evidence.append((value.__module__, value.__qualname__, instruction.argval, item))
                     except (ValueError, TypeError, pickle.PickleError) as exc:
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
-            evidence.append(fitted_witness(value))
+            evidence.append(value)
             owner = getattr(value, '__self__', None)
             if owner is not None and not isinstance(owner, ModuleType):
                 visit(owner)
@@ -192,7 +188,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 done.add(name)
                 part = cast(object, vars(value)[name])
                 visit(part, fitted_module=name in module_attributes)
-                evidence.append((value.__name__, name, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
+                evidence.append((value.__name__, name, part))
             return
         cls = value if isinstance(value, type) else type(value)
         names = method_names | {'__new__', '__init__'} if isinstance(value, type) else method_names
@@ -210,14 +206,14 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 evidence.append((key, type(method).__module__, type(method).__qualname__))
                 if isinstance(method, (property, staticmethod, classmethod)):
                     visit(cast(object, method))
-                    evidence.append((key, cached_witness(id(cast(object, method)))))
+                    evidence.append((key, cast(object, method)))
                 if isinstance(method, property):
                     method = native_attribute(method, 'fget')
                 if isinstance(method, (staticmethod, classmethod)):
                     method = native_attribute(cast(object, method), '__func__')
                 if method is not None:
                     visit(method)
-                    evidence.append((key, cached_witness(id(method)) if id(method) in seen else fitted_witness(method)))
+                    evidence.append((key, method))
 
     for value in values:
         visit(value)
@@ -228,7 +224,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             methods(value)
     if capture is not None:
         capture.extend(seen.values())
-    return evidence
+    return [fitted_witness((tuple(values), evidence))]
 
 
 def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:

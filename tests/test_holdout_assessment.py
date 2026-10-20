@@ -40,6 +40,8 @@ _REPEAT_KEYS = ('spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'sour
 _LATE_RULES = {'offset': 0.0}
 _COPY_AFTER_FREEZE = False
 _GLOBAL_FITTED_PROVIDER = None
+_ALIAS_SENTINEL = object()
+_ALIAS_REGISTRY = {'default': _ALIAS_SENTINEL}
 
 
 def later_probabilities(values):
@@ -1786,15 +1788,16 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(global_handle, assessment_case)
         assert loader.call_count == 0
-    class DirectStatic(staticmethod):
-        __call__ = staticmethod(max)
-        def __deepcopy__(self, memo):
-            return type(self)(staticmethod.__dict__['__func__'].__get__(self, type(self)))
-    unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = DirectStatic(identity_probabilities)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-            _freeze(unsafe_class)
-        assert loader.call_count == 0
+    for native_base, field in ((staticmethod, '__func__'), (classmethod, '__func__'), (property, 'fget')):
+        class DirectDescriptor(native_base):
+            __call__ = staticmethod(max)
+            def __deepcopy__(self, memo):
+                return type(self)(native_base.__dict__[field].__get__(self, type(self)))
+        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = DirectDescriptor(identity_probabilities)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                _freeze(unsafe_class)
+            assert loader.call_count == 0
     class SentinelPolicy:
         DEFAULT = object()
         def __init__(self):
@@ -1806,6 +1809,27 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class GlobalSentinelPolicy:
+        def __init__(self):
+            self.policy = _ALIAS_SENTINEL
+        def adjust(self, values):
+            return np.clip(values + (0 if self.policy is _ALIAS_SENTINEL else 0.1), 0, 1)
+    class NestedSentinelPolicy(GlobalSentinelPolicy):
+        def adjust(self, values):
+            return np.clip(values + (0 if self.policy is _ALIAS_REGISTRY['default'] else 0.1), 0, 1)
+    for implementation in (GlobalSentinelPolicy, NestedSentinelPolicy):
+        mapped._model.policy = implementation()
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+    class PreservingGlobalSentinel(GlobalSentinelPolicy):
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            clone.policy = self.policy
+            return clone
+    mapped._model.policy = PreservingGlobalSentinel()
+    assert _report(_freeze(mapped), assessment_case)['rows_sha256']
     class NativeMeta(type):
         __call__ = staticmethod(max)
     class NativeClassCallback(metaclass=NativeMeta):
