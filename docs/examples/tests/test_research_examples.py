@@ -165,7 +165,8 @@ def test_preparation_preserves_training_fits_and_target_geometry(python_scenario
     for interface, scenarios in [('python', python_scenarios), ('compiled', compiled_scenarios)]:
         output = tmp_path / interface
         result = scenarios.preparation(inputs, output)
-        verify_preparation(interface, result, output, inputs)
+        recorded = json.loads(json.dumps(result, allow_nan=False))
+        verify_preparation(interface, recorded, output, inputs)
 
 
 def test_common_baselines_preserve_signals_and_declared_economics(python_scenarios, compiled_scenarios, tmp_path):

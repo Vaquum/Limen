@@ -174,7 +174,7 @@ def preparation(data_dir, output):
                       'rmse': float(np.sqrt(np.mean((predictions-prepared[2]['label'].to_numpy())**2)))})
     return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': False,
             'fixed_d': .4, 'weight_threshold': .05, 'adf_grid_result': d,
-            'adf_stationary': stationarity.stationary, 'adf_p_value': stationarity.p_value}
+            'adf_stationary': bool(stationarity.stationary), 'adf_p_value': float(stationarity.p_value)}
 ```
 
 ### Compiled Research
