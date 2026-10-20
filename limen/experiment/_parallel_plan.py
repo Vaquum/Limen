@@ -10,7 +10,8 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, attach
-from limen.experiment._parallel_encoding import package_distributions, digest, encode, module_identity, reference, source_digest
+from limen.experiment._parallel_encoding import digest, encode, reference, source_digest
+from limen.experiment._parallel_identity import identity_snapshot, module_identity, package_distributions
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
@@ -173,10 +174,11 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
 
 
 def plan_digests(manifest: Manifest, stages: tuple[FrozenStage, ...]) -> tuple[str, str]:
-    imports = [module_identity(name) for name in sorted({name for stage in stages for name in stage.contract.backend_imports})]
-    selectors = SCALER_REGISTRY if any(isinstance(stage.component, ScalerFactory) and stage.component.dynamic_selector is not None for stage in stages) else None
-    return (digest((manifest, stages, imports, selectors)),
-            digest((stages, imports, selectors, module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})))
+    with identity_snapshot():
+        imports = [module_identity(name) for name in sorted({name for stage in stages for name in stage.contract.backend_imports})]
+        selectors = SCALER_REGISTRY if any(isinstance(stage.component, ScalerFactory) and stage.component.dynamic_selector is not None for stage in stages) else None
+        return (digest((manifest, stages, imports, selectors)),
+                digest((stages, imports, selectors, module_identity('limen.experiment._parallel_resources'), {'native_threads': 1, 'startup_threads': 1})))
 
 
 def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:

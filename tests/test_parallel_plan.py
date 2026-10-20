@@ -83,15 +83,15 @@ def _carried_probe(plan, params):
 
 
 def _frozen_probe(plan, params):
-    from limen.experiment import _parallel_encoding as codec
+    from limen.experiment import _parallel_identity as identities
     from limen.experiment._parallel_plan import plan_digests
     def no_discovery():
         raise AssertionError('worker repeated parent distribution discovery')
-    with pytest.MonkeyPatch.context() as patch, codec.distribution_providers(plan.distribution_providers):
-        patch.setattr(codec, 'package_distributions', no_discovery)
+    with pytest.MonkeyPatch.context() as patch, identities.distribution_providers(plan.distribution_providers):
+        patch.setattr(identities, 'package_distributions', no_discovery)
         assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
-        version = codec.metadata.version
-        patch.setattr(codec.metadata, 'version', lambda name: version(name) + '-changed')
+        version = identities.metadata.version
+        patch.setattr(identities.metadata, 'version', lambda name: version(name) + '-changed')
         assert plan_digests(plan.manifest, plan.stages) != (plan.pipeline_digest, plan.resource_digest)
     validate_resources(plan, params)
     from tests.test_parallel_rounds import recorded_source
@@ -162,7 +162,33 @@ def test_frozen_manifest_round_plan() -> None:
     assert digest(values['tuple']) != digest(values['list'])
     assert digest(values) == digest(dict(reversed(list(values.items()))))
     _assert_plan_identity(plan)
+    _assert_fresh_identity_snapshot(plan)
     _assert_selector_and_metric_identity(plan)
+
+
+def _assert_fresh_identity_snapshot(plan):
+    from limen.experiment import _parallel_identity as identities
+    from limen.experiment._parallel_plan import plan_digests
+    from importlib import import_module
+    read_bytes = Path.read_bytes
+    source = Path(import_module('limen.scalers.robust_scaler').__file__)
+    reads = []
+    changed = False
+    def read(path):
+        result = read_bytes(path)
+        if path == source:
+            reads.append(path)
+            if changed:
+                return result + b'\n# changed source'
+        return result
+    with pytest.MonkeyPatch.context() as patch, identities.distribution_providers(plan.distribution_providers):
+        patch.setattr(Path, 'read_bytes', read)
+        assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
+        assert reads == [source]
+        changed = True
+        altered = plan_digests(plan.manifest, plan.stages)
+        assert reads == [source, source]
+        assert altered[0] != plan.pipeline_digest and altered[1] != plan.resource_digest
 
 
 def _assert_inherited_identity(plan):

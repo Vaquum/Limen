@@ -16,7 +16,7 @@ from typing import Protocol, cast
 import polars as pl
 
 from limen.experiment._parallel_sources import SourceSnapshot
-from limen.experiment._parallel_encoding import distribution_providers
+from limen.experiment._parallel_identity import distribution_providers
 from limen.experiment._parallel_plan import FrozenManifestPlan, freeze_manifest, plan_identity, plan_digests
 from limen.experiment._parallel_evidence import round_record
 from limen.experiment._parallel_resources import backend_imports, validate_resources, validate_domain

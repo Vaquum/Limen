@@ -515,5 +515,6 @@
   "limen/experiment/_parallel_encoding.py": 220,
   "limen/experiment/_parallel_plan.py": 320,
   "limen/experiment/_parallel_resources.py": 300,
-  "limen/experiment/_parallel_evidence.py": 260
+  "limen/experiment/_parallel_evidence.py": 260,
+  "limen/experiment/_parallel_identity.py": 70
 }
