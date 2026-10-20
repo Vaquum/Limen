@@ -1570,7 +1570,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result['_probs'] = self.adjust(result['_probs'])
             return result
     ordered = copy.deepcopy(assessment_case[2][0][0])
-    ordered._model.__class__ = OrderedPrediction
+    ordered_model = object.__new__(OrderedPrediction)
+    vars(ordered_model).update(copy.deepcopy(vars(ordered._model)))
+    ordered._model = ordered_model
     ordered_handle = _freeze(ordered)
     with patch.object(OrderedPrediction, '__bases__', (SecondAdjustment, FirstAdjustment, LogRegBinary)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
         with pytest.raises(ValueError, match='prediction dependency changed'):
