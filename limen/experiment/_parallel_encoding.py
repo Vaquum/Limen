@@ -19,6 +19,7 @@ from typing import cast
 import polars as pl
 
 from limen.experiment._parallel_identity import module_identity
+from limen.experiment._parallel_graph import decode_graph, encode_graph, reuse_graph
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_function_metadata, restore_object
 
 VERSION = 1
@@ -44,6 +45,10 @@ _EMPTY_IDS: frozenset[int] = frozenset()
 
 
 def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool = False) -> list[object]:
+    return encode_graph(value, lambda: _encode(value, active, ordered=ordered))
+
+
+def _encode(value: object, active: frozenset[int], *, ordered: bool) -> list[object]:
     if callable(value):
         return _encode_composite(value, active, ordered=ordered)
     if value is None:
@@ -89,7 +94,7 @@ def _encode_composite(value: object, active: frozenset[int], *, ordered: bool) -
 
 def _encode_component(value: object, active: frozenset[int], *, owner_only: bool = False) -> list[object]:
     if inspect.ismethod(value):
-        owner = _encode_component(value.__self__, active | {id(value.__self__)}, owner_only=True)
+        owner = encode_graph(value.__self__, lambda: _encode_component(value.__self__, active | {id(value.__self__)}, owner_only=True))
         return ['method', owner, value.__name__, encode(value.__func__, active)]
     if inspect.isfunction(value):
         return ['function', reference(value), encode(value.__defaults__, active, ordered=True), encode(value.__kwdefaults__, active, ordered=True), encode(tuple(cell.cell_contents for cell in value.__closure__) if value.__closure__ else None, active, ordered=True), encode(vars(value).get('__wrapped__'), active, ordered=True)]
@@ -122,6 +127,10 @@ _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'date
 
 
 def decode(node: object, *, ordered: bool = False, isolate_functions: bool = False) -> object:
+    return decode_graph(node, lambda: _decode(node, ordered=ordered, isolate_functions=isolate_functions), lambda value: encode(value, ordered=ordered))
+
+
+def _decode(node: object, *, ordered: bool, isolate_functions: bool) -> object:
     if not isinstance(node, list) or not node or not isinstance(node[0], str):
         raise ValueError('Invalid version1 parallel parameter encoding')
     parts = cast(list[object], node)
@@ -138,8 +147,6 @@ def decode(node: object, *, ordered: bool = False, isolate_functions: bool = Fal
         result = date.fromisoformat(value) if tag == 'date' else datetime.fromisoformat(value) if tag == 'datetime' else Path(value)
     else:
         result = _decode_composite(parts, ordered=ordered, isolate_functions=isolate_functions)
-    if encode(result, ordered=ordered) != parts:
-        raise ValueError('Noncanonical parallel parameter encoding')
     return result
 
 
@@ -156,14 +163,17 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
         source = _import(value)
         if not inspect.isfunction(source):
             raise ValueError('Parallel function implementation changed')
+        defaults, keywords, closure, wrapped = [decode(item, ordered=True, isolate_functions=isolate_functions) for item in parts[2:]]
         function = source
         if isolate_functions or mutable_function(source) or encode(source) != parts:
-            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, decode(parts[2], ordered=True, isolate_functions=isolate_functions)), tuple(CellType(item) for item in cast(tuple[object, ...], decode(parts[4], ordered=True, isolate_functions=isolate_functions))) if parts[4] != ['null'] else None)
-            function.__kwdefaults__ = cast(dict[str, object] | None, decode(parts[3], ordered=True, isolate_functions=isolate_functions))
-            restore_function_metadata(function, source, decode(parts[5], ordered=True, isolate_functions=isolate_functions))
+            function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, defaults), tuple(CellType(item) for item in cast(tuple[object, ...], closure)) if closure is not None else None)
+            function.__kwdefaults__ = cast(dict[str, object] | None, keywords)
+            restore_function_metadata(function, source, wrapped)
+        else:
+            reuse_graph(defaults, source.__defaults__)
         return function
     if tag == 'method':
-        owner = (_decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True)
+        owner = (decode_graph(value, lambda: _decode_instance(cast(list[object], value), isolate_functions=isolate_functions, owner_only=True), lambda owner: encode(owner))
                  if isinstance(value, list) and value and value[0] in ('dataclass', 'instance') else decode(cast(object, value), isolate_functions=isolate_functions))
         function = decode(parts[3], isolate_functions=isolate_functions)
         if not inspect.isfunction(function):
@@ -186,7 +196,8 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only
         instance = restore_object(cast(type, _import(value)), cast(ObjectState, decode(state, ordered=True, isolate_functions=isolate_functions)))
     else:
         raise ValueError('Invalid or unsupported version1 parallel parameter tag')
-    if not owner_only and encode(call_implementation(instance)) != implementation:
+    captured = decode(implementation, isolate_functions=isolate_functions)
+    if not owner_only and encode(call_implementation(instance)) != encode(captured):
         raise ValueError('Parallel callable implementation changed')
     return instance
 

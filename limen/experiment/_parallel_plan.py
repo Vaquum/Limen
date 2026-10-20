@@ -51,6 +51,16 @@ attach(ScalerFactory)
 class _FrozenTargetConfig(_manifest.TargetClassConfig):
     _parallel_fit_defaults: dict[str, object] = field(default_factory=dict[str, object])
     _parallel_transform_defaults: dict[str, object] = field(default_factory=dict[str, object])
+    _parallel_init: Callable[..., object] | None = None
+    _parallel_transform: Callable[..., object] | None = None
+
+    def _parallel_make(self, **params: object) -> object:
+        cls = cast(type, self.target_class)
+        instance = cls.__new__(cls) if cls.__new__ is object.__new__ else cls.__new__(cls, **params)
+        if isinstance(instance, cls):
+            assert self._parallel_init is not None
+            self._parallel_init(instance, **params)
+        return instance
 
 
 def _target_defaults(component: object, skip: int) -> dict[str, object]:
@@ -113,14 +123,19 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
 _NO_ANCESTORS: frozenset[int] = frozenset()
 
 
-def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False) -> object:
+def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None) -> object:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
+    memo = {} if memo is None else memo
+    key = id(value)
+    if key in memo:
+        return memo[key][1]
     active |= {id(value)}
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
         value = _FrozenTargetConfig(value.target_class, value.fit_params, value.transform_params,
-                                    _target_defaults(value.target_class, 2), _target_defaults(cast(_TargetClass, value.target_class).transform, 2))
+                                    _target_defaults(value.target_class, 2), _target_defaults(cast(_TargetClass, value.target_class).transform, 2),
+                                    cast(Callable[..., object], value.target_class.__init__), cast(_TargetClass, value.target_class).transform)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -129,22 +144,25 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
             closure = {name: cell.cell_contents for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             return ScalerFactory(None, cast(dict[str, object], copy.deepcopy(closure['_static'])), cast(str, closure['param_name']))
     if isinstance(value, dict) and not is_component:
-        return {key: _normalize(item, active, snapshot=snapshot) for key, item in cast(dict[str, object], value).items()}
-    if isinstance(value, (list, tuple)) and not is_component:
-        items = [_normalize(item, active, snapshot=snapshot) for item in cast(list[object] | tuple[object, ...], value)]
-        return tuple(items) if isinstance(value, tuple) else items
-    return _normalize_component(cast(object, value), active, snapshot=snapshot)
+        clone: object = {name: _normalize(item, active, snapshot=snapshot, memo=memo) for name, item in cast(dict[str, object], value).items()}
+    elif isinstance(value, (list, tuple)) and not is_component:
+        items = [_normalize(item, active, snapshot=snapshot, memo=memo) for item in cast(list[object] | tuple[object, ...], value)]
+        clone = tuple(items) if isinstance(value, tuple) else items
+    else:
+        clone = _normalize_component(cast(object, value), active, snapshot=snapshot, memo=memo)
+    memo[key] = (value, clone)
+    return clone
 
 
-def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool) -> object:
-    if inspect.isfunction(value) or inspect.ismethod(value) or issubclass(type(value), partial):
+def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]]) -> object:
+    if callable(value) and not isinstance(value, type):
         clone = decode(encode(value), isolate_functions=snapshot)
         if hasattr(value, '__dict__') and '__parallel_round_contract__' in vars(value):
             vars(clone)['__parallel_round_contract__'] = vars(value)['__parallel_round_contract__']
     elif is_dataclass(value) and not isinstance(value, type):
         clone = copy.deepcopy(value)
         for field in fields(value):
-            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot))
+            object.__setattr__(clone, field.name, _normalize(getattr(value, field.name), active, snapshot=snapshot, memo=memo))
     else:
         clone = copy.deepcopy(value)
     implementation = call_implementation(value)
@@ -184,8 +202,8 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
     result.extend((f'feature_transforms.{i}', entry.func) for i, entry in enumerate(manifest.feature_transforms))
     if manifest.target_class_config is not None:
         result.append(('target', manifest.target_class_config.target_class))
-        result.extend((f'target.{name}', _normalize(getattr(manifest.target_class_config.target_class, method), snapshot=True))
-                      for name, method in (('fit', '__init__'), ('transform', 'transform')))
+        result.extend((f'target.{name}', getattr(manifest.target_class_config, captured))
+                      for name, captured in (('fit', '_parallel_init'), ('transform', '_parallel_transform')))
     if isinstance(manifest, MLManifest):
         if manifest.scaler is not None:
             computations, transform, _ = manifest.scaler

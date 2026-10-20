@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from datetime import date
 from functools import partial
 from inspect import Parameter, ismethod, signature
 from types import FunctionType, MemberDescriptorType
+from pathlib import Path
 from typing import cast
 
 ObjectState = tuple[dict[str, object], list[tuple[type, str, object]], tuple[object, ...] | None, list[object] | None]
@@ -83,7 +85,7 @@ def call_implementation(value: object) -> object:
 
 def mutable_function(function: FunctionType) -> bool:
     def mutable(value: object) -> bool:
-        return isinstance(value, (dict, list)) or (isinstance(value, tuple) and any(mutable(item) for item in cast(tuple[object, ...], value)))
+        return any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not isinstance(value, (type(None), str, bool, int, float, date, Path, type))
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
 
 

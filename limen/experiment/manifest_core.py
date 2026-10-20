@@ -1694,11 +1694,7 @@ def _apply_class_based_target(
         resolved_fit = dict(getattr(config, '_parallel_fit_defaults', {})) | _resolve_params(config.fit_params, round_params)
         if needs_context:
             resolved_fit['trade_context'] = trade_context
-        instance = config.target_class(
-            train_data=data,
-            target_name=target_name,
-            **resolved_fit
-        )
+        instance = getattr(config, '_parallel_make', config.target_class)(train_data=data, target_name=target_name, **resolved_fit)
         all_fitted_params[instance_key] = instance
     else:
         if instance_key not in all_fitted_params:
@@ -1710,7 +1706,8 @@ def _apply_class_based_target(
     resolved_transform = dict(getattr(config, '_parallel_transform_defaults', {})) | _resolve_params(config.transform_params, round_params)
     if needs_context:
         resolved_transform['trade_context'] = trade_context
-    data = instance.transform(data, **resolved_transform)
+    transform = getattr(config, '_parallel_transform', None)
+    data = transform(instance, data, **resolved_transform) if transform is not None else instance.transform(data, **resolved_transform)
     data = _drop_target_source_columns(data, instance, target_name)
     if needs_context:
         outcomes = instance.outcomes

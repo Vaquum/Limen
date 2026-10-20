@@ -143,6 +143,60 @@ class ClosureRolling:
     __call__ = _closed_implementation([2])
 
 
+@dataclass
+class FunctionRolling:
+    function: object
+
+    def __call__(self, data):
+        return self.function(data)
+
+
+@dataclass
+class RollingCounter:
+    window: int = 2
+
+
+@dataclass
+class CallableCounter(RollingCounter):
+    def __call__(self):
+        return self.window
+
+
+def _object_default_feature(data, counter=None):
+    counter.window += 1
+    return _caller_feature(data, counter.window)
+
+
+@dataclass
+class AliasedRolling:
+    left: list[int]
+    right: list[int]
+
+    def __call__(self, data):
+        assert self.left is self.right
+        self.left[0] += 1
+        return _caller_feature(data, self.right[0])
+
+
+def _target_constructor(window):
+    def implementation(self, train_data, target_name):
+        self.target_name, self.window = target_name, window
+    implementation.__qualname__ = 'ClosureTarget.__init__'
+    return implementation
+
+
+def _target_transform(window):
+    def implementation(self, data):
+        return data.with_columns((pl.col('close') > pl.col('close').shift(self.window + window)).cast(pl.Int8).alias(self.target_name))
+    implementation.__qualname__ = 'ClosureTarget.transform'
+    return implementation
+
+
+class ClosureTarget:
+    __init__ = _target_constructor(1)
+    transform = _target_transform(1)
+
+
 def _method_only_transform(owner, data):
     return _caller_feature(data, owner.window)
 
@@ -331,7 +385,7 @@ def _prepared_probe(plan, params):
 def _target_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     validate_resources(plan, params)
-    data = copy.deepcopy(plan.manifest).prepare_data(recorded_source(), params)
+    data = clone_manifest(plan.manifest).prepare_data(recorded_source(), params)
     return {key: data[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
 
 
@@ -507,6 +561,37 @@ def test_frozen_manifest_round_plan() -> None:
         actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
         expected, _ = _repeated_carried_probe(frozen, _parameters())
         assert actual == expected and pid != os.getpid()
+        from tests.test_parallel_rounds import recorded_source
+        expected_values = _caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()
+        shared = [2]
+        for component in (FunctionRolling(_mutable_feature), AliasedRolling(shared, shared)):
+            declare_parallel(component, ParallelRoundContract(deterministic_stage))
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(_mutable_feature, '__defaults__', ([2],))
+                frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+            actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+            expected, _ = _repeated_carried_probe(frozen, _parameters())
+            assert actual == expected == expected_values and pid != os.getpid()
+        declare_parallel(_object_default_feature, ParallelRoundContract(deterministic_stage))
+        for counter in (RollingCounter(), CallableCounter()):
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(_object_default_feature, '__defaults__', (counter,))
+                frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_object_default_feature), None)
+            actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+            expected, _ = _repeated_carried_probe(frozen, _parameters())
+            assert actual == expected == expected_values and pid != os.getpid() and counter.window == 2
+        declare_parallel(ClosureTarget, ParallelRoundContract(deterministic_stage))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(ClosureTarget.__init__.__closure__[0], 'cell_contents', 2)
+            patch.setattr(ClosureTarget.transform.__closure__[0], 'cell_contents', 2)
+            manifest = copy.deepcopy(plan.manifest).with_target_label('closed', ClosureTarget)
+            native = manifest.prepare_data(recorded_source(), _parameters())
+            expected = {key: native[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
+            frozen = freeze_manifest(manifest, None)
+            before = digest(frozen)
+        for _ in range(2):
+            assert pool.submit(_target_probe, frozen, _parameters()).result(timeout=30) == _target_probe(frozen, _parameters()) == expected
+        assert digest(frozen) == before
         component = partial(_kwargs_feature, n_jobs=2)
         declare_parallel(component, ParallelRoundContract(deterministic_stage))
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
