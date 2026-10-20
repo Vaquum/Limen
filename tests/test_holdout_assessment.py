@@ -976,7 +976,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.policy(result['_probs'])
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities)):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
         callable_selection._model.__class__ = CallablePolicy
         callable_selection._model.policy = provider

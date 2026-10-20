@@ -62,7 +62,18 @@ def _call_functions(value: object) -> tuple[FunctionType, ...]:
     return (*functions, *_call_functions(unwrapped)) if unwrapped is not value else functions
 
 
-def _matches(function: FunctionType, frame: FrameType) -> bool:
+def _matches(function: FunctionType, frame: FrameType, owner: object | None) -> bool:
+    if owner is not None:
+        code = frame.f_code
+        if code.co_argcount:
+            receiver = frame.f_locals.get(code.co_varnames[0])
+        elif code.co_flags & inspect.CO_VARARGS:
+            arguments = frame.f_locals.get(code.co_varnames[code.co_kwonlyargcount], ())
+            receiver = cast(tuple[object, ...], arguments)[0] if isinstance(arguments, tuple) and arguments else None
+        else:
+            return False
+        if receiver is not owner:
+            return False
     return frame.f_globals is function.__globals__ and all(
         frame.f_locals.get(name) is cell.cell_contents
         for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True))
@@ -70,8 +81,22 @@ def _matches(function: FunctionType, frame: FrameType) -> bool:
 
 @contextmanager
 def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
-    forbidden: dict[CodeType, set[FunctionType]] = {}
+    forbidden: dict[CodeType, list[tuple[FunctionType, object | None]]] = {}
     seen: set[int] = set()
+
+    def forbid(method: object) -> None:
+        call = inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
+        calls = _call_functions(call)
+        for function in _call_functions(method):
+            if inspect.ismethod(method):
+                owner = cast(object, method.__self__)
+            elif function in calls:
+                owner = method
+            elif isinstance(method, partial) and inspect.ismethod(method.func):
+                owner = cast(object, method.func.__self__)
+            else:
+                owner = None
+            forbidden.setdefault(function.__code__, []).append((function, owner))
 
     def collect(value: object) -> None:
         if value is None or isinstance(value, (str, bool, int, float, bytes, np.generic, pl.DataFrame, pl.Series)) or (issubclass(type(value), np.ndarray) and not object_array(value)):
@@ -80,15 +105,11 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             return
         seen.add(id(value))
         for name in _EFFECTS:
-            method = getattr(value, name, None)
-            for function in _call_functions(method):
-                forbidden.setdefault(function.__code__, set()).add(function)
+            forbid(getattr(value, name, None))
         config = getattr(value, 'prediction_calibration_config', None)
         if config is not None:
             for name in ('calibration_func', 'threshold_func'):
-                method = getattr(config, name, None)
-                for function in _call_functions(method):
-                    forbidden.setdefault(function.__code__, set()).add(function)
+                forbid(getattr(config, name, None))
         for part in children(value):
             collect(part)
 
@@ -102,7 +123,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     def profile(frame: FrameType, event: str, arg: object) -> None:
         nonlocal violation
         fixed_labels = frame.f_globals.get('__name__') == 'sklearn.preprocessing._label' and frame.f_code.co_name == 'fit' and np.array_equal(frame.f_locals.get('y', []), [0, 1])
-        matched = event == 'call' and frame.f_code in forbidden and any(_matches(function, frame) for function in forbidden[frame.f_code])
+        matched = event == 'call' and frame.f_code in forbidden and any(_matches(function, frame, owner) for function, owner in forbidden[frame.f_code])
         if event == 'call' and not fixed_labels and (matched or fitting_call(str(frame.f_globals.get('__name__', '')), getattr(frame.f_code, 'co_qualname', frame.f_code.co_name))):
             violation = True
             raise ValueError('Holdout inference attempted fitting/calibration/threshold search')
