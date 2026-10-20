@@ -10,7 +10,7 @@ import logging
 import marshal
 import pickle
 import typing
-from types import CodeType, GenericAlias, GetSetDescriptorType, MemberDescriptorType, MethodWrapperType, ModuleType
+from types import CodeType, GenericAlias, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, MethodWrapperType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
@@ -24,6 +24,8 @@ __all__ = ['children', 'code_digest', 'fitted_witness', 'object_payload']
 
 _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
 _FORM_TYPES = (type(typing.Union), type(typing.Literal))
+# Verify canonical identity rather than assume the interpreter's integer cache.
+_CANONICAL_INTS = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
 def _typing_metadata(value: object) -> dict[str, object] | None:
     if type(value) in _FORM_TYPES:
@@ -116,6 +118,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     classes: dict[int, type[object]] = {}
 
     def node(item: object) -> object:
+        if type(item) is int and item is _CANONICAL_INTS.get(item):
+            return item
         if item is None or type(item) in (str, bool, bytes):
             return item
         if isinstance(item, ModuleType):
