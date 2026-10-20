@@ -202,6 +202,7 @@ def test_a_release_superseded_during_verification_or_activation_is_not_accepted(
 
 @pytest.mark.parametrize('production_failure', [False, True])
 def test_public_verification_waits_for_activation_and_rollback_propagation(monkeypatch, tmp_path, production_failure):
+    from email.message import Message
     from urllib.error import HTTPError
     from verify_publication import sha256
     output = tmp_path / '.docs-evidence/deployment'
@@ -239,7 +240,7 @@ def test_public_verification_waits_for_activation_and_rollback_propagation(monke
             return current
         propagate()
         if url.endswith('publication.json') and state['public'] != staged['version_id']:
-            raise HTTPError(url, 404, 'Not Found', None, None)
+            raise HTTPError(url, 404, 'Not Found', Message(), None)
         return current if state['public'] == staged['version_id'] else previous
 
     def verify(url, release):
