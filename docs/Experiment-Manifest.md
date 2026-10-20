@@ -40,7 +40,7 @@ schema_version: "1.0"
 
 metadata:
   name: logreg-first
-  limen_version: "5.45.7"
+  limen_version: "5.45.10"
   mode: development
 
 sfd:
@@ -310,6 +310,30 @@ Configure the test data source used when `test_mode=True` is passed to `Universa
 
 ### Data source selection
 
+Both source setters accept synchronous frame-returning callables, including partials,
+callable instances, local functions and static methods. Fetch calls the configured
+callable once with its keyword parameters; it preserves its result and exceptions.
+For example, from a repository checkout:
+
+```python
+from functools import partial
+import polars as pl
+from limen.experiment import MLManifest
+
+source = partial(pl.read_parquet, 'tests/fixtures/spot_1h_20240101_20241231.parquet')
+manifest = MLManifest().set_data_source(source)
+bars = manifest.fetch_data()
+assert bars.equals(pl.read_parquet('tests/fixtures/spot_1h_20240101_20241231.parquet'))
+```
+
+Native bound methods retain owner `.data` precedence. Genuine unbound instance
+methods construct an owner only when their receiver is absent from the configured
+keywords; the method must populate `.data`. Wrapping a stateful method does not
+adapt a `None` or row-list result into a frame. Under an active holdout reservation,
+production fetching still requires the admitted native source identity; partials
+and copied-metadata wrappers do not inherit that admission. Callable compatibility
+also does not remove deepcopy or parallel-execution admission requirements.
+
 Pass `test_mode=True` to `UniversalExperimentLoop` to fetch from the test data source instead of the production source.
 When `test_mode=True` and a test data source is configured, `fetch_test_data()` is called; otherwise `fetch_data()` is used.
 
@@ -459,7 +483,7 @@ Save this example as `walk-forward.yaml` in a repository checkout. It uses the r
 schema_version: "1.0"
 metadata:
   name: recorded_walk_forward
-  limen_version: "5.45.7"
+  limen_version: "5.45.10"
   mode: development
 sfd:
   manifest:
@@ -516,7 +540,7 @@ Save this as `acceptance.yaml` in the repository checkout. It runs two rule-base
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
-  limen_version: "5.45.7"
+  limen_version: "5.45.10"
   mode: development
 sfd:
   manifest:
@@ -1286,6 +1310,11 @@ manifest_full = manifest.with_params_override(split_config=(1, 0, 0))
 ```
 
 The original manifest remains unchanged.
+
+Source overrides use the configured callable's signature, including partial keyword
+parameters. Unknown names retain the accepted-name diagnostic; callable instances
+and partials use their type name when they have no function name. Signature and
+deepcopy failures propagate without changing the original configuration.
 
 For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Source parameter names are checked during compilation; source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
 

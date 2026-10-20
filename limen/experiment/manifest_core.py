@@ -13,7 +13,6 @@ from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
 import copy
 import inspect
-import importlib
 import logging
 import random
 import re
@@ -215,23 +214,19 @@ class DataSourceResolver:
                 return bound_self.data
             return result
 
-        if inspect.isfunction(method):
-            if '.' in method.__qualname__:
-                module_name = method.__module__
-                class_name = method.__qualname__.rsplit('.', 1)[0]
-
-                module = importlib.import_module(module_name)
-                cls = getattr(module, class_name)
-
-                instance = cls()
-                bound_method = getattr(instance, method.__name__)
-                bound_method(**params)
-
-                if hasattr(instance, 'data'):
-                    return instance.data
-                raise ValueError(
-                    f"DataSourceResolver Method {method.__qualname__} executed successfully but instance does not have 'data' attribute. Expected data source methods to populate instance.data"
-                )
+        if inspect.isfunction(method) and '.' in method.__qualname__:
+            cls = getattr(inspect.getmodule(method), method.__qualname__.rsplit('.', 1)[0], None)
+            if inspect.isclass(cls) and inspect.getattr_static(cls, method.__name__, None) is method:
+                receiver = next(iter(inspect.signature(method, follow_wrapped=False).parameters), None)
+                if receiver not in params:
+                    instance = cls()
+                    method(instance, **params)
+                    if hasattr(instance, 'data'):
+                        return instance.data
+                    raise ValueError(
+                        f"DataSourceResolver Method {method.__qualname__} executed successfully but instance does not have 'data' attribute. Expected data source methods to populate instance.data"
+                    )
+        if callable(method) and not inspect.isclass(method):
             return method(**params)
 
         raise ValueError(f"DataSourceResolver Unsupported callable type: {type(method)}")
@@ -288,7 +283,7 @@ class Manifest:
         Configure production data source for the manifest.
 
         Args:
-            method (Callable): Method or function reference (e.g., HistoricalData.get_spot_klines)
+            method (Callable): Compatible callable returning data, or native stateful data source method
             params (dict): Parameters to pass to the method
 
         Returns:
@@ -310,7 +305,7 @@ class Manifest:
         Configure test data source for the manifest.
 
         Args:
-            method (Callable): Function reference (e.g., HistoricalData.get_spot_klines)
+            method (Callable): Compatible callable returning data, or native stateful data source method
             params (dict): Parameters to pass to the function
 
         Returns:
@@ -625,7 +620,7 @@ class Manifest:
             unknown = set(ds_overrides) - method_params
             if unknown:
                 raise ValueError(
-                    f"Manifest Unknown data source params: {sorted(unknown)}. Accepted by {new_manifest.data_source_config.method.__name__}: {sorted(method_params)}"
+                    f"Manifest Unknown data source params: {sorted(unknown)}. Accepted by {getattr(new_manifest.data_source_config.method, '__name__', type(new_manifest.data_source_config.method).__name__)}: {sorted(method_params)}"
                 )
             new_manifest.data_source_config.params = dict(new_manifest.data_source_config.params)
             new_manifest.data_source_config.params.update(ds_overrides)
