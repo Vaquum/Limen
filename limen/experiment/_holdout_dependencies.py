@@ -1,23 +1,22 @@
 from __future__ import annotations
 
-from collections import defaultdict, deque
-from collections.abc import Collection, Mapping, Sequence
+from collections import defaultdict
+from collections.abc import Sequence
 from functools import lru_cache, partial
 from hashlib import sha256
 import inspect
 from importlib.util import resolve_name
-from io import IOBase
 import dis
-import marshal
 import logging
 import pickle
 import sys
 from types import CodeType, ModuleType
-from typing import TypeGuard, cast
+from typing import cast
 
 import numpy as np
-import numpy.typing as npt
 import polars as pl
+
+from limen.experiment._holdout_state import _attributes, children, code_digest, fitted_witness, object_array
 
 __all__ = ['FITTING_METHODS', 'children', 'code_digest', 'dependency_digest', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_array']
 
@@ -31,119 +30,11 @@ def fitting_call(module: str, name: str) -> bool:
 
 
 @lru_cache(maxsize=2048)
-def code_digest(code: CodeType) -> str:
-    return sha256(marshal.dumps(code)).hexdigest()
-
-
-@lru_cache(maxsize=2048)
 def _instructions(code: CodeType) -> tuple[dis.Instruction, ...]:
     return (*dis.get_instructions(code), *(instruction for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS for instruction in _instructions(part)))
 
 
-def _booster(value: object) -> bool:
-    return type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster'
-
-
-def object_array(value: object) -> TypeGuard[npt.NDArray[np.generic]]:
-    return isinstance(value, np.ndarray) and cast(npt.NDArray[np.generic], value).dtype.hasobject
-
-
-def children(value: object) -> tuple[object, ...]:
-    if isinstance(value, Mapping):
-        entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
-        return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((value.default_factory,) if isinstance(value, defaultdict) else ()))
-    if isinstance(value, (tuple, list, set, frozenset, deque)):
-        return (*cast(Collection[object], value), *_attributes(cast(object, value)).values())
-    if object_array(value):
-        return (value.tolist(), *_attributes(cast(object, value)).values())
-    if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value):
-        return ()
-    if isinstance(value, partial):
-        return (value.func, value.args, value.keywords, _attributes(cast(object, value)))
-    return tuple(_attributes(value).values())
-
-
-def _attributes(value: object) -> dict[str, object]:
-    values = dict(cast(dict[str, object], getattr(value, '__dict__', {})))
-    for cls in type(value).__mro__:
-        declaration = cls.__dict__.get('__slots__', ())
-        slots = (declaration,) if isinstance(declaration, str) else declaration
-        for slot in slots:
-            if slot in ('__dict__', '__weakref__'):
-                continue
-            name = f'_{cls.__name__.lstrip("_")}{slot}' if slot.startswith('__') and not slot.endswith('__') else slot
-            descriptor = cls.__dict__[name]
-            if hasattr(value, name):
-                values[f'{cls.__module__}.{cls.__qualname__}:{name}'] = descriptor.__get__(value, type(value))
-    return values
-
-
-def fitted_witness(value: object) -> bytes:
-    seen: dict[int, tuple[int, object]] = {}
-
-    def node(item: object) -> object:
-        if item is None or type(item) in (str, bool, int, float, bytes):
-            return item
-        if isinstance(item, (ModuleType, type)):
-            return ('module', item.__name__) if isinstance(item, ModuleType) else ('class', item.__module__, item.__qualname__)
-        if id(item) in seen:
-            return ('ref', seen[id(item)][0])
-        seen[id(item)] = (len(seen), item)
-        return structure(item)
-
-    def structure(item: object) -> object:
-        kind = (type(item).__module__, type(item).__qualname__)
-        attributes = _attributes(item) if issubclass(type(item), (Mapping, tuple, list, set, frozenset, deque, np.ndarray)) else {}
-        state = node(attributes) if attributes else None
-        if _booster(item):
-            from lightgbm import Booster
-            booster = cast(Booster, item)
-            result = (kind, booster.model_to_string(num_iteration=-1), booster.num_trees(), booster.current_iteration(), booster.best_iteration)
-        elif inspect.ismethod(item):
-            result = ('method', node(item.__func__), node(item.__self__))
-        elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
-            result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
-        elif type(item) is logging.Logger:
-            result = ('logger', item.name)
-        elif inspect.isbuiltin(item):
-            owner = getattr(item, '__self__', None)
-            result = ('builtin', item.__module__, item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
-        elif inspect.isfunction(item):
-            closure = tuple(cell.cell_contents for cell in item.__closure__ or ())
-            result = ('function', item.__module__, item.__qualname__, code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(closure), node(vars(item)))
-        elif isinstance(item, partial):
-            result = (kind, 'partial', node(item.func), node(item.args), node(item.keywords), node(_attributes(cast(object, item))))
-        elif isinstance(item, bytearray):
-            result = (kind, bytes(memoryview(item)), node(_attributes(item)))
-        elif isinstance(item, (str, int, float, bytes)):
-            payload = str.__str__(item) if isinstance(item, str) else int.__int__(item) if isinstance(item, int) else float.__float__(item) if isinstance(item, float) else bytes.__repr__(item)
-            result = (kind, payload, node(_attributes(item)))
-        elif isinstance(item, Mapping):
-            factory = node(item.default_factory) if isinstance(item, defaultdict) else None
-            result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
-        elif isinstance(item, (tuple, list, deque)):
-            result = (kind, tuple(node(part) for part in cast(Collection[object], item)), item.maxlen if isinstance(item, deque) else None, state)
-        elif isinstance(item, (set, frozenset)):
-            result = (kind, tuple(sorted((node(part) for part in cast(Collection[object], item)), key=pickle.dumps)), state)
-        elif object_array(item):
-            result = (kind, item.shape, item.dtype.descr, node(item.tolist()), state)
-        elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
-            result = (kind, pickle.dumps(item, protocol=5), state)
-        elif kind[0].split('.')[0] == 'numpy' and kind[1] == '_ArrayFunctionDispatcher':
-            result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
-        elif isinstance(item, IOBase):
-            raise ValueError('Holdout refuses opaque external prediction dependencies')
-        elif isinstance(getattr(item, '__dict__', None), dict) or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
-            if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in type(item).__mro__):
-                raise ValueError('Holdout refuses opaque native prediction state')
-            result = (kind, node(_attributes(item)))
-        else:
-            result = (kind, pickle.dumps(item, protocol=5))
-        return result
-    return pickle.dumps(node(value), protocol=5)
-
-
-def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = ()) -> list[object]:
+def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
@@ -213,7 +104,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 elif instruction.opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME') and binding is not None:
                     references.setdefault(name, []).append(binding)
                     binding = None
-                if name == 'fit_calibrator' or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
+                if (name == 'fit_calibrator' and (value.__module__, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict'))) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
                 for candidate in tuple(references.get(name, ())):
                     item = cast(object, candidate)
@@ -282,6 +173,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         previous = (len(attributes), len(objects))
         for value in {(id(item) if isinstance(item, type) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
+    if capture is not None:
+        capture.extend(seen.values())
     return evidence
 
 

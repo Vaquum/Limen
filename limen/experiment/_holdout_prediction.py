@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator
 from contextlib import contextmanager
 import inspect
 from functools import partial
@@ -12,33 +12,13 @@ from typing import cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, object_array
+from limen.experiment._holdout_dependencies import FITTING_METHODS, children, fitted_witness, fitting_call, inference_evidence, object_array
+from limen.experiment._holdout_state import restore_iterations
 from limen.inference.sensor import Sensor
 from limen.experiment.manifest_core import MLManifest
 
 __all__ = ['readonly_prediction', 'restore_iterations', 'validate_prediction']
 _EFFECTS = FITTING_METHODS
-
-
-def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
-    seen: set[int] = set()
-
-    def visit(value: object) -> None:
-        if value is None or type(value) in (str, bool, int, float, bytes) or id(value) in seen:
-            return
-        seen.add(id(value))
-        if type(value).__module__ == 'lightgbm.basic' and type(value).__name__ == 'Booster':
-            from lightgbm import Booster
-            original = cast(Booster, value)
-            prediction = inspect.getattr_static(cast(type[object], type(original)), 'predict', None)
-            if 'predict' in vars(original) or not inspect.isfunction(prediction) or (prediction.__module__, prediction.__qualname__) != ('lightgbm.basic', 'Booster.predict'):
-                raise ValueError('Holdout refuses replaced Booster prediction methods')
-            copied = cast(Booster, memo[id(value)])
-            copied.best_iteration = original.best_iteration
-        for part in children(value):
-            visit(part)
-
-    visit(source)
 
 
 def _roots(sensor: Sensor) -> list[object]:
@@ -86,6 +66,7 @@ def _matches(function: FunctionType, frame: FrameType, owner: object | None) -> 
 def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     forbidden: dict[CodeType, list[tuple[FunctionType, object | None]]] = {}
     seen: set[int] = set()
+    configs: list[object] = []
 
     def forbid(method: object) -> None:
         if not callable(method):
@@ -93,6 +74,8 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
         call = None if inspect.isfunction(method) or inspect.ismethod(method) else inspect.getattr_static(cast(type[object], type(method)), '__call__', None)
         calls = _call_functions(call)
         functions = _call_functions(method)
+        if not functions:
+            raise ValueError('Holdout refuses fitting callbacks without observable Python call protection')
         bound_owner = method.__self__ if inspect.ismethod(method) else None
         call_owner: object | None = type(method) if isinstance(call, classmethod) else None if isinstance(call, staticmethod) else method
         wrapped = cast(partial[object], method).func if isinstance(method, partial) else None
@@ -111,6 +94,7 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
             forbid(getattr(value, name, None))
         config = getattr(value, 'prediction_calibration_config', None)
         if config is not None:
+            configs.append(config)
             for name in ('calibration_func', 'threshold_func'):
                 forbid(getattr(config, name, None))
         parts = children(value)
@@ -124,6 +108,13 @@ def readonly_prediction(sensors: list[Sensor]) -> Iterator[None]:
     for sensor in sensors:
         for root in _roots(sensor):
             collect(root)
+    reachable: list[object] = []
+    roots = [root for sensor in sensors for root in _roots(sensor)]
+    roots.extend(getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window'))
+    roots.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
+    _ = inference_evidence(roots, exclude=configs, resolved=(vars(Sensor)['_get_manifest'],), capture=reachable)
+    for value in reachable:
+        collect(value)
     numpy_state, python_state = fitted_witness(np.random.get_state()), random.getstate()
     previous = sys.getprofile()
     violation = False
