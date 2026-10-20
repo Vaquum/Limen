@@ -291,7 +291,9 @@ def _carried_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     data = recorded_source().head(24).select('close')
     from limen.experiment._parallel_plan import clone_manifest
-    for entry in clone_manifest(plan.manifest).feature_transforms:
+    entries = clone_manifest(plan.manifest).feature_transforms
+    start = -2 if all(getattr(entry.func, '__qualname__', '') == '_mutable_feature' for entry in entries[-2:]) else -1
+    for entry in entries[start:]:
         data = entry.func(data, **entry.params)
     return data['caller_mean'].to_list(), os.getpid()
 
