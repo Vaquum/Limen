@@ -48,9 +48,10 @@ def configure_manifest(manifest: Manifest, reference: Mapping[str, object], comp
     if components is not None and components(manifest) is not None:
         raise ValueError('components configurator must modify the Manifest and return None')
     if components is not None:
+        from limen.experiment._holdout_report import digest
         sfd = cast(dict[str, object], reference['sfd'])
         marker = cast(dict[str, object], sfd['components'])
-        pipeline = sha256(fitted_witness({field.name: getattr(manifest, field.name) for field in fields(manifest)})).hexdigest()
+        pipeline = digest({field.name: getattr(manifest, field.name) for field in fields(manifest)})
         if type(marker) is _Pending:
             sfd['components'] = {**marker, 'pipeline_sha256': pipeline}
         elif marker['pipeline_sha256'] != pipeline:
