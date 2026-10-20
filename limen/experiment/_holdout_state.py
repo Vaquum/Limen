@@ -144,11 +144,11 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
 
     def structure(item: object, item_type: type[object]) -> object:
         if item_type is dict:
-            return ((item_type.__module__, item_type.__qualname__, node(item_type)), None, tuple((node(key), node(part)) for key, part in cast(dict[object, object], item).items()), None)
+            return ((item_type.__module__, item_type.__qualname__, node(item_type)), None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else node(part))) for key, part in cast(dict[object, object], item).items()), None)
         if item_type is list or item_type is tuple:
-            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple(node(part) for part in cast(list[object] | tuple[object, ...], item)), None, None)
+            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple((part if part is None or type(part) in _ATOMIC_TYPES else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         if item_type is set or item_type is frozenset:
-            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple(node(part) for part in cast(set[object] | frozenset[object], item)), None)
+            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple((part if part is None or type(part) in _ATOMIC_TYPES else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
         kind = (type(item).__module__, type(item).__qualname__, node(type(item)))
         attributes = _attributes(item) if issubclass(type(item), _CONTAINER_TYPES) else {}
         state = node(attributes) if attributes else None
