@@ -148,6 +148,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             result = ('method', node(item.__func__), node(item.__self__))
         elif isinstance(item, (staticmethod, classmethod)):
             result = (kind, 'descriptor', node(native_attribute(cast(object, item), '__func__')), node(_attributes(cast(object, item))))
+        elif isinstance(item, property):
+            result = (kind, 'property', *(node(native_attribute(item, name)) for name in ('fget', 'fset', 'fdel', '__doc__')), node(_attributes(cast(object, item))))
         elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
         elif type(item) is logging.Logger:
@@ -160,8 +162,6 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif isinstance(item, GenericAlias):
             metadata = {name: vars(GenericAlias)[name].__get__(item, type(item)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
             result = (kind, 'generic-alias', node(metadata), node(_attributes(cast(object, item))))
-        elif isinstance(item, property):
-            result = (kind, 'property', *(node(native_attribute(item, name)) for name in ('fget', 'fset', 'fdel', '__doc__')), node(_attributes(cast(object, item))))
         elif isinstance(item, partial):
             result = (kind, 'partial', *(node(native_attribute(cast(object, item), name)) for name in ('func', 'args', 'keywords')), node(_attributes(cast(object, item))))
         elif isinstance(item, bytearray):
