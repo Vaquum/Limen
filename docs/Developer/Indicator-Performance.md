@@ -10,7 +10,6 @@ The [indicator reference](../Indicators.md) retains function names, default outp
 
 ## Performance measurements
 
-
 Limen 5.29.2 reduces the calculation cost of the existing Hilbert, MAMA, CCI, three candlestick and five regression indicators. Public indicator signatures, defaults, validation, output order/dtypes and warmup/null/NaN behavior are preserved.
 
 ### Reproduce

@@ -29,7 +29,7 @@ Before opening or updating a Limen PR:
 | preparing a release or checking release automation | [Making a Release](Making-Release.md) | Defines the local evidence required before Limen release publication. |
 | changing release or publish-path controls | [Release Policy](Release-Policy.md) | Defines the publish-path gates, model authority boundary, release deliverables, and version-reuse rules. |
 | changing package metadata, artifacts, extras, or packaging gates | [Packaging](Packaging.md) | Defines the wheel/sdist, dependency, reproducibility, and provenance contract. |
-| measuring or optimizing indicator calculations | [Indicator Performance](../Indicators.md#performance-measurements) | Records real-data timings, memory, exact equivalence and regression checks. |
+| measuring or optimizing indicator calculations | [Indicator Performance](Indicator-Performance.md#performance-measurements) | Records real-data timings, memory, exact equivalence and regression checks. |
 | deciding how to bump the version | [Semantic Versioning](../Semantic-Versioning.md) | Defines the Limen-local version surfaces and bump rules. |
 | assessing recorded known risk | [Technical Debt](../TechnicalDebt.md) | Tracks accepted debt, trigger conditions, and candidate remedies. |
 
