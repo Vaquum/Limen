@@ -1829,4 +1829,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.4] - 2026-10-20
 
+- Run complete pytest collection in two file-grouped workers by default while preserving explicit caller arguments.
+- Merge measured worker coverage into the existing outer proof, retain process and execution receipts, and reject incomplete case accounting.
+- Isolate shared test diagnostic and holdout CSV output paths while retaining the original tests, fixtures and proof limits.
+
+## [5.45.5] - 2026-10-20
+
 - Develop the research book around both recorded projects, explicit chapter routes and released-package publication.
