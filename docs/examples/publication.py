@@ -70,6 +70,23 @@ def validated_site_files(site: Path, built) -> dict[str, bytes]:
     return original
 
 
+def write_artifact(output: Path, site: Path, role: str, payload: bytes, suffix: str, *, wheel_name: str | None = None):
+    digest = sha256(payload)
+    if role == 'wheel':
+        if wheel_name is None or Path(wheel_name).name != wheel_name or not wheel_name.endswith('.whl'):
+            raise ValueError('The wheel artifact requires its original distribution filename')
+        name = wheel_name
+        path = relative_path(f'evidence/wheel-{digest}/{name}')
+    else:
+        name = f'{role}-{digest}.{suffix}'
+        path = relative_path('evidence/' + name)
+    (output / name).write_bytes(payload)
+    target = site / path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_bytes(payload)
+    return {'path': path, 'sha256': digest}
+
+
 def prepare(root: Path, release: str):
     execution = (root / '.docs-evidence/current.json').read_bytes()
     record = json.loads(execution)
@@ -88,13 +105,8 @@ def prepare(root: Path, release: str):
     output.mkdir(exist_ok=True)
     artifacts = {}
 
-    def artifact(role: str, payload: bytes, suffix: str):
-        digest = sha256(payload)
-        name = f'{role}-{digest}.{suffix}'
-        (output / name).write_bytes(payload)
-        target = site / 'evidence' / name
-        target.write_bytes(payload)
-        artifacts[role] = {'path': 'evidence/' + name, 'sha256': digest}
+    def artifact(role: str, payload: bytes, suffix: str, *, wheel_name: str | None = None):
+        artifacts[role] = write_artifact(output, site, role, payload, suffix, wheel_name=wheel_name)
 
     payload = {name: data for name, data in original.items() if not name.startswith('evidence/') and name != 'build.json'}
     staging = output / 'site.tar.gz'
@@ -105,7 +117,7 @@ def prepare(root: Path, release: str):
     artifact('validation', execution, 'json')
     artifact('examples', (root / record['bundle']['path']).read_bytes(), 'tar.gz')
     artifact('native_outputs', (root / record['native_outputs']['path']).read_bytes(), 'tar.gz')
-    artifact('wheel', wheel.read_bytes(), 'whl')
+    artifact('wheel', wheel.read_bytes(), 'whl', wheel_name=wheel.name)
     artifact('pypi_metadata', (receipt.parent / f"pypi-{record['package']['version']}.json").read_bytes(), 'json')
     record['mode'] = 'production'
     record['publication'] = {'release': release, 'merged_commit': record['revision']['head'],
