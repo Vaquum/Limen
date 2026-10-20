@@ -48,17 +48,22 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     cached_witness = lru_cache(maxsize=None)(witness)
     attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__', '__round__', '__trunc__', '__floor__', '__ceil__', '__divmod__', '__rdivmod__', '__hash__', '__format__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     module_attributes: set[str] = set()
+    fitted_names: set[str] = set()
+    module_dynamic: dict[int, bool] = {}
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
 
-    def visit(value: object) -> None:
+    def visit(value: object, *, fitted_module: bool = True) -> None:
         if value is None or type(value) in (str, bool, int, float, bytes) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic)):
             if isinstance(value, str):
                 attributes.add(value)
+                fitted_names.add(value)
             return
         if type(value) is logging.Logger:
             evidence.append(fitted_witness(value))
             return
+        if isinstance(value, ModuleType):
+            module_dynamic[id(value)] = module_dynamic.get(id(value), False) or fitted_module
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
@@ -160,14 +165,14 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def methods(value: object) -> None:
         if isinstance(value, ModuleType):
             done = processed.setdefault(id(value), set())
-            for name in module_attributes.intersection(vars(value)) - done:
+            for name in (module_attributes | (fitted_names if module_dynamic[id(value)] else set())).intersection(vars(value)) - done:
                 done.add(name)
                 part = cast(object, vars(value)[name])
-                visit(part)
+                visit(part, fitted_module=name in module_attributes)
                 evidence.append((value.__name__, name, cached_witness(id(part)) if id(part) in seen else fitted_witness(part)))
             return
         cls = value if isinstance(value, type) else type(value)
-        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
+        names = {'predict', 'predict_proba', 'transform', '__call__', '__get__', '__getattr__', '__getattribute__', '__getitem__', '__missing__', '__reversed__', '__enter__', '__exit__', '__aenter__', '__aexit__', '__await__', '__aiter__', '__anext__', '__iter__', '__next__', '__len__', '__contains__'} | attributes
         if isinstance(value, type):
             names.update(('__new__', '__init__'))
         done = processed.setdefault(id(cls), set())
@@ -192,9 +197,9 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
     for value in values:
         visit(value)
-    previous = (-1, -1, -1)
-    while previous != (len(attributes), len(objects), len(module_attributes)):
-        previous = (len(attributes), len(objects), len(module_attributes))
+    previous = (-1, -1, -1, -1, -1)
+    while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values())):
+        previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()))
         for value in {(id(item) if isinstance(item, (type, ModuleType)) else id(type(item)), isinstance(item, type)): item for item in tuple(objects)}.values():
             methods(value)
     if capture is not None:
@@ -215,7 +220,8 @@ def call_functions(value: object) -> tuple[FunctionType, ...]:
         call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
         return call_functions(provider.func) if call is partial[object].__call__ else call_functions(call)
     if isinstance(value, type):
-        return (*call_functions(value.__init__), *call_functions(value.__new__), *call_functions(type(value).__call__))
+        call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
+        return (*call_functions(value.__init__), *call_functions(value.__new__)) if call is type.__call__ else call_functions(call)
     if inspect.ismethod(value):
         value = value.__func__
     if inspect.isfunction(value):

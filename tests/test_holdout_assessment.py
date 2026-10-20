@@ -1230,6 +1230,22 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with self.policy as offset:
                 result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
             return result
+    class MissingPolicy(dict):
+        def __missing__(self, key):
+            return _LATE_RULES['offset']
+    class MissingLookup(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + self.policy['offset'], 0, 1)
+            return result
+    class ReversePolicy:
+        def __reversed__(self):
+            return iter((_LATE_RULES['offset'],))
+    class ReversedLookup(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + next(reversed(self.policy)), 0, 1)
+            return result
     class ComparisonPolicy:
         def __gt__(self, other):
             return _LATE_RULES['offset'] > other
@@ -1246,9 +1262,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ContextPolicy(), ConversionPolicy()):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ContextPolicy(), MissingPolicy(), ReversePolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Contextual if isinstance(provider, ContextPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Contextual if isinstance(provider, ContextPolicy) else MissingLookup if isinstance(provider, MissingPolicy) else ReversedLookup if isinstance(provider, ReversePolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1280,17 +1296,25 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = getattr(self, self.method_name)(result['_probs'])
             return result
+    class DynamicModuleLookup(LogRegBinary):
+        helpers = manifest_core
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = getattr(self.helpers, self.helper_name)(result['_probs'])
+            return result
     class BoundLookup(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
             result['_probs'] = self.policy('adjust')(result['_probs'])
             return result
-    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument, DynamicLookup, BoundLookup):
+    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument, DynamicLookup, DynamicModuleLookup, BoundLookup):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
         selection._model.research_x = late._model.research_x.copy()
         if implementation is DynamicLookup:
             selection._model.method_name = 'adjust_late'
+        if implementation is DynamicModuleLookup:
+            selection._model.helper_name = 'f17_later_probabilities'
         if implementation is BoundLookup:
             selection._model.policy = {'adjust': later_probabilities}.get
         if implementation is Factory:
@@ -1471,6 +1495,17 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
     assert _report(distinct_handle, assessment_case)['rows_sha256']
     with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
         distinct._model.callback_provider.prediction_calibration_config.threshold_func(distinct._model.model.coef_.ravel())
+    class NativeMeta(type):
+        __call__ = staticmethod(max)
+    class NativeClassCallback(metaclass=NativeMeta):
+        def __init__(self, values):
+            self.values = values
+    unsafe_class = copy.deepcopy(assessment_case[2][0][0])
+    unsafe_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativeClassCallback))
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+            _freeze(unsafe_class)
+        assert loader.call_count == 0
     original_loader = assessment.load_admitted_source
     def changed_during_loading(*args, **kwargs):
         result = original_loader(*args, **kwargs)
