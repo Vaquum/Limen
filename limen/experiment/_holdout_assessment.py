@@ -134,7 +134,8 @@ def _execute(final: pl.DataFrame, tape: list[dict[str, object]], declarations: l
 
 
 def _checked_labels(labels: list[int | None], height: int) -> list[int | None]:
-    if len(labels) != height or any(value is None for value in labels[:-1]) or any(value is not None and value not in (0, 1) for value in labels):
+    if (len(labels) != height or (labels and labels[-1] is not None) or any(value is None for value in labels[:-1])
+            or any(value is not None and value not in (0, 1) for value in labels)):
         raise ValueError('Holdout labels must be binary with a single unavailable terminal label')
     return labels
 

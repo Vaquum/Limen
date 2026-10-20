@@ -469,6 +469,6 @@ def test_holdout_threshold_spec_pins_shift_and_determinism(assessment_case):
 
 def test_holdout_labels_reject_nonbinary_or_misplaced_nulls():
     assert assessment._checked_labels([0, 1, None], 3) == [0, 1, None]
-    for bad in ([0, 1], [0, None, 1], [0, 2, None], [-1, 1, None], [None, None, None]):
+    for bad in ([0, 1], [0, 1, 0], [1, 1, 1], [0, None, 1], [0, 2, None], [-1, 1, None], [None, None, None]):
         with pytest.raises(ValueError, match='binary with a single unavailable terminal'):
             assessment._checked_labels(bad, 3)
