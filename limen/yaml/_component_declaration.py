@@ -6,6 +6,7 @@ from typing import cast
 
 from limen.experiment._holdout_calls import call_functions
 from limen.experiment._holdout_state import fitted_witness
+from limen.experiment._holdout_spec import digest
 from limen.experiment.manifest_core import Manifest
 
 __all__ = ['Components', 'bind_components', 'configure_manifest']
@@ -48,7 +49,6 @@ def configure_manifest(manifest: Manifest, reference: Mapping[str, object], comp
     if components is not None and components(manifest) is not None:
         raise ValueError('components configurator must modify the Manifest and return None')
     if components is not None:
-        from limen.experiment._holdout_report import digest
         sfd = cast(dict[str, object], reference['sfd'])
         marker = cast(dict[str, object], sfd['components'])
         pipeline = digest({field.name: getattr(manifest, field.name) for field in fields(manifest)})
