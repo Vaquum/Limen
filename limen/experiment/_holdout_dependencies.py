@@ -91,12 +91,12 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
-        function = value.__func__ if inspect.ismethod(value) else value
-        origin = _function_module(function) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
-        modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
-        if callable(value) and (entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules)):
-            raise ValueError('Holdout inference has an unowned random dependency')
         if callable(value):
+            function = value.__func__ if inspect.ismethod(value) else value
+            origin = _function_module(function) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
+            modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
+            if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
+                raise ValueError('Holdout inference has an unowned random dependency')
             visit(getattr(value, '__name__', None), annotation=True)
         if inspect.ismethod(value):
             visit(value.__func__)
@@ -132,6 +132,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             for index in _dependency_positions(value.__code__):
                 instruction = instructions[index]
                 name = str(instruction.argval)
+                if instruction.opname in ('LOAD_FAST', 'LOAD_DEREF') and name not in references:
+                    continue
                 indirect_globals = instruction.opname == 'LOAD_CONST' and name == '__globals__' and any(part.opname in ('CALL', 'CALL_FUNCTION') for part in instructions[index + 1:index + 4])
                 if name == '__globals__' and (instruction.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect_globals):
                     lookup = [part for part in instructions[index + 1:index + 6] if part.opname != 'PRECALL']
@@ -201,7 +203,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             evidence.append((value.__module__, value.__qualname__, instruction.argval, item))
                     except (ValueError, TypeError, pickle.PickleError) as exc:
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
-        elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
+        elif type(value).__module__ == 'builtins' and type(value) not in (dict, list, tuple, set, frozenset) and inspect.isroutine(value):
             owner = getattr(value, '__self__', None)
             if owner is not None and not isinstance(owner, ModuleType):
                 visit(owner)
