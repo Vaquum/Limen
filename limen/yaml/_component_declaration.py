@@ -19,7 +19,7 @@ def bind_components(reference: Mapping[str, object], components: Components | No
         return dict(reference)
     if not isinstance(sfd, Mapping):
         raise ValueError('Trusted components require an sfd mapping')
-    declared = sfd.get('components')
+    declared = cast(Mapping[str, object], sfd).get('components')
     if not callable(components):
         raise TypeError('components must be a callable Manifest configurator')
     name = f'{getattr(components, "__module__", type(components).__module__)}.{getattr(components, "__qualname__", type(components).__qualname__)}'

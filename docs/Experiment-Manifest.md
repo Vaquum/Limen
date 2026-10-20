@@ -23,33 +23,22 @@ Manifest methods while retaining Compiled Research. Supply the configurator
 explicitly; YAML references cannot import or authorize it. The existing dotted
 resolver still rejects aliases to external defining modules and dunder traversal.
 
-For an existing validated ML `config` and recorded-data `project`, the handoff is:
+Construct the compiled SFD with the caller's configurator. It receives the built
+Manifest, installs components with the public builder methods, and returns `None`.
+Functions keep their actual external defining modules.
 
+<!-- reference: trusted-components-constructor-api source=limen/yaml/compiler.py region=signature:CompiledSFD.__init__ role=signature -->
 ```python
-from limen import UniversalExperimentLoop
-from limen.inference import Trainer
-from limen.yaml import CompiledSFD, build_search_strategy
-from limen.calibration import sklearn_probability_calibrator
-
-
-def external_calibrator(estimator, x, y, **params):
-    return sklearn_probability_calibrator(estimator, x, y, **params)
-
-
-def configure_components(manifest):
-    manifest.with_calibration().probability_calibration(
-        external_calibrator, method='sigmoid').done()
-
-
-sfd = CompiledSFD(config, project_root=project, components=configure_components)
-reference = sfd.yaml_reference
-directory = project / 'experiment'
-loop = UniversalExperimentLoop(sfd=sfd, project_root=project,
-    experiment_dir=directory, yaml_reference=reference,
-    search_strategy=build_search_strategy(reference))
-loop.run('configured', n_permutations=1, progress_bar=False)
-trainer = Trainer(directory, project_root=project, components=configure_components)
+def __init__(self, yaml_dict: dict[str, Any], *, project_root: str | Path | None=None, components: Components | None=None) -> None:
+    ...
 ```
+
+Record research with `UniversalExperimentLoop(sfd=sfd,
+yaml_reference=sfd.yaml_reference, ...)`. Reconstruct it with
+`Trainer(directory, components=configure_components, ...)`. The ordinary native
+configuration and the explicitly supplied configurator together declare the
+pipeline. The recorded holdout proof covers genuine external model, scaler,
+calibration factory and threshold components through this complete handoff.
 
 Use `sfd.yaml_reference` when recording. It returns an independent copy containing
 `sfd.components` with the configurator's name and state/code digest. Trainer must
