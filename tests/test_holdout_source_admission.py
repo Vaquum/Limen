@@ -9,11 +9,15 @@ from ruamel.yaml import YAML
 from limen.data.historical_data import HistoricalData
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _holdout_history as history
+from limen.experiment import _round_storage
 from limen.experiment._holdout_source import admit_frame, load_admitted_source, source_spec
-from limen.experiment.holdout import reserve_holdout
+from limen.experiment.holdout import final_holdout_report, freeze_holdout_selection, reserve_holdout
 from limen.experiment.manifest_core import DataSourceConfig
+from limen.inference import Trainer
+from limen.targets.next_bar_up import NextBarUpTarget
 from limen.yaml import CompiledSFD
-from tests.test_holdout_research import _FIXTURE, _project
+from limen.yaml.compiler import build_search_strategy
+from tests.test_holdout_research import _FIXTURE, _configuration, _project
 from tests.test_trainer import _E2E_LOGREG_YAML
 
 
@@ -58,6 +62,14 @@ class _StoreOverride(_CleanSubclass):
         return super()._store(data)
 
 
+class _ClassmethodStore(_CleanSubclass):
+    _store = classmethod(vars(HistoricalData)['_store'])
+
+
+class _StaticmethodStore(_CleanSubclass):
+    _store = staticmethod(vars(HistoricalData)['_store'])
+
+
 def test_holdout_source_subclass_matrix(tmp_path):
     file_params = {'file_path_or_url': str(_FIXTURE)}
     kind, _, _ = source_spec(_manifest(_CleanSubclass().get_any_file, file_params), _binding(tmp_path))
@@ -66,6 +78,10 @@ def test_holdout_source_subclass_matrix(tmp_path):
     assert kind == 'local_file'
     with pytest.raises(ValueError, match='overrides/subclasses'):
         source_spec(_manifest(_StoreOverride().get_any_file, file_params), _binding(tmp_path))
+    with pytest.raises(ValueError, match='overrides/subclasses'):
+        source_spec(_manifest(_ClassmethodStore().get_any_file, file_params), _binding(tmp_path))
+    with pytest.raises(ValueError, match='overrides/subclasses'):
+        source_spec(_manifest(_StaticmethodStore().get_any_file, file_params), _binding(tmp_path))
     dirty = _CleanSubclass()
     dirty.extra_state = 1
     with pytest.raises(ValueError, match='overrides/subclasses'):
@@ -116,6 +132,44 @@ def test_holdout_csv_research_end_to_end(tmp_path):
     kind, params, _ = source_spec(compiled.manifest(), history.bind(root))
     assert kind == 'local_file'
     assert params['file_path_or_url'].endswith('spot.csv')
+
+
+_PYTHON_SCENARIO = {'fee_bps': 5.0, 'slip_bps': 2.0, 'notional_rate': 0.25, 'execution_lag_bars': 1, 'take_profit_bps': 20.0, 'stop_loss_bps': 20.0}
+
+
+def test_holdout_python_csv_manifest_end_to_end(tmp_path):
+    root = _project(tmp_path / 'project')
+    csv_path = root / 'spot.csv'
+    _csv_copy(_FIXTURE, csv_path)
+    config = _configuration(root)
+    reservation = reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    compiled = CompiledSFD(config, project_root=root)
+    manifest = compiled.manifest()
+    manifest.set_data_source(HistoricalData.get_any_file, {'file_path_or_url': str(csv_path)})
+    native = SimpleNamespace(__name__='holdout_python_csv', params=compiled.params, manifest=lambda: manifest)
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(sfd=native, project_root=root, experiment_dir=directory,
+        search_strategy=build_search_strategy(config), yaml_reference=config)
+    assert loop.data.height == 96
+    assert loop.data['datetime'].dt.epoch('ns').max() < history.utc_day('2024-01-05')
+    source = vars(manifest)['_holdout_source']
+    assert source['kind'] == 'local_file'
+    assert source['admitted']['rows'] == 96
+    kind, params, _ = source_spec(manifest, history.bind(root))
+    assert kind == 'local_file'
+    assert params['file_path_or_url'].endswith('spot.csv')
+    loop.run('guarded', n_permutations=1, progress_bar=False, post_processing=True)
+    with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
+        ids = [json.loads(line)['round_id'] for line in stream if line.strip()]
+    assert len(ids) == 1
+    sensors = Trainer(directory, project_root=root).train(ids)
+    frozen = freeze_holdout_selection(sensors[0], context_start='2024-01-04', scenarios=[_PYTHON_SCENARIO],
+        evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up'))
+    report = final_holdout_report(frozen, project_root=root, reservation_id=reservation, end='2024-01-06')
+    assert report['spec']['target']['params']['target_name'] == 'observed_up'
+    assert report['source']['kind'] == 'local_file'
+    rows = pl.read_parquet(root / report['rows_path']).filter(pl.col('role') == 'final')
+    assert rows.height == 24
 
 
 def test_holdout_headerless_csv_matches_headed(tmp_path):
