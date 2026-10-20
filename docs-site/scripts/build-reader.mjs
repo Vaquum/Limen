@@ -29,6 +29,7 @@ await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/
 for(const name of ['main','motion','code','place','navigation','search'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
 await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/book.css'));
 await fs.copyFile(path.join(site,'src/security-headers.json'),path.join(output,'security-headers.json'));
+await fs.copyFile(path.join(site,'reader/route-decisions.json'),path.join(output,'route-decisions.json'));
 for(const [from,to]of [['@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2','archivo.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2','plex.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-500-normal.woff2','plex-medium.woff2'],['@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-italic.woff2','plex-italic.woff2'],['@fontsource-variable/archivo/LICENSE','archivo-OFL.txt'],['@fontsource/ibm-plex-mono/LICENSE','plex-OFL.txt']])await fs.copyFile(path.join(site,'node_modules',from),path.join(output,'assets/fonts',to));
 await fs.mkdir(path.join(output,'evidence'),{recursive:true});await fs.copyFile(evidencePath,path.join(output,'evidence/current.json'));
 const bundleTarget=path.join(output,'evidence',path.basename(evidence.bundle.path));await fs.copyFile(path.resolve(root,evidence.bundle.path),bundleTarget);

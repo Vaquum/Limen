@@ -54,7 +54,21 @@ test('published routes agree with robots and sitemap while other products remain
   const sitemap=await (await request.get('/limen/sitemap.xml')).text();
   const routes=await (await request.get('/limen/routes.json')).json();
   expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>new URL(match[1]).pathname).sort()).toEqual(routes.map(route=>route.url).sort());
-  for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");}
+  const htmlByUrl=new Map();
+  for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
+  const decisions=await (await request.get('/limen/route-decisions.json')).json();
+  expect(decisions).toEqual(JSON.parse(await fs.readFile(path.join(root,'docs-site/reader/route-decisions.json'),'utf8')));
+  for(const item of decisions.legacy_routes){
+    const legacy=new URL(item.url),replacement=new URL(item.replacement);
+    expect(htmlByUrl.has(replacement.pathname),item.replacement).toBe(true);
+    const response=await request.get(legacy.pathname,{maxRedirects:0});
+    expect(response.status(),item.url).toBe(item.status==='retained'?200:404);
+  }
+  for(const item of decisions.published_links){
+    const replacement=new URL(item.replacement),html=htmlByUrl.get(replacement.pathname);
+    expect(html,item.replacement).toBeDefined();
+    if(replacement.hash)expect(html,item.replacement).toContain('id="'+replacement.hash.slice(1)+'"');
+  }
   const missing=await request.get('/limen/absent-chapter/');expect(missing.status()).toBe(404);expect(await missing.text()).toContain('Page unavailable');
   expect((await request.get('/another-product/')).status()).toBe(404);
 });
