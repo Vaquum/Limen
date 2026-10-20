@@ -95,7 +95,7 @@ def preparation(data_dir, output):
                         'max_horizon': 3, 'span': 8, 'min_periods': 8}))
         (manifest.set_scaler(RobustScaler).set_feature_ablation()
                     .set_pca_compression().add_to_data_dict(capture))
-        params = {'feature_groups': ['momentum', 'price'], 'feature_drop_count': int(compressed),
+        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
                   'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
         data = manifest.prepare_data(raw, params)
         model = RidgeRegressor().train(data, alpha=1., solver='svd')
