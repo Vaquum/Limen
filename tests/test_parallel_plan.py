@@ -55,6 +55,10 @@ def _caller_validator(params):
 class CallerRolling(CallerRollingBase):
     window: int
 
+    @classmethod
+    def class_transform(_cls, data, window=3):
+        return _caller_feature(data, window)
+
     def __call__(self, data):
         return self.transform(data)
 
@@ -127,13 +131,13 @@ def test_frozen_manifest_round_plan() -> None:
             assert actual[:3] == (frozen.pipeline_digest, True, False)
             assert actual[3] != os.getpid() and actual[4] == Path(__file__).resolve().as_posix()
             assert actual[5:] == expected[5:]
-        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3)):
+        for component in (partial(_caller_feature, window=3), CallerRolling(3).transform, CallerRolling(3), CallerRolling.class_transform):
             imports = ('tests.test_parallel_rounds',) if isinstance(component, CallerRolling) else ()
             declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',), imports))
             carried = copy.deepcopy(plan.manifest).add_feature(component)
             frozen = freeze_manifest(carried, None)
             assert digest(decode(encode(frozen))) == digest(frozen)
-            if hasattr(component, '__func__'):
+            if getattr(component, '__name__', None) == 'transform':
                 _assert_inherited_identity(frozen)
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())

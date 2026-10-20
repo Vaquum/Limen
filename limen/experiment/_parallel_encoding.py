@@ -56,6 +56,7 @@ def reference(value: object) -> list[object]:
     resolved: object = import_module(module)
     for part in name.split('.'):
         resolved = getattr(resolved, part)
+    resolved = resolved.__func__ if inspect.ismethod(resolved) else resolved
     if resolved is not value:
         raise ValueError('Parallel component differs from its importable identity')
     return [module_identity(module), name]
@@ -128,7 +129,7 @@ def _import(node: object) -> object:
     value: object = import_module(module_name)
     for part in cast(str, name).split('.'):
         value = getattr(value, part)
-    return value
+    return value.__func__ if inspect.ismethod(value) else value
 
 
 _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
