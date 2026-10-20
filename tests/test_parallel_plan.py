@@ -310,6 +310,17 @@ def _assert_plan_identity(plan):
 
 
 
+def _factory_probe(plan, factory):
+    from limen.experiment._parallel_identity import distribution_providers
+    from limen.experiment._parallel_plan import plan_digests
+    from tests.test_parallel_rounds import recorded_source
+    with distribution_providers(plan.distribution_providers):
+        assert plan_digests(plan.manifest, plan.stages) == (plan.pipeline_digest, plan.resource_digest)
+    validate_resources(plan, _parameters() | {'auxiliary_factory': factory})
+    result = plan.manifest.architecture_function(recorded_source().head(24), auxiliary_factory=factory)
+    return result['caller_mean'].to_list(), os.getpid()
+
+
 def _assert_factory_resources(plan, params):
     from limen.experiment._parallel_resources import unfrozen_stage
     from limen.experiment._parallel_resources import deterministic_stage
@@ -342,6 +353,17 @@ def _assert_factory_resources(plan, params):
     validate_resources(frozen, candidate)
     validate_resources(frozen, params | {'auxiliary_factory': _other_auxiliary_factory})
     validate_domain(frozen, {key: [value] for key, value in params.items()} | options, None)
+    assert digest(decode(encode(frozen))) == digest(frozen)
+    with startup_limits(), ProcessPoolExecutor(max_workers=1, mp_context=multiprocessing.get_context('spawn')) as pool:
+        for factory in options['auxiliary_factory']:
+            actual, pid = pool.submit(_factory_probe, frozen, factory).result(timeout=30)
+            expected, _ = _factory_probe(frozen, factory)
+            assert actual == expected and pid != os.getpid()
+    declare_parallel(_other_auxiliary_factory, ParallelRoundContract(unfrozen_stage))
+    with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: unfrozen external state'):
+        validate_domain(freeze_manifest(manifest, None, options),
+                        {key: [value] for key, value in params.items()} | options, None)
+    declare_parallel(_other_auxiliary_factory, ParallelRoundContract(_caller_validator, ('window',)))
     with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: missing frozen independence contract'):
         validate_resources(freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]}),
                            params | {'auxiliary_factory': _other_auxiliary_factory})
