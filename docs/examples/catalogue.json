@@ -100,7 +100,8 @@
     "docs/Utilities.md",
     "docs/Standard-Metrics-Library.md",
     "docs/Built-In-SFDs.md",
-    "docs/Trainer.md"
+    "docs/Trainer.md",
+    "docs/Cohort.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2619,6 +2620,10 @@
       "compiled/selection",
       "python/calibration",
       "compiled/calibration",
+      "compiled/walk_forward"
+    ],
+    "docs/Cohort.md": [
+      "python/selection",
       "compiled/walk_forward"
     ]
   }
