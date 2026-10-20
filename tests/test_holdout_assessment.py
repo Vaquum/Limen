@@ -906,6 +906,40 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
         with pytest.raises(ValueError, match='copy changed'):
             _freeze(mapped)
         assert loader.call_count == 0
+    class HiddenNumeric(HiddenArray):
+        def __reduce_ex__(self, protocol):
+            return int, (0,)
+    class NonpreservingNumeric(HiddenNumeric):
+        def __deepcopy__(self, memo):
+            clone = super().__deepcopy__(memo)
+            clone[0] += 0.1
+            return clone
+    mapped._model.policy = np.asarray([expected_offset], dtype=float).view(HiddenNumeric)
+    _freeze(mapped)
+    mapped._model.policy = np.asarray([expected_offset], dtype=float).view(NonpreservingNumeric)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
+    class HiddenAttributes:
+        def __init__(self, offset):
+            self.offset = offset
+        def __getattribute__(self, name):
+            return {} if name == '__dict__' else object.__getattribute__(self, name)
+        def adjust(self, values):
+            return np.clip(values + self.offset, 0, 1)
+        def __deepcopy__(self, memo):
+            return type(self)(self.offset)
+    class NonpreservingAttributes(HiddenAttributes):
+        def __deepcopy__(self, memo):
+            return type(self)(self.offset + 0.1)
+    mapped._model.policy = HiddenAttributes(expected_offset)
+    _freeze(mapped)
+    mapped._model.policy = NonpreservingAttributes(expected_offset)
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(mapped)
+        assert loader.call_count == 0
     class AliasPrediction(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
@@ -1122,6 +1156,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + next(self.policy), 0, 1)
             return result
+    class UnaryPolicy:
+        def __neg__(self):
+            return _LATE_RULES['offset']
+    class Negated(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + (-self.policy), 0, 1)
+            return result
     class ComparisonPolicy:
         def __gt__(self, other):
             return _LATE_RULES['offset'] > other
@@ -1138,9 +1180,9 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
             return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), ConversionPolicy()):
+    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), ConversionPolicy()):
         callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
         callable_selection._model.policy = provider
         callable_handle = _freeze(callable_selection)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1158,7 +1200,14 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             result = super().predict(data)
             result['_probs'] = self.helpers.f17_later_probabilities(result['_probs'])
             return result
-    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute):
+    def module_probabilities(module, values):
+        return module.f17_later_probabilities(values)
+    class ModuleArgument(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = module_probabilities(manifest_core, result['_probs'])
+            return result
+    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument):
         selection = copy.deepcopy(assessment_case[2][0][0])
         selection._model.__class__ = implementation
         selection._model.research_x = late._model.research_x.copy()

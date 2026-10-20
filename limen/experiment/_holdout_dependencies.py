@@ -41,7 +41,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     def witness(identity: int) -> bytes:
         return fitted_witness(seen[identity])
     cached_witness = lru_cache(maxsize=None)(witness)
-    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
+    attributes: set[str] = {'__float__', '__int__', '__index__', '__bool__', '__complex__', '__str__', '__bytes__', '__lt__', '__le__', '__eq__', '__ne__', '__gt__', '__ge__', '__neg__', '__pos__', '__abs__', '__invert__'} | {f'__{prefix}{operator}__' for prefix in ('', 'r', 'i') for operator in ('add', 'sub', 'mul', 'matmul', 'truediv', 'floordiv', 'mod', 'pow', 'lshift', 'rshift', 'and', 'xor', 'or')}
     module_attributes: set[str] = set()
     objects: list[object] = []
     processed: dict[int, set[str]] = {}
@@ -123,13 +123,12 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                         aliases = references.setdefault(str(instructions[following].argval), [])
                         if all(part is not item for part in aliases):
                             aliases.append(item)
-                    if not isinstance(item, ModuleType):
-                        try:
-                            visit(item)
-                            witness = cached_witness(id(item)) if id(item) in seen else fitted_witness(item)
-                            evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
-                        except (ValueError, TypeError, pickle.PickleError) as exc:
-                            raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
+                    try:
+                        visit(item)
+                        witness = cached_witness(id(item)) if id(item) in seen else fitted_witness(item)
+                        evidence.append((value.__module__, value.__qualname__, instruction.argval, witness))
+                    except (ValueError, TypeError, pickle.PickleError) as exc:
+                        raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
         elif inspect.isroutine(value) and type(value).__module__ == 'builtins':
             evidence.append(fitted_witness(value))
         elif object_array(value):

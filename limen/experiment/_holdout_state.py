@@ -9,7 +9,7 @@ from io import IOBase
 import logging
 import marshal
 import pickle
-from types import CodeType, ModuleType
+from types import CodeType, GetSetDescriptorType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
@@ -60,7 +60,15 @@ def children(value: object) -> tuple[object, ...]:
 
 
 def _attributes(value: object) -> dict[str, object]:
-    values = dict(cast(dict[str, object], getattr(value, '__dict__', {})))
+    values: dict[str, object] = {}
+    native_dict = False
+    for cls in type(value).__mro__:
+        descriptor = cls.__dict__.get('__dict__')
+        if isinstance(descriptor, GetSetDescriptorType):
+            values.update(cast(dict[str, object], descriptor.__get__(value, type(value))))
+            native_dict = True
+    if type(value).__dictoffset__ and not native_dict:
+        raise ValueError('Holdout refuses hidden native instance dictionaries')
     for cls in type(value).__mro__:
         declaration = cls.__dict__.get('__slots__', ())
         slots = (declaration,) if isinstance(declaration, str) else declaration
@@ -123,13 +131,16 @@ def fitted_witness(value: object) -> bytes:
             result = (kind, tuple(sorted((node(part) for part in _native_values(cast(object, item))), key=pickle.dumps)), state)
         elif object_array(item):
             result = (kind, item.shape, item.dtype.descr, node(npt.NDArray[np.generic].tolist(item)), state)
-        elif isinstance(item, (np.ndarray, pl.DataFrame, pl.Series)):
+        elif isinstance(item, np.ndarray):
+            native = cast(object, npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
+            result = (kind, pickle.dumps(native, protocol=5), state)
+        elif isinstance(item, (pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
         elif kind[0].split('.')[0] == 'numpy' and kind[1] == '_ArrayFunctionDispatcher':
             result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
-        elif isinstance(getattr(item, '__dict__', None), dict) or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
+        elif type(item).__dictoffset__ or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
             if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in type(item).__mro__):
                 raise ValueError('Holdout refuses opaque native prediction state')
             result = (kind, node(_attributes(item)))
