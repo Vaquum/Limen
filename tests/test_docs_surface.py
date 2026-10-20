@@ -91,7 +91,7 @@ def test_documentation_corpus_is_fully_routed_into_the_site() -> None:
 
 def test_site_assembly_preserves_authoring_and_navigation_contracts() -> None:
     pages = {block['source']: block for block in _doc_blocks()}
-    assert pages['docs/Command-Line-Interface.md']['part'] == 'Book'
+    assert pages['docs/Command-Line-Interface.md']['part'] == 'Reference'
     assert pages['docs/Developer/Packaging.md']['part'] == 'Developer'
     assert pages['docs/Roadmap.md']['part'] == 'Book'
     assert pages['docs/Developer/Security-Assurance-Case.md']['part'] == 'Developer'
