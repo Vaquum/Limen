@@ -147,6 +147,26 @@ Limen exposes both layers so one score does not hide either prediction quality o
 
 ## Walk-forward selection report
 
+The [Compiled project's recorded acceptance case](Experiment-Manifest.md#recorded-acceptance-example)
+executes two rule-based trials and retains their complete return tracks and reports.
+It runs inside the project's walk-forward scenario:
+
+<!-- example: benchmark-recorded-acceptance source=docs/examples/compiled-research/scenarios.py region=acceptance scenario=walk_forward interface=compiled role=executed -->
+```python
+def acceptance(data_dir, output):
+    config = configuration('acceptance', data_dir)
+    loop = execute(config, output)
+    report = json.loads((output / 'acceptance_report.json').read_text())
+    return {'rounds': research_project.completed_log(loop).height, 'report': report,
+            'artifacts': {name: hashlib.sha256((output / name).read_bytes()).hexdigest() for name in (
+                'trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+```
+
+Its independent proof derives DSR and PBO from the retained returns and ordered
+fold timestamps. These are native sweep reports. The Python project owns its
+selection criteria and return ledger; it does not acquire native report artifacts
+merely by using UEL or MSQ.
+
 [Manifest-backed walk-forward validation](Experiment-Manifest.md#walk-forward-sweeps) fits each fold independently, purges rows before validation and test, and excludes embargoed rows from later training pools. Choose the purge to cover the target's forward label horizon. Each successful trial retains its test net-return track in `trial_returns.parquet`.
 
 At sweep conclusion, Limen reads that artifact and writes `acceptance_report.json` and `acceptance_report.md` beside it. Without the artifact, no report is written. The report computes two statistics over the recorded per-trial out-of-sample return matrix:

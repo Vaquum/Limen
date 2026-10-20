@@ -543,7 +543,8 @@ def walk_forward(data_dir, output):
     cohort.set_members(sensors)
     metadata = [fold_metadata(sensor) for sensor in sensors]
     round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
+    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
+            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
             'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
             'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
             'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
@@ -551,10 +552,74 @@ def walk_forward(data_dir, output):
 
 ### Recorded acceptance example
 
-Read `trial_returns.parquet`, `acceptance_report.json` and `acceptance_report.md`
-from that experiment directory. The independent project proof checks the
-retained fold population and report values. Failed verdicts leave the research
-results available; null statistics remain unavailable rather than passing.
+The Compiled project's walk-forward scenario also executes this rule-based
+comparison on the complete recorded hourly source. Two entry thresholds produce
+two trials with two folds each. The retained tracks contain 96 returns per trial;
+the default CSCV partition uses two blocks of 48 returns.
+
+The YAML keeps the repository fixture path so it can also run from a checkout.
+The project driver resolves that filename through its explicit `--data-dir`
+argument and checks the recorded input digest before execution.
+
+<!-- example: manifest-recorded-acceptance source=docs/examples/compiled-research/acceptance.yaml region=__file__ scenario=walk_forward interface=compiled role=executed -->
+```yaml
+schema_version: "1.0"
+metadata:
+  name: recorded_acceptance
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: tests/fixtures/spot_1h_20240101_20241231.parquet
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 49
+      purge_bars: 4
+      embargo_bars: 3
+      anchored: true
+    acceptance:
+      min_deflated_sharpe_probability: 0.95
+      max_pbo: 0.20
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+    strategy:
+      conditions:
+        - id: entry
+          name: positive_return
+          type: threshold
+          column: ret_1
+          operator: ">"
+          value: "{entry_return}"
+      entry: entry
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+  params:
+    entry_return: [0.0, 0.001]
+uel:
+  recording:
+    alignment: true
+    fold_details: true
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  prep_each_round: true
+  output_format: parquet
+```
+
+The driver retains `trial_returns.parquet`, `acceptance_report.json`,
+`acceptance_report.md` and the fold records under `walk_forward/acceptance/`.
+The independent project proof checks the timestamp population, recomputes the
+selected trial's Deflated Sharpe probability and both CSCV rankings, and compares
+the JSON and Markdown verdicts. Failed verdicts leave the research results
+available. Null statistics remain unavailable rather than passing.
 For report definitions and family comparisons, continue to [Benchmark](Benchmark.md#walk-forward-selection-report).
 
 ### `set_pre_split_data_selector(func, **params)`

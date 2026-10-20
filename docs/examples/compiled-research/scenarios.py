@@ -265,6 +265,17 @@ def fold_metadata(sensor):
     return {'fold': fold, 'fitting': fitting.isoformat(), 'selection': selection.isoformat()}
 
 
+# region acceptance
+def acceptance(data_dir, output):
+    config = configuration('acceptance', data_dir)
+    loop = execute(config, output)
+    report = json.loads((output / 'acceptance_report.json').read_text())
+    return {'rounds': research_project.completed_log(loop).height, 'report': report,
+            'artifacts': {name: hashlib.sha256((output / name).read_bytes()).hexdigest() for name in (
+                'trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+# endregion acceptance
+
+
 # region walk_forward
 def walk_forward(data_dir, output):
     config = configuration('walk_forward', data_dir)
@@ -277,7 +288,8 @@ def walk_forward(data_dir, output):
     cohort.set_members(sensors)
     metadata = [fold_metadata(sensor) for sensor in sensors]
     round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
+    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
+            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
             'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
             'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
             'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}

@@ -2226,12 +2226,13 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "hourly: first 384 rows; two recorded folds",
+      "recorded_window": "hourly: first 384 rows for calibrated folds; complete 8784 rows for two-trial acceptance",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff.",
+      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff; independent DSR/CSCV and timestamp checks verify retained acceptance reports and verdicts.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry",
-        "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local"
+        "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local",
+        "docs/examples/tests/test_research_examples.py::test_acceptance_report_matches_recorded_tracks"
       ]
     },
     "python/holdout": {

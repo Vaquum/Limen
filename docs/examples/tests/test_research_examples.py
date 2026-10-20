@@ -169,6 +169,13 @@ def test_preparation_preserves_training_fits_and_target_geometry(python_scenario
         verify_preparation(interface, recorded, output, inputs)
 
 
+def test_acceptance_report_matches_recorded_tracks(compiled_scenarios, tmp_path):
+    from scenario_oracles import verify_acceptance
+    inputs = ROOT / 'tests/fixtures'
+    result = compiled_scenarios.acceptance(inputs, tmp_path)
+    verify_acceptance(json.loads(json.dumps(result, allow_nan=False)), tmp_path, inputs)
+
+
 def test_common_baselines_preserve_signals_and_declared_economics(python_scenarios, compiled_scenarios, tmp_path):
     from scenario_oracles import verify_common_baselines
     inputs = ROOT / 'tests/fixtures'

@@ -1,4 +1,6 @@
 from datetime import datetime, timezone
+from itertools import combinations
+from statistics import NormalDist
 import hashlib
 import json
 import math
@@ -95,6 +97,72 @@ def verify_feedback(interface, feedback, inputs):
             assert row['accuracy'] == pytest.approx(float(np.mean(predictions == expected)))
 
 
+def verify_acceptance(result, output, inputs):
+    report = result['report']
+    assert result['rounds'] == report['n_trials'] == 2
+    for name, digest in result['artifacts'].items():
+        assert hashlib.sha256((output / name).read_bytes()).hexdigest() == digest
+    assert json.loads((output / 'acceptance_report.json').read_text()) == report
+    frame = pl.read_parquet(output / 'trial_returns.parquet')
+    trials = frame['trial'].unique(maintain_order=True).to_list()
+    tracks = []
+    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
+        records = {item['round_id']: item for item in map(json.loads, stream)}
+    source = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
+    assert source.height == 8784 and set(records) == set(trials)
+    dates_by_trial = []
+    for trial in trials:
+        rows = frame.filter(pl.col('trial') == trial).sort('bar')
+        assert rows['bar'].to_list() == list(range(96))
+        track = rows['net_return'].to_numpy()
+        folds = records[trial]['folds']
+        assert len(folds) == 2
+        np.testing.assert_array_equal(track, [value for fold in folds for value in fold['net_returns']])
+        dates = [value for fold in folds for value in fold['alignment']['test_datetimes']]
+        assert len(dates) == len(set(dates)) == 96
+        assert dates == sorted(dates)
+        assert set(dates) <= {value.isoformat() for value in source['datetime']}
+        dates_by_trial.append(dates)
+        tracks.append(track)
+    assert dates_by_trial[0] == dates_by_trial[1]
+    matrix = np.stack(tracks)
+    sharpes = matrix.mean(axis=1) / matrix.std(axis=1, ddof=1)
+    winner = int(np.argmax(sharpes))
+    variance = float(sharpes.var(ddof=1))
+    track = matrix[winner]
+    centered = track - track.mean()
+    standardized = centered / np.sqrt(np.mean(centered ** 2))
+    skew, kurtosis = float(np.mean(standardized ** 3)), float(np.mean(standardized ** 4))
+    normal, gamma = NormalDist(), 0.5772156649015329
+    benchmark = math.sqrt(variance) * ((1-gamma)*normal.inv_cdf(1-1/len(trials)) + gamma*normal.inv_cdf(1-1/(len(trials)*math.e)))
+    corrected = 1-skew*sharpes[winner]+(kurtosis-1)*sharpes[winner]**2/4
+    probability = normal.cdf((sharpes[winner]-benchmark)*math.sqrt((len(track)-1)/corrected))
+    blocks = np.split(np.arange(matrix.shape[1]), 2)
+    losses = []
+    for selected in combinations(range(2), 1):
+        training = matrix[:, np.concatenate([blocks[index] for index in selected])]
+        held = matrix[:, np.concatenate([blocks[index] for index in range(2) if index not in selected])]
+        chosen = int(np.argmax(training.mean(axis=1) / training.std(axis=1, ddof=1)))
+        scores = held.mean(axis=1) / held.std(axis=1, ddof=1)
+        rank = np.count_nonzero(scores < scores[chosen]) + (np.count_nonzero(scores == scores[chosen])+1)/2
+        losses.append(rank/(len(trials)+1) <= .5)
+    pbo = sum(losses)/len(losses)
+    assert report['n_bars'] == 96 and report['n_blocks'] == 2 and report['pbo_block_bars'] == 48
+    assert report['pbo_combinations'] == 2 and report['pbo_resolution'] == .5
+    assert report['winner_trial'] == trials[winner]
+    assert report['winner_sharpe'] == pytest.approx(float(sharpes[winner]), abs=1e-14)
+    assert report['trial_sharpe_variance'] == pytest.approx(variance, abs=1e-14)
+    assert report['deflated_sharpe_probability'] == pytest.approx(probability, abs=1e-14)
+    assert report['pbo'] == pbo and report['errors'] == {}
+    assert report['thresholds'] == {'min_deflated_sharpe_probability': .95, 'max_pbo': .2}
+    assert report['verdicts'] == {'min_deflated_sharpe_probability': probability >= .95, 'max_pbo': pbo <= .2}
+    markdown = (output / 'acceptance_report.md').read_text()
+    assert f'Deflated Sharpe probability: {report["deflated_sharpe_probability"]}' in markdown
+    assert f'PBO: {report["pbo"]}' in markdown
+    for name, passed in report['verdicts'].items():
+        assert f'{name} ({report["thresholds"][name]}): {"pass" if passed else "fail"}' in markdown
+
+
 def verify(interface, name, result, output, inputs):
     if name == 'search':
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
@@ -188,6 +256,7 @@ def verify(interface, name, result, output, inputs):
                 assert fold['test_open'] == test['open'].to_list() and fold['test_close'] == test['close'].to_list()
                 assert fold['available_at_ns'] == (test['datetime'].dt.epoch('ns')+3_600_000_000_000).to_list()
         else:
+            verify_acceptance(result['acceptance'], output / 'acceptance', inputs)
             assert result['rounds'] == 1 and len(result['folds']) == 2
             assert result['member_folds'] == [0, 1]
             assert len(result['member_ids']) == 2 and all(len(item) == 4 for item in result['member_ids'])

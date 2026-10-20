@@ -6,6 +6,8 @@ The [research chapter](../../Research-Book.md) develops the project. The [docume
 
 The search scenario also compares baseline and compressed preparation on 1,440 recorded hourly bars. It retains each prepared train/validation/test matrix, a fixed-order fractional feature, ternary forward-close labels, training-fitted robust statistics, an explicit feature drop and optional two-component PCA. Independent tests reconstruct the labels, differenced values, scaler statistics, PCA subspace and Ridge forecasts. The Python case owns separate partition preparation; the native Manifest case retains its admitted CCO context. These are preparation checks, not a feature-importance ranking or profitability claim.
 
+The walk-forward scenario also runs `acceptance.yaml` against the complete recorded hourly source. It retains two rule-based trials, their 96-return tracks, fold timestamps and JSON/Markdown acceptance reports under `walk_forward/acceptance/`. Independent tests recompute Deflated Sharpe probability and PBO from those tracks and check the declared verdicts. The driver binds the YAML's repository-relative source filename through `--data-dir`; use the complete project when running from the downloaded bundle.
+
 ## Prerequisites
 
 Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats,boosting]`; Sobol uses statistics; factorization uses LightGBM.
