@@ -36,7 +36,6 @@ The declaration uses the bundle's `inputs/` directory and writes `results/dev/co
 
 Search also executes all eight [common strategy baselines](../../Common-Strategies.md) on the recorded 2024 hourly source. Their desired signals share the same assessment window. The Python case owns next-open-to-close one-bar trades with a declared 2 bp round-trip cost; the Compiled case uses the native lagged held-position snapshot with 10 bp fee and 5 bp slippage per fill. Independent assertions check causal signals and each policy's arithmetic; these are different trading interpretations, not a cross-engine return ranking.
 
-
 `--scenario all` runs the named scenarios in separate output directories. `--scenario` also accepts one name from the table. Use a new output directory for a fresh run; the recovery scenario creates its interrupted run and resumes it internally.
 
 | Scenario | Decision and output |

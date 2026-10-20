@@ -630,7 +630,6 @@ Primary keyword resolution is unchanged. A caller-owned architecture accepting `
 
 For complete fixed-duration bars stamped at their closing time, declare `backtest.source_timestamp_role: end` and `source_interval_seconds`. Model datetimes and split membership stay unchanged; execution observes each original interval from `datetime - interval` through `datetime`. Ordered integer-multiple gaps remain gaps, with no candles or prices filled. Declare the role from source provenance, not inferred performance. The default `start` retains existing strict regular-grid behavior and legacy execution hashes. Declared crash-reversal bar intervals also accept aligned gaps without reading the next recorded timestamp.
 
-
 ## Recorded execution price costs
 
 `limen.backtest.observed_costs.CostCalibration` audits local normalized fill
@@ -818,4 +817,3 @@ Manifest/YAML option is exposed.
 - Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable trained sensors.
 - Continue to [Log](Log.md) for the post-run workflow that produces backtest inputs.
 - Continue to [Benchmark](Benchmark.md) for the prediction-quality layer that precedes trading-economics inspection.
-

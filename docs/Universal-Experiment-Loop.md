@@ -481,7 +481,7 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 Python/MSQ runs can resume when all four recording groups were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
 
-### Python Research
+### Resume Python Research
 
 <!-- example: uel-recovery-python source=docs/examples/python-research/scenarios.py region=recovery scenario=recovery interface=python role=executed -->
 ```python
@@ -518,7 +518,7 @@ def recovery(data_dir, output):
     return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
 ```
 
-### Compiled Research
+### Resume Compiled Research
 
 <!-- example: uel-recovery-compiled source=docs/examples/compiled-research/scenarios.py region=recovery scenario=recovery interface=compiled role=executed -->
 ```python
