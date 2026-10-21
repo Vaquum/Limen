@@ -1510,6 +1510,62 @@ def test_frozen_logger_handler_dependencies(native_assessment_case, callback):
             assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('default', [False, True])
+@pytest.mark.parametrize('aliased', [False, True])
+def test_frozen_mapping_get_namespace_reader(native_assessment_case, default, aliased):
+    class MappingGetGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if aliased:
+                reader = self.readers.get('read_globals', None) if default else self.readers.get('read_globals')
+                offset = reader()['_LATE_RULES']['offset']
+            else:
+                offset = self.readers.get('read_globals', None)()['_LATE_RULES']['offset'] if default else self.readers.get('read_globals')()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = MappingGetGlobals
+    selected._model.readers = {'read_globals': globals}
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('binary', [False, True])
+def test_frozen_primitive_alias_copy(native_assessment_case, binary):
+    from limen.experiment._holdout_state import fitted_witness
+    class PrimitiveAliases(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + (0 if self.left is self.right else 0.1), 0, 1)
+            return result
+        def __deepcopy__(self, memo):
+            clone = object.__new__(type(self))
+            memo[id(self)] = clone
+            vars(clone).update(copy.deepcopy(vars(self), memo))
+            if self.split:
+                clone.right = bytes(bytearray(self.right)) if binary else self.right.encode().decode()
+            return clone
+    value = b'owned primitive alias' if binary else 'owned primitive alias'
+    duplicate = bytes(bytearray(value)) if binary else value.encode().decode()
+    assert value == duplicate and value is not duplicate
+    assert fitted_witness((value, value)) != fitted_witness((value, duplicate))
+    assert fitted_witness((value, value), class_aliases=True) != fitted_witness((value, duplicate), class_aliases=True)
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = PrimitiveAliases
+    selected._model.left = selected._model.right = value
+    selected._model.split = False
+    assert _report(_freeze(selected), native_assessment_case)['state'] == 'completed'
+    selected._model.split = True
+    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='copy changed selected state'):
+            _freeze(selected)
+        assert loader.call_count == 0
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:

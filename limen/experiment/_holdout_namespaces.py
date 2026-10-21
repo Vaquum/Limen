@@ -27,7 +27,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
         if lookup_start is None and part.opname == 'LOAD_CONST':
             for position in range(index + 1, len(instructions) - 1):
                 getter, invocation = instructions[position:position + 2]
-                if getter.opname in _CALLS and getter.arg in (2, 3):
+                if getter.opname in _CALLS and getter.arg in (1, 2, 3):
                     if invocation.opname in ('STORE_FAST', 'STORE_DEREF'):
                         aliases.setdefault(str(invocation.argval), set()).update(names)
                     elif invocation.opname in _CALLS and invocation.arg == 0:
