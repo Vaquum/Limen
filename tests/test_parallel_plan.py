@@ -1002,17 +1002,6 @@ def _frozen_manifest_round_plan() -> None:
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
             from tests.test_parallel_rounds import recorded_source
             data = recorded_source().head(24).select('close')
-        foreign = ForeignBoundScaler(data)
-        assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 5).alias('close')))
-        with pytest.MonkeyPatch.context() as patch:
-            patch.setattr(ForeignTransformOwner, 'multiplier', 7)
-            assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 7).alias('close')))
-            with pytest.raises(TypeError, match='unfrozen class-method owner state'):
-                freeze_manifest(copy.deepcopy(native).set_scaler(ForeignBoundScaler), None)
-        with pytest.raises(TypeError, match='unfrozen class-method owner state'):
-            freeze_manifest(copy.deepcopy(native).set_scaler(ForeignBoundScaler), None)
-        with pytest.raises(TypeError, match='unfrozen class-method owner state'):
-            pool.submit(capture_transform, ForeignBoundScaler).result(timeout=30)
             control = scaler_class(data).transform(data).to_dict(as_series=False)
             actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
             assert actual[5] == control and actual[3] != os.getpid()
@@ -1036,6 +1025,17 @@ def _frozen_manifest_round_plan() -> None:
                     for _ in range(2):
                         actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
                         assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
+        foreign = ForeignBoundScaler(data)
+        assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 5).alias('close')))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(ForeignTransformOwner, 'multiplier', 7)
+            assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 7).alias('close')))
+            with pytest.raises(TypeError, match='unfrozen class-method owner state'):
+                freeze_manifest(copy.deepcopy(native).set_scaler(ForeignBoundScaler), None)
+        with pytest.raises(TypeError, match='unfrozen class-method owner state'):
+            freeze_manifest(copy.deepcopy(native).set_scaler(ForeignBoundScaler), None)
+        with pytest.raises(TypeError, match='unfrozen class-method owner state'):
+            pool.submit(capture_transform, ForeignBoundScaler).result(timeout=30)
         unsafe = freeze_manifest(copy.deepcopy(native).set_scaler(SelfAssignedThreadScaler), None)
         with pytest.raises(ValueError, match=r'scaler\.class\.0\.0\.transform: effective n_jobs=1'):
             validate_resources(unsafe, _parameters())
