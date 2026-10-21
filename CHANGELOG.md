@@ -1940,4 +1940,3 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.30] - 2026-10-21
 
 - Allow resume with inapplicable recording groups disabled; require applicable committed payloads before recovery writes.
-
