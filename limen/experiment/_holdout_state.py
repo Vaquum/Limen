@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from builtins import globals as _native_globals
 from collections import defaultdict, deque
-from collections.abc import Mapping
+from collections.abc import Callable, Iterator, Mapping
 from functools import lru_cache, partial
 from hashlib import sha256
 import inspect
@@ -29,6 +29,7 @@ _ATOMIC_TYPES = (str, bool, bytes)
 _NO_ATTRIBUTE_TYPES = (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray)
 _CONTAINER_TYPES: tuple[type[object], ...] = (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)
 native_types = (list[object], tuple[object, ...], dict[object, object], deque[object], set[object], frozenset[object], npt.NDArray[np.generic])
+_NATIVE_ITERATORS = cast(tuple[Callable[[object], Iterator[object]], ...], (native_types[0].__iter__, native_types[1].__iter__, native_types[3].__iter__, native_types[4].__iter__, native_types[5].__iter__))
 # Verify canonical identity rather than assume the interpreter's integer cache.
 _CANONICAL_INTS: MappingProxyType[object, int] = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
@@ -47,13 +48,8 @@ def code_digest(code: CodeType) -> str:
     return _code_hash(code, id(code))
 
 def _native_values(value: object) -> tuple[object, ...]:
-    if isinstance(value, (tuple, list)):
-        return tuple(native_types[1].__iter__(cast(tuple[object, ...], value))) if isinstance(value, tuple) else tuple(native_types[0].__iter__(cast(list[object], value)))
-    if isinstance(value, deque):
-        return tuple(native_types[3].__iter__(cast(deque[object], value)))
-    if isinstance(value, set):
-        return tuple(native_types[4].__iter__(cast(set[object], value)))
-    return tuple(native_types[5].__iter__(cast(frozenset[object], value)))
+    iterator = _NATIVE_ITERATORS[1] if isinstance(value, tuple) else _NATIVE_ITERATORS[0] if isinstance(value, list) else _NATIVE_ITERATORS[2] if isinstance(value, deque) else _NATIVE_ITERATORS[3] if isinstance(value, set) else _NATIVE_ITERATORS[4]
+    return tuple(iterator(value))
 
 
 def _booster(value: object) -> bool:
@@ -143,13 +139,16 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         if item_type is int or item_type is float:
             return ('scalar', item_type.__name__, item)
         kind = (item_type.__module__, item_type.__qualname__, ('ref', reference) if (reference := seen.get(id(item_type))) is not None else node(item_type))
+        result: object
         if item_type is dict:
-            return (kind, None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else ('ref', key_ref) if (key_ref := seen.get(id(key))) is not None else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part))) for key, part in cast(dict[object, object], item).items()), None)
+            result = (kind, None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else ('ref', key_ref) if (key_ref := seen.get(id(key))) is not None else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part))) for key, part in cast(dict[object, object], item).items()), None)
         elif item_type is list or item_type is tuple:
-            return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
+            result = (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         elif item_type is set or item_type is frozenset:
-            return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
-        return structure(item, item_type, kind)
+            result = (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
+        else:
+            result = structure(item, item_type, kind)
+        return result
 
     def structure(item: object, item_type: type[object], kind: tuple[str, str, object]) -> object:
         attributes = _attributes(item) if issubclass(item_type, _CONTAINER_TYPES) else {}
