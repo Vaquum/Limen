@@ -2,7 +2,7 @@
 
 Limen's documentation is a research book built around two complete, executable projects: Python Research and Compiled Research. Chapters develop those projects; Reference and Developer provide the detail needed to use and maintain them.
 
-This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md#research-interface-contract) establishes the research interfaces. Documentation must describe their current behavior and make the evidence behind its examples inspectable.
+This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md) establishes the delivery laws. Documentation must describe current behavior and make the evidence behind its examples inspectable.
 
 The [Python project](../examples/python-research/README.md) and
 [Compiled project](../examples/compiled-research/README.md) are the canonical
@@ -219,7 +219,7 @@ Keep the source commit/PR visible with each example. Make the complete project, 
 A change to project code, preparation, numerical behavior or displayed results requires the corresponding documentation, bindings and semantic proof to change together.
 
 1. Identify affected projects, scenarios, source regions, pages and results in the coverage catalogue.
-2. Include their paths in the slice's Surfaces before implementation.
+2. Record their paths in the delivering issue before implementation.
 3. Change the canonical source and synchronized excerpts; regenerate observed results through execution.
 4. Run the required proof in its declared environment and inspect the changed assertions and results.
 5. Publish only evidence for the exact candidate or release being judged.
@@ -239,7 +239,7 @@ The existing required `PR Checks Docs Site` context will own the comprehensive e
 
 Missing, failed, skipped required proof or wrong-revision evidence fails the check. Do not pass evidence through an independent workflow that can race the build. Record the dependency lock digest and its resolution target as well as the actual interpreter patch version, platform and runner image. Installing a lock resolved for Python 3.10 under Python 3.12 does not make it a Python 3.12 resolution. Include the browser runner, Chromium and system dependencies in the locked/provisioned toolchain. Audit the complete shipped dependency graph through Limen's lockfile.
 
-The book tests provide documentation evidence. They do not replace a public research slice’s ordinary `tests/` proof required by the Interface Contract. Documentation maintenance may cite the required Docs Site check where a governance declaration needs a check reference.
+The book tests provide documentation evidence. They do not replace a public research change’s ordinary `tests/` proof. Documentation maintenance may cite the required Docs Site check as its evidence.
 
 Keep comprehensive docs execution outside default `tests.run` discovery. The package's required test, coverage and 240-second runtime obligations remain unchanged. The measured suite executes on Python 3.12; separate runtime and coverage jobs use Python 3.10 to read its artifacts. The initial `fb5dc4f2` baseline measured 252.659 seconds against 240 seconds. Isolating new docs work does not repair or waive that failure, nor establish the health of a later revision; judge the actual candidate's checks.
 
@@ -293,7 +293,7 @@ Preserve HSTS, CSP, permissions, referrer, content-type and frame protections. B
 
 ## Publication and rollback
 
-The first migration keeps three delivery slices. Before merging BOOK-LIMEN, retain the current production Worker version and home-page digest, disconnect its independent Git-integrated build, prove the complete candidate, provision the release publisher and remove the Docusaurus sources and configuration in the same PR. The deployed predecessor keeps serving while the merged package is released.
+The first migration keeps three delivery phases. Before merging BOOK-LIMEN, retain the current production Worker version and home-page digest, disconnect its independent Git-integrated build, prove the complete candidate, provision the release publisher and remove the Docusaurus sources and configuration in the same PR. The deployed predecessor keeps serving while the merged package is released.
 
 After merge, the publisher must obtain and execute that actual released wheel, retain its public evidence, verify an inactive preview and activate it or restore the predecessor. Parent #1045 remains open until the actual cutover, anonymous artifact verification and rollback acceptance are recorded. This ordering permits the publisher to use its own merged release; candidate proof cannot satisfy the post-merge obligations.
 

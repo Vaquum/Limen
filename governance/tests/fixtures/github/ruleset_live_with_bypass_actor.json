@@ -69,7 +69,7 @@
             "context": "pr_checks_ruleset"
           },
           {
-            "context": "pr_checks_slice"
+            "context": "pr_checks_prd"
           },
           {
             "context": "pr_checks_fail_loud"

@@ -1,4 +1,4 @@
-"""Contract tests for the hard-mechanical bloat gates (slice #11)."""
+"""Contract tests for the hard-mechanical bloat gates."""
 from __future__ import annotations
 
 import json
