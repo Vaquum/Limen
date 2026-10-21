@@ -1886,8 +1886,12 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.17] - 2026-10-21
 
+- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit bound subclasses only when HistoricalData itself defines the store.
+
+## [5.45.18] - 2026-10-21
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
-- Preserve legacy parallel recovery through 5.45.16 and isolate captured callable declarations from newer caller contracts.
+- Preserve legacy parallel recovery through 5.45.17 and isolate captured callable declarations from newer caller contracts.
 - Retain compatible built-in callable identity when captured declarations are unchanged.
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
 - Freeze scaler transformation behavior without changing fitted scaler objects.
