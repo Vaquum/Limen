@@ -23,7 +23,7 @@ import polars as pl
 from limen._parallel_contract import ParallelRoundContract, declare_parallel, deterministic_stage, seeded_stage, unfrozen_stage
 from limen.experiment._parallel_encoding import decode, digest, encode, source_digest
 from limen.experiment._parallel_plan import clone_manifest, freeze_manifest
-from limen.experiment._parallel_scaler import ScalerFactory
+from limen.experiment._parallel_scaler import ScalerFactory, capture_transform
 from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
 from limen.experiment._parallel_evidence import record_context, validate_record, wire_record, parameter_projection, parameter_matches
@@ -998,10 +998,21 @@ def _frozen_manifest_round_plan() -> None:
                 actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
-        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler, AllocatedInheritedScaler, AllocatedClassScaler, ForeignBoundScaler):
+        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler, AllocatedInheritedScaler, AllocatedClassScaler):
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
             from tests.test_parallel_rounds import recorded_source
             data = recorded_source().head(24).select('close')
+        foreign = ForeignBoundScaler(data)
+        assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 5).alias('close')))
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(ForeignTransformOwner, 'multiplier', 7)
+            assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 7).alias('close')))
+            with pytest.raises(TypeError, match='unfrozen class-method owner state'):
+                freeze_manifest(copy.deepcopy(native).set_scaler(ForeignBoundScaler), None)
+        with pytest.raises(TypeError, match='unfrozen class-method owner state'):
+            freeze_manifest(copy.deepcopy(native).set_scaler(ForeignBoundScaler), None)
+        with pytest.raises(TypeError, match='unfrozen class-method owner state'):
+            pool.submit(capture_transform, ForeignBoundScaler).result(timeout=30)
             control = scaler_class(data).transform(data).to_dict(as_series=False)
             actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
             assert actual[5] == control and actual[3] != os.getpid()
@@ -1635,6 +1646,9 @@ def _assert_plan_identity(plan):
     import limen.experiment._parallel_encoding as codec
     import limen.experiment._parallel_plan as plans
     from limen.experiment import _parallel_identity as identities
+    providers = identities.package_distributions()
+    assert set(plan.distribution_providers) < set(providers)
+    assert all(value == providers[name] and value is not providers[name] for name, value in plan.distribution_providers.items())
     reads = defaultdict(int)
     original_read = identities._read_identity
     def read_identity(name):

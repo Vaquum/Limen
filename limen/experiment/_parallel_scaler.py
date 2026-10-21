@@ -39,7 +39,10 @@ class CapturedTransform:
 
 
 def capture_transform(cls: type) -> CapturedTransform:
-    return CapturedTransform(cls, cast(TransformClass, cls).transform, isfunction(getattr_static(cls, 'transform')),
+    function = cast(TransformClass, cls).transform
+    if ismethod(function) and isinstance(function.__self__, type) and not isinstance(getattr_static(cls, 'transform'), classmethod):
+        raise TypeError('Parallel transform has unfrozen class-method owner state')
+    return CapturedTransform(cls, function, isfunction(getattr_static(cls, 'transform')),
                              getattr(cls, '__parallel_round_contract__', None))
 
 

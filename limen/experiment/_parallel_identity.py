@@ -37,6 +37,13 @@ def identity_snapshot() -> Iterator[None]:
         _snapshot.reset(token)
 
 
+def captured_providers() -> dict[str, list[str]]:
+    context, providers = _snapshot.get(), _providers.get()
+    assert context is not None
+    providers = package_distributions() if providers is None else providers
+    return {name: list(providers[name]) for name in {module.partition('.')[0] for module in context[0]} if name in providers}
+
+
 def module_identity(name: str) -> list[object]:
     context = _snapshot.get()
     snapshot = None if context is None else context[0]

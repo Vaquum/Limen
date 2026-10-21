@@ -22,7 +22,7 @@ from limen.experiment._parallel_encoding import import_reference, decode, digest
 from limen.experiment._parallel_graph import copy_context
 from limen.experiment._parallel_callable import bind_call
 from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
-from limen.experiment._parallel_identity import declaration_changed, distribution_providers, identity_snapshot, module_identity, package_distributions
+from limen.experiment._parallel_identity import captured_providers, declaration_changed, distribution_providers, identity_snapshot, module_identity
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
@@ -89,6 +89,7 @@ def clone_manifest(manifest: Manifest, *, snapshot: bool = False) -> Manifest:
         return cast(Manifest, _normalize(manifest, snapshot=snapshot))
 
 
+@identity_snapshot()
 def component_digest(component: object) -> str:
     return digest(_normalize(component, snapshot=True))
 
@@ -161,8 +162,7 @@ def _scaler_factory(cls: object, params: dict[str, object], selector: str | None
 
 
 @identity_snapshot()
-def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None,
-               state_memo: dict[int, tuple[object, object]] | None = None) -> object:
+def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None, state_memo: dict[int, tuple[object, object]] | None = None) -> object:
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     memo = {} if memo is None else memo
@@ -306,8 +306,8 @@ def components(manifest: Manifest, factory_options: Mapping[str, list[object]] |
     return result
 
 
-def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | None,
-                    factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
+@identity_snapshot()
+def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | None, factory_options: Mapping[str, list[object]] | None = None) -> FrozenManifestPlan:
     from limen.yaml.compiler import build_manifest
     resources = vars(import_module('limen.experiment._parallel_resources'))
     bind_factories = cast(Callable[[Mapping[str, list[object]], Mapping[str, object]], dict[str, object]], resources['bind_factories'])
@@ -331,7 +331,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
                 or (stage.path != 'architecture' and stage.contract.prediction_kind is not None)):
             raise ValueError(f'Parallel stage {stage.path}: invalid prediction-kind declaration')
     pipeline, resources = plan_digests(frozen, stages)
-    plan = FrozenManifestPlan(frozen, stages, pipeline, resources, copy.deepcopy(dict(package_distributions())))
+    plan = FrozenManifestPlan(frozen, stages, pipeline, resources, captured_providers())
     # Include factory variants that exist only in the stage inventory.
     with identity_snapshot():
         _ = decode(encode(plan))
