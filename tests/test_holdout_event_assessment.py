@@ -253,6 +253,11 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, orphan, 'fill state coverage')
 
+    def skim(report_dict):
+        report_dict['execution']['ledger']['states'][0]['cash'] += 100.0
+
+    _rewrite_report(root, report, skim, 'accounting anchor')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
