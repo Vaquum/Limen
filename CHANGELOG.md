@@ -1949,3 +1949,5 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Bundle and verify the recorded walk-forward subset and normalized funding history; preserve component API regression coverage separately from the public examples.
 
 - Bind guarded CLI assessment to its YAML window and pin recovery Parquet bytes across initial execution and resume.
+
+- Carry the merged frozen-event holdout contract through YAML/CLI assessment and a complete independently reserved example.

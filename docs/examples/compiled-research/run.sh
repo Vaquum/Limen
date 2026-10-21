@@ -58,6 +58,7 @@ limen run --no-progress-bar \
 # endregion models
 # region holdout
 sh compiled-research/final/run.sh
+sh compiled-research/final-event/run.sh
 # endregion holdout
 
 # region command_line

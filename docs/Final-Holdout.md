@@ -45,14 +45,46 @@ limen run --no-progress-bar compiled-research/final/holdout.yaml
 limen assess compiled-research/final/holdout.yaml --results results/dev/compiled-holdout --reservation "$reservation"
 ```
 
+## Preserve event economics
+
+The separate `final-event/holdout.yaml` project selects one Sensor and retains the event policy used during research. Its source clock, product, costs and exposure remain fixed through final assessment.
+
+<!-- example: holdout-event-policy source=docs/examples/compiled-research/final-event/holdout.yaml region=event_policy scenario=holdout interface=compiled role=executed -->
+```yaml
+    backtest:
+      source_interval_seconds: 3600
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.25
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1.0e-9
+        min_notional: 0.0
+```
+
+Set `holdout.scenarios: []` to assess that frozen contract once. Event assessment requires one ordinary selected Sensor; a contract-bearing Cohort is refused. The ordinary scenario project above keeps its separate snapshot policy.
+
+<!-- example: holdout-event-command source=docs/examples/compiled-research/final-event/run.sh region=final_assessment scenario=holdout interface=compiled role=executed -->
+```bash
+git init --quiet compiled-research/final-event
+reservation=$(limen reserve compiled-research/final-event/holdout.yaml)
+limen run --no-progress-bar compiled-research/final-event/holdout.yaml
+limen assess compiled-research/final-event/holdout.yaml --results results/dev/compiled-holdout_event --reservation "$reservation"
+```
+
+This variant writes a schema-2 final report with the research and assessment contract digests, policy, initial equity, prediction tape, executed signals and complete ledger frames. Its terminal rule marks remaining exposure without forcing a close. Preserve this project's reservation history and evidence together.
+
 ## Read the final evidence
 
-The CLI writes `final-report.json` beside the experiment results. It records the reserved interval, selected membership, the frozen assessment specification, scenario outcomes, retained-row identity and exposure history. Selection uses the explicitly declared validation threshold score; the guarded case keeps the supported native snapshot policy. Classification uses the fixed next-bar target declared in the YAML; the last observation has no following label.
+The CLI writes `final-report.json` beside the experiment results. It records the reserved interval, selected membership, the frozen assessment specification, scenario outcomes, retained-row identity and exposure history. Selection uses the explicitly declared validation threshold score; the scenario case keeps the supported native snapshot policy, and the event case retains its frozen contract. Classification uses the fixed next-bar target declared in the YAML; the last observation has no following label.
 
 Local recorded files leave earlier external exposure unknown. Keep that classification beside any score: reservation protects this project's workflow, and cannot prove that the observations were never read elsewhere.
 
 ## Preserve the project
 
-Keep `compiled-research/final/limen.toml`, its native holdout project marker, reservation history and assessment artifacts together. Copying only the result CSV does not preserve reservation or exposure evidence. Git backup follows ignore rules; preserve excluded holdout history separately.
+Keep each guarded project's `limen.toml`, native holdout project marker, reservation history and assessment artifacts together. Copying only the result CSV does not preserve reservation or exposure evidence. Git backup follows ignore rules; preserve excluded holdout history separately.
 
 The [guarded holdout reference](Guarded-Holdout-Reference.md) gives the supported modes, reservation lifecycle, failure conditions, retained evidence and optional component APIs. Continue to the [complete workflow](End-to-End-Workflow.md) to review these results alongside the rest of the research.

@@ -69,6 +69,8 @@ limen run --no-progress-bar compiled-research/final/holdout.yaml
 limen assess compiled-research/final/holdout.yaml --results results/dev/compiled-holdout --reservation "$reservation"
 ```
 
+The [event-contract variant](Final-Holdout.md#preserve-event-economics) declares one selected Sensor and `holdout.scenarios: []`. The CLI freezes its recorded event policy and round identity, then writes the schema-2 execution report.
+
 ## Commands
 
 | Command | Purpose | Main output |

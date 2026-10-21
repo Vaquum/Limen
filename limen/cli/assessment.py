@@ -68,8 +68,10 @@ def _assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
             from limen.yaml.resolver import resolve
             declaration = cast(dict[str, object], holdout['evaluation_target'])
             target = resolve(str(declaration['class']))(pl.DataFrame(), str(declaration['name']), **cast(dict[str, object], declaration.get('params', {})))
-        frozen = freeze_holdout_selection(cohort, evaluation_target=target, context_start=str(holdout['context_start']),
-                                          scenarios=cast(list[Mapping[str, object]], holdout['scenarios']))
+        scenarios = cast(list[Mapping[str, object]], holdout['scenarios'])
+        frozen = freeze_holdout_selection(sensors[0] if not scenarios else cohort, evaluation_target=target,
+                                          context_start=str(holdout['context_start']), scenarios=scenarios,
+                                          round_locator={'experiment_dir': str(results), 'round_id': ids[0]} if not scenarios else None)
         final = final_holdout_report(frozen, project_root=_project(yaml_file), reservation_id=reservation, start=str(holdout['start']), end=str(holdout['end']))
         _write(results / 'final-report.json', final)
     elif reservation is not None:

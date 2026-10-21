@@ -2298,7 +2298,7 @@
       ],
       "recorded_window": "hourly: January 1\u20136 2024; reserved January 5\u20136",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown.",
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown. Assess a separate single-Sensor event contract through YAML/CLI; verify schema-2 execution pins, native report read-back, tape, ledger and retained rows.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_guarded_holdout_excludes_research_and_never_refits"
       ]

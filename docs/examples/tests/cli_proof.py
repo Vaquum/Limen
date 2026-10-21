@@ -15,7 +15,7 @@ DIRECTORIES = {
     'selection': ['compiled-cli'],
     'search': ['compiled-research', 'compiled-preparation', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
-    'holdout': ['compiled-holdout'], 'calibration': ['compiled-calibration'],
+    'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
     'allocation': ['compiled-allocation', 'compiled-allocation_ml', 'compiled-allocation_funded'],
 }
@@ -180,6 +180,17 @@ def verify_project(project):
     assert report['classification']['accuracy']['denominator'] == 23
     assert report['exposure']['class'] == 'unknown'
     summaries['holdout'] = {'final_rows': 24, 'report_sha256': hashlib.sha256((base / 'compiled-holdout/final-report.json').read_bytes()).hexdigest(), 'exposure': report['exposure']}
+    from limen.experiment.holdout import read_holdout_report
+    event = json.loads((base / 'compiled-holdout_event/final-report.json').read_text())
+    assert event['schema_version'] == 2 and event['scenarios'] == []
+    assert read_holdout_report(project / 'compiled-research/final-event', event['attempt_id']) == event
+    execution = event['execution']
+    assert len(execution['tape']) == len(execution['signals']) == 24
+    assert execution['ledger']['states'] and execution['ledger']['funding'] == []
+    assert execution['policy']['product']['kind'] == 'cash_spot'
+    assert execution['contract']['rules']['terminal'] == 'mark_without_close'
+    assert [row['prediction'] for row in execution['tape']] == [int(row['target']) for row in execution['signals']]
+    summaries['holdout']['event'] = {'schema_version': 2, 'final_rows': 24, 'research_digest': execution['research_digest'], 'assessment_digest': execution['assessment_digest']}
     calibration = checked_log(base / 'compiled-calibration', 4)
     assert set(zip(calibration['use_calibration'], calibration['use_threshold'])) == {(a, b) for a in (False, True) for b in (False, True)}
     summaries['calibration'] = {'modes': calibration.select('use_calibration', 'use_threshold', 'optimal_threshold').to_dicts()}

@@ -108,14 +108,15 @@ def test_cli_accepts_multiple_unchanged_yaml_targets(recorded_cli, monkeypatch):
     assert result.exit_code != 0 and 'Cannot specify both' in result.output
 
 
-def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypatch):
+@pytest.mark.parametrize('variant', ['final', 'final-event'])
+def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypatch, variant):
     import subprocess
     from limen.experiment import holdout
     from limen.sfd.reference_architecture import LogRegBinary
     project = tmp_path / 'final'
     project.mkdir()
     (project / 'limen.toml').write_text('[project]\nname="recorded-cli-final"\n')
-    source = ROOT / 'docs/examples/compiled-research/final/holdout.yaml'
+    source = ROOT / 'docs/examples/compiled-research' / variant / 'holdout.yaml'
     shutil.copyfile(source, project / 'holdout.yaml')
     (tmp_path / 'inputs').mkdir()
     shutil.copyfile(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet', tmp_path / 'inputs/spot_1h_20240101_20241231.parquet')
@@ -145,11 +146,12 @@ def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypat
     monkeypatch.setattr(run_command, 'UniversalExperimentLoop', construct)
     executed = runner.invoke(cli, ['run', '--no-progress-bar', 'final/holdout.yaml'])
     assert executed.exit_code == 0, executed.output
+    results = 'results/dev/compiled-holdout_event' if variant == 'final-event' else 'results/dev/compiled-holdout'
     with monkeypatch.context() as guard:
         def no_reconstruction(*args, **kwargs):
             raise AssertionError('A mismatched reservation reached reconstruction')
         guard.setattr('limen.Trainer', no_reconstruction)
-        rejected = runner.invoke(cli, ['assess', 'final/holdout.yaml', '--results', 'results/dev/compiled-holdout', '--reservation', second.stdout.strip()])
+        rejected = runner.invoke(cli, ['assess', 'final/holdout.yaml', '--results', results, '--reservation', second.stdout.strip()])
         assert rejected.exit_code != 0 and 'must be contained' in rejected.output
     original_freeze = holdout.freeze_holdout_selection
     def forbidden(*args, **kwargs):
@@ -159,14 +161,32 @@ def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypat
         monkeypatch.setattr(LogRegBinary, 'train', forbidden)
         return result
     monkeypatch.setattr(holdout, 'freeze_holdout_selection', freeze)
-    assessed = runner.invoke(cli, ['assess', 'final/holdout.yaml', '--results', 'results/dev/compiled-holdout', '--reservation', identity])
+    assessed = runner.invoke(cli, ['assess', 'final/holdout.yaml', '--results', results, '--reservation', identity])
     assert assessed.exit_code == 0, assessed.output
     assert len(fitted) == 2
-    report = json.loads((tmp_path / 'results/dev/compiled-holdout/final-report.json').read_text())
+    report = json.loads((tmp_path / results / 'final-report.json').read_text())
     assert report['classification']['accuracy']['denominator'] == 23
     assert report['exposure']['class'] == 'unknown'
     retained = holdout.read_holdout_report(project, report['attempt_id'])
     assert retained == report
+    if variant == 'final-event':
+        assert report['schema_version'] == 2 and report['scenarios'] == []
+        assert len(report['execution']['tape']) == len(report['execution']['signals']) == 24
+        assert report['execution']['ledger']['funding'] == []
+
+
+@pytest.mark.parametrize('change', ['snapshot', 'cohort', 'fold'])
+def test_empty_scenarios_requires_one_event_sensor(change):
+    document, errors = parse(ROOT / 'docs/examples/compiled-research/final-event/holdout.yaml')
+    assert not errors
+    if change == 'snapshot':
+        del document['sfd']['manifest']['backtest']['product']
+    elif change == 'cohort':
+        document['assessment']['top_k'] = 2
+    else:
+        document['assessment']['folds'] = [0]
+    report = validate(document)
+    assert not report.valid and any('one ordinary selected Sensor' in item.message for item in report.errors)
 
 
 def test_cli_resume_rejects_changed_pinned_source(tmp_path, monkeypatch):

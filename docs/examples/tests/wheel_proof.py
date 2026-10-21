@@ -19,7 +19,7 @@ from released_wheel import verify_download
 from scenario_oracles import verify
 
 
-def run(argv, *, cwd, env=None, timeout=90):
+def run(argv, *, cwd, env=None, timeout: float | None = 90):
     environment = dict(os.environ if env is None else env)
     for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
         environment.pop(name, None)

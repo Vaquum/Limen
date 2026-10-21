@@ -68,10 +68,10 @@ def holdout_spec(document: Mapping[str, object]) -> dict[str, object] | None:
     if start >= end or context >= start or (not isinstance(interval, int) or isinstance(interval, bool)) or interval <= 0 or 86400 % interval:
         raise ValueError('holdout requires context_start<start<end and a native interval dividing 86400')
     scenarios = spec['scenarios']
-    if not isinstance(scenarios, list) or not scenarios:
-        raise ValueError('holdout.scenarios must be a nonempty list')
+    if not isinstance(scenarios, list):
+        raise ValueError('holdout.scenarios must be a list')
     from limen.experiment._holdout_freeze import scenario_declarations
-    _ = scenario_declarations(cast(list[Mapping[str, object]], scenarios))
+    _ = scenario_declarations(cast(list[Mapping[str, object]], scenarios), allow_empty=True)
     if 'evaluation_target' in spec:
         target = _mapping(spec['evaluation_target'], 'holdout.evaluation_target', {'class', 'name'}, {'params'})
         if target['class'] not in ('limen.targets.NextBarUpTarget', 'limen.targets.NextBarDownTarget', 'limen.targets.ThresholdBinaryTarget') or not isinstance(target['name'], str) or not target['name']:
@@ -81,6 +81,11 @@ def holdout_spec(document: Mapping[str, object]) -> dict[str, object] | None:
     selection = assessment_spec(document)
     if selection is None or selection.predict:
         raise ValueError('holdout requires assessment selection with ordinary prediction disabled')
+    sfd = document.get('sfd')
+    manifest = sfd.get('manifest') if isinstance(sfd, Mapping) else None
+    backtest = manifest.get('backtest') if isinstance(manifest, Mapping) else None
+    if not scenarios and (not isinstance(backtest, Mapping) or 'product' not in backtest or selection.top_k != 1 or selection.folds):
+        raise ValueError('Empty holdout.scenarios requires one ordinary selected Sensor with declared event economics')
     return spec
 
 

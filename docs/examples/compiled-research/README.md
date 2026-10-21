@@ -220,6 +220,7 @@ sh compiled-research/run.sh
 | `allocation.yaml`, `allocation_ml.yaml`, `allocation_funded.yaml` | Compare rule and learned primaries with completed-opportunity allocation and recorded funding. |
 | `common_strategies.yaml`, `family_*.yaml` | Compare eight fixed baselines and the admitted model families on their own declared populations. |
 | `final/holdout.yaml` | Reserve the final window before research; reconstruct, freeze and assess the selected Cohort through the CLI. Preserve its project history and final report together. |
+| `final-event/holdout.yaml` | Reserve a separate project and assess one selected Sensor under its frozen event contract, with schema-2 ledger evidence. |
 | `project.sh` | Validate, profile, scaffold, commit, fork, index, execute, back up and restore a campaign using installed CLI commands and a local Git remote. |
 
 ## Read the evidence
