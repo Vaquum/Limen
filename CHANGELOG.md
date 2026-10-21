@@ -1921,11 +1921,20 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.25] - 2026-10-21
 
+- Retire the slice delivery regime: remove the slice template, slice gate and workflows, and the interface-contract system; add the `pr_checks_prd` gate so every PR closes one open issue and `feat` PRs close a PRD.
+
+## [5.45.26] - 2026-10-21
+
+- Repair and collect the supply-chain contract test, add a Task issue template for non-feature work, and document the legacy branch-protection mirror.
+
+## [5.45.27] - 2026-10-21
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
-- Preserve legacy parallel recovery through 5.45.24 and isolate captured callable declarations from newer caller contracts.
+- Preserve legacy parallel recovery through 5.45.26 and isolate captured callable declarations from newer caller contracts.
 - Retain compatible built-in callable identity when captured declarations are unchanged.
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
 - Freeze scaler transformation behavior without changing fitted scaler objects.
 - Normalize callable round state once and share fresh source identities within each complete validation.
 - Reject factory call descriptors, call defaults and class callable owners whose execution state remains imported.
 - Encode primitive values directly while preserving canonical graph references and typed transport.
+- Bind ordinary factory routine defaults to constructor fingerprints and refuse stale worker imports before allocation.

@@ -1,0 +1,73 @@
+name: pr_checks_prd
+
+# Mechanical PR <-> issue gate. The deterministic rules are defined
+# once, in governance/prd_gate.py's module docstring (the single source);
+# this workflow only runs it. Every PR closes exactly one OPEN issue; a
+# `feat` PR's issue must be a PRD. If any rule is false the gate fails
+# and merge is blocked. There is no graceful skip, no optional mode,
+# and no bypass flag.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  # NOTE: no merge_group trigger. The merge_group event payload does
+  # not carry github.event.pull_request.*, and this workflow reads
+  # those fields. Re-enabling merge_group requires a dedicated path
+  # that derives the PR (or PRs) from the merge-group payload.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  issues: read
+
+jobs:
+  pr_checks_prd:
+    name: pr_checks_prd
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: ${{ github.event_name == 'pull_request' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.10'
+
+      - name: Fetch PR title and body
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -z "$PR_NUMBER" ]; then
+            echo "::error::this workflow only runs on pull_request events that carry a PR number"
+            exit 1
+          fi
+          gh pr view "$PR_NUMBER" \
+            --repo "${{ github.repository }}" \
+            --json title,body > pr_view.json
+          jq -r '.title' pr_view.json > pr_title.txt
+          jq -r '.body // ""' pr_view.json > pr_body.txt
+          echo "PR #$PR_NUMBER title:       $(cat pr_title.txt)"
+          echo "PR #$PR_NUMBER body bytes:  $(wc -c < pr_body.txt)"
+
+      - name: Run PRD gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          PR_TITLE=$(cat pr_title.txt)
+          python governance/prd_gate.py \
+            --pr-title "$PR_TITLE" \
+            --pr-body-file pr_body.txt \
+            --repo "${{ github.repository }}"
