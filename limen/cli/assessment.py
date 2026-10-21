@@ -7,14 +7,10 @@ from pathlib import Path
 from typing import cast
 
 import click
-import polars as pl
-
-from limen.cli.commands._load_yaml import load_and_validate
-from limen.yaml._assessment_spec import assessment_spec, holdout_spec
-from limen.yaml.config import find_project_root
 
 
 def _project(path: Path) -> Path:
+    from limen.yaml.config import find_project_root
     root = find_project_root(path.parent)
     if root is None:
         raise click.ClickException('A guarded assessment requires a Git project with limen.toml')
@@ -26,7 +22,10 @@ def _write(path: Path, value: object) -> None:
 
 
 def _assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
+    import polars as pl
     from limen import Cohort, Trainer
+    from limen.cli.commands._load_yaml import load_and_validate
+    from limen.yaml._assessment_spec import assessment_spec, holdout_spec
     document, valid = load_and_validate(yaml_file)
     if not valid:
         raise click.ClickException('Invalid assessment declaration')
@@ -87,6 +86,7 @@ def _assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
 
 
 def require_reservation(document: dict[str, object], yaml_path: Path) -> None:
+    from limen.yaml._assessment_spec import holdout_spec
     spec = holdout_spec(document)
     if spec is not None:
         from limen.experiment._holdout_history import bind, utc_day
@@ -110,6 +110,8 @@ def assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
 @click.argument('yaml_file', type=click.Path(exists=True, path_type=Path))
 def reserve(yaml_file: Path) -> None:
     '''Reserve the YAML's final window before research; print its identity.'''
+    from limen.cli.commands._load_yaml import load_and_validate
+    from limen.yaml._assessment_spec import holdout_spec
     from limen.experiment.holdout import reserve_holdout
     with redirect_stdout(sys.stderr):
         document, valid = load_and_validate(yaml_file)
