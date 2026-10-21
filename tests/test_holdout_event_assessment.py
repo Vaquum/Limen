@@ -405,6 +405,38 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, shutter, 'episode close')
 
+    def reprice_trades(execution):
+        episodes = execution['ledger']['episodes']
+        closed = [episode for episode in episodes if episode['closed_at_ns'] is not None]
+        execution['metrics']['completed_trades']['value'] = float(len(closed))
+        execution['metrics']['open_trades']['value'] = float(len(episodes) - len(closed))
+        execution['metrics']['episode_win_rate']['value'] = sum(episode['net_pnl'] > 0 for episode in closed) / len(closed)
+
+    def clone(report_dict):
+        execution = report_dict['execution']
+        shuttered = next(episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is not None)
+        execution['ledger']['episodes'].append(copy.deepcopy(shuttered))
+        reprice_trades(execution)
+
+    _rewrite_report(root, report, clone, 'evidence schema')
+
+    def copyfill(report_dict):
+        execution = report_dict['execution']
+        execution['ledger']['fills'].append(copy.deepcopy(execution['ledger']['fills'][0]))
+        reprice_costs(execution)
+
+    _rewrite_report(root, report, copyfill, 'evidence schema')
+
+    def orphanep(report_dict):
+        execution = report_dict['execution']
+        shuttered = next(episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is not None)
+        forged = copy.deepcopy(shuttered)
+        forged['episode_id'] = 'holdout:episode:phantom'
+        execution['ledger']['episodes'].append(forged)
+        reprice_trades(execution)
+
+    _rewrite_report(root, report, orphanep, 'evidence schema')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
