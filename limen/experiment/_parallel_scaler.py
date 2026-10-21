@@ -29,7 +29,7 @@ class CapturedTransform:
             raise TypeError('Parallel transform has an uncaptured subclass implementation')
         if getattr_static(instance, 'transform') is not getattr_static(type(instance), 'transform'):
             return cast(TransformClass, instance).transform(data, **params)
-        if ismethod(self.function) and isinstance(self.function.__self__, type):
+        if isinstance(getattr_static(self.owner, 'transform'), classmethod) and ismethod(self.function):
             return cast(Callable[..., pl.DataFrame], self.function.__func__)(type(instance), data, **params)
         return self.function(instance, data, **params) if self.bind_instance and not (hasattr(instance, '__dict__') and 'transform' in vars(instance)) else self.function(data, **params)
 

@@ -156,6 +156,30 @@ class DifferentInitializerRolling(AllocatedSubclassRolling):
         self.window = window + 1
 
 
+class StaticInitRolling(CallerRolling):
+    window = 3
+
+    @staticmethod
+    def __init__():
+        return None
+
+
+class StaticJobsInitRolling(CallerRolling):
+    window = 3
+
+    @staticmethod
+    def __init__(n_jobs=2):
+        return None
+
+
+class ClassInitRolling(CallerRolling):
+    window = 4
+
+    @classmethod
+    def __init__(cls, n_jobs=2):
+        assert cls is ClassInitRolling
+
+
 class InheritedCallable(CallerRollingBase):
     def __init__(self, window):
         self.window = window
@@ -405,6 +429,17 @@ class ReorderedJobsTarget:
 
     def __init__(self, train_data, n_jobs=2, target_name='target'):
         self.window, self.target_name = 2, target_name
+
+
+class TargetHookMeta(type):
+    def __call__(cls, **params):
+        instance = object.__new__(cls)
+        instance.window, instance.target_name = 3, params['target_name']
+        return instance
+
+
+class HookedTarget(AllocatedTarget, metaclass=TargetHookMeta):
+    """Initialize target state through native metaclass dispatch."""
 
 
 def _method_only_transform(owner, data):
@@ -689,6 +724,18 @@ class ClassScalerResult(AllocatedClassScaler):
     """Exercise native classmethod binding on the allocated subtype."""
 
 
+class ForeignTransformOwner:
+    multiplier = 5
+
+    @classmethod
+    def transform(cls, data):
+        return data.with_columns((pl.col('close') * cls.multiplier).alias('close'))
+
+
+class ForeignBoundScaler(RobustScaler):
+    transform = staticmethod(ForeignTransformOwner.transform)
+
+
 def _prepared_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     from limen.experiment._parallel_plan import clone_manifest
@@ -892,7 +939,7 @@ def test_frozen_manifest_round_plan() -> None:
                 actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
-        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler, AllocatedInheritedScaler, AllocatedClassScaler):
+        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler, AllocatedInheritedScaler, AllocatedClassScaler, ForeignBoundScaler):
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
             from tests.test_parallel_rounds import recorded_source
             data = recorded_source().head(24).select('close')
@@ -1270,6 +1317,16 @@ def test_frozen_manifest_round_plan() -> None:
         for _ in range(2):
             assert pool.submit(_target_probe, safe, _parameters()).result(timeout=30) == _target_probe(safe, _parameters()) == expected
         assert digest(safe) == before
+        declare_parallel(HookedTarget, ParallelRoundContract(deterministic_stage))
+        data = recorded_source().head(24)
+        hooked = HookedTarget(train_data=data, target_name='meta')
+        assert hooked.window == 3
+        assert hooked.transform(data).equals(data.with_columns((pl.col('close') > pl.col('close').shift(3)).cast(pl.Int8).alias('meta')))
+        target = copy.deepcopy(plan.manifest).with_target_label('meta', HookedTarget)
+        native = target.prepare_data(recorded_source(), _parameters())
+        assert all(native[key].len() for key in ('y_train', 'y_val', 'y_test'))
+        with pytest.raises(TypeError, match='unfrozen factory metaclass state'):
+            freeze_manifest(target, None)
         component = partial(_kwargs_feature, n_jobs=2)
         declare_parallel(component, ParallelRoundContract(deterministic_stage))
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
@@ -1612,6 +1669,20 @@ def _assert_factory_resources(plan, params):
                 else:
                     _factory_probe(allocated, AllocatedSubclassRolling, extra)
         assert digest(allocated) == before
+        for factory in (StaticInitRolling, StaticJobsInitRolling, ClassInitRolling):
+            declare_parallel(factory, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
+            candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+            extra = {} if factory is StaticInitRolling else {'auxiliary_params': {'n_jobs': 1}}
+            if factory is not StaticInitRolling:
+                with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: effective n_jobs=1'):
+                    validate_resources(candidate, params | {'auxiliary_factory': factory})
+            expected = factory(**extra.get('auxiliary_params', {}))(data)['caller_mean'].to_list()
+            assert expected == _caller_feature(data, 4 if factory is ClassInitRolling else 3)['caller_mean'].to_list()
+            before = digest(candidate)
+            for _ in range(2):
+                actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
+                assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
+            assert digest(candidate) == before
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 4})
             captured_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})

@@ -15,7 +15,7 @@ from typing import cast
 from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer, factory_signature
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -30,8 +30,7 @@ class FrozenClassFactory:
 
     @property
     def __signature__(self) -> Signature:
-        result = signature(self.initializer or self.allocator or self.factory_class)
-        return result.replace(parameters=list(result.parameters.values())[1:]) if self.initializer is not None or self.allocator is not None else result
+        return factory_signature(self.factory_class, self.initializer, self.allocator)
 
     @property
     def __parallel_round_contract__(self) -> object:
@@ -41,8 +40,8 @@ class FrozenClassFactory:
         allocate = self.allocator or self.factory_class.__new__
         instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
         if isinstance(instance, self.factory_class):
-            initialize = factory_initializer(self.factory_class, type(instance), self.initializer)
-            if initialize(instance, *args, **kwargs) is not None:
+            initialize = factory_initializer(self.factory_class, instance, self.initializer)
+            if initialize(*args, **kwargs) is not None:
                 raise TypeError('Parallel factory initializer must return None')
         return instance
 
@@ -51,7 +50,7 @@ def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-        return FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None)
+        return FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) or inspect.ismethod(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None)
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None
@@ -316,7 +315,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
         initializer = getattr(target, '_parallel_init', None)
-        result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=0 if initializer is None else 1, path='target', runtime=(*runtime, 'train_data', 'target_name'))
+        result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=0 if initializer is None or isinstance(inspect.getattr_static(target.target_class, '__init__'), (staticmethod, classmethod)) else 1, path='target', runtime=(*runtime, 'train_data', 'target_name'))
         transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(TransformClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})

@@ -42,7 +42,7 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
         instance = allocator(cls, **({} if allocator is object.__new__ else params))
         if isinstance(instance, cls):
             assert self._parallel_init is not None
-            _ = factory_initializer(cls, type(instance), self._parallel_init)(instance, **params)
+            _ = factory_initializer(cls, instance, self._parallel_init)(**params)
         return instance
 
 
@@ -119,10 +119,19 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
     return None
 
 
-def factory_initializer(cls: type, actual: type, captured: Callable[..., object] | None) -> Callable[..., object]:
-    if actual.__init__ is not cls.__init__:
+def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None) -> Callable[..., object]:
+    method = inspect.getattr_static(cls, '__init__')
+    if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
-    return captured or cls.__init__
+    function = captured or cls.__init__
+    return function if isinstance(method, staticmethod) else partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance)
+
+
+def factory_signature(cls: type, initializer: Callable[..., object] | None, allocator: Callable[..., object] | None) -> inspect.Signature:
+    component = initializer or allocator or cls
+    skip = int((initializer is not None and not isinstance(inspect.getattr_static(cls, '__init__'), (staticmethod, classmethod))) or (initializer is None and allocator is not None))
+    signature = inspect.signature(component)
+    return signature.replace(parameters=list(signature.parameters.values())[skip:])
 
 
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 19)
@@ -235,6 +244,8 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
 
 
 def _contract(component: object, path: str) -> ParallelRoundContract:
+    if isinstance(component, type) and type(component).__call__ is not type.__call__:
+        raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
     contract = getattr(component, '__parallel_round_contract__', None)
     if not isinstance(contract, ParallelRoundContract):
         raise ValueError(f'Parallel stage {path}: missing independence contract')
