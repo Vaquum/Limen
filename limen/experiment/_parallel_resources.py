@@ -12,8 +12,8 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
-from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, constructor_state
-from limen.experiment._parallel_encoding import encode
+from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, constructor_state, validate_constructor
+from limen.experiment._parallel_encoding import digest, encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
 from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer, factory_signature
 
@@ -38,11 +38,11 @@ class FrozenClassFactory:
         return getattr(self.factory_class, '__parallel_round_contract__', None)
 
     def __call__(self, *args: object, **kwargs: object) -> object:
+        validate_constructor(self.factory_class, self.parents, digest)
         allocate = self.allocator or self.factory_class.__new__
         instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
         if isinstance(instance, self.factory_class):
-            initialize = factory_initializer(self.factory_class, instance, self.initializer, self.parents)
-            if initialize(*args, **kwargs) is not None:
+            if factory_initializer(self.factory_class, instance, self.initializer)(*args, **kwargs) is not None:
                 raise TypeError('Parallel factory initializer must return None')
         return instance
 

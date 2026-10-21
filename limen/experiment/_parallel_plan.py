@@ -39,11 +39,12 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
 
     def _parallel_make(self, **params: object) -> object:
         cls = self.target_class
+        validate_constructor(cls, self._parallel_parents, digest)
         allocator = self._parallel_new or cast(Callable[..., object], cls.__new__)
         instance = allocator(cls, **({} if allocator is object.__new__ else params))
         if isinstance(instance, cls):
             assert self._parallel_init is not None
-            _ = factory_initializer(cls, instance, self._parallel_init, self._parallel_parents)(**params)
+            _ = factory_initializer(cls, instance, self._parallel_init)(**params)
         return instance
 
 
@@ -121,8 +122,7 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
     return None
 
 
-def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None, parents: tuple[tuple[type, dict[str, object]], ...] = ()) -> Callable[..., object]:
-    validate_constructor(cls, parents, digest)
+def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None) -> Callable[..., object]:
     method = inspect.getattr_static(cls, '__init__')
     if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')

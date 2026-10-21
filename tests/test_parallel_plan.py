@@ -164,6 +164,13 @@ class StaticInitRolling(CallerRolling):
         return None
 
 
+class ForeignAllocationRolling:
+    window = 3
+
+    def __new__(cls):
+        return CallerRolling(cls.window)
+
+
 class StaticJobsInitRolling(CallerRolling):
     window = 3
 
@@ -1807,11 +1814,11 @@ def _assert_factory_resources(plan, params):
                 else:
                     _factory_probe(allocated, AllocatedSubclassRolling, extra)
         assert digest(allocated) == before
-        for factory, window in ((StaticInitRolling, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5), (PartialInitRolling, 6)):
+        for factory, window in ((StaticInitRolling, 3), (ForeignAllocationRolling, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5), (PartialInitRolling, 6)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
             candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
-            extra = {} if factory is StaticInitRolling else {'auxiliary_params': {'n_jobs': 1}}
-            if factory is not StaticInitRolling:
+            extra = {} if factory in (StaticInitRolling, ForeignAllocationRolling) else {'auxiliary_params': {'n_jobs': 1}}
+            if factory not in (StaticInitRolling, ForeignAllocationRolling):
                 with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: effective n_jobs=1'):
                     validate_resources(candidate, params | {'auxiliary_factory': factory})
             expected = factory(**extra.get('auxiliary_params', {}))(data)['caller_mean'].to_list()
@@ -1822,9 +1829,9 @@ def _assert_factory_resources(plan, params):
                 actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
             assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
-            if factory is StaticInitRolling:
+            if factory in (StaticInitRolling, ForeignAllocationRolling):
                 with pytest.MonkeyPatch.context() as patch:
-                    patch.setattr(StaticInitRolling, 'window', 4)
+                    patch.setattr(factory, 'window', 4)
                     changed = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
                     changed_output = factory()(data)['caller_mean'].to_list()
                     assert changed_output == _caller_feature(data, 4)['caller_mean'].to_list() and changed_output != expected
