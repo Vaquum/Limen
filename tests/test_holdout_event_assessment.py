@@ -462,6 +462,21 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, resample, 'signal sampling')
 
+    def phantom(report_dict):
+        states = report_dict['execution']['ledger']['states']
+        index = next(i for i in range(1, len(states)) if states[i]['time_ns'] - states[i - 1]['time_ns'] >= 3)
+        introduced = copy.deepcopy(states[index - 1])
+        introduced['time_ns'] = states[index - 1]['time_ns'] + 1
+        introduced['quantity'] = 0.5
+        introduced['absolute_exposure'] = 0.1
+        introduced['signal_sample'] = False
+        removed = copy.deepcopy(states[index])
+        removed['time_ns'] = states[index - 1]['time_ns'] + 2
+        states.insert(index, introduced)
+        states.insert(index + 1, removed)
+
+    _rewrite_report(root, report, phantom, 'position continuity')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
