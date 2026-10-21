@@ -17,7 +17,7 @@ from typing import cast
 
 import polars as pl
 
-from limen.experiment._parallel_identity import identity_snapshot, module_identity, restore_function_metadata
+from limen.experiment._parallel_identity import declaration_changed, identity_snapshot, module_identity, restore_function_metadata
 from limen.experiment._parallel_callable import bind_call, source_class
 from limen.experiment._parallel_graph import EMPTY_IDS as _EMPTY_IDS, copied_source, decode_graph, encode_graph, has_decoded_identity, isolated_encoding
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
@@ -179,7 +179,7 @@ def _decode_composite(parts: list[object], *, ordered: bool, isolate_functions: 
             raise ValueError('Parallel function implementation changed')
         defaults, keywords, closure, wrapped = [decode(item, ordered=True, isolate_functions=isolate_functions) for item in parts[2:]]
         function = source
-        if isolate_functions or has_decoded_identity(source) or (original is not None and original is not source) or mutable_function(source) or encode(source) != parts:
+        if isolate_functions or has_decoded_identity(source) or mutable_function(source) or declaration_changed(source, original, encode) or encode(source) != parts:
             function = FunctionType(source.__code__, source.__globals__, source.__name__, cast(tuple[object, ...] | None, defaults), cast(tuple[CellType, ...] | None, closure))
             function.__kwdefaults__ = cast(dict[str, object] | None, keywords)
             restore_function_metadata(function, source, wrapped)

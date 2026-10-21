@@ -43,7 +43,8 @@ def _value_node(node: object) -> bool:
 
 
 def has_decoded_identity(value: object) -> bool:
-    return any(item is value for item in (_decoded.get() or ()))
+    copy = copy_context.get()
+    return any(item is value for item in (_decoded.get() or ())) or (copy is not None and any(restored is value for _, restored in copy[0].values()))
 
 
 def copied_source() -> object | None:
