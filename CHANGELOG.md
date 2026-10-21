@@ -1894,6 +1894,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Enforce the shared per-PR readiness lane and reject event-specific lane mutations; backport the merged upstream regression guard.
 - Clarify that the readiness comment reports ruleset checks while separate classic protection can still block a merge.
 
+## [5.45.19] - 2026-10-21
+
+- Hold Compiled profiling admission through loading, evaluation and cleanup so first reservations cannot race real model fitting. Preserve active-reservation refusal and ordinary profiling results.
+
 ## [5.46.0] - 2026-10-21
 
 - Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
