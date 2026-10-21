@@ -46,7 +46,7 @@ class FrozenClassFactory:
         return instance
 
 
-def factory_component(value: object) -> object:
+def factory_component(value: object, *, captured_transform: bool = False) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
@@ -54,13 +54,13 @@ def factory_component(value: object) -> object:
         if (implementation := getattr(implementation, '__func__', implementation)) is not None and (not inspect.isroutine(implementation) or inspect.isfunction(implementation) and mutable_function(implementation)):
             raise TypeError('Parallel transport rejects unfrozen factory call state')
         parents = constructor_state(value)
-        if any(callable(item) and not inspect.isroutine(item) for _, attributes in parents for item in attributes.values()):
+        if any(callable(item) and not inspect.isroutine(item) for _, attributes in parents for name, item in attributes.items() if name != 'transform' or not captured_transform):
             raise TypeError('Parallel transport rejects unfrozen factory class callable state')
         return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parents)
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None
-        result = restore_object(type(cast(object, value)), (attributes, slots, (factory_component(bound[0]), *bound[1:]), native))
+        result = restore_object(type(cast(object, value)), (attributes, slots, (factory_component(bound[0], captured_transform=captured_transform), *bound[1:]), native))
         vars(result)['__parallel_round_contract__'] = getattr(cast(object, value), '__parallel_round_contract__', None)
         return result
     return value

@@ -153,7 +153,7 @@ def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, .
 
 
 def _scaler_factory(cls: object, params: dict[str, object], selector: str | None) -> ScalerFactory:
-    return scaler_factory(cls, params, selector, cast(Callable[[object], object], vars(import_module('limen.experiment._parallel_resources'))['factory_component']))
+    return scaler_factory(cls, params, selector, partial(cast(Callable[..., object], vars(import_module('limen.experiment._parallel_resources'))['factory_component']), captured_transform=True))
 
 
 def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None, state_memo: dict[int, tuple[object, object]] | None = None) -> object:
