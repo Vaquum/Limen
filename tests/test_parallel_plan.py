@@ -1338,7 +1338,8 @@ def test_frozen_manifest_round_plan() -> None:
         hooked = HookedTarget(train_data=data, target_name='meta')
         assert hooked.window == 3
         assert hooked.transform(data).equals(data.with_columns((pl.col('close') > pl.col('close').shift(3)).cast(pl.Int8).alias('meta')))
-        target = copy.deepcopy(plan.manifest).with_target_label('meta', HookedTarget)
+        from tests.test_parallel_rounds import parallel_config
+        target = build_manifest(parallel_config()).with_target_label('meta', HookedTarget)
         native = target.prepare_data(recorded_source(), _parameters())
         assert all(native[key].len() for key in ('y_train', 'y_val', 'y_test'))
         with pytest.raises(TypeError, match='unfrozen factory metaclass state'):
@@ -1355,7 +1356,6 @@ def test_frozen_manifest_round_plan() -> None:
         vars(component)['cached_result'] = []
         with pytest.raises(ValueError, match='undeclared runtime state'):
             freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
-        from tests.test_parallel_rounds import parallel_config
         declare_parallel(CallerTarget, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
         target = build_manifest(parallel_config()).with_target_label('noise', CallerTarget, fit_params={'random_state': '{target_seed}'})
         frozen = freeze_manifest(target, None)
