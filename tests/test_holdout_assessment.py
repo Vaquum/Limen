@@ -1579,10 +1579,11 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
         return logreg_binary(data, **(params | {'C': 1 + policy.__globals__['rules']['offset']}))
     def builtins_factory(data, **params):
         return logreg_binary(data, **(params | {'C': 1 + policy.__builtins__['rules']['offset']}))
+    read_attribute = getattr
     def getattr_globals_factory(data, **params):
-        return logreg_binary(data, **(params | {'C': 1 + getattr(policy, '__globals__')['rules']['offset']}))
+        return logreg_binary(data, **(params | {'C': 1 + read_attribute(policy, '__globals__')['rules']['offset']}))
     def getattr_builtins_factory(data, **params):
-        return logreg_binary(data, **(params | {'C': 1 + getattr(policy, '__builtins__')['rules']['offset']}))
+        return logreg_binary(data, **(params | {'C': 1 + read_attribute(policy, '__builtins__')['rules']['offset']}))
     def annotation_factory(data, **params):
         return annotation_factory.__annotations__['build'](data, **params)
     annotation_factory.__annotations__ = {'build': helper}
