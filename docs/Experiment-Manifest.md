@@ -332,6 +332,22 @@ def set_test_data_source(self, method: Callable[..., Any], params: dict[str, Any
 
 ### Data source selection
 
+Both source setters accept synchronous frame-returning callables, including
+partials, callable instances, local functions and static methods. Fetch invokes
+the configured callable once with its keyword parameters and preserves its result
+and exceptions. From a repository checkout, a partial of `polars.read_parquet`
+bound to `tests/fixtures/spot_1h_20240101_20241231.parquet` can be passed to
+`set_data_source()` or `set_test_data_source()`; `params={'n_rows': 3}` selects
+the first three recorded rows through that callable's own keyword argument.
+
+Native bound methods retain owner `.data` precedence. Genuine unbound instance
+methods construct an owner only when their receiver is absent from configured
+keywords; the method must populate `.data`. Wrapping a stateful method does not
+adapt a `None` or row-list result into a frame. Under an active holdout reservation,
+production fetching still requires the admitted native source identity; partials
+and copied-metadata wrappers do not inherit that admission. Callable compatibility
+also preserves deepcopy and parallel-execution admission requirements.
+
 Pass `test_mode=True` to `UniversalExperimentLoop` to fetch from the test data source instead of the production source.
 When `test_mode=True` and a test data source is configured, `fetch_test_data()` is called; otherwise `fetch_data()` is used.
 
@@ -1277,6 +1293,11 @@ Example:
 Use `split_config` for a derived train/validation/test ratio, or an admitted source-method parameter such as `row_count_limit` for a different data selection. Neither modifies the source Manifest.
 
 The original manifest remains unchanged.
+
+Source overrides use the configured callable's signature, including partial keyword
+parameters. Unknown names retain the accepted-name diagnostic; callable instances
+and partials use their type name when they have no function name. Signature and
+deepcopy failures propagate without changing the original configuration.
 
 For ML YAML manifests, `sfd.manifest.params_override` applies accepted data-source parameter overrides to the compiled manifest. Source parameter names are checked during compilation; source constraints still apply. For `HistoricalData.get_spot_klines`, `row_count_limit` and its `n_rows` alias cannot be combined with both split-derived date limits. Reserved date-limit overrides can replace those fetch limits without updating `split_dates`. Recompiling saved YAML applies previously ignored overrides, including when resuming or reconstructing an existing experiment.
 
