@@ -108,6 +108,16 @@ def _binary(value: object) -> bool:
     return cast(bool, output['probabilities'])
 
 
+def bind_native_output(owner: Owner, members: Sequence[object], default: bool) -> None:
+    probabilities = default
+    declarations = [getattr(type(getattr(member, '_model', None)), 'inference_output', None) for member in members]
+    for value in (False, True):
+        if declarations and all(isinstance(declaration, tuple) and len(declaration) == 2 and declaration[0] == 'binary' and declaration[1] is value for declaration in declarations):
+            probabilities = value
+    owner.supports_probabilities = probabilities
+    owner.aggregation_mode = 'probability_weighted' if probabilities else 'majority_vote'
+
+
 def _compile(path: Path, metadata: Mapping[str, object]) -> Manifest:
     try:
         reference = metadata.get('yaml_reference')
