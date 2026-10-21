@@ -36,7 +36,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
                         break
         if lookup_start is not None:
             lookup = instructions[lookup_start:lookup_start + 2]
-            key = lookup[0].argval if len(lookup) == 2 and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
+            key = lookup[0].argval if tuple(part.opname for part in lookup) == ('LOAD_CONST', 'BINARY_SUBSCR') and isinstance(lookup[0].argval, str) else None
             found.extend((name, key) for name in names)
     return (*found, *((alias, key) for part in code.co_consts if isinstance(part, CodeType) for name, key in namespace_calls(part) for alias in aliases.get(name, {name})))
 
