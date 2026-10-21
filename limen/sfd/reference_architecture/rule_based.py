@@ -13,6 +13,7 @@ from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 BPS_PER_UNIT = 10_000.0
+_MATRIX_DIMENSIONS = 2
 
 
 def _compounded_trade_pnl_summary(
@@ -80,7 +81,7 @@ class RuleBasedStrategy(ReferenceModel):
             if self._strategy is None or not self._predicate_ids:
                 raise ValueError('Rule inference requires a captured selected strategy and predicate order')
             matrix = np.asarray(data['x_test'])
-            if matrix.ndim != 2 or matrix.shape[1] != len(self._predicate_ids) or matrix.dtype.kind not in 'bifu' or not np.isfinite(matrix).all() or not np.isin(matrix, (0, 1)).all():
+            if matrix.ndim != _MATRIX_DIMENSIONS or matrix.shape[1] != len(self._predicate_ids) or matrix.dtype.kind not in 'bifu' or not np.isfinite(matrix).all() or not np.isin(matrix, (0, 1)).all():
                 raise ValueError('Rule inference requires a finite binary matrix with the captured predicate width')
             frame = pl.DataFrame(matrix, schema=list(self._predicate_ids), orient='row').cast(pl.Boolean)
             strategy = self._strategy

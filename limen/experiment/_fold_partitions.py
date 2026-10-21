@@ -131,7 +131,7 @@ def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, objec
                     raise FoldEvidenceError('row_membership', f'{name} model rows differ from their retained source carriers')
             else:
                 native = cast(pl.DataFrame, data[suffix])
-                if not native['datetime'].equals(frame['datetime']) or not _same_inputs(data['x_' + suffix], native.select(input_columns)):
+                if not native.equals(frame.drop('datetime')) or not _same_inputs(data['x_' + suffix], frame.select(input_columns)):
                     raise FoldEvidenceError('row_membership', f'{name} native predicate rows differ from their retained source carriers')
             allowed = {index for first, last in cast(list[list[int]], raw_witnesses[name]['segments']) for index in range(first, last)}
             if any(index not in allowed for group in rows for index in group):
