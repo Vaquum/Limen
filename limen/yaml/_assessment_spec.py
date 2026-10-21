@@ -82,8 +82,8 @@ def holdout_spec(document: Mapping[str, object]) -> dict[str, object] | None:
     if selection is None or selection.predict:
         raise ValueError('holdout requires assessment selection with ordinary prediction disabled')
     sfd = document.get('sfd')
-    manifest = sfd.get('manifest') if isinstance(sfd, Mapping) else None
-    backtest = manifest.get('backtest') if isinstance(manifest, Mapping) else None
+    manifest = cast(Mapping[str, object], sfd).get('manifest') if isinstance(sfd, Mapping) else None
+    backtest = cast(Mapping[str, object], manifest).get('backtest') if isinstance(manifest, Mapping) else None
     if not scenarios and (not isinstance(backtest, Mapping) or 'product' not in backtest or selection.top_k != 1 or selection.folds):
         raise ValueError('Empty holdout.scenarios requires one ordinary selected Sensor with declared event economics')
     return spec
