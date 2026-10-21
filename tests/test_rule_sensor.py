@@ -46,7 +46,7 @@ def rule_campaign(request, tmp_path_factory):
         config['sfd']['params']['price_floor'] = [float(bars['close'].median())]
         manifest['strategy']['entry'] = 'combined'
     if request.param == 'formed':
-        manifest['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': 100000}}
+        manifest['bar_formation'] = {'func': 'limen.data.bars.trade_bars', 'params': {'trade_threshold': int(bars['no_of_trades'].max()) * 2}}
         config['sfd']['params']['bar_type'] = ['trade']
     if request.param == 'common':
         manifest['indicators'] = [{'func': 'limen.features.common_strategy_positions.common_strategy_positions', 'params': {'strategy': '{strategy}'}}]
