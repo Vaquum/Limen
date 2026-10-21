@@ -102,12 +102,10 @@ class CheckpointManager:
              content_hash: str,
              feedback_controller: FeedbackController | None = None,
              pruning_strategies: list[PruningStrategy] | None = None,
-             failed_round_params: list[dict[str, object]] | None = None) -> None:
+             failed_round_params: list[dict[str, object]] | None = None,
+             holdout_binding: dict[str, object] | None = None) -> None:
 
-        '''
-        NOTE: All state is written atomically to a single file via a
-        write-then-rename pattern. The previous checkpoint remains intact
-        until the new one is fully written.
+        '''Write state atomically; preserve the previous checkpoint until replacement.
 
         Args:
             checkpoint_dir (Path): Directory to write checkpoint file
@@ -120,6 +118,7 @@ class CheckpointManager:
             feedback_controller (FeedbackController | None): FeedbackController to checkpoint
             pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
             failed_round_params (list[dict[str, object]] | None): Committed parallel failure parameters
+            holdout_binding (dict[str, object] | None): Private saved protection/population evidence
 
         '''
 
@@ -133,6 +132,7 @@ class CheckpointManager:
             },
             'msq_state': msq.get_state(),
             'domain_state': domain.get_state(),
+            **({'holdout_binding': holdout_binding} if holdout_binding is not None else {}),
         }
 
         if feedback_controller is not None:

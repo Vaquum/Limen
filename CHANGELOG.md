@@ -1926,3 +1926,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.26] - 2026-10-21
 
 - Repair and collect the supply-chain contract test, add a Task issue template for non-feature work, and document the legacy branch-protection mirror.
+
+## [5.45.27] - 2026-10-21
+
+- Bind saved checkpoint protection to the actual source, population and completed round history before restoring state; reject unproven Trainer lineage before refitting.
+- Preserve existing V1 protected selections and zero-active checkpoint identity; retain public guards on unfinished protected workflows.

@@ -1,4 +1,5 @@
 import limen.experiment._holdout_research as _holdout
+import limen.experiment._holdout_checkpoint as _holdout_checkpoint
 import limen.experiment._round_storage as _storage
 import csv
 import importlib.metadata
@@ -852,6 +853,7 @@ class UniversalExperimentLoop:
         )
         metadata_path = self._experiment_dir / 'metadata.json'
         metadata: dict[str, object] = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        _holdout_checkpoint.validate(self, checkpoint_data, metadata)
         if metadata.get('record_execution', False) != self._record_execution:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
@@ -1026,6 +1028,8 @@ class UniversalExperimentLoop:
 
         if holdout := _holdout.metadata(self.manifest):
             metadata['holdout'] = holdout
+        if binding := _holdout_checkpoint.header(self.manifest):
+            metadata['holdout_binding'] = binding
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
 
@@ -1064,6 +1068,7 @@ class UniversalExperimentLoop:
             feedback_controller=feedback_controller,
             pruning_strategies=pruning_strategies,
             failed_round_params=failed_round_params,
+            holdout_binding=_holdout_checkpoint.capture(self, current_round),
         )
 
 
@@ -1144,7 +1149,7 @@ class UniversalExperimentLoop:
                     self.round_params.append(entry['round_params'])
                     self.preds.append(entry['preds'])
                     self._alignment.append({
-                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding') if key in entry},
+                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in entry},
                         'missing_datetimes': [
                             datetime.fromisoformat(dt)
                             for dt in entry['alignment']['missing_datetimes']

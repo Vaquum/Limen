@@ -69,6 +69,7 @@ experiment/
 ├── _grid_resume.py
 ├── _holdout_assessment.py
 ├── _holdout_attempts.py
+├── _holdout_checkpoint.py
 ├── _holdout_freeze.py
 ├── _holdout_history.py
 ├── _holdout_report.py
@@ -120,3 +121,5 @@ experiment/
 - [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
+
+`_holdout_checkpoint.py` checks saved project, population and completed-round evidence before checkpoint restoration or Trainer preparation. Protected resume remains unavailable through the public workflow guard.

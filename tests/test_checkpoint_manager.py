@@ -92,6 +92,12 @@ def test_save_metadata_content():
         assert metadata['strategy_type'] == 'GridStrategy'
         assert metadata['content_hash'] == 'b' * 64
         assert 'saved_at' in metadata
+        assert 'holdout_binding' not in data
+        binding = {'schema_version': 1, 'project_id': None, 'reservation_revision': 0,
+                   'cutoff_ns': None, 'interval_seconds': None, 'population': {}, 'completed_rounds': []}
+        cm.save(ckpt_dir, msq, domain, 42, 500, strategy_type='GridStrategy',
+                content_hash='b' * 64, holdout_binding=binding)
+        assert cm.load(ckpt_dir)['holdout_binding'] == binding
 
 
 def test_validate_passes_when_all_match():
