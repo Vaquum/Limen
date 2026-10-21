@@ -1466,6 +1466,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind):
     from types import CellType, ModuleType
     def helper(data, **params):
+        assert data is not None
         return logreg_binary(data, **(params | {'C': 1 + _LATE_RULES['offset']}))
     def replacement(data, **params):
         return logreg_binary(data, **(params | {'C': 2.0}))
@@ -1521,6 +1522,26 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
             CompiledSFD(recorded, components=configure).manifest()
         with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
             Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_trusted_factory_rejects_assertion_runtime_spoof(native_assessment_case, wrapped, monkeypatch):
+    import _pytest.assertion.rewrite as rewrite
+    def factory(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + _LATE_RULES['offset']}))
+    monkeypatch.setattr(rewrite, 'logreg_binary', logreg_binary, raising=False)
+    monkeypatch.setattr(rewrite, '_LATE_RULES', _LATE_RULES, raising=False)
+    forged = FunctionType(factory.__code__, vars(rewrite), factory.__name__)
+    declared = partial(forged) if wrapped else forged
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is declared
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
         assert loader.call_count == 0
 
 
