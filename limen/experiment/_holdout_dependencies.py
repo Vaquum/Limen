@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies, reader_names, native_annotation
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies, reader_names, native_annotation, reader_types
 from limen.experiment._holdout_state import native_types, children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
