@@ -619,13 +619,16 @@ class InstanceTransformScaler(RobustScaler):
         self.transform = partial(_original_scaler_transform, self)
 
 
+def _self_assigned_transform(data, multiplier=2):
+    return data.with_columns((pl.col('close') * multiplier).alias('close'))
+
+
 class SelfAssignedScaler(RobustScaler):
+    transform = _self_assigned_transform
+
     def __init__(self, data):
         super().__init__(data)
         self.transform = type(self).transform
-
-    def transform(data, multiplier=2):
-        return data.with_columns((pl.col('close') * multiplier).alias('close'))
 
 
 def _prepared_probe(plan, params):
@@ -1232,7 +1235,7 @@ def _assert_transform_bindings(params, pool):
     base = build_manifest(parallel_config())
     domain = {key: [value] for key, value in params.items()}
     for cls, seed_key in ((TransformSeedTarget, 'random_state'), (IndependentSeedTarget, 'seed')):
-        declare_parallel(cls, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
+        declare_parallel(cls, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',), validation_keys=('random_state', 'seed')))
         target = copy.deepcopy(base).with_target_label('noise', cls, fit_params={'random_state': 42})
         with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
             validate_resources(freeze_manifest(target, None), params)
