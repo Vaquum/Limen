@@ -1913,4 +1913,3 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Retain compatible built-in callable identity when captured declarations are unchanged.
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
 - Freeze scaler transformation behavior without changing fitted scaler objects.
-
