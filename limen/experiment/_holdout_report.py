@@ -285,6 +285,8 @@ def _verify(report: dict[str, object], record: dict[str, object], rows: pl.DataF
         populations.append(cast(dict[str, object], scenario['metrics']))
     if cast(int, report['schema_version']) == _SCHEMA_EXECUTION:
         populations.append(_verify_execution(cast(dict[str, object], report['execution']), final, spec, cast(dict[str, int], report['planned'])))
+    elif cast(list[dict[str, object]], spec['members'])[0].get('execution') is not None:
+        raise ValueError('Invalid schema for pinned execution evidence')
     _metric_schema(populations)
 
 
@@ -319,8 +321,8 @@ def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: M
         (any(row['episode_id'] not in episodes for row in (*ledger['intents'], *ledger['fills']) if row['episode_id'] is not None), 'Invalid execution episode linkage'),
         (times != sorted(times) or fills != sorted(fills) or requested != sorted(requested), 'Invalid execution time order'),
         (any(moment < partition[0] or moment > partition[1] for moment in (*times, *fills, *requested)), 'Invalid execution time bounds'),
-        (not times or times[0] != partition[0] or ledger['states'][0]['equity'] != pin.get('initial_equity') or ledger['states'][0]['quantity'] != 0, 'Invalid execution accounting anchor'),
-        (any(all((row['requested_at_ns'], row['target']) != (signal['available_at_ns'], signal['target']) for signal in signals) for row in ledger['intents'] if row['reason'] == 'signal'), 'Invalid execution signal linkage'))
+        (not times or times[0] != partition[0] or ledger['states'][0]['equity'] != pin.get('initial_equity') or ledger['states'][0]['quantity'] != 0, 'Invalid execution accounting anchor'), (any(all((row['requested_at_ns'], row['target']) != (signal['available_at_ns'], cast(float, signal['target']) * cast(float, cast(dict[str, object], execution['policy'])['notional_rate'])) for signal in signals) for row in ledger['intents'] if row['reason'] == 'signal'), 'Invalid execution signal linkage'),
+        ([point['prediction'] for point in tape] != final['aggregate_prediction'].to_list(), 'Invalid execution retained predictions'), (contract['policy'] != execution['policy'], 'Invalid execution contract policy'))
     for failed, message in checks:
         if failed:
             raise ValueError(message)

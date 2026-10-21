@@ -56,10 +56,11 @@ def event_case(tmp_path_factory):
     root = _project(tmp_path_factory.mktemp('event') / 'project')
     base = _configuration(root)
     spot = copy.deepcopy(base)
-    spot['sfd']['manifest']['backtest'] = {'product': dict(_SPOT)}
+    spot['sfd']['manifest']['backtest'] = {'product': dict(_SPOT), 'notional_rate': 0.25}
     perp = copy.deepcopy(base)
-    perp['sfd']['manifest']['backtest'] = {'product': dict(_PERP), 'initial_equity': '{equity}'}
+    perp['sfd']['manifest']['backtest'] = {'product': dict(_PERP), 'initial_equity': '{equity}', 'fee_bps': '{fee}'}
     perp['sfd']['params']['equity'] = [25000.0]
+    perp['sfd']['params']['fee'] = [5.0]
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
     sensors, rounds, directories = {}, {}, {}
     for name, config in (('spot', spot), ('perp', perp)):
@@ -150,19 +151,44 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
     assert perp_policy['product']['initial_margin_fraction'] == 1.0
     ledgers = {name: event_case['reports'][name]['execution']['ledger'] for name in ('spot', 'perp')}
     assert ledgers['spot']['states'][0]['equity'] != ledgers['perp']['states'][0]['equity']
+    targets = [intent['target'] for intent in ledgers['spot']['intents']]
+    assert 0.25 in targets
+    assert all(target in (0.0, 0.25) for target in targets)
     root, report = event_case['root'], event_case['reports']['spot']
+    _rewrite_report(root, report, lambda tampered: tampered['execution'].update(ledger=copy.deepcopy(ledgers['perp'])), 'accounting anchor')
+
+    def drift(report_dict):
+        report_dict['execution']['tape'][5]['prediction'] ^= 1
+        report_dict['execution']['signals'][5]['target'] = float(report_dict['execution']['tape'][5]['prediction'])
+
+    _rewrite_report(root, report, drift, 'retained predictions')
+
+    def reprice(report_dict):
+        report_dict['execution']['contract']['policy']['fee_bps'] = 999.0
+        report_dict['execution']['assessment_digest'] = contract_digest(report_dict['execution']['contract'])
+
+    _rewrite_report(root, report, reprice, 'contract policy')
+
+    def downgrade(report_dict):
+        report_dict['schema_version'] = 1
+        del report_dict['execution']
+
+    _rewrite_report(root, report, downgrade, 'schema for pinned')
+
+
+def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
         stored = db.execute('SELECT report_path, report_sha256 FROM attempts WHERE id=?', (history.identifier(report['attempt_id']),)).fetchone()
     target = root / stored[0]
     original = target.read_bytes()
     try:
         tampered = copy.deepcopy(report)
-        tampered['execution']['ledger'] = copy.deepcopy(ledgers['perp'])
+        mutate(tampered)
         target.write_bytes(json.dumps(tampered, sort_keys=True, separators=(',', ':')).encode())
         with history.connection(root / 'manifests/holdout.sqlite3') as db:
             db.execute('UPDATE attempts SET report_sha256=? WHERE id=?', (hashlib.sha256(target.read_bytes()).hexdigest(), history.identifier(report['attempt_id'])))
             db.commit()
-        with pytest.raises(ValueError, match='accounting anchor'):
+        with pytest.raises(ValueError, match=match):
             read_holdout_report(root, report['attempt_id'])
     finally:
         target.write_bytes(original)
@@ -361,6 +387,10 @@ def test_event_round_locator_binding(event_case):
     crossing = _tampered(sensor, lambda contract: contract['partition'].__setitem__(1, history.utc_day('2024-02-01')), refresh_digest=True)
     with pytest.raises(ValueError, match='crosses the test window'):
         freeze_holdout_selection(crossing, context_start='2024-01-04', scenarios=[], evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up'), round_locator=_locator(event_case, 'spot'))
+    drifted = copy.copy(event_case['sensors']['perp'])
+    vars(drifted)['_round_params'] = {**vars(drifted)['_round_params'], 'fee': 999.0}
+    with pytest.raises(ValueError, match='disagrees with its recorded contract'):
+        freeze_holdout_selection(drifted, context_start='2024-01-04', scenarios=[], evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up'), round_locator=_locator(event_case, 'perp'))
     clone = owned_copy(sensor)
     assert vars(clone)['_trade_digest'] == contract_digest(vars(clone)['_trade_contract'])
 

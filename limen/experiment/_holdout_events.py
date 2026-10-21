@@ -73,6 +73,8 @@ def contract_execution(sensor: object, locator: Mapping[str, object]) -> dict[st
     policy = holdout_event_policy(cast(BacktestConfig | None, config), params)
     if policy is None:
         raise ValueError('Holdout contract/policy mismatch refuses freezing')
+    if json_value(policy) != contract['policy']:
+        raise ValueError('Holdout resolved policy disagrees with its recorded contract')
     rules = cast(dict[str, object], contract['rules'])
     if rules.get('terminal') != 'mark_without_close':
         raise ValueError('Holdout contract requires mark_without_close terminal semantics')
