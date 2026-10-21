@@ -15,7 +15,9 @@ def git(root, *arguments):
 def base_revision(root):
     if git(root, 'rev-parse', '--is-shallow-repository') != 'false':
         raise ValueError('Source provenance requires full Git history')
-    return git(root, 'merge-base', 'HEAD', 'origin/main')
+    main = git(root, 'rev-parse', 'origin/main')
+    changes = git(root, 'rev-list', '--first-parent', '--reverse', main, '--not', 'HEAD').splitlines()
+    return git(root, 'rev-parse', changes[0] + '^1') if changes else main
 
 
 @lru_cache(maxsize=4096)
@@ -69,8 +71,8 @@ def tree_objects(root, revision):
     return objects
 
 
-def identity(root, base, path, current, previous, *, head=None):
-    if previous.get(path) != current[path]:
+def identity(root, base, path, current, previous, *, head=None, ancestry=None):
+    if previous.get(path) != current[path] or ancestry is not None and ancestry.get(path) != current[path]:
         return history_change(root, head or git(root, 'rev-parse', 'HEAD'), path, False), 'candidate'
     return history_change(root, base, path, True), 'merged'
 
@@ -81,9 +83,10 @@ def acquire(root, output):
     base = base_revision(root)
     head = git(root, 'rev-parse', 'HEAD')
     current, previous = tree_objects(root, head), tree_objects(root, base)
+    ancestry = tree_objects(root, git(root, 'merge-base', head, 'origin/main'))
     files, responses = [], {}
     for path in source_paths(root):
-        commit, status = identity(root, base, path, current, previous, head=head)
+        commit, status = identity(root, base, path, current, previous, head=head, ancestry=ancestry)
         pull = None
         if status == 'merged':
             if commit not in responses:
@@ -104,8 +107,9 @@ def validate_provenance(root, record):
         raise ValueError('Source provenance inventory differs')
     head = git(root, 'rev-parse', 'HEAD')
     current, previous = tree_objects(root, head), tree_objects(root, base)
+    ancestry = tree_objects(root, git(root, 'merge-base', head, 'origin/main'))
     for item in record['files']:
-        commit, status = identity(root, base, item['path'], current, previous, head=head)
+        commit, status = identity(root, base, item['path'], current, previous, head=head, ancestry=ancestry)
         if (item['commit'], item['status']) != (commit, status) or item['sha256'] != hashlib.sha256((root / item['path']).read_bytes()).hexdigest():
             raise ValueError('Source-changing commit or source bytes differ')
         expected = merged_pull(commit, record['responses'][commit]) if status == 'merged' else None
@@ -113,11 +117,17 @@ def validate_provenance(root, record):
             raise ValueError('Source PR identity differs')
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description='Bind canonical source changes to merged PRs on main.')
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[2],
+                        help='Inspect this full-history checkout without changing its source or revision.')
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[2]
+    root = args.root.resolve()
     result = acquire(root, args.output)
     validate_provenance(root, result)
     print(f"Bound {len(result['files'])} sources to first-parent main history and explicit candidate changes.")
+
+
+if __name__ == '__main__':
+    main()

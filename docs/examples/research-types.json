@@ -3,7 +3,8 @@
     "*.py",
     "python-research",
     "compiled-research",
-    "tests"
+    "tests",
+    "../checker/tests"
   ],
   "typeCheckingMode": "basic",
   "pythonVersion": "3.10",
@@ -16,6 +17,9 @@
     },
     {
       "root": "tests"
+    },
+    {
+      "root": "../checker/tests"
     },
     {
       "root": "."

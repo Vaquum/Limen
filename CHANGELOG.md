@@ -1877,6 +1877,15 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.16] - 2026-10-21
 
+- Preserve the mainline provenance boundary when qualifying original PR heads after merge; allow the reviewed checker to inspect an explicit retained checkout.
+- Use one reviewed provenance dependency for retained source acquisition, original book tests and reader evidence validation; retain separate checker identities and unchanged product sources.
+- Keep restored pre-PR source bytes candidate when they differ from ordinary merged ancestry, preserving the original evidence guard.
+- Record raised checker failures with their actual exit codes; reuse captured original-head source metadata in bounded regression setup while retaining every assertion.
+- Run retained-checker regressions before research proof in the same required documentation job, preserving test coverage, source checks and existing proof time limits.
+- Include checker regressions in source distributions and update markdown-it to 14.3.3 for GHSA-vfgh-jcmw-g37q.
+
+## [5.45.17] - 2026-10-21
+
 - Preserve active merge-readiness runs when review and check-suite events arrive; backport the upstream scheduling correction and contract guard.
 - Enforce the shared per-PR readiness lane and reject event-specific lane mutations; backport the merged upstream regression guard.
 - Clarify that the readiness comment reports ruleset checks while separate classic protection can still block a merge.
