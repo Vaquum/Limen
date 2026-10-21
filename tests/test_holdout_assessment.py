@@ -24,6 +24,7 @@ from limen.experiment._holdout_freeze import members, owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
 from limen.inference.sensor import Sensor
+from limen.scalers import logreg_scaler
 from limen.targets.next_bar_up import NextBarUpTarget
 from limen.targets.threshold_binary import ThresholdBinaryTarget
 from limen.yaml import CompiledSFD
@@ -157,7 +158,8 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert rows.height == 48 and rows.filter(pl.col('role') == 'final').height == 24
     assert all(len(row) == 2 for row in rows.filter(pl.col('role') == 'final')['members'].to_list())
     assert read_holdout_report(root, report['attempt_id']) == report
-    repeat = _report(frozen, assessment_case)
+    with patch.dict(logreg_scaler.SCALING_RULES, dict.fromkeys(logreg_scaler.SCALING_RULES, 'divide_100')):
+        repeat = _report(frozen, assessment_case)
     assert {key: repeat[key] for key in _REPEAT_KEYS} == {key: report[key] for key in _REPEAT_KEYS}
     assert repeat['exposure']['class'] == 'subsequent'
     majority = copy.deepcopy(cohort)
@@ -170,8 +172,10 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert _report(_freeze(trained[1][0]), assessment_case)['state'] == 'completed'
     changed = copy.deepcopy(trained[1][0])
     changed._model.model.booster_.best_iteration = 1
-    with pytest.raises(ValueError, match='best_iteration'):
-        _freeze(changed)
+    _freeze(changed)
+    clone = owned_copy(changed)
+    assert clone._model.model.booster_.best_iteration == 1
+    assert clone.predict(probe) == changed.predict(probe)
     changed = copy.deepcopy(trained[0][1])
     changed._model._fitted_calibrator = None
     with pytest.raises(ValueError, match='unfitted calibration'):

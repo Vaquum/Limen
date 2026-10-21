@@ -2,10 +2,6 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
-## [5.45.28] - 2026-10-21
-
-- Allow resume with inapplicable recording groups disabled; require applicable committed payloads before recovery writes.
-
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
@@ -1935,3 +1931,13 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Allow merging without rebasing onto latest main; retain conflict blocking, review dismissal, and all required checks.
 - Sync the ruleset snapshot and pinned live fixtures with the relaxed status check policy.
+
+## [5.45.29] - 2026-10-21
+
+- Preserve native LightGBM `best_iteration` across owned holdout copies instead of refusing it.
+- Bind `LogRegScaler` to the scaling rules it was fitted with, so frozen holdout state covers them and later rule changes cannot alter a frozen assessment.
+
+## [5.45.30] - 2026-10-21
+
+- Allow resume with inapplicable recording groups disabled; require applicable committed payloads before recovery writes.
+

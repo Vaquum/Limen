@@ -178,8 +178,6 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
             raise ValueError('Holdout requires exact LGBMClassifier')
         if any(getattr(LGBMClassifier, name).__module__ != 'lightgbm.sklearn' or getattr(LGBMClassifier, name).__qualname__ != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
             raise ValueError('Holdout refuses replaced LightGBM prediction methods')
-        if model.booster_.best_iteration > 0:
-            raise ValueError('Holdout refuses positive native LightGBM best_iteration')
     check_is_fitted(model)
     if list(cast(Iterable[int], getattr(model, 'classes_', []))) != [0, 1]:
         raise ValueError('Holdout estimator classes must be [0,1]')
@@ -286,6 +284,8 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
         member = copy.copy(original)
         vars(member).clear()
         vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(_member_state(original)), strict=True))
+        if type(vars(member)['_model']) is LightGBMBinary:
+            vars(member)['_model'].model.booster_.best_iteration = vars(original)['_model'].model.booster_.best_iteration
         member.permutation_id, member.manifest_id = original.permutation_id, original.manifest_id
         vars(member)['_trade_digest'] = None
         cached = cast(MLManifest | None, vars(original)['_manifest'])
