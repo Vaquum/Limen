@@ -128,8 +128,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         item_type = type(item)
         if item is None or item_type in _ATOMIC_TYPES or (item_type is int and item is _CANONICAL_INTS.get(cast(int, item))):
             return item
-        if id(item) in seen:
-            return ('ref', seen[id(item)])
+        if (reference := seen.get(id(item))) is not None:
+            return ('ref', reference)
         if class_aliases and type(item).__module__ != 'builtins':
             classes[id(type(item))] = type(item)
         seen[id(item)] = len(retained)
@@ -143,13 +143,13 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         return structure(item, item_type)
 
     def structure(item: object, item_type: type[object]) -> object:
+        kind = (item_type.__module__, item_type.__qualname__, ('ref', reference) if (reference := seen.get(id(item_type))) is not None else node(item_type))
         if item_type is dict:
-            return ((item_type.__module__, item_type.__qualname__, node(item_type)), None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else node(part))) for key, part in cast(dict[object, object], item).items()), None)
+            return (kind, None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else ('ref', key_ref) if (key_ref := seen.get(id(key))) is not None else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part))) for key, part in cast(dict[object, object], item).items()), None)
         if item_type is list or item_type is tuple:
-            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple((part if part is None or type(part) in _ATOMIC_TYPES else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
+            return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         if item_type is set or item_type is frozenset:
-            return ((item_type.__module__, item_type.__qualname__, node(item_type)), tuple((part if part is None or type(part) in _ATOMIC_TYPES else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
-        kind = (type(item).__module__, type(item).__qualname__, node(type(item)))
+            return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
         attributes = _attributes(item) if issubclass(type(item), _CONTAINER_TYPES) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
