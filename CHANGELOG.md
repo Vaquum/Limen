@@ -1908,4 +1908,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.22] - 2026-10-21
 
+- Batch candidate documentation source comparisons while preserving merged-source rejection and fatal Git errors.
+
+## [5.45.23] - 2026-10-21
+
 - Retain selected rule configuration and ordered predicate inputs in the native binary model without live fitting or probability output.
