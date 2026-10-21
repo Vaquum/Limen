@@ -15,7 +15,7 @@
     "check:reader": "node scripts/check-reader.mjs"
   },
   "dependencies": {
-    "markdown-it": "14.3.2",
+    "markdown-it": "14.3.3",
     "prismjs": "1.30.0",
     "@fontsource-variable/archivo": "5.3.0",
     "@fontsource/ibm-plex-mono": "5.3.0"
