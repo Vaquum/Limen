@@ -17,7 +17,7 @@ This page covers:
 - a `SearchStrategy` for Python/MSQ execution
 - an `experiment_dir` when you need persisted round artifacts or checkpoints
 
-## Preferred execution path
+## Run the Compiled declaration
 
 From the recorded-input bundle root, run the Compiled project directly:
 

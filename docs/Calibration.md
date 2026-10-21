@@ -2,7 +2,7 @@
 
 Calibration changes probability estimates. Threshold selection changes the decision made from those estimates. Both consume validation evidence; neither supplies an untouched assessment of the selected model.
 
-The [Python project](examples/python-research/README.md) owns these steps as ordinary Python functions. The [Compiled project](examples/compiled-research/README.md) declares them in its Manifest and lets the pipeline fit, record and reconstruct them. Both projects compare all four on/off combinations in their `calibration` scenario.
+The [Python project](examples/python-research/README.md) owns these steps as ordinary Python functions. The [Compiled project](examples/compiled-research/README.md) declares them in YAML and runs the fitting and recording through the CLI. Its complete `research.yaml` also carries the selected calibrated models through `limen assess`. Both projects compare all four on/off combinations in their `calibration` scenario.
 
 ## Prerequisites
 
@@ -257,7 +257,7 @@ Threshold grids are caller-owned inputs: `threshold_step` must be positive and f
 
 ## Calibration at Inference
 
-The Python scenario stores the fitted probability model and selected threshold together in its caller-owned state. Its inference function prepares completed history and reuses that state without fitting. The Compiled scenario reconstructs the declared model through `Trainer`; the resulting Sensor reuses fitted preprocessing, calibration and the selected threshold.
+The Python scenario stores the fitted probability model and selected threshold together in its caller-owned state. Its inference function prepares completed history and reuses that state without fitting. The Compiled calibration scenario records all four modes. The complete `research.yaml` additionally declares assessment: `limen assess` reconstructs the selected Sensors with their fitted preprocessing, calibration and thresholds.
 
 A Sensor accepts history through its native inference API. The lower-level classifier's `predict()` accepts the prepared feature matrix; these are distinct boundaries. `fit_calibrator` provides the shared fit operation outside a Manifest too.
 

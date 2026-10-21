@@ -51,7 +51,7 @@ Its `project.sh` validates, profiles, compiles, commits and executes the recorde
 | Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison, model families and YAML reducers | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
 | Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Reconstruct declaration, queue/results and a selected Sensor; compare complete artifacts | [Recovery](Advanced-Search.md#resume-flow) |
 | Evaluate across time | Own fold fitting, validation selection and later Sensor decisions | Declared folds, purge/embargo and qualified fold reconstruction | [Walk-forward](Walk-Forward.md) |
-| Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four configured modes and recorded Sensor reconstruction | [Calibration](Calibration.md) |
+| Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four YAML-configured modes; calibrated selection through CLI assessment | [Calibration](Calibration.md) |
 | Assess a selected result | Exclude the final partition from fitting and selection in code | Reserve, freeze and assess with native project records; earlier exposure remains unknown for local files | [Final holdout](Final-Holdout.md) |
 | Measure execution | Direct event inputs, policy, source clocks, costs and recorded funding | Declared event policy, ledgers, source bindings and funded comparison | [Backtest](Backtest.md) |
 | Form alternate bars | Call the shared bar helper over recorded observations | Form bars separately after each chronological split | [Data bars](Data-Bars.md) |

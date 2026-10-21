@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import csv
@@ -148,9 +149,15 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
+    # Independent project commands write disjoint results; retain each real CLI run.
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
+                                           cwd=project, env=runtime_environment)
+                      for name in ('python-selection', 'python-all', 'compiled-all')}
+        for execution in executions.values():
+            execution.result()
     for interface in ('python',):
         command = shlex.split(canonical_commands[interface + '-selection'])
-        run(command, cwd=project, env=runtime_environment)
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
         assert summary['interface'] == interface and summary['scenario'] == 'selection'
         assert summary['rounds'] == 4
@@ -161,7 +168,6 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
         commands[interface] = [str(arg) for arg in command]
         scenario_reports[(interface, 'selection')] = summaries[interface] | {'command': commands[interface]}
         command = shlex.split(canonical_commands[interface + '-all'])
-        run(command, cwd=project, env=runtime_environment)
         report = json.loads((project / f'results/{interface}-all/summary.json').read_text())
         catalogue = json.loads((project / 'catalogue.json').read_text())
         expected = {name for name, interfaces in catalogue['required_scenarios'].items() if interface in interfaces} - {'selection'}
@@ -173,7 +179,6 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             scenario_reports[(interface, name)] = {'summary': result, 'command': [str(arg) for arg in command], 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
     from cli_proof import verify_project, prove_interrupted_recovery
     command = shlex.split(canonical_commands['compiled-all'])
-    run(command, cwd=project, env=runtime_environment)
     compiled = verify_project(project)
     compiled["recovery"].update(prove_interrupted_recovery(project, runtime_environment))
     catalogue = json.loads((project / 'catalogue.json').read_text())

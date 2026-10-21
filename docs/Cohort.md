@@ -277,7 +277,7 @@ remain `None`. Ordinary persisted rounds and [qualified binary folds](#recorded-
 
 ## Recorded walk-forward members
 
-Choose explicit zero-based folds with three-element selections; ordinary selections keep two elements. Reconstruct each selected fold through its own Trainer, then bind the returned Sensors:
+Compiled Research declares zero-based fold indices in `assessment.folds`. `limen assess` reconstructs the selected fold Sensors and binds their Cohort:
 
 <!-- example: cohort-compiled-recorded-folds source=docs/examples/compiled-research/run.sh region=walk_forward scenario=walk_forward interface=compiled role=executed -->
 ```bash
@@ -286,7 +286,7 @@ limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-
 limen run --no-progress-bar compiled-research/acceptance.yaml
 ```
 
-Selection and binding perform no fitting or source fetching. Missing files raise `FileNotFoundError`; malformed JSON, versioned witnesses or disagreeing metadata/YAML declarations raise `ReconstructionError` naming the source. Invalid selections and incompatible/bound members raise `ValueError`. Folds require nonnegative literal integers: booleans, floats, nulls and out-of-range indices reject. An unqualified walk-forward round rejects with `supply fold`; an ordinary source cannot take a fold index.
+For native API integration, three-element selections identify folds; ordinary selections keep two elements. Selection and binding themselves perform no fitting or source fetching; Trainer performs the checked refit used by the CLI. Missing files raise `FileNotFoundError`; malformed JSON, versioned witnesses or disagreeing metadata/YAML declarations raise `ReconstructionError` naming the source. Invalid selections and incompatible/bound members raise `ValueError`. Folds require nonnegative literal integers: booleans, floats, nulls and out-of-range indices reject. An unqualified walk-forward round rejects with `supply fold`; an ordinary source cannot take a fold index.
 
 Fold-containing `member_ids` retain caller order and mix `(manifest_id, permutation_id, fold, provenance_digest)` with ordinary `(manifest_id, permutation_id)` pairs. The digest is the Sensor's raw 64-character hexadecimal selected-artifact digest. Same trial, distinct folds are distinct members. Duplicate keys reject across copies and aliases; different evidence for the same trial/fold raises `Cohort evidence conflict`. Binding checks every member key, architecture and native binary declaration before matching fold count and exact selected-artifact digest. A wrong digest cannot bind by matching the trial/fold key alone. Transparent attribute-forwarding wrappers may bind; hiding fold identity cannot convert a fold Sensor into an ordinary member.
 
@@ -480,7 +480,7 @@ Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per
 
 Use each project's entry point, matching wheel and recorded input bundle. Their model source, preparation helpers and inputs travel together. A chapter excerpt is not a standalone replacement for that project.
 
-The two complete project functions above are the executable examples. The Python selection proof checks retained object identity, mean aggregation and every causal inference prefix without refitting. The Compiled walk-forward proof checks both reconstructed fold identities, fitting/selection cutoffs, recorded fold membership and objective metrics. It does not claim a multi-directory selection or future fold-Cohort inference run. Those extension contracts are described by the source-bound API and identity rules above.
+The Python function and Compiled CLI commands above are the executable examples. The Python selection proof checks retained object identity, mean aggregation and every causal inference prefix without refitting. The Compiled walk-forward proof checks both reconstructed fold identities, fitting/selection cutoffs, recorded fold membership and objective metrics. The CLI also writes batch fold-Cohort predictions from the declared inference source. This does not establish future performance or a multi-directory selection. Those extension contracts are described by the source-bound API and identity rules above.
 
 An explicit cross-directory selected list remains caller-owned; changing a search seed does not establish distinct fitted models or non-overlapping parameter rounds. Selectors may still choose IDs independently
 within each directory before assembling that list. For a parent/narrowed

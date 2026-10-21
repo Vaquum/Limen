@@ -122,7 +122,7 @@ def acceptance_runs(tmp_path_factory):
     canonical, errors = parse(example)
     assert not errors
     assert canonical['metadata']['name'] == 'recorded_acceptance'
-    assert canonical['sfd']['manifest']['data_source']['params']['file_path_or_url'] == str(_FIXTURE.relative_to(Path(__file__).parents[1]))
+    assert canonical['sfd']['manifest']['data_source']['params']['file_path_or_url'] == 'inputs/' + _FIXTURE.name
     for declared in ('none', 'canonical', 'strict'):
         config = copy.deepcopy(canonical)
         if declared == 'none':

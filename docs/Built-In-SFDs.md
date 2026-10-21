@@ -156,7 +156,7 @@ limen run --no-progress-bar \
   compiled-research/family_direction_sizing.yaml
 ```
 
-This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains prediction payloads and reconstructs deterministic selected rounds. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
+This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
 
 The separate [XGBoost sweep driver](examples/xgboost_sweep.py) remains available for broader research. Its `test` mode selects a 5,000-row two-hour source; `prod` selects hourly observations from 2025-01-01. Its seed controls candidate sampling. CUDA additionally needs a compatible XGBoost build and GPU; inspect the fitted booster configuration to establish the actual backend. Those broader and GPU runs are outside the canonical project's recorded proof.
 
@@ -188,20 +188,18 @@ That optional status matters at execution time: discovery and template listing w
 
 ## Running one immediately
 
-The Compiled selection entry point shows how a declared configuration becomes an SFD, runs through UEL and reconstructs its chosen recorded round:
+The Compiled selection entry point validates the YAML, runs its declared search and assesses the selected recorded rounds:
 
-<!-- example: builtins-compiled-selection source=docs/examples/compiled-research/run.sh region=models scenario=selection interface=compiled role=executed -->
+<!-- example: builtins-compiled-selection source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
 ```bash
-limen run --no-progress-bar \
-  compiled-research/common_strategies.yaml \
-  compiled-research/family_ridge_regressor.yaml \
-  compiled-research/family_dlinear_regressor.yaml \
-  compiled-research/family_xgboost_regressor.yaml \
-  compiled-research/family_random_binary.yaml \
-  compiled-research/family_direction_sizing.yaml
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
-The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template scaffolding and installed commands. Native invocation can supply a built-in or custom search strategy; adopting the Manifest keeps it Compiled Research. When `data=` is omitted, the Manifest fetches data through `fetch_data()`.
+The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template scaffolding and installed commands. Declare the data source and `uel.search_strategy` in YAML. The CLI compiles that declaration and fetches its input through the configured source.
 
 ## How to choose
 

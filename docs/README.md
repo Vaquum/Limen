@@ -45,7 +45,7 @@ Limen does not place venue orders or manage downstream trading decisions. In the
 2. Compare model behavior in [Benchmark](Benchmark.md)
 3. Evaluate trading behavior in [Backtest](Backtest.md)
 4. Review helper metrics in [Standard Metrics Library](Standard-Metrics-Library.md) and [Reference Architecture](Reference-Architecture.md)
-5. Reuse selected Python fitted state through [Sensors](Trainer.md#python-construction), or reconstruct recorded Compiled rounds through [Trainer](Trainer.md); continue to [Cohort](Cohort.md) for composition
+5. Reuse selected Python fitted state through [Sensors](Trainer.md#python-construction) and [Cohort](Cohort.md), or declare assessment in [Compiled YAML](Compiled-Research.md) and run [`limen assess`](Command-Line-Interface.md#sensor-and-cohort-assessment)
 
 ### Extend Limen
 

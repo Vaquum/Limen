@@ -218,9 +218,9 @@ There are two manifest subclasses under the YAML and Python surfaces:
 
 Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass. `Manifest` itself is not meant to be instantiated directly — its `prepare_data()` raises `NotImplementedError`.
 
-## Optional builder API
+## Preparation fields and component APIs
 
-The Compiled project also constructs a native Manifest directly. This complete function compares baseline and compressed preparation, retains its actual matrices, and fits a native Ridge class to ternary labels. It uses the project's recorded-data and configuration helpers:
+The Compiled project declares scaling, feature ablation and PCA in YAML. The CLI builds their Manifest components internally:
 
 <!-- example: manifest-native-preparation source=docs/examples/compiled-research/research.yaml region=preparation scenario=search interface=compiled role=executed -->
 ```yaml
@@ -236,7 +236,7 @@ The Compiled project also constructs a native Manifest directly. This complete f
 
 Component authors can construct Manifest-backed SFDs through the optional Python APIs below. The Compiled user workflow is the [YAML definition and CLI execution](Compiled-Research.md); direct builder calls do not replace that interface.
 
-YAML and the native builder are both supported Compiled entry points. Use the complete project instructions for their exact dependencies, recorded inputs and working directory.
+Use the complete project instructions for the YAML workflow, dependencies, recorded inputs and working directory.
 
 ## How A Manifest Executes
 
@@ -528,7 +528,6 @@ comparison on the complete recorded hourly source. Two entry thresholds produce
 two trials with two folds each. The retained tracks contain 96 returns per trial;
 the default CSCV partition uses two blocks of 48 returns.
 
-The YAML keeps the repository fixture path so it can also run from a checkout.
 The declaration uses its literal bundled input path. Run it from the bundle root.
 
 <!-- example: manifest-recorded-acceptance source=docs/examples/compiled-research/acceptance.yaml region=__file__ scenario=walk_forward interface=compiled role=executed -->
@@ -589,7 +588,7 @@ uel:
 ```
 
 The CLI retains `trial_returns.parquet`, `acceptance_report.json`,
-`acceptance_report.md` and the fold records under `walk_forward/acceptance/`.
+`acceptance_report.md` and the fold records under `results/dev/compiled-acceptance/`.
 The independent project proof checks the timestamp population, recomputes the
 selected trial's Deflated Sharpe probability and both CSCV rankings, and compares
 the JSON and Markdown verdicts. Failed verdicts leave the research results
