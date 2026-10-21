@@ -9,7 +9,7 @@ from typing import cast
 
 from limen.experiment._holdout_calls import call_functions, factory_imports, function_module, native_attribute, reader_names, reader_types
 from limen.experiment._holdout_namespaces import namespace_calls, reflective_reads
-from limen.experiment._holdout_state import children, fitted_witness, native_values
+from limen.experiment._holdout_state import children, fitted_witness, native_values, typing_metadata
 
 __all__ = ['declaration_witness']
 _LIBRARIES = ('limen', 'numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy', '_pytest')
@@ -50,7 +50,7 @@ def declaration_witness(value: object) -> bytes:
         seen[id(item)] = item
         if isinstance(item, ModuleType):
             modules[id(item)] = item
-        elif not inspect.isfunction(item):
+        elif not inspect.isfunction(item) and typing_metadata(item) is None:
             owner = item.__self__ if inspect.ismethod(item) else item
             cls = cast(type[object], owner if isinstance(owner, type) else type(owner))
             owners[id(cls)] = cls

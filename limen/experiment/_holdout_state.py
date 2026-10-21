@@ -19,7 +19,7 @@ import polars as pl
 from limen.experiment._holdout_calls import native_attribute, logger_attributes
 from limen.experiment._holdout_code import code_digest
 
-__all__ = ['children', 'code_digest', 'fitted_witness', 'native_types', 'native_values', 'object_payload']
+__all__ = ['children', 'code_digest', 'fitted_witness', 'native_types', 'native_values', 'object_payload', 'typing_metadata']
 
 
 _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
@@ -32,7 +32,7 @@ _NATIVE_ITERATORS = cast(tuple[Callable[[object], Iterator[object]], ...], (nati
 # Verify canonical identity rather than assume the interpreter's integer cache.
 _CANONICAL_INTS: MappingProxyType[object, int] = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
-def _typing_metadata(value: object) -> dict[str, object] | None:
+def typing_metadata(value: object) -> dict[str, object] | None:
     if type(value) in _FORM_TYPES:
         return {'name': str(value)}
     return {name: getattr(value, name) for name in ('__name__', '__bound__', '__constraints__', '__covariant__', '__contravariant__', '__infer_variance__', '__default__', '__origin__') if hasattr(value, name)} if type(value) in _PARAMETER_TYPES else None
@@ -67,7 +67,7 @@ def children(value: object, *, namespace_readers: set[str] | None = None) -> tup
         return (*native_values(cast(object, value)), *_attributes(cast(object, value), namespace_readers).values())
     if object_payload(value):
         return (native_types[6].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
-    metadata = _typing_metadata(value)
+    metadata = typing_metadata(value)
     if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)) or metadata is not None:
         parts: tuple[object, ...]
         if metadata is not None:
@@ -93,7 +93,7 @@ def _attributes(value: object, namespace_readers: set[str] | None = None) -> dic
         descriptor = cls.__dict__.get('__dict__')
         if isinstance(descriptor, GetSetDescriptorType):
             values[f'{cls.__module__}.{cls.__qualname__}:__dict__'] = descriptor.__get__(value, type(value))
-    if type(value).__dictoffset__ and not values and _typing_metadata(value) is None:
+    if type(value).__dictoffset__ and not values and typing_metadata(value) is None:
         raise ValueError('Holdout refuses hidden native instance dictionaries')
     for cls in type(value).__mro__:
         if '__slots__' not in cls.__dict__:
@@ -166,7 +166,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif inspect.isbuiltin(item) or isinstance(item, MethodWrapperType):
             owner = getattr(item, '__self__', None)
             result = ('builtin', getattr(item, '__module__', None), item.__qualname__, None if isinstance(owner, ModuleType) else node(owner))
-        elif (metadata := _typing_metadata(item)) is not None:
+        elif (metadata := typing_metadata(item)) is not None:
             result = (kind, 'typing-parameter', node(metadata), node(_attributes(item)))
         elif isinstance(item, GenericAlias):
             metadata = {name: vars(GenericAlias)[name].__get__(item, item_type) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
