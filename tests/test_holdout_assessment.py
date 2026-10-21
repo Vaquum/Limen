@@ -1274,6 +1274,25 @@ def test_frozen_logger_callable_globals(native_assessment_case, bound, filtered)
             assert loader.call_count == 0
 
 
+def test_frozen_logger_filter_insertion(native_assessment_case):
+    class LoggerFilters(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if self.logger.filters:
+                result['_probs'] = self.logger.filters[0](result['_probs'])
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = LoggerFilters
+    selected._model.logger = logging.getLogger('holdout-filter-insertion')
+    with patch.object(selected._model.logger, 'filters', []):
+        frozen = _freeze(selected)
+        assert _report(frozen, native_assessment_case)['state'] == 'completed'
+        with patch.object(selected._model.logger, 'filters', [later_probabilities]), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='changed'):
+                _report(frozen, native_assessment_case)
+            assert loader.call_count == 0
+
+
 @pytest.mark.parametrize('wrapped', [False, True])
 def test_trusted_factory_helper_globals(native_assessment_case, wrapped):
     def factory(data, **params):

@@ -210,7 +210,7 @@ def _cell_binding(cell: CellType) -> tuple[bool, object]:
 
 
 def logger_attributes(value: logging.Logger) -> dict[str, object]:
-    return {name: part for name, part in cast(dict[str, object], vars(value)).items() if name not in ('name', 'level', 'disabled', 'propagate', 'parent', 'manager', 'handlers', '_cache')}
+    return {name: part for name, part in cast(dict[str, object], vars(value)).items() if name not in ('name', 'level', 'disabled', 'propagate', 'parent', 'manager', 'handlers', '_cache') and not (name == 'filters' and type(part) is list and not part)}
 
 
 def native_leaf_dependencies(value: object, seen: dict[int, object], evidence: list[object], visit: Callable[[object], None]) -> None:
