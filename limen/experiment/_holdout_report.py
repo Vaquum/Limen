@@ -311,9 +311,7 @@ def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: M
     aligned = len(tape) == len(opens) == len(signals) == len(rows)
     chained = aligned and not any(point['open_ns'] != open_ns or point['trade_contract_digest'] != execution['research_digest'] or point['available_at_ns'] != signal['available_at_ns'] or signal['target'] != point['prediction'] or (signal['row_id'], signal['available_at_ns']) != (row['row_id'], row['available_at_ns']) for point, signal, row, open_ns in zip(tape, signals, rows, opens, strict=True))
     checks = ((set(execution) != _EXECUTION_KEYS or set(ledger) != _LEDGER_KEYS, 'Invalid execution evidence schema'), (execution['research_digest'] != pin.get('research_digest') or execution['policy'] != pin.get('policy') or execution['initial_equity'] != pin.get('initial_equity'), 'Invalid execution evidence pin'),
-        (contract_digest(cast(Mapping[str, JsonValue], contract)) != execution['assessment_digest'], 'Invalid execution contract digest'),
-        (cast(dict[str, object], contract['rules']).get('terminal') != 'mark_without_close', 'Invalid execution terminal semantics'),
-        (initial.get('equity') != pin.get('initial_equity') or initial.get('quantity') != 0 or initial.get('currency') != product.get('quote_currency'), 'Invalid execution economics'),
+        (contract_digest(cast(Mapping[str, JsonValue], contract)) != execution['assessment_digest'], 'Invalid execution contract digest'), (cast(dict[str, object], contract['rules']).get('terminal') != 'mark_without_close', 'Invalid execution terminal semantics'), (initial.get('equity') != pin.get('initial_equity') or initial.get('quantity') != 0 or initial.get('currency') != product.get('quote_currency'), 'Invalid execution economics'),
         (ledger['funding'] != [] or contract.get('calibration') is not None or cast(dict[str, object], execution['policy']).get('funding') is not None, 'Invalid execution funding absence'),
         (partition != [planned['context_start_ns'], planned['end_ns']], 'Invalid execution partition bounds'),
         (not aligned, 'Invalid execution tape identity'), (not chained, 'Invalid execution prediction chain'),
@@ -322,7 +320,8 @@ def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: M
         (times != sorted(times) or fills != sorted(fills) or requested != sorted(requested), 'Invalid execution time order'),
         (any(moment < partition[0] or moment > partition[1] for moment in (*times, *fills, *requested)), 'Invalid execution time bounds'),
         (not times or times[0] != partition[0] or ledger['states'][0]['equity'] != pin.get('initial_equity') or ledger['states'][0]['quantity'] != 0, 'Invalid execution accounting anchor'), (any(all((row['requested_at_ns'], row['target']) != (signal['available_at_ns'], cast(float, signal['target']) * cast(float, cast(dict[str, object], execution['policy'])['notional_rate'])) for signal in signals) for row in ledger['intents'] if row['reason'] == 'signal'), 'Invalid execution signal linkage'),
-        ([point['prediction'] for point in tape] != final['aggregate_prediction'].to_list(), 'Invalid execution retained predictions'), (contract['policy'] != execution['policy'], 'Invalid execution contract policy'), (mismatch, 'Invalid execution metrics evidence'))
+        ([point['prediction'] for point in tape] != final['aggregate_prediction'].to_list(), 'Invalid execution retained predictions'), (contract['policy'] != execution['policy'], 'Invalid execution contract policy'), (mismatch, 'Invalid execution metrics evidence'),
+        (any(cast(int, point['available_at_ns']) < close_ns for point, close_ns in zip(tape, final['close_ns'].to_list(), strict=True)), 'Invalid execution availability floor'), (any(row['closed_at_ns'] is None and cast(float, row['net_pnl']) != ending - cast(float, row['entry_equity']) for row in ledger['episodes']), 'Invalid execution open-episode valuation'))
     for failed, message in checks:
         if failed:
             raise ValueError(message)

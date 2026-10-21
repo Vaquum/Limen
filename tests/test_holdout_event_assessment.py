@@ -184,6 +184,24 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, fabricate, 'metrics evidence')
 
+    def misprice(report_dict):
+        carried = next(episode for episode in report_dict['execution']['ledger']['episodes'] if episode['closed_at_ns'] is None)
+        carried['net_pnl'] += 100.0
+
+    _rewrite_report(root, report, misprice, 'open-episode valuation')
+
+    def backdate(report_dict):
+        execution = report_dict['execution']
+        for point, signal, row in zip(execution['tape'], execution['signals'], execution['contract']['signal_rows'], strict=True):
+            point['available_at_ns'] -= 3600_000_000_000
+            signal['available_at_ns'] -= 3600_000_000_000
+            row['available_at_ns'] -= 3600_000_000_000
+        for intent in execution['ledger']['intents']:
+            intent['requested_at_ns'] -= 3600_000_000_000
+        execution['assessment_digest'] = contract_digest(execution['contract'])
+
+    _rewrite_report(root, report, backdate, 'availability floor')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
