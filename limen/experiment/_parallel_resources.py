@@ -15,7 +15,7 @@ from typing import cast
 from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, constructor_state, validate_constructor
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, factory_signature, mutable_function, object_state, restore_object
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, _same_component, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, same_component, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -50,7 +50,7 @@ def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-        implementation = getattr(value, '__call__', None)
+        implementation = inspect.getattr_static(value, '__call__', None)
         if inspect.isfunction(implementation := getattr(implementation, '__func__', implementation)) and mutable_function(implementation):
             raise TypeError('Parallel transport rejects unfrozen factory call state')
         return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, constructor_state(value))
@@ -156,7 +156,7 @@ def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> d
     for key, component in configs['architecture'].items():
         if key.endswith('_factory') and callable(component):
             path = f'architecture.{key}'
-            if not any(stage.path == path and _same_component(stage.component, component) for stage in plan.stages):
+            if not any(stage.path == path and same_component(stage.component, component) for stage in plan.stages):
                 raise ValueError(f'Parallel stage {path}: missing frozen independence contract')
     return configs
 
@@ -164,7 +164,7 @@ def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> d
 def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]) -> None:
     if stage.path not in configs:
         return  # The native Manifest skips this conditional stage for this candidate.
-    if stage.path.startswith('architecture.') and not _same_component(configs['architecture'].get(stage.path.split('.')[1]), stage.component):
+    if stage.path.startswith('architecture.') and not same_component(configs['architecture'].get(stage.path.split('.')[1]), stage.component):
         return  # A different frozen factory variant is selected for this candidate.
     config = configs[stage.path]
     for key in stage.contract.parameter_keys:
