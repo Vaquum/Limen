@@ -51,9 +51,12 @@ def factory_component(value: object) -> object:
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
         implementation = inspect.getattr_static(value, '__call__', None)
-        if inspect.isfunction(implementation := getattr(implementation, '__func__', implementation)) and mutable_function(implementation):
+        if (implementation := getattr(implementation, '__func__', implementation)) is not None and (not inspect.isroutine(implementation) or inspect.isfunction(implementation) and mutable_function(implementation)):
             raise TypeError('Parallel transport rejects unfrozen factory call state')
-        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, constructor_state(value))
+        parents = constructor_state(value)
+        if any(callable(item) and not inspect.isroutine(item) for _, attributes in parents for item in attributes.values()):
+            raise TypeError('Parallel transport rejects unfrozen factory class callable state')
+        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parents)
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None
@@ -178,8 +181,8 @@ def _validate_stage(stage: FrozenStage, configs: Mapping[str, dict[str, object]]
 
 
 def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]]) -> tuple[Mapping[str, object], tuple[str, ...]]:
+    function = manifest.architecture_function
     if path == 'architecture':
-        function = manifest.architecture_function
         assert function is not None
         parameters = signature(function).parameters
         names_to_bind = domain if any(value.kind == Parameter.VAR_KEYWORD for value in parameters.values()) else parameters
@@ -187,14 +190,10 @@ def _bindings(manifest: Manifest, path: str, domain: Mapping[str, list[object]])
     if path.startswith('architecture.'):
         factory = path.split('.')[1]
         key = factory.removesuffix('_factory') + '_params'
-        function = manifest.architecture_function
         assert function is not None
         parameter = signature(function).parameters.get(key)
         default: object = None if parameter is None else parameter.default
-        variants: list[Mapping[str, object]] = []
-        for option in domain.get(key, [default]):
-            if isinstance(option, Mapping):
-                variants.append(cast(Mapping[str, object], option))
+        variants = [cast(Mapping[str, object], option) for option in domain.get(key, [default]) if isinstance(option, Mapping)]
         names = {name for value in variants for name in value}
         arguments: dict[str, object] = {name: [value.get(name) for value in variants] for name in names}
         seeded = 'seed' in signature(function).parameters or any(value.kind == Parameter.VAR_KEYWORD for value in signature(function).parameters.values())

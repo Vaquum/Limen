@@ -264,6 +264,10 @@ class DefaultSharedRolling(InheritedCallable):
         return super().transform(data)
 
 
+class PartialCallFactory(StaticInitRolling):
+    __call__ = partial(_mutable_feature)
+
+
 class SlottedDefaultRolling:
     __slots__ = ('window',)
 
@@ -1836,11 +1840,11 @@ def _assert_factory_resources(plan, params):
                 else:
                     _factory_probe(allocated, AllocatedSubclassRolling, extra)
         assert digest(allocated) == before
-        for factory, window in ((StaticInitRolling, 3), (ForeignAllocationRolling, 3), (CallableAttributeFactory, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5), (PartialInitRolling, 6)):
+        for factory, window in ((StaticInitRolling, 3), (ForeignAllocationRolling, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5), (PartialInitRolling, 6)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
             candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
-            extra = {} if factory in (StaticInitRolling, ForeignAllocationRolling, CallableAttributeFactory) else {'auxiliary_params': {'n_jobs': 1}}
-            if factory not in (StaticInitRolling, ForeignAllocationRolling, CallableAttributeFactory):
+            extra = {} if factory in (StaticInitRolling, ForeignAllocationRolling) else {'auxiliary_params': {'n_jobs': 1}}
+            if factory not in (StaticInitRolling, ForeignAllocationRolling):
                 with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: effective n_jobs=1'):
                     validate_resources(candidate, params | {'auxiliary_factory': factory})
             expected = factory(**extra.get('auxiliary_params', {}))(data)['caller_mean'].to_list()
@@ -1851,12 +1855,9 @@ def _assert_factory_resources(plan, params):
                 actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
             assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
-            if factory in (StaticInitRolling, ForeignAllocationRolling, CallableAttributeFactory):
+            if factory in (StaticInitRolling, ForeignAllocationRolling):
                 with pytest.MonkeyPatch.context() as patch:
-                    if factory is CallableAttributeFactory:
-                        patch.setattr(factory.transform, 'window', 4)
-                    else:
-                        patch.setattr(factory, 'window', 4)
+                    patch.setattr(factory, 'window', 4)
                     changed = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
                     changed_output = factory()(data)['caller_mean'].to_list()
                     assert changed_output == _caller_feature(data, 4)['caller_mean'].to_list() and changed_output != expected
@@ -1870,6 +1871,32 @@ def _assert_factory_resources(plan, params):
                 with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
                     _factory_probe(changed, factory)
                 assert digest(candidate) == before
+        for transform in (InheritedCallable(3), DefaultSharedRolling(2)):
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(CallableAttributeFactory, 'transform', transform)
+                initial = transform.window
+                expected = CallableAttributeFactory()(data)['caller_mean'].to_list()
+                assert expected == _caller_feature(data, initial + int(isinstance(transform, DefaultSharedRolling)))['caller_mean'].to_list()
+                before = transform.window
+                declare_parallel(CallableAttributeFactory, ParallelRoundContract(deterministic_stage))
+                for factory in (CallableAttributeFactory, partial(CallableAttributeFactory)):
+                    with pytest.raises(TypeError, match='unfrozen factory class callable state'):
+                        freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                    with pytest.raises(TypeError, match='unfrozen factory class callable state'):
+                        pool.submit(factory_component, factory).result(timeout=30)
+                    assert transform.window == before
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_mutable_feature, '__defaults__', ([2],))
+            assert PartialCallFactory()(data)['caller_mean'].to_list() == _caller_feature(data, 2)['caller_mean'].to_list()
+            assert PartialCallFactory()(data)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+            before = list(_mutable_feature.__defaults__[0])
+            declare_parallel(PartialCallFactory, ParallelRoundContract(deterministic_stage))
+            for factory in (PartialCallFactory, partial(PartialCallFactory)):
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    pool.submit(factory_component, factory).result(timeout=30)
+                assert _mutable_feature.__defaults__[0] == before
         for factory, window in ((AliasedClassFactory, 3), (DistinctClassFactory, 5)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage))
             expected = factory()(data)['caller_mean'].to_list()
