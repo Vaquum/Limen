@@ -14,10 +14,17 @@ name: pr_checks_prd_on_issue
 #
 # Delivery is rerun-only: this workflow never POSTs check-runs, so no
 # API-posted layer exists that could outrank the canonical run and no
-# posted-verdict reconciliation is needed. A rerun-API failure fails
-# this workflow loudly instead of silently keeping the stale verdict.
-# A linked PR with no canonical run yet (e.g. opened before this
-# workflow existed) is left to its next pull_request event.
+# posted-verdict reconciliation is needed.
+#
+# Two races shape the delivery loop. First, an in-flight canonical run
+# may have read the issue BEFORE this event, so its verdict can be
+# stale: the loop waits for quiescence (bounded) and only then
+# compares the latest completed conclusion against the fresh verdict.
+# Second, the rerun request itself can fail transiently: it is
+# retried, and only a persistent failure fails this workflow loudly
+# instead of silently keeping the stale verdict. A linked PR with no
+# canonical run yet (e.g. opened before this workflow existed) is
+# left to its next pull_request event.
 
 on:
   issues:
@@ -152,14 +159,35 @@ jobs:
             fi
 
             # Heal the canonical pull_request run when it disagrees
-            # with the fresh verdict. A queued or in-progress run for
-            # this head already computes a fresh verdict, so it takes
-            # precedence over any rerun.
-            RUNS=$(gh api \
-              "repos/$REPO/actions/workflows/pr_checks_prd.yml/runs?head_sha=$HEAD_SHA&per_page=100" \
-              --jq '[.workflow_runs[] | select(.event == "pull_request")]')
-            if [ "$(echo "$RUNS" | jq '[.[] | select(.status != "completed")] | length')" -gt 0 ]; then
-              echo "a fresh run is already in flight for $HEAD_SHA; skipping rerun"
+            # with the fresh verdict. An in-flight run may have read
+            # the issue before this event, so skipping on in-flight
+            # status alone can strand a stale verdict: wait for
+            # quiescence first (bounded), then compare the latest
+            # completed conclusion. A moved head aborts the wait and
+            # leaves the new head to its own runs.
+            QUIET=0
+            RUNS="[]"
+            for i in $(seq 1 21); do
+              RUNS=$(gh api \
+                "repos/$REPO/actions/workflows/pr_checks_prd.yml/runs?head_sha=$HEAD_SHA&per_page=100" \
+                --jq '[.workflow_runs[] | select(.event == "pull_request")]')
+              INFLIGHT=$(echo "$RUNS" | jq '[.[] | select(.status != "completed")] | length')
+              LIVE_HEAD=$(gh pr view "$PR_NUM" --repo "$REPO" --json headRefOid --jq .headRefOid)
+              if [ "$LIVE_HEAD" != "$HEAD_SHA" ]; then
+                echo "PR #$PR_NUM moved during validation; leave the new head to its own run"
+                echo "::endgroup::"
+                continue 2
+              fi
+              if [ "$INFLIGHT" -eq 0 ]; then
+                QUIET=1
+                break
+              fi
+              echo "waiting for $INFLIGHT in-flight run(s) to settle ($i/21)..."
+              sleep 20
+            done
+            if [ "$QUIET" -ne 1 ]; then
+              echo "::error::runs still in flight for $HEAD_SHA after ~7 minutes; refusing to judge a moving target"
+              FAILURES=$((FAILURES + 1))
               echo "::endgroup::"
               continue
             fi
@@ -177,16 +205,21 @@ jobs:
               continue
             fi
 
-            LIVE_HEAD=$(gh pr view "$PR_NUM" --repo "$REPO" --json headRefOid --jq .headRefOid)
-            if [ "$LIVE_HEAD" != "$HEAD_SHA" ]; then
-              echo "PR #$PR_NUM moved during validation; skipping rerun"
-              echo "::endgroup::"
-              continue
-            fi
-            if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
-              echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION)"
-            else
-              echo "::error::rerun of canonical run $RUN_ID failed; verdict for $HEAD_SHA may be stale"
+            # The rerun request is retried: a transient API failure
+            # must not strand a stale verdict, and every later issue
+            # or PR event re-runs this validation anyway.
+            RERUN_OK=0
+            for attempt in 1 2 3; do
+              if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
+                RERUN_OK=1
+                echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION, attempt $attempt)"
+                break
+              fi
+              echo "::warning::rerun attempt $attempt for run $RUN_ID failed; retrying"
+              sleep 15
+            done
+            if [ "$RERUN_OK" -ne 1 ]; then
+              echo "::error::rerun of canonical run $RUN_ID failed after 3 attempts; verdict for $HEAD_SHA may be stale"
               FAILURES=$((FAILURES + 1))
             fi
             echo "::endgroup::"

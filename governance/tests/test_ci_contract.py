@@ -66,9 +66,14 @@ def test_prd_on_issue_workflow_contract() -> None:
     assert 'checks: write' not in workflow
     assert 'check-runs"' not in workflow
     assert 'check-runs?' not in workflow
-    # A fresh in-flight run takes precedence over any rerun; a moved
-    # head is left to its own run; failures fail loud.
-    assert 'already in flight' in workflow
+    # Quiescence before comparison (an in-flight run may have read
+    # the issue before the event); a moved head is left to its own
+    # run; the rerun is retried; failures fail loud.
+    assert 'quiescence' in workflow
+    assert 'seq 1 21' in workflow
+    assert 'continue 2' in workflow
+    assert 'for attempt in 1 2 3' in workflow
+    assert 'after 3 attempts' in workflow
     assert 'moved' in workflow
     assert 'could not be revalidated' in workflow
     assert 'done < <(jq' in workflow
