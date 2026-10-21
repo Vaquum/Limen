@@ -1898,6 +1898,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Hold Compiled profiling admission through loading, evaluation and cleanup so first reservations cannot race real model fitting. Preserve active-reservation refusal and ordinary profiling results.
 
+## [5.45.20] - 2026-10-21
+
+- Restore compatible callable Manifest sources and override diagnostics while preserving native stateful and holdout admission behavior.
+
 ## [5.46.0] - 2026-10-21
 
 - Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
