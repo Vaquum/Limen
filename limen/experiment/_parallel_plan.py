@@ -27,7 +27,7 @@ from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_scaler import ScalerFactory, capture_transform, scaler_factory
+from limen.experiment._parallel_scaler import ScalerFactory, capture_transform, parent_initializers, scaler_factory, validate_initializers
 
 
 @dataclass
@@ -35,6 +35,7 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
     _parallel_init: Callable[..., object] | None = None
     _parallel_transform: Callable[..., object] | None = None
     _parallel_new: Callable[..., object] | None = None
+    _parallel_parents: tuple[tuple[type, Callable[..., object]], ...] = ()
 
     def _parallel_make(self, **params: object) -> object:
         cls = self.target_class
@@ -42,7 +43,7 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
         instance = allocator(cls, **({} if allocator is object.__new__ else params))
         if isinstance(instance, cls):
             assert self._parallel_init is not None
-            _ = factory_initializer(cls, instance, self._parallel_init)(**params)
+            _ = factory_initializer(cls, instance, self._parallel_init, self._parallel_parents)(**params)
         return instance
 
 
@@ -120,7 +121,8 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
     return None
 
 
-def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None) -> Callable[..., object]:
+def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None, parents: tuple[tuple[type, Callable[..., object]], ...] = ()) -> Callable[..., object]:
+    validate_initializers(cls, parents, digest)
     method = inspect.getattr_static(cls, '__init__')
     if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
@@ -150,8 +152,7 @@ def legacy_metadata(metadata: Mapping[str, object]) -> bool:
 
 
 def plan_identity(plan: FrozenManifestPlan, frames: tuple[pl.DataFrame | None, ...]) -> dict[str, object]:
-    return {'version': 1, 'pipeline_digest': plan.pipeline_digest, 'resource_digest': plan.resource_digest,
-            'source_digest': source_digest(frames), 'parameter_encoding': 1}
+    return {'version': 1, 'pipeline_digest': plan.pipeline_digest, 'resource_digest': plan.resource_digest, 'source_digest': source_digest(frames), 'parameter_encoding': 1}
 
 
 _NO_ANCESTORS: frozenset[int] = frozenset()
@@ -174,7 +175,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
         target = value
-        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params, cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class), None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__)
+        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params, cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class), None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__, parent_initializers(target.target_class))
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)

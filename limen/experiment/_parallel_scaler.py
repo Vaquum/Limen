@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from importlib import import_module
 from inspect import Parameter, getattr_static, isfunction, ismethod, signature
 from typing import Protocol, cast
 
 import polars as pl
 
 from limen._parallel_contract import ParallelRoundContract, attach
+from limen.experiment._parallel_identity import identity_snapshot
 from limen.scalers.registry import SCALER_REGISTRY
 
 
@@ -28,6 +30,9 @@ class CapturedTransform:
         if getattr_static(type(instance), 'transform') is not getattr_static(self.owner, 'transform'):
             raise TypeError('Parallel transform has an uncaptured subclass implementation')
         if getattr_static(instance, 'transform') is not getattr_static(type(instance), 'transform'):
+            defaults = cast(Callable[..., dict[str, object]], vars(import_module('limen.experiment._parallel_resources'))['_defaults'])
+            assert self.__parallel_round_contract__ is not None
+            self.__parallel_round_contract__.validate(defaults(cast(TransformClass, instance).transform, params, skip=1))
             return cast(TransformClass, instance).transform(data, **params)
         if isinstance(getattr_static(self.owner, 'transform'), classmethod) and ismethod(self.function):
             return cast(Callable[..., pl.DataFrame], self.function.__func__)(type(instance), data, **params)
@@ -44,6 +49,16 @@ def capture_transform(cls: type) -> CapturedTransform:
         raise TypeError('Parallel transform has unfrozen class-method owner state')
     return CapturedTransform(cls, function, isfunction(getattr_static(cls, 'transform')),
                              getattr(cls, '__parallel_round_contract__', None))
+
+
+def parent_initializers(cls: type) -> tuple[tuple[type, Callable[..., object]], ...]:
+    return tuple((base, base.__init__) for base in cls.__mro__[1:] if base.__init__ is not cls.__init__ and (isfunction(base.__init__) or ismethod(base.__init__)))
+
+
+@identity_snapshot()
+def validate_initializers(cls: type, parents: tuple[tuple[type, Callable[..., object]], ...], fingerprint: Callable[[object], str]) -> None:
+    if fingerprint(parent_initializers(cls)) != fingerprint(parents):
+        raise TypeError('Parallel constructor has unfrozen inherited initializer state')
 
 
 @dataclass(frozen=True)

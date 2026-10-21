@@ -12,7 +12,7 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
-from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass
+from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, parent_initializers
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
 from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer, factory_signature
@@ -27,6 +27,7 @@ class FrozenClassFactory:
     factory_class: type
     initializer: Callable[..., object] | None
     allocator: Callable[..., object] | None
+    parents: tuple[tuple[type, Callable[..., object]], ...] = ()
 
     @property
     def __signature__(self) -> Signature:
@@ -40,7 +41,7 @@ class FrozenClassFactory:
         allocate = self.allocator or self.factory_class.__new__
         instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
         if isinstance(instance, self.factory_class):
-            initialize = factory_initializer(self.factory_class, instance, self.initializer)
+            initialize = factory_initializer(self.factory_class, instance, self.initializer, self.parents)
             if initialize(*args, **kwargs) is not None:
                 raise TypeError('Parallel factory initializer must return None')
         return instance
@@ -50,7 +51,7 @@ def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__)
+        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parent_initializers(value))
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None

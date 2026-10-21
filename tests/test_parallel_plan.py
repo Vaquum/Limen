@@ -731,6 +731,12 @@ class InstanceTransformScaler(RobustScaler):
         self.transform = partial(_original_scaler_transform, self)
 
 
+class UnsafeInstanceTransformScaler(RobustScaler):
+    def __init__(self, data):
+        super().__init__(data)
+        self.transform = CallerScalerTransform(n_jobs=2)
+
+
 def _self_assigned_transform(data, multiplier=2):
     return data.with_columns((pl.col('close') * multiplier).alias('close'))
 
@@ -1025,6 +1031,37 @@ def _frozen_manifest_round_plan() -> None:
                     for _ in range(2):
                         actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
                         assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
+        declare_parallel(UnsafeInstanceTransformScaler, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
+        assert UnsafeInstanceTransformScaler(data).transform(data).equals(data.with_columns((pl.col('close') * 2).alias('close')))
+        unsafe_instance = freeze_manifest(copy.deepcopy(native).set_scaler(UnsafeInstanceTransformScaler), None)
+        before = digest(unsafe_instance)
+        for spawned in (False, True):
+            with pytest.raises(ValueError, match='effective n_jobs=1'):
+                if spawned:
+                    pool.submit(_frozen_probe, unsafe_instance, _parameters()).result(timeout=30)
+                else:
+                    _frozen_probe(unsafe_instance, _parameters())
+        assert digest(unsafe_instance) == before
+        inherited_manifest = copy.deepcopy(native).set_scaler(InstanceTransformScaler)
+        baseline = freeze_manifest(inherited_manifest, None)
+        baseline_output = InstanceTransformScaler(data).transform(data).to_dict(as_series=False)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(RobustScaler.__init__, '__defaults__', ((0.1, 0.9),))
+            inherited_defaults = freeze_manifest(inherited_manifest, None)
+            control = InstanceTransformScaler(data).transform(data).to_dict(as_series=False)
+            assert control != baseline_output and _frozen_probe(inherited_defaults, _parameters())[5] == control
+            assert inherited_defaults.pipeline_digest != baseline.pipeline_digest and inherited_defaults.resource_digest != baseline.resource_digest
+            before = digest(inherited_defaults)
+            with pytest.raises(TypeError, match='unfrozen inherited initializer state'):
+                pool.submit(_frozen_probe, inherited_defaults, _parameters()).result(timeout=30)
+            assert digest(inherited_defaults) == before
+        for spawned in (False, True):
+            with pytest.raises(TypeError, match='unfrozen inherited initializer state'):
+                if spawned:
+                    pool.submit(_frozen_probe, inherited_defaults, _parameters()).result(timeout=30)
+                else:
+                    _frozen_probe(inherited_defaults, _parameters())
+        assert digest(inherited_defaults) == before
         foreign = ForeignBoundScaler(data)
         assert foreign.transform(data).equals(data.with_columns((pl.col('close') * 5).alias('close')))
         with pytest.MonkeyPatch.context() as patch:
