@@ -41,9 +41,8 @@ class FrozenClassFactory:
         validate_constructor(self.factory_class, self.parents, digest)
         allocate = self.allocator or self.factory_class.__new__
         instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
-        if isinstance(instance, self.factory_class):
-            if factory_initializer(self.factory_class, instance, self.initializer)(*args, **kwargs) is not None:
-                raise TypeError('Parallel factory initializer must return None')
+        if isinstance(instance, self.factory_class) and factory_initializer(self.factory_class, instance, self.initializer)(*args, **kwargs) is not None:
+            raise TypeError('Parallel factory initializer must return None')
         return instance
 
 
