@@ -263,4 +263,4 @@ def export_trade_contract(policy: TradePolicy, inputs: TradeInputs) -> dict[str,
     return result
 
 
-__all__ = ['BPS', 'NANOSECONDS', 'RULE_VERSION', 'ExecutionEvent', 'FundingPolicy', 'JsonScalar', 'JsonValue', 'PredictionMode', 'ProductSpec', 'SourceBinding', 'TradeInputs', 'TradeLedger', 'TradePolicy', 'contract_digest', 'expected_signal_intents', 'export_trade_contract', 'finite_number', 'json_value', 'source_binding']
+__all__ = ['BPS', 'NANOSECONDS', 'RULE_VERSION', 'ExecutionEvent', 'FundingPolicy', 'JsonScalar', 'JsonValue', 'PredictionMode', 'ProductSpec', 'SourceBinding', 'TradeInputs', 'TradeLedger', 'TradePolicy', 'contract_digest', 'export_trade_contract', 'finite_number', 'json_value', 'source_binding']
