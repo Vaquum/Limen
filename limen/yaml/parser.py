@@ -3,7 +3,7 @@ from typing import Any
 
 from ruamel.yaml.constructor import DuplicateKeyError
 
-from limen.yaml._parser_yaml import _parser_yaml
+from limen.yaml._parser_yaml import parser_yaml
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import YAMLError
 
@@ -23,7 +23,7 @@ def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
     '''
 
     errors: list[YAMLError] = []
-    yaml = _parser_yaml()
+    yaml = parser_yaml()
 
     try:
         if isinstance(source, Path):
