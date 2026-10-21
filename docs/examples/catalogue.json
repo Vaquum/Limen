@@ -125,7 +125,8 @@
     "docs/Experiment-Manifest.md",
     "docs/Reference-Architecture.md",
     "docs/Common-Strategies.md",
-    "docs/Compiled-Research.md"
+    "docs/Compiled-Research.md",
+    "docs/Guarded-Holdout-Reference.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2801,6 +2802,10 @@
       "python/selection",
       "compiled/selection",
       "compiled/search"
+    ],
+    "docs/Guarded-Holdout-Reference.md": [
+      "python/holdout",
+      "compiled/holdout"
     ]
   }
 }

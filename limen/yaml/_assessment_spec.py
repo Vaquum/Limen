@@ -37,7 +37,7 @@ def assessment_spec(document: Mapping[str, object]) -> Assessment | None:
         return None
     spec = _mapping(document['assessment'], 'assessment', ASSESSMENT_REQUIRED, ASSESSMENT_OPTIONAL)
     metric, direction, count = spec['metric'], spec['direction'], spec['top_k']
-    if not isinstance(metric, str) or not metric.startswith('val_') or metric == 'val_score':
+    if not isinstance(metric, str) or not metric.startswith('val_'):
         raise ValueError('assessment.metric must name an explicit recorded validation metric')
     if direction not in ('maximize', 'minimize'):
         raise ValueError('assessment.direction must be maximize or minimize')

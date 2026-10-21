@@ -15,11 +15,11 @@ result only under that declared policy.
 
 ## Follow the two execution cases
 
-The complete project functions below both execute ordinary cash-spot behavior
+The Python function and Compiled YAML below execute ordinary cash-spot behavior
 and a separate linear-perpetual case using the same recorded funding history.
 The tests independently reconcile fill clocks, quantities, fees, funding and
 final equity. No funding rate or fill price is invented for the comparison.
-The functions use imports and data helpers from their complete projects.
+The Python function uses its complete project's imports and helpers. The Compiled YAML names its complete source and execution policy.
 
 ### Python Research
 
@@ -437,7 +437,7 @@ class FundingPolicy:
 
 The product names and quantity rules are declarations supplied by the caller. Cash spot uses `kind='cash_spot'` and supports long/flat; linear quote-settled perpetuals support long/flat/short. Perpetual funding does not model spot borrowing. All accounting uses the declared quote currency, with no currency conversion, inverse contracts, liquidation or order-book model.
 
-The Compiled project loads this complete funded definition, then binds the funding source to its derived Parquet file of recorded events before execution:
+The Compiled YAML reads the bundled `inputs/recorded-funding.parquet` directly. The bundle pins that normalization of the recorded funding events; no research driver prepares or rewrites it:
 
 <!-- example: backtest-compiled-funding source=docs/examples/compiled-research/funded.yaml region=__file__ scenario=execution interface=compiled role=executed -->
 ```yaml

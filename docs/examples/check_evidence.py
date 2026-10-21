@@ -103,7 +103,7 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
         if not path.is_relative_to(root.resolve()) or any(part.is_symlink() for part in (requested, *requested.parents)):
             raise ValueError('Example source escapes the repository')
         if interface == 'compiled' and path.suffix not in ('.yaml', '.sh', '.json'):
-            raise ValueError(f'Compiled Research requires YAML and CLI source: {identity}')
+            raise ValueError(f'Wrong research interface: Compiled Research requires YAML and CLI source: {identity}')
         canonical = region(path, name)
         if canonical != excerpt + '\n':
             raise ValueError(f'Documentation differs from executable source: {identity}')

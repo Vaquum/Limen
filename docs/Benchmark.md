@@ -138,7 +138,7 @@ uel:
   checkpoint_interval: 1
 ```
 
-These executed functions use helpers from their complete projects. The tests
+The Python function uses its complete project's helpers; the Compiled case executes the complete YAML declaration through the CLI. The tests
 recompute classifier decisions and the validation threshold score. Use the
 source-bound `Log` reference below when inspecting native retained row evidence.
 
@@ -258,6 +258,7 @@ sfd:
   params:
     entry_return: [0.0, 0.001]
 uel:
+  record_execution: true
   output_path: compiled-acceptance
   recording:
     alignment: true

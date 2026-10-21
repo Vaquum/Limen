@@ -284,6 +284,11 @@ limen run --no-progress-bar compiled-research/selection.yaml
 
 The command validates and compiles the declaration, executes two candidates and writes `results/dev/compiled-cli`. The [CLI lifecycle](https://github.com/Vaquum/Limen/blob/main/docs/Command-Line-Interface.md#first-yaml-run) also exercises template initialization, explicit validation/profiling, dry compilation, immutable committed definitions, recovery and project backup.
 
+<!-- example: readme-compiled-assessment source=docs/examples/commands.json region=compiled-selection-assess scenario=selection interface=compiled role=executed -->
+```bash
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
+```
+
 After execution, `limen assess` applies the YAML's validation selection, reconstructs the selected Sensors and binds their Cohort. Reconstruction refits under the recorded pipeline and checks replayed metrics. The [comprehensive YAML](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/research.yaml) continues through feature ablation, PCA, calibration, threshold selection, full recording and inference; separate declarations cover incompatible research choices.
 
 | Artifact | What it records |

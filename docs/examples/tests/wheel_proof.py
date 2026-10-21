@@ -174,10 +174,11 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             destination = output / f'{interface}-{name}.json'
             destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
             scenario_reports[(interface, name)] = {'summary': result, 'command': [str(arg) for arg in command], 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
-    from cli_proof import verify_project
+    from cli_proof import verify_project, prove_interrupted_recovery
     command = shlex.split(canonical_commands['compiled-all'])
     run(command, cwd=project, env=runtime_environment)
     compiled = verify_project(project)
+    compiled["recovery"].update(prove_interrupted_recovery(project, runtime_environment))
     catalogue = json.loads((project / 'catalogue.json').read_text())
     assert set(compiled) == {name for name, interfaces in catalogue['required_scenarios'].items() if 'compiled' in interfaces}
     for name, result in compiled.items():

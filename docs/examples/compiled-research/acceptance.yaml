@@ -40,6 +40,7 @@ sfd:
   params:
     entry_return: [0.0, 0.001]
 uel:
+  record_execution: true
   output_path: compiled-acceptance
   recording:
     alignment: true

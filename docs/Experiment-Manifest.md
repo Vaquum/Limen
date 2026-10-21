@@ -427,6 +427,7 @@ sfd:
     - 1.0
     random_state: [42]
 uel:
+  record_execution: true
   output_path: compiled-walk_forward
   n_permutations: 1
   search_strategy:
@@ -574,6 +575,7 @@ sfd:
   params:
     entry_return: [0.0, 0.001]
 uel:
+  record_execution: true
   output_path: compiled-acceptance
   recording:
     alignment: true

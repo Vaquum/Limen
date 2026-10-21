@@ -219,7 +219,6 @@ def run(target: tuple[str, ...], dry_run: bool, resume: Path | None,
       limen run --dry-run experiment.yaml
       limen run manifest://sha256:abc123ef...
       limen run --resume ./results/my_experiment_20260521_120000
-      limen run --no-progress-bar experiment.yaml
     '''
 
     if resume is not None:

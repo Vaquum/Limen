@@ -69,6 +69,8 @@ limen assess compiled-research/final/holdout.yaml --results results/dev/compiled
 
 | Command | Purpose | Main output |
 | --- | --- | --- |
+| `limen assess <yaml_file> --results <directory>` | Select validation-ranked rounds, validate reconstructed Sensors and assess their Cohort. | `assessment.json`, optional `predictions.parquet` or guarded `final-report.json`. |
+| `limen reserve <yaml_file>` | Reserve the declared final interval before research. | Reservation identity and native project history. |
 | `limen validate <yaml_file>` | Validate YAML syntax, schema, references, parameter lists, split settings, search strategy, and output format. | Exit code plus validation messages. |
 | `limen profile <yaml_file>` | Estimate parameter-space size and sample runtime against the real data source. | Complexity rating, parameter counts, per-permutation runtime estimate, and data-quality warnings. |
 | `limen run <target>` | Validate, compile, and execute a YAML file or a committed manifest (`sha256:` / `manifest://sha256:`). | Results directory with `results.csv`, optional `results.parquet`, metadata, round data, and checkpoints when configured. |
@@ -99,9 +101,9 @@ Exit behavior:
 
 Validates and compiles the YAML, then reports parameter-space size and complexity. It also fetches the manifest's real data source and runs a covering-array sample of permutations to estimate per-permutation runtime and surface data-quality warnings (e.g. unexpected nulls). Strict mode is temporarily disabled during sampling so thin parameter combinations do not abort profiling.
 
-### `limen run <yaml_file>`
+### `limen run <yaml_file> [<yaml_file> ...]`
 
-Runs the normal YAML execution path:
+Execute one or more YAML declarations sequentially. A failure stops before the next file. Resume accepts one results directory and cannot be combined with YAML targets. Each declaration follows the same execution path:
 
 1. parse the YAML file
 2. validate structure and references

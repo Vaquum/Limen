@@ -340,6 +340,10 @@
       "route": "/book/compiled-definition/",
       "part": "Book",
       "bookOrder": 3
+    },
+    "docs/Guarded-Holdout-Reference.md": {
+      "route": "/reference/guarded-holdout/",
+      "part": "Reference"
     }
   }
 }

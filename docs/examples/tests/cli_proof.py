@@ -37,7 +37,7 @@ def checked_log(directory, count):
 
 def predictions(directory, record):
     reference = record['preds_ref']
-    with gzip.open(directory / 'round_signals' / (reference['sha256'] + '.json.gz'), 'rb') as stream:
+    with gzip.GzipFile(filename=directory / 'round_signals' / (reference['sha256'] + '.json.gz'), mode='rb') as stream:
         raw = stream.read()
     assert hashlib.sha256(raw).hexdigest() == reference['sha256']
     result = np.asarray(json.loads(raw))
@@ -160,3 +160,43 @@ def verify_project(project):
     (project / 'results/compiled-all').mkdir(exist_ok=True)
     (project / 'results/compiled-all/summary.json').write_text(json.dumps({'scenarios': {key: value for key, value in summaries.items() if key != 'selection'}}, indent=2, allow_nan=False) + '\n')
     return summaries
+
+
+def prove_interrupted_recovery(project, environment):
+    import shutil
+    import signal
+    import time
+    directory = project / 'results/compiled-interruption'
+    (directory / 'compiled-research').mkdir(parents=True)
+    (directory / 'inputs').mkdir()
+    shutil.copyfile(project / 'compiled-research/recovery.yaml', directory / 'compiled-research/recovery.yaml')
+    shutil.copyfile(project / 'inputs/spot_1h_20240101_20241231.parquet', directory / 'inputs/spot_1h_20240101_20241231.parquet')
+    child_environment = dict(environment)
+    for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
+        child_environment.pop(name, None)
+    child_environment['PYTHONNOUSERSITE'] = '1'
+    process = subprocess.Popen(['limen', 'run', '--no-progress-bar', 'compiled-research/recovery.yaml'], cwd=directory, env=child_environment)
+    checkpoint = directory / 'results/dev/compiled-recovery/checkpoint.json'
+    deadline, interrupted = time.monotonic() + 30, False
+    while process.poll() is None and time.monotonic() < deadline:
+        if checkpoint.exists():
+            state = json.loads(checkpoint.read_text())['msq_state']
+            if 0 < state['yielded_count'] < 4:
+                process.send_signal(signal.SIGINT)
+                interrupted = True
+                break
+        time.sleep(.001)
+    if process.poll() is None and not interrupted:
+        process.terminate()
+    _ = process.wait(timeout=10)
+    assert interrupted, 'The actual CLI process did not expose an interruptible completed-round checkpoint'
+    output = directory / 'results/dev/compiled-recovery'
+    first = pl.read_csv(output / 'results.csv')
+    assert 0 < first.height < 4
+    subprocess.run(['limen', 'run', '--no-progress-bar', '--resume', 'results/dev/compiled-recovery'], cwd=directory, env=child_environment, check=True, timeout=30)
+    complete = checked_log(output, 4)
+    baseline = pl.read_csv(project / 'results/dev/compiled-recovery/results.csv')
+    assert complete.drop('execution_time').equals(baseline.drop('execution_time'))
+    assert set(first['id']) <= set(complete['id'])
+    assert [row['_round_index'] for row in records(output)] == list(range(4))
+    return {'interrupted_rounds': first.height, 'resumed_rounds': complete.height, 'uninterrupted_equivalence': True}

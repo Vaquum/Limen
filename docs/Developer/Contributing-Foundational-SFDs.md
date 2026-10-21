@@ -87,9 +87,7 @@ def manifest() -> Manifest:
     ...
 ```
 
-The Compiled project's selection function demonstrates the surrounding execution
-and reconstruction contract with recorded inputs. Calling it from Python still
-uses the Compiled interface:
+The Compiled project's selection commands validate, profile and execute unchanged YAML, then reconstruct validation-selected Sensors through CLI assessment. Component APIs remain optional integration reference:
 
 <!-- example: foundational-compiled-project source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
 ```bash

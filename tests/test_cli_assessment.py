@@ -88,3 +88,47 @@ def test_cli_accepts_multiple_unchanged_yaml_targets(recorded_cli, monkeypatch):
     assert result.exit_code == 0 and calls == [Path('selection.yaml'), Path('selection.yaml')]
     result = CliRunner().invoke(cli, ['run', 'selection.yaml', '--resume', 'results/dev/compiled-cli'])
     assert result.exit_code != 0 and 'Cannot specify both' in result.output
+
+
+def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypatch):
+    import subprocess
+    from limen.experiment import holdout
+    from limen.sfd.reference_architecture import LogRegBinary
+    project = tmp_path / 'final'
+    project.mkdir()
+    (project / 'limen.toml').write_text('[project]\nname="recorded-cli-final"\n')
+    source = ROOT / 'docs/examples/compiled-research/final/holdout.yaml'
+    shutil.copyfile(source, project / 'holdout.yaml')
+    (tmp_path / 'inputs').mkdir()
+    shutil.copyfile(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet', tmp_path / 'inputs/spot_1h_20240101_20241231.parquet')
+    subprocess.run(['git', 'init', '--quiet', str(project)], check=True)
+    monkeypatch.chdir(tmp_path)
+    runner = CliRunner()
+    reserved = runner.invoke(cli, ['reserve', 'final/holdout.yaml'])
+    assert reserved.exit_code == 0, reserved.output
+    identity = reserved.stdout.strip()
+    fitted = []
+    original_train = LogRegBinary.train
+    def train(model, prepared, **params):
+        assert prepared['holdout']['source']['admitted']['rows'] == 96
+        fitted.append(model)
+        return original_train(model, prepared, **params)
+    monkeypatch.setattr(LogRegBinary, 'train', train)
+    executed = runner.invoke(cli, ['run', '--no-progress-bar', 'final/holdout.yaml'])
+    assert executed.exit_code == 0, executed.output
+    original_freeze = holdout.freeze_holdout_selection
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Final CLI assessment fitted after the selection was frozen')
+    def freeze(*args, **kwargs):
+        result = original_freeze(*args, **kwargs)
+        monkeypatch.setattr(LogRegBinary, 'train', forbidden)
+        return result
+    monkeypatch.setattr(holdout, 'freeze_holdout_selection', freeze)
+    assessed = runner.invoke(cli, ['assess', 'final/holdout.yaml', '--results', 'results/dev/compiled-holdout', '--reservation', identity])
+    assert assessed.exit_code == 0, assessed.output
+    assert len(fitted) == 2
+    report = json.loads((tmp_path / 'results/dev/compiled-holdout/final-report.json').read_text())
+    assert report['classification']['accuracy']['denominator'] == 23
+    assert report['exposure']['class'] == 'unknown'
+    retained = holdout.read_holdout_report(project, report['attempt_id'])
+    assert retained == report
