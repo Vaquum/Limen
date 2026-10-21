@@ -1936,3 +1936,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Preserve native LightGBM `best_iteration` across owned holdout copies instead of refusing it.
 - Bind `LogRegScaler` to the scaling rules it was fitted with, so frozen holdout state covers them and later rule changes cannot alter a frozen assessment.
+
+## [5.45.30] - 2026-10-21
+
+- Admit every built-in CPU architecture to parallel rounds by checking only the thread and device knobs it exposes, and resume parallel runs whose rounds record continuous predictions or no probabilities.
