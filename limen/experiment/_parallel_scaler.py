@@ -63,8 +63,9 @@ def constructor_state(cls: type) -> tuple[tuple[type, dict[str, object]], ...]:
 
 
 @identity_snapshot()
-def validate_constructor(cls: type, parents: tuple[tuple[type, dict[str, object]], ...], fingerprint: Callable[[object], str]) -> None:
-    if fingerprint(constructor_state(cls)) != fingerprint(parents):
+def validate_constructor(cls: type, parents: tuple[tuple[type, dict[str, object]], ...], fingerprint: Callable[[object], str], *functions: object) -> None:
+    state = constructor_state(cls)
+    if (state or parents) and fingerprint((state, functions)) != fingerprint((parents, functions)):
         raise TypeError('Parallel constructor has unfrozen inherited initializer state or class state')
 
 

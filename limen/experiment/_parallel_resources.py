@@ -38,7 +38,7 @@ class FrozenClassFactory:
         return getattr(self.factory_class, '__parallel_round_contract__', None)
 
     def __call__(self, *args: object, **kwargs: object) -> object:
-        validate_constructor(self.factory_class, self.parents, component_digest)
+        validate_constructor(self.factory_class, self.parents, component_digest, self.initializer, self.allocator)
         allocate = self.allocator or self.factory_class.__new__
         instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
         if isinstance(instance, self.factory_class) and factory_initializer(self.factory_class, instance, self.initializer)(*args, **kwargs) is not None:

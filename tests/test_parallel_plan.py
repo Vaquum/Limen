@@ -171,6 +171,23 @@ class ForeignAllocationRolling:
         return CallerRolling(cls.window)
 
 
+def _class_options_initializer(self, options=None):
+    self.window = options['window'] if options is type(self).options else 5
+
+
+class AliasedClassFactory(CallerRolling):
+    options = {'window': 3}
+    __init__ = _class_options_initializer
+
+
+_class_options_initializer.__defaults__ = (AliasedClassFactory.options,)
+
+
+class DistinctClassFactory(CallerRolling):
+    options = {'window': 3}
+    __init__ = _class_options_initializer
+
+
 class StaticJobsInitRolling(CallerRolling):
     window = 3
 
@@ -1852,6 +1869,23 @@ def _assert_factory_resources(plan, params):
                 with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
                     _factory_probe(changed, factory)
                 assert digest(candidate) == before
+        for factory, window in ((AliasedClassFactory, 3), (DistinctClassFactory, 5)):
+            declare_parallel(factory, ParallelRoundContract(deterministic_stage))
+            expected = factory()(data)['caller_mean'].to_list()
+            assert expected == _caller_feature(data, window)['caller_mean'].to_list()
+            frozen_alias = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+            before = digest(frozen_alias)
+            for spawned in (False, True):
+                if factory is AliasedClassFactory:
+                    with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
+                        if spawned:
+                            pool.submit(_factory_probe, frozen_alias, factory).result(timeout=30)
+                        else:
+                            _factory_probe(frozen_alias, factory)
+                else:
+                    actual, pid = pool.submit(_factory_probe, frozen_alias, factory).result(timeout=30) if spawned else _factory_probe(frozen_alias, factory)
+                    assert actual == expected and (pid != os.getpid()) is spawned
+            assert digest(frozen_alias) == before and _class_options_initializer.__defaults__[0] is AliasedClassFactory.options
         declare_parallel(BoundAllocatedRolling, ParallelRoundContract(seeded_stage, validation_keys=('seed',)))
         candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [BoundAllocatedRolling]})
         with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):

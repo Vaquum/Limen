@@ -39,7 +39,7 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
 
     def _parallel_make(self, **params: object) -> object:
         cls = self.target_class
-        validate_constructor(cls, self._parallel_parents, component_digest)
+        validate_constructor(cls, self._parallel_parents, component_digest, self._parallel_init, self._parallel_new)
         allocator = self._parallel_new or cast(Callable[..., object], cls.__new__)
         instance = allocator(cls, **({} if allocator is object.__new__ else params))
         if isinstance(instance, cls):
