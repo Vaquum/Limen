@@ -196,6 +196,30 @@ class BoundInitRolling(CallerRolling):
     __init__ = _bound_initializer_owner.initialize
 
 
+class PartialInitRolling(CallerRolling):
+    window = 6
+    __init__ = partial(_bound_initializer_owner.initialize)
+
+
+class BoundAllocatorOwner:
+    def __init__(self):
+        self.calls = 0
+
+    def allocate(self, cls, seed=None):
+        self.calls += 1
+        return object.__new__(cls)
+
+
+_bound_allocator_owner = BoundAllocatorOwner()
+
+
+class BoundAllocatedRolling(CallerRolling):
+    __new__ = _bound_allocator_owner.allocate
+
+    def __init__(self, seed=42):
+        self.window = seed
+
+
 class InheritedCallable(CallerRollingBase):
     def __init__(self, window):
         self.window = window
@@ -456,6 +480,25 @@ class TargetHookMeta(type):
 
 class HookedTarget(AllocatedTarget, metaclass=TargetHookMeta):
     """Initialize target state through native metaclass dispatch."""
+
+
+class BoundTargetInitOwner:
+    def __init__(self):
+        self.target_name = 'bound'
+
+    def initialize(self, n_jobs=2, train_data=None, target_name='bound'):
+        self.target_name = target_name
+
+    def transform(self, data):
+        return data.with_columns((pl.col('close') > pl.col('close').shift(2)).cast(pl.Int8).alias(self.target_name))
+
+
+_bound_target_initializer = BoundTargetInitOwner()
+
+
+class BoundInitTarget:
+    __init__ = _bound_target_initializer.initialize
+    transform = staticmethod(_bound_target_initializer.transform)
 
 
 def _method_only_transform(owner, data):
@@ -1344,6 +1387,22 @@ def test_frozen_manifest_round_plan() -> None:
         assert all(native[key].len() for key in ('y_train', 'y_val', 'y_test'))
         with pytest.raises(TypeError, match='unfrozen factory metaclass state'):
             freeze_manifest(target, None)
+        declare_parallel(BoundInitTarget, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
+        target = build_manifest(parallel_config()).with_target_label('bound', BoundInitTarget)
+        unsafe = freeze_manifest(target, None)
+        with pytest.raises(ValueError, match=r'target: effective n_jobs=1'):
+            validate_resources(unsafe, _parameters())
+        with pytest.raises(ValueError, match=r'target: effective n_jobs=1'):
+            validate_domain(unsafe, {key: [value] for key, value in _parameters().items()}, None)
+        target = build_manifest(parallel_config()).with_target_label('bound', BoundInitTarget, fit_params={'n_jobs': 1})
+        native = target.prepare_data(recorded_source(), _parameters())
+        expected = {key: native[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
+        assert all(expected.values())
+        safe, owner_name = freeze_manifest(target, None), _bound_target_initializer.target_name
+        before = digest(safe)
+        for _ in range(2):
+            assert pool.submit(_target_probe, safe, _parameters()).result(timeout=30) == _target_probe(safe, _parameters()) == expected
+        assert digest(safe) == before and _bound_target_initializer.target_name == owner_name
         component = partial(_kwargs_feature, n_jobs=2)
         declare_parallel(component, ParallelRoundContract(deterministic_stage))
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
@@ -1685,7 +1744,7 @@ def _assert_factory_resources(plan, params):
                 else:
                     _factory_probe(allocated, AllocatedSubclassRolling, extra)
         assert digest(allocated) == before
-        for factory, window in ((StaticInitRolling, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5)):
+        for factory, window in ((StaticInitRolling, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5), (PartialInitRolling, 6)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
             candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
             extra = {} if factory is StaticInitRolling else {'auxiliary_params': {'n_jobs': 1}}
@@ -1700,6 +1759,20 @@ def _assert_factory_resources(plan, params):
                 actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
             assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
+        declare_parallel(BoundAllocatedRolling, ParallelRoundContract(seeded_stage, validation_keys=('seed',)))
+        candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [BoundAllocatedRolling]})
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):
+            validate_resources(candidate, params | {'auxiliary_factory': BoundAllocatedRolling})
+        with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):
+            validate_domain(candidate, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [BoundAllocatedRolling]}, None)
+        extra = {'auxiliary_params': {'seed': 3}}
+        expected = BoundAllocatedRolling(seed=3)(data)['caller_mean'].to_list()
+        assert expected == _caller_feature(data, 3)['caller_mean'].to_list()
+        before, owner_calls = digest(candidate), _bound_allocator_owner.calls
+        for _ in range(2):
+            actual, pid = pool.submit(_factory_probe, candidate, BoundAllocatedRolling, extra).result(timeout=30)
+            assert actual == _factory_probe(candidate, BoundAllocatedRolling, extra)[0] == expected and pid != os.getpid()
+        assert digest(candidate) == before and _bound_allocator_owner.calls == owner_calls
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 4})
             captured_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})

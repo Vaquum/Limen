@@ -3,7 +3,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Callable, Mapping
 from itertools import product
-from inspect import Parameter, signature, isfunction, Signature
+from inspect import Parameter, signature, Signature
 from dataclasses import dataclass
 from functools import partial
 from importlib import import_module
@@ -50,7 +50,7 @@ def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-        return FrozenClassFactory(value, value.__init__ if isfunction(value.__init__) or inspect.ismethod(value.__init__) else None, value.__new__ if isfunction(value.__new__) else None)
+        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__)
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None
@@ -315,7 +315,7 @@ def configurations(manifest: Manifest, params: Mapping[str, object]) -> dict[str
         if any(key in arguments for arguments in (target.fit_params, target.transform_params) for key in runtime):
             raise ValueError('Parallel stage target: trade outcome context is reserved to the framework')
         initializer = getattr(target, '_parallel_init', None)
-        result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=0 if initializer is None or isinstance(inspect.getattr_static(target.target_class, '__init__'), (staticmethod, classmethod)) else 1, path='target', runtime=(*runtime, 'train_data', 'target_name'))
+        result['target'] = _defaults(target.target_class if initializer is None else initializer, _resolve_params(target.fit_params, params), skip=int(initializer is not None and inspect.isfunction(inspect.getattr_static(target.target_class, '__init__'))), path='target', runtime=(*runtime, 'train_data', 'target_name'))
         transform_config = _defaults(getattr(target, '_parallel_transform', None) or cast(TransformClass, target.target_class).transform, _resolve_params(target.transform_params, params), skip=2, path='target.transform', runtime=runtime)
         result['target']['transform_params'] = transform_config
         result.update({'target.fit': result['target'], 'target.transform': result['target'] | transform_config})

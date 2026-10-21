@@ -124,7 +124,7 @@ def factory_initializer(cls: type, instance: object, captured: Callable[..., obj
     if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
     function = captured or cls.__init__
-    return function if isinstance(method, staticmethod) or inspect.ismethod(method) else partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance)
+    return partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance) if inspect.isfunction(method) or inspect.ismethoddescriptor(method) or isinstance(method, classmethod) else function
 
 
 def factory_signature(cls: type, initializer: Callable[..., object] | None, allocator: Callable[..., object] | None) -> inspect.Signature:
@@ -175,7 +175,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
         target = value
         value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
                                     cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class),
-                                    target.target_class.__new__ if inspect.isfunction(target.target_class.__new__) else None)
+                                    None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
