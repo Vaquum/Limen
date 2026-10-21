@@ -261,6 +261,7 @@ def test_cli_run_resume_exits_0_on_success() -> None:
         runner = CliRunner()
         with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
             mock_uel.return_value.run.return_value = None
+            mock_uel.return_value._shutdown_requested = False
             result = runner.invoke(cli, ['run', '--resume', _tmpdir])
         assert result.exit_code == 0
 
@@ -271,6 +272,7 @@ def test_cli_run_resume_calls_uel_run_with_resume_true() -> None:
         runner = CliRunner()
         with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
             mock_uel.return_value.run.return_value = None
+            mock_uel.return_value._shutdown_requested = False
             runner.invoke(cli, ['run', '--resume', _tmpdir])
         _, kwargs = mock_uel.return_value.run.call_args
     assert kwargs.get('resume') is True
@@ -294,6 +296,7 @@ def test_cli_run_no_progress_bar_passes_flag() -> None:
         runner = CliRunner()
         with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
             mock_uel.return_value.run.return_value = None
+            mock_uel.return_value._shutdown_requested = False
             runner.invoke(cli, ['run', '--no-progress-bar', '--resume', _tmpdir])
         _, kwargs = mock_uel.return_value.run.call_args
     assert kwargs.get('progress_bar') is False
@@ -305,6 +308,7 @@ def test_cli_run_progress_bar_on_by_default() -> None:
         runner = CliRunner()
         with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
             mock_uel.return_value.run.return_value = None
+            mock_uel.return_value._shutdown_requested = False
             runner.invoke(cli, ['run', '--resume', _tmpdir])
         _, kwargs = mock_uel.return_value.run.call_args
     assert kwargs.get('progress_bar') is True
