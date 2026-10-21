@@ -54,7 +54,7 @@ def declaration_witness(value: object) -> bytes:
             names = {name for code in codes for name in code.co_names}
             attributes.update(names | {part for code in codes for part in code.co_consts if isinstance(part, str)})
             namespace = {name: (function.__globals__ if name in function.__globals__ else function.__builtins__)[name] for name in sorted(names) if name in function.__globals__ or name in function.__builtins__}
-            parameters = dict(zip(function.__code__.co_varnames[function.__code__.co_argcount - len(function.__defaults__ or ()):function.__code__.co_argcount], function.__defaults__ or (), strict=True)) | (function.__kwdefaults__ or {})
+            parameters: dict[str, object] = dict(zip(function.__code__.co_varnames[function.__code__.co_argcount - len(function.__defaults__ or ()):function.__code__.co_argcount], function.__defaults__ or (), strict=True)) | (function.__kwdefaults__ or {})
             parameters.update({name: part for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True) for part in children(cell)[1:]})
             readers = {name for name, part in (namespace | parameters).items() if part is _native_globals}
             for name, key in namespace_calls(function.__code__):
