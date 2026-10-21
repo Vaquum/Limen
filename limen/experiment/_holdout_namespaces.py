@@ -2,8 +2,9 @@ import dis
 from collections.abc import Callable
 from functools import lru_cache
 from types import CodeType, FunctionType, MethodType
+from typing import cast
 
-__all__ = ['namespace_bindings', 'namespace_calls']
+__all__ = ['namespace_bindings', 'namespace_calls', 'reader_names']
 _CALLS = frozenset({'CALL', 'CALL_FUNCTION', 'CALL_METHOD'})
 _LOOKUP_WIDTH = 2
 
@@ -45,7 +46,12 @@ def namespace_bindings(functions: tuple[FunctionType, ...], native: Callable[[Fu
         if function in seen:
             continue
         seen.add(function)
-        namespace = {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}
+        namespace = {name: (function.__globals__ if name in function.__globals__ else function.__builtins__)[name] for name in function.__code__.co_names if name in function.__globals__ or name in function.__builtins__}
         bindings.append((function, namespace))
         pending.extend(value.__func__ if isinstance(value, MethodType) else value for value in namespace.values() if isinstance(value, (FunctionType, MethodType)) and not native(value.__func__ if isinstance(value, MethodType) else value))
     return tuple(bindings)
+
+
+def reader_names(value: object, key: str | int) -> tuple[str, ...]:
+    size = list[object].__len__(cast(list[object], value)) if isinstance(cast(object, value), list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(cast(object, value), tuple) else None
+    return (str(key), str(key - size)) if isinstance(key, int) and size is not None else (str(key),)

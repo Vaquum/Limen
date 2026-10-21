@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies, reader_names
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -87,7 +87,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         seen[id(value)] = value
         sequence = list[object].__iter__(cast(list[object], value)) if isinstance(cast(object, value), list) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if isinstance(cast(object, value), tuple) else ()
         readers = dict[object, object].items(cast(dict[object, object], value)) if isinstance(cast(object, value), dict) else enumerate(sequence)
-        globals_names.update(str(key) for key, part in readers if isinstance(key, (str, int)) and part is _native_globals)
+        globals_names.update(alias for key, part in readers if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(value, key))
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value
             origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__

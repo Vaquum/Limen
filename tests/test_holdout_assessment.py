@@ -1239,6 +1239,33 @@ def test_frozen_sequence_subclass_namespace_reader(native_assessment_case, base,
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('base', [list, tuple])
+@pytest.mark.parametrize('subclass', [False, True])
+@pytest.mark.parametrize('aliased', [False, True])
+def test_frozen_negative_namespace_reader(native_assessment_case, base, subclass, aliased):
+    class Readers(base):
+        pass
+    class NegativeGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if aliased:
+                reader = self.readers[-2]
+                offset = reader()['_LATE_RULES']['offset']
+            else:
+                offset = self.readers[-1]()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = NegativeGlobals
+    selected._model.readers = (Readers if subclass else base)([globals, globals])
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
 @pytest.mark.parametrize('factory_kind', ['class', 'instance', 'callable'])
 @pytest.mark.parametrize('inherited', [False, True])
 @pytest.mark.parametrize('wrapped', [False, True])
@@ -1335,6 +1362,59 @@ def test_trusted_factory_helper_globals(native_assessment_case, wrapped):
     metadata['yaml_reference'] = recorded
     (directory / 'metadata.json').write_text(json.dumps(metadata))
     with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('base', [float, int, dict, list, tuple])
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_trusted_scalar_and_container_factory(native_assessment_case, base, wrapped):
+    class Factory(base):
+        def __call__(self, data, **params):
+            return logreg_binary(data, **(params | {'C': 1.0}))
+    def replacement(self, data, **params):
+        return logreg_binary(data, **(params | {'C': 2.0}))
+    factory = Factory()
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is declared
+    directory = native_assessment_case[0] / f'scalar-container-factory-{base.__name__}-{wrapped}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    with patch.object(Factory, '__call__', replacement), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_trusted_factory_builtin_bindings(native_assessment_case, wrapped):
+    import builtins
+    def factory(data, **params):
+        return logreg_binary(data, **(params | {'C': abs(-1.0)}))
+    factory = FunctionType(factory.__code__, {'__name__': __name__, '__builtins__': dict(vars(builtins)), 'logreg_binary': logreg_binary}, factory.__name__)
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is declared
+    directory = native_assessment_case[0] / f'builtin-factory-{wrapped}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    with patch.dict(factory.__builtins__, {'abs': later_probabilities}), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
         with pytest.raises(ValueError, match='differs from the recorded'):
             CompiledSFD(recorded, components=configure).manifest()
         with pytest.raises(ValueError, match='not a valid YAML SFD reference'):

@@ -22,22 +22,7 @@ _LIBRARIES = ('numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy')
 
 def normalized(value: object) -> object:
     result: object
-    if value is None or type(value) in (str, bool, int):
-        result = value
-    elif isinstance(value, numbers.Real):
-        result = float(value)
-        if not math.isfinite(result):
-            raise ValueError('Holdout specification must be finite')
-    elif isinstance(value, (date, datetime)):
-        result = value.isoformat()
-    elif isinstance(value, Mapping):
-        items = cast(Mapping[object, object], value)
-        if not all(isinstance(key, str) for key in items):
-            raise ValueError('Holdout specification requires string keys')
-        result = {str(key): normalized(item) for key, item in items.items()}
-    elif isinstance(value, (list, tuple)):
-        result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
-    elif callable(value):
+    if callable(value):
         callable_value = cast(object, value)
         factory = callable_value
         while isinstance(factory, partial):
@@ -54,6 +39,21 @@ def normalized(value: object) -> object:
         class_state = tuple((owner, {name: inspect.getattr_static(owner, name) for function, _ in bindings for name in function.__code__.co_names if any(name in vars(parent) for parent in owner.__mro__)}) for owner in classes)
         result = {'callable': f'{getattr(callable_value, "__module__", type(callable_value).__module__)}.{getattr(callable_value, "__qualname__", type(callable_value).__qualname__)}',
                   'implementation': sha256(fitted_witness((callable_value, constructors, bindings, class_state))).hexdigest()}
+    elif value is None or type(value) in (str, bool, int):
+        result = value
+    elif isinstance(value, numbers.Real):
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError('Holdout specification must be finite')
+    elif isinstance(value, (date, datetime)):
+        result = value.isoformat()
+    elif isinstance(value, Mapping):
+        items = cast(Mapping[object, object], value)
+        if not all(isinstance(key, str) for key in items):
+            raise ValueError('Holdout specification requires string keys')
+        result = {str(key): normalized(item) for key, item in items.items()}
+    elif isinstance(value, (list, tuple)):
+        result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
     elif is_dataclass(value) and not isinstance(value, type) and type(value).__module__.startswith('limen.'):
         result = {field.name: normalized(getattr(value, field.name)) for field in fields(value)}
     else:
