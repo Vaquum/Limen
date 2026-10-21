@@ -51,10 +51,10 @@ def capture_transform(cls: type) -> CapturedTransform:
                              getattr(cls, '__parallel_round_contract__', None))
 
 
-def constructor_state(cls: type) -> tuple[tuple[type, dict[str, object]], ...]:
+def constructor_state(cls: type, *, include_routines: bool = False) -> tuple[tuple[type, dict[str, object]], ...]:
     states: list[tuple[type, dict[str, object]]] = []
     for base in cls.__mro__:
-        values = {name: value for name, value in vars(base).items() if not name.startswith('__') and not isinstance(value, type) and not isroutine(value) and not isdatadescriptor(value)}
+        values = {name: value for name, value in vars(base).items() if not name.startswith('__') and not isinstance(value, type) and (include_routines or not isroutine(value)) and not isdatadescriptor(value)}
         if base.__init__ is not cls.__init__ and (isfunction(base.__init__) or ismethod(base.__init__)):
             values['__init__'] = base.__init__
         if values:

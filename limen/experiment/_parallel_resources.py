@@ -55,7 +55,9 @@ def factory_component(value: object, *, captured_transform: bool = False) -> obj
                 or ((implementation := getattr(implementation, '__func__', implementation)) is not None and (not inspect.isroutine(implementation) or (inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or mutable_function(implementation)))))):
             raise TypeError('Parallel transport rejects unfrozen factory call state')
         parents = constructor_state(value)
-        if any(callable(item) and not inspect.isroutine(item) for _, attributes in parents for name, item in attributes.items() if name != 'transform' or not captured_transform):
+        if any((callable(item) and not inspect.isroutine(item)) or inspect.ismethod(item)
+               or (inspect.isfunction(function := getattr(item, '__func__', item)) and mutable_function(function))
+               for _, attributes in constructor_state(value, include_routines=True) for name, item in attributes.items() if not name.startswith('__') and (name != 'transform' or not captured_transform)):
             raise TypeError('Parallel transport rejects unfrozen factory class callable state')
         return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parents)
     if isinstance(value, partial):
@@ -68,8 +70,7 @@ def factory_component(value: object, *, captured_transform: bool = False) -> obj
 
 
 def factory_bindings(manifest: Manifest, options: Mapping[str, list[object]] | None) -> dict[str, list[object]]:
-    function = manifest.architecture_function
-    if function is None:
+    if (function := manifest.architecture_function) is None:
         return {}
     defaults = {name: [item.default] for name, item in signature(function).parameters.items() if name.endswith('_factory')}
     result: dict[str, list[object]] = {}
@@ -160,9 +161,8 @@ def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> d
     configs = configurations(plan.manifest, params)
     for key, component in configs['architecture'].items():
         if key.endswith('_factory') and callable(component):
-            path = f'architecture.{key}'
-            if not any(stage.path == path and same_component(stage.component, component) for stage in plan.stages):
-                raise ValueError(f'Parallel stage {path}: missing frozen independence contract')
+            if not any(stage.path == f'architecture.{key}' and same_component(stage.component, component) for stage in plan.stages):
+                raise ValueError(f'Parallel stage architecture.{key}: missing frozen independence contract')
     return configs
 
 

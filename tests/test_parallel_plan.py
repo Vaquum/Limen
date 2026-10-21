@@ -346,6 +346,10 @@ class ClosureRolling:
     __call__ = _closed_implementation([2])
 
 
+class RoutineClosureFactory(CallerRolling):
+    transform = ClosureRolling.__call__
+
+
 @dataclass
 class FunctionRolling:
     function: object
@@ -1927,6 +1931,19 @@ def _assert_factory_resources(plan, params):
                     pool.submit(factory_component, factory).result(timeout=30)
                 assert owner.window == 4
         assert owner.window == 2
+        with pytest.MonkeyPatch.context() as patch:
+            cell = ClosureRolling.__call__.__closure__[0]
+            patch.setattr(cell, 'cell_contents', [2])
+            assert RoutineClosureFactory(2)(data)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+            assert RoutineClosureFactory(2)(data)['caller_mean'].to_list() == _caller_feature(data, 4)['caller_mean'].to_list()
+            before = list(cell.cell_contents)
+            declare_parallel(RoutineClosureFactory, ParallelRoundContract(deterministic_stage))
+            for factory in (RoutineClosureFactory, partial(RoutineClosureFactory)):
+                with pytest.raises(TypeError, match='unfrozen factory class callable state'):
+                    freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                with pytest.raises(TypeError, match='unfrozen factory class callable state'):
+                    pool.submit(factory_component, factory).result(timeout=30)
+                assert cell.cell_contents == before
         for factory, window in ((AliasedClassFactory, 3), (DistinctClassFactory, 5)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage))
             expected = factory()(data)['caller_mean'].to_list()
