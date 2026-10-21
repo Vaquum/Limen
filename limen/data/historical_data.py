@@ -969,6 +969,7 @@ class HistoricalData:
         row_count_limit: int | None = None,
         *,
         n_rows: int | None = None,
+        expected_sha256: str | None = None,
     ) -> pl.DataFrame:
 
         '''Load a local path or URL into Polars.
@@ -979,11 +980,16 @@ class HistoricalData:
 
         row_count_limit = _resolve_row_count_limit(row_count_limit, n_rows)
 
-        data = _read_any_file(
-            file_path_or_url,
-            has_header=has_header,
-            columns=columns,
-        )
+        if expected_sha256 is not None:
+            from hashlib import sha256
+            if Path(file_path_or_url).suffix.lower() != '.parquet':
+                raise ValueError('expected_sha256 requires a local Parquet file')
+            payload = Path(file_path_or_url).read_bytes()
+            if sha256(payload).hexdigest() != expected_sha256:
+                raise ValueError('Recorded source SHA-256 differs from the YAML declaration')
+            data = _validate_columns(pl.read_parquet(BytesIO(payload)), columns)
+        else:
+            data = _read_any_file(file_path_or_url, has_header=has_header, columns=columns)
         data = _normalize_generic_frame(data)
         if row_count_limit is not None:
             data = data.tail(row_count_limit)

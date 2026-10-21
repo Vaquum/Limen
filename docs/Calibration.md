@@ -2,11 +2,11 @@
 
 Calibration changes probability estimates. Threshold selection changes the decision made from those estimates. Both consume validation evidence; neither supplies an untouched assessment of the selected model.
 
-The [Python project](examples/python-research/README.md) owns these steps as ordinary Python functions. The [Compiled project](examples/compiled-research/README.md) declares them in its Manifest and lets the pipeline fit, record and reconstruct them. Both projects compare all four on/off combinations in their `calibration` scenario.
+The [Python project](examples/python-research/README.md) owns these steps as ordinary Python functions. The [Compiled project](examples/compiled-research/README.md) declares them in YAML and runs the fitting and recording through the CLI. Its complete `research.yaml` also carries the selected calibrated models through `limen assess`. Both projects compare all four on/off combinations in their `calibration` scenario.
 
 ## Prerequisites
 
-Use the complete project entry points and matching recorded input bundle. The Python example fits a logistic classifier on its training partition and calibrates on validation. The Compiled example validates its declaration, executes four rounds and reconstructs all four Sensors through `Trainer`. The assessment partition supplies no calibration or threshold fitting data.
+Use the complete project entry points and matching recorded input bundle. Python fits its classifier and calibrator in caller-owned state. Compiled Research runs the four calibration/threshold combinations declared in `calibration.yaml`; its CSV retains each mode and selected threshold. The assessment partition supplies no calibration or threshold fitting data.
 
 ## What Calibration Does
 
@@ -31,7 +31,7 @@ When both are `False`, no `prediction_calibration_config` is injected into the a
 
 ## Quick Start
 
-Read the two complete scenario functions together. Their reports have different owners: Python returns an explicit threshold even when tuning is disabled; the Compiled classifier keeps a stable results schema with nullable calibration fields.
+Read the Python function and Compiled declaration together. Python returns its explicit threshold; the compiled classifier retains nullable calibration fields in a stable result schema.
 
 <!-- example: calibration-python-modes source=docs/examples/python-research/scenarios.py region=calibration scenario=calibration interface=python role=executed -->
 ```python
@@ -56,13 +56,77 @@ def calibration(data_dir, output):
     return {'modes': modes, 'validation_reused': True}
 ```
 
-<!-- example: calibration-compiled-modes source=docs/examples/compiled-research/scenarios.py region=calibration scenario=calibration interface=compiled role=executed -->
-```python
-def calibration(data_dir, output):
-    config = configuration('calibration', data_dir)
-    loop = execute(config, output / 'experiment')
-    sensors = Trainer(output / 'experiment').train(research_project.completed_log(loop)['id'].to_list())
-    return {'modes': research_project.completed_log(loop).select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
+<!-- example: calibration-compiled-modes source=docs/examples/compiled-research/calibration.yaml region=declaration scenario=calibration interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_compiled_calibration
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+# region calibration_config
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: sigmoid
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+# endregion calibration_config
+  params:
+    scaler_type: [logreg]
+    C:
+    - 1.0
+    random_state: [42]
+# region calibration_modes
+    use_calibration:
+    - false
+    - true
+    use_threshold:
+    - false
+    - true
+# endregion calibration_modes
+uel:
+  output_path: compiled-calibration
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
 ```
 
 The Python example uses sigmoid calibration, a caller-owned fitted state and `Sensor.from_python`. It wraps that Sensor in a voting Cohort and checks every assessment decision is binary. The Compiled project uses this declaration:
@@ -160,7 +224,7 @@ def __call__(self, y_val: npt.NDArray[Any] | pl.Series, val_proba: npt.NDArray[n
     ...
 ```
 
-The protocols are independent: a custom calibrator can use the built-in threshold optimizer, and a custom optimizer can use the built-in calibrator. Python Research owns their composition directly; Compiled Research registers them through the builder. The project proof executes the built-in combinations above; these signatures document the extension contract.
+The protocols are independent: a custom calibrator can use the built-in threshold optimizer, and a custom optimizer can use the built-in calibrator. Python owns their composition directly; Compiled Research declares resolvable functions under `calibration`. The signatures below document component extension.
 
 ## What Gets Added to Results
 
@@ -193,7 +257,7 @@ Threshold grids are caller-owned inputs: `threshold_step` must be positive and f
 
 ## Calibration at Inference
 
-The Python scenario stores the fitted probability model and selected threshold together in its caller-owned state. Its inference function prepares completed history and reuses that state without fitting. The Compiled scenario reconstructs the declared model through `Trainer`; the resulting Sensor reuses fitted preprocessing, calibration and the selected threshold.
+The Python scenario stores the fitted probability model and selected threshold together in its caller-owned state. Its inference function prepares completed history and reuses that state without fitting. The Compiled calibration scenario records all four modes. The complete `research.yaml` additionally declares assessment: `limen assess` reconstructs the selected Sensors with their fitted preprocessing, calibration and thresholds.
 
 A Sensor accepts history through its native inference API. The lower-level classifier's `predict()` accepts the prepared feature matrix; these are distinct boundaries. `fit_calibrator` provides the shared fit operation outside a Manifest too.
 

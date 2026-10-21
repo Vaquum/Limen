@@ -41,7 +41,7 @@ The [Compiled project](examples/compiled-research/README.md) names the recorded 
         file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
 ```
 
-Its driver verifies the input digest and resolves the documented `--data-dir` argument into this file declaration. The archived source and exact commands preserve that resolution. Both projects acquire their matching recorded inputs from the project bundle; neither requires a live dataset download during research proof.
+The bundle pins the source by SHA-256. The YAML reads its literal `inputs/` path from the bundle root. Both projects use the matching recorded-input bundle; research proof requires no live dataset download.
 
 `HistoricalData` remains stateful for Manifest compatibility. Each retrieval method returns the loaded frame and stores it on the instance as `data`, with column names in `data_columns`.
 
@@ -127,9 +127,11 @@ Use this for Binance source files rather than the curated kline dataset.
 
 <!-- reference: data-api-get-any-file source=limen/data/historical_data.py region=signature:HistoricalData.get_any_file role=signature -->
 ```python
-def get_any_file(self, file_path_or_url: str, has_header: bool=True, columns: list[str] | None=None, row_count_limit: int | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+def get_any_file(self, file_path_or_url: str, has_header: bool=True, columns: list[str] | None=None, row_count_limit: int | None=None, *, n_rows: int | None=None, expected_sha256: str | None=None) -> pl.DataFrame:
     ...
 ```
+
+`expected_sha256` pins a local Parquet file. Limen verifies its bytes before decoding those same bytes, on both initial loading and CLI resume. The recovery YAML declares this digest; a changed source fails before another candidate can fit.
 
 It is the right choice for:
 

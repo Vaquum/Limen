@@ -27,13 +27,25 @@ def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
 
 ### Compiled Research
 
-<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.py region=completed_log scenario=selection interface=compiled role=executed -->
-```python
-def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
-    log = loop.experiment_log
-    if log is None:
-        raise ValueError("The experiment has no completed result log")
-    return log
+<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.yaml region=run scenario=selection interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-research
+  n_permutations: 8
+  workers: 1
+  search_strategy:
+    type: grid
+    shuffle: true
+    seed: 17
+  prep_each_round: true
+  checkpoint_interval: 1
+  feedback_interval: 1
+  output_format: parquet
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 `Log` adds captured-group and row-analysis APIs to those results. The constructor

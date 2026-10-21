@@ -43,7 +43,7 @@ prune .pytest_cache
 prune .ruff_cache
 global-exclude __pycache__ *.py[cod]
 
-recursive-include docs/examples *.py *.json *.txt *.in
+recursive-include docs/examples *.py *.json *.txt *.in *.sh *.toml
 recursive-include docs/checker/tests *.py
 recursive-include docs-site/reader *.mjs *.css *.json
 recursive-include docs-site/tests *.mjs *.json

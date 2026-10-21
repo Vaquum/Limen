@@ -1,3 +1,4 @@
+from contextlib import ExitStack
 import math
 import shutil
 from datetime import datetime
@@ -23,97 +24,96 @@ def run_experiment(yaml_path: Path,
                    progress_bar: bool = True,
                    workers: int | None = None) -> bool:
 
-    '''
-    Validate and run YAML, with CLI workers taking precedence over YAML.
-    Committed manifests retain their hash-based output layout and source YAML.
+    '''Run the declared experiment, preserving its YAML and committed-manifest output layout.'''
 
-    '''
+    with ExitStack() as resources:
+        click.echo(f"Loading {yaml_path} ...")
 
-    click.echo(f"Loading {yaml_path} ...")
-
-    yaml_dict, valid = load_and_validate(yaml_path)
-    if not valid:
-        return False
-
-    if dry_run:
-        try:
-            _ = CompiledSFD(yaml_dict, project_root=yaml_path.parent).manifest()
-        except Exception as exc:  # noqa: BLE001
-            click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
+        yaml_dict, valid = load_and_validate(yaml_path)
+        if not valid:
             return False
-        click.echo('  Dry run — skipping execution')
+
+        if dry_run:
+            try:
+                _ = CompiledSFD(yaml_dict, project_root=yaml_path.parent).manifest()
+            except Exception as exc:  # noqa: BLE001
+                click.secho(f'  ✗ Compilation failed: {exc}', fg='red')
+                return False
+            click.echo('  Dry run — skipping execution')
+            return True
+
+        uel_cfg = yaml_dict.get('uel', {})
+
+        experiment_name: str = yaml_dict['metadata']['name']
+        n_permutations: int = uel_cfg.get('n_permutations', 10000)
+        prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
+        test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
+        effective_workers = uel_cfg.get('workers', 1) if workers is None else workers
+        feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
+        checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
+        results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
+
+        try:
+            from limen.cli.assessment import require_reservation
+            _ = resources.enter_context(require_reservation(yaml_dict, yaml_path))
+            search_strategy = build_search_strategy(yaml_dict)
+            pruning_strategies = build_pruning_strategies(yaml_dict)
+            compiled = CompiledSFD(yaml_dict, project_root=yaml_path.parent)
+            uel = UniversalExperimentLoop(
+                sfd=compiled,
+                search_strategy=search_strategy,
+                pruning_strategies=pruning_strategies,
+                experiment_dir=results_dir,
+                test_mode=test_mode,
+                feedback_interval=feedback_interval,
+                checkpoint_interval=checkpoint_interval,
+                yaml_reference=dict(yaml_dict),
+            )
+            from limen.experiment._holdout_research import reject_modes
+            reject_modes(uel.manifest, workers=effective_workers, factorize=uel_cfg.get('factorize', False))
+            uel.check_parallel_admission(effective_workers, prep_each_round,
+                                         factorize=uel_cfg.get('factorize', False))
+        except Exception as exc:  # noqa: BLE001
+            click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
+            return False
+
+        results_dir.mkdir(parents=True, exist_ok=True)
+        _ = shutil.copy2(yaml_path, results_dir / ('manifest.yaml' if manifest_id is not None else yaml_path.name))
+
+        _params = compiled.params()
+        total_space = math.prod(len(v) for v in _params.values())
+        strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
+        click.echo(
+            f"Running '{experiment_name}' — {n_permutations:,} of {format_space(total_space)} permutations ({strategy_type})"
+        )
+        click.echo(f"  Results → {results_dir}")
+
+        try:
+            uel.run(
+                experiment_name=experiment_name,
+                n_permutations=n_permutations,
+                prep_each_round=prep_each_round,
+                progress_bar=progress_bar,
+                record_execution=uel_cfg.get('record_execution', False),
+                record_model_outputs=uel_cfg.get('record_model_outputs', False),
+                recording=uel_cfg.get('recording'),
+                factorize=uel_cfg.get('factorize', False),
+                workers=effective_workers,
+            )
+            if uel.interrupted:
+                raise InterruptedError('Interrupted; checkpoint retained.')
+        except Exception as exc:  # noqa: BLE001
+            click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
+            return False
+
+        if uel_cfg.get('output_format', 'csv') == 'parquet' and uel.experiment_log is not None:
+            parquet_path = results_dir / 'results.parquet'
+            uel.experiment_log.write_parquet(str(parquet_path))
+            click.echo(f"  Parquet → {parquet_path}")
+
+        click.secho('  ✓ Experiment complete', fg='green')
+
         return True
-
-    uel_cfg = yaml_dict.get('uel', {})
-
-    experiment_name: str = yaml_dict['metadata']['name']
-    n_permutations: int = uel_cfg.get('n_permutations', 10000)
-    prep_each_round: bool = bool(uel_cfg.get('prep_each_round', True))
-    test_mode: bool = yaml_dict['metadata'].get('mode', 'development') == 'development'
-    effective_workers = uel_cfg.get('workers', 1) if workers is None else workers
-    feedback_interval: int = int(uel_cfg.get('feedback_interval', 100))
-    checkpoint_interval: int = int(uel_cfg.get('checkpoint_interval', 1000))
-    results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
-
-    try:
-        search_strategy = build_search_strategy(yaml_dict)
-        pruning_strategies = build_pruning_strategies(yaml_dict)
-        compiled = CompiledSFD(yaml_dict, project_root=yaml_path.parent)
-        uel = UniversalExperimentLoop(
-            sfd=compiled,
-            search_strategy=search_strategy,
-            pruning_strategies=pruning_strategies,
-            experiment_dir=results_dir,
-            test_mode=test_mode,
-            feedback_interval=feedback_interval,
-            checkpoint_interval=checkpoint_interval,
-            yaml_reference=dict(yaml_dict),
-        )
-        from limen.experiment._holdout_research import reject_modes
-        reject_modes(uel.manifest, workers=effective_workers, factorize=uel_cfg.get('factorize', False))
-        uel.check_parallel_admission(effective_workers, prep_each_round,
-                                     factorize=uel_cfg.get('factorize', False))
-    except Exception as exc:  # noqa: BLE001
-        click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
-        return False
-
-    results_dir.mkdir(parents=True, exist_ok=True)
-    yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name
-    _ = shutil.copy2(yaml_path, results_dir / yaml_dest_name)
-
-    _params = compiled.params()
-    total_space = math.prod(len(v) for v in _params.values())
-    strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
-    click.echo(
-        f"Running '{experiment_name}' — {n_permutations:,} of {format_space(total_space)} permutations ({strategy_type})"
-    )
-    click.echo(f"  Results → {results_dir}")
-
-    try:
-        uel.run(
-            experiment_name=experiment_name,
-            n_permutations=n_permutations,
-            prep_each_round=prep_each_round,
-            progress_bar=progress_bar,
-            record_execution=uel_cfg.get('record_execution', False),
-            record_model_outputs=uel_cfg.get('record_model_outputs', False),
-            recording=uel_cfg.get('recording'),
-            factorize=uel_cfg.get('factorize', False),
-            workers=effective_workers,
-        )
-    except Exception as exc:  # noqa: BLE001
-        click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
-        return False
-
-    output_format: str = uel_cfg.get('output_format', 'csv')
-    if output_format == 'parquet' and uel.experiment_log is not None:
-        parquet_path = results_dir / 'results.parquet'
-        uel.experiment_log.write_parquet(str(parquet_path))
-        click.echo(f"  Parquet → {parquet_path}")
-
-    click.secho('  ✓ Experiment complete', fg='green')
-
-    return True
 
 
 def _build_results_dir(uel_cfg: dict[str, Any],

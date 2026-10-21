@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_ml_allocation
@@ -74,6 +75,7 @@ sfd:
     max_iter:
     - 1000
 uel:
+  output_path: compiled-allocation_ml
   n_permutations: 2
   search_strategy:
     type: grid
@@ -85,3 +87,4 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration

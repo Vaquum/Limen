@@ -15,11 +15,11 @@ result only under that declared policy.
 
 ## Follow the two execution cases
 
-The complete project functions below both execute ordinary cash-spot behavior
+The Python function and Compiled YAML below execute ordinary cash-spot behavior
 and a separate linear-perpetual case using the same recorded funding history.
 The tests independently reconcile fill clocks, quantities, fees, funding and
 final equity. No funding rate or fill price is invented for the comparison.
-The functions use imports and data helpers from their complete projects.
+The Python function uses its complete project's imports and helpers. The Compiled YAML names its complete source and execution policy.
 
 ### Python Research
 
@@ -54,38 +54,73 @@ def execution(data_dir, output):
 
 ### Compiled Research
 
-<!-- example: backtest-compiled-execution source=docs/examples/compiled-research/scenarios.py region=execution scenario=execution interface=compiled role=executed -->
-```python
-def execution_contexts(config, loop):
-    manifest = CompiledSFD(config).manifest()
-    if not isinstance(loop.data, pl.DataFrame):
-        raise TypeError('Execution must retain its original recorded source')
-    contexts = []
-    for row in research_project.completed_log(loop).iter_rows(named=True):
-        prepared = manifest.prepare_data(loop.data, {key: row[key] for key in config['sfd']['params']})
-        inputs, policy = prepared['_trade_inputs'], prepared['_trade_policy']
-        if not isinstance(inputs, TradeInputs) or not isinstance(policy, TradePolicy):
-            raise TypeError('Execution requires native bound inputs and policy')
-        contexts.append({'observations': inputs.observations.to_dicts(), 'partition': [inputs.partition_start_ns, inputs.partition_end_ns],
-                         'contract': export_trade_contract(policy, inputs)})
-    return contexts
-
-
-def execution(data_dir, output):
-    config = configuration('execution', data_dir)
-    loop = execute(config, output / 'experiment')
-    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
-        records = [json.loads(line) for line in stream]
-    history = funding_history(data_dir)
-    derived = output / 'recorded-funding.parquet'
-    history.write_parquet(derived)
-    funded_config = configuration('funded', data_dir)
-    funded_config['sfd']['manifest']['backtest']['funding']['data_source']['params']['file_path_or_url'] = str(derived.resolve())
-    funded_loop = execute(funded_config, output / 'funded')
-    with gzip.open(output / 'funded/round_data.jsonl.gz', 'rt') as stream:
-        funded_records = [json.loads(line) for line in stream]
-    funded = {'metrics': research_project.completed_log(funded_loop).select('risk_span', 'backtest_funding_pnl').to_dicts(), 'ledgers': [row['trade_ledger'] for row in funded_records], 'contexts': execution_contexts(funded_config, funded_loop), 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}
-    return {'rounds': research_project.completed_log(loop).height, 'metrics': research_project.completed_log(loop).select('risk_span', 'backtest_total_return', 'backtest_completed_trades').to_dicts(), 'contracts': [row['trade_contract_digest'] for row in records], 'ledgers': [row['trade_ledger'] for row in records], 'contexts': execution_contexts(config, loop), 'funded': funded}
+<!-- example: backtest-compiled-execution source=docs/examples/compiled-research/execution.yaml region=declaration scenario=execution interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_compiled_execution
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-02'
+      train_end: '2024-01-03'
+      val_start: '2024-01-04'
+      val_end: '2024-01-05'
+      test_start: '2024-01-05'
+      test_end: '2024-01-06'
+    backtest:
+      product:
+        kind: cash_spot
+        instrument: BTCUSDT
+        base_currency: BTC
+        quote_currency: USDT
+        quantity_step: 1e-05
+        min_notional: 5
+      source_interval_seconds: 3600
+      fee_bps: 10
+      slip_bps: 5
+      take_profit_bps_column: volatility_take_profit_bps
+      stop_loss_bps_column: volatility_stop_loss_bps
+      barrier_features:
+        method: limen.features.volatility_barriers.volatility_barriers
+        params:
+          span: '{risk_span}'
+          regime_span: 24
+          min_periods: 3
+    reference_architecture: 
+      limen.sfd.reference_architecture.rule_based.rule_based
+    strategy:
+      conditions:
+      - id: entry
+        name: Recorded close above open
+        type: relative
+        column: close
+        operator: '>'
+        other_column: open
+      entry: entry
+  params:
+    risk_span:
+    - 6
+    - 12
+uel:
+  output_path: compiled-execution
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  prep_each_round: true
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 ## Prerequisites
@@ -402,10 +437,11 @@ class FundingPolicy:
 
 The product names and quantity rules are declarations supplied by the caller. Cash spot uses `kind='cash_spot'` and supports long/flat; linear quote-settled perpetuals support long/flat/short. Perpetual funding does not model spot borrowing. All accounting uses the declared quote currency, with no currency conversion, inverse contracts, liquidation or order-book model.
 
-The Compiled project loads this complete funded definition, then binds the funding source to its derived Parquet file of recorded events before execution:
+The Compiled YAML reads the bundled `inputs/recorded-funding.parquet` directly. The bundle pins that normalization of the recorded funding events; no research driver prepares or rewrites it:
 
 <!-- example: backtest-compiled-funding source=docs/examples/compiled-research/funded.yaml region=__file__ scenario=execution interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_recorded_funding
@@ -448,7 +484,7 @@ sfd:
         data_source:
           method: limen.data.HistoricalData.get_any_file
           params:
-            file_path_or_url: derived/recorded-funding.parquet
+            file_path_or_url: inputs/recorded-funding.parquet
     reference_architecture: 
       limen.sfd.reference_architecture.rule_based.rule_based
     strategy:
@@ -465,6 +501,7 @@ sfd:
     - 6
     - 12
 uel:
+  output_path: compiled-funded
   n_permutations: 2
   search_strategy:
     type: grid
@@ -476,6 +513,7 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration
 ```
 
 Each referenced parameter must exist in `sfd.params`. Native numeric fields also accept bare parameter names. Nested adapter/source parameters resolve explicit `{parameter}` references. Unknown keys, nonfinite values, incompatible products and missing required data fail.
@@ -540,6 +578,7 @@ Use `backtest.take_profit_bps_column` and/or `stop_loss_bps_column` instead of t
 
 <!-- example: backtest-compiled-barriers source=docs/examples/compiled-research/execution.yaml region=__file__ scenario=execution interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_execution
@@ -593,6 +632,7 @@ sfd:
     - 6
     - 12
 uel:
+  output_path: compiled-execution
   n_permutations: 2
   search_strategy:
     type: grid
@@ -604,6 +644,7 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration
 ```
 
 The definition retains its complete product and economics declaration alongside the barrier producer. Numeric producer parameters accept `{param}` search references; producer identity and column names are literals. Scalar and column declarations for the same side conflict. Resampled/ambiguous bars are unsupported.

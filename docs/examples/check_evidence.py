@@ -102,6 +102,8 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
         path = requested.resolve()
         if not path.is_relative_to(root.resolve()) or any(part.is_symlink() for part in (requested, *requested.parents)):
             raise ValueError('Example source escapes the repository')
+        if interface == 'compiled' and path.suffix not in ('.yaml', '.sh', '.json'):
+            raise ValueError(f'Wrong research interface: Compiled Research requires YAML and CLI source: {identity}')
         canonical = region(path, name)
         if canonical != excerpt + '\n':
             raise ValueError(f'Documentation differs from executable source: {identity}')
@@ -350,13 +352,8 @@ def validate_model_catalogue(root, catalogue) -> None:
 
 
 def validate_cli_catalogue(root, catalogue) -> None:
-    module = ast.parse((root / 'limen/cli/main.py').read_text())
-    commands = set()
-    for node in module.body:
-        if isinstance(node, ast.FunctionDef):
-            for decorator in node.decorator_list:
-                if isinstance(decorator, ast.Call) and isinstance(decorator.func, ast.Attribute) and isinstance(decorator.func.value, ast.Name) and decorator.func.value.id == 'cli' and decorator.func.attr == 'command':
-                    commands.add(ast.literal_eval(decorator.args[0]) if decorator.args else node.name.replace('_', '-'))
+    from limen.cli.main import cli
+    commands = set(cli.commands)
     if set(catalogue['cli_commands']) != commands:
         raise ValueError('Public CLI catalogue is incomplete')
     for entry in catalogue['cli_commands'].values():
@@ -397,7 +394,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         if (display['path'], display['sha256']) != (binding['path'], binding['sha256']) or display['environment_sha256'] != digest(json.dumps(retained['environment'], sort_keys=True).encode()):
             raise ValueError('Observed output identity differs')
         current = next(item for item in record['validation']['scenarios'] if item['interface'] == binding['interface'] and item['id'] == binding['scenario'])
-        source = next(item for item in record['sources'] if f"/{binding['interface']}-research/" in item['path'] and item['region'] == 'experiment')
+        source = next(item for item in retained['sources'] if f"/{binding['interface']}-research/" in item['path'] and item['sha256'] == display['source_sha256'])
         validate_retained_source(root, retained, source, display)
         compare_output(json.loads((root / current['output_path']).read_text()), json.loads((root / display['path']).read_text()), display['metrics'])
     if record['revision']['head'] != head or record['revision']['tree'] != tree:
@@ -469,7 +466,11 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         for scenario in record['validation']['scenarios']:
             interface, name = scenario['interface'], scenario['id']
             directory = f'results/{interface}' if name == 'selection' else f'results/{interface}-all/{name}'
-            if not any(path.startswith(directory + '/') for path in contents):
+            if interface == 'compiled':
+                index = json.loads(contents['results/compiled-artifacts.json'])[name]
+                if not index or any(path not in contents or digest(contents[path]) != value for path, value in index.items()):
+                    raise ValueError('A compiled scenario lost its actual CLI artifacts')
+            if not any(path.startswith(directory + '/') for path in contents) and interface != 'compiled':
                 raise ValueError('A required scenario has no retained native artifacts')
             summary = json.loads(contents[f'results/{interface}/summary.json'] if name == 'selection' else contents[f'results/{interface}-all/summary.json'])
             native_result = summary if name == 'selection' else summary['scenarios'][name]

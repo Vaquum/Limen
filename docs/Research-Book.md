@@ -10,9 +10,9 @@ Use the recorded input bundle and its matching Limen wheel. The project pages st
 
 ## Choose who owns the experiment
 
-Python Research keeps data, preparation, fitting, backtesting and selection in your functions. Compiled Research records the Manifest definition and applies its configured checks. Invoking that Manifest from Python remains Compiled Research.
+Python Research keeps data, preparation, fitting, backtesting and selection in your functions. Compiled Research records the Manifest definition and applies its configured checks. Compiled Research is authored in YAML and executed through the CLI.
 
-Both paths use UEL and MSQ. The difference is the methodological contract you adopt, rather than the language of the driver. Read [the two interfaces](../README.md#two-interfaces-different-purposes) before deciding which responsibility you want Limen to carry.
+Both paths use UEL and MSQ internally. Python Research owns ordinary Python functions; Compiled Research owns YAML files and CLI commands. Read [the two interfaces](../README.md#two-interfaces-different-purposes) before deciding which responsibility you want Limen to carry.
 
 ## Begin with recorded observations
 
@@ -66,28 +66,15 @@ The selected Sensors wrap the same fitted pipelines that were evaluated. Preproc
 
 ## Adopt the Compiled pipeline
 
-The Compiled project declares a chronological split, a rate-of-change indicator, a fitted quantile target, scaling and logistic regression. The driver resolves its public input-directory argument into the recorded run definition. It runs that definition, selects a validation result and asks Trainer to reconstruct it with the original split.
+The Compiled project declares its source, dates, preparation, model, search and selection in YAML. Run the unchanged definition with `limen run`, then use `limen assess` to reconstruct validation-selected Sensors and write Cohort predictions. The [complete project](examples/compiled-research/README.md) gives both commands and their artifacts.
 
-<!-- example: compiled-selection source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
-```python
-def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
-    source = data_dir / "spot_15m_20250101_20250531.parquet"
-    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise ValueError("Recorded quarter-hour input digest differs")
-    # Resolve the driver's public --data-dir argument into the recorded run definition.
-    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
-    compiled = CompiledSFD(config)
-    loop = UniversalExperimentLoop(
-        sfd=compiled, search_strategy=build_search_strategy(config),
-        experiment_dir=output_dir, yaml_reference=config,
-    )
-    loop.run("compiled-selection", n_permutations=2, workers=1,
-             post_processing=True, progress_bar=False)
-    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
-    sensors = Trainer(output_dir).train(selected)
-    return loop, sensors, selected
+<!-- example: compiled-selection source=docs/examples/compiled-research/selection.yaml region=assessment scenario=selection interface=compiled role=executed -->
+```yaml
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  predict: true
 ```
 
 Reconstruction validates the replayed numeric metrics against the recorded round. It is a refit under the recorded contract; it is not restoration of arbitrary saved weights. [Trainer](Trainer.md#training-and-validation) explains that boundary. A configured pipeline check also does not prove that an arbitrary feature is causal or that source observations are correct.
@@ -98,7 +85,7 @@ The [Python project](examples/python-research/README.md) and [Compiled project](
 
 ## Observe the retained run
 
-These are retained outputs of the identified successful run. Their counts and selected parameters are exact. The Python forecast permits only the numerical tolerance stated in its evidence record. The current validation is shown separately; it does not change when these observations were made.
+These are retained outputs of the identified successful run. The Python project and unchanged Compiled YAML/CLI commands ran against the same isolated installed wheel. Their counts and selected parameters are exact. The Python forecast permits only the numerical tolerance stated in its evidence record. The current validation is shown separately; it does not change when these observations were made.
 
 ### Python selection result
 

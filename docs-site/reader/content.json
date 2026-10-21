@@ -18,17 +18,17 @@
     "docs/examples/python-research/README.md": {
       "route": "/book/python-research/",
       "part": "Book",
-      "bookOrder": 12
+      "bookOrder": 10
     },
     "docs/examples/compiled-research/README.md": {
       "route": "/book/compiled-research/",
       "part": "Book",
-      "bookOrder": 13
+      "bookOrder": 11
     },
     "docs/Final-Holdout.md": {
       "route": "/book/final-holdout/",
       "part": "Book",
-      "bookOrder": 10
+      "bookOrder": 8
     },
     "README.md": {
       "route": "/about/",
@@ -51,7 +51,7 @@
     "docs/End-to-End-Workflow.md": {
       "route": "/book/end-to-end-workflow/",
       "part": "Book",
-      "bookOrder": 11
+      "bookOrder": 9
     },
     "docs/Data-Bars.md": {
       "route": "/book/data-bars/",
@@ -60,8 +60,7 @@
     },
     "docs/Single-File-Decoder.md": {
       "route": "/book/single-file-decoder/",
-      "part": "Book",
-      "bookOrder": 3
+      "part": "Reference"
     },
     "docs/Built-In-SFDs.md": {
       "route": "/reference/built-in-sfds/",
@@ -73,23 +72,22 @@
     },
     "docs/Experiment-Manifest.md": {
       "route": "/book/experiment-manifest/",
-      "part": "Book",
-      "bookOrder": 4
+      "part": "Reference",
+      "navigationTitle": "Manifest API and YAML fields"
     },
     "docs/Universal-Experiment-Loop.md": {
       "route": "/book/universal-experiment-loop/",
-      "part": "Book",
-      "bookOrder": 5
+      "part": "Reference"
     },
     "docs/Advanced-Search.md": {
       "route": "/book/advanced-search/",
       "part": "Book",
-      "bookOrder": 6
+      "bookOrder": 4
     },
     "docs/Reducers-And-Feedback.md": {
       "route": "/book/reducers-and-feedback/",
       "part": "Book",
-      "bookOrder": 7
+      "bookOrder": 5
     },
     "docs/Log.md": {
       "route": "/reference/log/",
@@ -104,7 +102,7 @@
     "docs/Backtest.md": {
       "route": "/book/backtest/",
       "part": "Book",
-      "bookOrder": 9
+      "bookOrder": 7
     },
     "docs/Backtest-Benchmarks.md": {
       "route": "/developer/backtest-benchmarks/",
@@ -332,11 +330,20 @@
     "docs/Walk-Forward.md": {
       "route": "/book/walk-forward/",
       "part": "Book",
-      "bookOrder": 8
+      "bookOrder": 6
     },
     "docs/Developer/Indicator-Performance.md": {
       "route": "/developer/indicator-performance/",
       "part": "Developer"
+    },
+    "docs/Compiled-Research.md": {
+      "route": "/book/compiled-definition/",
+      "part": "Book",
+      "bookOrder": 3
+    },
+    "docs/Guarded-Holdout-Reference.md": {
+      "route": "/reference/guarded-holdout/",
+      "part": "Reference"
     }
   }
 }
