@@ -13,7 +13,7 @@ import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS, Selector
 from limen.cohort._round_sources import RoundSources
-from limen.cohort._fold_sources import FoldSources, select_sources
+from limen.cohort._fold_sources import FoldSources, bind_native_output, select_sources
 from limen.inference._fold_sensor import reject_legacy_members
 from limen.inference.sensor import BarPrediction, PredictionReason, Sensor
 from limen.cohort._python_cohort import Aggregate, CohortMap, CohortPrepare, HistoryT, PythonCohortBase, cohort_fields
@@ -198,6 +198,8 @@ class Cohort:
 
         if self._round_sources is not None:
             bound = self._round_sources.bind(members)
+            if not isinstance(self._round_sources, FoldSources):
+                bind_native_output(self, bound, self._architecture_supports_probabilities(self.architecture_id))
             assert self.aggregation_mode is not None
             payload = json.dumps(self._round_sources.identity(self.aggregation_mode), sort_keys=True)
             self._members = bound
@@ -250,6 +252,7 @@ class Cohort:
             )
 
         self._members = [by_pid[pid] for pid in self.permutation_ids]
+        bind_native_output(self, self._members, self._architecture_supports_probabilities(self.architecture_id))
 
         payload = json.dumps(
             {
