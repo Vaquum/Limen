@@ -18,7 +18,7 @@ import numpy as np
 import polars as pl
 
 from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies, reader_names, native_annotation
-from limen.experiment._holdout_state import _NATIVE_TYPES, children, code_digest, fitted_witness, object_payload
+from limen.experiment._holdout_state import native_types, children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
 
@@ -78,8 +78,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if (identity := id(value)) in seen or identity in omitted:
             return
         seen[identity] = value
-        sequence = _NATIVE_TYPES[0].__iter__(cast(list[object], value)) if issubclass(value_type, _READER_TYPES[0]) else _NATIVE_TYPES[1].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, _READER_TYPES[1]) else _NATIVE_TYPES[3].__iter__(cast(deque[object], value)) if issubclass(value_type, _READER_TYPES[3]) else ()
-        readers = _NATIVE_TYPES[2].items(cast(dict[object, object], value)) if issubclass(value_type, _READER_TYPES[2]) else enumerate(sequence)
+        sequence = native_types[0].__iter__(cast(list[object], value)) if issubclass(value_type, _READER_TYPES[0]) else native_types[1].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, _READER_TYPES[1]) else native_types[3].__iter__(cast(deque[object], value)) if issubclass(value_type, _READER_TYPES[3]) else ()
+        readers = native_types[2].items(cast(dict[object, object], value)) if issubclass(value_type, _READER_TYPES[2]) else enumerate(sequence)
         globals_names.update(alias for key, part in readers if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(value, key))
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value

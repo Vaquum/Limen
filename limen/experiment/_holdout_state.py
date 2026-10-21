@@ -20,7 +20,7 @@ import polars as pl
 
 from limen.experiment._holdout_calls import native_attribute, logger_attributes, code_aliases
 
-__all__ = ['children', 'code_digest', 'fitted_witness', 'object_payload']
+__all__ = ['children', 'code_digest', 'fitted_witness', 'native_types', 'object_payload']
 
 
 _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
@@ -28,7 +28,7 @@ _FORM_TYPES = (type(typing.Union), type(typing.Literal))
 _ATOMIC_TYPES = (str, bool, bytes)
 _NO_ATTRIBUTE_TYPES = (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray)
 _CONTAINER_TYPES: tuple[type[object], ...] = (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)
-_NATIVE_TYPES = (list[object], tuple[object, ...], dict[object, object], deque[object], set[object], frozenset[object], npt.NDArray[np.generic])
+native_types = (list[object], tuple[object, ...], dict[object, object], deque[object], set[object], frozenset[object], npt.NDArray[np.generic])
 # Verify canonical identity rather than assume the interpreter's integer cache.
 _CANONICAL_INTS: MappingProxyType[object, int] = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
@@ -48,12 +48,12 @@ def code_digest(code: CodeType) -> str:
 
 def _native_values(value: object) -> tuple[object, ...]:
     if isinstance(value, (tuple, list)):
-        return tuple(_NATIVE_TYPES[1].__iter__(cast(tuple[object, ...], value))) if isinstance(value, tuple) else tuple(_NATIVE_TYPES[0].__iter__(cast(list[object], value)))
+        return tuple(native_types[1].__iter__(cast(tuple[object, ...], value))) if isinstance(value, tuple) else tuple(native_types[0].__iter__(cast(list[object], value)))
     if isinstance(value, deque):
-        return tuple(_NATIVE_TYPES[3].__iter__(cast(deque[object], value)))
+        return tuple(native_types[3].__iter__(cast(deque[object], value)))
     if isinstance(value, set):
-        return tuple(_NATIVE_TYPES[4].__iter__(cast(set[object], value)))
-    return tuple(_NATIVE_TYPES[5].__iter__(cast(frozenset[object], value)))
+        return tuple(native_types[4].__iter__(cast(set[object], value)))
+    return tuple(native_types[5].__iter__(cast(frozenset[object], value)))
 
 
 def _booster(value: object) -> bool:
@@ -73,12 +73,12 @@ def _cell_parts(value: CellType) -> tuple[object, ...]:
 
 def children(value: object, *, namespace_readers: set[str] | None = None) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        entries = _NATIVE_TYPES[2].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
+        entries = native_types[2].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
         return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value), namespace_readers).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value), namespace_readers).values())
     if object_payload(value):
-        return (_NATIVE_TYPES[6].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
+        return (native_types[6].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
     metadata = _typing_metadata(value)
     if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)) or metadata is not None:
         parts: tuple[object, ...]
@@ -189,16 +189,16 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             result = (kind, payload, node(_attributes(item)))
         elif isinstance(item, Mapping):
             factory = node(native_attribute(cast(object, item), 'default_factory', defaultdict)) if isinstance(item, defaultdict) else None
-            result = (kind, factory, tuple((node(key), node(part)) for key, part in (_NATIVE_TYPES[2].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
+            result = (kind, factory, tuple((node(key), node(part)) for key, part in (native_types[2].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
         elif isinstance(item, (tuple, list, deque)):
             result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), native_attribute(cast(object, item), 'maxlen', deque) if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), state)
         elif object_payload(item):
             payload_owner: type[object] = np.ndarray if isinstance(item, np.ndarray) else np.generic
-            result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(_NATIVE_TYPES[6].tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
+            result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(native_types[6].tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
         elif isinstance(item, np.ndarray):
-            native = cast(object, _NATIVE_TYPES[6].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
+            native = cast(object, native_types[6].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
             result = (kind, pickle.dumps(native, protocol=5), state)
         elif isinstance(item, (pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
