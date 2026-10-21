@@ -619,6 +619,15 @@ class InstanceTransformScaler(RobustScaler):
         self.transform = partial(_original_scaler_transform, self)
 
 
+class SelfAssignedScaler(RobustScaler):
+    def __init__(self, data):
+        super().__init__(data)
+        self.transform = type(self).transform
+
+    def transform(data, multiplier=2):
+        return data.with_columns((pl.col('close') * multiplier).alias('close'))
+
+
 def _prepared_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     from limen.experiment._parallel_plan import clone_manifest
@@ -818,13 +827,22 @@ def test_frozen_manifest_round_plan() -> None:
                 actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
-        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler):
+        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler):
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
             from tests.test_parallel_rounds import recorded_source
             data = recorded_source().head(24).select('close')
             control = scaler_class(data).transform(data).to_dict(as_series=False)
             actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
             assert actual[5] == control and actual[3] != os.getpid()
+            if scaler_class is SelfAssignedScaler:
+                before = digest(frozen)
+                with pytest.MonkeyPatch.context() as patch:
+                    patch.setattr(SelfAssignedScaler.transform, '__defaults__', (4,))
+                    changed = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
+                    assert changed.pipeline_digest != frozen.pipeline_digest and changed.resource_digest != frozen.resource_digest
+                    for _ in range(2):
+                        actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+                        assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
             if scaler_class is CallableScaler:
                 before = digest(frozen)
                 with pytest.MonkeyPatch.context() as patch:

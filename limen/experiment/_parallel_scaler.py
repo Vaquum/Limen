@@ -26,7 +26,7 @@ class CapturedTransform:
     def __call__(self, instance: object, data: pl.DataFrame, **params: object) -> pl.DataFrame:
         if getattr_static(instance, 'transform') is not getattr_static(type(instance), 'transform'):
             return cast(TransformClass, instance).transform(data, **params)
-        return self.function(instance, data, **params) if self.bind_instance else self.function(data, **params)
+        return self.function(instance, data, **params) if self.bind_instance and not (hasattr(instance, '__dict__') and 'transform' in vars(instance)) else self.function(data, **params)
 
 
 def capture_transform(cls: type) -> CapturedTransform:
