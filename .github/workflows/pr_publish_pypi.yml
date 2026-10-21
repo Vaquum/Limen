@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      checks: read
     outputs:
       tag_name: ${{ steps.resolve.outputs.tag_name }}
 
@@ -70,6 +71,30 @@ jobs:
 
           echo "Resolved tag: $tag_name"
           echo "tag_name=$tag_name" >> "$GITHUB_OUTPUT"
+
+      # Merges are not rebased onto latest main before landing, so the
+      # release commit may never have been CI-tested as merged. Publish
+      # must not outrun the post-merge suite: wait here until every
+      # validation check-run on the tagged commit is green.
+      - name: Wait for validation checks on release commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.resolve.outputs.tag_name }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$TAG_NAME" ]]; then
+            echo 'No release tag resolved; nothing to validate.'
+            exit 0
+          fi
+          tag_sha="$(git rev-parse "$TAG_NAME^{commit}")"
+          python3 scripts/wait_for_commit_checks.py \
+            --repo '${{ github.repository }}' \
+            --sha "$tag_sha" \
+            --timeout-seconds 1200 \
+            --poll-seconds 20 \
+            --exclude-substring 'Automated Release' \
+            --exclude-substring 'publish' \
+            --exclude-substring 'release'
 
   build_distribution:
     name: Build Distribution
