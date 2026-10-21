@@ -437,6 +437,31 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, orphanep, 'evidence schema')
 
+    def twin(report_dict):
+        states = report_dict['execution']['ledger']['states']
+        lower = copy.deepcopy(states[0])
+        lower['cash'] -= 500.0
+        lower['equity'] = lower['cash'] + lower['accrued_funding']
+        states.insert(1, lower)
+        states.insert(2, copy.deepcopy(states[0]))
+        initial = report_dict['execution']['initial_equity']
+        running, worst = 0.0, 0.0
+        for value in [row['equity'] for row in states]:
+            running = max(running, value)
+            worst = min(worst, value / max(running, initial) - 1)
+        report_dict['execution']['metrics']['max_drawdown']['value'] = worst
+
+    _rewrite_report(root, report, twin, 'time order')
+
+    def resample(report_dict):
+        states = report_dict['execution']['ledger']['states']
+        target = next(row for row in states if not row['signal_sample'])
+        target['signal_sample'] = True
+        flagged = [row['absolute_exposure'] for row in states if row['signal_sample']]
+        report_dict['execution']['metrics']['avg_absolute_exposure']['value'] = sum(flagged) / len(flagged)
+
+    _rewrite_report(root, report, resample, 'signal sampling')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
