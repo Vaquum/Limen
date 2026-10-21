@@ -132,7 +132,7 @@ def test_governance_config_schema_is_minimal() -> None:
         'runtime',
         'toolchain',
         'review',
-        'slice',
+        'prd',
         'ruleset',
     }
 
@@ -180,10 +180,17 @@ def test_workflow_runtime_and_tooling_match_config() -> None:
     assert pyproject['tool']['pyright']['pythonVersion'] == python_version
 
 
-def test_review_and_slice_settings_match_config() -> None:
+def test_review_and_prd_settings_match_config() -> None:
     config = _config()
     assert config['review']['approving_authority'] == 'zero-bang'
-    assert config['slice']['label'] == 'slice'
-    template = REPO_ROOT / config['slice']['issue_template']
+    assert config['prd']['label'] == 'prd'
+    template = REPO_ROOT / config['prd']['issue_template']
     assert template.is_file()
+    # The label is the gate's mechanical PRD identifier: prd_gate.py
+    # hardcodes it and the template files it. If either drifts, `feat`
+    # PRs stop matching their PRDs.
+    prd_gate_source = (REPO_ROOT / 'governance' / 'prd_gate.py').read_text(encoding='utf-8')
+    assert "PRD_LABEL: Final[str] = 'prd'" in prd_gate_source
+    template_payload = yaml.safe_load(template.read_text(encoding='utf-8'))
+    assert 'prd' in template_payload.get('labels', [])
 

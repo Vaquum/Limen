@@ -26,7 +26,7 @@ Limen is a Python research library and CLI that an operator runs inside their ow
 
 Argument: the declared branch-protection policy requires review and current checks before merge. The live ruleset audit supplies the settings evidence; this page is not an independent audit of every administrator capability.
 
-Evidence: the `Protect-Main` ruleset requires pull requests with non-author approval, code-owner review on the enforcement surfaces owned in `.github/CODEOWNERS`, and all required status checks (Ruff, Tests, Coverage, Runtime, CodeQL, Pyright, Docs Site, Packaging, Package Install on four Python versions, the slice gate, and the dependency vulnerability gate) before merge; force pushes and branch deletion are blocked. The slice gate (`governance/slice_gate.py`, run by `.github/workflows/pr_checks_slice.yml`) additionally binds every PR to a filed scope contract.
+Evidence: the `Protect-Main` ruleset requires pull requests with non-author approval, code-owner review on the enforcement surfaces owned in `.github/CODEOWNERS`, and all required status checks (Ruff, Tests, Coverage, Runtime, CodeQL, Pyright, Docs Site, Packaging, Package Install on four Python versions, the PRD gate, and the dependency vulnerability gate) before merge; force pushes and branch deletion are blocked. The PRD gate (`governance/prd_gate.py`, run by `.github/workflows/pr_checks_prd.yml`) additionally binds every `feat` PR to a filed PRD and every other PR to a filed issue.
 
 ## Requirement 2: released artifacts are exactly what CI built, and users can verify it
 

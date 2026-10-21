@@ -16,15 +16,15 @@ Nineteen laws. Eighteen are workflow gates on every PR; the nineteenth is branch
 
 The list is long because this repository ships a package: alongside the governance gates it carries packaging verification, a built-wheel install matrix across four interpreters, a coverage floor, a suite runtime budget, and a documentation site. Every one of those is a required check, and law 17 requires each to be named here.
 
-1. **Every PR closes exactly one OPEN slice-labelled issue; closing its native parent PRD additionally requires no other open slice children and complete parent evidence.** A completed last child may leave its parent open with `Parent remains open: <remaining outcome or next slice>` in the PR body. Every PR carries the [Interface Contract](#research-interface-contract), agrees with its slice when declared, and respects its authoritative parent contract. Public delivery must completely support each claimed interface. PR title byte-equals the slice issue's title. Diff stays within the issue's `## Surfaces` globs and touches no path in `## Out of Scope`. Issue body preserves every existing `> **Significance.**` blockquote from the slice template verbatim. Every `Done Means` checkbox is checked or carries `OVERRULED: <reason>` before merge; this cannot waive the independent interface contract. The `slice_closeout_guard` workflow writes closeout evidence when a merged PR closes the slice and reopens an evidence-less close. *(pr_checks_slice)*
+1. **Every PR closes exactly one OPEN issue via `Closes #N`.** A `feat` PR's issue must carry the `prd` label; any other type may close any OPEN issue — or a PRD when the author wants more eyes on it. *(pr_checks_prd)*
 
-2. **PR title, every non-merge commit, and the linked issue title match Conventional Commits v1.0.0, and no commit message or the PR title names an AI/LLM assistant.** Allowed types: `feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert`. Every commit-message closing reference, including merge commits, must also appear explicitly as a same-repository closing reference in the PR body; cross-repository commit closures are rejected. *(pr_checks_cc)*
+2. **PR title and every non-merge commit match Conventional Commits v1.0.0, and no commit message or the PR title names an AI/LLM assistant.** Allowed types: `feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert`. Every commit-message closing reference, including merge commits, must also appear explicitly as a same-repository closing reference in the PR body; cross-repository commit closures are rejected. *(pr_checks_cc)*
 
 3. **Typing discipline never weakens.** No new `Any`, `cast(..., Any)`, `# type: ignore`, `# pyright: ignore`, or `# noqa`. Pyright error count cannot rise. `.github/typing_budget.json` cannot be raised by the PR it gates. The budget is seeded at this repository's measured state, not at zero: law 3 guarantees "no worse", not "clean". *(pr_checks_typing)*
 
 4. **Silent-fallback patterns never grow.** No new bare `except:`, empty handler (`pass`, `...`, `return`, `return None`, `continue`, `break`), `contextlib.suppress` (or any alias chain thereof), or `errors='ignore'`. `.github/fail_loud_budget.json` cannot be raised by the PR it gates. *(pr_checks_fail_loud)*
 
-5. **Every PR bumps the version and leaves a CHANGELOG trail.** `[project].version` advances strictly forward by `MAJOR.MINOR.PATCH`; the one exception is a PR whose body carries `[version-rewind: <reason>]` on its own line, which may set a lower version to withdraw releases that should never have been cut. `CHANGELOG.md` carries a `## [X.Y.Z] - YYYY-MM-DD` section for the new version with at least one content line, written imperatively ("Add", not "Added") and free of leftover placeholders. Bump level meets the Conventional Commits type minimum: `type!` → major, `feat` → minor, else patch. A major release is reserved for a change to the public API and requires `[major-release: <reason>]` on its own line of the PR body naming that change; a behaviour change inside one component, however visible in its output, is a patch or a minor and its slice title carries no `!`. `CITATION.cff` and every `limen_version:` in the manifest templates and public docs carry the same version. *(pr_checks_version)*
+5. **Every PR bumps the version and leaves a CHANGELOG trail.** `[project].version` advances strictly forward by `MAJOR.MINOR.PATCH`; the one exception is a PR whose body carries `[version-rewind: <reason>]` on its own line, which may set a lower version to withdraw releases that should never have been cut. `CHANGELOG.md` carries a `## [X.Y.Z] - YYYY-MM-DD` section for the new version with at least one content line, written imperatively ("Add", not "Added") and free of leftover placeholders. Bump level meets the Conventional Commits type minimum: `type!` → major, `feat` → minor, else patch. A major release is reserved for a change to the public API and requires `[major-release: <reason>]` on its own line of the PR body naming that change; a behaviour change inside one component, however visible in its output, is a patch or a minor and its title carries no `!`. `CITATION.cff` and every `limen_version:` in the manifest templates and public docs carry the same version. *(pr_checks_version)*
 
 6. **The static lint plane passes.** Ruff 0.15.21 across `limen/`, `governance/`, and `tests/`; every package module within its declared line budget in `.github/module_budgets.json`; no honesty-violation is swallowed; declared runtime dependencies carry no known vulnerability (pip-audit, with time-boxed `.github/vuln_exceptions.json` entries); and no budget file is raised by the PR it gates. *(pr_checks_lint)*
 
@@ -58,48 +58,6 @@ The list is long because this repository ships a package: alongside the governan
 
 Beyond the gates, `audit_main_ruleset` re-checks the live ruleset on every push to `main` with a privileged token — including `bypass_actors`, which the PR-time ruleset gate (`pr_checks_ruleset`) cannot observe. It is a post-merge alarm, not a merge gate, so it carries no law of its own. The release and publish path (`pr_post_release`, `pr_publish_pypi`), the weekly fuzz smoke, and the OpenSSF Scorecard analysis run outside the merge gate for the same reason.
 
-## Research interface contract
-
-Limen has two research interfaces. **Python Research** gives callers their own data, models, features, backtesting and selection in ordinary Python: custom SFD `params`/`prep`/`model` functions through `UniversalExperimentLoop`, caller-controlled search through MSQ, and `Sensor.from_python` for native inference handoff. It requires no new research language or built-in-model whitelist. **Compiled Research** adopts the `Manifest` (`MLManifest`/`RuleBasedManifest`) contract, directly or through `CompiledSFD` and CLI validation/compilation. A Manifest invoked from Python remains Compiled Research. UEL/MSQ, indicators, features and scalers are shared machinery, not exclusive interface markers.
-
-A public capability must work across every semantically applicable combination admitted by each interface that exposes it. Complete Python-only or Compiled-only delivery is valid; an unfinished second interface must remain unavailable. Restrictions must follow the capability's methodology or necessary evidence, not an implementation whitelist. Shared changes preserve existing guarantees on both paths. Completeness applies to the introduced or extended user capability, not every individual helper; unrelated maintenance does not have to repair every legacy limitation.
-
-This is a deliberate Limen-specific extension of the upstream governance plane, including law 1's independent child completion. It uses existing required contexts and introduces no additional research interface or required status context.
-
-### Declaration
-
-Every implementation PR has exactly one `## Interface Contract` section; issue forms may render it as `### Interface Contract`. It contains exactly one YAML fence with exactly four keys:
-
-```yaml
-delivery: maintenance
-interfaces: []
-scope: "Change contributor governance without changing research execution."
-proof: {}
-```
-
-- `delivery` is `public`, `prerequisite` or `maintenance`. Public delivery requires at least one interface and full support for each. A prerequisite exposes no unfinished public capability. Maintenance repairs or preserves existing behavior without enlarging its public contract.
-- `interfaces` is a duplicate-free subset of `python`, `compiled`. Prerequisite and maintenance work may use `[]` when no research capability changes; ordinary slice Proof and CI obligations still apply.
-- `scope` is a nonblank string naming the capability and justified exclusions, or the non-public purpose. Quote prose values to avoid YAML ambiguity. It cannot redefine an implementation gap as methodological inapplicability.
-- `proof` maps exactly the listed interfaces to nonempty reference lists; `interfaces: []` uses `proof: {}`. Public delivery needs at least one named test for every interface. Other roles may instead cite a relevant required check.
-
-Duplicate or unknown keys, aliases/merge keys, non-string enum values, placeholders and duplicate sections are rejected. CRLF and interface/reference ordering do not change a declaration's meaning. New issue forms require the field; CLI-authored issues follow the same planning discipline. The new slice field has no Significance blockquote, so it does not invalidate existing issues' quotations.
-
-### Evidence and review
-
-Test references use `test:tests/<path>/test_<module>.py::test_<name>` or `test:tests/<path>/test_<module>.py::Test<Class>::test_<name>`; the intermediate path may be absent. They name directly declared, normally discovered package tests. Reference a whole parametrized function, not selected cases. The gate rejects unsafe paths, symlinks, missing files/symbols and statically declared skip/xfail evidence. Only prerequisite/maintenance work may use `check:<required context>`, resolved against the trusted default branch's ruleset, not the candidate snapshot.
-
-Gate reads use the judged PR head as data; missing head identity or unavailable evidence cannot pass. Privileged issue/sweep jobs never import, collect or execute candidate tests. Reference existence and check membership do not prove execution or relevance. Required CI and semantic review must establish actual passing, unskipped execution, meaningful assertions, full claimed scope and honest exclusions. A formatting or admission check cannot prove a public research capability.
-
-### Adoption and parent completion
-
-The PR declaration must equal its slice's parsed declaration when present. If the slice lacks the section, its own PR supplies it; every PR still declares a contract, so no adoption-date exemption is needed. A native parent's contract must persist in that parent issue before child admission. Add it with a targeted issue edit, preserve the parent's agreed outcomes, and never replace it with a PR-body backfill.
-
-A public child requires a public parent and may claim a subset of its interfaces. A prerequisite's interfaces must also be a subset of the parent's targets. Maintenance may additionally name existing interfaces preserved by a shared repair without enlarging the parent's delivered product scope. Validate compatibility on every child; defer only parent proof-reference lookup until closure.
-
-A completed child may close independently. A last-child PR leaving the parent open names the remaining outcome or next slice in `Parent remains open: ...`. When ready, a new completion slice may close itself and the parent with all parent evidence. Child counts alone never establish product completion. GitHub's optional-colon closing syntax is recognized; commit-based closures must be represented in the PR body so they receive the same checks. Add a missing reference to the PR body rather than rewriting commit history.
-
-The gate covers PR-path parent closure. Manual PRD closure has no automatic evidence guard; contributors must not use it to evade this law. Material PR/issue contract edits require renewed semantic review of both the current head and changed declaration; GitHub does not automatically dismiss approval on body edits. These are explicit mechanical limits, not completeness guarantees. After correcting a stale API-posted sweep failure, dispatch `pr_checks_slice_sweep` with `workflow_dispatch` to refresh the verdict instead of waiting six hours.
-
 ## Workflow
 
 Branch off `main`. Commit the first working increment and push to a remote branch of the same name, then **open the PR right away — before you run the gates locally, and never as a draft.** Opening it first starts CI immediately; run the local gate suite afterwards, keep working while GitHub runs the gates too, and don't wait for CI in the foreground. Never sit on local verification without an open PR; open a real PR or none.
@@ -110,7 +68,7 @@ Each push re-runs every gate. Prefer new commits to amends — amends don't give
 
 Merge unlocks when every required gate is green **and** the branch is up-to-date with `main`. Up-to-date is enforced server-side; rebase when main advances.
 
-When a gate fails, the gate's own output names the reason. Read the output, fix the code or the slice issue, push again. If the failure is the gate being wrong rather than the PR being wrong, fix the gate in its own PR — the ruleset drift gate (`pr_checks_ruleset`) will force the matching ruleset-snapshot update so no gate relaxation side-enters.
+When a gate fails, the gate's own output names the reason. Read the output, fix the code or the linked issue, push again. If the failure is the gate being wrong rather than the PR being wrong, fix the gate in its own PR — the ruleset drift gate (`pr_checks_ruleset`) will force the matching ruleset-snapshot update so no gate relaxation side-enters.
 
 ## Review work
 
@@ -120,7 +78,7 @@ The same posture governs the rest of review work. When reviewing an issue, post 
 
 ## Beyond the laws
 
-The gates check shape, scope, format, ratchets, and named test suites. They do not check whether the slice's capability actually works. The operator judges that at review time, against the following stance:
+The gates check shape, scope, format, ratchets, and named test suites. They do not check whether the PR's capability actually works. The operator judges that at review time, against the following stance:
 
 **Radical simplicity.** The simplest code that meets the requirement wins. Complexity earns its place by naming the specific concern it addresses — not "robustness" or "future-proofing" in general.
 
@@ -130,15 +88,15 @@ The gates check shape, scope, format, ratchets, and named test suites. They do n
 
 **No long-running commands.** Do not repeatedly run long-running commands. If something needs to be run repeatedly, immediately profile it, and report back to operator the profile results. The operator is expert in performance hacking, you are not. 
 
-**Minimal scope.** Touch only the files the task demands. Drive-by cleanups go in a separate slice.
+**Minimal scope.** Touch only the files the task demands. Drive-by cleanups go in a separate PR.
 
 **No synthetic data.** Ever. Inventing data is not a shortcut — it corrupts everything downstream. If the real data isn't there, stop and ask.
 
-**Validate against the stated expectation.** The question is never "did it run" — it's "did it return what the slice promised."
+**Validate against the stated expectation.** The question is never "did it run" — it's "did it return what the issue promised."
 
 **Deliver meaning not mechanics.** It's better to deliver the right meaning poorly, than deliver meaningless scaffolding and mechanics in an impressive way. 
 
-**The smallest possible honest way always.** Slice spec, code, communication, everything, let it be the smallest possible unit size that honestly delivers what is required.
+**The smallest possible honest way always.** Issue spec, code, communication, everything, let it be the smallest possible unit size that honestly delivers what is required.
 
 ## Conventions
 

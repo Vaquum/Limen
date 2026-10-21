@@ -30,7 +30,7 @@ def test_agents_file_routes_to_the_constitution_without_restating_it() -> None:
     """Verify AGENTS.md is a pointer rather than a second rulebook.
 
     The 257-line task-type regime it replaced was a parallel operating
-    document whose useful parts now live in the slice template. A second
+    document whose useful parts now live in the issue templates. A second
     rulebook is how the two drift apart.
     """
     assert AGENTS.is_file()

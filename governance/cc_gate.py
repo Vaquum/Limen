@@ -1,19 +1,21 @@
 #!/usr/bin/env python3
 """Conventional Commits gate -- hard-fail on any deviation.
 
-The slice gate owns closing-reference counts and issue existence.
+The PRD gate owns closing-reference counts and issue existence.
 
 This gate enforces the Conventional Commits v1.0.0 specification on:
 
   1. The PR title.
-  2. Every closing-referenced issue title except ``planning``-labelled
-     parent PRDs, using the shared Closes/Fixes/Resolves parser.
-  3. Every non-merge commit subject in ``$BASE..$HEAD``.
+  2. Every non-merge commit subject in ``$BASE..$HEAD``.
+
+Linked issues carry no format requirement: PRDs and ordinary issues
+alike use free-form titles.
 
 It also rejects AI/LLM attribution in PR titles and non-merge commit
 messages; commit metadata in this org never carries AI attribution.
 Every commit closing reference, including merge messages, must also be
-declared in the PR body so slice/parent admission validates the full set.
+declared in the PR body so PRD admission validates the full set, and
+cross-repository commit closures are forbidden.
 
 Specification reference: https://www.conventionalcommits.org/en/v1.0.0/
 
@@ -43,7 +45,6 @@ Usage:
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import re
 import subprocess
@@ -170,57 +171,9 @@ def list_commits(base_ref: str, head_ref: str) -> list[dict[str, object]]:
     return commits
 
 
-def fetch_issue(repo: str, number: int) -> dict[str, object]:
-    """Return ``{'title': ..., 'labels': [...]}`` for the issue.
-
-    Any gh failure here is a gate setup failure because linked-issue
-    title validation is part of cc_gate's own contract.
-    """
-    try:
-        result = subprocess.run(
-            [
-                'gh', 'api', f'repos/{repo}/issues/{number}',
-                '--jq', '{title: .title, labels: [.labels[].name]}',
-            ],
-            check=False,
-            capture_output=True,
-            text=True,
-        )
-    except FileNotFoundError as exc:
-        print(f'cc_gate: gh not found: {exc}', file=sys.stderr)
-        raise SystemExit(2) from exc
-    if result.returncode != 0:
-        error_output = (
-            result.stderr.strip()
-            or result.stdout.strip()
-            or 'no error output'
-        )
-        print(
-            f'cc_gate: gh api repos/{repo}/issues/{number} failed '
-            f'(exit {result.returncode}): {error_output}',
-            file=sys.stderr,
-        )
-        raise SystemExit(2)
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        print(
-            f'cc_gate: linked issue #{number} payload is not JSON: {exc}',
-            file=sys.stderr,
-        )
-        raise SystemExit(2) from exc
-    if not isinstance(payload, dict) or not str(payload.get('title', '')).strip():
-        print(
-            f'cc_gate: linked issue #{number} has an empty title payload',
-            file=sys.stderr,
-        )
-        raise SystemExit(2)
-    return payload
-
-
 def find_closing_references(body: str) -> list[int]:
-    # Deduplicated, first-seen order: a body repeating a reference must
-    # not fetch the same issue twice.
+    # Deduplicated, first-seen order: a body repeating a reference
+    # resolves to one declared reference, not two.
     return list(dict.fromkeys(
         int(m.group(1)) for m in CLOSING_KEYWORD_RE.finditer(body)
     ))
@@ -288,7 +241,7 @@ def gate(
     if err is not None:
         failures.append(f'PR title {pr_title!r} {err}.')
 
-    # Rule 2: every non-merge commit in range.
+    # Rule 2: every non-merge commit subject in range.
     commits = list_commits(base_ref, head_ref)
     for c in commits:
         if c['is_merge']:
@@ -299,26 +252,16 @@ def gate(
         if err is not None:
             failures.append(f'commit {sha[:8]} subject {subject!r} {err}.')
 
-    # Rule 3: linked issue titles. Reference-count discipline is a
-    # slice_gate concern; cc_gate checks CC on every closing-referenced
-    # issue and exempts only ``planning``-labelled parent PRDs — an
-    # exemption scoped to any non-slice label would silently drop the
-    # validation the old single-reference branch applied to every
-    # ordinary issue.
+    # The PR body's declared references: every commit closure below must
+    # be a member of this set (rule 3). Reference-count discipline and
+    # issue existence are the PRD gate's concern, not duplicated here.
     refs = find_closing_references(pr_body)
-    for number in refs:
-        issue = fetch_issue(repo, number)
-        labels = issue.get('labels')
-        if isinstance(labels, list) and 'planning' in labels:
-            continue
-        issue_title = str(issue.get('title', ''))
-        err = check_cc(issue_title)
-        if err is not None:
-            failures.append(
-                f'linked issue #{number} title {issue_title!r} {err}.'
-            )
 
-    # Rule 4: no AI/LLM attribution in the PR title or any commit message.
+    # Rule 3: every commit closing reference is declared in the PR body;
+    # rule 4: no AI/LLM attribution in the PR title or any non-merge
+    # commit message. Merge messages are exempt from attribution (an
+    # auto-generated merge subject may name a branch like ``copilot/...``)
+    # but not from closure declaration.
     title_hit = attribution_hit(pr_title)
     if title_hit is not None:
         failures.append(
