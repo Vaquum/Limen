@@ -14,6 +14,7 @@ from collections.abc import Mapping
 from limen.experiment._resolve_backtest_config import resolve_backtest_config as _resolve_backtest_config, configured_barriers as _configured_barriers
 import copy
 import inspect
+import importlib
 import logging
 import random
 import re
