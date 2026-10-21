@@ -55,6 +55,9 @@ def trainer_metadata(manifest: object, metadata: Mapping[str, object], rounds: o
             from limen.data import HistoricalData
             setter = cast(Callable[..., None], getattr(manifest, 'set_data_source'))
             setter(HistoricalData.get_any_file, dict(cast(Mapping[str, object], source['identity'])))
+            reference = cast(dict[str, object], metadata['yaml_reference'])
+            declaration = cast(dict[str, object], cast(Mapping[str, object], reference['sfd'])['manifest'])
+            declaration['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file', 'params': dict(cast(Mapping[str, object], source['identity']))}
     return metadata.get('holdout')
 
 
