@@ -210,7 +210,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         imported = import_reference(reference(value.__func__ if isinstance(value, MethodType) else value)) if isinstance(value, (FunctionType, MethodType)) else None
         isolate = snapshot or (imported is not None and declaration_changed(imported, cast(object, value), encode))
         with shared_copy(state_memo):
-            clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if snapshot and isinstance(value, FunctionType) else decode(encode(cast(object, value)), isolate_functions=isolate)
+            clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if isinstance(value, FunctionType) and (isolate or mutable_function(value)) else decode(encode(cast(object, value)), isolate_functions=isolate)
         if isinstance(value, FunctionType) and clone is not value and (snapshot or mutable_function(value)):
             cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
