@@ -124,7 +124,8 @@ def factory_initializer(cls: type, instance: object, captured: Callable[..., obj
     if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
     function = captured or cls.__init__
-    return partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance) if inspect.isfunction(method) or inspect.ismethoddescriptor(method) or isinstance(method, classmethod) else function
+    bind = not isinstance(method, staticmethod) and (inspect.isfunction(method) or inspect.ismethoddescriptor(method))
+    return partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance) if bind else function
 
 
 def factory_signature(cls: type, initializer: Callable[..., object] | None, allocator: Callable[..., object] | None) -> inspect.Signature:
