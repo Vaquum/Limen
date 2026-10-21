@@ -62,14 +62,7 @@ In this workflow:
 
 A reconstructed `RuleBasedStrategy` owns a copy of the selected strategy and its ordered leaf-predicate inputs. It emits binary positions without probabilities. Reconstruction replays the original metrics; live prediction evaluates the stored rule without fitting it again. Ordinary recorded rounds and currently qualified walk-forward folds use the same Trainer routes and evidence requirements as other native models.
 
-```python
-from limen.inference import Trainer
-
-
-def selected_rule_decision(experiment_dir, permutation_id, raw_history):
-    sensor = Trainer(experiment_dir).train([permutation_id])[0]
-    return sensor.predict(raw_history)
-```
+Use the same [recorded selection workflow](#workflow): construct Trainer from the completed rule experiment, pass the selected round ID to `train`, then pass raw history to the returned Sensor. The source-bound [Trainer](#training-and-validation) and [Sensor API](#sensor-inference-api) below give the exact calls.
 
 Pass the completed rule experiment directory, its selected round ID, and recorded or fresh raw bars with the original source schema. Default artifacts suffice for ordinary reconstruction; a fold still requires its original opt-in promotion evidence. `train([id], fold=k)` never manufactures missing evidence.
 
