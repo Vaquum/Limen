@@ -623,12 +623,20 @@ def _self_assigned_transform(data, multiplier=2):
     return data.with_columns((pl.col('close') * multiplier).alias('close'))
 
 
+def _self_assigned_thread_transform(data, n_jobs=2):
+    return _caller_scaler(data, n_jobs)
+
+
 class SelfAssignedScaler(RobustScaler):
     transform = _self_assigned_transform
 
     def __init__(self, data):
         super().__init__(data)
         self.transform = type(self).transform
+
+
+class SelfAssignedThreadScaler(SelfAssignedScaler):
+    transform = _self_assigned_thread_transform
 
 
 def _prepared_probe(plan, params):
@@ -857,6 +865,19 @@ def test_frozen_manifest_round_plan() -> None:
                     for _ in range(2):
                         actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
                         assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
+        unsafe = freeze_manifest(copy.deepcopy(native).set_scaler(SelfAssignedThreadScaler), None)
+        with pytest.raises(ValueError, match=r'scaler\.class\.0\.0\.transform: effective n_jobs=1'):
+            validate_resources(unsafe, _parameters())
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(SelfAssignedThreadScaler.transform, '__defaults__', (1,))
+            frozen = freeze_manifest(copy.deepcopy(native).set_scaler(SelfAssignedThreadScaler), None)
+            control = SelfAssignedThreadScaler(data).transform(data).to_dict(as_series=False)
+        before = digest(frozen)
+        for _ in range(2):
+            actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+            expected = _frozen_probe(frozen, _parameters())
+            assert actual[5] == expected[5] == control and actual[3] != os.getpid() and digest(frozen) == before
+        assert SelfAssignedThreadScaler.transform.__defaults__ == (2,)
         weights = ConfiguredScaler.transform.__closure__[0].cell_contents
         for dynamic in (False, True):
             manifest = copy.deepcopy(native).set_scaler_from_params() if dynamic else copy.deepcopy(native).set_scaler(ConfiguredScaler)

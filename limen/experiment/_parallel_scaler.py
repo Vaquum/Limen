@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from inspect import getattr_static, isfunction
+from inspect import Parameter, getattr_static, isfunction, signature
 from typing import Protocol, cast
 
 import polars as pl
 
-from limen._parallel_contract import ParallelRoundContract, attach
+from limen._parallel_contract import ParallelRoundContract, _SEED_KEYS, attach
 from limen.scalers.registry import SCALER_REGISTRY
 
 
@@ -27,6 +27,10 @@ class CapturedTransform:
         if getattr_static(instance, 'transform') is not getattr_static(type(instance), 'transform'):
             return cast(TransformClass, instance).transform(data, **params)
         return self.function(instance, data, **params) if self.bind_instance and not (hasattr(instance, '__dict__') and 'transform' in vars(instance)) else self.function(data, **params)
+
+    def resource_defaults(self) -> dict[str, object]:
+        return {name: cast(object, parameter.default) for name, parameter in signature(self.function).parameters.items()
+                if name in _SEED_KEYS and parameter.default is not Parameter.empty}
 
 
 def capture_transform(cls: type) -> CapturedTransform:

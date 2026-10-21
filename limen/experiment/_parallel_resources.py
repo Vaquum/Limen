@@ -268,7 +268,7 @@ def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]]
 
 
 def _defaults(component: object, params: Mapping[str, object], *, skip: int = 1, path: str = 'architecture', runtime: tuple[str, ...] = ()) -> dict[str, object]:
-    component, skip = (component.function, 2 if component.bind_instance else 1) if isinstance(component, CapturedTransform) else (component, skip)
+    component, skip, params = (component.function, 2 if component.bind_instance else 1, component.resource_defaults() | dict(params)) if isinstance(component, CapturedTransform) else (component, skip, params)
     owner = component.__self__ if inspect.ismethod(component) else component
     state = component_state(owner) if not (inspect.isfunction(owner) or isinstance(owner, type)) else {}
     result = {key: value for key, value in state.items() if key != '__parallel_round_contract__'} | dict(params)
