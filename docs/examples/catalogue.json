@@ -2230,7 +2230,7 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer.",
+      "assertions": "Execute unchanged YAML through the installed CLI. Interrupt after a completed prefix, resume to four unique candidates, compare identities and metrics with uninterrupted execution, and reject changed pinned source bytes before fitting.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry"
       ]
