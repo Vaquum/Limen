@@ -12,6 +12,7 @@ import numbers
 from typing import cast
 
 from limen.experiment._holdout_state import fitted_witness
+from limen.experiment._holdout_namespaces import namespace_bindings
 from limen.experiment._holdout_calls import call_functions, native_attribute
 
 __all__ = ['digest', 'encoded', 'normalized']
@@ -34,7 +35,7 @@ def normalized(value: object) -> object:
         result = {str(key): normalized(item) for key, item in items.items()}
     elif isinstance(value, (list, tuple)):
         result = [normalized(item) for item in cast(list[object] | tuple[object, ...], value)]
-    elif inspect.ismethod(value) or inspect.isfunction(value) or isinstance(value, (type, partial)):
+    elif callable(value):
         callable_value = cast(object, value)
         factory = callable_value
         while isinstance(factory, partial):
@@ -43,10 +44,11 @@ def normalized(value: object) -> object:
                 break
             factory = native_attribute(provider, 'func')
         constructors = tuple(inspect.getattr_static(owner, name, None) for owner, name in ((factory, '__new__'), (factory, '__init__'), (type(factory), '__call__'))) if isinstance(factory, type) else ()
-        bindings = tuple((function, {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}) for target in (callable_value, *constructors) for function in call_functions(target))
-        owner = factory.__self__ if inspect.ismethod(factory) else factory
+        bindings = namespace_bindings(tuple(function for target in (callable_value, *constructors) for function in call_functions(target)))
+        target = cast(object, factory)
+        owner: object = target.__self__ if inspect.ismethod(target) else target
         factory_class = owner if isinstance(owner, type) else type(owner)
-        classes = (cast(type[object], factory_class), cast(type[object], type(factory_class))) if isinstance(factory, type) or inspect.ismethod(factory) else ()
+        classes = (cast(type[object], factory_class), cast(type[object], type(factory_class))) if not inspect.isfunction(target) else ()
         class_state = tuple((owner, {name: inspect.getattr_static(owner, name) for function, _ in bindings for name in function.__code__.co_names if any(name in vars(parent) for parent in owner.__mro__)}) for owner in classes)
         result = {'callable': f'{getattr(callable_value, "__module__", type(callable_value).__module__)}.{getattr(callable_value, "__qualname__", type(callable_value).__qualname__)}',
                   'implementation': sha256(fitted_witness((callable_value, constructors, bindings, class_state))).hexdigest()}

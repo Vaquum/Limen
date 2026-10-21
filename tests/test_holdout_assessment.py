@@ -1190,20 +1190,21 @@ def test_frozen_native_predict_exemption(native_assessment_case):
 
 
 @pytest.mark.parametrize('aliased', [False, True])
-def test_frozen_mapping_namespace_reader(native_assessment_case, aliased):
+@pytest.mark.parametrize('sequence', [False, True])
+def test_frozen_mapping_namespace_reader(native_assessment_case, aliased, sequence):
     class MappingGlobals(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
             if aliased:
-                reader = self.readers['read_globals']
+                reader = self.readers[0] if sequence else self.readers['read_globals']
                 offset = reader()['_LATE_RULES']['offset']
             else:
-                offset = self.readers['read_globals']()['_LATE_RULES']['offset']
+                offset = self.readers[0]()['_LATE_RULES']['offset'] if sequence else self.readers['read_globals']()['_LATE_RULES']['offset']
             result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
             return result
     selected = copy.deepcopy(native_assessment_case[2][0][0])
     selected._model.__class__ = MappingGlobals
-    selected._model.readers = {'read_globals': globals}
+    selected._model.readers = [globals] if sequence else {'read_globals': globals}
     frozen = _freeze(selected)
     assert _report(frozen, native_assessment_case)['state'] == 'completed'
     with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
@@ -1212,10 +1213,10 @@ def test_frozen_mapping_namespace_reader(native_assessment_case, aliased):
         assert loader.call_count == 0
 
 
-@pytest.mark.parametrize('classmethod_factory', [False, True])
+@pytest.mark.parametrize('factory_kind', ['class', 'instance', 'callable'])
 @pytest.mark.parametrize('inherited', [False, True])
 @pytest.mark.parametrize('wrapped', [False, True])
-def test_trusted_bound_factory_class_attributes(native_assessment_case, classmethod_factory, inherited, wrapped):
+def test_trusted_bound_factory_class_attributes(native_assessment_case, factory_kind, inherited, wrapped):
     class Parent:
         depth = 1.0
         @classmethod
@@ -1223,11 +1224,13 @@ def test_trusted_bound_factory_class_attributes(native_assessment_case, classmet
             return logreg_binary(data, **(params | {'C': cls.depth}))
         def construct(self, data, **params):
             return logreg_binary(data, **(params | {'C': self.depth}))
+        def __call__(self, data, **params):
+            return logreg_binary(data, **(params | {'C': self.depth}))
     class Factory(Parent):
         pass
     if not inherited:
         Factory.depth = 1.0
-    factory = Factory.build if classmethod_factory else Factory().construct
+    factory = Factory.build if factory_kind == 'class' else Factory().construct if factory_kind == 'instance' else Factory()
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
@@ -1235,7 +1238,7 @@ def test_trusted_bound_factory_class_attributes(native_assessment_case, classmet
     recorded = compiled.yaml_reference
     architecture = CompiledSFD(recorded, components=configure).manifest().architecture_function
     assert architecture.func is factory if wrapped else architecture is factory
-    directory = native_assessment_case[0] / f'bound-factory-{classmethod_factory}-{inherited}-{wrapped}'
+    directory = native_assessment_case[0] / f'bound-factory-{factory_kind}-{inherited}-{wrapped}'
     directory.mkdir()
     metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
     metadata['yaml_reference'] = recorded
@@ -1249,25 +1252,49 @@ def test_trusted_bound_factory_class_attributes(native_assessment_case, classmet
 
 
 @pytest.mark.parametrize('bound', [False, True])
-def test_frozen_logger_callable_globals(native_assessment_case, bound):
+@pytest.mark.parametrize('filtered', [False, True])
+def test_frozen_logger_callable_globals(native_assessment_case, bound, filtered):
     def bound_adjust(logger, values):
         return later_probabilities(values)
     class LoggerAdjustment(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
-            result['_probs'] = self.logger.adjust(result['_probs'])
+            result['_probs'] = self.logger.filters[0](result['_probs']) if filtered else self.logger.adjust(result['_probs'])
             return result
     selected = copy.deepcopy(native_assessment_case[2][0][0])
     selected._model.__class__ = LoggerAdjustment
-    selected._model.logger = logging.getLogger(f'holdout-extra-callback-{bound}')
+    selected._model.logger = logging.getLogger(f'holdout-extra-callback-{bound}-{filtered}')
     callback = MethodType(bound_adjust, selected._model.logger) if bound else later_probabilities
-    with patch.object(selected._model.logger, 'adjust', callback, create=True):
+    with patch.object(selected._model.logger, 'filters' if filtered else 'adjust', [callback] if filtered else callback, create=True):
         frozen = _freeze(selected)
         assert _report(frozen, native_assessment_case)['state'] == 'completed'
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(frozen, native_assessment_case)
             assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_trusted_factory_helper_globals(native_assessment_case, wrapped):
+    def factory(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + float(later_probabilities(0))}))
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is declared
+    directory = native_assessment_case[0] / f'helper-factory-{wrapped}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
 
 
 def test_trusted_component_implementation_and_globals(native_assessment_case):

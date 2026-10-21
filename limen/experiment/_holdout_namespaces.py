@@ -1,8 +1,8 @@
 import dis
 from functools import lru_cache
-from types import CodeType
+from types import CodeType, FunctionType, MethodType
 
-__all__ = ['namespace_calls']
+__all__ = ['namespace_bindings', 'namespace_calls']
 _CALLS = frozenset({'CALL', 'CALL_FUNCTION', 'CALL_METHOD'})
 _LOOKUP_WIDTH = 2
 
@@ -13,9 +13,9 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
     found: list[tuple[str, str | None]] = []
     aliases: dict[str, set[str]] = {}
     for index, part in enumerate(instructions[:-1]):
-        if part.opname not in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST', 'LOAD_FAST', 'LOAD_DEREF') or not isinstance(part.argval, str):
+        if part.opname not in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST', 'LOAD_FAST', 'LOAD_DEREF') or not isinstance(part.argval, (str, int)):
             continue
-        names = aliases.get(part.argval, {part.argval}) if part.opname in ('LOAD_FAST', 'LOAD_DEREF') else {part.argval}
+        names = aliases.get(str(part.argval), {str(part.argval)}) if part.opname in ('LOAD_FAST', 'LOAD_DEREF') else {str(part.argval)}
         call_index = index + 2 if instructions[index + 1].opname == 'BINARY_SUBSCR' and index + 2 < len(instructions) else index + 1
         call = instructions[call_index]
         if call.opname in ('STORE_FAST', 'STORE_DEREF') and (part.opname != 'LOAD_CONST' or call_index > index + 1):
@@ -35,3 +35,16 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
             key = lookup[0].argval if len(lookup) == _LOOKUP_WIDTH and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
             found.extend((name, key) for name in names)
     return (*found, *((alias, key) for part in code.co_consts if isinstance(part, CodeType) for name, key in namespace_calls(part) for alias in aliases.get(name, {name})))
+
+
+def namespace_bindings(functions: tuple[FunctionType, ...]) -> tuple[tuple[FunctionType, dict[str, object]], ...]:
+    pending, seen, bindings = list(functions), set[FunctionType](), list[tuple[FunctionType, dict[str, object]]]()
+    while pending:
+        function = pending.pop()
+        if function in seen:
+            continue
+        seen.add(function)
+        namespace = {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}
+        bindings.append((function, namespace))
+        pending.extend(value.__func__ if isinstance(value, MethodType) else value for value in namespace.values() if isinstance(value, (FunctionType, MethodType)))
+    return tuple(bindings)
