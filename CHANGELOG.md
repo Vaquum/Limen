@@ -1878,3 +1878,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.16] - 2026-10-21
 
 - Preserve active merge-readiness runs when review and check-suite events arrive; backport the upstream scheduling correction and contract guard.
+- Enforce the shared per-PR readiness lane and reject event-specific lane mutations; backport the merged upstream regression guard.

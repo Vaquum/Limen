@@ -8,6 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -130,7 +131,15 @@ def test_merge_readiness_workflow_contract() -> None:
     assert 'pull-requests: write' in workflow
     # One concurrency lane per PR across every event type, so parallel
     # runs cannot race the read-then-create on the marker comment.
-    assert 'github.event.check_suite.pull_requests[0].number' in workflow
+    expected_group = (
+        '${{ github.workflow }}-'
+        '${{ github.event.pull_request.number || '
+        'github.event.check_suite.pull_requests[0].number || '
+        'github.event.check_suite.head_sha || github.run_id }}'
+    )
+    assert parsed['concurrency']['group'] == expected_group, (
+        'readiness events must share one PR concurrency lane'
+    )
     # Informational only: never itself a required context, so it cannot
     # deadlock the merge it reports on.
     snapshot = json.loads(RULESET_SNAPSHOT.read_text(encoding='utf-8'))
@@ -138,6 +147,22 @@ def test_merge_readiness_workflow_contract() -> None:
         if rule['type'] == 'required_status_checks':
             contexts = [c['context'] for c in rule['parameters']['required_status_checks']]
             assert 'pr_merge_readiness' not in contexts
+
+
+def test_merge_readiness_rejects_event_specific_concurrency(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A review event must not acquire a separate marker-comment lane."""
+    workflow = READINESS_WORKFLOW.read_text(encoding='utf-8')
+    group = yaml.safe_load(workflow)['concurrency']['group']
+    assert workflow.count(group) == 1
+    mutated = workflow.replace(group, group + '-${{ github.event_name }}', 1)
+    path = tmp_path / 'pr_merge_readiness.yml'
+    path.write_text(mutated, encoding='utf-8')
+    monkeypatch.setattr(sys.modules[__name__], 'READINESS_WORKFLOW', path)
+
+    with pytest.raises(AssertionError, match='one PR concurrency lane'):
+        test_merge_readiness_workflow_contract()
 
 
 def test_update_changelog_script_removed() -> None:
