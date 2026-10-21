@@ -685,6 +685,7 @@ def _shared_carried_probe(plan, identity='function'):
             assert entries[0].func.__self__ is entries[1].func
         else:
             assert entries[0].func.function is entries[1].func.function
+            assert entries[0].func == entries[1].func
         data, outputs = recorded_source().head(24).select('close'), []
         for entry in entries:
             data = entry.func(data)
@@ -1019,6 +1020,19 @@ def test_frozen_manifest_round_plan() -> None:
         expected, _ = _shared_carried_probe(frozen)
         oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (2, 3)]
         assert actual == expected == oracle and pid != os.getpid()
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_caller_feature, '__defaults__', (3,))
+            first, second = FunctionRolling(_caller_feature), FunctionRolling(_caller_feature)
+            for component in (first, second):
+                declare_parallel(component, ParallelRoundContract(deterministic_stage))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(first).add_feature(second), None)
+        before = digest(frozen)
+        for _ in range(2):
+            actual, pid = pool.submit(_shared_carried_probe, frozen).result(timeout=30)
+            expected, _ = _shared_carried_probe(frozen)
+            oracle = [_caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()] * 2
+            assert actual == expected == oracle and pid != os.getpid() and digest(frozen) == before
+        assert first.function is second.function is _caller_feature and _caller_feature.__defaults__ == (2,)
         for identity, components in (('cell', (_cell_increment, _cell_read)), ('owner', (owner.transform, owner))):
             for component in components:
                 declare_parallel(component, ParallelRoundContract(deterministic_stage))

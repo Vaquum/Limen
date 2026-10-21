@@ -5,13 +5,12 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from datetime import date
 from pathlib import Path
-from types import FunctionType
 from typing import cast
 
 _encoded: ContextVar[tuple[dict[int, tuple[int, object]], set[int]] | None] = ContextVar('parallel_encoded_graph', default=None)
 _decoded: ContextVar[list[object] | None] = ContextVar('parallel_decoded_graph', default=None)
 copy_context: ContextVar[tuple[dict[int, tuple[object, object]], dict[int, object]] | None] = ContextVar('parallel_shared_copy', default=None)
-_VALUE_ARITY = {'tuple': 2, 'function': 6, 'ref': 2}
+_VALUE_ARITY = {'tuple': 2, 'ref': 2}
 EMPTY_IDS: frozenset[int] = frozenset()
 
 
@@ -26,24 +25,20 @@ def isolated_encoding() -> Iterator[None]:
         copy_context.reset(copy_token)
 
 
-def value_only(value: object, *, functions: bool = True) -> bool:
-    if isinstance(value, FunctionType):
-        return functions and value.__closure__ is None and value.__kwdefaults__ is None and '__wrapped__' not in vars(value) and value_only(value.__defaults__)
+def value_only(value: object) -> bool:
     if callable(value) and not isinstance(value, type):
         return False
     if isinstance(value, tuple):
-        return all(value_only(item, functions=False) for item in cast(tuple[object, ...], value))
+        return all(value_only(item) for item in cast(tuple[object, ...], value))
     return isinstance(value, (type(None), str, bool, int, float, date, Path, type))
 
 
-def _value_node(node: object, *, functions: bool = True) -> bool:
+def _value_node(node: object) -> bool:
     if not isinstance(node, list) or not node:
         return False
     parts = cast(list[object], node)
     if parts[0] == 'tuple' and len(parts) == _VALUE_ARITY['tuple'] and isinstance(parts[1], list):
-        return all(_value_node(item, functions=False) for item in cast(list[object], parts[1]))
-    if parts[0] == 'function' and len(parts) == _VALUE_ARITY['function']:
-        return functions and _value_node(parts[2]) and parts[3:] == [['null'], ['null'], ['null']]
+        return all(_value_node(item) for item in cast(list[object], parts[1]))
     return parts[0] in ('null', 'str', 'bool', 'int', 'float', 'date', 'datetime', 'path', 'import', 'owner_call')
 
 

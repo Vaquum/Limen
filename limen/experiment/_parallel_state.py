@@ -90,5 +90,5 @@ def mutable_function(function: FunctionType, active: frozenset[int] = EMPTY_IDS)
         return True
     active |= {id(function)}
     def mutable(value: object) -> bool:
-        return mutable_function(value, active) if isinstance(value, FunctionType) else any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not value_only(value, functions=False)
+        return mutable_function(value, active) if isinstance(value, FunctionType) else any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not value_only(value)
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
