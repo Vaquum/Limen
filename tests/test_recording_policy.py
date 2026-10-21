@@ -252,11 +252,12 @@ def recovery_campaigns(tmp_path_factory, campaigns):
         partial._append_round_data = stop_after_two
         _recovery_run(partial, kind, recording=policy)
         prefix = _records(paths['resumed'])
+        columns = pl.read_csv(paths['resumed'] / 'results.csv').drop('execution_time').columns
         assert len(prefix) == 2
         resumed = _recovery_loop(kind, paths['resumed'])
         _recovery_run(resumed, kind, resume=True)
         result[kind] = {'paths': paths, 'control': control, 'resumed': resumed,
-                        'policy': policy, 'prefix': prefix}
+                        'policy': policy, 'prefix': prefix, 'columns': columns}
         return result[kind]
 
     return campaign
@@ -268,8 +269,10 @@ def test_resume_ignores_inapplicable_recording_groups(kind, recovery_campaigns):
     full, resumed = (_records(captured['paths'][label]) for label in ('full', 'resumed'))
     assert resumed == [_project(record, captured['policy']) for record in full]
     assert resumed[:len(captured['prefix'])] == captured['prefix']
-    assert_frame_equal(pl.read_csv(captured['paths']['full'] / 'results.csv').drop('execution_time'),
-                       pl.read_csv(captured['paths']['resumed'] / 'results.csv').drop('execution_time'),
+    left, right = (pl.read_csv(captured['paths'][label] / 'results.csv').drop('execution_time') for label in ('full', 'resumed'))
+    assert right.columns == captured['columns']
+    assert set(left.columns) == set(right.columns)
+    assert_frame_equal(left, right.select(left.columns),
                        check_exact=False, rel_tol=1e-10, abs_tol=1e-12)
     assert captured['resumed']._recording == captured['policy']
     if kind.startswith('native'):
@@ -299,7 +302,7 @@ def test_resume_requires_applicable_policy(kind, group, tmp_path):
     ('factorized', 'missing_datetimes'),
 ))
 def test_resume_requires_payloads_before_rewrites(kind, damage, recovery_campaigns, tmp_path):
-    source = recovery_campaigns(kind)['paths']['full']
+    source = recovery_campaigns(kind)['paths']['resumed' if kind == 'parallel_snapshot' else 'full']
     path = tmp_path / kind
     shutil.copytree(source, path)
     round_path = storage.round_path(path)
