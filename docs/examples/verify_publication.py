@@ -96,7 +96,10 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
             raise ValueError('The deployed 404 body could not be read completely') from error
         if error.code != 404 or error.read() != files['404.html']:
             raise ValueError('The deployed 404 differs from the sealed reader') from error
-        require_headers(error.headers)
+        try:
+            require_headers(error.headers)
+        except ValueError as header_error:
+            raise header_error from error
 
 
 def relative_path(value: str) -> str:

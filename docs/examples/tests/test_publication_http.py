@@ -228,7 +228,7 @@ def publication_failure_server(rollback_fails=True):
             status, payload = 404, body
             if path.endswith('security-headers.json'):
                 status, payload = 200, policy_bytes
-            elif path.startswith(('/site/', '/good/', '/partial404/')) and not missing:
+            elif path.startswith(('/site/', '/headers/', '/good/', '/partial404/')) and not missing:
                 status = 200
             elif missing and path.startswith('/site/'):
                 status = 503
@@ -239,7 +239,7 @@ def publication_failure_server(rollback_fails=True):
                 status = 503
             self.send_response(status, 'reason-private-marker')
             for name, value in policy.items():
-                self.send_header(name, value)
+                self.send_header(name, 'changed' if missing and path.startswith('/headers/') and name == 'X-Frame-Options' else value)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(payload) + (10 if partial else 0)))
             self.send_header('Cache-Control', 'public, max-age=0, must-revalidate')

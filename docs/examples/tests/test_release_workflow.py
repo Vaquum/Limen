@@ -289,6 +289,7 @@ def test_deployment_identity_must_hold_through_the_propagation_barrier(monkeypat
     ('artifact', False, False, None),
     ('artifact', True, False, None),
     ('wrapped', True, False, None),
+    ('headers', True, False, None),
     ('non-http', True, False, None),
     ('artifact', True, True, None),
     ('artifact', False, False, 'activation'),
@@ -341,8 +342,9 @@ def verification(url, release):
         raise ValueError("injected non-HTTP activation failure")
     if phase == "rollback" and not rollback_fails:
         return {"release": release}
-    if kind == "wrapped":
-        verify_site(base + "/site/" + phase + "/", {"index.html": body, "404.html": body, "security-headers.json": policy})
+    if kind in ("wrapped", "headers"):
+        route = "/headers/" if kind == "headers" else "/site/"
+        verify_site(base + route + phase + "/", {"index.html": body, "404.html": body, "security-headers.json": policy})
     else:
         fetch(base + "/phase/" + phase + "?token=query-private-marker#fragment-private-marker")
     raise AssertionError("The real HTTP failure did not propagate")
@@ -392,7 +394,10 @@ deployment.activate(root, Path("isolated-control-plane"))
                 assert request['body_state'] == 'complete' and request['body_bytes'] == len(body)
                 assert request['body_sha256'] == sha256(body)
                 assert request['body_read_error_type'] is None
-                endpoint = '/site/' + phase + '/__missing-docs-acceptance__/' if kind == 'wrapped' else '/phase/' + phase
+                if kind in ('wrapped', 'headers'):
+                    endpoint = ('/headers/' if kind == 'headers' else '/site/') + phase + '/__missing-docs-acceptance__/'
+                else:
+                    endpoint = '/phase/' + phase
                 assert request['requested_url'] == request['response_url'] == base + endpoint
         assert not (output / 'accepted.json').exists()
         assert (output / 'rollback.json').exists() == (kind != 'preflight' and not rollback_fails)
