@@ -51,18 +51,24 @@ jobs:
       - name: Check bindings without prior execution evidence
         run: python -m pytest --import-mode=importlib docs/examples/tests/test_docs_examples.py -k 'not exact_bindings_and_coverage' -q --docs-evidence .docs-evidence/bindings-only.json
 
+      - name: Prove retained checker selection and failure receipts
+        run: timeout 60s python -m pytest --import-mode=importlib docs/checker/tests -q
+
       - name: Prepare hashed offline research dependencies
         run: python docs/examples/prepare_environment.py
 
       - name: Acquire merged source identities
         env:
           GH_TOKEN: ${{ github.token }}
-        run: python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
+        run: python docs/examples/retained_checker.py docs/examples/provenance.py --output .docs-evidence/source-provenance.json
 
       - name: Prove the candidate wheel and research projects
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
-        run: timeout 120s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
+        run: timeout 120s python docs/examples/retained_checker.py -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short
+
+      - name: Install the matching reader evidence checker
+        run: python docs/examples/retained_checker.py --install-launcher .docs-evidence/retained-python
 
       - name: Prove dependency audit failures
         working-directory: docs-site
@@ -76,6 +82,7 @@ jobs:
         working-directory: docs-site
         env:
           LIMEN_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          LIMEN_PYTHON: ${{ github.workspace }}/.docs-evidence/retained-python
         run: timeout 60s npm run check
 
       - name: Provision the locked browser

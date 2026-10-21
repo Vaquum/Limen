@@ -1875,6 +1875,15 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Report post-experiment confusion only for binary classification; record explicit unavailability for exposure, continuous, and unclassifiable outputs while preserving backtests, correlation, and the convergence report.
 
-## [5.45.16] - 2026-10-20
+## [5.45.16] - 2026-10-21
+
+- Preserve the mainline provenance boundary when qualifying original PR heads after merge; allow the reviewed checker to inspect an explicit retained checkout.
+- Use one reviewed provenance dependency for retained source acquisition, original book tests and reader evidence validation; retain separate checker identities and unchanged product sources.
+- Keep restored pre-PR source bytes candidate when they differ from ordinary merged ancestry, preserving the original evidence guard.
+- Record raised checker failures with their actual exit codes; reuse captured original-head source metadata in bounded regression setup while retaining every assertion.
+- Run retained-checker regressions before research proof in the same required documentation job, preserving test coverage, source checks and existing proof time limits.
+- Include checker regressions in source distributions and update markdown-it to 14.3.3 for GHSA-vfgh-jcmw-g37q.
+
+## [5.45.17] - 2026-10-21
 
 - Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit bound subclasses only when HistoricalData itself defines the store.
