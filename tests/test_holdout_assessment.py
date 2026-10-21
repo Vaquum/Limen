@@ -1462,7 +1462,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 
 
 @pytest.mark.parametrize('wrapped', [False, True])
-@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook', 'numeric-hook', 'reflect-globals', 'reflect-builtins', 'getattr-globals', 'getattr-builtins', 'dotted-import', 'mro'])
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook', 'numeric-hook', 'reflect-globals', 'reflect-builtins', 'getattr-globals', 'getattr-builtins', 'dotted-import', 'mro', 'bound-method'])
 def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind, monkeypatch):
     import sys
     from types import CellType, ModuleType
@@ -1568,6 +1568,11 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
         return logreg_binary(data, **(params | {'C': descriptor_settings.depth}))
     registry = {'build': helper}
     getter = registry.get
+    class BoundFactory:
+        def __init__(self):
+            self.helper = helper
+        def create(self, data, **params):
+            return self.helper(data, **params)
     def bound_get_factory(data, **params):
         return getter('build')(data, **params)
     class AttributeSettings:
@@ -1603,7 +1608,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     annotation_factory.__annotations__ = {'build': helper}
     def nested_module_factory(data, **params):
         return package.helpers.build(data, **params)
-    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory, 'numeric-hook': numeric_factory, 'reflect-globals': globals_factory, 'reflect-builtins': builtins_factory, 'getattr-globals': getattr_globals_factory, 'getattr-builtins': getattr_builtins_factory, 'dotted-import': dotted_factory, 'mro': OrderedFactory}[kind]
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory, 'numeric-hook': numeric_factory, 'reflect-globals': globals_factory, 'reflect-builtins': builtins_factory, 'getattr-globals': getattr_globals_factory, 'getattr-builtins': getattr_builtins_factory, 'dotted-import': dotted_factory, 'mro': OrderedFactory, 'bound-method': BoundFactory().create}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
@@ -1627,6 +1632,30 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
             CompiledSFD(recorded, components=configure).manifest()
         with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
             Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+def test_frozen_same_named_base_order(native_assessment_case):
+    class First:
+        def adjust(self, values):
+            return values
+    class Second:
+        def adjust(self, values):
+            return np.clip(values + 0.1, 0, 1)
+    Second.__name__, Second.__qualname__ = First.__name__, First.__qualname__
+    class OrderedPrediction(First, Second, LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.adjust(result['_probs'])
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = OrderedPrediction
+    selected._model.base_choices = (First, Second)
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.object(OrderedPrediction, '__bases__', (Second, First, LogRegBinary)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
         assert loader.call_count == 0
 
 

@@ -233,7 +233,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         names = constructor_names if isinstance(value, type) else method_names
         if id(cls) not in recorded_mro:
             recorded_mro.add(id(cls))
-            evidence.append(('mro', cls.__module__, cls.__qualname__, tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)))
+            mro = tuple((parent.__module__, parent.__qualname__) for parent in cls.__mro__)
+            evidence.append(('mro', cls.__module__, cls.__qualname__, mro, *((cls.__mro__,) if len(set(mro)) != len(mro) else ())))
         for parent in cls.__mro__:
             stamp = (id(parent), isinstance(value, type), len(names), len(parent.__dict__))
             if stamp in inspected:

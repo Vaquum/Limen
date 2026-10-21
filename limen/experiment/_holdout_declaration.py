@@ -55,7 +55,7 @@ def declaration_witness(value: object) -> bytes:
             cls = cast(type[object], owner if isinstance(owner, type) else type(owner))
             owners[id(cls)] = cls
             owners[id(type(cls))] = type(cls)
-        pending.extend((getattr(item, '__self__', None),) if inspect.isbuiltin(item) or isinstance(item, MethodWrapperType) else ())
+        pending.extend((getattr(item, '__self__', None),) if inspect.isbuiltin(item) or inspect.ismethod(item) or isinstance(item, MethodWrapperType) else ())
         if isinstance(item, reader_types):
             readers.update(alias for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else enumerate(native_values(item))) if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(cast(object, item), key))
         for function in call_functions(cast(object, item)):
