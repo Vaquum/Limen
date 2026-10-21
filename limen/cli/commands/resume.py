@@ -79,6 +79,10 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
         return False
 
+    if uel._shutdown_requested:
+        click.secho('  Interrupted; checkpoint retained.', fg='yellow')
+        return False
+
     click.secho('  ✓ Experiment complete', fg='green')
     return True
 

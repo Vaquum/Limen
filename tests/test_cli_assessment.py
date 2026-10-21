@@ -136,6 +136,13 @@ def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypat
         fitted.append(model)
         return original_train(model, prepared, **params)
     monkeypatch.setattr(LogRegBinary, 'train', train)
+    import limen.cli.commands.run as run_command
+    original_loop = run_command.UniversalExperimentLoop
+    def construct(*args, **kwargs):
+        with pytest.raises(ValueError, match='Cannot change reservations inside active research'):
+            holdout.withdraw_holdout(project, identity)
+        return original_loop(*args, **kwargs)
+    monkeypatch.setattr(run_command, 'UniversalExperimentLoop', construct)
     executed = runner.invoke(cli, ['run', '--no-progress-bar', 'final/holdout.yaml'])
     assert executed.exit_code == 0, executed.output
     with monkeypatch.context() as guard:
@@ -182,3 +189,37 @@ def test_cli_resume_rejects_changed_pinned_source(tmp_path, monkeypatch):
     resumed = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(output)])
     assert resumed.exit_code != 0 and 'Recorded source SHA-256 differs' in resumed.output
     assert {name: (output / name).read_bytes() for name in before} == before
+
+
+@pytest.mark.parametrize('signum', ['SIGINT', 'SIGTERM'])
+def test_cli_interrupt_stops_before_next_yaml(tmp_path, monkeypatch, signum):
+    import signal
+    import limen.cli.commands.run as command
+    from limen.sfd.reference_architecture import LogRegBinary
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'inputs').mkdir()
+    name = 'spot_1h_20240101_20241231.parquet'
+    shutil.copyfile(ROOT / 'tests/fixtures' / name, tmp_path / 'inputs' / name)
+    for name in ('recovery.yaml', 'selection.yaml'):
+        shutil.copyfile(ROOT / 'docs/examples/compiled-research' / name, tmp_path / name)
+    invoked = []
+    original_run, original_train = command.run_experiment, LogRegBinary.train
+    def run(path, **kwargs):
+        invoked.append(path)
+        return original_run(path, **kwargs)
+    def interrupt(model, data, **params):
+        result = original_train(model, data, **params)
+        signal.raise_signal(getattr(signal, signum))
+        return result
+    monkeypatch.setattr(command, 'run_experiment', run)
+    monkeypatch.setattr(LogRegBinary, 'train', interrupt)
+    previous = {item: signal.getsignal(item) for item in (signal.SIGINT, signal.SIGTERM)}
+    try:
+        result = CliRunner().invoke(cli, ['run', '--no-progress-bar', 'recovery.yaml', 'selection.yaml'])
+    finally:
+        for item, handler in previous.items():
+            signal.signal(item, handler)
+    assert result.exit_code != 0 and 'Interrupted; checkpoint retained' in result.output
+    assert invoked == [Path('recovery.yaml')]
+    assert (tmp_path / 'results/dev/compiled-recovery/checkpoint.json').is_file()
+    assert not (tmp_path / 'results/dev/compiled-cli').exists()

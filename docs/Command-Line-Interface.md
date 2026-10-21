@@ -46,6 +46,8 @@ limen new results/compiled-restored --from "$bundle/results/compiled-backup.git"
 
 The project script preserves its source YAML and uses a local Git remote. Runtime outputs and guarded holdout history have their own preservation requirements; Git backup follows the project's ignore rules. The template scaffold is separate from the recorded experiment.
 
+A multi-file run stops after a signalled interruption and retains the current experiment's checkpoint; later YAML files are not launched.
+
 ## Sensor and Cohort assessment
 
 `limen assess YAML --results DIRECTORY` requires the exact declaration retained in that directory. A guarded assessment also requires the supplied reservation to contain the YAML-declared final window. Its `assessment` block names an explicit validation metric, direction and member count. Optional fold numbers select qualified recorded folds. The command reconstructs and validates each selected Sensor, binds the Cohort and writes `assessment.json`. `predict: true` additionally writes `predictions.parquet` with decision timestamps, unavailable reasons and optional native availability values.

@@ -1,7 +1,7 @@
-from contextlib import redirect_stdout
+from contextlib import contextmanager, redirect_stdout
 from dataclasses import asdict
 import sys
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 import json
 from pathlib import Path
 from typing import cast
@@ -88,14 +88,19 @@ def _assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
     click.echo(f'Validated {len(sensors)} Sensor members → {results / "assessment.json"}')
 
 
-def require_reservation(document: dict[str, object], yaml_path: Path) -> None:
+@contextmanager
+def require_reservation(document: dict[str, object], yaml_path: Path) -> Iterator[None]:
     from limen.yaml._assessment_spec import holdout_spec
     spec = holdout_spec(document)
-    if spec is not None:
-        from limen.experiment._holdout_history import bind, utc_day
+    if spec is None:
+        yield
+        return
+    from limen.experiment._holdout_history import admission, bind, utc_day
+    with admission(_project(yaml_path)):
         binding = bind(yaml_path.parent)
         if binding is None or binding.cutoff_ns is None or binding.cutoff_ns > utc_day(str(spec['start'])) or binding.interval_seconds != spec['interval_seconds']:
             raise ValueError('Run limen reserve for the declared final window before research')
+        yield
 
 
 @click.command('assess')
