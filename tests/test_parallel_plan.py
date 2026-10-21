@@ -268,6 +268,16 @@ class PartialCallFactory(StaticInitRolling):
     __call__ = partial(_mutable_feature)
 
 
+class BoundCallOwner(InheritedCallable):
+    def __call__(self, data):
+        self.window += 1
+        return _caller_feature(data, self.window)
+
+
+class BoundCallFactory(StaticInitRolling):
+    __call__ = BoundCallOwner(2).__call__
+
+
 class SlottedDefaultRolling:
     __slots__ = ('window',)
 
@@ -1904,6 +1914,19 @@ def _assert_factory_resources(plan, params):
                     pool.submit(factory_component, factory).result(timeout=30)
                 assert SlottedDefaultRolling.__call__.__defaults__ == (2,)
         assert SlottedDefaultRolling.__call__.__defaults__ == (1,)
+        owner = BoundCallFactory.__call__.__self__
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(owner, 'window', 2)
+            assert BoundCallFactory()(data)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+            assert BoundCallFactory()(data)['caller_mean'].to_list() == _caller_feature(data, 4)['caller_mean'].to_list()
+            declare_parallel(BoundCallFactory, ParallelRoundContract(deterministic_stage))
+            for factory in (BoundCallFactory, partial(BoundCallFactory)):
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    pool.submit(factory_component, factory).result(timeout=30)
+                assert owner.window == 4
+        assert owner.window == 2
         for factory, window in ((AliasedClassFactory, 3), (DistinctClassFactory, 5)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage))
             expected = factory()(data)['caller_mean'].to_list()

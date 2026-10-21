@@ -51,7 +51,8 @@ def factory_component(value: object, *, captured_transform: bool = False) -> obj
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
         implementation = inspect.getattr_static(value, '__call__', None)
-        if (implementation := getattr(implementation, '__func__', implementation)) is not None and (not inspect.isroutine(implementation) or (inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or mutable_function(implementation)))):
+        if (inspect.ismethod(implementation)
+                or ((implementation := getattr(implementation, '__func__', implementation)) is not None and (not inspect.isroutine(implementation) or (inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or mutable_function(implementation)))))):
             raise TypeError('Parallel transport rejects unfrozen factory call state')
         parents = constructor_state(value)
         if any(callable(item) and not inspect.isroutine(item) for _, attributes in parents for name, item in attributes.items() if name != 'transform' or not captured_transform):
