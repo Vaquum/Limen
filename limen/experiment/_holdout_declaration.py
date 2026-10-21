@@ -92,4 +92,4 @@ def declaration_witness(value: object) -> bytes:
                     class_state[key] = part = vars(parent)[name]
                     readers.update((name,) if (native_attribute(cast(object, part), '__func__') if isinstance(part, (staticmethod, classmethod)) else part) is _native_globals else ())
                     pending.extend((cast(object, part),) if name in ('__new__', '__init__', '__call__') or not (calls := call_functions(cast(object, part))) or any(not _native(function) for function in calls) else ())
-    return fitted_witness((value, tuple(bindings.items()), tuple((cls, name, part) for (cls, name), part in class_state.items())))
+    return fitted_witness((value, tuple(bindings.items()), tuple((cls, name, part) for (cls, name), part in class_state.items()), tuple((cls, cls.__mro__) for cls in owners.values())))

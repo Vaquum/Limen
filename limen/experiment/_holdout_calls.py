@@ -212,5 +212,6 @@ def factory_imports(function: FunctionType, codes: tuple[CodeType, ...]) -> dict
         for index, instruction in enumerate(instructions):
             if instruction.opname == 'IMPORT_NAME':
                 imported = resolve_name('.' * int(instructions[index - 2].argval) + str(instruction.argval), function.__globals__.get('__package__', ''))
-                bindings[f'import:{imported}'] = sys.modules[imported]
+                parts = imported.split('.')
+                bindings.update((f'import:{name}', sys.modules[name]) for size in range(1, len(parts) + 1) for name in ('.'.join(parts[:size]),))
     return bindings

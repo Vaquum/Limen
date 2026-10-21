@@ -1462,7 +1462,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 
 
 @pytest.mark.parametrize('wrapped', [False, True])
-@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook', 'numeric-hook', 'reflect-globals', 'reflect-builtins', 'getattr-globals', 'getattr-builtins'])
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook', 'numeric-hook', 'reflect-globals', 'reflect-builtins', 'getattr-globals', 'getattr-builtins', 'dotted-import', 'mro'])
 def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind, monkeypatch):
     import sys
     from types import CellType, ModuleType
@@ -1520,6 +1520,20 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     package.helpers = helpers
     monkeypatch.setitem(sys.modules, package.__name__, package)
     monkeypatch.setitem(sys.modules, package.__name__ + '.helpers', helpers)
+    def dotted_factory(data, **params):
+        import holdout_construction_package.helpers
+        return holdout_construction_package.helpers.build(data, **params)
+    changed_helpers = ModuleType('changed_construction_helpers')
+    changed_helpers.build = replacement
+    class First:
+        depth = 1.0
+    class Second:
+        depth = 2.0
+    class OrderedFactory(First, Second):
+        choices = (First, Second)
+        def __new__(cls, data, **params):
+            assert cls.choices == (First, Second)
+            return logreg_binary(data, **(params | {'C': cls.depth}))
     def relative_factory(data, **params):
         from .helpers import build
         return build(data, **params)
@@ -1589,7 +1603,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     annotation_factory.__annotations__ = {'build': helper}
     def nested_module_factory(data, **params):
         return package.helpers.build(data, **params)
-    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory, 'numeric-hook': numeric_factory, 'reflect-globals': globals_factory, 'reflect-builtins': builtins_factory, 'getattr-globals': getattr_globals_factory, 'getattr-builtins': getattr_builtins_factory}[kind]
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory, 'numeric-hook': numeric_factory, 'reflect-globals': globals_factory, 'reflect-builtins': builtins_factory, 'getattr-globals': getattr_globals_factory, 'getattr-builtins': getattr_builtins_factory, 'dotted-import': dotted_factory, 'mro': OrderedFactory}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
@@ -1607,7 +1621,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     round_path = _round_storage.round_path(native_assessment_case[0] / 'native')
     copyfile(round_path, directory / round_path.name)
     assert Trainer(directory, project_root=native_assessment_case[0], components=configure)._manifest.architecture_function is declared
-    mutation = patch.object(Depth, '__get__', changed_getter) if kind == 'descriptor' else patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
+    mutation = patch.object(package, 'helpers', changed_helpers) if kind == 'dotted-import' else patch.object(OrderedFactory, '__bases__', (Second, First)) if kind == 'mro' else patch.object(Depth, '__get__', changed_getter) if kind == 'descriptor' else patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
     with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
         with pytest.raises(ValueError, match='differs from the recorded'):
             CompiledSFD(recorded, components=configure).manifest()
