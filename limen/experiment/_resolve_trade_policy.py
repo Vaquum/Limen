@@ -8,6 +8,7 @@ from typing import Literal, Protocol, cast
 from limen.backtest.funding_adapter import ADAPTER_VERSION, FUNDING_KEYS, FundingAdapter, funding_adapter
 from limen.backtest.funding_presets import PRESETS, PRESET_VERSION
 from limen.backtest.trade_contract import FundingPolicy, JsonValue, ProductSpec, TradePolicy, finite_number, json_value
+from limen.experiment._dynamic_barriers import dynamic_barriers
 from limen.experiment._resolve_backtest_config import resolve_backtest_config
 
 
@@ -145,6 +146,46 @@ def resolve_funding(config: FundingConfig | None, params: Mapping[str, object]) 
     if mechanism not in ('discrete', 'continuous') or valuation not in ('mark', 'oracle', 'execution_proxy') or not isinstance(currency, str) or approximation not in ('scenario', 'sampled', 'recorded_exact'):
         raise ValueError('Funding requires explicit mechanism, valuation, currency and approximation')
     return FundingPolicy(f'{module}.{name}', config.adapter_version, defaults, config.preset, PRESET_VERSION if config.preset else None, mechanism, finite_number(defaults.get('rate_basis_seconds'), 'funding rate basis'), valuation, currency, approximation, PRESETS[config.preset].calibration if config.preset is not None else None)
+
+
+def holdout_structural(manifest: object) -> None:
+    config = getattr(manifest, 'backtest_config', None)
+    if config is None:
+        return
+    declared = (getattr(config, 'product', None) is not None or getattr(config, 'execution_data_source', None) is not None
+        or getattr(config, 'funding', None) is not None or dynamic_barriers(config)
+        or getattr(config, 'source_interval_seconds', None) is not None)
+    if hasattr(manifest, 'strategy') and declared:
+        raise ValueError('Holdout research refuses rule-based event execution')
+    if getattr(config, 'execution_data_source', None) is not None:
+        raise ValueError('Holdout research refuses execution data sources')
+    if getattr(config, 'funding', None) is not None:
+        raise ValueError('Holdout research refuses funding')
+    if dynamic_barriers(config):
+        raise ValueError('Holdout research refuses dynamic barriers')
+    if getattr(config, 'source_interval_seconds', None) is not None:
+        raise ValueError('Holdout research refuses declared source intervals')
+    if getattr(config, 'product', None) is not None and getattr(config.product, 'kind', None) not in ('cash_spot', 'linear_perpetual'):
+        raise ValueError('Holdout research refuses this product')
+    if getattr(config, 'prediction_mode', 'binary') != 'binary':
+        raise ValueError('Holdout research refuses non-binary prediction mode')
+
+
+def holdout_event_policy(config: BacktestConfig | None, params: Mapping[str, object]) -> TradePolicy | None:
+    policy = resolve_trade_policy(config, params)
+    if policy is None or config is None:
+        return None
+    if policy.funding is not None or config.execution_data_source is not None:
+        raise ValueError('Holdout event execution refuses funding and execution data sources')
+    if dynamic_barriers(config):
+        raise ValueError('Holdout event execution refuses dynamic barriers')
+    if config.source_interval_seconds is not None:
+        raise ValueError('Holdout event execution refuses declared source intervals')
+    if config.product is None or config.product.kind not in ('cash_spot', 'linear_perpetual'):
+        raise ValueError('Holdout event execution refuses this product')
+    if policy.prediction_mode != 'binary':
+        raise ValueError('Holdout event execution refuses non-binary prediction mode')
+    return policy
 
 
 __all__ = ['BACKTEST_FIELDS', 'TRADE_NUMBERS', 'BacktestConfig', 'FundingConfig', 'ProductConfig', 'SourceConfig', 'resolve_funding', 'resolve_json', 'resolve_number', 'resolve_trade_policy']

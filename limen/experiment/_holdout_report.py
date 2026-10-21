@@ -18,6 +18,7 @@ import numpy.typing as npt
 import polars as pl
 from sklearn import metrics as _metrics
 
+from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.experiment import _holdout_history as history
 
 roc_auc_score = cast(Callable[[Sequence[int], Sequence[float]], float], vars(_metrics)['roc_auc_score'])
@@ -112,6 +113,9 @@ _COLUMNS = {'open_ns': pl.Int64, 'close_ns': pl.Int64, 'role': pl.String, 'sourc
             'members': _MEMBER, 'aggregate_prediction': pl.Int64, 'aggregate_probability': pl.Float64,
             'aggregate_reason': pl.String, 'label': pl.Int64, 'label_reason': pl.String, 'scenarios': _SCENARIO}
 _REPORT_KEYS: set[str] = {'schema_version', 'attempt_id', 'assessment_index', 'state', 'created_ns', 'finished_ns', 'project_id', 'reservation', 'spec', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'source', 'source_column_map', 'source_schema', 'planned', 'prior', 'exposure', 'rows_path', 'rows_sha256', 'classification', 'scenarios'}
+_SCHEMA_EXECUTION = 2
+_EXECUTION_KEYS: set[str] = {'research_digest', 'assessment_digest', 'policy', 'initial_equity', 'metrics', 'ledger', 'contract', 'tape', 'signals'}
+_LEDGER_KEYS: set[str] = {'states', 'intents', 'fills', 'episodes', 'funding'}
 
 
 def retained_rows(raw: pl.DataFrame, step: int, start: int, tape: list[dict[str, object]],
@@ -212,7 +216,8 @@ def read_holdout_report(project_root: str | Path, attempt_id: str) -> dict[str, 
             raise ValueError('Artifact hash mismatch')
         report = cast(dict[str, object], json.loads(report_file.read_bytes()))
         _ = encoded(report)
-        if set(report) != _REPORT_KEYS or report['schema_version'] != 1 or report['state'] != 'completed' or report['attempt_id'] != attempt_id:
+        expected: set[str] = _REPORT_KEYS | ({'execution'} if report.get('schema_version') == _SCHEMA_EXECUTION else cast(set[str], set()))
+        if set(report) != expected or report.get('schema_version') not in (1, _SCHEMA_EXECUTION) or report['state'] != 'completed' or report['attempt_id'] != attempt_id:
             raise ValueError('Invalid report schema or identity')
         for key in ('project_id', 'assessment_index', 'created_ns', 'finished_ns', 'spec_sha256', 'state_sha256', 'scenarios_sha256', 'rows_path', 'rows_sha256'):
             if report[key] != record[key]:
@@ -278,7 +283,48 @@ def _verify(report: dict[str, object], record: dict[str, object], rows: pl.DataF
         if set(scenario) != {'index', 'declaration', 'metrics'} or scenario['index'] != index or scenario['declaration'] != declaration:
             raise ValueError('Invalid retained scenario identity')
         populations.append(cast(dict[str, object], scenario['metrics']))
+    if cast(int, report['schema_version']) == _SCHEMA_EXECUTION:
+        populations.append(_verify_execution(cast(dict[str, object], report['execution']), final, spec, cast(dict[str, int], report['planned'])))
     _metric_schema(populations)
+
+
+def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: Mapping[str, object], planned: Mapping[str, int]) -> dict[str, object]:
+    members = cast(list[dict[str, object]], spec['members'])
+    pin = cast(dict[str, object], members[0].get('execution', {})) if len(members) == 1 else {}
+    ledger = cast(dict[str, list[dict[str, object]]], execution['ledger'])
+    contract = cast(dict[str, object], execution['contract'])
+    initial = cast(dict[str, object], contract['initial_conditions'])
+    product = cast(dict[str, object], cast(dict[str, object], execution['policy'])['product'])
+    partition = cast(list[int], contract['partition'])
+    tape = cast(list[dict[str, object]], execution['tape'])
+    signals = cast(list[dict[str, object]], execution['signals'])
+    rows = cast(list[dict[str, object]], contract['signal_rows'])
+    opens = final['open_ns'].to_list()
+    intents = {row['intent_id'] for row in ledger['intents']}
+    episodes = {row['episode_id'] for row in ledger['episodes']}
+    times = [cast(int, row['time_ns']) for row in ledger['states']]
+    fills = [cast(int, row['time_ns']) for row in ledger['fills']]
+    requested = [cast(int, row['requested_at_ns']) for row in ledger['intents']]
+    aligned = len(tape) == len(opens) == len(signals) == len(rows)
+    chained = aligned and not any(point['open_ns'] != open_ns or point['trade_contract_digest'] != execution['research_digest'] or point['available_at_ns'] != signal['available_at_ns'] or signal['target'] != point['prediction'] or (signal['row_id'], signal['available_at_ns']) != (row['row_id'], row['available_at_ns']) for point, signal, row, open_ns in zip(tape, signals, rows, opens, strict=True))
+    checks = ((set(execution) != _EXECUTION_KEYS or set(ledger) != _LEDGER_KEYS, 'Invalid execution evidence schema'),
+        (execution['research_digest'] != pin.get('research_digest') or execution['policy'] != pin.get('policy') or execution['initial_equity'] != pin.get('initial_equity'), 'Invalid execution evidence pin'),
+        (contract_digest(cast(Mapping[str, JsonValue], contract)) != execution['assessment_digest'], 'Invalid execution contract digest'),
+        (cast(dict[str, object], contract['rules']).get('terminal') != 'mark_without_close', 'Invalid execution terminal semantics'),
+        (initial.get('equity') != pin.get('initial_equity') or initial.get('quantity') != 0 or initial.get('currency') != product.get('quote_currency'), 'Invalid execution economics'),
+        (ledger['funding'] != [] or contract.get('calibration') is not None or cast(dict[str, object], execution['policy']).get('funding') is not None, 'Invalid execution funding absence'),
+        (partition != [planned['context_start_ns'], planned['end_ns']], 'Invalid execution partition bounds'),
+        (not aligned, 'Invalid execution tape identity'), (not chained, 'Invalid execution prediction chain'),
+        (any(row['intent_id'] not in intents for row in ledger['fills']), 'Invalid execution intent linkage'),
+        (any(row['episode_id'] not in episodes for row in (*ledger['intents'], *ledger['fills']) if row['episode_id'] is not None), 'Invalid execution episode linkage'),
+        (times != sorted(times) or fills != sorted(fills) or requested != sorted(requested), 'Invalid execution time order'),
+        (any(moment < partition[0] or moment > partition[1] for moment in (*times, *fills, *requested)), 'Invalid execution time bounds'),
+        (not times or times[0] != partition[0] or ledger['states'][0]['equity'] != pin.get('initial_equity') or ledger['states'][0]['quantity'] != 0, 'Invalid execution accounting anchor'),
+        (any(all((row['requested_at_ns'], row['target']) != (signal['available_at_ns'], signal['target']) for signal in signals) for row in ledger['intents'] if row['reason'] == 'signal'), 'Invalid execution signal linkage'))
+    for failed, message in checks:
+        if failed:
+            raise ValueError(message)
+    return cast(dict[str, object], execution['metrics'])
 
 
 def _metric_schema(populations: list[dict[str, object]]) -> None:

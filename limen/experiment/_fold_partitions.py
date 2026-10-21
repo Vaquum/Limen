@@ -163,7 +163,7 @@ def decisions(manifest: object, raw: pl.DataFrame, bars: pl.DataFrame, *, native
     from limen.experiment._resolve_trade_policy import SourceConfig, resolve_number
     config = getattr(manifest, 'backtest_config', None)
     if interval_seconds is None:
-        interval_seconds = getattr(config, 'source_interval_seconds', None) or source_interval(cast(SourceConfig | None, getattr(manifest, 'data_source_config', None)))
+        interval_seconds = getattr(config, 'source_interval_seconds', None) or getattr(manifest, '_holdout_interval_seconds', None) or source_interval(cast(SourceConfig | None, getattr(manifest, 'data_source_config', None)))
         interval_seconds = None if interval_seconds is None else resolve_number(interval_seconds, params or {}, 'recorded source interval')
     role = timestamp_role if timestamp_role is not None else cast(str, getattr(config, 'source_timestamp_role', 'start'))
     step = cast(int | None, getattr(manifest, '_fold_native_interval', None))
