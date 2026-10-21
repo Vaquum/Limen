@@ -203,10 +203,31 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
     _rewrite_report(root, report, backdate, 'availability floor')
 
     def reprice_fills(report_dict):
-        for fill in report_dict['execution']['ledger']['fills']:
+        execution = report_dict['execution']
+        for fill in execution['ledger']['fills']:
             fill['reference_price'] *= 2.0
+            fill['slippage'] = fill['quantity_delta'] * (fill['fill_price'] - fill['reference_price'])
+        slip = sum(fill['slippage'] for fill in execution['ledger']['fills'])
+        execution['metrics']['slippage']['value'] = slip
+        execution['metrics']['gross_pnl']['value'] = (execution['metrics']['ending_equity']['value'] - execution['initial_equity']
+                                                      + execution['metrics']['fees']['value'] + slip - execution['metrics']['funding_pnl']['value'])
 
     _rewrite_report(root, report, reprice_fills, 'fill reference')
+
+    def waive_costs(report_dict):
+        report_dict['execution']['ledger']['fills'][0]['fee'] += 1.0
+        report_dict['execution']['ledger']['fills'][0]['slippage'] += 1.0
+        report_dict['execution']['metrics']['fees']['value'] += 1.0
+        report_dict['execution']['metrics']['slippage']['value'] += 1.0
+        report_dict['execution']['metrics']['gross_pnl']['value'] += 2.0
+
+    _rewrite_report(root, report, waive_costs, 'fill costs')
+
+    def trim_closed(report_dict):
+        shuttered = next(episode for episode in report_dict['execution']['ledger']['episodes'] if episode['closed_at_ns'] is not None)
+        shuttered['net_pnl'] += 10.0
+
+    _rewrite_report(root, report, trim_closed, 'closed-episode valuation')
 
 
 def _rewrite_report(root, report, mutate, match):
