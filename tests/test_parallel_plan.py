@@ -180,6 +180,22 @@ class ClassInitRolling(CallerRolling):
         assert cls is ClassInitRolling
 
 
+class BoundInitOwner:
+    def __init__(self):
+        self.calls = 0
+
+    def initialize(self, n_jobs=2):
+        self.calls += 1
+
+
+_bound_initializer_owner = BoundInitOwner()
+
+
+class BoundInitRolling(CallerRolling):
+    window = 5
+    __init__ = _bound_initializer_owner.initialize
+
+
 class InheritedCallable(CallerRollingBase):
     def __init__(self, window):
         self.window = window
@@ -1669,7 +1685,7 @@ def _assert_factory_resources(plan, params):
                 else:
                     _factory_probe(allocated, AllocatedSubclassRolling, extra)
         assert digest(allocated) == before
-        for factory in (StaticInitRolling, StaticJobsInitRolling, ClassInitRolling):
+        for factory, window in ((StaticInitRolling, 3), (StaticJobsInitRolling, 3), (ClassInitRolling, 4), (BoundInitRolling, 5)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
             candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
             extra = {} if factory is StaticInitRolling else {'auxiliary_params': {'n_jobs': 1}}
@@ -1677,12 +1693,13 @@ def _assert_factory_resources(plan, params):
                 with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory: effective n_jobs=1'):
                     validate_resources(candidate, params | {'auxiliary_factory': factory})
             expected = factory(**extra.get('auxiliary_params', {}))(data)['caller_mean'].to_list()
-            assert expected == _caller_feature(data, 4 if factory is ClassInitRolling else 3)['caller_mean'].to_list()
+            assert expected == _caller_feature(data, window)['caller_mean'].to_list()
+            owner_calls = _bound_initializer_owner.calls
             before = digest(candidate)
             for _ in range(2):
                 actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
-            assert digest(candidate) == before
+            assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 4})
             captured_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})
