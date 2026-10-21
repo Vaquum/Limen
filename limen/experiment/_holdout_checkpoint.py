@@ -4,7 +4,7 @@ from collections.abc import Callable, Mapping
 from hashlib import sha256
 import json
 from pathlib import Path
-from typing import cast
+from typing import Protocol, cast
 
 import polars as pl
 
@@ -14,6 +14,10 @@ import limen.experiment._round_storage as storage
 __all__: list[str] = []
 _HEADER = {'schema_version', 'project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds'}
 _BINDING_SINCE = (5, 45, 28)
+
+
+class _SourceSetter(Protocol):
+    def set_data_source(self, method: Callable[..., object], params: dict[str, object]) -> None: ...
 
 
 def _json(value: object) -> str:
@@ -53,8 +57,7 @@ def trainer_metadata(manifest: object, metadata: Mapping[str, object], rounds: o
         source = cast(Mapping[str, object], proofs[0]['source'])
         if source['kind'] == 'local_file':
             from limen.data import HistoricalData
-            setter = cast(Callable[..., None], getattr(manifest, 'set_data_source'))
-            setter(HistoricalData.get_any_file, dict(cast(Mapping[str, object], source['identity'])))
+            cast(_SourceSetter, manifest).set_data_source(HistoricalData.get_any_file, dict(cast(Mapping[str, object], source['identity'])))
             reference = cast(dict[str, object], metadata['yaml_reference'])
             declaration = cast(dict[str, object], cast(Mapping[str, object], reference['sfd'])['manifest'])
             declaration['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file', 'params': dict(cast(Mapping[str, object], source['identity']))}
