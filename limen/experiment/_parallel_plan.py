@@ -124,12 +124,12 @@ def factory_initializer(cls: type, instance: object, captured: Callable[..., obj
     if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
     function = captured or cls.__init__
-    return function if isinstance(method, staticmethod) else partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance)
+    return function if isinstance(method, staticmethod) or inspect.ismethod(method) else partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance)
 
 
 def factory_signature(cls: type, initializer: Callable[..., object] | None, allocator: Callable[..., object] | None) -> inspect.Signature:
     component = initializer or allocator or cls
-    skip = int((initializer is not None and not isinstance(inspect.getattr_static(cls, '__init__'), (staticmethod, classmethod))) or (initializer is None and allocator is not None))
+    skip = int((initializer is not None and inspect.isfunction(inspect.getattr_static(cls, '__init__'))) or (initializer is None and allocator is not None))
     signature = inspect.signature(component)
     return signature.replace(parameters=list(signature.parameters.values())[skip:])
 
