@@ -96,6 +96,10 @@ def component_digest(component: object) -> str:
     return digest(_normalize(component, snapshot=True))
 
 
+def _same_component(left: object, right: object) -> bool:
+    return left is right or component_digest(left) == component_digest(right)
+
+
 def factory_reference(value: object) -> tuple[list[object], bool]:
     if isinstance(value, partial):
         bound = cast(partial[object], value)

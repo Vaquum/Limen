@@ -14,8 +14,8 @@ from typing import cast
 
 from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, constructor_state, validate_constructor
 from limen.experiment._parallel_encoding import encode
-from limen.experiment._parallel_state import component_state, factory_signature, object_state, restore_object
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
+from limen.experiment._parallel_state import component_state, factory_signature, mutable_function, object_state, restore_object
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, _same_component, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -50,6 +50,9 @@ def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
+        implementation = getattr(value, '__call__', None)
+        if inspect.isfunction(implementation := getattr(implementation, '__func__', implementation)) and mutable_function(implementation):
+            raise TypeError('Parallel transport rejects unfrozen factory call state')
         return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, constructor_state(value))
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
@@ -146,10 +149,6 @@ def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -
     for stage in plan.stages:
         _validate_stage(stage, configs)
 
-
-
-def _same_component(left: object, right: object) -> bool:
-    return left is right or component_digest(left) == component_digest(right)
 
 
 def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> dict[str, dict[str, object]]:

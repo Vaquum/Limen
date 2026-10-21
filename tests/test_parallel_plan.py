@@ -16,6 +16,7 @@ from pathlib import Path
 from dataclasses import dataclass, fields, is_dataclass, replace
 from functools import partial, wraps
 from types import FunctionType
+from typing import ClassVar
 
 import pytest
 import polars as pl
@@ -24,7 +25,7 @@ from limen._parallel_contract import ParallelRoundContract, declare_parallel, de
 from limen.experiment._parallel_encoding import decode, digest, encode, source_digest
 from limen.experiment._parallel_plan import clone_manifest, freeze_manifest
 from limen.experiment._parallel_scaler import ScalerFactory, capture_transform
-from limen.experiment._parallel_resources import sklearn_stage, validate_resources, xgboost_stage, validate_domain
+from limen.experiment._parallel_resources import factory_component, sklearn_stage, validate_resources, xgboost_stage, validate_domain
 from limen.experiment._parallel_worker import startup_limits
 from limen.experiment._parallel_evidence import record_context, validate_record, wire_record, parameter_projection, parameter_matches
 from limen.experiment import _round_storage as storage
@@ -176,7 +177,7 @@ def _class_options_initializer(self, options=None):
 
 
 class AliasedClassFactory(CallerRolling):
-    options = {'window': 3}
+    options: ClassVar[dict[str, int]] = {'window': 3}
     __init__ = _class_options_initializer
 
 
@@ -184,7 +185,7 @@ _class_options_initializer.__defaults__ = (AliasedClassFactory.options,)
 
 
 class DistinctClassFactory(CallerRolling):
-    options = {'window': 3}
+    options: ClassVar[dict[str, int]] = {'window': 3}
     __init__ = _class_options_initializer
 
 
@@ -1886,6 +1887,19 @@ def _assert_factory_resources(plan, params):
                     actual, pid = pool.submit(_factory_probe, frozen_alias, factory).result(timeout=30) if spawned else _factory_probe(frozen_alias, factory)
                     assert actual == expected and (pid != os.getpid()) is spawned
             assert digest(frozen_alias) == before and _class_options_initializer.__defaults__[0] is AliasedClassFactory.options
+        with pytest.MonkeyPatch.context() as patch:
+            cell = ClosureRolling.__call__.__closure__[0]
+            patch.setattr(cell, 'cell_contents', [2])
+            assert ClosureRolling()(data)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+            assert ClosureRolling()(data)['caller_mean'].to_list() == _caller_feature(data, 4)['caller_mean'].to_list()
+            before = list(cell.cell_contents)
+            declare_parallel(ClosureRolling, ParallelRoundContract(deterministic_stage))
+            for factory in (ClosureRolling, partial(ClosureRolling)):
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    pool.submit(factory_component, factory).result(timeout=30)
+                assert cell.cell_contents == before
         declare_parallel(BoundAllocatedRolling, ParallelRoundContract(seeded_stage, validation_keys=('seed',)))
         candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [BoundAllocatedRolling]})
         with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):
