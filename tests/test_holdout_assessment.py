@@ -1668,1775 +1668,1858 @@ def test_frozen_instance_namespace_module_alias_and_fixed_labels(native_assessme
 
 
 def test_frozen_dependencies_and_invalid_state(assessment_case):
-    import limen.scalers.logreg_scaler as scaler_module
-    from sklearn.linear_model import LogisticRegression
-    from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+    # Keep shared closure cells; release phase-local frozen graphs on return.
+    Adjusted: object
+    CalibrationConfig: object
+    FittingProvider: object
+    Keyed: object
+    LogRegBinary: object
+    LogisticRegression: object
+    PartialState: object
+    UsesReadonlyCallable: object
+    annotation_handle: object
+    bound_initializer: object
+    branch_handle: object
+    callback: object
+    callback_calls: object
+    changed: object
+    class_handle: object
+    config: object
+    container: object
+    copying_handle: object
+    db: object
+    defaultdict: object
+    deque: object
+    described: object
+    descriptor: object
+    descriptor_handle: object
+    distinct: object
+    expected_offset: object
+    factory: object
+    failed: object
+    field: object
+    global_handle: object
+    implementation: object
+    keyed: object
+    late: object
+    loader: object
+    mapped: object
+    name: object
+    nested_threshold: object
+    policy: object
+    property_handle: object
+    provider: object
+    readonly_prediction: object
+    record: object
+    reviewed: object
+    selected: object
+    threshold_selections: object
+    unsafe_class: object
 
-    class Lazy(LogRegBinary):
-        def predict(self, data):
-            self.model.fit(data['x_test'], [0])
-            return super().predict(data)
-    class Random(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_preds'] = np.random.choice([0, 1], len(data['x_test']))
-            return result
-    class Mutating(LogRegBinary):
-        def predict(self, data):
-            self.counter = getattr(self, 'counter', 0) + 1
-            return super().predict(data)
-    external_state = {'calls': 0}
-    class ExternalMutation(LogRegBinary):
-        def predict(self, data):
-            external_state['calls'] += 1
-            return super().predict(data)
-    class Nonpreserving(LogRegBinary):
-        def __deepcopy__(self, memo):
-            result = type(self).__new__(type(self))
-            vars(result).update(copy.deepcopy(vars(self), memo))
-            result.extra = 'changed selected state'
-            return result
-    from lightgbm import Booster
-    original_booster_predict = Booster.predict
-    for selected in assessment_case[2][1]:
-        native_handle = _freeze(selected)
-        with patch.object(Booster, 'predict', lambda *args, **kwargs: original_booster_predict(*args, **kwargs)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(native_handle, assessment_case)
-            assert loader.call_count == 0
-    altered_native = copy.deepcopy(assessment_case[2][1][1])
-    native_booster = altered_native._model.model.booster_
-    native_booster.predict = lambda *args, **kwargs: original_booster_predict(native_booster, *args, **kwargs)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='replaced Booster prediction methods'):
-            _freeze(altered_native)
-        assert loader.call_count == 0
-    frozen = _freeze(assessment_case[2][0][0])
-    with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(frozen, assessment_case)
-        assert loader.call_count == 0
-    import limen.inference.sensor as sensor_module
-    with patch.object(sensor_module, '_extract_scalar', lambda value: 0), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(frozen, assessment_case)
-        assert loader.call_count == 0
-    for kind, reason in ((Lazy, 'attempted fitting'), (Random, 'random dependency'), (Mutating, 'mutated fitted state'), (Nonpreserving, 'copy changed')):
-        changed = copy.deepcopy(assessment_case[2][0][0])
-        changed._model.__class__ = kind
+    def phase_1():
+        nonlocal Adjusted, Keyed, LogRegBinary, LogisticRegression, branch_handle, callback, changed, container, db, descriptor_handle, failed, implementation, keyed, late, loader, name, record, selected
+        import limen.scalers.logreg_scaler as scaler_module
+        from sklearn.linear_model import LogisticRegression
+        from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+
+        class Lazy(LogRegBinary):
+            def predict(self, data):
+                self.model.fit(data['x_test'], [0])
+                return super().predict(data)
+        class Random(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_preds'] = np.random.choice([0, 1], len(data['x_test']))
+                return result
+        class Mutating(LogRegBinary):
+            def predict(self, data):
+                self.counter = getattr(self, 'counter', 0) + 1
+                return super().predict(data)
+        external_state = {'calls': 0}
+        class ExternalMutation(LogRegBinary):
+            def predict(self, data):
+                external_state['calls'] += 1
+                return super().predict(data)
+        class Nonpreserving(LogRegBinary):
+            def __deepcopy__(self, memo):
+                result = type(self).__new__(type(self))
+                vars(result).update(copy.deepcopy(vars(self), memo))
+                result.extra = 'changed selected state'
+                return result
+        from lightgbm import Booster
+        original_booster_predict = Booster.predict
+        for selected in assessment_case[2][1]:
+            native_handle = _freeze(selected)
+            with patch.object(Booster, 'predict', lambda *args, **kwargs: original_booster_predict(*args, **kwargs)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(native_handle, assessment_case)
+                assert loader.call_count == 0
+        altered_native = copy.deepcopy(assessment_case[2][1][1])
+        native_booster = altered_native._model.model.booster_
+        native_booster.predict = lambda *args, **kwargs: original_booster_predict(native_booster, *args, **kwargs)
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match=reason):
-                _freeze(changed)
+            with pytest.raises(ValueError, match='replaced Booster prediction methods'):
+                _freeze(altered_native)
             assert loader.call_count == 0
-    changed = copy.deepcopy(assessment_case[2][0][0])
-    changed._model.__class__ = ExternalMutation
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='mutated prediction dependencies'):
-            _freeze(changed)
-        assert loader.call_count == 0 and external_state['calls'] > 0
-    original_scale = manifest_core._apply_scaler
-    def mutating_scale(*args):
-        external_state['calls'] += 1
-        return original_scale(*args)
-    with patch.object(manifest_core, '_apply_scaler', mutating_scale), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='mutated prediction dependencies'):
-            _freeze(assessment_case[2][0][0])
-        assert loader.call_count == 0
-    class CopyDependency(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = later_probabilities(result['_probs'])
-            return result
-        def __deepcopy__(self, memo):
-            result = type(self).__new__(type(self))
-            vars(result).update(copy.deepcopy(vars(self), memo))
-            _LATE_RULES['offset'] += 0.1
-            return result
-    copy_dependency = copy.deepcopy(assessment_case[2][0][0])
-    copy_dependency._model.__class__ = CopyDependency
-    with patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed prediction dependencies'):
-            _freeze(copy_dependency)
-        assert loader.call_count == 0
-    defaults, closure = {'offset': 0.0}, {'offset': 0.0}
-    def correction(values=defaults):
-        return values['offset'] + closure['offset']
-    class Configured(LogRegBinary):
-        rules: ClassVar[dict[str, float]] = {'offset': 0.0}
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + correction() + self.rules['offset'], 0, 1)
-            return result
-    configured = copy.deepcopy(assessment_case[2][0][0])
-    configured._model.__class__ = Configured
-    sealed = _freeze(configured)
-    for dependency in (defaults, closure, Configured.rules):
-        with patch.dict(dependency, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        frozen = _freeze(assessment_case[2][0][0])
+        with patch.dict(scaler_module.SCALING_RULES, dict.fromkeys(('open', 'high', 'low', 'close'), 'none')), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(frozen, assessment_case)
+            assert loader.call_count == 0
+        import limen.inference.sensor as sensor_module
+        with patch.object(sensor_module, '_extract_scalar', lambda value: 0), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(frozen, assessment_case)
+            assert loader.call_count == 0
+        for kind, reason in ((Lazy, 'attempted fitting'), (Random, 'random dependency'), (Mutating, 'mutated fitted state'), (Nonpreserving, 'copy changed')):
+            changed = copy.deepcopy(assessment_case[2][0][0])
+            changed._model.__class__ = kind
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match=reason):
+                    _freeze(changed)
+                assert loader.call_count == 0
+        changed = copy.deepcopy(assessment_case[2][0][0])
+        changed._model.__class__ = ExternalMutation
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='mutated prediction dependencies'):
+                _freeze(changed)
+            assert loader.call_count == 0 and external_state['calls'] > 0
+        original_scale = manifest_core._apply_scaler
+        def mutating_scale(*args):
+            external_state['calls'] += 1
+            return original_scale(*args)
+        with patch.object(manifest_core, '_apply_scaler', mutating_scale), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='mutated prediction dependencies'):
+                _freeze(assessment_case[2][0][0])
+            assert loader.call_count == 0
+        class CopyDependency(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = later_probabilities(result['_probs'])
+                return result
+            def __deepcopy__(self, memo):
+                result = type(self).__new__(type(self))
+                vars(result).update(copy.deepcopy(vars(self), memo))
+                _LATE_RULES['offset'] += 0.1
+                return result
+        copy_dependency = copy.deepcopy(assessment_case[2][0][0])
+        copy_dependency._model.__class__ = CopyDependency
+        with patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed prediction dependencies'):
+                _freeze(copy_dependency)
+            assert loader.call_count == 0
+        defaults, closure = {'offset': 0.0}, {'offset': 0.0}
+        def correction(values=defaults):
+            return values['offset'] + closure['offset']
+        class Configured(LogRegBinary):
+            rules: ClassVar[dict[str, float]] = {'offset': 0.0}
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + correction() + self.rules['offset'], 0, 1)
+                return result
+        configured = copy.deepcopy(assessment_case[2][0][0])
+        configured._model.__class__ = Configured
+        sealed = _freeze(configured)
+        for dependency in (defaults, closure, Configured.rules):
+            with patch.dict(dependency, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(sealed, assessment_case)
+                assert loader.call_count == 0
+        with patch.object(Configured, 'predict', LogRegBinary.predict), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(sealed, assessment_case)
             assert loader.call_count == 0
-    with patch.object(Configured, 'predict', LogRegBinary.predict), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(sealed, assessment_case)
-        assert loader.call_count == 0
-    slot_name = 'offset'
-    class SlotOffset:
-        __slots__ = slot_name
-        def __init__(self, offset):
-            self.offset = offset
-        def adjust(self, values):
-            return np.clip(values + self.offset, 0, 1)
-    class Adjusted(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.adjust(result['_probs'])
-            return result
-    slotted = copy.deepcopy(assessment_case[2][0][0])
-    slotted._model.__class__ = Adjusted
-    slotted._model.policy = SlotOffset(slotted._model._calibration_threshold)
-    stable = _freeze(slotted)
-    first = _report(stable, assessment_case)
-    slotted._model.policy.offset += 0.1
-    assert _report(stable, assessment_case)['rows_sha256'] == first['rows_sha256']
-    class NonpreservingSlot(SlotOffset):
-        def __deepcopy__(self, memo):
-            return type(self)(self.offset + 0.1)
-    slotted._model.policy = NonpreservingSlot(slotted._model._calibration_threshold)
-    with pytest.raises(ValueError, match='copy changed'):
-        _freeze(slotted)
-    class Late(LogRegBinary):
-        def predict(self, data):
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                if self.refit == 'callback':
-                    self.prediction_calibration_config.calibration_func()
-                elif self.refit == 'wrapped':
-                    self.prediction_calibration_config.threshold_func()
-                elif self.refit:
-                    self.model.fit(data['x_test'], [0])
-                else:
-                    self.counter += 1
-            return super().predict(data)
-    for refit in (False, True, 'callback', 'wrapped'):
-        late = copy.deepcopy(assessment_case[2][0][0])
-        prepared, _ = late._get_manifest().sensor_input_prep(late._fitted_params['_holdout_probe'], late._fitted_params, late._round_params)
-        columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]
-        late._model.__class__ = Late
-        late._model.research_x = np.asarray(prepared.select(columns).tail(1), dtype=float)
-        late._model.counter, late._model.refit = 0, refit
-        handle = _freeze(late)
-        with pytest.raises(ValueError, match='attempted fitting' if refit else 'changed fitted state') as failed:
-            _report(handle, assessment_case)
-        with history.connection(assessment_case[0] / history._HISTORY) as db:
-            record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
-            assert record['state'] == 'failed' and record['id'] in str(failed.value)
-            assert json.loads(record['error_json'])['stage'] == 'predict'
-        with pytest.raises(ValueError, match='not completed'):
-            read_holdout_report(assessment_case[0], record['id'])
-    class NativeRandom(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                result['_probs'] = np.clip(result['_probs'] + self.rng.normal(), 0, 1)
-            return result
-    native_random = copy.deepcopy(assessment_case[2][0][0])
-    native_random._model.__class__ = NativeRandom
-    native_random._model.research_x = late._model.research_x.copy()
-    native_random._model.rng = np.random.default_rng(42)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='random dependency'):
-            _freeze(native_random)
-        assert loader.call_count == 0
-    class Branch(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                if self.helper_class == 'local':
-                    class LocalOffset:
-                        def __init__(self):
-                            self.offset = _LATE_RULES['offset']
-                        def adjust(self, values):
-                            return np.clip(values + self.offset, 0, 1)
-                    result['_probs'] = LocalOffset().adjust(result['_probs'])
-                elif self.helper_class == 'registry':
-                    result['_probs'] = _OFFSET_REGISTRY['offset']().adjust(result['_probs'])
-                else:
-                    result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
-            return result
-    for helper_class in (False, True, 'local', 'registry'):
-        branched = copy.deepcopy(assessment_case[2][0][0])
-        branched._model.__class__ = Branch
-        branched._model.research_x = late._model.research_x.copy()
-        branched._model.helper_class = helper_class
-        branch_handle = _freeze(branched)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(branch_handle, assessment_case)
+        slot_name = 'offset'
+        class SlotOffset:
+            __slots__ = slot_name
+            def __init__(self, offset):
+                self.offset = offset
+            def adjust(self, values):
+                return np.clip(values + self.offset, 0, 1)
+        class Adjusted(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.adjust(result['_probs'])
+                return result
+        slotted = copy.deepcopy(assessment_case[2][0][0])
+        slotted._model.__class__ = Adjusted
+        slotted._model.policy = SlotOffset(slotted._model._calibration_threshold)
+        stable = _freeze(slotted)
+        first = _report(stable, assessment_case)
+        slotted._model.policy.offset += 0.1
+        assert _report(stable, assessment_case)['rows_sha256'] == first['rows_sha256']
+        class NonpreservingSlot(SlotOffset):
+            def __deepcopy__(self, memo):
+                return type(self)(self.offset + 0.1)
+        slotted._model.policy = NonpreservingSlot(slotted._model._calibration_threshold)
+        with pytest.raises(ValueError, match='copy changed'):
+            _freeze(slotted)
+        class Late(LogRegBinary):
+            def predict(self, data):
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    if self.refit == 'callback':
+                        self.prediction_calibration_config.calibration_func()
+                    elif self.refit == 'wrapped':
+                        self.prediction_calibration_config.threshold_func()
+                    elif self.refit:
+                        self.model.fit(data['x_test'], [0])
+                    else:
+                        self.counter += 1
+                return super().predict(data)
+        for refit in (False, True, 'callback', 'wrapped'):
+            late = copy.deepcopy(assessment_case[2][0][0])
+            prepared, _ = late._get_manifest().sensor_input_prep(late._fitted_params['_holdout_probe'], late._fitted_params, late._round_params)
+            columns = [name for name in prepared.columns if name not in ('datetime', '__trade_available_at_ns__')]
+            late._model.__class__ = Late
+            late._model.research_x = np.asarray(prepared.select(columns).tail(1), dtype=float)
+            late._model.counter, late._model.refit = 0, refit
+            handle = _freeze(late)
+            with pytest.raises(ValueError, match='attempted fitting' if refit else 'changed fitted state') as failed:
+                _report(handle, assessment_case)
+            with history.connection(assessment_case[0] / history._HISTORY) as db:
+                record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+                assert record['state'] == 'failed' and record['id'] in str(failed.value)
+                assert json.loads(record['error_json'])['stage'] == 'predict'
+            with pytest.raises(ValueError, match='not completed'):
+                read_holdout_report(assessment_case[0], record['id'])
+        class NativeRandom(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    result['_probs'] = np.clip(result['_probs'] + self.rng.normal(), 0, 1)
+                return result
+        native_random = copy.deepcopy(assessment_case[2][0][0])
+        native_random._model.__class__ = NativeRandom
+        native_random._model.research_x = late._model.research_x.copy()
+        native_random._model.rng = np.random.default_rng(42)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='random dependency'):
+                _freeze(native_random)
             assert loader.call_count == 0
-        if helper_class is True or helper_class == 'registry':
-            with patch.object(InferenceOffset, '__init__', _OFFSET_REGISTRY['alternate']), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        class Branch(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    if self.helper_class == 'local':
+                        class LocalOffset:
+                            def __init__(self):
+                                self.offset = _LATE_RULES['offset']
+                            def adjust(self, values):
+                                return np.clip(values + self.offset, 0, 1)
+                        result['_probs'] = LocalOffset().adjust(result['_probs'])
+                    elif self.helper_class == 'registry':
+                        result['_probs'] = _OFFSET_REGISTRY['offset']().adjust(result['_probs'])
+                    else:
+                        result['_probs'] = InferenceOffset().adjust(result['_probs']) if self.helper_class else later_probabilities(result['_probs'])
+                return result
+        for helper_class in (False, True, 'local', 'registry'):
+            branched = copy.deepcopy(assessment_case[2][0][0])
+            branched._model.__class__ = Branch
+            branched._model.research_x = late._model.research_x.copy()
+            branched._model.helper_class = helper_class
+            branch_handle = _freeze(branched)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(branch_handle, assessment_case)
                 assert loader.call_count == 0
-            with patch.object(InferenceOffset, 'offset', 0.2, create=True):
-                descriptor_handle = _freeze(branched)
-                with patch.object(InferenceOffset, 'adjust', classmethod(InferenceOffset.adjust)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            if helper_class is True or helper_class == 'registry':
+                with patch.object(InferenceOffset, '__init__', _OFFSET_REGISTRY['alternate']), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                     with pytest.raises(ValueError, match='prediction dependency changed'):
-                        _report(descriptor_handle, assessment_case)
+                        _report(branch_handle, assessment_case)
                     assert loader.call_count == 0
-    class Imported(LogRegBinary):
-        def predict(self, data):
-            import limen.calibration
-            result = super().predict(data)
-            result['_probs'] = limen.calibration.f17_later_probabilities(result['_probs'])
-            return result
-    class Aliased(LogRegBinary):
-        def predict(self, data):
-            import limen.calibration as imported
-            helpers = imported
-            result = super().predict(data)
-            result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
-            return result
-    for implementation in (Imported, Aliased):
-        imported = copy.deepcopy(assessment_case[2][0][0])
-        imported._model.__class__ = implementation
-        with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True):
-            imported_handle = _freeze(imported)
-            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-                with pytest.raises(ValueError, match='prediction dependency changed'):
-                    _report(imported_handle, assessment_case)
-                assert loader.call_count == 0
-    class Keyed(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = next(iter(self.adjustments))(result['_probs'])
-            return result
-    keyed = copy.deepcopy(assessment_case[2][0][0])
-    keyed._model.__class__ = Keyed
-    keyed._model.adjustments = {later_probabilities: True}
-    keyed_handle = _freeze(keyed)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(keyed_handle, assessment_case)
-        assert loader.call_count == 0
-    for container in (set, frozenset, lambda values: np.asarray(values, dtype=object)):
-        keyed._model.adjustments = container([later_probabilities])
-        container_handle = _freeze(keyed)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(container_handle, assessment_case)
-            assert loader.call_count == 0
-    class CallbackState(Keyed):
-        def predict(self, data):
-            result = super().predict(data)
-            callback = next(iter(self.adjustments))
-            result['_probs'] = np.clip(result['_probs'] + callback.offset, 0, 1)
-            return result
-    keyed._model.__class__ = CallbackState
-    keyed._model.adjustments = {identity_probabilities: True}
-    with patch.object(identity_probabilities, 'offset', 0.0, create=True):
-        callback_handle = _freeze(keyed)
-        with patch.object(identity_probabilities, 'offset', 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(callback_handle, assessment_case)
-            assert loader.call_count == 0
-    class MappingPolicy(dict):
-        def __init__(self, offset):
-            super().__init__()
-            self.offset = offset
-        def adjust(self, values):
-            return np.clip(values + self.offset, 0, 1)
-    mapped = copy.deepcopy(assessment_case[2][0][0])
-    mapped._model.__class__ = Adjusted
-    mapped._model.policy = MappingPolicy(mapped._model._calibration_threshold)
-    mapping_copy = owned_copy(mapped)
-    _freeze(mapping_copy)
-    expected_offset = mapping_copy._model.policy.offset
-    mapped._model.policy.offset += 0.1
-    assert mapping_copy._model.policy.offset == expected_offset
-    class NonpreservingMapping(MappingPolicy):
-        def __deepcopy__(self, memo):
-            return type(self)(self.offset + 0.1)
-    mapped._model.policy = NonpreservingMapping(expected_offset)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenMapping(dict):
-        def items(self):
-            return ()
-        def adjust(self, values):
-            return np.clip(values + self['offset'], 0, 1)
-        def __deepcopy__(self, memo):
-            return type(self)((key, copy.deepcopy(value, memo)) for key, value in dict.items(self))
-    class NonpreservingHidden(HiddenMapping):
-        def __deepcopy__(self, memo):
-            clone = super().__deepcopy__(memo)
-            clone['offset'] += 0.1
-            return clone
-    mapped._model.policy = HiddenMapping(offset=expected_offset)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingHidden(offset=expected_offset)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenSequence(list):
-        def __iter__(self):
-            return iter(())
-        def adjust(self, values):
-            return np.clip(values + list.__getitem__(self, 0), 0, 1)
-        def __deepcopy__(self, memo):
-            return type(self)(copy.deepcopy(value, memo) for value in list.__iter__(self))
-    class NonpreservingSequence(HiddenSequence):
-        def __deepcopy__(self, memo):
-            clone = super().__deepcopy__(memo)
-            clone[0] += 0.1
-            return clone
-    mapped._model.policy = HiddenSequence([expected_offset])
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingSequence([expected_offset])
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenArray(np.ndarray):
-        def tolist(self):
-            return []
-        def adjust(self, values):
-            return np.clip(values + np.ndarray.__getitem__(self, 0), 0, 1)
-        def __deepcopy__(self, memo):
-            clone = np.ndarray.copy(self)
-            memo[id(self)] = clone
-            return clone
-    class NonpreservingArray(HiddenArray):
-        def __deepcopy__(self, memo):
-            clone = super().__deepcopy__(memo)
-            clone[0] += 0.1
-            return clone
-    mapped._model.policy = np.asarray([expected_offset], dtype=object).view(HiddenArray)
-    _freeze(mapped)
-    mapped._model.policy = np.asarray([expected_offset], dtype=object).view(NonpreservingArray)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenNumeric(HiddenArray):
-        def __reduce_ex__(self, protocol):
-            return int, (0,)
-    class NonpreservingNumeric(HiddenNumeric):
-        def __deepcopy__(self, memo):
-            clone = super().__deepcopy__(memo)
-            clone[0] += 0.1
-            return clone
-    mapped._model.policy = np.asarray([expected_offset], dtype=float).view(HiddenNumeric)
-    _freeze(mapped)
-    mapped._model.policy = np.asarray([expected_offset], dtype=float).view(NonpreservingNumeric)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenAttributes:
-        def __init__(self, offset):
-            self.offset = offset
-        def __getattribute__(self, name):
-            return {} if name == '__dict__' else object.__getattribute__(self, name)
-        def adjust(self, values):
-            return np.clip(values + self.offset, 0, 1)
-        def __deepcopy__(self, memo):
-            return type(self)(self.offset)
-    class NonpreservingAttributes(HiddenAttributes):
-        def __deepcopy__(self, memo):
-            return type(self)(self.offset + 0.1)
-    mapped._model.policy = HiddenAttributes(expected_offset)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingAttributes(expected_offset)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenSlots:
-        __slots__ = ('offset', 'optional')
-        def __init__(self, offset):
-            self.offset = offset
-        def __getattribute__(self, name):
-            if name == 'offset':
-                raise AttributeError('hidden learned state')
-            return object.__getattribute__(self, name)
-        def adjust(self, values):
-            return np.clip(values + object.__getattribute__(self, 'offset'), 0, 1)
-        def __deepcopy__(self, memo):
-            return type(self)(object.__getattribute__(self, 'offset'))
-    class NonpreservingSlots(HiddenSlots):
-        def __deepcopy__(self, memo):
-            return type(self)(object.__getattribute__(self, 'offset') + 0.1)
-    mapped._model.policy = HiddenSlots(expected_offset)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingSlots(expected_offset)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class IteratorSlots:
-        __slots__ = iter(('offset',))
-        def __init__(self, offset):
-            self.offset = offset
-        def adjust(self, values):
-            return np.clip(values + self.offset, 0, 1)
-        def __deepcopy__(self, memo):
-            return type(self)(self.offset)
-    class NonpreservingIteratorSlots(IteratorSlots):
-        def __deepcopy__(self, memo):
-            return type(self)(self.offset + 0.1)
-    mapped._model.policy = IteratorSlots(expected_offset)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingIteratorSlots(expected_offset)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class AdjustProperty(property):
-        def __get__(self, instance, owner=None):
-            return lambda values: np.clip(values + self.offset + _LATE_RULES['offset'], 0, 1)
-    class PropertyModel(LogRegBinary):
-        @AdjustProperty
-        def adjust(self):
-            return identity_probabilities
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.adjust(result['_probs'])
-            return result
-    descriptor = vars(PropertyModel)['adjust']
-    descriptor.offset = expected_offset
-    described = copy.deepcopy(assessment_case[2][0][0])
-    described._model.__class__ = PropertyModel
-    property_handle = _freeze(described)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(property_handle, assessment_case)
-        assert loader.call_count == 0
-    with patch.object(descriptor, 'offset', expected_offset + 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(property_handle, assessment_case)
-        assert loader.call_count == 0
-    class AliasPrediction(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = fit_calibrator(result['_probs'])
-            return result
-    aliased_helper = copy.deepcopy(assessment_case[2][0][0])
-    aliased_helper._model.__class__ = AliasPrediction
-    alias_handle = _freeze(aliased_helper)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(alias_handle, assessment_case)
-        assert loader.call_count == 0
-    class AssessmentCopy(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = later_probabilities(result['_probs'])
-            return result
-        def __deepcopy__(self, memo):
-            clone = type(self).__new__(type(self))
-            vars(clone).update(copy.deepcopy(vars(self), memo))
-            if _COPY_AFTER_FREEZE:
-                _LATE_RULES['offset'] += 0.1
-            return clone
-    copying = copy.deepcopy(assessment_case[2][0][0])
-    copying._model.__class__ = AssessmentCopy
-    copying_handle = _freeze(copying)
-    with patch.dict(globals(), {'_COPY_AFTER_FREEZE': True}), patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed prediction dependencies before observation access'):
-            _report(copying_handle, assessment_case)
-        assert loader.call_count == 0
-    class Relative(LogRegBinary):
-        def predict(self, data):
-            from . import test_holdout_research as helpers
-            result = super().predict(data)
-            result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
-            return result
-    relative = copy.deepcopy(assessment_case[2][0][0])
-    relative._model.__class__ = Relative
-    with patch('tests.test_holdout_research.f17_later_probabilities', later_probabilities, create=True):
-        relative_handle = _freeze(relative)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(relative_handle, assessment_case)
-            assert loader.call_count == 0
-    class CollidingOffset(float):
-        def __hash__(self):
-            return 0
-    class SetChoice(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + next(iter(self.policy)), 0, 1)
-            return result
-        def __deepcopy__(self, memo):
-            clone = type(self).__new__(type(self))
-            memo[id(self)] = clone
-            vars(clone).update(copy.deepcopy(vars(self), memo))
-            clone.policy = type(self.policy)(reversed(tuple(self.policy)))
-            return clone
-    reordered = copy.deepcopy(assessment_case[2][0][0])
-    reordered._model.__class__ = SetChoice
-    for container in (set, frozenset):
-        reordered._model.policy = container((CollidingOffset(expected_offset), CollidingOffset(expected_offset + 0.1)))
-        assert tuple(copy.deepcopy(reordered._model).policy) == tuple(reversed(tuple(reordered._model.policy)))
-        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='copy changed'):
-                _freeze(reordered)
-            assert loader.call_count == 0
-    class FloatPolicy(float):
-        def adjust(self, values):
-            return np.clip(values + float(self), 0, 1)
-    class NonpreservingFloat(FloatPolicy):
-        def __deepcopy__(self, memo):
-            return type(self)(float(self) + 0.1)
-    mapped._model.policy = FloatPolicy(expected_offset)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingFloat(expected_offset)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class BytePolicy(bytearray):
-        def adjust(self, values):
-            return np.clip(values + np.frombuffer(self, dtype=np.float64)[0], 0, 1)
-    class NonpreservingBytes(BytePolicy):
-        def __deepcopy__(self, memo):
-            return type(self)((np.frombuffer(self, dtype=np.float64) + 0.1).tobytes())
-    learned_bytes = np.float64(expected_offset).tobytes()
-    mapped._model.policy = BytePolicy(learned_bytes)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingBytes(learned_bytes)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    from collections import deque
-    class DequePolicy(deque):
-        def adjust(self, values):
-            return np.clip(values + self[0], 0, 1)
-    class NonpreservingDeque(DequePolicy):
-        def __deepcopy__(self, memo):
-            return type(self)((self[0] + 0.1,), maxlen=self.maxlen)
-    mapped._model.policy = DequePolicy((expected_offset,), maxlen=1)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingDeque((expected_offset,), maxlen=1)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    from array import array
-    class OpaqueNativePolicy(array):
-        def adjust(self, values):
-            return np.clip(values + self[0], 0, 1)
-    mapped._model.policy = OpaqueNativePolicy('d', [expected_offset])
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='opaque native prediction state'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class ModuleLookup(LogRegBinary):
-        def predict(self, data):
-            import limen.calibration as helpers
-            result = super().predict(data)
-            name = 'f17_later_probabilities'
-            result['_probs'] = getattr(helpers, name)(result['_probs'])
-            return result
-    class BranchImports(LogRegBinary):
-        def predict(self, data):
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                import limen.calibration as helpers
-            else:
-                from . import test_holdout_research as helpers
-            result = super().predict(data)
-            result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
-            return result
-    class Reflective(LogRegBinary):
-        def adjust(self, values):
-            return later_probabilities(values)
-        def predict(self, data):
-            result = super().predict(data)
-            method_name = 'adjust'
-            result['_probs'] = getattr(self, method_name)(result['_probs'])
-            return result
-    class Derived(Reflective):
-        def predict(self, data):
-            return super().predict(data)
-    class ClassBody(LogRegBinary):
-        def predict(self, data):
-            class Local:
-                offset = _LATE_RULES['offset']
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + Local.offset, 0, 1)
-            return result
-    class Descriptor:
-        def __get__(self, instance, owner=None):
-            return later_probabilities
-        def __set__(self, instance, value):
-            raise AssertionError('Read-only prediction descriptor')
-    class Described(LogRegBinary):
-        adjust = Descriptor()
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.adjust(result['_probs'])
-            return result
-    from collections import defaultdict
-    class Factory(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.default_factory(result['_probs'])
-            return result
-    class PartialState(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.adjust(result['_probs'])
-            return result
-    class PartialPolicy(partial):
-        def __call__(self, values):
-            return later_probabilities(super().__call__(values))
-    class SlottedPartial(PartialPolicy):
-        __slots__ = ('offset',)
-        def __call__(self, values):
-            return np.clip(super().__call__(values) + self.offset, 0, 1)
-        def __deepcopy__(self, memo):
-            clone = type(self)(self.func, *self.args, **self.keywords)
-            memo[id(self)] = clone
-            vars(clone).update(copy.deepcopy(vars(self), memo))
-            clone.offset = self.offset
-            return clone
-    class NonpreservingSlotted(SlottedPartial):
-        def __deepcopy__(self, memo):
-            clone = super().__deepcopy__(memo)
-            clone.offset += 0.1
-            return clone
-    slotted_partial = SlottedPartial(identity_probabilities)
-    slotted_partial.offset = expected_offset
-    slotted_selection = copy.deepcopy(assessment_case[2][0][0])
-    slotted_selection._model.__class__ = PartialState
-    slotted_selection._model.policy = slotted_partial
-    slotted_selection._model.policy.adjust = slotted_partial
-    _freeze(slotted_selection)
-    slotted_selection._model.policy = NonpreservingSlotted(identity_probabilities)
-    slotted_selection._model.policy.offset = expected_offset
-    slotted_selection._model.policy.adjust = slotted_selection._model.policy
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(slotted_selection)
-        assert loader.call_count == 0
-    class NonpreservingPartial(PartialPolicy):
-        def __deepcopy__(self, memo):
-            return partial(self.func, *self.args, **self.keywords)
-    class ProbabilityMeta(type):
-        def __call__(cls, values):
-            return later_probabilities(values)
-    class ClassPolicy(metaclass=ProbabilityMeta):
-        selected = True
-    class CallablePolicy(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy(result['_probs'])
-            return result
-    class ArithmeticPolicy:
-        def __add__(self, values):
-            return later_probabilities(values)
-    class Arithmetic(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy + result['_probs']
-            return result
-    class NativeFloatPolicy(np.float64):
-        def __deepcopy__(self, memo):
-            return type(self)(float(self))
-        def adjust(self, values):
-            return later_probabilities(np.clip(values + float(self), 0, 1))
-    class IteratorPolicy:
-        def __next__(self):
-            return _LATE_RULES['offset']
-    class Iterated(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + next(self.policy), 0, 1)
-            return result
-    class UnaryPolicy:
-        def __neg__(self):
-            return _LATE_RULES['offset']
-    class Negated(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + (-self.policy), 0, 1)
-            return result
-    class RoundPolicy:
-        def __round__(self, ndigits=None):
-            return round(_LATE_RULES['offset'], ndigits)
-    class Rounded(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + round(self.policy, 2), 0, 1)
-            return result
-    class ContextPolicy:
-        def __enter__(self):
-            return _LATE_RULES['offset']
-        def __exit__(self, *args):
-            return False
-    class Contextual(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            with self.policy as offset:
-                result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
-            return result
-    class MissingPolicy(dict):
-        def __missing__(self, key):
-            return _LATE_RULES['offset']
-    class MissingLookup(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + self.policy['offset'], 0, 1)
-            return result
-    class ReversePolicy:
-        def __reversed__(self):
-            return iter((_LATE_RULES['offset'],))
-    class ReversedLookup(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + next(reversed(self.policy)), 0, 1)
-            return result
-    class ComparisonPolicy:
-        def __gt__(self, other):
-            return _LATE_RULES['offset'] > other
-    class Compared(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + (0.1 if self.policy > 0 else 0), 0, 1)
-            return result
-    class ConversionPolicy:
-        def __float__(self):
-            return _LATE_RULES['offset']
-    class Converted(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
-            return result
-    for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ContextPolicy(), MissingPolicy(), ReversePolicy(), ConversionPolicy()):
-        callable_selection = copy.deepcopy(assessment_case[2][0][0])
-        callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Contextual if isinstance(provider, ContextPolicy) else MissingLookup if isinstance(provider, MissingPolicy) else ReversedLookup if isinstance(provider, ReversePolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
-        callable_selection._model.policy = provider
-        callable_handle = _freeze(callable_selection)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(callable_handle, assessment_case)
-            assert loader.call_count == 0
-    callable_selection._model.policy = NonpreservingPartial(identity_probabilities)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(callable_selection)
-        assert loader.call_count == 0
-    class ModuleAttribute(LogRegBinary):
-        helpers = manifest_core
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.helpers.f17_later_probabilities(result['_probs'])
-            return result
-    def module_probabilities(module, values):
-        return module.f17_later_probabilities(values)
-    class ModuleArgument(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = module_probabilities(manifest_core, result['_probs'])
-            return result
-    class DynamicLookup(LogRegBinary):
-        def adjust_late(self, values):
-            return later_probabilities(values)
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = getattr(self, self.method_name)(result['_probs'])
-            return result
-    class DynamicModuleLookup(LogRegBinary):
-        helpers = manifest_core
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = getattr(self.helpers, self.helper_name)(result['_probs'])
-            return result
-    class BoundLookup(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy('adjust')(result['_probs'])
-            return result
-    for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument, DynamicLookup, DynamicModuleLookup, BoundLookup):
-        selection = copy.deepcopy(assessment_case[2][0][0])
-        selection._model.__class__ = implementation
-        selection._model.research_x = late._model.research_x.copy()
-        if implementation is DynamicLookup:
-            selection._model.method_name = 'adjust_late'
-        if implementation is DynamicModuleLookup:
-            selection._model.helper_name = 'f17_later_probabilities'
-        if implementation is BoundLookup:
-            selection._model.policy = {'adjust': later_probabilities}.get
-        if implementation is Factory:
-            selection._model.policy = defaultdict(later_probabilities)
-        if implementation is PartialState:
-            selection._model.policy = partial(identity_probabilities)
-            selection._model.policy.adjust = later_probabilities
-        with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True), patch('tests.test_holdout_research.f17_later_probabilities', identity_probabilities, create=True), patch.object(manifest_core, 'f17_later_probabilities', later_probabilities, create=True):
-            selected = _freeze(selection)
-            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-                with pytest.raises(ValueError, match='prediction dependency changed'):
-                    _report(selected, assessment_case)
-                assert loader.call_count == 0
-    from limen.experiment.manifest_core import CalibrationConfig
-    class FittingProvider:
-        def __init__(self, config):
-            self.prediction_calibration_config = config
-        def adjust(self, values):
-            self.prediction_calibration_config.threshold_func(values)
-            return values
-    from limen.experiment._holdout_prediction import readonly_prediction
-    class NumericCallbacks(np.ndarray):
-        prediction_calibration_config = None
-    callback_calls = []
-    def nested_threshold(*args):
-        callback_calls.append('threshold')
-    nested = copy.deepcopy(assessment_case[2][0][0])
-    nested._model.policy = nested._model.model.coef_.copy().view(NumericCallbacks)
-    nested._model.policy.prediction_calibration_config = CalibrationConfig(calibration_func=None, threshold_func=nested_threshold)
-    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
-        nested._model.policy.prediction_calibration_config.threshold_func()
-    assert callback_calls == []
-    class ScalarCallbacks(float):
-        prediction_calibration_config = None
-    nested._model.policy = ScalarCallbacks(expected_offset)
-    nested._model.policy.prediction_calibration_config = CalibrationConfig(calibration_func=None, threshold_func=nested_threshold)
-    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
-        nested._model.policy.prediction_calibration_config.threshold_func()
-    assert callback_calls == []
-    class StaticThreshold:
-        __call__ = staticmethod(nested_threshold)
-    class ClassThreshold:
-        @classmethod
-        def __call__(cls, *args):
-            nested_threshold(*args)
-    for callback in (partial(StaticThreshold()), partial(ClassThreshold())):
-        nested._model.policy.prediction_calibration_config.threshold_func = callback
-        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
-            callback()
-        assert callback_calls == []
-    configured_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=nested_threshold))
-    def default_provider(provider=configured_provider):
-        provider.prediction_calibration_config.threshold_func()
-    def closed_provider(provider):
-        def invoke():
-            provider.prediction_calibration_config.threshold_func()
-        return invoke
-    class BoundProvider:
-        prediction_calibration_config = configured_provider.prediction_calibration_config
-        def invoke(self):
-            self.prediction_calibration_config.threshold_func()
-    for provider in (default_provider, closed_provider(configured_provider), BoundProvider().invoke):
-        nested._model.policy = provider
-        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
-            provider()
-        assert callback_calls == []
-    nested._model.policy = FittingProvider(CalibrationConfig(threshold_func=partial(max)))
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='callbacks without observable Python call protection'), readonly_prediction([nested]):
-            nested._model.policy.adjust(nested._model.model.coef_.ravel())
-        assert loader.call_count == 0
-    class GlobalCallbackModel(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                result['_probs'] = _GLOBAL_FITTED_PROVIDER.adjust(result['_probs'])
-            return result
-    globally_configured = copy.deepcopy(assessment_case[2][0][0])
-    globally_configured._model.__class__ = GlobalCallbackModel
-    globally_configured._model.research_x = late._model.research_x.copy()
-    with patch.dict(globals(), {'_GLOBAL_FITTED_PROVIDER': configured_provider}):
-        global_handle = _freeze(globally_configured)
-        with pytest.raises(ValueError, match='attempted fitting') as global_failure:
-            _report(global_handle, assessment_case)
-        assert callback_calls == []
-        with history.connection(assessment_case[0] / history._HISTORY) as db:
-            record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
-            assert record['state'] == 'failed' and record['id'] in str(global_failure.value)
-            assert json.loads(record['error_json'])['stage'] == 'predict'
-    class ThreadedCallbackModel(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                worker = Thread(target=self.policy.prediction_calibration_config.threshold_func)
-                worker.start()
-                worker.join()
-            return result
-    threaded = copy.deepcopy(assessment_case[2][0][0])
-    threaded._model.__class__ = ThreadedCallbackModel
-    threaded._model.research_x = late._model.research_x.copy()
-    threaded._model.policy = configured_provider
-    threaded_handle = _freeze(threaded)
-    with pytest.raises(ValueError, match='attempted thread dispatch') as thread_failure:
-        _report(threaded_handle, assessment_case)
-    assert callback_calls == []
-    with history.connection(assessment_case[0] / history._HISTORY) as db:
-        record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
-        assert record['state'] == 'failed' and record['id'] in str(thread_failure.value)
-        assert json.loads(record['error_json'])['stage'] == 'predict'
-    nested._model.policy = configured_provider
-    with ThreadPoolExecutor(max_workers=1) as pool:
-        assert pool.submit(bool, True).result() is True
-        with pytest.raises(ValueError, match='attempted thread dispatch'), readonly_prediction([nested]):
-            pool.submit(nested_threshold).result()
-        assert callback_calls == []
-    def descriptor_get(self, instance, owner=None):
-        return lambda values: np.clip(later_probabilities(values) + self.offset, 0, 1)
-    class StaticDescriptor(staticmethod):
-        __get__ = descriptor_get
-    class ClassDescriptor(classmethod):
-        __get__ = descriptor_get
-    for descriptor_type in (StaticDescriptor, ClassDescriptor):
-        class DescriptorModel(LogRegBinary):
-            adjust = descriptor_type(identity_probabilities)
+                with patch.object(InferenceOffset, 'offset', 0.2, create=True):
+                    descriptor_handle = _freeze(branched)
+                    with patch.object(InferenceOffset, 'adjust', classmethod(InferenceOffset.adjust)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                        with pytest.raises(ValueError, match='prediction dependency changed'):
+                            _report(descriptor_handle, assessment_case)
+                        assert loader.call_count == 0
+        class Imported(LogRegBinary):
+            def predict(self, data):
+                import limen.calibration
+                result = super().predict(data)
+                result['_probs'] = limen.calibration.f17_later_probabilities(result['_probs'])
+                return result
+        class Aliased(LogRegBinary):
+            def predict(self, data):
+                import limen.calibration as imported
+                helpers = imported
+                result = super().predict(data)
+                result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
+                return result
+        for implementation in (Imported, Aliased):
+            imported = copy.deepcopy(assessment_case[2][0][0])
+            imported._model.__class__ = implementation
+            with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True):
+                imported_handle = _freeze(imported)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(imported_handle, assessment_case)
+                    assert loader.call_count == 0
+        class Keyed(LogRegBinary):
             def predict(self, data):
                 result = super().predict(data)
-                result['_probs'] = self.adjust(result['_probs'])
+                result['_probs'] = next(iter(self.adjustments))(result['_probs'])
                 return result
-        descriptor = vars(DescriptorModel)['adjust']
-        descriptor.offset = expected_offset
-        described = copy.deepcopy(assessment_case[2][0][0])
-        described._model.__class__ = DescriptorModel
-        descriptor_handle = _freeze(described)
+        keyed = copy.deepcopy(assessment_case[2][0][0])
+        keyed._model.__class__ = Keyed
+        keyed._model.adjustments = {later_probabilities: True}
+        keyed_handle = _freeze(keyed)
         with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(descriptor_handle, assessment_case)
+                _report(keyed_handle, assessment_case)
             assert loader.call_count == 0
-        with patch.object(descriptor, 'offset', expected_offset + 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(descriptor_handle, assessment_case)
-            assert loader.call_count == 0
-    class ExternalEntropy(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                result['_probs'] = np.clip(result['_probs'] + int.from_bytes(os.urandom(1), 'big') / 255, 0, 1)
-            return result
-    entropic = copy.deepcopy(assessment_case[2][0][0])
-    entropic._model.__class__ = ExternalEntropy
-    entropic._model.research_x = late._model.research_x.copy()
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='random dependency'):
-            _freeze(entropic)
-        assert loader.call_count == 0
-    with pytest.raises(ValueError, match='unowned randomness'), readonly_prediction([nested]):
-        os.urandom(1)
-    class NativePartial(partial):
-        __call__ = staticmethod(max)
-    unsafe_callback = copy.deepcopy(assessment_case[2][0][0])
-    unsafe_callback._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativePartial(identity_probabilities)))
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-            _freeze(unsafe_callback)
-        assert loader.call_count == 0
-    class NativeThreshold:
-        __call__ = staticmethod(max)
-    class DynamicStaticMethod(staticmethod):
-        def __get__(self, instance, owner=None):
-            return max
-    class DynamicThreshold:
-        __call__ = DynamicStaticMethod(identity_probabilities)
-    class DynamicClassMethod(classmethod):
-        def __get__(self, instance, owner=None):
-            return max
-    class DynamicClassThreshold:
-        __call__ = DynamicClassMethod(identity_probabilities)
-    class DynamicProperty(property):
-        def __get__(self, instance, owner=None):
-            return max
-    class DynamicPropertyThreshold:
-        __call__ = DynamicProperty(lambda self: identity_probabilities)
-    misleading = NativeThreshold()
-    misleading.__wrapped__ = identity_probabilities
-    for callback in (misleading, DynamicThreshold(), DynamicClassThreshold(), DynamicPropertyThreshold()):
-        unsafe_callback._model.callback_provider.prediction_calibration_config.threshold_func = callback
-        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-                _freeze(unsafe_callback)
-            assert loader.call_count == 0
-    class ReadonlyCallable:
-        def __call__(self, values):
-            return identity_probabilities(values)
-    class UsesReadonlyCallable(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy(result['_probs'])
-            return result
-    distinct = copy.deepcopy(assessment_case[2][0][0])
-    distinct._model.__class__ = UsesReadonlyCallable
-    distinct._model.policy = ReadonlyCallable()
-    distinct._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=partial(ReadonlyCallable())))
-    distinct_handle = _freeze(distinct)
-    assert _report(distinct_handle, assessment_case)['rows_sha256']
-    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
-        distinct._model.callback_provider.prediction_calibration_config.threshold_func(distinct._model.model.coef_.ravel())
-    def positional_default(offset):
-        def invoke(values, adjustment=offset):
-            return np.clip(values + adjustment, 0, 1)
-        return invoke
-    def keyword_default(offset):
-        def invoke(values, *, adjustment=offset):
-            return np.clip(values + adjustment, 0, 1)
-        return invoke
-    for factory, callback_offset in ((positional_default, expected_offset + 0.1), (keyword_default, expected_offset + 0.1), (positional_default, expected_offset)):
-        prediction = factory(expected_offset)
-        callback = factory(callback_offset)
-        original_code = callback.__code__
-        distinct._model.policy = prediction
-        distinct._model.callback_provider.prediction_calibration_config.threshold_func = callback
-        distinct_handle = _freeze(distinct)
-        assert _report(distinct_handle, assessment_case)['rows_sha256']
-        assert callback.__code__ is original_code
-        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
-            callback(distinct._model.model.coef_.ravel(), adjustment=expected_offset)
-        assert callback.__code__ is original_code
-    class FirstAdjustment:
-        def adjust(self, values):
-            return values
-    class SecondAdjustment:
-        def adjust(self, values):
-            return np.clip(values + expected_offset, 0, 1)
-    class OrderedPrediction(FirstAdjustment, SecondAdjustment, LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.adjust(result['_probs'])
-            return result
-    ordered = copy.deepcopy(assessment_case[2][0][0])
-    ordered_model = object.__new__(OrderedPrediction)
-    vars(ordered_model).update(copy.deepcopy(vars(ordered._model)))
-    ordered._model = ordered_model
-    ordered_handle = _freeze(ordered)
-    original_bases = OrderedPrediction.__bases__
-    try:
-        OrderedPrediction.__bases__ = (SecondAdjustment, FirstAdjustment, LogRegBinary)
-        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(ordered_handle, assessment_case)
-            assert loader.call_count == 0
-    finally:
-        OrderedPrediction.__bases__ = original_bases
-    class NativeNewCallback:
-        __new__ = staticmethod(getattr)
-        def __init__(self, *args):
-            raise AssertionError('unused initializer')
-    unsafe_class = copy.deepcopy(assessment_case[2][0][0])
-    unsafe_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativeNewCallback))
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-            _freeze(unsafe_class)
-        assert loader.call_count == 0
-    class SharedInitializer:
-        def __init__(self, values):
-            self.values = values
-    class SharedNew(SharedInitializer):
-        def __new__(cls, values):
-            return object.__new__(cls)
-    for base in (SharedInitializer, SharedNew):
-        class ThresholdClass(base):
-            __slots__ = ()
-        class ReadonlyClass(base):
-            __slots__ = ()
-        class UsesClass(LogRegBinary):
+        for container in (set, frozenset, lambda values: np.asarray(values, dtype=object)):
+            keyed._model.adjustments = container([later_probabilities])
+            container_handle = _freeze(keyed)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(container_handle, assessment_case)
+                assert loader.call_count == 0
+        class CallbackState(Keyed):
             def predict(self, data):
                 result = super().predict(data)
-                result['_probs'] = ReadonlyClass(result['_probs']).values
+                callback = next(iter(self.adjustments))
+                result['_probs'] = np.clip(result['_probs'] + callback.offset, 0, 1)
                 return result
-        for callback in (ThresholdClass, partial(ThresholdClass)):
-            selected_class = copy.deepcopy(assessment_case[2][0][0])
-            selected_class._model.__class__ = UsesClass
-            selected_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=callback))
-            class_handle = _freeze(selected_class)
-            assert _report(class_handle, assessment_case)['rows_sha256']
-            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected_class]):
-                callback(selected_class._model.model.coef_.ravel())
-    for library_function in (LogisticRegression.predict_proba, LogisticRegression.fit):
-        @wraps(library_function)
-        def decorated_adjust(values):
-            return np.clip(values + _LATE_RULES['offset'], 0, 1)
-        decorated = copy.deepcopy(assessment_case[2][0][0])
-        decorated._model.__class__ = UsesReadonlyCallable
-        decorated._model.policy = decorated_adjust
-        decorated_handle = _freeze(decorated)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(decorated_handle, assessment_case)
-            assert loader.call_count == 0
-    threshold_selections = []
-    def bound_new(marker, cls, values):
-        threshold_selections.append(cls)
-        return np.max(values)
-    def variadic_new(marker, *args):
-        return bound_new(marker, *args)
-    class NewProvider:
-        def __call__(self, cls, values):
-            return bound_new(expected_offset, cls, values)
-    for factory in (partial(bound_new, expected_offset), partial(variadic_new, expected_offset), NewProvider()):
-        class BoundConstructor:
-            __new__ = factory
-        for callback in (BoundConstructor, partial(BoundConstructor)):
-            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
-            _freeze(unsafe_class)
-            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
-                callback(unsafe_class._model.model.coef_.ravel())
-            assert threshold_selections == []
-    def target_copy(self, memo):
-        clone = object.__new__(type(self))
-        vars(clone).update(copy.deepcopy(vars(self), memo))
-        _LATE_RULES['offset'] += 0.1
-        return clone
-    with history.connection(assessment_case[0] / history._HISTORY) as db:
-        before_target_copy = db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
-    with patch.dict(_LATE_RULES), patch.object(NextBarUpTarget, '__deepcopy__', target_copy, create=True), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed prediction dependencies before observation access'):
-            _report(copying_handle, assessment_case)
-        assert loader.call_count == 0
-    with history.connection(assessment_case[0] / history._HISTORY) as db:
-        assert db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0] == before_target_copy
-    def bound_initializer(marker, cls, values):
-        threshold_selections.append(cls)
-    class BoundInitializer:
-        __init__ = classmethod(partial(bound_initializer, expected_offset))
-    for callback in (BoundInitializer, partial(BoundInitializer)):
-        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
-        _freeze(unsafe_class)
-        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
-            callback(unsafe_class._model.model.coef_.ravel())
-        assert threshold_selections == []
-    class HiddenFunction(staticmethod):
-        @property
-        def __func__(self):
-            return identity_probabilities
-    class HiddenThreshold:
-        __call__ = HiddenFunction(max)
-    unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = HiddenThreshold()
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-            _freeze(unsafe_class)
-        assert loader.call_count == 0
-    def bound_adjust(offset, values, *, scale):
-        return np.clip(values * scale + offset, 0, 1)
-    class HiddenPartial(partial):
-        @property
-        def func(self):
-            return identity_probabilities
-        @property
-        def args(self):
-            return ()
-        @property
-        def keywords(self):
-            return {}
-        def adjust(self, values):
-            return self(values)
-        def __deepcopy__(self, memo):
-            values = partial.__dict__['args'].__get__(self, type(self))
-            keywords = partial.__dict__['keywords'].__get__(self, type(self))
-            return type(self)(bound_adjust, *values, **keywords)
-    class NonpreservingHiddenPartial(HiddenPartial):
-        def __deepcopy__(self, memo):
-            values = partial.__dict__['args'].__get__(self, type(self))
-            keywords = partial.__dict__['keywords'].__get__(self, type(self))
-            return type(self)(bound_adjust, values[0] + 0.1, **keywords)
-    hidden_partial = copy.deepcopy(assessment_case[2][0][0])
-    hidden_partial._model.__class__ = PartialState
-    hidden_partial._model.policy = HiddenPartial(bound_adjust, expected_offset, scale=1.0)
-    _freeze(hidden_partial)
-    hidden_partial._model.policy = NonpreservingHiddenPartial(bound_adjust, expected_offset, scale=1.0)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(hidden_partial)
-        assert loader.call_count == 0
-    class ThresholdReceiver:
-        def choose(self, values):
-            threshold_selections.append(self)
-            return np.max(values)
-    threshold_receiver = ThresholdReceiver()
-    class BoundMeta(type):
-        __call__ = threshold_receiver.choose
-    class BoundMetaCallback(metaclass=BoundMeta):
-        pass
-    for callback in (BoundMetaCallback, partial(BoundMetaCallback)):
-        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
-        _freeze(unsafe_class)
-        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
-            callback(unsafe_class._model.model.coef_.ravel())
-        assert threshold_selections == []
-    class HiddenDtype(np.ndarray):
-        @property
-        def dtype(self):
-            return np.dtype(float)
-        def __deepcopy__(self, memo):
-            return np.ndarray.copy(self)
-    keyed._model.__class__ = Keyed
-    keyed._model.adjustments = np.asarray([later_probabilities], dtype=object).view(HiddenDtype)
-    hidden_dtype_handle = _freeze(keyed)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(hidden_dtype_handle, assessment_case)
-        assert loader.call_count == 0
-    class HiddenFactory(defaultdict):
-        @property
-        def default_factory(self):
-            return identity_probabilities
-        def adjust(self, values):
-            return defaultdict.__dict__['default_factory'].__get__(self, type(self))()(values)
-        def __deepcopy__(self, memo):
-            return type(self)(defaultdict.__dict__['default_factory'].__get__(self, type(self)))
-    class NonpreservingFactory(HiddenFactory):
-        def __deepcopy__(self, memo):
-            return type(self)(later_probabilities)
-    mapped._model.policy = HiddenFactory(lambda: identity_probabilities)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingFactory(lambda: identity_probabilities)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class HiddenCapacity(deque):
-        @property
-        def maxlen(self):
-            return 1
-        def adjust(self, values):
-            return np.clip(values + deque.__dict__['maxlen'].__get__(self, type(self)) / 100, 0, 1)
-        def __deepcopy__(self, memo):
-            return type(self)(maxlen=deque.__dict__['maxlen'].__get__(self, type(self)))
-    class NonpreservingCapacity(HiddenCapacity):
-        def __deepcopy__(self, memo):
-            return type(self)(maxlen=deque.__dict__['maxlen'].__get__(self, type(self)) + 1)
-    mapped._model.policy = HiddenCapacity(maxlen=1)
-    _freeze(mapped)
-    mapped._model.policy = NonpreservingCapacity(maxlen=1)
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    def global_lookup(values):
-        return np.clip(values + globals()['_LATE_RULES']['offset'], 0, 1)
-    distinct._model.__class__ = UsesReadonlyCallable
-    distinct._model.policy = global_lookup
-    global_handle = _freeze(distinct)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(global_handle, assessment_case)
-        assert loader.call_count == 0
-    class ConstructorDescriptor(staticmethod):
-        def __call__(self, *args):
-            return identity_probabilities(args[-1])
-    def descriptor_new(cls, values):
-        threshold_selections.append(cls)
-        return np.max(values)
-    class DescriptorConstructor:
-        __new__ = ConstructorDescriptor(descriptor_new)
-    class InitializerDescriptor(classmethod):
-        def __call__(self, *args):
-            return identity_probabilities(args[-1])
-    class DescriptorInitializer:
-        __init__ = InitializerDescriptor(partial(bound_initializer, expected_offset))
-    for constructor in (DescriptorConstructor, DescriptorInitializer):
-        for callback in (constructor, partial(constructor)):
-            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
-            _freeze(unsafe_class)
-            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
-                callback(unsafe_class._model.model.coef_.ravel())
-            assert threshold_selections == []
-    for native_base, field in ((staticmethod, '__func__'), (classmethod, '__func__'), (property, 'fget')):
-        class DirectDescriptor(native_base):
-            __call__ = staticmethod(max)
-            def __deepcopy__(self, memo, descriptor=native_base.__dict__[field]):
-                return type(self)(descriptor.__get__(self, type(self)))
-        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = DirectDescriptor(identity_probabilities)
-        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-                _freeze(unsafe_class)
-            assert loader.call_count == 0
-    class SentinelPolicy:
-        DEFAULT = object()
-        def __init__(self):
-            self.policy = self.DEFAULT
-        def adjust(self, values):
-            return np.clip(values + (0 if self.policy is self.DEFAULT else 0.1), 0, 1)
-    mapped._model.policy = SentinelPolicy()
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(mapped)
-        assert loader.call_count == 0
-    class GlobalSentinelPolicy:
-        def __init__(self):
-            self.policy = _ALIAS_SENTINEL
-        def adjust(self, values):
-            return np.clip(values + (0 if self.policy is _ALIAS_SENTINEL else 0.1), 0, 1)
-    class NestedSentinelPolicy(GlobalSentinelPolicy):
-        def adjust(self, values):
-            return np.clip(values + (0 if self.policy is _ALIAS_REGISTRY['default'] else 0.1), 0, 1)
-    for implementation in (GlobalSentinelPolicy, NestedSentinelPolicy):
-        mapped._model.policy = implementation()
+        keyed._model.__class__ = CallbackState
+        keyed._model.adjustments = {identity_probabilities: True}
+        with patch.object(identity_probabilities, 'offset', 0.0, create=True):
+            callback_handle = _freeze(keyed)
+            with patch.object(identity_probabilities, 'offset', 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(callback_handle, assessment_case)
+                assert loader.call_count == 0
+    phase_1()
+
+    def phase_2():
+        nonlocal Adjusted, LogRegBinary, container, copying_handle, deque, described, descriptor, expected_offset, loader, mapped, name, property_handle
+        class MappingPolicy(dict):
+            def __init__(self, offset):
+                super().__init__()
+                self.offset = offset
+            def adjust(self, values):
+                return np.clip(values + self.offset, 0, 1)
+        mapped = copy.deepcopy(assessment_case[2][0][0])
+        mapped._model.__class__ = Adjusted
+        mapped._model.policy = MappingPolicy(mapped._model._calibration_threshold)
+        mapping_copy = owned_copy(mapped)
+        _freeze(mapping_copy)
+        expected_offset = mapping_copy._model.policy.offset
+        mapped._model.policy.offset += 0.1
+        assert mapping_copy._model.policy.offset == expected_offset
+        class NonpreservingMapping(MappingPolicy):
+            def __deepcopy__(self, memo):
+                return type(self)(self.offset + 0.1)
+        mapped._model.policy = NonpreservingMapping(expected_offset)
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='copy changed'):
                 _freeze(mapped)
             assert loader.call_count == 0
-    class PreservingGlobalSentinel(GlobalSentinelPolicy):
-        def __deepcopy__(self, memo):
-            clone = object.__new__(type(self))
-            clone.policy = self.policy
-            return clone
-    mapped._model.policy = PreservingGlobalSentinel()
-    assert _report(_freeze(mapped), assessment_case)['rows_sha256']
-    class StructuredPolicy(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy['adjust'](result['_probs'])
-            return result
-    structured = copy.deepcopy(assessment_case[2][0][0])
-    structured._model.__class__ = StructuredPolicy
-    structured._model.policy = np.asarray((later_probabilities,), dtype=[('adjust', object)])[()]
-    structured_handle = _freeze(structured)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(structured_handle, assessment_case)
-        assert loader.call_count == 0
-    class FreshCallbackConfig:
-        calibration_func = None
-        @property
-        def threshold_func(self):
-            def choose(values):
-                callback_calls.append('fresh threshold')
-                return np.max(values)
-            return choose
-    unsafe_class._model.callback_provider.prediction_calibration_config = FreshCallbackConfig()
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='stable observable binding'):
-            _freeze(unsafe_class)
-        assert loader.call_count == 0 and callback_calls == []
-    class StableCallbackConfig:
-        calibration_func = None
-        def __init__(self, callback):
-            self.callback = callback
-        @property
-        def threshold_func(self):
-            return self.callback
-    class MethodCallbackConfig(StableCallbackConfig):
-        @property
-        def threshold_func(self):
-            return self.choose
-        def choose(self, values):
-            callback_calls.append('bound threshold')
-            return np.max(values)
-    class PartialCallbackConfig(StableCallbackConfig):
-        @property
-        def threshold_func(self):
-            return partial(self.callback)
-    for config in (StableCallbackConfig(nested_threshold), MethodCallbackConfig(nested_threshold), PartialCallbackConfig(nested_threshold)):
-        unsafe_class._model.callback_provider.prediction_calibration_config = config
-        _freeze(unsafe_class)
-        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
-            config.threshold_func(unsafe_class._model.model.coef_.ravel())
-        assert callback_calls == []
-    class AnnotationState(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + self.policy.__annotations__['offset'], 0, 1)
-            return result
-    annotated = copy.deepcopy(assessment_case[2][0][0])
-    annotated._model.__class__ = AnnotationState
-    annotated._model.policy = identity_probabilities
-    with patch.object(identity_probabilities, '__annotations__', {'offset': expected_offset}):
-        annotation_handle = _freeze(annotated)
-        with patch.dict(identity_probabilities.__annotations__, {'offset': expected_offset + 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='changed'):
-                _report(annotation_handle, assessment_case)
+        class HiddenMapping(dict):
+            def items(self):
+                return ()
+            def adjust(self, values):
+                return np.clip(values + self['offset'], 0, 1)
+            def __deepcopy__(self, memo):
+                return type(self)((key, copy.deepcopy(value, memo)) for key, value in dict.items(self))
+        class NonpreservingHidden(HiddenMapping):
+            def __deepcopy__(self, memo):
+                clone = super().__deepcopy__(memo)
+                clone['offset'] += 0.1
+                return clone
+        mapped._model.policy = HiddenMapping(offset=expected_offset)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingHidden(offset=expected_offset)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
             assert loader.call_count == 0
-    class AnnotationCallableState(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.__annotations__['adjust'](result['_probs'])
-            return result
-    annotated._model.__class__ = AnnotationCallableState
-    from typing import Literal
-    for policy in (identity_probabilities, LogisticRegression.predict_proba):
-        annotated._model.policy = policy
-        with patch.object(policy, '__annotations__', {'adjust': later_probabilities, 'mode': Literal['fixed']}):
-            annotation_handle = _freeze(annotated)
+        class HiddenSequence(list):
+            def __iter__(self):
+                return iter(())
+            def adjust(self, values):
+                return np.clip(values + list.__getitem__(self, 0), 0, 1)
+            def __deepcopy__(self, memo):
+                return type(self)(copy.deepcopy(value, memo) for value in list.__iter__(self))
+        class NonpreservingSequence(HiddenSequence):
+            def __deepcopy__(self, memo):
+                clone = super().__deepcopy__(memo)
+                clone[0] += 0.1
+                return clone
+        mapped._model.policy = HiddenSequence([expected_offset])
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingSequence([expected_offset])
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class HiddenArray(np.ndarray):
+            def tolist(self):
+                return []
+            def adjust(self, values):
+                return np.clip(values + np.ndarray.__getitem__(self, 0), 0, 1)
+            def __deepcopy__(self, memo):
+                clone = np.ndarray.copy(self)
+                memo[id(self)] = clone
+                return clone
+        class NonpreservingArray(HiddenArray):
+            def __deepcopy__(self, memo):
+                clone = super().__deepcopy__(memo)
+                clone[0] += 0.1
+                return clone
+        mapped._model.policy = np.asarray([expected_offset], dtype=object).view(HiddenArray)
+        _freeze(mapped)
+        mapped._model.policy = np.asarray([expected_offset], dtype=object).view(NonpreservingArray)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class HiddenNumeric(HiddenArray):
+            def __reduce_ex__(self, protocol):
+                return int, (0,)
+        class NonpreservingNumeric(HiddenNumeric):
+            def __deepcopy__(self, memo):
+                clone = super().__deepcopy__(memo)
+                clone[0] += 0.1
+                return clone
+        mapped._model.policy = np.asarray([expected_offset], dtype=float).view(HiddenNumeric)
+        _freeze(mapped)
+        mapped._model.policy = np.asarray([expected_offset], dtype=float).view(NonpreservingNumeric)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class HiddenAttributes:
+            def __init__(self, offset):
+                self.offset = offset
+            def __getattribute__(self, name):
+                return {} if name == '__dict__' else object.__getattribute__(self, name)
+            def adjust(self, values):
+                return np.clip(values + self.offset, 0, 1)
+            def __deepcopy__(self, memo):
+                return type(self)(self.offset)
+        class NonpreservingAttributes(HiddenAttributes):
+            def __deepcopy__(self, memo):
+                return type(self)(self.offset + 0.1)
+        mapped._model.policy = HiddenAttributes(expected_offset)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingAttributes(expected_offset)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class HiddenSlots:
+            __slots__ = ('offset', 'optional')
+            def __init__(self, offset):
+                self.offset = offset
+            def __getattribute__(self, name):
+                if name == 'offset':
+                    raise AttributeError('hidden learned state')
+                return object.__getattribute__(self, name)
+            def adjust(self, values):
+                return np.clip(values + object.__getattribute__(self, 'offset'), 0, 1)
+            def __deepcopy__(self, memo):
+                return type(self)(object.__getattribute__(self, 'offset'))
+        class NonpreservingSlots(HiddenSlots):
+            def __deepcopy__(self, memo):
+                return type(self)(object.__getattribute__(self, 'offset') + 0.1)
+        mapped._model.policy = HiddenSlots(expected_offset)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingSlots(expected_offset)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class IteratorSlots:
+            __slots__ = iter(('offset',))
+            def __init__(self, offset):
+                self.offset = offset
+            def adjust(self, values):
+                return np.clip(values + self.offset, 0, 1)
+            def __deepcopy__(self, memo):
+                return type(self)(self.offset)
+        class NonpreservingIteratorSlots(IteratorSlots):
+            def __deepcopy__(self, memo):
+                return type(self)(self.offset + 0.1)
+        mapped._model.policy = IteratorSlots(expected_offset)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingIteratorSlots(expected_offset)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class AdjustProperty(property):
+            def __get__(self, instance, owner=None):
+                return lambda values: np.clip(values + self.offset + _LATE_RULES['offset'], 0, 1)
+        class PropertyModel(LogRegBinary):
+            @AdjustProperty
+            def adjust(self):
+                return identity_probabilities
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.adjust(result['_probs'])
+                return result
+        descriptor = vars(PropertyModel)['adjust']
+        descriptor.offset = expected_offset
+        described = copy.deepcopy(assessment_case[2][0][0])
+        described._model.__class__ = PropertyModel
+        property_handle = _freeze(described)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(property_handle, assessment_case)
+            assert loader.call_count == 0
+        with patch.object(descriptor, 'offset', expected_offset + 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(property_handle, assessment_case)
+            assert loader.call_count == 0
+        class AliasPrediction(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = fit_calibrator(result['_probs'])
+                return result
+        aliased_helper = copy.deepcopy(assessment_case[2][0][0])
+        aliased_helper._model.__class__ = AliasPrediction
+        alias_handle = _freeze(aliased_helper)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(alias_handle, assessment_case)
+            assert loader.call_count == 0
+        class AssessmentCopy(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = later_probabilities(result['_probs'])
+                return result
+            def __deepcopy__(self, memo):
+                clone = type(self).__new__(type(self))
+                vars(clone).update(copy.deepcopy(vars(self), memo))
+                if _COPY_AFTER_FREEZE:
+                    _LATE_RULES['offset'] += 0.1
+                return clone
+        copying = copy.deepcopy(assessment_case[2][0][0])
+        copying._model.__class__ = AssessmentCopy
+        copying_handle = _freeze(copying)
+        with patch.dict(globals(), {'_COPY_AFTER_FREEZE': True}), patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed prediction dependencies before observation access'):
+                _report(copying_handle, assessment_case)
+            assert loader.call_count == 0
+        class Relative(LogRegBinary):
+            def predict(self, data):
+                from . import test_holdout_research as helpers
+                result = super().predict(data)
+                result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
+                return result
+        relative = copy.deepcopy(assessment_case[2][0][0])
+        relative._model.__class__ = Relative
+        with patch('tests.test_holdout_research.f17_later_probabilities', later_probabilities, create=True):
+            relative_handle = _freeze(relative)
             with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
-                    _report(annotation_handle, assessment_case)
+                    _report(relative_handle, assessment_case)
                 assert loader.call_count == 0
-    class AnnotationHelper:
-        def __new__(cls, values):
-            return later_probabilities(values)
-    annotated._model.policy = identity_probabilities
-    with patch.object(identity_probabilities, '__annotations__', {'adjust': AnnotationHelper}):
-        class_handle = _freeze(annotated)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(class_handle, assessment_case)
+        class CollidingOffset(float):
+            def __hash__(self):
+                return 0
+        class SetChoice(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + next(iter(self.policy)), 0, 1)
+                return result
+            def __deepcopy__(self, memo):
+                clone = type(self).__new__(type(self))
+                memo[id(self)] = clone
+                vars(clone).update(copy.deepcopy(vars(self), memo))
+                clone.policy = type(self.policy)(reversed(tuple(self.policy)))
+                return clone
+        reordered = copy.deepcopy(assessment_case[2][0][0])
+        reordered._model.__class__ = SetChoice
+        for container in (set, frozenset):
+            reordered._model.policy = container((CollidingOffset(expected_offset), CollidingOffset(expected_offset + 0.1)))
+            assert tuple(copy.deepcopy(reordered._model).policy) == tuple(reversed(tuple(reordered._model.policy)))
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='copy changed'):
+                    _freeze(reordered)
+                assert loader.call_count == 0
+        class FloatPolicy(float):
+            def adjust(self, values):
+                return np.clip(values + float(self), 0, 1)
+        class NonpreservingFloat(FloatPolicy):
+            def __deepcopy__(self, memo):
+                return type(self)(float(self) + 0.1)
+        mapped._model.policy = FloatPolicy(expected_offset)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingFloat(expected_offset)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
             assert loader.call_count == 0
-        with patch.object(AnnotationHelper, '__new__', staticmethod(lambda cls, values: values)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(class_handle, assessment_case)
+        class BytePolicy(bytearray):
+            def adjust(self, values):
+                return np.clip(values + np.frombuffer(self, dtype=np.float64)[0], 0, 1)
+        class NonpreservingBytes(BytePolicy):
+            def __deepcopy__(self, memo):
+                return type(self)((np.frombuffer(self, dtype=np.float64) + 0.1).tobytes())
+        learned_bytes = np.float64(expected_offset).tobytes()
+        mapped._model.policy = BytePolicy(learned_bytes)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingBytes(learned_bytes)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
             assert loader.call_count == 0
-    class FunctionDefaults(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.__defaults__[0](result['_probs'])
-            return result
-    annotated._model.__class__ = FunctionDefaults
-    annotated._model.policy = LogisticRegression.predict_proba
-    with patch.object(LogisticRegression.predict_proba, '__defaults__', (later_probabilities,)):
-        defaults_handle = _freeze(annotated)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(defaults_handle, assessment_case)
+        from collections import deque
+        class DequePolicy(deque):
+            def adjust(self, values):
+                return np.clip(values + self[0], 0, 1)
+        class NonpreservingDeque(DequePolicy):
+            def __deepcopy__(self, memo):
+                return type(self)((self[0] + 0.1,), maxlen=self.maxlen)
+        mapped._model.policy = DequePolicy((expected_offset,), maxlen=1)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingDeque((expected_offset,), maxlen=1)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
             assert loader.call_count == 0
-    from types import FunctionType
-    def captured_adjustment(adjust):
-        def apply(values):
-            return adjust(values)
-        return apply
-    template = captured_adjustment(later_probabilities)
-    annotated._model.policy = FunctionType(template.__code__, LogisticRegression.predict_proba.__globals__, closure=template.__closure__)
-    class FunctionClosure(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.__closure__[0].cell_contents(result['_probs'])
-            return result
-    annotated._model.__class__ = FunctionClosure
-    closure_handle = _freeze(annotated)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(closure_handle, assessment_case)
-        assert loader.call_count == 0
-    class FunctionDocument(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + float(self.policy.__doc__), 0, 1)
-            return result
-    annotated._model.__class__ = FunctionDocument
-    annotated._model.policy = identity_probabilities
-    with patch.object(identity_probabilities, '__doc__', str(expected_offset)):
-        document_handle = _freeze(annotated)
-        with patch.object(identity_probabilities, '__doc__', str(expected_offset + 0.1)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='changed'):
-                _report(document_handle, assessment_case)
+        from array import array
+        class OpaqueNativePolicy(array):
+            def adjust(self, values):
+                return np.clip(values + self[0], 0, 1)
+        mapped._model.policy = OpaqueNativePolicy('d', [expected_offset])
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='opaque native prediction state'):
+                _freeze(mapped)
             assert loader.call_count == 0
-    class FunctionMetadataCall(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            payload = getattr(self.policy, self.metadata_field)
-            adjust = payload[0] if isinstance(payload, tuple) else payload
-            result['_probs'] = adjust(result['_probs'])
-            return result
-    annotated._model.__class__ = FunctionMetadataCall
-    missing_metadata = object()
-    for policy in (identity_probabilities, LogisticRegression.predict_proba):
-        annotated._model.policy = policy
-        for field in ('__doc__', '__type_params__'):
-            annotated._model.metadata_field = field
-            original_metadata = getattr(policy, field, missing_metadata)
-            try:
-                setattr(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities)
-                metadata_handle = _freeze(annotated)
+    phase_2()
+
+    def phase_3():
+        nonlocal CalibrationConfig, LogRegBinary, PartialState, defaultdict, expected_offset, implementation, late, loader, name, provider, selected
+        class ModuleLookup(LogRegBinary):
+            def predict(self, data):
+                import limen.calibration as helpers
+                result = super().predict(data)
+                name = 'f17_later_probabilities'
+                result['_probs'] = getattr(helpers, name)(result['_probs'])
+                return result
+        class BranchImports(LogRegBinary):
+            def predict(self, data):
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    import limen.calibration as helpers
+                else:
+                    from . import test_holdout_research as helpers
+                result = super().predict(data)
+                result['_probs'] = helpers.f17_later_probabilities(result['_probs'])
+                return result
+        class Reflective(LogRegBinary):
+            def adjust(self, values):
+                return later_probabilities(values)
+            def predict(self, data):
+                result = super().predict(data)
+                method_name = 'adjust'
+                result['_probs'] = getattr(self, method_name)(result['_probs'])
+                return result
+        class Derived(Reflective):
+            def predict(self, data):
+                return super().predict(data)
+        class ClassBody(LogRegBinary):
+            def predict(self, data):
+                class Local:
+                    offset = _LATE_RULES['offset']
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + Local.offset, 0, 1)
+                return result
+        class Descriptor:
+            def __get__(self, instance, owner=None):
+                return later_probabilities
+            def __set__(self, instance, value):
+                raise AssertionError('Read-only prediction descriptor')
+        class Described(LogRegBinary):
+            adjust = Descriptor()
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.adjust(result['_probs'])
+                return result
+        from collections import defaultdict
+        class Factory(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.default_factory(result['_probs'])
+                return result
+        class PartialState(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.adjust(result['_probs'])
+                return result
+        class PartialPolicy(partial):
+            def __call__(self, values):
+                return later_probabilities(super().__call__(values))
+        class SlottedPartial(PartialPolicy):
+            __slots__ = ('offset',)
+            def __call__(self, values):
+                return np.clip(super().__call__(values) + self.offset, 0, 1)
+            def __deepcopy__(self, memo):
+                clone = type(self)(self.func, *self.args, **self.keywords)
+                memo[id(self)] = clone
+                vars(clone).update(copy.deepcopy(vars(self), memo))
+                clone.offset = self.offset
+                return clone
+        class NonpreservingSlotted(SlottedPartial):
+            def __deepcopy__(self, memo):
+                clone = super().__deepcopy__(memo)
+                clone.offset += 0.1
+                return clone
+        slotted_partial = SlottedPartial(identity_probabilities)
+        slotted_partial.offset = expected_offset
+        slotted_selection = copy.deepcopy(assessment_case[2][0][0])
+        slotted_selection._model.__class__ = PartialState
+        slotted_selection._model.policy = slotted_partial
+        slotted_selection._model.policy.adjust = slotted_partial
+        _freeze(slotted_selection)
+        slotted_selection._model.policy = NonpreservingSlotted(identity_probabilities)
+        slotted_selection._model.policy.offset = expected_offset
+        slotted_selection._model.policy.adjust = slotted_selection._model.policy
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(slotted_selection)
+            assert loader.call_count == 0
+        class NonpreservingPartial(PartialPolicy):
+            def __deepcopy__(self, memo):
+                return partial(self.func, *self.args, **self.keywords)
+        class ProbabilityMeta(type):
+            def __call__(cls, values):
+                return later_probabilities(values)
+        class ClassPolicy(metaclass=ProbabilityMeta):
+            selected = True
+        class CallablePolicy(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy(result['_probs'])
+                return result
+        class ArithmeticPolicy:
+            def __add__(self, values):
+                return later_probabilities(values)
+        class Arithmetic(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy + result['_probs']
+                return result
+        class NativeFloatPolicy(np.float64):
+            def __deepcopy__(self, memo):
+                return type(self)(float(self))
+            def adjust(self, values):
+                return later_probabilities(np.clip(values + float(self), 0, 1))
+        class IteratorPolicy:
+            def __next__(self):
+                return _LATE_RULES['offset']
+        class Iterated(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + next(self.policy), 0, 1)
+                return result
+        class UnaryPolicy:
+            def __neg__(self):
+                return _LATE_RULES['offset']
+        class Negated(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + (-self.policy), 0, 1)
+                return result
+        class RoundPolicy:
+            def __round__(self, ndigits=None):
+                return round(_LATE_RULES['offset'], ndigits)
+        class Rounded(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + round(self.policy, 2), 0, 1)
+                return result
+        class ContextPolicy:
+            def __enter__(self):
+                return _LATE_RULES['offset']
+            def __exit__(self, *args):
+                return False
+        class Contextual(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                with self.policy as offset:
+                    result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+                return result
+        class MissingPolicy(dict):
+            def __missing__(self, key):
+                return _LATE_RULES['offset']
+        class MissingLookup(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + self.policy['offset'], 0, 1)
+                return result
+        class ReversePolicy:
+            def __reversed__(self):
+                return iter((_LATE_RULES['offset'],))
+        class ReversedLookup(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + next(reversed(self.policy)), 0, 1)
+                return result
+        class ComparisonPolicy:
+            def __gt__(self, other):
+                return _LATE_RULES['offset'] > other
+        class Compared(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + (0.1 if self.policy > 0 else 0), 0, 1)
+                return result
+        class ConversionPolicy:
+            def __float__(self):
+                return _LATE_RULES['offset']
+        class Converted(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + float(self.policy), 0, 1)
+                return result
+        for provider in (PartialPolicy(identity_probabilities), ClassPolicy, CalibratorFactory(later_probabilities), ArithmeticPolicy(), ComparisonPolicy(), NativeFloatPolicy(expected_offset), IteratorPolicy(), UnaryPolicy(), RoundPolicy(), ContextPolicy(), MissingPolicy(), ReversePolicy(), ConversionPolicy()):
+            callable_selection = copy.deepcopy(assessment_case[2][0][0])
+            callable_selection._model.__class__ = Arithmetic if isinstance(provider, ArithmeticPolicy) else Compared if isinstance(provider, ComparisonPolicy) else PartialState if isinstance(provider, NativeFloatPolicy) else Iterated if isinstance(provider, IteratorPolicy) else Negated if isinstance(provider, UnaryPolicy) else Rounded if isinstance(provider, RoundPolicy) else Contextual if isinstance(provider, ContextPolicy) else MissingLookup if isinstance(provider, MissingPolicy) else ReversedLookup if isinstance(provider, ReversePolicy) else Converted if isinstance(provider, ConversionPolicy) else CallablePolicy
+            callable_selection._model.policy = provider
+            callable_handle = _freeze(callable_selection)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(callable_handle, assessment_case)
+                assert loader.call_count == 0
+        callable_selection._model.policy = NonpreservingPartial(identity_probabilities)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(callable_selection)
+            assert loader.call_count == 0
+        class ModuleAttribute(LogRegBinary):
+            helpers = manifest_core
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.helpers.f17_later_probabilities(result['_probs'])
+                return result
+        def module_probabilities(module, values):
+            return module.f17_later_probabilities(values)
+        class ModuleArgument(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = module_probabilities(manifest_core, result['_probs'])
+                return result
+        class DynamicLookup(LogRegBinary):
+            def adjust_late(self, values):
+                return later_probabilities(values)
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = getattr(self, self.method_name)(result['_probs'])
+                return result
+        class DynamicModuleLookup(LogRegBinary):
+            helpers = manifest_core
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = getattr(self.helpers, self.helper_name)(result['_probs'])
+                return result
+        class BoundLookup(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy('adjust')(result['_probs'])
+                return result
+        for implementation in (ModuleLookup, BranchImports, Reflective, Derived, ClassBody, Described, Factory, PartialState, ModuleAttribute, ModuleArgument, DynamicLookup, DynamicModuleLookup, BoundLookup):
+            selection = copy.deepcopy(assessment_case[2][0][0])
+            selection._model.__class__ = implementation
+            selection._model.research_x = late._model.research_x.copy()
+            if implementation is DynamicLookup:
+                selection._model.method_name = 'adjust_late'
+            if implementation is DynamicModuleLookup:
+                selection._model.helper_name = 'f17_later_probabilities'
+            if implementation is BoundLookup:
+                selection._model.policy = {'adjust': later_probabilities}.get
+            if implementation is Factory:
+                selection._model.policy = defaultdict(later_probabilities)
+            if implementation is PartialState:
+                selection._model.policy = partial(identity_probabilities)
+                selection._model.policy.adjust = later_probabilities
+            with patch('limen.calibration.f17_later_probabilities', later_probabilities, create=True), patch('tests.test_holdout_research.f17_later_probabilities', identity_probabilities, create=True), patch.object(manifest_core, 'f17_later_probabilities', later_probabilities, create=True):
+                selected = _freeze(selection)
                 with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                     with pytest.raises(ValueError, match='prediction dependency changed'):
-                        _report(metadata_handle, assessment_case)
+                        _report(selected, assessment_case)
                     assert loader.call_count == 0
-            finally:
-                if original_metadata is missing_metadata:
-                    delattr(policy, field)
-                else:
-                    setattr(policy, field, original_metadata)
-    class ReprPolicy:
-        def __repr__(self):
-            return str(_LATE_RULES['offset'])
-    class ReprModel(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + float(repr(self.policy)), 0, 1)
-            return result
-    reviewed = copy.deepcopy(assessment_case[2][0][0])
-    reviewed._model.__class__ = ReprModel
-    reviewed._model.policy = ReprPolicy()
-    repr_handle = _freeze(reviewed)
-    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(repr_handle, assessment_case)
-        assert loader.call_count == 0
-    class PolicyModel(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = self.policy.adjust(result['_probs'])
-            return result
-    class DictionaryAlias:
-        def __init__(self):
-            self.offset = expected_offset
-            self.state = vars(self)
-        def adjust(self, values):
-            return np.clip(values + self.offset + (0 if self.state is vars(self) else 0.1), 0, 1)
-        def __deepcopy__(self, memo):
-            clone = object.__new__(type(self))
-            memo[id(self)] = clone
-            memo[id(vars(self))] = vars(clone)
-            vars(clone).update((name, copy.deepcopy(part, memo)) for name, part in vars(self).items())
-            return clone
-    class BrokenDictionaryAlias(DictionaryAlias):
-        def __deepcopy__(self, memo):
-            clone = object.__new__(type(self))
-            memo[id(self)] = clone
-            vars(clone).update(copy.deepcopy(vars(self), memo))
-            return clone
-    reviewed._model.__class__ = PolicyModel
-    reviewed._model.policy = DictionaryAlias()
-    _freeze(reviewed)
-    reviewed._model.policy = BrokenDictionaryAlias()
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(reviewed)
-        assert loader.call_count == 0
-    class ClassReferencePolicy:
-        def __init__(self):
-            self.first = type('HoldoutMarker', (), {})
-            self.second = type('HoldoutMarker', (), {})
-            self.selected = self.first
-            self.break_copy = False
-        def adjust(self, values):
-            return np.clip(values + (0 if self.selected is self.first else 0.1), 0, 1)
-        def __deepcopy__(self, memo):
-            clone = object.__new__(type(self))
-            memo[id(self)] = clone
-            vars(clone).update(copy.deepcopy(vars(self), memo))
-            if self.break_copy:
-                clone.selected = clone.second
-            return clone
-    reviewed._model.policy = ClassReferencePolicy()
-    _freeze(reviewed)
-    reviewed._model.policy.break_copy = True
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='copy changed'):
-            _freeze(reviewed)
-        assert loader.call_count == 0
-    class OptionalAttributePolicy:
-        optional = None
-        def adjust(self, values):
-            return np.clip(values + (0 if hasattr(self, 'optional') else 0.1), 0, 1)
-    reviewed._model.policy = OptionalAttributePolicy()
-    optional_handle = _freeze(reviewed)
-    try:
-        del OptionalAttributePolicy.optional
+        from limen.experiment.manifest_core import CalibrationConfig
+    phase_3()
+
+    def phase_4():
+        nonlocal CalibrationConfig, FittingProvider, LogRegBinary, callback, callback_calls, config, db, described, descriptor, descriptor_handle, expected_offset, global_handle, late, loader, nested_threshold, provider, readonly_prediction, record
+        class FittingProvider:
+            def __init__(self, config):
+                self.prediction_calibration_config = config
+            def adjust(self, values):
+                self.prediction_calibration_config.threshold_func(values)
+                return values
+        from limen.experiment._holdout_prediction import readonly_prediction
+        class NumericCallbacks(np.ndarray):
+            prediction_calibration_config = None
+        callback_calls = []
+        def nested_threshold(*args):
+            callback_calls.append('threshold')
+        nested = copy.deepcopy(assessment_case[2][0][0])
+        nested._model.policy = nested._model.model.coef_.copy().view(NumericCallbacks)
+        nested._model.policy.prediction_calibration_config = CalibrationConfig(calibration_func=None, threshold_func=nested_threshold)
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+            nested._model.policy.prediction_calibration_config.threshold_func()
+        assert callback_calls == []
+        class ScalarCallbacks(float):
+            prediction_calibration_config = None
+        nested._model.policy = ScalarCallbacks(expected_offset)
+        nested._model.policy.prediction_calibration_config = CalibrationConfig(calibration_func=None, threshold_func=nested_threshold)
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+            nested._model.policy.prediction_calibration_config.threshold_func()
+        assert callback_calls == []
+        class StaticThreshold:
+            __call__ = staticmethod(nested_threshold)
+        class ClassThreshold:
+            @classmethod
+            def __call__(cls, *args):
+                nested_threshold(*args)
+        for callback in (partial(StaticThreshold()), partial(ClassThreshold())):
+            nested._model.policy.prediction_calibration_config.threshold_func = callback
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+                callback()
+            assert callback_calls == []
+        configured_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=nested_threshold))
+        def default_provider(provider=configured_provider):
+            provider.prediction_calibration_config.threshold_func()
+        def closed_provider(provider):
+            def invoke():
+                provider.prediction_calibration_config.threshold_func()
+            return invoke
+        class BoundProvider:
+            prediction_calibration_config = configured_provider.prediction_calibration_config
+            def invoke(self):
+                self.prediction_calibration_config.threshold_func()
+        for provider in (default_provider, closed_provider(configured_provider), BoundProvider().invoke):
+            nested._model.policy = provider
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([nested]):
+                provider()
+            assert callback_calls == []
+        nested._model.policy = FittingProvider(CalibrationConfig(threshold_func=partial(max)))
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(optional_handle, assessment_case)
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'), readonly_prediction([nested]):
+                nested._model.policy.adjust(nested._model.model.coef_.ravel())
             assert loader.call_count == 0
-    finally:
-        OptionalAttributePolicy.optional = None
-    class ScalarAliasPolicy:
-        def __init__(self, factory):
-            self.left = factory('1000')
-            self.right = self.left
-            self.break_copy = False
-        def adjust(self, values):
-            return np.clip(values + (0 if self.left is self.right else 0.1), 0, 1)
-        def __deepcopy__(self, memo):
+        class GlobalCallbackModel(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    result['_probs'] = _GLOBAL_FITTED_PROVIDER.adjust(result['_probs'])
+                return result
+        globally_configured = copy.deepcopy(assessment_case[2][0][0])
+        globally_configured._model.__class__ = GlobalCallbackModel
+        globally_configured._model.research_x = late._model.research_x.copy()
+        with patch.dict(globals(), {'_GLOBAL_FITTED_PROVIDER': configured_provider}):
+            global_handle = _freeze(globally_configured)
+            with pytest.raises(ValueError, match='attempted fitting') as global_failure:
+                _report(global_handle, assessment_case)
+            assert callback_calls == []
+            with history.connection(assessment_case[0] / history._HISTORY) as db:
+                record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+                assert record['state'] == 'failed' and record['id'] in str(global_failure.value)
+                assert json.loads(record['error_json'])['stage'] == 'predict'
+        class ThreadedCallbackModel(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    worker = Thread(target=self.policy.prediction_calibration_config.threshold_func)
+                    worker.start()
+                    worker.join()
+                return result
+        threaded = copy.deepcopy(assessment_case[2][0][0])
+        threaded._model.__class__ = ThreadedCallbackModel
+        threaded._model.research_x = late._model.research_x.copy()
+        threaded._model.policy = configured_provider
+        threaded_handle = _freeze(threaded)
+        with pytest.raises(ValueError, match='attempted thread dispatch') as thread_failure:
+            _report(threaded_handle, assessment_case)
+        assert callback_calls == []
+        with history.connection(assessment_case[0] / history._HISTORY) as db:
+            record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+            assert record['state'] == 'failed' and record['id'] in str(thread_failure.value)
+            assert json.loads(record['error_json'])['stage'] == 'predict'
+        nested._model.policy = configured_provider
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            assert pool.submit(bool, True).result() is True
+            with pytest.raises(ValueError, match='attempted thread dispatch'), readonly_prediction([nested]):
+                pool.submit(nested_threshold).result()
+            assert callback_calls == []
+        def descriptor_get(self, instance, owner=None):
+            return lambda values: np.clip(later_probabilities(values) + self.offset, 0, 1)
+        class StaticDescriptor(staticmethod):
+            __get__ = descriptor_get
+        class ClassDescriptor(classmethod):
+            __get__ = descriptor_get
+        for descriptor_type in (StaticDescriptor, ClassDescriptor):
+            class DescriptorModel(LogRegBinary):
+                adjust = descriptor_type(identity_probabilities)
+                def predict(self, data):
+                    result = super().predict(data)
+                    result['_probs'] = self.adjust(result['_probs'])
+                    return result
+            descriptor = vars(DescriptorModel)['adjust']
+            descriptor.offset = expected_offset
+            described = copy.deepcopy(assessment_case[2][0][0])
+            described._model.__class__ = DescriptorModel
+            descriptor_handle = _freeze(described)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(descriptor_handle, assessment_case)
+                assert loader.call_count == 0
+            with patch.object(descriptor, 'offset', expected_offset + 0.1), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(descriptor_handle, assessment_case)
+                assert loader.call_count == 0
+        class ExternalEntropy(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    result['_probs'] = np.clip(result['_probs'] + int.from_bytes(os.urandom(1), 'big') / 255, 0, 1)
+                return result
+        entropic = copy.deepcopy(assessment_case[2][0][0])
+        entropic._model.__class__ = ExternalEntropy
+        entropic._model.research_x = late._model.research_x.copy()
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='random dependency'):
+                _freeze(entropic)
+            assert loader.call_count == 0
+        with pytest.raises(ValueError, match='unowned randomness'), readonly_prediction([nested]):
+            os.urandom(1)
+        class NativePartial(partial):
+            __call__ = staticmethod(max)
+        unsafe_callback = copy.deepcopy(assessment_case[2][0][0])
+        unsafe_callback._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativePartial(identity_probabilities)))
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                _freeze(unsafe_callback)
+            assert loader.call_count == 0
+        class NativeThreshold:
+            __call__ = staticmethod(max)
+        class DynamicStaticMethod(staticmethod):
+            def __get__(self, instance, owner=None):
+                return max
+        class DynamicThreshold:
+            __call__ = DynamicStaticMethod(identity_probabilities)
+        class DynamicClassMethod(classmethod):
+            def __get__(self, instance, owner=None):
+                return max
+        class DynamicClassThreshold:
+            __call__ = DynamicClassMethod(identity_probabilities)
+        class DynamicProperty(property):
+            def __get__(self, instance, owner=None):
+                return max
+        class DynamicPropertyThreshold:
+            __call__ = DynamicProperty(lambda self: identity_probabilities)
+        misleading = NativeThreshold()
+        misleading.__wrapped__ = identity_probabilities
+        for callback in (misleading, DynamicThreshold(), DynamicClassThreshold(), DynamicPropertyThreshold()):
+            unsafe_callback._model.callback_provider.prediction_calibration_config.threshold_func = callback
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                    _freeze(unsafe_callback)
+                assert loader.call_count == 0
+    phase_4()
+
+    def phase_5():
+        nonlocal CalibrationConfig, FittingProvider, LogRegBinary, LogisticRegression, PartialState, UsesReadonlyCallable, bound_initializer, callback, class_handle, copying_handle, db, distinct, expected_offset, factory, loader, readonly_prediction, threshold_selections, unsafe_class
+        class ReadonlyCallable:
+            def __call__(self, values):
+                return identity_probabilities(values)
+        class UsesReadonlyCallable(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy(result['_probs'])
+                return result
+        distinct = copy.deepcopy(assessment_case[2][0][0])
+        distinct._model.__class__ = UsesReadonlyCallable
+        distinct._model.policy = ReadonlyCallable()
+        distinct._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=partial(ReadonlyCallable())))
+        distinct_handle = _freeze(distinct)
+        assert _report(distinct_handle, assessment_case)['rows_sha256']
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
+            distinct._model.callback_provider.prediction_calibration_config.threshold_func(distinct._model.model.coef_.ravel())
+        def positional_default(offset):
+            def invoke(values, adjustment=offset):
+                return np.clip(values + adjustment, 0, 1)
+            return invoke
+        def keyword_default(offset):
+            def invoke(values, *, adjustment=offset):
+                return np.clip(values + adjustment, 0, 1)
+            return invoke
+        for factory, callback_offset in ((positional_default, expected_offset + 0.1), (keyword_default, expected_offset + 0.1), (positional_default, expected_offset)):
+            prediction = factory(expected_offset)
+            callback = factory(callback_offset)
+            original_code = callback.__code__
+            distinct._model.policy = prediction
+            distinct._model.callback_provider.prediction_calibration_config.threshold_func = callback
+            distinct_handle = _freeze(distinct)
+            assert _report(distinct_handle, assessment_case)['rows_sha256']
+            assert callback.__code__ is original_code
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([distinct]):
+                callback(distinct._model.model.coef_.ravel(), adjustment=expected_offset)
+            assert callback.__code__ is original_code
+        class FirstAdjustment:
+            def adjust(self, values):
+                return values
+        class SecondAdjustment:
+            def adjust(self, values):
+                return np.clip(values + expected_offset, 0, 1)
+        class OrderedPrediction(FirstAdjustment, SecondAdjustment, LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.adjust(result['_probs'])
+                return result
+        ordered = copy.deepcopy(assessment_case[2][0][0])
+        ordered_model = object.__new__(OrderedPrediction)
+        vars(ordered_model).update(copy.deepcopy(vars(ordered._model)))
+        ordered._model = ordered_model
+        ordered_handle = _freeze(ordered)
+        original_bases = OrderedPrediction.__bases__
+        try:
+            OrderedPrediction.__bases__ = (SecondAdjustment, FirstAdjustment, LogRegBinary)
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(ordered_handle, assessment_case)
+                assert loader.call_count == 0
+        finally:
+            OrderedPrediction.__bases__ = original_bases
+        class NativeNewCallback:
+            __new__ = staticmethod(getattr)
+            def __init__(self, *args):
+                raise AssertionError('unused initializer')
+        unsafe_class = copy.deepcopy(assessment_case[2][0][0])
+        unsafe_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativeNewCallback))
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                _freeze(unsafe_class)
+            assert loader.call_count == 0
+        class SharedInitializer:
+            def __init__(self, values):
+                self.values = values
+        class SharedNew(SharedInitializer):
+            def __new__(cls, values):
+                return object.__new__(cls)
+        for base in (SharedInitializer, SharedNew):
+            class ThresholdClass(base):
+                __slots__ = ()
+            class ReadonlyClass(base):
+                __slots__ = ()
+            class UsesClass(LogRegBinary):
+                def predict(self, data):
+                    result = super().predict(data)
+                    result['_probs'] = ReadonlyClass(result['_probs']).values
+                    return result
+            for callback in (ThresholdClass, partial(ThresholdClass)):
+                selected_class = copy.deepcopy(assessment_case[2][0][0])
+                selected_class._model.__class__ = UsesClass
+                selected_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=callback))
+                class_handle = _freeze(selected_class)
+                assert _report(class_handle, assessment_case)['rows_sha256']
+                with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([selected_class]):
+                    callback(selected_class._model.model.coef_.ravel())
+        for library_function in (LogisticRegression.predict_proba, LogisticRegression.fit):
+            @wraps(library_function)
+            def decorated_adjust(values):
+                return np.clip(values + _LATE_RULES['offset'], 0, 1)
+            decorated = copy.deepcopy(assessment_case[2][0][0])
+            decorated._model.__class__ = UsesReadonlyCallable
+            decorated._model.policy = decorated_adjust
+            decorated_handle = _freeze(decorated)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(decorated_handle, assessment_case)
+                assert loader.call_count == 0
+        threshold_selections = []
+        def bound_new(marker, cls, values):
+            threshold_selections.append(cls)
+            return np.max(values)
+        def variadic_new(marker, *args):
+            return bound_new(marker, *args)
+        class NewProvider:
+            def __call__(self, cls, values):
+                return bound_new(expected_offset, cls, values)
+        for factory in (partial(bound_new, expected_offset), partial(variadic_new, expected_offset), NewProvider()):
+            class BoundConstructor:
+                __new__ = factory
+            for callback in (BoundConstructor, partial(BoundConstructor)):
+                unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+                _freeze(unsafe_class)
+                with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                    callback(unsafe_class._model.model.coef_.ravel())
+                assert threshold_selections == []
+        def target_copy(self, memo):
             clone = object.__new__(type(self))
-            memo[id(self)] = clone
             vars(clone).update(copy.deepcopy(vars(self), memo))
-            if self.break_copy:
-                if type(self.right) in (list, tuple, dict):
-                    clone.right = tuple(iter(self.right)) if type(self.right) is tuple else copy.copy(self.right)
-                else:
-                    clone.right = type(self.right)(str(self.right))
+            _LATE_RULES['offset'] += 0.1
             return clone
-    for factory in (float, int, lambda value: [None, True, b'leaf', value, 1], lambda value: (None, True, b'leaf', value, 1), lambda value: {'leaf': value, 'canonical': 1, 'missing': None}):
-        reviewed._model.policy = ScalarAliasPolicy(factory)
+        with history.connection(assessment_case[0] / history._HISTORY) as db:
+            before_target_copy = db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
+        with patch.dict(_LATE_RULES), patch.object(NextBarUpTarget, '__deepcopy__', target_copy, create=True), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed prediction dependencies before observation access'):
+                _report(copying_handle, assessment_case)
+            assert loader.call_count == 0
+        with history.connection(assessment_case[0] / history._HISTORY) as db:
+            assert db.execute('SELECT COUNT(*) FROM attempts').fetchone()[0] == before_target_copy
+        def bound_initializer(marker, cls, values):
+            threshold_selections.append(cls)
+        class BoundInitializer:
+            __init__ = classmethod(partial(bound_initializer, expected_offset))
+        for callback in (BoundInitializer, partial(BoundInitializer)):
+            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+            _freeze(unsafe_class)
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                callback(unsafe_class._model.model.coef_.ravel())
+            assert threshold_selections == []
+        class HiddenFunction(staticmethod):
+            @property
+            def __func__(self):
+                return identity_probabilities
+        class HiddenThreshold:
+            __call__ = HiddenFunction(max)
+        unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = HiddenThreshold()
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                _freeze(unsafe_class)
+            assert loader.call_count == 0
+        def bound_adjust(offset, values, *, scale):
+            return np.clip(values * scale + offset, 0, 1)
+        class HiddenPartial(partial):
+            @property
+            def func(self):
+                return identity_probabilities
+            @property
+            def args(self):
+                return ()
+            @property
+            def keywords(self):
+                return {}
+            def adjust(self, values):
+                return self(values)
+            def __deepcopy__(self, memo):
+                values = partial.__dict__['args'].__get__(self, type(self))
+                keywords = partial.__dict__['keywords'].__get__(self, type(self))
+                return type(self)(bound_adjust, *values, **keywords)
+        class NonpreservingHiddenPartial(HiddenPartial):
+            def __deepcopy__(self, memo):
+                values = partial.__dict__['args'].__get__(self, type(self))
+                keywords = partial.__dict__['keywords'].__get__(self, type(self))
+                return type(self)(bound_adjust, values[0] + 0.1, **keywords)
+        hidden_partial = copy.deepcopy(assessment_case[2][0][0])
+        hidden_partial._model.__class__ = PartialState
+        hidden_partial._model.policy = HiddenPartial(bound_adjust, expected_offset, scale=1.0)
+        _freeze(hidden_partial)
+        hidden_partial._model.policy = NonpreservingHiddenPartial(bound_adjust, expected_offset, scale=1.0)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(hidden_partial)
+            assert loader.call_count == 0
+        class ThresholdReceiver:
+            def choose(self, values):
+                threshold_selections.append(self)
+                return np.max(values)
+        threshold_receiver = ThresholdReceiver()
+        class BoundMeta(type):
+            __call__ = threshold_receiver.choose
+        class BoundMetaCallback(metaclass=BoundMeta):
+            pass
+        for callback in (BoundMetaCallback, partial(BoundMetaCallback)):
+            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+            _freeze(unsafe_class)
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                callback(unsafe_class._model.model.coef_.ravel())
+            assert threshold_selections == []
+    phase_5()
+
+    def phase_6():
+        nonlocal Keyed, LogRegBinary, UsesReadonlyCallable, bound_initializer, callback, callback_calls, config, defaultdict, deque, descriptor, distinct, expected_offset, field, global_handle, implementation, keyed, loader, mapped, nested_threshold, readonly_prediction, threshold_selections, unsafe_class
+        class HiddenDtype(np.ndarray):
+            @property
+            def dtype(self):
+                return np.dtype(float)
+            def __deepcopy__(self, memo):
+                return np.ndarray.copy(self)
+        keyed._model.__class__ = Keyed
+        keyed._model.adjustments = np.asarray([later_probabilities], dtype=object).view(HiddenDtype)
+        hidden_dtype_handle = _freeze(keyed)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(hidden_dtype_handle, assessment_case)
+            assert loader.call_count == 0
+        class HiddenFactory(defaultdict):
+            @property
+            def default_factory(self):
+                return identity_probabilities
+            def adjust(self, values):
+                return defaultdict.__dict__['default_factory'].__get__(self, type(self))()(values)
+            def __deepcopy__(self, memo):
+                return type(self)(defaultdict.__dict__['default_factory'].__get__(self, type(self)))
+        class NonpreservingFactory(HiddenFactory):
+            def __deepcopy__(self, memo):
+                return type(self)(later_probabilities)
+        mapped._model.policy = HiddenFactory(lambda: identity_probabilities)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingFactory(lambda: identity_probabilities)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class HiddenCapacity(deque):
+            @property
+            def maxlen(self):
+                return 1
+            def adjust(self, values):
+                return np.clip(values + deque.__dict__['maxlen'].__get__(self, type(self)) / 100, 0, 1)
+            def __deepcopy__(self, memo):
+                return type(self)(maxlen=deque.__dict__['maxlen'].__get__(self, type(self)))
+        class NonpreservingCapacity(HiddenCapacity):
+            def __deepcopy__(self, memo):
+                return type(self)(maxlen=deque.__dict__['maxlen'].__get__(self, type(self)) + 1)
+        mapped._model.policy = HiddenCapacity(maxlen=1)
+        _freeze(mapped)
+        mapped._model.policy = NonpreservingCapacity(maxlen=1)
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        def global_lookup(values):
+            return np.clip(values + globals()['_LATE_RULES']['offset'], 0, 1)
+        distinct._model.__class__ = UsesReadonlyCallable
+        distinct._model.policy = global_lookup
+        global_handle = _freeze(distinct)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(global_handle, assessment_case)
+            assert loader.call_count == 0
+        class ConstructorDescriptor(staticmethod):
+            def __call__(self, *args):
+                return identity_probabilities(args[-1])
+        def descriptor_new(cls, values):
+            threshold_selections.append(cls)
+            return np.max(values)
+        class DescriptorConstructor:
+            __new__ = ConstructorDescriptor(descriptor_new)
+        class InitializerDescriptor(classmethod):
+            def __call__(self, *args):
+                return identity_probabilities(args[-1])
+        class DescriptorInitializer:
+            __init__ = InitializerDescriptor(partial(bound_initializer, expected_offset))
+        for constructor in (DescriptorConstructor, DescriptorInitializer):
+            for callback in (constructor, partial(constructor)):
+                unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = callback
+                _freeze(unsafe_class)
+                with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                    callback(unsafe_class._model.model.coef_.ravel())
+                assert threshold_selections == []
+        for native_base, field in ((staticmethod, '__func__'), (classmethod, '__func__'), (property, 'fget')):
+            class DirectDescriptor(native_base):
+                __call__ = staticmethod(max)
+                def __deepcopy__(self, memo, descriptor=native_base.__dict__[field]):
+                    return type(self)(descriptor.__get__(self, type(self)))
+            unsafe_class._model.callback_provider.prediction_calibration_config.threshold_func = DirectDescriptor(identity_probabilities)
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                    _freeze(unsafe_class)
+                assert loader.call_count == 0
+        class SentinelPolicy:
+            DEFAULT = object()
+            def __init__(self):
+                self.policy = self.DEFAULT
+            def adjust(self, values):
+                return np.clip(values + (0 if self.policy is self.DEFAULT else 0.1), 0, 1)
+        mapped._model.policy = SentinelPolicy()
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(mapped)
+            assert loader.call_count == 0
+        class GlobalSentinelPolicy:
+            def __init__(self):
+                self.policy = _ALIAS_SENTINEL
+            def adjust(self, values):
+                return np.clip(values + (0 if self.policy is _ALIAS_SENTINEL else 0.1), 0, 1)
+        class NestedSentinelPolicy(GlobalSentinelPolicy):
+            def adjust(self, values):
+                return np.clip(values + (0 if self.policy is _ALIAS_REGISTRY['default'] else 0.1), 0, 1)
+        for implementation in (GlobalSentinelPolicy, NestedSentinelPolicy):
+            mapped._model.policy = implementation()
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='copy changed'):
+                    _freeze(mapped)
+                assert loader.call_count == 0
+        class PreservingGlobalSentinel(GlobalSentinelPolicy):
+            def __deepcopy__(self, memo):
+                clone = object.__new__(type(self))
+                clone.policy = self.policy
+                return clone
+        mapped._model.policy = PreservingGlobalSentinel()
+        assert _report(_freeze(mapped), assessment_case)['rows_sha256']
+        class StructuredPolicy(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy['adjust'](result['_probs'])
+                return result
+        structured = copy.deepcopy(assessment_case[2][0][0])
+        structured._model.__class__ = StructuredPolicy
+        structured._model.policy = np.asarray((later_probabilities,), dtype=[('adjust', object)])[()]
+        structured_handle = _freeze(structured)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(structured_handle, assessment_case)
+            assert loader.call_count == 0
+        class FreshCallbackConfig:
+            calibration_func = None
+            @property
+            def threshold_func(self):
+                def choose(values):
+                    callback_calls.append('fresh threshold')
+                    return np.max(values)
+                return choose
+        unsafe_class._model.callback_provider.prediction_calibration_config = FreshCallbackConfig()
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='stable observable binding'):
+                _freeze(unsafe_class)
+            assert loader.call_count == 0 and callback_calls == []
+        class StableCallbackConfig:
+            calibration_func = None
+            def __init__(self, callback):
+                self.callback = callback
+            @property
+            def threshold_func(self):
+                return self.callback
+        class MethodCallbackConfig(StableCallbackConfig):
+            @property
+            def threshold_func(self):
+                return self.choose
+            def choose(self, values):
+                callback_calls.append('bound threshold')
+                return np.max(values)
+        class PartialCallbackConfig(StableCallbackConfig):
+            @property
+            def threshold_func(self):
+                return partial(self.callback)
+        for config in (StableCallbackConfig(nested_threshold), MethodCallbackConfig(nested_threshold), PartialCallbackConfig(nested_threshold)):
+            unsafe_class._model.callback_provider.prediction_calibration_config = config
+            _freeze(unsafe_class)
+            with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([unsafe_class]):
+                config.threshold_func(unsafe_class._model.model.coef_.ravel())
+            assert callback_calls == []
+    phase_6()
+
+    def phase_7():
+        nonlocal LogRegBinary, LogisticRegression, annotation_handle, class_handle, expected_offset, field, loader, policy
+        class AnnotationState(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + self.policy.__annotations__['offset'], 0, 1)
+                return result
+        annotated = copy.deepcopy(assessment_case[2][0][0])
+        annotated._model.__class__ = AnnotationState
+        annotated._model.policy = identity_probabilities
+        with patch.object(identity_probabilities, '__annotations__', {'offset': expected_offset}):
+            annotation_handle = _freeze(annotated)
+            with patch.dict(identity_probabilities.__annotations__, {'offset': expected_offset + 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='changed'):
+                    _report(annotation_handle, assessment_case)
+                assert loader.call_count == 0
+        class AnnotationCallableState(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.__annotations__['adjust'](result['_probs'])
+                return result
+        annotated._model.__class__ = AnnotationCallableState
+        from typing import Literal
+        for policy in (identity_probabilities, LogisticRegression.predict_proba):
+            annotated._model.policy = policy
+            with patch.object(policy, '__annotations__', {'adjust': later_probabilities, 'mode': Literal['fixed']}):
+                annotation_handle = _freeze(annotated)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(annotation_handle, assessment_case)
+                    assert loader.call_count == 0
+        class AnnotationHelper:
+            def __new__(cls, values):
+                return later_probabilities(values)
+        annotated._model.policy = identity_probabilities
+        with patch.object(identity_probabilities, '__annotations__', {'adjust': AnnotationHelper}):
+            class_handle = _freeze(annotated)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(class_handle, assessment_case)
+                assert loader.call_count == 0
+            with patch.object(AnnotationHelper, '__new__', staticmethod(lambda cls, values: values)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(class_handle, assessment_case)
+                assert loader.call_count == 0
+        class FunctionDefaults(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.__defaults__[0](result['_probs'])
+                return result
+        annotated._model.__class__ = FunctionDefaults
+        annotated._model.policy = LogisticRegression.predict_proba
+        with patch.object(LogisticRegression.predict_proba, '__defaults__', (later_probabilities,)):
+            defaults_handle = _freeze(annotated)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(defaults_handle, assessment_case)
+                assert loader.call_count == 0
+        from types import FunctionType
+        def captured_adjustment(adjust):
+            def apply(values):
+                return adjust(values)
+            return apply
+        template = captured_adjustment(later_probabilities)
+        annotated._model.policy = FunctionType(template.__code__, LogisticRegression.predict_proba.__globals__, closure=template.__closure__)
+        class FunctionClosure(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.__closure__[0].cell_contents(result['_probs'])
+                return result
+        annotated._model.__class__ = FunctionClosure
+        closure_handle = _freeze(annotated)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(closure_handle, assessment_case)
+            assert loader.call_count == 0
+        class FunctionDocument(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + float(self.policy.__doc__), 0, 1)
+                return result
+        annotated._model.__class__ = FunctionDocument
+        annotated._model.policy = identity_probabilities
+        with patch.object(identity_probabilities, '__doc__', str(expected_offset)):
+            document_handle = _freeze(annotated)
+            with patch.object(identity_probabilities, '__doc__', str(expected_offset + 0.1)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='changed'):
+                    _report(document_handle, assessment_case)
+                assert loader.call_count == 0
+        class FunctionMetadataCall(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                payload = getattr(self.policy, self.metadata_field)
+                adjust = payload[0] if isinstance(payload, tuple) else payload
+                result['_probs'] = adjust(result['_probs'])
+                return result
+        annotated._model.__class__ = FunctionMetadataCall
+        missing_metadata = object()
+        for policy in (identity_probabilities, LogisticRegression.predict_proba):
+            annotated._model.policy = policy
+            for field in ('__doc__', '__type_params__'):
+                annotated._model.metadata_field = field
+                original_metadata = getattr(policy, field, missing_metadata)
+                try:
+                    setattr(policy, field, (later_probabilities,) if field == '__type_params__' else later_probabilities)
+                    metadata_handle = _freeze(annotated)
+                    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                        with pytest.raises(ValueError, match='prediction dependency changed'):
+                            _report(metadata_handle, assessment_case)
+                        assert loader.call_count == 0
+                finally:
+                    if original_metadata is missing_metadata:
+                        delattr(policy, field)
+                    else:
+                        setattr(policy, field, original_metadata)
+    phase_7()
+
+    def phase_8():
+        nonlocal LogRegBinary, LogisticRegression, annotation_handle, descriptor, expected_offset, factory, loader, name, policy, property_handle, reviewed
+        class ReprPolicy:
+            def __repr__(self):
+                return str(_LATE_RULES['offset'])
+        class ReprModel(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + float(repr(self.policy)), 0, 1)
+                return result
+        reviewed = copy.deepcopy(assessment_case[2][0][0])
+        reviewed._model.__class__ = ReprModel
+        reviewed._model.policy = ReprPolicy()
+        repr_handle = _freeze(reviewed)
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(repr_handle, assessment_case)
+            assert loader.call_count == 0
+        class PolicyModel(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = self.policy.adjust(result['_probs'])
+                return result
+        class DictionaryAlias:
+            def __init__(self):
+                self.offset = expected_offset
+                self.state = vars(self)
+            def adjust(self, values):
+                return np.clip(values + self.offset + (0 if self.state is vars(self) else 0.1), 0, 1)
+            def __deepcopy__(self, memo):
+                clone = object.__new__(type(self))
+                memo[id(self)] = clone
+                memo[id(vars(self))] = vars(clone)
+                vars(clone).update((name, copy.deepcopy(part, memo)) for name, part in vars(self).items())
+                return clone
+        class BrokenDictionaryAlias(DictionaryAlias):
+            def __deepcopy__(self, memo):
+                clone = object.__new__(type(self))
+                memo[id(self)] = clone
+                vars(clone).update(copy.deepcopy(vars(self), memo))
+                return clone
+        reviewed._model.__class__ = PolicyModel
+        reviewed._model.policy = DictionaryAlias()
         _freeze(reviewed)
-        reviewed._model.policy.break_copy = True
-        broken = copy.deepcopy(reviewed._model.policy)
-        assert broken.left == broken.right and broken.left is not broken.right
+        reviewed._model.policy = BrokenDictionaryAlias()
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
             with pytest.raises(ValueError, match='copy changed'):
                 _freeze(reviewed)
             assert loader.call_count == 0
-    class PropertyDocument:
-        @property
-        def offset(self):
-            return expected_offset
-        def adjust(self, values):
-            return np.clip(values + float(type(self).offset.__doc__), 0, 1)
-    descriptor = vars(PropertyDocument)['offset']
-    descriptor.__doc__ = str(expected_offset)
-    reviewed._model.policy = PropertyDocument()
-    property_handle = _freeze(reviewed)
-    try:
-        descriptor.__doc__ = str(expected_offset + 0.1)
+        class ClassReferencePolicy:
+            def __init__(self):
+                self.first = type('HoldoutMarker', (), {})
+                self.second = type('HoldoutMarker', (), {})
+                self.selected = self.first
+                self.break_copy = False
+            def adjust(self, values):
+                return np.clip(values + (0 if self.selected is self.first else 0.1), 0, 1)
+            def __deepcopy__(self, memo):
+                clone = object.__new__(type(self))
+                memo[id(self)] = clone
+                vars(clone).update(copy.deepcopy(vars(self), memo))
+                if self.break_copy:
+                    clone.selected = clone.second
+                return clone
+        reviewed._model.policy = ClassReferencePolicy()
+        _freeze(reviewed)
+        reviewed._model.policy.break_copy = True
         with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(property_handle, assessment_case)
+            with pytest.raises(ValueError, match='copy changed'):
+                _freeze(reviewed)
             assert loader.call_count == 0
-    finally:
-        descriptor.__doc__ = str(expected_offset)
-    class NamedDispatch(LogRegBinary):
-        def function_named_offset(self, values):
-            return np.clip(values + _LATE_RULES['offset'], 0, 1)
-        oct = function_named_offset
-        heaviside = function_named_offset
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = getattr(self, self.policy.__name__)(result['_probs'])
-            return result
-    reviewed._model.__class__ = NamedDispatch
-    for policy in (identity_probabilities, LogisticRegression.predict_proba):
-        reviewed._model.policy = policy
-        original_name = policy.__name__
-        policy.__name__ = 'function_named_offset'
+        class OptionalAttributePolicy:
+            optional = None
+            def adjust(self, values):
+                return np.clip(values + (0 if hasattr(self, 'optional') else 0.1), 0, 1)
+        reviewed._model.policy = OptionalAttributePolicy()
+        optional_handle = _freeze(reviewed)
         try:
+            del OptionalAttributePolicy.optional
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(optional_handle, assessment_case)
+                assert loader.call_count == 0
+        finally:
+            OptionalAttributePolicy.optional = None
+        class ScalarAliasPolicy:
+            def __init__(self, factory):
+                self.left = factory('1000')
+                self.right = self.left
+                self.break_copy = False
+            def adjust(self, values):
+                return np.clip(values + (0 if self.left is self.right else 0.1), 0, 1)
+            def __deepcopy__(self, memo):
+                clone = object.__new__(type(self))
+                memo[id(self)] = clone
+                vars(clone).update(copy.deepcopy(vars(self), memo))
+                if self.break_copy:
+                    if type(self.right) in (list, tuple, dict):
+                        clone.right = tuple(iter(self.right)) if type(self.right) is tuple else copy.copy(self.right)
+                    else:
+                        clone.right = type(self.right)(str(self.right))
+                return clone
+        for factory in (float, int, lambda value: [None, True, b'leaf', value, 1], lambda value: (None, True, b'leaf', value, 1), lambda value: {'leaf': value, 'canonical': 1, 'missing': None}):
+            reviewed._model.policy = ScalarAliasPolicy(factory)
+            _freeze(reviewed)
+            reviewed._model.policy.break_copy = True
+            broken = copy.deepcopy(reviewed._model.policy)
+            assert broken.left == broken.right and broken.left is not broken.right
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='copy changed'):
+                    _freeze(reviewed)
+                assert loader.call_count == 0
+        class PropertyDocument:
+            @property
+            def offset(self):
+                return expected_offset
+            def adjust(self, values):
+                return np.clip(values + float(type(self).offset.__doc__), 0, 1)
+        descriptor = vars(PropertyDocument)['offset']
+        descriptor.__doc__ = str(expected_offset)
+        reviewed._model.policy = PropertyDocument()
+        property_handle = _freeze(reviewed)
+        try:
+            descriptor.__doc__ = str(expected_offset + 0.1)
+            with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                with pytest.raises(ValueError, match='prediction dependency changed'):
+                    _report(property_handle, assessment_case)
+                assert loader.call_count == 0
+        finally:
+            descriptor.__doc__ = str(expected_offset)
+        class NamedDispatch(LogRegBinary):
+            def function_named_offset(self, values):
+                return np.clip(values + _LATE_RULES['offset'], 0, 1)
+            oct = function_named_offset
+            heaviside = function_named_offset
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = getattr(self, self.policy.__name__)(result['_probs'])
+                return result
+        reviewed._model.__class__ = NamedDispatch
+        for policy in (identity_probabilities, LogisticRegression.predict_proba):
+            reviewed._model.policy = policy
+            original_name = policy.__name__
+            policy.__name__ = 'function_named_offset'
+            try:
+                name_handle = _freeze(reviewed)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(name_handle, assessment_case)
+                    assert loader.call_count == 0
+            finally:
+                policy.__name__ = original_name
+        for policy in (oct, np.heaviside):
+            reviewed._model.policy = policy
             name_handle = _freeze(reviewed)
             with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
                 with pytest.raises(ValueError, match='prediction dependency changed'):
                     _report(name_handle, assessment_case)
                 assert loader.call_count == 0
-        finally:
-            policy.__name__ = original_name
-    for policy in (oct, np.heaviside):
-        reviewed._model.policy = policy
-        name_handle = _freeze(reviewed)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-            with pytest.raises(ValueError, match='prediction dependency changed'):
-                _report(name_handle, assessment_case)
-            assert loader.call_count == 0
-    class AnnotationDispatch(LogRegBinary):
-        def annotation_selected_offset(self, values):
-            return np.clip(values + _LATE_RULES['offset'], 0, 1)
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = getattr(self, self.policy.__annotations__['method'])(result['_probs'])
-            return result
-    reviewed._model.__class__ = AnnotationDispatch
-    for policy in (identity_probabilities, LogisticRegression.predict_proba):
-        reviewed._model.policy = policy
-        with patch.object(policy, '__annotations__', {'method': 'annotation_selected_offset'}):
-            annotation_handle = _freeze(reviewed)
-            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-                with pytest.raises(ValueError, match='prediction dependency changed'):
-                    _report(annotation_handle, assessment_case)
-                assert loader.call_count == 0
-    class NativeNamespace(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + self.policy.__globals__['holdout_rules']['offset'], 0, 1)
-            return result
-    reviewed._model.__class__ = NativeNamespace
-    for policy in (identity_probabilities, LogisticRegression.predict_proba):
-        reviewed._model.policy = policy
-        with patch.dict(policy.__globals__, {'holdout_rules': _LATE_RULES}):
-            namespace_handle = _freeze(reviewed)
-            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-                with pytest.raises(ValueError, match='prediction dependency changed'):
-                    _report(namespace_handle, assessment_case)
-                assert loader.call_count == 0
-    class IndirectNamespace(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = np.clip(result['_probs'] + getattr(self.policy, '__globals__', None)['holdout_rules']['offset'], 0, 1)
-            return result
-    reviewed._model.__class__ = IndirectNamespace
-    for policy in (identity_probabilities, LogisticRegression.predict_proba):
-        reviewed._model.policy = policy
-        with patch.dict(policy.__globals__, {'holdout_rules': _LATE_RULES}):
-            namespace_handle = _freeze(reviewed)
-            with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-                with pytest.raises(ValueError, match='prediction dependency changed'):
-                    _report(namespace_handle, assessment_case)
-                assert loader.call_count == 0
-    class BuiltinPolicy(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            result['_probs'] = abs(result['_probs'])
-            return result
-    reviewed._model.__class__ = BuiltinPolicy
-    builtin_handle = _freeze(reviewed)
-    with patch('builtins.abs', later_probabilities), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(builtin_handle, assessment_case)
-        assert loader.call_count == 0
+        class AnnotationDispatch(LogRegBinary):
+            def annotation_selected_offset(self, values):
+                return np.clip(values + _LATE_RULES['offset'], 0, 1)
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = getattr(self, self.policy.__annotations__['method'])(result['_probs'])
+                return result
+        reviewed._model.__class__ = AnnotationDispatch
+        for policy in (identity_probabilities, LogisticRegression.predict_proba):
+            reviewed._model.policy = policy
+            with patch.object(policy, '__annotations__', {'method': 'annotation_selected_offset'}):
+                annotation_handle = _freeze(reviewed)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(annotation_handle, assessment_case)
+                    assert loader.call_count == 0
+        class NativeNamespace(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + self.policy.__globals__['holdout_rules']['offset'], 0, 1)
+                return result
+        reviewed._model.__class__ = NativeNamespace
+        for policy in (identity_probabilities, LogisticRegression.predict_proba):
+            reviewed._model.policy = policy
+            with patch.dict(policy.__globals__, {'holdout_rules': _LATE_RULES}):
+                namespace_handle = _freeze(reviewed)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(namespace_handle, assessment_case)
+                    assert loader.call_count == 0
+        class IndirectNamespace(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = np.clip(result['_probs'] + getattr(self.policy, '__globals__', None)['holdout_rules']['offset'], 0, 1)
+                return result
+        reviewed._model.__class__ = IndirectNamespace
+        for policy in (identity_probabilities, LogisticRegression.predict_proba):
+            reviewed._model.policy = policy
+            with patch.dict(policy.__globals__, {'holdout_rules': _LATE_RULES}):
+                namespace_handle = _freeze(reviewed)
+                with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+                    with pytest.raises(ValueError, match='prediction dependency changed'):
+                        _report(namespace_handle, assessment_case)
+                    assert loader.call_count == 0
+        class BuiltinPolicy(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                result['_probs'] = abs(result['_probs'])
+                return result
+        reviewed._model.__class__ = BuiltinPolicy
         builtin_handle = _freeze(reviewed)
-        with patch.dict(_LATE_RULES, {'offset': 0.1}), pytest.raises(ValueError, match='prediction dependency changed'):
-            _report(builtin_handle, assessment_case)
-        assert loader.call_count == 0
-    class DynamicNamespace(NativeNamespace):
-        def predict(self, data):
-            result = LogRegBinary.predict(self, data)
-            result['_probs'] = self.policy.__globals__[self.namespace_key](result['_probs'])
+        with patch('builtins.abs', later_probabilities), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(builtin_handle, assessment_case)
+            assert loader.call_count == 0
+            builtin_handle = _freeze(reviewed)
+            with patch.dict(_LATE_RULES, {'offset': 0.1}), pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(builtin_handle, assessment_case)
+            assert loader.call_count == 0
+        class DynamicNamespace(NativeNamespace):
+            def predict(self, data):
+                result = LogRegBinary.predict(self, data)
+                result['_probs'] = self.policy.__globals__[self.namespace_key](result['_probs'])
+                return result
+        reviewed._model.__class__ = DynamicNamespace
+        reviewed._model.namespace_key = 'adjust'
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='literal key for reflective function globals'):
+                _freeze(reviewed)
+            assert loader.call_count == 0
+    phase_8()
+
+    def phase_9():
+        nonlocal CalibrationConfig, FittingProvider, LogRegBinary, LogisticRegression, branch_handle, callback_calls, changed, config, db, failed, late, loader, nested_threshold, readonly_prediction, record, reviewed, unsafe_class
+        class FreshConfigProvider:
+            @property
+            def prediction_calibration_config(self):
+                def threshold(values):
+                    callback_calls.append('fresh config threshold')
+                    return np.max(values)
+                return CalibrationConfig(calibration_func=None, threshold_func=threshold)
+            def adjust(self, values):
+                self.prediction_calibration_config.threshold_func(values)
+                return values
+        class StableConfigProvider(FreshConfigProvider):
+            def __init__(self, config):
+                self.config = config
+            @property
+            def prediction_calibration_config(self):
+                return self.config
+        class CallbackOnFinal(LogRegBinary):
+            def predict(self, data):
+                result = super().predict(data)
+                if not np.array_equal(np.asarray(data['x_test']), self.research_x):
+                    result['_probs'] = self.policy.adjust(result['_probs'])
+                return result
+        reviewed = copy.deepcopy(assessment_case[2][0][0])
+        reviewed._model.__class__ = CallbackOnFinal
+        reviewed._model.research_x = late._model.research_x.copy()
+        reviewed._model.policy = FreshConfigProvider()
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='stable observable binding'):
+                _freeze(reviewed)
+            assert loader.call_count == 0 and callback_calls == []
+        reviewed._model.policy = StableConfigProvider(CalibrationConfig(calibration_func=None, threshold_func=nested_threshold))
+        _freeze(reviewed)
+        with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([reviewed]):
+            reviewed._model.policy.adjust(reviewed._model.model.coef_.ravel())
+        assert callback_calls == []
+        class NativeMeta(type):
+            __call__ = staticmethod(max)
+        class NativeClassCallback(metaclass=NativeMeta):
+            def __init__(self, values):
+                self.values = values
+        unsafe_class = copy.deepcopy(assessment_case[2][0][0])
+        unsafe_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativeClassCallback))
+        with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
+                _freeze(unsafe_class)
+            assert loader.call_count == 0
+        original_loader = assessment.load_admitted_source
+        def changed_during_loading(*args, **kwargs):
+            result = original_loader(*args, **kwargs)
+            _LATE_RULES['offset'] = 0.1
             return result
-    reviewed._model.__class__ = DynamicNamespace
-    reviewed._model.namespace_key = 'adjust'
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='literal key for reflective function globals'):
-            _freeze(reviewed)
-        assert loader.call_count == 0
-    class FreshConfigProvider:
-        @property
-        def prediction_calibration_config(self):
-            def threshold(values):
-                callback_calls.append('fresh config threshold')
-                return np.max(values)
-            return CalibrationConfig(calibration_func=None, threshold_func=threshold)
-        def adjust(self, values):
-            self.prediction_calibration_config.threshold_func(values)
-            return values
-    class StableConfigProvider(FreshConfigProvider):
-        def __init__(self, config):
-            self.config = config
-        @property
-        def prediction_calibration_config(self):
-            return self.config
-    class CallbackOnFinal(LogRegBinary):
-        def predict(self, data):
-            result = super().predict(data)
-            if not np.array_equal(np.asarray(data['x_test']), self.research_x):
-                result['_probs'] = self.policy.adjust(result['_probs'])
-            return result
-    reviewed = copy.deepcopy(assessment_case[2][0][0])
-    reviewed._model.__class__ = CallbackOnFinal
-    reviewed._model.research_x = late._model.research_x.copy()
-    reviewed._model.policy = FreshConfigProvider()
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='stable observable binding'):
-            _freeze(reviewed)
-        assert loader.call_count == 0 and callback_calls == []
-    reviewed._model.policy = StableConfigProvider(CalibrationConfig(calibration_func=None, threshold_func=nested_threshold))
-    _freeze(reviewed)
-    with pytest.raises(ValueError, match='attempted fitting'), readonly_prediction([reviewed]):
-        reviewed._model.policy.adjust(reviewed._model.model.coef_.ravel())
-    assert callback_calls == []
-    class NativeMeta(type):
-        __call__ = staticmethod(max)
-    class NativeClassCallback(metaclass=NativeMeta):
-        def __init__(self, values):
-            self.values = values
-    unsafe_class = copy.deepcopy(assessment_case[2][0][0])
-    unsafe_class._model.callback_provider = FittingProvider(CalibrationConfig(calibration_func=None, threshold_func=NativeClassCallback))
-    with patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
-        with pytest.raises(ValueError, match='callbacks without observable Python call protection'):
-            _freeze(unsafe_class)
-        assert loader.call_count == 0
-    original_loader = assessment.load_admitted_source
-    def changed_during_loading(*args, **kwargs):
-        result = original_loader(*args, **kwargs)
-        _LATE_RULES['offset'] = 0.1
-        return result
-    with patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=changed_during_loading), patch.object(assessment, '_tape', side_effect=AssertionError('changed predictions')) as tape:
-        with pytest.raises(ValueError, match='changed prediction dependencies during loading') as failed:
-            _report(branch_handle, assessment_case)
-        assert tape.call_count == 0
-    with history.connection(assessment_case[0] / history._HISTORY) as db:
-        record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
-        assert record['state'] == 'failed' and record['id'] in str(failed.value)
-        assert json.loads(record['error_json'])['stage'] == 'predict'
-    changed = copy.deepcopy(assessment_case[2][0][0])
-    changed._model.model = LogisticRegression()
-    with pytest.raises(ValueError, match='not fitted'):
-        _freeze(changed)
+        with patch.dict(_LATE_RULES), patch.object(assessment, 'load_admitted_source', side_effect=changed_during_loading), patch.object(assessment, '_tape', side_effect=AssertionError('changed predictions')) as tape:
+            with pytest.raises(ValueError, match='changed prediction dependencies during loading') as failed:
+                _report(branch_handle, assessment_case)
+            assert tape.call_count == 0
+        with history.connection(assessment_case[0] / history._HISTORY) as db:
+            record = db.execute('SELECT * FROM attempts ORDER BY assessment_index DESC LIMIT 1').fetchone()
+            assert record['state'] == 'failed' and record['id'] in str(failed.value)
+            assert json.loads(record['error_json'])['stage'] == 'predict'
+        changed = copy.deepcopy(assessment_case[2][0][0])
+        changed._model.model = LogisticRegression()
+        with pytest.raises(ValueError, match='not fitted'):
+            _freeze(changed)
+    phase_9()
 
 
 _THRESHOLD = 43750.0
