@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import polars as pl
+import pytest
 
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.parser import parse
@@ -248,3 +249,9 @@ def test_profile_runtime_fetch_data_failure_reported_as_error() -> None:
 
     assert any('Failed to load data' in e for e in result.errors)
     assert result.sample_permutations_attempted == 0
+
+
+@pytest.mark.parametrize(('kind', 'failure'), [('ml', None), ('rule', None), ('ml', 'load'), ('ml', 'model'), ('ml', 'interrupt')])
+def test_profile_late_project_binding(tmp_path, monkeypatch, kind, failure):
+    from tests.test_holdout_workflows import _profile_admission
+    _profile_admission(tmp_path, monkeypatch, kind, failure, 'lazy')
