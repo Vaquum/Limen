@@ -503,6 +503,18 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, relabel, 'signal linkage')
 
+    def retime(report_dict):
+        target = next(row for row in report_dict['execution']['ledger']['intents'] if row['reason'] == 'signal' and row['target'] == 0)
+        target['reason'] = 'time_stop'
+
+    _rewrite_report(root, report, retime, 'signal linkage')
+
+    def tripguard(report_dict):
+        target = next(row for row in report_dict['execution']['ledger']['intents'] if row['reason'] == 'signal' and row['target'] == 0)
+        target['reason'] = 'stop_loss'
+
+    _rewrite_report(root, report, tripguard, 'signal linkage')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
