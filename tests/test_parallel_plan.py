@@ -1224,6 +1224,22 @@ def _frozen_manifest_round_plan() -> None:
             actual, pid = pool.submit(_carried_probe, frozen, _parameters()).result(timeout=30)
             expected, _ = _carried_probe(frozen, _parameters())
             assert actual == expected and pid != os.getpid()
+        from tests.test_parallel_rounds import recorded_source
+        observations = recorded_source().head(24).select('close')
+        for component in (StaticInitRolling(), StaticInitRolling().transform, partial(StaticInitRolling()), partial(StaticInitRolling().transform)):
+            declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
+            frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
+            before = digest(frozen)
+            expected = _caller_feature(observations, 3)['caller_mean'].to_list()
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(StaticInitRolling, 'window', 4)
+                assert component(observations)['caller_mean'].to_list() == _caller_feature(observations, 4)['caller_mean'].to_list() != expected
+                validate_resources(frozen, _parameters())
+                assert _carried_probe(frozen, _parameters())[0] == expected
+                for actual, pid in pool.submit(_repeat_probe, _carried_probe, frozen, _parameters()).result(timeout=30):
+                    assert actual == expected and pid != os.getpid()
+                assert digest(frozen) == before
+            assert digest(frozen) == before
         for component, attribute, defaults in ((_caller_feature, '__defaults__', (3,)), (_keyword_feature, '__kwdefaults__', {'window': 3})):
             declare_parallel(component, ParallelRoundContract(_caller_validator, ('window',)))
             baseline = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
