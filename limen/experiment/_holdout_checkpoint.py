@@ -27,7 +27,7 @@ def _binding(manifest: object) -> history.ProjectBinding | None:
 def _legacy(metadata: Mapping[str, object]) -> bool:
     version = metadata.get('limen_version')
     parts = version.split('.') if isinstance(version, str) else []
-    return len(parts) == 3 and all(part.isdigit() for part in parts) and tuple(map(int, parts)) < _BINDING_SINCE
+    return len(parts) == len(_BINDING_SINCE) and all(part.isdigit() for part in parts) and tuple(map(int, parts)) < _BINDING_SINCE
 
 
 def header(manifest: object) -> dict[str, object] | None:
@@ -128,11 +128,10 @@ def validate(host: object, checkpoint: Mapping[str, object], metadata: Mapping[s
     if type(frontier) is not int or frontier < -1:
         raise ValueError('Holdout checkpoint frontier is invalid')
     marked = 'holdout_binding' in checkpoint or 'holdout_binding' in metadata
-    if not marked and 'holdout' not in metadata:
-        if current is None or (current['cutoff_ns'] is None and _legacy(metadata)):
-            if any(_protected(row) for row in _rows(cast(Path, attrs['_experiment_dir']), frontier)):
-                raise ValueError('Protected checkpoint lost its reservation/metadata binding')
-            return
+    if not marked and 'holdout' not in metadata and (current is None or (current['cutoff_ns'] is None and _legacy(metadata))):
+        if any(_protected(row) for row in _rows(cast(Path, attrs['_experiment_dir']), frontier)):
+            raise ValueError('Protected checkpoint lost its reservation/metadata binding')
+        return
     saved = checkpoint.get('holdout_binding')
     if (current is None or _json(metadata.get('holdout_binding')) != _json(current)
             or not isinstance(saved, dict) or set(cast(dict[str, object], saved)) != _HEADER | {'population', 'completed_rounds'}):

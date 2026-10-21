@@ -230,7 +230,7 @@ def _refuse_checkpoint(loop, monkeypatch, *, retain):
         patch.setattr(loop, '_walk_forward', SimpleNamespace(restore=forbidden, writer=SimpleNamespace(clear=forbidden, append=forbidden)))
         patch.setattr(loop, '_pruning_strategies', [SimpleNamespace(set_state=forbidden)])
         for parallel in (False, True):
-            with pytest.raises(ValueError, match='Holdout|Protected'):
+            with pytest.raises(ValueError, match=r'Holdout|Protected'):
                 if parallel:
                     _parallel_resume.restore_parallel(loop, parts['msq'], parts['domain'], parts['feedback_controller'], parts['checkpoint_manager'],
                         content_hash=parts['content_hash'], strategy_type=parts['strategy_type'], csv_path=parts['csv_path'],
@@ -257,7 +257,7 @@ def _refuse_trainer(directory, root, monkeypatch, *, data=None):
         patch.setattr(QuantileBinaryTarget, '__init__', forbidden)
         patch.setattr(LogRegScaler, '__init__', forbidden)
         patch.setattr(LogisticRegression, 'fit', forbidden)
-        with pytest.raises(ValueError, match='Holdout|Protected'):
+        with pytest.raises(ValueError, match=r'Holdout|Protected'):
             trainer = Trainer(directory, data=data, project_root=root)
             trainer.train([_checkpoint_rows(directory)[0]['round_id']])
     assert calls == []
@@ -367,7 +367,7 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, retain):
         restore_files()
 
         resumed = _checkpoint_loop(config, root, directory)
-        with pytest.raises(ValueError, match='refuses.*resume'):
+        with pytest.raises(ValueError, match=r'refuses.*resume'):
             resumed.run('guarded', n_permutations=3, progress_bar=False, resume=True)
         # Exercise the reviewed private restore boundary; public admission remains guarded until workflow composition.
         with research.operation(resumed.manifest, 'experiment'):

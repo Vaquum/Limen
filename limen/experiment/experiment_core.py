@@ -1,5 +1,5 @@
 import limen.experiment._holdout_research as _holdout
-import limen.experiment._holdout_checkpoint as _holdout_checkpoint
+from limen.experiment import _holdout_checkpoint
 import limen.experiment._round_storage as _storage
 import csv
 import importlib.metadata
