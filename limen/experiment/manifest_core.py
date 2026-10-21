@@ -39,7 +39,6 @@ from limen.calibration.pipeline import CalibratorProtocol
 from limen.calibration.pipeline import ThresholdOptimizerProtocol
 from limen.data.utils import split_by_dates
 from limen.data.utils import split_data_to_prep_output
-from limen.data.utils import split_data_to_rule_based_prep_output
 from limen.data.utils import split_sequential
 from limen.experiment.errors import StrictModeError
 from limen.scalers.registry import SCALER_REGISTRY
@@ -1274,7 +1273,6 @@ class RuleBasedManifest(Manifest):
                     self, data, round_params, all_fitted_params, i == 0
                 )
 
-            data = data.fill_nan(None).drop_nulls()
             split_data[i] = data.fill_nan(None).drop_nulls()
 
         split_data = _align_split_columns(split_data)
@@ -1285,9 +1283,29 @@ class RuleBasedManifest(Manifest):
         if _configured_barriers(self.backtest_config) and self.resolve_trade_policy(round_params) is None:
             _ = _validate_witness(witness)
         data_dict = _finalize_rule_based_data(self, split_data, all_datetimes, round_params)
+        data_dict['_fitted_params'] = dict(all_fitted_params)
         _attach_witness(data_dict, witness)
         _attach_trade_context(data_dict, trade, split_data)
         return _allocation_stage.attach(self, raw_data, round_params, data_dict)
+
+
+    def sensor_input_prep(self, raw_klines: pl.DataFrame, fitted_params: dict[str, object], round_params: dict[str, object]) -> tuple[pl.DataFrame, int]:
+        from limen.experiment._manifest_preparation import rule_predicates
+        _, data = _process_bars(self, raw_klines, round_params)
+        clock = data.select('datetime')
+        decisions = None
+        if self.resolve_trade_policy(round_params) is not None:
+            decisions = _partitions.decisions(self, raw_klines, data, native=sensor_decisions, params=round_params)
+            data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
+        data = _apply_feature_transforms(self, data.lazy(), round_params).collect()
+        if self.target_class_config is not None:
+            data, _ = _apply_class_based_target(self, data, round_params, copy.deepcopy(fitted_params), False)
+        predicates, names = rule_predicates(self, data.fill_nan(None).drop_nulls(), round_params)
+        result = clock.join(predicates.select('datetime', *names), on='datetime', how='left', maintain_order='left')
+        lookback = _count_leading_nulls(result)
+        if decisions is not None:
+            result = result.join(decisions, on='datetime', how='left', maintain_order='left')
+        return result, lookback
 
 
 def _apply_fitted_transform(data: pl.DataFrame, fitted_transform: Any) -> pl.DataFrame:
@@ -2023,36 +2041,8 @@ def _finalize_rule_based_data(
         round_params: dict[str, Any],
 ) -> dict[str, Any]:
 
-    from limen.sfd.rule_based.predicates import build_predicate  # avoid circular import at module level
-
-    data_dict = split_data_to_rule_based_prep_output(split_data, all_datetimes)
-    if manifest.split_walk_forward is not None or getattr(manifest, '_parallel_evidence', False):
-        data_dict['_alignment']['test_datetimes'] = split_data[2]['datetime'].to_list()
-
-    config = manifest.strategy
-    if config is None:
-        raise ValueError('_finalize_rule_based_data manifest has no strategy configured')
-    predicate_conditions = [c for c in config.conditions if 'type' in c]
-    predicate_ids = [c['id'] for c in predicate_conditions]
-    predicate_exprs = [
-        build_predicate(condition, round_params).fill_null(False).alias(condition['id'])
-        for condition in predicate_conditions
-    ]
-    if predicate_exprs:
-        for split in ('train', 'val', 'test'):
-            collisions = sorted(set(data_dict[split].columns) & set(predicate_ids))
-            if collisions:
-                raise ValueError(
-                    f"Rule-based condition ids collide with existing columns in {split!r} split: {collisions}. Rename the affected conditions."
-                )
-            data_dict[split] = data_dict[split].with_columns(predicate_exprs)
-
-    data_dict['strategy'] = {
-        'conditions': config.conditions,
-        'entry': config.entry,
-    }
-
-    return data_dict
+    from limen.experiment._manifest_preparation import finish_rule_data
+    return finish_rule_data(manifest, split_data, all_datetimes, round_params)
 
 _parallel(_apply_feature_ablation, 'seeded_stage')
 

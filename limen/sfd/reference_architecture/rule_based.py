@@ -1,5 +1,6 @@
+from copy import deepcopy
+from typing import Any, cast
 from limen._parallel_contract import attach as _parallel
-from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -13,6 +14,7 @@ from limen.metrics.rule_based_metrics import rule_based_metrics
 from limen.sfd.reference_architecture.base import ReferenceModel
 
 BPS_PER_UNIT = 10_000.0
+_MATRIX_DIMENSIONS = 2
 
 
 def _compounded_trade_pnl_summary(
@@ -40,6 +42,7 @@ class RuleBasedStrategy(ReferenceModel):
     '''Rule-based strategy that applies boolean predicate logic per bar to produce long/flat positions.'''
 
     deterministic = True
+    inference_output = ('binary', False)
 
     def __init__(self,
                  sharpe_std_threshold: float = 0.5,
@@ -48,20 +51,17 @@ class RuleBasedStrategy(ReferenceModel):
         super().__init__()
         self.sharpe_std_threshold = sharpe_std_threshold
         self.sharpe_degradation_threshold = sharpe_degradation_threshold
+        self._strategy: dict[str, object] | None = None
+        self._predicate_ids: tuple[str, ...] = ()
 
     @override
     def train(self, data: dict[str, Any], **params: Any) -> 'RuleBasedStrategy':
 
-        '''
-        No-op training step — rule-based strategies have no learnable parameters.
-
-        Args:
-            data (dict): Ignored
-            **params: Ignored
-
-        Returns:
-            RuleBasedStrategy: Self
-        '''
+        '''Own the selected rule configuration without learned fitting.'''
+        strategy = cast(dict[str, object], deepcopy(data['strategy']))
+        self._strategy = strategy
+        conditions = cast(list[dict[str, object]], strategy['conditions'])
+        self._predicate_ids = tuple(cast(str, condition['id']) for condition in conditions if 'type' in condition)
 
         return self
 
@@ -78,7 +78,17 @@ class RuleBasedStrategy(ReferenceModel):
             dict: {'_preds': np.ndarray} of 0/1 integer positions
         '''
 
-        pos = self._apply_logic(data['test'], data['strategy']).fill_null(False).to_numpy().astype(int)
+        if 'x_test' in data:
+            if self._strategy is None or not self._predicate_ids:
+                raise ValueError('Rule inference requires a captured selected strategy and predicate order')
+            matrix = np.asarray(data['x_test'])
+            if matrix.ndim != _MATRIX_DIMENSIONS or matrix.shape[1] != len(self._predicate_ids) or matrix.dtype.kind not in 'bifu' or not np.isfinite(matrix).all() or not np.isin(matrix, (0, 1)).all():
+                raise ValueError('Rule inference requires a finite binary matrix with the captured predicate width')
+            frame = pl.DataFrame(matrix, schema=list(self._predicate_ids), orient='row').cast(pl.Boolean)
+            strategy = self._strategy
+        else:
+            frame, strategy = data['test'], data['strategy']
+        pos = self._apply_logic(frame, strategy).fill_null(False).to_numpy().astype(int)
         return {'_preds': pos}
 
     @override
@@ -184,6 +194,8 @@ def rule_based(data: dict[str, Any],
         sharpe_degradation_threshold=sharpe_degradation_threshold,
     )
     _ = model.train(data)
-    return model.evaluate(data)
+    result = model.evaluate(data)
+    result['_model'] = model
+    return result
 
 _parallel(rule_based, 'deterministic_stage', parameter_keys=(), prediction_kind='binary', probabilities=False, backend_imports=('numpy', 'polars'))
