@@ -1,6 +1,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+from http.client import IncompleteRead
 import io
 import json
 from pathlib import Path, PurePosixPath
@@ -15,6 +16,42 @@ from released_wheel import wheel_entry
 
 ROLES = {'examples', 'native_outputs', 'validation', 'evidence', 'site', 'rollback', 'wheel', 'pypi_metadata'}
 USER_AGENT = 'LimenDocsVerifier/1.0 (+https://github.com/Vaquum/Limen)'
+ERROR_HEADERS = ('Content-Type', 'Content-Length', 'Cache-Control', 'CF-Cache-Status', 'CF-Ray', 'ETag')
+
+
+def _safe_url(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed._replace(netloc=parsed.netloc.rsplit('@', 1)[-1], query='', fragment='').geturl()
+
+
+class PublicationHTTPError(HTTPError):
+    def __init__(self, requested_url: str, error: HTTPError):
+        state, read_error = 'complete', None
+        try:
+            with error:
+                body = error.read()
+        except IncompleteRead as failure:
+            body, state, read_error = failure.partial, 'partial', type(failure).__name__
+        except Exception as failure:
+            body, state, read_error = None, 'unavailable', type(failure).__name__
+        response_url = _safe_url(error.geturl())
+        self.evidence = {
+            'requested_url': _safe_url(requested_url), 'response_url': response_url,
+            'status': error.code,
+            'headers': {name: error.headers[name] for name in ERROR_HEADERS if error.headers.get(name) is not None},
+            'body_state': state, 'body_bytes': len(body) if body is not None else None,
+            'body_sha256': sha256(body) if body is not None else None, 'body_read_error_type': read_error,
+        }
+        super().__init__(response_url, error.code, json.dumps(self.evidence, sort_keys=True),
+                         error.headers, io.BytesIO(body if body is not None else b''))
+
+
+def _open(url: str):
+    anonymous_url(url)
+    try:
+        return urlopen(Request(url, headers={'User-Agent': USER_AGENT}), timeout=30)
+    except HTTPError as error:
+        raise PublicationHTTPError(url, error) from None
 
 
 def sha256(data: bytes) -> str:
@@ -44,8 +81,7 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
         relative_path(name)
         route = name.removesuffix('index.html') if name.endswith('index.html') else name
         url = urljoin(base_url, route)
-        anonymous_url(url)
-        with urlopen(Request(url, headers={'User-Agent': USER_AGENT}), timeout=30) as response:
+        with _open(url) as response:
             anonymous_url(response.geturl())
             if response.read() != expected:
                 raise ValueError('The active site member differs from its sealed payload: ' + name)
@@ -53,9 +89,11 @@ def verify_site(base_url: str, files: dict[str, bytes]) -> None:
     with ThreadPoolExecutor(max_workers=8) as readers:
         list(readers.map(member, ((name, data) for name, data in files.items() if name != '404.html')))
     try:
-        with urlopen(Request(urljoin(base_url, '__missing-docs-acceptance__/'), headers={'User-Agent': USER_AGENT}), timeout=30):
+        with _open(urljoin(base_url, '__missing-docs-acceptance__/')):
             raise ValueError('An unknown documentation route did not return 404')
     except HTTPError as error:
+        if isinstance(error, PublicationHTTPError) and error.evidence['body_state'] != 'complete':
+            raise ValueError('The deployed 404 body could not be read completely') from error
         if error.code != 404 or error.read() != files['404.html']:
             raise ValueError('The deployed 404 differs from the sealed reader') from error
         require_headers(error.headers)
@@ -77,8 +115,7 @@ def anonymous_url(url: str) -> None:
 
 
 def fetch(url: str) -> bytes:
-    anonymous_url(url)
-    with urlopen(Request(url, headers={'User-Agent': USER_AGENT}), timeout=30) as response:
+    with _open(url) as response:
         anonymous_url(response.geturl())
         return response.read()
 
