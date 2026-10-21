@@ -171,8 +171,15 @@ def test_recorded_rule_sensor_decisions(rule_campaign):
             params = sensor.round_params | {'bar_type': 'trade'}
             formed, _ = native.sensor_input_prep(raw, {}, params)
             assert 0 < formed.height < raw.height and formed['datetime'].equals(trade_bars(raw, threshold)['datetime'])
-            research = _whole_window(native, raw, params)
-            assert sensor._model.predict({'test': formed, 'strategy': sensor._model._strategy})['_preds'].tolist() == sensor._model.predict({'test': research['train'], 'strategy': sensor._model._strategy})['_preds'].tolist()
+            first = raw['datetime'][0].date()
+            middle, later, end = first + timedelta(days=7), first + timedelta(days=10), first + timedelta(days=14)
+            native.set_split_dates(first, middle, middle, later, later, end)
+            research = native.prepare_data(raw, params)
+            train_input = raw.filter(pl.col('datetime').dt.date() < middle)
+            prepared, _ = native.sensor_input_prep(train_input, {}, params)
+            assert prepared.height == research['train'].height > 0
+            assert prepared['datetime'].equals(trade_bars(train_input, threshold)['datetime'])
+            assert sensor._model.predict({'test': prepared, 'strategy': sensor._model._strategy})['_preds'].tolist() == sensor._model.predict({'test': research['train'], 'strategy': sensor._model._strategy})['_preds'].tolist()
 
 
 def test_recorded_rule_sensor_consumers(rule_campaign):
