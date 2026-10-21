@@ -85,7 +85,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if id(value) in seen or id(value) in omitted:
             return
         seen[id(value)] = value
-        sequence = list[object].__iter__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else ()
+        sequence = list[object].__iter__(cast(list[object], value)) if isinstance(cast(object, value), list) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if isinstance(cast(object, value), tuple) else ()
         readers = dict[object, object].items(cast(dict[object, object], value)) if isinstance(cast(object, value), dict) else enumerate(sequence)
         globals_names.update(str(key) for key, part in readers if isinstance(key, (str, int)) and part is _native_globals)
         if callable(value):
