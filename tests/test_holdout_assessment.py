@@ -1462,8 +1462,9 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 
 
 @pytest.mark.parametrize('wrapped', [False, True])
-@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata'])
-def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind):
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property'])
+def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind, monkeypatch):
+    import sys
     from types import CellType, ModuleType
     def helper(data, **params):
         assert data is not None
@@ -1499,7 +1500,49 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     def metadata_factory(data, **params):
         return metadata_factory.__module__.build(data, **params)
     metadata_factory.__module__ = helpers
-    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory}[kind]
+    class Settings:
+        @property
+        def depth(self):
+            return 1 + _LATE_RULES['offset']
+    settings = Settings()
+    def property_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': settings.depth}))
+    class PropertyFactory:
+        settings = Settings()
+        @classmethod
+        def build(cls, data, **params):
+            return logreg_binary(data, **(params | {'C': cls.settings.depth}))
+    monkeypatch.setitem(sys.modules, 'holdout_construction_helpers', helpers)
+    def imported_factory(data, **params):
+        from holdout_construction_helpers import build
+        return build(data, **params)
+    package = ModuleType('holdout_construction_package')
+    package.helpers = helpers
+    monkeypatch.setitem(sys.modules, package.__name__, package)
+    monkeypatch.setitem(sys.modules, package.__name__ + '.helpers', helpers)
+    def relative_factory(data, **params):
+        from .helpers import build
+        return build(data, **params)
+    relative_factory = FunctionType(relative_factory.__code__, relative_factory.__globals__ | {'__package__': package.__name__}, relative_factory.__name__)
+    class Reader:
+        def __init__(self):
+            self.read_globals = globals
+        def __call__(self, data, **params):
+            return logreg_binary(data, **(params | {'C': 1 + self.read_globals()['_LATE_RULES']['offset']}))
+    class SlotReader:
+        __slots__ = ('read_globals',)
+        def __init__(self):
+            self.read_globals = globals
+        __call__ = Reader.__call__
+    class ClassReader:
+        read_globals = staticmethod(globals)
+        __call__ = Reader.__call__
+    def annotation_factory(data, **params):
+        return annotation_factory.__annotations__['build'](data, **params)
+    annotation_factory.__annotations__ = {'build': helper}
+    def nested_module_factory(data, **params):
+        return package.helpers.build(data, **params)
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
@@ -1513,8 +1556,9 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     metadata['yaml_reference'] = recorded
     (directory / 'metadata.json').write_text(json.dumps(metadata))
     from limen.experiment import _round_storage
-    with _round_storage.open_text(_round_storage.round_path(native_assessment_case[0] / 'native')) as stream:
-        (directory / 'round_data.jsonl').write_text(''.join(stream))
+    from shutil import copyfile
+    round_path = _round_storage.round_path(native_assessment_case[0] / 'native')
+    copyfile(round_path, directory / round_path.name)
     assert Trainer(directory, project_root=native_assessment_case[0], components=configure)._manifest.architecture_function is declared
     mutation = patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
     with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
@@ -1527,7 +1571,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
 
 @pytest.mark.parametrize('wrapped', [False, True])
 def test_trusted_factory_rejects_assertion_runtime_spoof(native_assessment_case, wrapped, monkeypatch):
-    import _pytest.assertion.rewrite as rewrite
+    from _pytest.assertion import rewrite
     def factory(data, **params):
         return logreg_binary(data, **(params | {'C': 1 + _LATE_RULES['offset']}))
     monkeypatch.setattr(rewrite, 'logreg_binary', logreg_binary, raising=False)
