@@ -78,8 +78,7 @@ def run_experiment(yaml_path: Path,
             return False
 
         results_dir.mkdir(parents=True, exist_ok=True)
-        yaml_dest_name = 'manifest.yaml' if manifest_id is not None else yaml_path.name
-        _ = shutil.copy2(yaml_path, results_dir / yaml_dest_name)
+        _ = shutil.copy2(yaml_path, results_dir / ('manifest.yaml' if manifest_id is not None else yaml_path.name))
 
         _params = compiled.params()
         total_space = math.prod(len(v) for v in _params.values())
@@ -107,8 +106,7 @@ def run_experiment(yaml_path: Path,
             click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
             return False
 
-        output_format: str = uel_cfg.get('output_format', 'csv')
-        if output_format == 'parquet' and uel.experiment_log is not None:
+        if uel_cfg.get('output_format', 'csv') == 'parquet' and uel.experiment_log is not None:
             parquet_path = results_dir / 'results.parquet'
             uel.experiment_log.write_parquet(str(parquet_path))
             click.echo(f"  Parquet → {parquet_path}")
