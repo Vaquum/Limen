@@ -59,6 +59,8 @@ inference/
 
 ## Things to know
 
+Compiled rule rounds return native selected `RuleBasedStrategy` Sensors. Their raw-history, feature-row, temporal and causality semantics are documented once in [Trainer](../../docs/Trainer.md#selected-rule-rounds). Qualified folds retain their existing opt-in evidence requirements.
+
 - `Trainer` validates by re-running the manifest and comparing metrics to the original log; a deviation past tolerance raises `ReconstructionError` rather than returning a mismatched model.
 - Metric comparison uses a float tolerance (with a wider tolerance for stochastic models), and a fixed set of bookkeeping columns (`id`, `execution_time`, …) is skipped during comparison.
 - `BarPrediction.reason` explains a `None` prediction (`'warm-up'`, `'inside-training-window'`, `'null-features'`, `'sensor-error'`) — a null prediction is expected during warm-up, not an error.

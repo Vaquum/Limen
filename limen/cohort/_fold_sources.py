@@ -15,7 +15,7 @@ from limen.inference.errors import ReconstructionError
 from limen.yaml.compiler import CompiledSFD
 from limen.yaml.config import is_mapping
 
-__all__ = ['FoldSources', 'select_sources', 'bind_native_output']
+__all__ = ['FoldSources', 'bind_native_output', 'select_sources']
 _PAIR = 2
 _TRIPLE = 3
 Key = tuple[str, str] | tuple[str, str, int]
@@ -112,7 +112,7 @@ def bind_native_output(owner: Owner, members: Sequence[object], default: bool) -
     probabilities = default
     declarations = [cast(object, getattr(type(cast(object, getattr(member, '_model', None))), 'inference_output', None)) for member in members]
     for value in (False, True):
-        if declarations and all(isinstance(declaration, tuple) and len(cast(tuple[object, ...], declaration)) == _PAIR and declaration[0] == 'binary' and declaration[1] is value for declaration in declarations):
+        if declarations and all(isinstance(declaration, tuple) and len(cast(tuple[object, ...], declaration)) == _PAIR and cast(tuple[object, ...], declaration)[0] == 'binary' and cast(tuple[object, ...], declaration)[1] is value for declaration in declarations):
             probabilities = value
     owner.supports_probabilities = probabilities
     owner.aggregation_mode = 'probability_weighted' if probabilities else 'majority_vote'

@@ -24,7 +24,7 @@ Metric validation is intersection-based: Trainer compares numeric, non-private m
 
 - a saved Compiled experiment directory, created by the CLI or a Python invocation preserving the same YAML definition
 - the experiment must be YAML-based and include `metadata.json["yaml_reference"]`
-- the SFD must be a manifest-driven ML architecture (rule-based architectures are not supported)
+- the SFD must use a reconstructable Manifest architecture that returns its native model; ML and rule-based architectures are supported
 
 ## Workflow
 
@@ -57,6 +57,25 @@ In this workflow:
 - `Trainer` reconstructs the manifest and round metadata
 - `trainer.train(top_ids)` replays and validates the selected rounds
 - each returned `Sensor` wraps one trained `ReferenceModel`
+
+## Selected rule rounds
+
+A reconstructed `RuleBasedStrategy` owns a copy of the selected strategy and its ordered leaf-predicate inputs. It emits binary positions without probabilities. Reconstruction replays the original metrics; live prediction evaluates the stored rule without fitting it again. Ordinary recorded rounds and currently qualified walk-forward folds use the same Trainer routes and evidence requirements as other native models.
+
+```python
+from limen.inference import Trainer
+
+
+def selected_rule_decision(experiment_dir, permutation_id, raw_history):
+    sensor = Trainer(experiment_dir).train([permutation_id])[0]
+    return sensor.predict(raw_history)
+```
+
+Pass the completed rule experiment directory, its selected round ID, and recorded or fresh raw bars with the original source schema. Default artifacts suffice for ordinary reconstruction; a fold still requires its original opt-in promotion evidence. `train([id], fold=k)` never manufactures missing evidence.
+
+Rule preparation computes features, retains feature-valid rows, and then evaluates predicates on those rows. Sensor preparation follows that order and rejoins the original decision clock: leading missing feature rows remain warm-up, later missing rows remain null-feature results, and predicate nulls become False before AND/OR/NOT. Active bar formation uses the caller's supplied raw history; an already formed source remains an already formed source.
+
+Supply the same raw split or window when comparing research and inference. Rolling predicates, persistence, recency, feature warm-up and stateful common strategies depend on that window. No hidden history is fetched. Arbitrary SQL may use whole-window aggregates or future rows; replay and same-window agreement do not certify append-only causality. The caller owns causal feature and rule definitions. Historical guards and trade-policy availability/digests retain their existing meaning.
 
 ## Why Trainer Exists
 

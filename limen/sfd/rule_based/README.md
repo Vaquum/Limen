@@ -48,6 +48,8 @@ rule_based/
 
 ## Things to know
 
+Selected Compiled rule pipelines can be reconstructed through Trainer and consumed by Sensor and binary Cohort. See the canonical [selected-rule inference contract](../../../docs/Trainer.md#selected-rule-rounds), including identical-window comparisons and caller-owned SQL causality.
+
 - Leaf conditions are validated by type: each of `threshold`, `relative`, `crossover`, `slope`, and `sql_expr` has its own required fields, and a missing field raises `ValueError`.
 - Logical nodes combine leaves with `and`, `or`, and `not`.
 - Leaf conditions may specify `persistence_n` **or** `recency_n`; see the [canonical temporal-modifier contract](../../../docs/Experiment-Manifest.md#temporal-modifiers).
