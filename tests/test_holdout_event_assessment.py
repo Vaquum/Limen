@@ -326,6 +326,32 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, inject, 'cash reconciliation')
 
+    def credit(report_dict):
+        report_dict['execution']['ledger']['states'][-1]['accrued_funding'] += 250.0
+
+    _rewrite_report(root, report, credit, 'funding absence')
+
+    def rebase(report_dict):
+        states = report_dict['execution']['ledger']['states']
+        moments = {fill['time_ns'] for fill in report_dict['execution']['ledger']['fills']}
+        target = next(row for row in states[1:] if row['quantity'] == 0 and row['time_ns'] not in moments)
+        target['basis'] += 10.0
+
+    _rewrite_report(root, event_case['reports']['perp'], rebase, 'basis reconciliation')
+
+    def expose(report_dict):
+        for row in report_dict['execution']['ledger']['states']:
+            row['absolute_exposure'] *= 1.5
+        report_dict['execution']['metrics']['avg_absolute_exposure']['value'] *= 1.5
+
+    _rewrite_report(root, report, expose, 'exposure evidence')
+
+    def ghost(report_dict):
+        target = next(row for row in report_dict['execution']['ledger']['states'] if row['quantity'] == 0)
+        target['absolute_exposure'] = 0.25
+
+    _rewrite_report(root, report, ghost, 'exposure evidence')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
