@@ -4,7 +4,9 @@ from inspect import getattr_static
 from types import FunctionType
 from typing import cast
 
-from limen.experiment._parallel_state import call_implementation
+from limen.experiment._parallel_graph import isolated_encoding
+from limen.experiment._parallel_identity import execution_class
+from limen.experiment._parallel_state import call_implementation, mutable_function
 
 _CAPTURED_CALL_PARTS = 2
 
@@ -22,13 +24,11 @@ def bind_call(instance: object, captured: object) -> None:
         raise ValueError('Parallel callable implementation or metaclass state changed')
     raw = getattr_static(cls, '__call__')
     descriptor: object = classmethod(implementation) if isinstance(raw, classmethod) else staticmethod(implementation) if isinstance(raw, staticmethod) else implementation
+    if hasattr(instance, '__dict__'):
+        vars(instance)['__parallel_round_contract__'] = contract
+    from limen.experiment._parallel_encoding import digest
+    with isolated_encoding():
+        identity = (digest(implementation), id(implementation) if mutable_function(implementation) else 0, 0 if hasattr(instance, '__dict__') else id(contract))
     attributes: dict[str, object] = {'__slots__': (), '__module__': cls.__module__, '__qualname__': cls.__qualname__,
                   '_parallel_source_class': cls, '__call__': descriptor, '__parallel_round_contract__': contract}
-    object.__setattr__(instance, '__class__', type(cls.__name__, (cls,), attributes))
-
-
-def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:
-    function.__module__, function.__qualname__, function.__annotations__ = source.__module__, source.__qualname__, source.__annotations__.copy()
-    for name, value in {'__wrapped__': wrapped, '__parallel_round_contract__': vars(source).get('__parallel_round_contract__')}.items():
-        if value is not None:
-            vars(function)[name] = value
+    object.__setattr__(instance, '__class__', execution_class(cls, identity, attributes))

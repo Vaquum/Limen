@@ -256,6 +256,29 @@ class DefaultRollingFactory:
 
 
 @dataclass
+class SharedDefaultFactory:
+    window: int = 3
+
+    def __call__(self, counter=None):
+        counter[0] += 1
+        return CallerRolling(self.window + counter[0])
+
+
+@dataclass
+class ComparingFactories:
+    left: DefaultRollingFactory | SharedDefaultFactory
+    right: DefaultRollingFactory | SharedDefaultFactory
+    mutate: bool = False
+
+    def __call__(self, data):
+        if self.left != self.right:
+            return _caller_feature(data, self.left.window + 1)
+        if self.mutate:
+            _ = self.left()(data)
+        return self.right()(data)
+
+
+@dataclass
 class OrderedFactory:
     steps: dict[str, int]
 
@@ -992,6 +1015,28 @@ def test_frozen_manifest_round_plan() -> None:
                 assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), 4)['caller_mean'].to_list()
                 assert pid != os.getpid() and digest(frozen) == before
         assert slotted.window == 2 and not hasattr(slotted, '__dict__') and SlottedDefaultRolling.__call__.__defaults__ == (1,)
+        for mutable in (False, True):
+            factory_class = SharedDefaultFactory if mutable else DefaultRollingFactory
+            left, right = factory_class(3), factory_class(3)
+            declare_parallel(left, ParallelRoundContract(_caller_validator, ('window',)))
+            declare_parallel(right, ParallelRoundContract(deterministic_stage))
+            compared = ComparingFactories(left, right, mutable)
+            declare_parallel(compared, ParallelRoundContract(deterministic_stage))
+            counter = [0]
+            with pytest.MonkeyPatch.context() as patch:
+                patch.setattr(SharedDefaultFactory.__call__, '__defaults__', (counter,))
+                patch.setattr(DefaultRollingFactory.__call__, '__kwdefaults__', {'n_jobs': 2})
+                frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(compared), None)
+            before = digest(frozen)
+            restored = decode(encode(frozen.manifest.feature_transforms[-1].func))
+            assert left == right and left is not right and restored.left == restored.right and restored.left is not restored.right
+            assert type(restored.left) is type(restored.right) and restored.left.__parallel_round_contract__ != restored.right.__parallel_round_contract__
+            for _ in range(2):
+                actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+                expected, _ = _repeated_carried_probe(frozen, _parameters())
+                assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), 5 if mutable else 3)['caller_mean'].to_list()
+                assert pid != os.getpid() and digest(frozen) == before and counter == [0]
+            assert type(left) is type(right) is factory_class and SharedDefaultFactory.__call__.__defaults__ == (None,)
         declare_parallel(_mapping_feature, ParallelRoundContract(deterministic_stage))
         options = defaultdict(int)
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(_mapping_feature, options=options), None)

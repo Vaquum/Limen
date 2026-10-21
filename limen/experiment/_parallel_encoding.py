@@ -17,9 +17,9 @@ from typing import cast
 
 import polars as pl
 
-from limen.experiment._parallel_identity import module_identity
-from limen.experiment._parallel_callable import bind_call, restore_function_metadata, source_class
-from limen.experiment._parallel_graph import decode_graph, encode_graph, isolated_encoding
+from limen.experiment._parallel_identity import identity_snapshot, module_identity, restore_function_metadata
+from limen.experiment._parallel_callable import bind_call, source_class
+from limen.experiment._parallel_graph import EMPTY_IDS as _EMPTY_IDS, decode_graph, encode_graph, isolated_encoding
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
@@ -41,9 +41,6 @@ def reference(value: object) -> list[object]:
                                      and value.__code__ is resolved.__code__ and value.__globals__ is resolved.__globals__):
         raise ValueError('Parallel component differs from its importable identity')
     return [module_identity(module), name]
-
-
-_EMPTY_IDS: frozenset[int] = frozenset()
 
 
 def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool = False) -> list[object]:
@@ -145,7 +142,8 @@ _ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'date
 
 
 def decode(node: object, *, ordered: bool = False, isolate_functions: bool = False) -> object:
-    return decode_graph(node, lambda: _decode(node, ordered=ordered, isolate_functions=isolate_functions), lambda value: encode(value, ordered=ordered))
+    with identity_snapshot():
+        return decode_graph(node, lambda: _decode(node, ordered=ordered, isolate_functions=isolate_functions), lambda value: encode(value, ordered=ordered))
 
 
 def _decode(node: object, *, ordered: bool, isolate_functions: bool) -> object:
