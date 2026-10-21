@@ -481,7 +481,7 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 ## Resume in practice
 
-Python/MSQ runs can resume when all four recording groups were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
+Python/MSQ runs can resume when the applicable [recording groups](#recording-policy) were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
 
 ### Resume Python Research
 

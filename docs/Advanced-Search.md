@@ -162,7 +162,7 @@ Unlike the other files above, `interventions.json` is not produced by the run. I
 
 ## Resume flow
 
-Python/MSQ can resume from a saved checkpoint when all four [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
+Python/MSQ can resume from a saved checkpoint when the applicable [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
 
 The `recovery` scenarios interrupt after two completed rounds, reconstruct their original configuration and resume. The Python scenario also compares its completed results with an uninterrupted run:
 
