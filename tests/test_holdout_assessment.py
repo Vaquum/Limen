@@ -1461,6 +1461,69 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('wrapped', [False, True])
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata'])
+def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind):
+    from types import CellType, ModuleType
+    def helper(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + _LATE_RULES['offset']}))
+    def replacement(data, **params):
+        return logreg_binary(data, **(params | {'C': 2.0}))
+    helpers = ModuleType('construction_helpers')
+    helpers.build = helper
+    def module_factory(data, **params):
+        return helpers.build(data, **params)
+    class Registry:
+        registry = {'build': helper}
+        @classmethod
+        def build(cls, data, **params):
+            return cls.registry['build'](data, **params)
+    class Helpers:
+        build = staticmethod(helper)
+    def static_factory(data, **params):
+        return Helpers.build(data, **params)
+    class Base:
+        def __new__(cls, data, **params):
+            return helper(data, **params)
+    class Derived(Base):
+        def __new__(cls, data, **params):
+            return super().__new__(cls, data, **params)
+    def unused_cell_factory():
+        unused = None
+        def factory(data, **params):
+            if False:
+                return unused
+            return logreg_binary(data, **(params | _FACTORY_PARAMS))
+        return FunctionType(factory.__code__, factory.__globals__, factory.__name__, closure=(CellType(),))
+    def metadata_factory(data, **params):
+        return metadata_factory.__module__.build(data, **params)
+    metadata_factory.__module__ = helpers
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory}[kind]
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert compiled.manifest().architecture_function is declared
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is declared
+    directory = native_assessment_case[0] / f'owned-helper-{kind}-{wrapped}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    from limen.experiment import _round_storage
+    with _round_storage.open_text(_round_storage.round_path(native_assessment_case[0] / 'native')) as stream:
+        (directory / 'round_data.jsonl').write_text(stream.read())
+    assert Trainer(directory, project_root=native_assessment_case[0], components=configure)._manifest.architecture_function is declared
+    mutation = patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
+    with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
 @pytest.mark.parametrize('negative', [False, True])
 @pytest.mark.parametrize('aliased', [False, True])
 def test_frozen_deque_namespace_reader(native_assessment_case, negative, aliased):
