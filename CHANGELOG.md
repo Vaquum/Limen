@@ -1901,3 +1901,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.20] - 2026-10-21
 
 - Restore compatible callable Manifest sources and override diagnostics while preserving native stateful and holdout admission behavior.
+
+## [5.45.21] - 2026-10-21
+
+- Retain sanitized publication HTTP failure evidence for activation and rollback, including partial response bodies, without changing release verification or recovery ordering.
