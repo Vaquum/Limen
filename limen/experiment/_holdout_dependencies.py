@@ -47,7 +47,7 @@ def _native_annotation(value: object) -> bool:
     if not isinstance(value, type):
         return False
     module = sys.modules.get(value.__module__)
-    return module is not None and vars(module).get(value.__qualname__) is value and (value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.split('.')[0] in _LIBRARIES)
+    return module is not None and vars(module).get(value.__qualname__) is value and ((root := value.__module__.split('.')[0]) in sys.stdlib_module_names or root in _LIBRARIES)
 
 
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
