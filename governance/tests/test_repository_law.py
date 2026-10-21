@@ -1,8 +1,9 @@
 """Honesty gate: the written laws and the enforced ruleset agree exactly.
 
 The constitution (CLAUDE.md) lists the laws; each workflow-gate law carries
-its required-status-check context as a trailing `*(context)*` annotation, and
-exactly one law is the server-side branch-protection law. This gate asserts a
+its required-status-check context as a trailing `*(context)*` annotation,
+exactly one law is the server-side branch-protection law, and exactly one
+law is a manual procedure. This gate asserts a
 bijection: the contexts named in the laws equal the contexts the ruleset
 actually requires. A gate added to the ruleset without a law, or a law whose
 gate was dropped from the ruleset, fails here -- the written laws cannot drift
@@ -20,6 +21,9 @@ RULESET = REPO_ROOT / '.github/rulesets/main.json'
 
 # The one law that maps to server-side branch protection, not a status check.
 BRANCH_PROTECTION_ANNOTATION = 'branch protection, server-side'
+
+# The one law with no mechanical enforcement: a manual procedure.
+MANUAL_ANNOTATION = 'manual'
 
 _LAW_LINE = re.compile(r'^\d+\.\s')
 _ANNOTATION = re.compile(r'\*\((?P<annotation>.+)\)\*\s*$')
@@ -61,8 +65,16 @@ def test_exactly_one_branch_protection_law() -> None:
     assert len(branch) == 1, f'expected exactly one branch-protection law, got {len(branch)}'
 
 
+def test_exactly_one_manual_law() -> None:
+    manual = [a for a in _law_annotations() if a == MANUAL_ANNOTATION]
+    assert len(manual) == 1, f'expected exactly one manual law, got {len(manual)}'
+
+
 def test_laws_and_ruleset_are_in_bijection() -> None:
-    law_contexts = {a for a in _law_annotations() if a != BRANCH_PROTECTION_ANNOTATION}
+    law_contexts = {
+        a for a in _law_annotations()
+        if a not in (BRANCH_PROTECTION_ANNOTATION, MANUAL_ANNOTATION)
+    }
     ruleset_contexts = _ruleset_contexts()
     assert law_contexts == ruleset_contexts, (
         'laws <-> ruleset drift -- '

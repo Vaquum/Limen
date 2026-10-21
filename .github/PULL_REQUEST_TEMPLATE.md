@@ -11,9 +11,7 @@ _(Fill in at least a short description of the intent of the change.)_
 - [ ] I ran `python -m tests.run` locally without errors (where applicable)
 - [ ] I updated any relevant documentation (if behavior/API/config/user/etc changed)
 - [ ] I added and/or updated docstrings for any changed public functions/classes (the docstring-conventions gate enforces the mechanizable rules)
-- [ ] I added a `CHANGELOG.md` entry under a new `## [X.Y.Z] - YYYY-MM-DD` header (every PR — the version gate requires it)
-- [ ] I bumped `[project].version` in `pyproject.toml` (every PR — the version gate requires it)
-- [ ] I carried the version to `CITATION.cff` and every `limen_version:` in the manifest templates and public docs
+- [ ] I left version surfaces untouched (version/changelog move only at release time)
 - [ ] I added and/or updated tests (if behavior changed or new code paths added)
 - [ ] I validated that the change returns what it promised — not merely that it ran
 - [ ] I removed any extraneous examples/comments

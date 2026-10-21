@@ -17,7 +17,7 @@ TYPING_BUDGET: Final[Path] = REPO_ROOT / '.github' / 'typing_budget.json'
 
 # The Conventional Commits subject regex: type, optional scope (without
 # parens), optional breaking marker, description. Shared by cc_gate and
-# version_gate so the two cannot silently drift apart.
+# prd_gate so the two cannot silently drift apart.
 CC_RE: Final[re.Pattern[str]] = re.compile(
     r'^(?P<type>[a-z]+)'
     r'(?:\((?P<scope>[a-z0-9._/\-]+)\))?'
