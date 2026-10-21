@@ -762,7 +762,7 @@ def test_frozen_default_bindings_and_provider_identity(native_assessment_case):
 
 def test_frozen_library_namespace_metaclass_and_config_binding(native_assessment_case):
     assessment_case = native_assessment_case
-    from types import FunctionType, MethodType
+    from types import FunctionType
     from sklearn.linear_model import LogisticRegression
     from limen.experiment._holdout_prediction import readonly_prediction
 
@@ -1366,7 +1366,7 @@ def test_trusted_components_require_matching_explicit_reload(native_assessment_c
 
 
 def test_frozen_instance_namespace_module_alias_and_fixed_labels(native_assessment_case):
-    from types import FunctionType, MethodType, ModuleType
+    from types import FunctionType, ModuleType
     from sklearn.preprocessing import _label
     from limen.experiment._holdout_prediction import readonly_prediction
     from limen.experiment._holdout_state import fitted_witness
@@ -2850,7 +2850,7 @@ def test_frozen_dependencies_and_invalid_state(assessment_case):
             with pytest.raises(ValueError, match='prediction dependency changed'):
                 _report(defaults_handle, assessment_case)
             assert loader.call_count == 0
-    from types import FunctionType, MethodType
+    from types import FunctionType
     def captured_adjustment(adjust):
         def apply(values):
             return adjust(values)

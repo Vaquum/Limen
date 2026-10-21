@@ -11,7 +11,7 @@ from typing import NamedTuple, cast
 
 from limen.experiment._holdout_namespaces import namespace_calls
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'logger_attributes', 'native_leaf_dependencies', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'logger_attributes', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'native_leaf_dependencies', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
