@@ -7,7 +7,7 @@ from typing import Protocol, cast
 
 import polars as pl
 
-from limen._parallel_contract import ParallelRoundContract, _SEED_KEYS, attach
+from limen._parallel_contract import ParallelRoundContract, attach
 from limen.scalers.registry import SCALER_REGISTRY
 
 
@@ -30,7 +30,7 @@ class CapturedTransform:
 
     def resource_defaults(self) -> dict[str, object]:
         return {name: cast(object, parameter.default) for name, parameter in signature(self.function).parameters.items()
-                if name in _SEED_KEYS and parameter.default is not Parameter.empty}
+                if parameter.default is not Parameter.empty}
 
 
 def capture_transform(cls: type) -> CapturedTransform:
