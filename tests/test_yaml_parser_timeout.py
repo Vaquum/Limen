@@ -51,3 +51,27 @@ def test_retained_mapping_key_timeouts(text: str, text_sha256: str, column: int,
         assert len(errors) == 1
         assert 'mappings cannot be YAML keys' in errors[0].message
         assert (errors[0].line, errors[0].column) == (1, column)
+
+
+@pytest.mark.parametrize('text,message,line,column', [
+    ('metadata: !!map [name]\n', 'expected a mapping node, but found sequence', 1, 11),
+    ('!!map name\n', 'expected a mapping node, but found scalar', 1, 1),
+    ('metadata: !manifest\n  ? {name: null}\n  : null\n', 'mappings cannot be YAML keys', 2, 5),
+    ('metadata: !manifest\n  child:\n    ? {name: null}\n    : null\n', 'mappings cannot be YAML keys', 3, 7),
+])
+def test_tagged_nodes_keep_located_errors(text: str, message: str, line: int, column: int, tmp_path: Path) -> None:
+    path = tmp_path / 'tagged.yaml'
+    path.write_text(text, encoding='utf-8')
+    for source in (text, path):
+        data, errors = parse(source)
+        assert data == {}
+        assert len(errors) == 1
+        assert message in errors[0].message
+        assert (errors[0].line, errors[0].column) == (line, column)
+
+
+def test_shared_nodes_and_sequence_keys() -> None:
+    data, errors = parse('metadata: &meta {name: example}\ncopy: *meta\nsequence: [*meta]\nkeys: {? [left, right]: value}\n')
+    assert errors == []
+    assert data['metadata'] is data['copy'] is data['sequence'][0]
+    assert data['keys'][('left', 'right')] == 'value'
