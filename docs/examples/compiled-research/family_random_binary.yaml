@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_random_binary
@@ -40,6 +41,7 @@ sfd:
     random_weights:
     - 0.5
 uel:
+  output_path: compiled-family_random_binary
   n_permutations: 1
   search_strategy:
     type: grid
@@ -50,3 +52,4 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration

@@ -87,7 +87,7 @@ def inventory(root: Path):
                 raise ValueError('Registry inventory requires explicit keys: ' + symbol)
             keys.append(ast.literal_eval(key))
         registries[name] = context(interfaces, scenario) | {'source': source, 'entry_point': symbol, 'names': sorted(keys), 'reference': reference}
-    schema = ast.parse((root / 'limen/yaml/schema.py').read_text())
+    schema = ast.parse((root / 'limen/yaml/schema.py').read_text() + '\n' + (root / 'limen/yaml/_assessment_spec.py').read_text())
     groups = {}
     for node in schema.body:
         targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []

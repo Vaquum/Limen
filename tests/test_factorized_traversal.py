@@ -246,11 +246,13 @@ UniversalExperimentLoop._checkpoint = checkpoint
 from limen.cli.main import cli
 cli()
 '''
-    for command in ([sys.executable, '-c', stop_script, 'run', str(source), '--no-progress-bar'],
-                    [sys.executable, '-m', 'limen', 'run', '--resume', str(tmp_path / 'results/dev/factorized_shuffle'), '--no-progress-bar']):
+    for index, command in enumerate(([sys.executable, '-c', stop_script, 'run', str(source), '--no-progress-bar'],
+                    [sys.executable, '-m', 'limen', 'run', '--resume', str(tmp_path / 'results/dev/factorized_shuffle'), '--no-progress-bar'])):
         result = subprocess.run(command, cwd=tmp_path,
                                 env=env, text=True, capture_output=True, timeout=30, check=False)
-        assert result.returncode == 0, result.stdout + result.stderr
+        assert result.returncode == (1 if index == 0 else 0), result.stdout + result.stderr
+        if index == 0:
+            assert 'Interrupted; checkpoint retained' in result.stdout
     path = tmp_path / 'results/dev/factorized_shuffle'
     rows, records = _science(path)
     assert len(rows) == len(records) == 8

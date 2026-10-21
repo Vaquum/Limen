@@ -43,7 +43,7 @@ The [Compiled project](examples/compiled-research/README.md) predicts whether th
         shift: -1
 ```
 
-`fit_params` go to the target constructor on the training split; `transform_params` go to `transform()` on each split. Values can refer to declared round parameters. A Manifest built through Python remains Compiled Research. Python Research can call the same target classes directly, provided its preparation owns the fitting and split boundaries.
+`fit_params` go to the target constructor on the training split; `transform_params` go to `transform()` on each split. Values can refer to declared round parameters. Compiled Research declares these values in YAML. Python Research can call the same target classes directly, provided its preparation owns the fitting and split boundaries.
 
 The reference below gives current package signatures and the behavior of each alternative. Constructor and transform signatures describe the API; they do not claim that every target participates in the two selection runs. Data-dependent targets still require their stated columns, fitting observations and execution economics.
 

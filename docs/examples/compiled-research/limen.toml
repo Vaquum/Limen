@@ -1,0 +1,4 @@
+[project]
+name = "recorded-compiled-campaign"
+[store]
+backup_remote = "../compiled-backup.git"

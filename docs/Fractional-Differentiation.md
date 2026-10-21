@@ -157,61 +157,23 @@ def preparation(data_dir, output):
 
 ### Compiled Research
 
-The native builder remains Compiled Research when called from Python. Its preparation case uses the same recorded source and fixed order, while native CCO carries the admitted prior context into later partitions. It fits RobustScaler and optional PCA only on training:
+The Compiled YAML declares fixed-order fractional differentiation as a feature. The pipeline carries its admitted prior context into later partitions and fits robust scaling and optional PCA only on training. The complete project executes this declaration through the CLI:
 
-<!-- example: fractional-compiled-preparation source=docs/examples/compiled-research/scenarios.py region=preparation scenario=search interface=compiled role=executed -->
-```python
-def preparation(data_dir, output):
-    from limen.experiment import MLManifest
-    from limen.features import fractional_diff
-    from limen.indicators import roc
-    from limen.scalers import RobustScaler
-    from limen.sfd.reference_architecture import RidgeRegressor
-    from limen.targets import TripleBarrierTarget
-
-    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
-    cases = []
-    for compressed in (False, True):
-        name = 'compressed' if compressed else 'baseline'
-        directory = output / name
-        directory.mkdir(parents=True)
-
-        def surface(data):
-            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
-
-        def capture(data_dict, split_data, round_params, fitted_params):
-            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
-                frame.write_parquet(directory / (split + '.parquet'))
-            return data_dict
-
-        manifest = MLManifest()
-        (manifest.set_split_config(6, 2, 2)
-                    .add_indicator(roc, period=3, group='momentum')
-                    .add_indicator(roc, period=12, group='momentum')
-                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
-                    .add_feature(surface)
-                    .with_target_label('label', TripleBarrierTarget, fit_params={
-                        'upper_multiple': 1.5, 'lower_multiple': 1.,
-                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
-        (manifest.set_scaler(RobustScaler).set_feature_ablation()
-                    .set_pca_compression().add_to_data_dict(capture))
-        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
-                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
-        data = manifest.prepare_data(raw, params)
-        model = RidgeRegressor().train(data, alpha=1., solver='svd')
-        scored = model.evaluate(data, inline_metrics=False)
-        scaler = data['_scaler']
-        pca = data.get('_pca')
-        cases.append({'name': name,
-                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
-                      'dropped': params.get('_dropped_features', []),
-                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
-                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
-                      'pca_mean': None if pca is None else pca.mean_.tolist(),
-                      'components': None if pca is None else pca.components_.tolist(),
-                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
-    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
-            'fixed_d': .4, 'weight_threshold': .05}
+<!-- example: fractional-compiled-preparation source=docs/examples/compiled-research/research.yaml region=features scenario=search interface=compiled role=executed -->
+```yaml
+    features:
+      - func: limen.features.lag_range
+        params:
+          col: roc_1
+          start: 1
+          end: 3
+          group: momentum
+      - func: limen.features.fractional_diff
+        params:
+          d: 0.4
+          cols: [close]
+          threshold: 0.05
+          group: price
 ```
 
 | YAML field | Binding |

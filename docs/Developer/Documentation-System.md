@@ -83,9 +83,9 @@ Use the README's names and distinction throughout the book.
 | Interface | Research responsibility | Inference handoff |
 |---|---|---|
 | Python Research | Callers own their data, preparation, models, backtesting and selection in ordinary Python. Custom SFD `params`, `prep` and `model` functions use UEL with caller-controlled search through MSQ. | Wrap evaluated fitted state with `Sensor.from_model` or `Sensor.from_python`; compose selected Sensors with `Cohort.from_python`. |
-| Compiled Research | Callers adopt the `Manifest` contract through `MLManifest`, `RuleBasedManifest`, `CompiledSFD` or the CLI. Limen applies the configured pipeline checks and records their evidence. | Reconstruct selected recorded rounds or qualified folds through Trainer and bind compatible Sensors into a Cohort. |
+| Compiled Research | Callers declare the complete research definition in YAML and execute it through the CLI. Limen applies the configured pipeline checks and records their evidence. | `limen assess` reconstructs validation-selected recorded rounds or qualified folds and binds their Sensors into a Cohort. |
 
-Calling a Manifest from Python remains Compiled Research. UEL, MSQ, indicators, features, targets and scalers are shared machinery; their presence does not identify an interface.
+Compiled Research uses YAML declarations and CLI commands throughout. Its canonical directory contains no Python drivers. Tests may inspect artifacts in Python, but every execution claim must run the unchanged YAML through the installed CLI. UEL, MSQ, indicators, features, targets and scalers are shared machinery; their presence does not identify an interface.
 
 Show both interfaces wherever the subject applies to both. Explain who owns each preparation, evaluation or evidence boundary. Caller-supplied Python declarations do not create compiled provenance. A compiled check does not prove arbitrary feature causality, data correctness or future performance.
 
@@ -125,7 +125,7 @@ The README's language must remain coherent across the whole system.
 
 - Lead with current behavior and the reader's decision.
 - Use ordinary English and exact domain terms. Prefer concrete verbs and one claim per sentence.
-- Keep Python Research and Compiled Research equally explicit. Do not present YAML or the CLI as the universal first path.
+- Keep Python Research and Compiled Research equally explicit. Python Research uses ordinary Python; Compiled Research uses YAML and CLI throughout.
 - Explain the methodology, observable result and responsibility boundary together.
 - Use exact public names, commands, paths, values, units and return fields where they carry meaning.
 - Introduce an optional dependency before the first example that needs it.
@@ -143,7 +143,7 @@ Maintain the canonical projects under `docs/examples/python-research/` and `docs
 
 Use named scenarios for choices that cannot coexist in one run. The main path remains readable; scenarios provide the breadth needed for the interface. The coverage catalogue must account for public exports, registries, Manifest fields, CLI commands, supported families and combinations, and the pages explaining them. Preserve the existing public-export, reference and embedded-version checks alongside this catalogue until equivalent protection is demonstrated.
 
-The Python project must show caller-owned preparation, fitting, backtesting, search and selection, followed by reuse of the evaluated fitted state. The Compiled project must show the declared pipeline, validation and execution, recorded results, reconstruction and compatible cohort binding. Include supported recovery, walk-forward, holdout, calibration and execution scenarios where their data and evidence are available. Distinguish caller-owned assessment from guarded project holdout, and ordinary members from qualified recorded folds.
+The Python project must show caller-owned preparation, fitting, backtesting, search and selection, followed by reuse of evaluated fitted state. The Compiled project must show YAML declaration, CLI validation and execution, recorded results, CLI reconstruction and compatible cohort binding. Its complete canonical manifest covers composable features; separate YAML variants cover incompatible choices such as target families, fixed and walk-forward splits, bar formation and guarded final assessment.
 
 Use recorded data only. Declare each input's origin, SHA-256 digest, relevant time range, row selection and availability clocks. A missing recorded input or optional environment is an unproved boundary, not permission to invent data or output. Real TabPFN model validation remains unproved while the execution tracked in [#628](https://github.com/Vaquum/Limen/issues/628) is absent; a skipped test cannot support a successful-run claim.
 

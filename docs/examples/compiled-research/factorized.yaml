@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_factorized
@@ -59,8 +60,13 @@ sfd:
     colsample_bytree:
     - 1.0
 uel:
+  output_path: compiled-factorized
+  factorize: true
   n_permutations: 4
   search_strategy:
     type: grid
+    shuffle: true
+    seed: 13
   output_format: csv
   checkpoint_interval: 1
+# endregion declaration

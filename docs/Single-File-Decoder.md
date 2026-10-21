@@ -10,9 +10,9 @@ A Single-File Decoder (SFD) is the experiment unit used by both CLI and Python/M
 - a parameter space whose values are lists
 - either a concrete manifest or custom `prep()` and `model()` functions
 
-## Choose the SFD style
+## Component and Python SFD styles
 
-Limen supports two SFD styles.
+This reference describes the two internal SFD shapes. Python Research authors ordinary `params`/`prep`/`model` functions. Compiled Research authors YAML; the CLI builds its internal SFD without requiring Python SFD authoring.
 
 | Style | Fit | Required functions | Data handling |
 |---|---|---|---|
@@ -21,7 +21,7 @@ Limen supports two SFD styles.
 
 Choose by methodological ownership. The [Python project](examples/python-research/README.md) supplies ordinary functions and retains its evaluated fitted models. The [Compiled project](examples/compiled-research/README.md) adopts the Manifest contract and reconstructs selected recorded rounds. Neither requires the other interface as a preliminary step.
 
-## What every SFD must expose
+## Python SFD parameter contract
 
 Every SFD must expose `params()`.
 
@@ -36,30 +36,17 @@ The Python project's `run_research` function below supplies a four-candidate `sp
 - individual values are scalars such as ints, floats, strings, booleans, or callables
 - structured values are possible when a manifest step explicitly expects them; keep them deterministic and inspectable
 
-## Manifest-driven SFDs
+## Optional Manifest component API
 
 Manifest-driven SFDs expose `manifest()` instead of custom `prep()` and `model()` functions.
 
-<!-- example: sfd-compiled-definition source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
-```python
-def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
-    source = data_dir / "spot_15m_20250101_20250531.parquet"
-    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise ValueError("Recorded quarter-hour input digest differs")
-    # Resolve the driver's public --data-dir argument into the recorded run definition.
-    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
-    compiled = CompiledSFD(config)
-    loop = UniversalExperimentLoop(
-        sfd=compiled, search_strategy=build_search_strategy(config),
-        experiment_dir=output_dir, yaml_reference=config,
-    )
-    loop.run("compiled-selection", n_permutations=2, workers=1,
-             post_processing=True, progress_bar=False)
-    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
-    sensors = Trainer(output_dir).train(selected)
-    return loop, sensors, selected
+<!-- example: sfd-compiled-definition source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
 This project uses `CompiledSFD` to translate its YAML definition into a Manifest-based SFD. Packaged foundational SFDs expose the same boundary through native `params()` and `manifest()` functions.

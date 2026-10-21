@@ -8,7 +8,7 @@
 
 ## In the research projects
 
-The [Python project](../../docs/examples/python-research/README.md) promotes evaluated fitted objects without fitting them again. The [Compiled project](../../docs/examples/compiled-research/README.md) reconstructs selected recorded rounds and qualified folds through Trainer. The Sensor and Cohort references distinguish retained fitted state from reconstruction under a recorded definition.
+The [Python project](../../docs/examples/python-research/README.md) promotes evaluated fitted objects without fitting them again. The [Compiled project](../../docs/examples/compiled-research/README.md) uses `limen assess` to reconstruct selected recorded rounds and qualified folds through Trainer. The Sensor and Cohort references distinguish retained fitted state from reconstruction under a recorded definition.
 
 ## What this package owns
 

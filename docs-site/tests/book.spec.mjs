@@ -267,3 +267,16 @@ test('a place within code survives reload and non-wheel scrolling',async({page})
   const before=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-before)).toBeLessThan(3);
 });
+
+
+test('compiled project is authored and operated through YAML and CLI',async({page})=>{
+  await page.goto('/limen/book/compiled-research/');
+  await page.getByText('Read the complete canonical manifest',{exact:true}).click();
+  const labels=await page.locator('figure.code .code-bar>span:first-child').allTextContents();
+  expect(labels.some(label=>label.startsWith('yaml'))).toBe(true);
+  expect(labels.every(label=>/^(bash|yaml)\b/.test(label.trim()))).toBe(true);
+  const source=(await page.locator('figure.code .code-src').allTextContents()).join('\n');
+  expect(source).toContain('limen assess');expect(source).toContain('assessment:');expect(source).toContain('uel:');
+  expect(source).not.toMatch(/python .*compiled-research|from limen import|UniversalExperimentLoop\(/);
+  await expect(page.locator('figure.code').filter({hasText:'assessment:'}).getByRole('link',{name:'complete source',exact:true})).toBeVisible();
+});

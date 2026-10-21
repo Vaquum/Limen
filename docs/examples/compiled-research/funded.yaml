@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_recorded_funding
@@ -40,7 +41,7 @@ sfd:
         data_source:
           method: limen.data.HistoricalData.get_any_file
           params:
-            file_path_or_url: derived/recorded-funding.parquet
+            file_path_or_url: inputs/recorded-funding.parquet
     reference_architecture: 
       limen.sfd.reference_architecture.rule_based.rule_based
     strategy:
@@ -57,6 +58,7 @@ sfd:
     - 6
     - 12
 uel:
+  output_path: compiled-funded
   n_permutations: 2
   search_strategy:
     type: grid
@@ -68,3 +70,4 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration

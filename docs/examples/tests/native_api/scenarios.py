@@ -25,14 +25,15 @@ from recorded_inputs import FUNDING, HASHES, funding_history, trade_profile
 
 INPUTS = {
     'spot_1h_20240101_20241231.parquet': 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72',
+    'spot_1h_20240101_20240116.parquet': '170337b8e80843067b3934f194f304bb1e2697327e6784e70739811b3edfdadd',
     'spot_15m_20250101_20250531.parquet': 'eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a',
 }
 
 
 def configuration(name, data_dir):
-    config = YAML(typ='safe').load(Path(__file__).with_name(name + '.yaml'))
+    config = YAML(typ='safe').load(Path(__file__).with_name('holdout.yaml') if name == 'holdout' else Path(__file__).resolve().parents[2] / 'compiled-research' / (name + '.yaml'))
     params = config['sfd']['manifest']['data_source']['params']
-    source = data_dir / Path(params['file_path_or_url']).name
+    source = data_dir / ('spot_1h_20240101_20241231.parquet' if name == 'walk_forward' else Path(params['file_path_or_url']).name)
     if hashlib.sha256(source.read_bytes()).hexdigest() != INPUTS[source.name]:
         raise ValueError('Recorded input digest differs: ' + source.name)
     params['file_path_or_url'] = str(source.resolve())

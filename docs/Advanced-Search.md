@@ -1,8 +1,8 @@
 # Choose which trials run
 
-A search chooses the next parameter combination to evaluate. Fix the admissible values, scoring population and trial budget before interpreting its winner. Python Research owns its SFD functions and strategy objects; Compiled Research obtains a declared pipeline and can construct its strategy through the CLI or Python.
+A search chooses the next parameter combination to evaluate. Fix the admissible values, scoring population and trial budget before interpreting its winner. Python Research owns its SFD functions and strategy objects; Compiled Research obtains a declared pipeline and declares its search strategy in YAML and runs it through the CLI.
 
-The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) each provide a `search` scenario. Their examples below are exact functions from those projects. Use the complete project entry points, matching wheel and recorded input bundle; their preparation helpers and declarations remain in the complete source.
+The [Python project](examples/python-research/README.md) supplies its search functions. The [Compiled project](examples/compiled-research/README.md) supplies complete YAML declarations and CLI commands. Each example retains its own population and execution assumptions.
 
 ## Prerequisites
 
@@ -60,29 +60,21 @@ def search(data_dir, output):
             'feedback': mixed_feedback(data_dir, output / 'feedback')}
 ```
 
-<!-- example: search-compiled-traversal source=docs/examples/compiled-research/scenarios.py region=search scenario=search interface=compiled role=executed -->
-```python
-def search(data_dir, output):
-    results = {}
-    for kind in ('grid', 'random', 'sobol', 'shuffled', 'factorized'):
-        config = configuration('factorized' if kind == 'factorized' else 'search', data_dir)
-        config['uel']['search_strategy'] = {'type': kind if kind in ('random', 'sobol') else 'grid'}
-        if kind in ('random', 'sobol'):
-            config['uel']['search_strategy']['seed'] = 42
-        if kind in ('shuffled', 'factorized'):
-            config['uel']['search_strategy'].update(shuffle=True, seed=42)
-        loop = execute(config, output / kind, factorize=kind == 'factorized')
-        results[kind] = research_project.completed_log(loop).select('id', 'accuracy', *(['n_estimators', 'fee'] if kind == 'factorized' else ['C'])).to_dicts()
-    return {'runs': results, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'families': model_comparisons(data_dir, output / 'families'),
-            'adaptive': adaptive_search(data_dir, output / 'adaptive'),
-            'feedback': mixed_feedback(data_dir, output / 'feedback')}
+<!-- example: search-compiled-traversal source=docs/examples/compiled-research/run.sh region=search scenario=search interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar \
+  compiled-research/search.yaml \
+  compiled-research/search_random.yaml \
+  compiled-research/search_sobol.yaml \
+  compiled-research/factorized.yaml \
+  compiled-research/adaptive.yaml
 ```
 
 The Python case compares grid, random, Sobol and shuffled traversal over two windows and two Ridge penalties. The Compiled case compares the same traversal choices, a separately admitted factorized grid and declared model families. Their budgets finish the bounded comparison used in this proof; they do not establish universal finite-domain coverage for a sampler. A search seed does not control model randomness.
 
 ## Seeded finite traversal
 
-The Python search function constructs its shuffled grid with `shuffle=True, seed=42`. The Compiled search function declares the same strategy settings and enables factorization only for its separate factorized case. The unmodified driver records these choices alongside the base configuration; running that YAML file alone does not reproduce the driver's traversal choices.
+The Python search function constructs its shuffled grid with `shuffle=True, seed=42`. The Compiled declarations record every traversal choice: the random and Sobol definitions use seed 7, while the factorized grid declares `factorize: true`, `shuffle: true` and seed 13. These choices are executed directly from the displayed files.
 
 Fresh seeded shuffled grids use version 2: eight balanced Feistel rounds with SHAKE-256, cycle-walked into the finite index domain. Candidate generation never materializes the Cartesian product or a permutation list. Cycle-walk cost varies. Sorted parameter keys and declared level order define the mixed-radix mapping. The seed changes the permutation; the round budget does not, so increasing it extends the same prefix. Exhaustion stops normally; existing full-parameter hash deduplication still collapses duplicate-valued levels.
 
@@ -132,22 +124,27 @@ def adaptive_search(data_dir, output):
             'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 ```
 
-<!-- example: search-compiled-budget source=docs/examples/compiled-research/scenarios.py region=adaptive_search scenario=search interface=compiled role=executed -->
-```python
-def adaptive_search(data_dir, output):
-    config = configuration('adaptive', data_dir)
-    loop = execute(config, output)
-    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
-    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
-            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
-            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
+<!-- example: search-compiled-budget source=docs/examples/compiled-research/adaptive.yaml region=budget_config scenario=search interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-adaptive
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  pruning_strategies:
+  - type: budget
+    params:
+      max_permutations: 3
+  feedback_interval: 1
 ```
 
 Use feedback when changing the remaining search belongs to the research design. A reduced budget changes which observations of model performance are collected. It does not establish that the resulting selection is better.
 
 ## What `experiment_dir` stores
 
-When `experiment_dir` is set, Python/MSQ writes:
+Python Research persists these files when `experiment_dir` is set. The Compiled CLI writes them beneath its resolved YAML output path:
 
 | File | Meaning |
 |---|---|
@@ -156,15 +153,14 @@ When `experiment_dir` is set, Python/MSQ writes:
 | `checkpoint.json` | search state for resume |
 | `audit.jsonl` | feedback-cycle audit trail |
 | `metadata.json` | experiment metadata used by `Trainer` |
-| `interventions.json` | optional input file polled by the feedback controller when the file exists |
 
-Unlike the other files above, `interventions.json` is not produced by the run. It is an optional external control file that the feedback controller watches when `experiment_dir` is present.
+The [controller extension reference](Developer/Pruning-Strategies.md#manual-intervention) describes caller-owned callback and file controls. Compiled Research declares its adaptive controls in YAML.
 
 ## Resume flow
 
 Python/MSQ can resume from a saved checkpoint when the applicable [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
 
-The `recovery` scenarios interrupt after two completed rounds, reconstruct their original configuration and resume. The Python scenario also compares its completed results with an uninterrupted run:
+Recovery tests interrupt after completed rounds, resume the saved queue and compare it with uninterrupted execution. The Compiled entry point is `limen run --resume RESULTS_DIR`; its YAML records the initial recording and checkpoint policy.
 
 <!-- example: search-python-recovery source=docs/examples/python-research/scenarios.py region=recovery scenario=recovery interface=python role=executed -->
 ```python
@@ -201,26 +197,10 @@ def recovery(data_dir, output):
     return {'interrupted_rounds': completed_before_resume, 'rounds': project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'fitted_state_restored': False, 'uninterrupted_equivalence': True}
 ```
 
-<!-- example: search-compiled-recovery source=docs/examples/compiled-research/scenarios.py region=recovery scenario=recovery interface=compiled role=executed -->
-```python
-def recovery(data_dir, output):
-    config = configuration('recovery', data_dir)
-    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
-
-    def stop_after_two(log, msq):
-        if log.height == 2:
-            signal.raise_signal(signal.SIGINT)
-
-    first = execute(config, output / 'experiment', callback=stop_after_two)
-    resumed = execute(config, output / 'experiment', resume=True)
-    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
-        records = [json.loads(line) for line in stream]
-    selected = research_project.completed_log(resumed)['id'][0]
-    sensors = Trainer(output / 'experiment').train([selected])
-    full = execute(config, output / 'uninterrupted')
-    if not research_project.completed_log(resumed).drop('execution_time').equals(research_project.completed_log(full).drop('execution_time')):
-        raise ValueError('Resumed Compiled results differ from uninterrupted research')
-    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors), 'uninterrupted_equivalence': True}
+<!-- example: search-compiled-recovery source=docs/examples/compiled-research/run.sh region=recovery scenario=recovery interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/recovery.yaml
+limen run --no-progress-bar --resume results/dev/compiled-recovery
 ```
 
 In the shutdown-and-resume example:
@@ -240,7 +220,7 @@ For resume to work cleanly, keep these stable:
 
 ## Capabilities shared with CLI
 
-The CLI constructs a compiled SFD and strategy around the same MSQ engine. Both projects use that engine's candidate identities, feedback controller and checkpoint format. Direct Python invocation can construct the shared objects explicitly; adopting a Manifest still makes the experiment Compiled Research.
+The CLI compiles YAML and constructs the search around MSQ. Python Research supplies its own functions and strategy objects. Both use the queue's candidate identities, feedback and checkpoint semantics.
 
 Python Research owns its arbitrary SFD functions and fitted models. Recovery restores the search state and recorded results, rather than arbitrary fitted Python objects. Saving a custom run does not give it Trainer reconstruction: Trainer and CLI resume require a reconstructible YAML definition saved as `yaml_reference`. [Trainer](Trainer.md) describes that boundary.
 

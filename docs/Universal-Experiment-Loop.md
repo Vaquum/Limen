@@ -17,7 +17,7 @@ This page covers:
 - a `SearchStrategy` for Python/MSQ execution
 - an `experiment_dir` when you need persisted round artifacts or checkpoints
 
-## Preferred execution path
+## Run the Compiled declaration
 
 From the recorded-input bundle root, run the Compiled project directly:
 
@@ -164,32 +164,18 @@ Compiled artifact binding remains a separate construction path.
 
 ## Compiled construction
 
-Calling a Manifest-backed SFD from Python remains Compiled Research. Its
-selection function validates the recorded source digest, retains a reconstructible
-YAML reference, runs two candidates, selects by validation return and asks Trainer
-to reconstruct the selected round.
+Compiled Research supplies the complete YAML definition to `limen run`. The CLI validates and compiles it, executes its declared candidates and retains the original declaration. `limen assess` applies its recorded validation selection and reconstructs the selected Sensors.
 
-<!-- example: uel-compiled-selection source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
-```python
-def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
-    source = data_dir / "spot_15m_20250101_20250531.parquet"
-    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise ValueError("Recorded quarter-hour input digest differs")
-    # Resolve the driver's public --data-dir argument into the recorded run definition.
-    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
-    compiled = CompiledSFD(config)
-    loop = UniversalExperimentLoop(
-        sfd=compiled, search_strategy=build_search_strategy(config),
-        experiment_dir=output_dir, yaml_reference=config,
-    )
-    loop.run("compiled-selection", n_permutations=2, workers=1,
-             post_processing=True, progress_bar=False)
-    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
-    sensors = Trainer(output_dir).train(selected)
-    return loop, sensors, selected
+<!-- example: uel-compiled-selection source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
+
+`loop.interrupted` reports whether shutdown was requested during the run. CLI commands retain its checkpoint and exit unsuccessfully when this is true; a batch does not start another YAML file.
 
 ## Constructor contract
 
@@ -357,26 +343,27 @@ The same flag records the sibling `market: {"ret": [...]}`: unscaled returns fro
 
 When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), both `execution` and `market` are `null`. A flat snapshot has full-length zero execution arrays and still records market returns. Event execution retains its existing `trade_ledger` by default. With recording off, neither field is added.
 
-Read retained arrays according to the declared storage format. The Compiled project's family comparisons use this exact version-2 prediction reader; its independent tests check the decoded values against the model/label population. This helper requires a validated v2 prediction reference and is not a general reader for all formats:
+Declare the required artifacts before execution. The Compiled project retains predictions, alignment, trade ledgers and fold details through YAML; its proof verifies prediction payload hashes and compares the decoded values with the original label population:
 
-<!-- example: uel-compiled-recorded-predictions source=docs/examples/compiled-research/scenarios.py region=recorded_predictions scenario=search interface=compiled role=executed -->
-```python
-def recorded_predictions(directory: Path, record):
-    metadata = json.loads((directory / 'metadata.json').read_text())
-    if metadata['round_storage'] != 'gzip-jsonl-v2':
-        raise ValueError('This project expects its recorded version-2 signal payloads')
-    reference = record['preds_ref']
-    digest = reference['sha256']
-    if not isinstance(digest, str) or not re.fullmatch('[0-9a-f]{64}', digest):
-        raise ValueError('Invalid recorded prediction digest')
-    with gzip.GzipFile(filename=directory / 'round_signals' / (digest + '.json.gz'), mode='rb') as stream:
-        payload = stream.read()
-    if hashlib.sha256(payload).hexdigest() != digest:
-        raise ValueError('Recorded prediction payload differs')
-    values = json.loads(payload)
-    if not isinstance(values, list) or len(values) != reference['count']:
-        raise ValueError('Recorded prediction count differs')
-    return values
+<!-- example: uel-compiled-recorded-predictions source=docs/examples/compiled-research/research.yaml region=run scenario=search interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-research
+  n_permutations: 8
+  workers: 1
+  search_strategy:
+    type: grid
+    shuffle: true
+    seed: 17
+  prep_each_round: true
+  checkpoint_interval: 1
+  feedback_interval: 1
+  output_format: parquet
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 To replay snapshot summaries, construct an `ExecutionResult` from retained `pos`, `gross` and `net` arrays and apply the package-local snapshot ledger with notional `1.0`. Those arrays already contain the resolved notional; applying the original notional again would scale twice. For the shipped snapshot strategy without TP/SL, `gross[i] == execution.pos[i] * market.ret[i]` on available market rows. TP/SL uses fill-based exit returns, so a residual against original market closes includes exit effects. A timing diagnostic can subtract mean position times mean market return from mean gross return over one common, nonempty finite population; this adds no Limen metric. Net returns include costs, and compounded market return is a separate quantity.
@@ -466,15 +453,20 @@ def adaptive_search(data_dir, output):
 
 ### Compiled Research
 
-<!-- example: uel-budget-compiled source=docs/examples/compiled-research/scenarios.py region=adaptive_search scenario=search interface=compiled role=executed -->
-```python
-def adaptive_search(data_dir, output):
-    config = configuration('adaptive', data_dir)
-    loop = execute(config, output)
-    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
-    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
-            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
-            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
+<!-- example: uel-budget-compiled source=docs/examples/compiled-research/adaptive.yaml region=budget_config scenario=search interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-adaptive
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  pruning_strategies:
+  - type: budget
+    params:
+      max_permutations: 3
+  feedback_interval: 1
 ```
 
 The budget reducer can trim the remaining queue during a feedback cycle, so the number of completed rows may be lower than the requested permutation budget. `results.csv` and `round_data.jsonl.gz` track completed rounds; `audit.jsonl` records the intervention; checkpoints follow `checkpoint_interval`.
@@ -522,29 +514,13 @@ def recovery(data_dir, output):
 
 ### Resume Compiled Research
 
-<!-- example: uel-recovery-compiled source=docs/examples/compiled-research/scenarios.py region=recovery scenario=recovery interface=compiled role=executed -->
-```python
-def recovery(data_dir, output):
-    config = configuration('recovery', data_dir)
-    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
-
-    def stop_after_two(log, msq):
-        if log.height == 2:
-            signal.raise_signal(signal.SIGINT)
-
-    first = execute(config, output / 'experiment', callback=stop_after_two)
-    resumed = execute(config, output / 'experiment', resume=True)
-    with gzip.open(output / 'experiment/round_data.jsonl.gz', 'rt') as stream:
-        records = [json.loads(line) for line in stream]
-    selected = research_project.completed_log(resumed)['id'][0]
-    sensors = Trainer(output / 'experiment').train([selected])
-    full = execute(config, output / 'uninterrupted')
-    if not research_project.completed_log(resumed).drop('execution_time').equals(research_project.completed_log(full).drop('execution_time')):
-        raise ValueError('Resumed Compiled results differ from uninterrupted research')
-    return {'interrupted_rounds': research_project.completed_log(first).height, 'rounds': research_project.completed_log(resumed).height, 'round_indices': [row['_round_index'] for row in records], 'round_ids': [row['round_id'] for row in records], 'reconstructed_sensors': len(sensors), 'uninterrupted_equivalence': True}
+<!-- example: uel-recovery-compiled source=docs/examples/compiled-research/run.sh region=recovery scenario=recovery interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/recovery.yaml
+limen run --no-progress-bar --resume results/dev/compiled-recovery
 ```
 
-Both project recovery cases interrupt a real run after two completed candidates, resume its checkpoint and compare final identities/order with uninterrupted execution. Their tests also reject changed recorded source rows or split geometry. The Compiled case retains four unique candidates; the Python case preserves its caller-defined parameter domain.
+The recovery tests interrupt real execution, resume its checkpoint and compare final identities and metrics with uninterrupted runs. The Compiled recovery YAML pins its local Parquet source with `expected_sha256`; initial execution and resume reject changed bytes before fitting. Python recovery restores the caller-defined queue and results.
 
 Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
 

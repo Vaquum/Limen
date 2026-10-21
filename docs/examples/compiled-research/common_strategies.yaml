@@ -1,0 +1,65 @@
+# region declaration
+schema_version: "1.0"
+
+metadata:
+  name: common_strategies
+  mode: development
+  description: Eight fixed long-flat strategy baselines with causal indicator history
+
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    required_columns: [datetime, open, high, low, close]
+    split_dates:
+      train_start: "2024-01-01"
+      train_end: "2024-10-01"
+      val_start: "2024-10-01"
+      val_end: "2024-11-01"
+      test_start: "2024-11-01"
+      test_end: "2025-01-01"
+    indicators:
+      - func: limen.features.common_strategy_positions.common_strategy_positions
+        params:
+          strategy: "{strategy}"
+    strategy:
+      conditions:
+        - id: common_strategy_long
+          name: Common strategy requests long
+          type: threshold
+          column: common_strategy_position
+          operator: ">"
+          value: 0
+      entry: common_strategy_long
+    reference_architecture: limen.sfd.reference_architecture.rule_based.rule_based
+    backtest:
+      fee_bps: 10.0
+      slip_bps: 5.0
+  params:
+    strategy:
+      - buy_and_hold
+      - sma_cross
+      - ema_cross
+      - macd
+      - rsi_mean_reversion
+      - bollinger_mean_reversion
+      - donchian_breakout
+      - time_series_momentum
+
+uel:
+  output_path: compiled-common_strategies
+  record_execution: true
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+  n_permutations: 8
+  search_strategy:
+    type: grid
+  output_format: csv
+# endregion declaration

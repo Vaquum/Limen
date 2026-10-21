@@ -6,7 +6,7 @@ A chronological split answers a question about one fitting window and what follo
 
 Use the matching Limen wheel and recorded-input bundle from the [Python](examples/python-research/README.md) and [Compiled](examples/compiled-research/README.md) project pages. Their environment and entry-point instructions also apply to this chapter's `walk_forward` scenario.
 
-The two projects use the first 384 recorded hourly Bitcoin observations from `spot_1h_20240101_20241231.parquet`. They retain different research decisions. The Python project owns its folds and selection; the Compiled project records a pipeline whose selected folds can be reconstructed. Their results are not interchangeable estimates of the same model.
+The two projects use the first 384 recorded hourly Bitcoin observations. The Compiled YAML names their explicit bundled subset, `spot_1h_20240101_20240116.parquet`; Python selects those rows from the full recorded file. They retain different research decisions. The Python project owns its folds and selection; the Compiled project records a pipeline whose selected folds can be reconstructed. Their results are not interchangeable estimates of the same model.
 
 ## Choose the information available to each fit
 
@@ -49,24 +49,11 @@ The independent assertions rebuild the Ridge solution and validation return from
 
 The [Compiled project](examples/compiled-research/README.md) runs its recorded `walk_forward` definition over the same bounded source. The Manifest supplies fold preparation, fitted targets and transforms, calibration and the configured validation objective. Each selected fold has its own fitted and calibration state.
 
-<!-- example: book-compiled-walk-forward source=docs/examples/compiled-research/scenarios.py region=walk_forward scenario=walk_forward interface=compiled role=executed -->
-```python
-def walk_forward(data_dir, output):
-    config = configuration('walk_forward', data_dir)
-    bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
-    loop = execute(config, output / 'experiment', bars=bars)
-    round_id = research_project.completed_log(loop)['id'][0]
-    trainer = Trainer(output / 'experiment', data=bars)
-    sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
-    cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
-    cohort.set_members(sensors)
-    metadata = [fold_metadata(sensor) for sensor in sensors]
-    round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
-            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
-            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
-            'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
-            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+<!-- example: book-compiled-walk-forward source=docs/examples/compiled-research/run.sh region=walk_forward scenario=walk_forward interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/walk_forward.yaml
+limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward
+limen run --no-progress-bar compiled-research/acceptance.yaml
 ```
 
 `Trainer` receives both the recorded round and an explicit zero-based fold. It refits and validates that fold against its retained witnesses. This is reconstruction under a recorded contract, not restoration of arbitrary saved model weights. The project retains the compressed round records and their digest so the qualified result can be inspected.

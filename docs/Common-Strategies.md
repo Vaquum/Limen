@@ -89,31 +89,73 @@ data in both normal and test mode. Supplying `data=` uses those recorded rows
 directly, without fetching either source. The benchmark always supplies its
 explicit fixture data; it does not depend on a changing latest-data window.
 
-The Compiled project supplies the complete recorded hourly fixture explicitly and performs no network fetch. Its native factory uses the `8:1:2` row-count split; the installed YAML template instead declares date windows. Calling the factory from Python still follows Compiled Research. This complete project function executes all eight candidates and retains native UEL artifacts:
+The Compiled project reads the complete recorded hourly fixture through `common_strategies.yaml`, with explicit January–September training, October validation and November–December testing windows. It runs all eight candidates through the CLI and retains native execution records. The historical factory benchmark below has its own row-count split and is not the current YAML result.
 
-<!-- example: common-compiled-baselines source=docs/examples/compiled-research/scenarios.py region=common_baselines scenario=search interface=compiled role=executed -->
-```python
-def common_baselines(data_dir, output):
-    from limen.experiment.param_domain import ParamDomain
-    from limen.experiment.param_search import GridStrategy
-    from limen.sfd.foundational_sfd import common_strategies
+<!-- example: common-compiled-baselines source=docs/examples/compiled-research/common_strategies.yaml region=declaration scenario=search interface=compiled role=executed -->
+```yaml
+schema_version: "1.0"
 
-    source = configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url']
-    raw = pl.read_parquet(source)
-    directory = output / 'experiment'
-    loop = UniversalExperimentLoop(data=raw, sfd=common_strategies,
-                                   search_strategy=GridStrategy(ParamDomain(common_strategies.params())),
-                                   experiment_dir=directory)
-    loop.run('common-baselines', n_permutations=8, workers=1, record_execution=True,
-             recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
-             post_processing=False, progress_bar=False)
-    with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
-        records = [json.loads(line) for line in stream]
-    tracks = {record['round_params']['strategy']: record['execution'] for record in records}
-    columns = ['strategy', 'pnl_per_bar_bps_test', 'position_rate_test', 'num_executed_trades_test']
-    return {'rows': research_project.completed_log(loop).select(columns).to_dicts(),
-            'tracks': tracks, 'source_rows': raw.height, 'fee_bps': 10., 'slip_bps': 5.,
-            'execution': 'native lagged long/flat snapshot with per-fill costs'}
+metadata:
+  name: common_strategies
+  mode: development
+  description: Eight fixed long-flat strategy baselines with causal indicator history
+
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    required_columns: [datetime, open, high, low, close]
+    split_dates:
+      train_start: "2024-01-01"
+      train_end: "2024-10-01"
+      val_start: "2024-10-01"
+      val_end: "2024-11-01"
+      test_start: "2024-11-01"
+      test_end: "2025-01-01"
+    indicators:
+      - func: limen.features.common_strategy_positions.common_strategy_positions
+        params:
+          strategy: "{strategy}"
+    strategy:
+      conditions:
+        - id: common_strategy_long
+          name: Common strategy requests long
+          type: threshold
+          column: common_strategy_position
+          operator: ">"
+          value: 0
+      entry: common_strategy_long
+    reference_architecture: limen.sfd.reference_architecture.rule_based.rule_based
+    backtest:
+      fee_bps: 10.0
+      slip_bps: 5.0
+  params:
+    strategy:
+      - buy_and_hold
+      - sma_cross
+      - ema_cross
+      - macd
+      - rsi_mean_reversion
+      - bollinger_mean_reversion
+      - donchian_breakout
+      - time_series_momentum
+
+uel:
+  output_path: compiled-common_strategies
+  record_execution: true
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+  n_permutations: 8
+  search_strategy:
+    type: grid
+  output_format: csv
 ```
 
 `params()` has one categorical axis, `strategy`. A candidate chooses one

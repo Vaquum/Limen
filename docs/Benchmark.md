@@ -65,16 +65,80 @@ def calibration(data_dir, output):
 
 ### Compiled Research
 
-<!-- example: benchmark-compiled-calibration source=docs/examples/compiled-research/scenarios.py region=calibration scenario=calibration interface=compiled role=executed -->
-```python
-def calibration(data_dir, output):
-    config = configuration('calibration', data_dir)
-    loop = execute(config, output / 'experiment')
-    sensors = Trainer(output / 'experiment').train(research_project.completed_log(loop)['id'].to_list())
-    return {'modes': research_project.completed_log(loop).select('use_calibration', 'use_threshold', 'optimal_threshold', 'val_score', 'accuracy').to_dicts(), 'reconstructed_sensors': len(sensors), 'validation_reused': True}
+<!-- example: benchmark-compiled-calibration source=docs/examples/compiled-research/calibration.yaml region=declaration scenario=calibration interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_compiled_calibration
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+# region calibration_config
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: sigmoid
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+# endregion calibration_config
+  params:
+    scaler_type: [logreg]
+    C:
+    - 1.0
+    random_state: [42]
+# region calibration_modes
+    use_calibration:
+    - false
+    - true
+    use_threshold:
+    - false
+    - true
+# endregion calibration_modes
+uel:
+  output_path: compiled-calibration
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
 ```
 
-These executed functions use helpers from their complete projects. The tests
+The Python function uses its complete project's helpers; the Compiled case executes the complete YAML declaration through the CLI. The tests
 recompute classifier decisions and the validation threshold score. Use the
 source-bound `Log` reference below when inspecting native retained row evidence.
 
@@ -151,15 +215,59 @@ The [Compiled project's recorded acceptance case](Experiment-Manifest.md#recorde
 executes two rule-based trials and retains their complete return tracks and reports.
 It runs inside the project's walk-forward scenario:
 
-<!-- example: benchmark-recorded-acceptance source=docs/examples/compiled-research/scenarios.py region=acceptance scenario=walk_forward interface=compiled role=executed -->
-```python
-def acceptance(data_dir, output):
-    config = configuration('acceptance', data_dir)
-    loop = execute(config, output)
-    report = json.loads((output / 'acceptance_report.json').read_text())
-    return {'rounds': research_project.completed_log(loop).height, 'report': report,
-            'artifacts': {name: hashlib.sha256((output / name).read_bytes()).hexdigest() for name in (
-                'trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+<!-- example: benchmark-recorded-acceptance source=docs/examples/compiled-research/acceptance.yaml region=declaration scenario=walk_forward interface=compiled role=executed -->
+```yaml
+schema_version: "1.0"
+metadata:
+  name: recorded_acceptance
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 49
+      purge_bars: 4
+      embargo_bars: 3
+      anchored: true
+    acceptance:
+      min_deflated_sharpe_probability: 0.95
+      max_pbo: 0.20
+    indicators:
+      - func: limen.indicators.window_return
+        params:
+          period: 1
+    strategy:
+      conditions:
+        - id: entry
+          name: positive_return
+          type: threshold
+          column: ret_1
+          operator: ">"
+          value: "{entry_return}"
+      entry: entry
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+  params:
+    entry_return: [0.0, 0.001]
+uel:
+  record_execution: true
+  output_path: compiled-acceptance
+  recording:
+    alignment: true
+    fold_details: true
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  prep_each_round: true
+  output_format: parquet
 ```
 
 Its independent proof derives DSR and PBO from the retained returns and ordered

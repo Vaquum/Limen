@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_dlinear_regressor
@@ -45,6 +46,7 @@ sfd:
     alpha:
     - 1.0
 uel:
+  output_path: compiled-family_dlinear_regressor
   n_permutations: 1
   search_strategy:
     type: grid
@@ -55,3 +57,4 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration
