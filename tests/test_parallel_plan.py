@@ -1892,6 +1892,18 @@ def _assert_factory_resources(plan, params):
                 with pytest.raises(TypeError, match='unfrozen factory call state'):
                     pool.submit(factory_component, factory).result(timeout=30)
                 assert _mutable_feature.__defaults__[0] == before
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(SlottedDefaultRolling.__call__, '__defaults__', (2,))
+            assert SlottedDefaultRolling(2)(data)['caller_mean'].to_list() == _caller_feature(data, 4)['caller_mean'].to_list()
+            assert pool.submit(SlottedDefaultRolling(2), data).result(timeout=30)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+            declare_parallel(SlottedDefaultRolling, ParallelRoundContract(deterministic_stage))
+            for factory in (SlottedDefaultRolling, partial(SlottedDefaultRolling)):
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                with pytest.raises(TypeError, match='unfrozen factory call state'):
+                    pool.submit(factory_component, factory).result(timeout=30)
+                assert SlottedDefaultRolling.__call__.__defaults__ == (2,)
+        assert SlottedDefaultRolling.__call__.__defaults__ == (1,)
         for factory, window in ((AliasedClassFactory, 3), (DistinctClassFactory, 5)):
             declare_parallel(factory, ParallelRoundContract(deterministic_stage))
             expected = factory()(data)['caller_mean'].to_list()

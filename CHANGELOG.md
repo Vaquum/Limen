@@ -1922,4 +1922,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
 - Freeze scaler transformation behavior without changing fitted scaler objects.
 - Normalize callable round state once and share fresh source identities within each complete validation.
-- Reject factory call descriptors and class callable owners whose mutable execution state remains imported.
+- Reject factory call descriptors, call defaults and class callable owners whose execution state remains imported.
