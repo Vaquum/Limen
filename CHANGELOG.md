@@ -1941,7 +1941,3 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Assess frozen event execution contracts in final holdout: admit pinned single-Sensor binary cash_spot/linear_perpetual economics from protected research through classified freeze, single event execution and versioned read-back; scenario reports stay schema-1 byte-identical.
 - Raise the suite runtime ceiling to 260s for measured suite growth (main observed up to 238s).
-
-## [5.46.1] - 2026-10-21
-
-- Admit every built-in CPU architecture to parallel rounds by checking only the thread and device knobs it exposes, and resume parallel runs whose rounds record continuous predictions or no probabilities.
