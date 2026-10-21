@@ -352,6 +352,19 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, ghost, 'exposure evidence')
 
+    def dent(report_dict):
+        states = report_dict['execution']['ledger']['states']
+        target = next(row for row in states[1:-1] if row['quantity'] == 0)
+        target['equity'] -= 500.0
+        initial = report_dict['execution']['initial_equity']
+        running, worst = 0.0, 0.0
+        for value in [row['equity'] for row in states]:
+            running = max(running, value)
+            worst = min(worst, value / max(running, initial) - 1)
+        report_dict['execution']['metrics']['max_drawdown']['value'] = worst
+
+    _rewrite_report(root, report, dent, 'flat-state valuation')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
