@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import replace
 import json
 import logging
 import math
@@ -14,10 +15,16 @@ from typing_extensions import override
 import polars as pl
 
 from limen.backtest._snapshot_execution import snapshot_with_execution
+from limen.backtest.execution_events import with_predictions
+from limen.backtest.trade_contract import TradeInputs, TradePolicy, contract_digest, export_trade_contract, json_value
+from limen.backtest.trade_execution import trade_execution
 from limen.cohort import Cohort
 from limen.experiment import _holdout_attempts as attempts
+from limen.experiment import _holdout_events as events
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_report as reports
+from limen.experiment._prepare_trade_context import normalize_observations, prepare_trade_context
+from limen.experiment._resolve_trade_policy import BacktestConfig
 from limen.experiment._holdout_freeze import FrozenHoldoutSelection, digest, members, owned_copy, provenance, state_digest, unchanged, frozen_parts
 from limen.experiment._holdout_source import SourceEvidence, load_admitted_source, source_spec
 from limen.experiment.manifest_core import MLManifest
@@ -89,8 +96,9 @@ def _valid(bar: BarPrediction, timestamp: object) -> None:
         raise ValueError('Holdout probability must be finite in [0,1]')
 
 
-def _tape(selection: Sensor | Cohort, raw: pl.DataFrame, start: int, failures: _Failures) -> list[dict[str, object]]:
+def _tape(selection: Sensor | Cohort, raw: pl.DataFrame, start: int, failures: _Failures) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
     result: list[dict[str, object]] = []
+    witnesses: list[dict[str, object]] = []
     sensors = members(selection)
     logger = logging.getLogger('limen.inference.sensor')
     logger.addHandler(failures)
@@ -112,9 +120,49 @@ def _tape(selection: Sensor | Cohort, raw: pl.DataFrame, start: int, failures: _
             aggregate = bars[0] if type(selection) is Sensor else _aggregate(cast(Cohort, selection), bars)
             _valid(aggregate, timestamp)
             result.append({'members': retained, 'prediction': int(cast(int, aggregate.prediction)), 'probability': aggregate.probability, 'reason': aggregate.reason})
-        return result
+            witnesses.append({'available_at_ns': aggregate.available_at_ns, 'trade_contract_digest': aggregate.trade_contract_digest, 'prediction': int(cast(int, aggregate.prediction))})
+        return result, witnesses
     finally:
         logger.removeHandler(failures)
+
+
+def _contract_inputs(raw: pl.DataFrame, final: pl.DataFrame, interval: int, config: BacktestConfig, policy: TradePolicy, params: Mapping[str, object]) -> tuple[TradeInputs, pl.DataFrame]:
+    '''Build one engine partition over the final window with recorded context.'''
+    frame = normalize_observations(raw, interval_seconds=interval, timestamp_role=config.source_timestamp_role)
+    prepared = prepare_trade_context(config, policy, [raw], [final.select('datetime')], params, interval_seconds=interval, frozen_sources=(frame, None))
+    return prepared.partitions[0], prepared.model_rows[0]
+
+
+def _contract_tape(witnesses: list[dict[str, object]], mapping: pl.DataFrame, inputs: TradeInputs, frozen: str) -> list[dict[str, object]]:
+    '''Build the retained execution tape from sensor-emitted witnesses.'''
+    if len(witnesses) != mapping.height or mapping.height != inputs.signals.height:
+        raise ValueError('Holdout execution tape disagrees with executed signals')
+    opens = mapping['datetime'].dt.epoch('ns').to_list()
+    tape: list[dict[str, object]] = []
+    for index, witness in enumerate(witnesses):
+        if witness['trade_contract_digest'] != frozen:
+            raise ValueError('Holdout execution tape disagrees with its frozen contract')
+        if witness['available_at_ns'] != mapping['available_at_ns'][index]:
+            raise ValueError('Holdout execution availability disagrees with executed signals')
+        tape.append({'index': index, 'open_ns': opens[index], 'available_at_ns': mapping['available_at_ns'][index], 'trade_contract_digest': frozen, 'prediction': witness['prediction']})
+    return tape
+
+
+def _execute_contract(inputs: TradeInputs, tape: list[dict[str, object]], policy: TradePolicy, pin: Mapping[str, object]) -> dict[str, object]:
+    '''Execute final inputs once under pinned equity; return the execution evidence.'''
+    bound = with_predictions(replace(inputs, initial_equity=cast(float, pin['initial_equity'])), [row['prediction'] for row in tape])
+    ledger = trade_execution(bound, policy)
+    contract = export_trade_contract(policy, bound)
+    assessment = ledger.contract_digest
+    if assessment != contract_digest(contract):
+        raise ValueError('Holdout retained contract disagrees with executed plan')
+    if (ledger.states['time_ns'] > bound.partition_end_ns).any() or (ledger.fills['time_ns'] > bound.partition_end_ns).any():
+        raise ValueError('Holdout execution closed past its terminal bound')
+    metrics: dict[str, object] = {name: {'value': float(value) if math.isfinite(value) else None, 'reason': None if math.isfinite(value) else 'undefined-return-statistic',
+                       'numerator': None, 'denominator': None, 'support_rows': ledger.fills.height} for name, value in ledger.metrics.items()}
+    payload: dict[str, object] = {name: json_value(getattr(ledger, name).to_dicts()) for name in ('states', 'intents', 'fills', 'episodes', 'funding')}
+    return {'research_digest': pin['research_digest'], 'assessment_digest': assessment, 'policy': pin['policy'], 'initial_equity': pin['initial_equity'],
+            'metrics': metrics, 'ledger': payload, 'contract': cast(dict[str, object], contract), 'tape': tape, 'signals': json_value(bound.signals.to_dicts())}
 
 
 def _execute(final: pl.DataFrame, tape: list[dict[str, object]], declarations: list[dict[str, object]]) -> tuple[list[dict[str, object]], list[list[dict[str, object]]]]:
@@ -168,9 +216,14 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
             failures = _Failures()
             for member, proof in zip(members(selection), proofs, strict=True):
                 manifest = cast(MLManifest, vars(member)['_manifest'])
+                vars(manifest)['_holdout_interval_seconds'] = declaration['interval_seconds']
                 _ = vars(manifest).pop('_holdout_binding', None)
                 vars(manifest)['_holdout_assessment_schemas'] = {'input': proof['input_schema'], 'model': proof['model_schema']}
                 vars(manifest)['_holdout_assessment_failure'] = failures.schema
+            pin = cast(dict[str, object] | None, cast(list[dict[str, object]], spec['members'])[0].get('execution'))
+            policy = events.preallocate_contract(members(selection)[0], pin) if pin is not None else None
+            if pin is not None and declarations:
+                raise ValueError('Holdout contract assessment refuses scenario declarations')
             attempt = attempts.allocate(root, declaration, planned, spec=spec_sha, state=state_sha, scenarios=scenarios_sha)
             attempt_id, stage = cast(str, attempt['id']), 'load'
             source: SourceEvidence | None = None
@@ -179,7 +232,7 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                 binding = history.ProjectBinding(root, cast(str, declaration['project_id']), cast(int, declaration['revision']), None, interval)
                 raw, source = load_admitted_source(cast(MLManifest, vars(members(selection)[0])['_manifest']), binding, lower_ns=planned['context_start_ns'], upper_ns=planned['end_ns'], complete=True)
                 stage = 'predict'
-                tape = _tape(selection, raw, planned['start_ns'], failures)
+                tape, witnesses = _tape(selection, raw, planned['start_ns'], failures)
                 failures.member_id, failures.bar_ns = None, None
                 final = raw.filter(pl.col('datetime').dt.epoch('ns') >= planned['start_ns'])
                 stage = 'labels'
@@ -192,16 +245,30 @@ def final_holdout_report(frozen: FrozenHoldoutSelection, *, project_root: str | 
                         frame = target.transform(final)[target.target_name].to_list()
                     labels = _checked_labels(cast(list[int | None], frame), final.height)
                 stage = 'execute'
-                summaries, ledgers = _execute(final, tape, declarations)
+                execution: dict[str, object] | None = None
+                summaries: list[dict[str, object]] = []
+                ledgers: list[list[dict[str, object]]] = []
+                if policy is not None and pin is not None:
+                    member = members(selection)[0]
+                    manifest = cast(MLManifest, vars(member)['_manifest'])
+                    params = cast(dict[str, object], vars(member)['_round_params'])
+                    inputs, model = _contract_inputs(raw, final, interval, cast(BacktestConfig, manifest.backtest_config), policy, params)
+                    if inputs.partition_start_ns != planned['context_start_ns'] or inputs.partition_end_ns != planned['end_ns']:
+                        raise ValueError('Holdout execution partition disagrees with its allocation')
+                    ctape = _contract_tape(witnesses, model, inputs, cast(str, pin['research_digest']))
+                    execution = _execute_contract(inputs, ctape, policy, pin)
+                    ledgers = [cast(list[dict[str, object]], []) for _ in tape]
+                else:
+                    summaries, ledgers = _execute(final, tape, declarations)
                 stage = 'artifacts'
                 rows, mapping = reports.retained_rows(raw, interval * 1_000_000_000, planned['start_ns'], tape, labels, target is not None, ledgers)
                 finished = time.time_ns()
-                report: dict[str, object] = {'schema_version': 1, 'attempt_id': attempt_id, 'assessment_index': attempt['assessment_index'], 'state': 'completed',
+                report: dict[str, object] = {'schema_version': 2 if execution is not None else 1, 'attempt_id': attempt_id, 'assessment_index': attempt['assessment_index'], 'state': 'completed',
                     'created_ns': attempt['created_ns'], 'finished_ns': finished, 'project_id': attempt['project_id'], 'reservation': {key: value for key, value in declaration.items() if key != 'project_id'},
                     'spec': spec, 'spec_sha256': spec_sha, 'state_sha256': state_sha, 'scenarios_sha256': scenarios_sha,
                     'source': source, 'source_column_map': mapping, 'source_schema': [{'name': name, 'dtype': str(dtype)} for name, dtype in raw.schema.items()], 'planned': planned, 'prior': attempt['prior'],
                     'exposure': reports.exposure(declaration, cast(dict[str, object], attempt['prior']), proofs, planned['start_ns'], planned['end_ns'], coverage=coverage),
-                    'classification': reports.classification(labels, [cast(int, row['prediction']) for row in tape], [cast(float | None, row['probability']) for row in tape]), 'scenarios': summaries}
+                    'classification': reports.classification(labels, [cast(int, row['prediction']) for row in tape], [cast(float | None, row['probability']) for row in tape]), 'scenarios': summaries, **({'execution': execution} if execution is not None else {})}
                 files = reports.artifacts(root, report, rows)
                 stage = 'finalize'
                 attempts.finalize(root, attempt_id, source=source, artifacts=files, finished_ns=finished)

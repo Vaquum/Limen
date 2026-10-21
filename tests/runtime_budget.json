@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "max_total_seconds": 240,
+  "max_total_seconds": 260,
   "slowest_tests_limit": 10,
   "threshold_bands_seconds": [
     1,
@@ -19,6 +19,6 @@
     "observed_min_seconds": 85.0,
     "observed_max_seconds": 119.0,
     "headroom_seconds": 16.0,
-    "note": "Historical main CI baseline retained; the 240-second ceiling was explicitly authorized for parallel-round proofs in PR #913."
+    "note": "Historical main CI baseline retained; 260-second ceiling reflects measured suite growth (main observed up to 238s; holdout execution proofs in PR #1136 add sustained read coverage)."
   }
 }
