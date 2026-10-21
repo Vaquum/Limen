@@ -1936,12 +1936,13 @@ def _assert_factory_resources(plan, params):
                 assert owner.window == 4
         assert owner.window == 2
         declare_parallel(RoutineDefaultFactory, ParallelRoundContract(deterministic_stage))
+        assert _caller_feature.__defaults__ == (2,)
         for factory in (RoutineDefaultFactory, partial(RoutineDefaultFactory)):
             baseline = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_caller_feature, '__defaults__', (4,))
                 assert RoutineDefaultFactory()(data)['caller_mean'].to_list() == _caller_feature(data, 4)['caller_mean'].to_list()
-                assert pool.submit(RoutineDefaultFactory(), data).result(timeout=30)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+                assert pool.submit(RoutineDefaultFactory(), data).result(timeout=30)['caller_mean'].to_list() == _caller_feature(data, 2)['caller_mean'].to_list()
                 captured = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
                 assert captured.pipeline_digest != baseline.pipeline_digest and captured.resource_digest != baseline.resource_digest
                 expected, _ = _factory_probe(captured, factory)
@@ -1952,7 +1953,7 @@ def _assert_factory_resources(plan, params):
                 assert digest(captured) == before
             with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
                 _factory_probe(captured, factory)
-            assert _factory_probe(baseline, factory)[0] == pool.submit(_factory_probe, baseline, factory).result(timeout=30)[0] == _caller_feature(data, 3)['caller_mean'].to_list()
+            assert _factory_probe(baseline, factory)[0] == pool.submit(_factory_probe, baseline, factory).result(timeout=30)[0] == _caller_feature(data, 2)['caller_mean'].to_list()
         with pytest.MonkeyPatch.context() as patch:
             cell = ClosureRolling.__call__.__closure__[0]
             patch.setattr(cell, 'cell_contents', [2])
