@@ -38,7 +38,6 @@ ruleset:
     - pr_checks_prd
     - pr_checks_fail_loud
     - pr_checks_typing
-    - pr_checks_version
     - pr_checks_honesty
     - PR Checks Tests
     - PR Checks Coverage

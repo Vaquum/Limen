@@ -19,7 +19,6 @@
   "governance/prd_gate.py": 200,
   "governance/ruleset_gate.py": 190,
   "governance/typing_gate.py": 760,
-  "governance/version_gate.py": 330,
   "limen/__init__.py": 100,
   "limen/__main__.py": 10,
   "limen/_optional.py": 20,
