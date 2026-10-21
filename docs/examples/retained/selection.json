@@ -1,59 +1,102 @@
 {
   "revision": {
-    "head": "d89bfba60a2fbb16f158ced625ea5d94a293df2b",
-    "tested_commit": "d89bfba60a2fbb16f158ced625ea5d94a293df2b",
-    "tree": "609750b802e87bf8e05157554103560670e35ee5",
+    "head": "6185108890a65f22174849b389e036810a7f0e83",
+    "tested_commit": "6185108890a65f22174849b389e036810a7f0e83",
+    "tree": "79b3d723f1d056b681b81c8aea644e81049c3a47",
     "dirty": false
   },
   "package": {
-    "version": "5.44.4",
-    "wheel_sha256": "b0cf157fd6e6176450bd773c0abc651d799e76a8b2fc05cd4eba5025d00cee9c",
-    "import_location": "/private/var/folders/zg/pwnp530s7m5731gmlbhqyh_r0000gn/T/pytest-of-mikkokotila/pytest-133/book_wheel0/isolated/lib/python3.12/site-packages/limen/__init__.py"
+    "version": "5.46.0",
+    "wheel_sha256": "c61db7d5cfe78bf6938e96ce621c14347904211c4a09a689806b0bf413a2957f",
+    "import_location": "/private/tmp/limen-compiled-observation-env/lib/python3.12/site-packages/limen/__init__.py"
   },
   "environment": {
     "python": "3.12.3 (main, Apr  9 2024, 08:09:14) [Clang 15.0.0 (clang-1500.1.0.2.5)]",
     "platform": "macOS-26.6.2-arm64-arm-64bit",
     "runner": "local:arm64",
-    "lock_sha256": "e1cdf86ec14ea2c7e9f57036197097e7290007fbc8f45a239386e0fb749ec748",
-    "lock_resolution_target": "Python 3.10 / Linux (research-env.in resolution header)",
-    "dependencies_sha256": "9fe3ee65858613b5dcbe5d41303c4526bd02ea977b0103968ec341752a31ccf0"
+    "lock_sha256": "090652807b6a6449e14ff980ed1bc1ad95ca83d7a412c6fed67dbc9c44ca5a8e",
+    "lock_resolution_target": "docs/examples/requirements-research-macos.txt / Python 3.10 resolution",
+    "dependencies_sha256": "d0c8e70b4cecfefa08dd63e83561c0f93b51bfbbf688101d897338eadb2ae678"
   },
   "inputs": [
     {
+      "path": "tests/fixtures/spot_1h_20240101_20240116.parquet",
+      "sha256": "170337b8e80843067b3934f194f304bb1e2697327e6784e70739811b3edfdadd",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
+      "path": "tests/fixtures/recorded-funding.parquet",
+      "sha256": "59d48b719df4bdb3545c1e742128e4513d6aa3078645375e0dc0db92d845ab92",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
       "path": "tests/fixtures/spot_1h_20240101_20241231.parquet",
       "sha256": "a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72",
-      "window": "full recorded fixture; scenario-specific row selections are in the project"
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
     },
     {
       "path": "tests/fixtures/spot_15m_20250101_20250531.parquet",
       "sha256": "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a",
-      "window": "full recorded fixture; scenario-specific row selections are in the project"
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
     },
     {
       "path": "tests/fixtures/btcusdt_funding_20240101_20240108.json",
       "sha256": "4352c58c5467ba48b5d13039052085e3bd59c089d6e1455bf99f4063279c3df2",
-      "window": "full recorded fixture; scenario-specific row selections are in the project"
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
     },
     {
       "path": "tests/fixtures/binance_trades_btcusdt_2025-05-23_90s.zip",
       "sha256": "ecc0d2c54aad5c69bba510fe0453d91b288f23579e568d665c06ecfae49757b5",
-      "window": "full recorded fixture; scenario-specific row selections are in the project"
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
+      "path": "tests/fixtures/observed_costs/benchmark.json",
+      "sha256": "b71011697713417b21302e670abf78c0bff739ec9135c7012db02fa3b2d6ccf8",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
+      "path": "tests/fixtures/observed_costs/history.zip",
+      "sha256": "df4d7776172df459ec297cbcfe8e72a4748a51ab626e3c990deec83415102093",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
+      "path": "tests/fixtures/observed_costs/license.json",
+      "sha256": "23484080def908bce03a3ad470c783ad4e7aea821b4275f16a132eec737f69d7",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
+      "path": "tests/fixtures/observed_costs/provenance.json",
+      "sha256": "e533eee80a6e90fd8d30936795a3fbbcb25b9d7080d57e8f11880f5ed3765e98",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
+    },
+    {
+      "path": "tests/fixtures/observed_costs/reproduce.py",
+      "sha256": "3fa7c01d291c119b03fa1040673904b06ffb8d3e00f81eb3daa55b13a1f2adf0",
+      "window": "Pinned recorded bundle; source and selection windows are in the canonical declarations."
     }
   ],
   "sources": [
     {
       "path": "docs/examples/python-research/research.py",
       "region": "experiment",
-      "sha256": "40e72b1a7d213c54760e7809cfbb887507d6a63155688d07a1873dfc6c23c2c1",
-      "commit": "648328a3d9b5b7a1290a769f871e65fa54a8574b",
+      "sha256": "96f6b16f406844ff05e52a72d2a31d589dfc324402a3069c0e8bfd42c09ec558",
+      "commit": "3a1dba7f7ceac86a2fcfc44283ffc0a00675f27e",
       "status": "candidate",
       "merged_pr": null
     },
     {
-      "path": "docs/examples/compiled-research/research.py",
-      "region": "experiment",
-      "sha256": "fcbdac4c020168a17a122f00074dc9c15cc9e8b92a8b56a202310aa08d07f16b",
-      "commit": "648328a3d9b5b7a1290a769f871e65fa54a8574b",
+      "path": "docs/examples/compiled-research/run.sh",
+      "region": "selection",
+      "sha256": "5a3997eb024fd53cc620ba4be0ddc32bd3efabc3e210ec15ceea8162b63d2f80",
+      "commit": "dd331411f8e751c2b17dd64a43949e7f8a3adfe3",
+      "status": "candidate",
+      "merged_pr": null
+    },
+    {
+      "path": "docs/examples/compiled-research/selection.yaml",
+      "region": "declaration",
+      "sha256": "bd2536a29a42ead9545893838350e7951a4c6d584cb0a521449bd6dbbeb0bc5f",
+      "commit": "dd331411f8e751c2b17dd64a43949e7f8a3adfe3",
       "status": "candidate",
       "merged_pr": null
     }
@@ -64,9 +107,9 @@
       "scenario": "selection",
       "path": "docs/examples/retained/python-selection.json",
       "sha256": "d51c57f27c605fa1ab5e9048b49e69b5faaac2b728f19bd6a499a6d2f23071c4",
-      "source_sha256": "40e72b1a7d213c54760e7809cfbb887507d6a63155688d07a1873dfc6c23c2c1",
-      "environment_sha256": "0ad78a9a0fa5330d7cfe6084d82ea42ecb7fc512479f77b0a1bb36d4b8fa71b0",
-      "retained_commit": "d89bfba60a2fbb16f158ced625ea5d94a293df2b",
+      "source_sha256": "96f6b16f406844ff05e52a72d2a31d589dfc324402a3069c0e8bfd42c09ec558",
+      "environment_sha256": "8274b39964676aff7b54d5dcc7d8a47ed6b852506347dbc12fb7fa2c900c25f3",
+      "retained_commit": "6185108890a65f22174849b389e036810a7f0e83",
       "metrics": {
         "last_prediction": {
           "absolute_tolerance": 1e-10,
@@ -79,9 +122,9 @@
       "scenario": "selection",
       "path": "docs/examples/retained/compiled-selection.json",
       "sha256": "67d02350500cd6454b6b0621a408b68665738b5f44be7903dc242f0db121e824",
-      "source_sha256": "fcbdac4c020168a17a122f00074dc9c15cc9e8b92a8b56a202310aa08d07f16b",
-      "environment_sha256": "0ad78a9a0fa5330d7cfe6084d82ea42ecb7fc512479f77b0a1bb36d4b8fa71b0",
-      "retained_commit": "d89bfba60a2fbb16f158ced625ea5d94a293df2b",
+      "source_sha256": "5a3997eb024fd53cc620ba4be0ddc32bd3efabc3e210ec15ceea8162b63d2f80",
+      "environment_sha256": "8274b39964676aff7b54d5dcc7d8a47ed6b852506347dbc12fb7fa2c900c25f3",
+      "retained_commit": "6185108890a65f22174849b389e036810a7f0e83",
       "metrics": {}
     }
   ]

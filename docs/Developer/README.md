@@ -41,12 +41,12 @@ The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canon
 
 For research behavior changes:
 
-1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. A Manifest called from Python still follows the latter contract. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
+1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. Verify the Compiled claim through unchanged YAML and actual CLI execution; Python component APIs are optional integration surfaces. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
 2. Confirm the signal layer: read the relevant [Indicators](../Indicators.md), [Features](../Features.md), [Transforms](../Transforms.md), and [Scalers](../Scalers.md) pages before changing prep.
 3. For Compiled Research prep, preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations. Python Research keeps methodology caller-owned.
 4. For target changes, read [Targets](../Targets.md); preserve training-only threshold fitting in the governed pipeline.
 5. Declare Compiled Research search spaces through Manifest/YAML params; preserve caller-owned parameter and search choices in Python Research.
-6. Run compiled experiments through CLI/Manifest, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
+6. Run Compiled experiments through unchanged YAML and CLI, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
 7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
 8. Make affected code, canonical examples, docs and tests change together. Leave version surfaces alone; they move only at release time.
 9. Review the full GitHub diff before requesting review.

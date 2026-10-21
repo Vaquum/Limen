@@ -9,7 +9,7 @@
 
 ## In the research projects
 
-The [Python project](../../docs/examples/python-research/README.md) checks recorded input digests before reading bounded populations. The [Compiled project](../../docs/examples/compiled-research/README.md) resolves its declared file source through the driver’s data directory. The data chapter explains both acquisition paths and the difference between a fixed file and a provider’s current snapshot.
+The [Python project](../../docs/examples/python-research/README.md) checks recorded input digests before reading bounded populations. The [Compiled project](../../docs/examples/compiled-research/README.md) reads the literal `inputs/` source path declared in YAML from the bundle root. The data chapter explains both acquisition paths and the difference between a fixed file and a provider’s current snapshot.
 
 ## What this package owns
 

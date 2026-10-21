@@ -3,6 +3,7 @@ from pathlib import Path
 import click
 
 from limen import __version__
+from limen.cli.assessment import register as _register_assessment
 
 
 @click.group()
@@ -13,13 +14,11 @@ def cli() -> None:
     Limen — declarative ML experiment runner.
 
     \b
-    Define experiments as YAML files and run them with a single command.
-    Limen handles validation, compilation, parameter search, and result saving.
+    Define experiments in YAML; validate, compile, search and save with the CLI.
 
     \b
     Quick start:
-      limen validate experiment.yaml       Check your YAML for errors
-      limen profile experiment.yaml        Profile permutation space
+      limen validate experiment.yaml       Check YAML; profile it with limen profile
       limen run experiment.yaml            Run the experiment
       limen run --dry-run experiment.yaml  Validate + compile only, no execution
 
@@ -42,10 +41,7 @@ def cli() -> None:
           type: random             # random | grid
         output_format: csv         # csv | parquet
 
-    \b
-    \b
-    Template discovery:
-      limen list-templates
+    Template discovery: limen list-templates
     '''
 
 
@@ -176,7 +172,7 @@ def profile_cmd(yaml_file: Path) -> None:
 
 
 @cli.command()
-@click.argument('target', required=False, default=None, metavar='[YAML_FILE | MANIFEST_URI]')
+@click.argument('target', nargs=-1, metavar='[YAML_FILE | MANIFEST_URI]...')
 @click.option('--dry-run', is_flag=True, default=False,
               help='Validate and compile only — do not execute the experiment.')
 @click.option('--resume', type=click.Path(exists=True, file_okay=False, path_type=Path),
@@ -185,7 +181,7 @@ def profile_cmd(yaml_file: Path) -> None:
 @click.option('--no-progress-bar', is_flag=True, default=False,
               help='Disable the experiment progress bar.')
 @click.option('--workers', type=click.IntRange(min=1), default=None, help='Concurrent rounds; overrides YAML, or uses saved settings with --resume.')
-def run(target: str | None, dry_run: bool, resume: Path | None,
+def run(target: tuple[str, ...], dry_run: bool, resume: Path | None,
         no_progress_bar: bool, workers: int | None) -> None:
 
     '''
@@ -223,11 +219,10 @@ def run(target: str | None, dry_run: bool, resume: Path | None,
       limen run --dry-run experiment.yaml
       limen run manifest://sha256:abc123ef...
       limen run --resume ./results/my_experiment_20260521_120000
-      limen run --no-progress-bar experiment.yaml
     '''
 
     if resume is not None:
-        if target is not None:
+        if target:
             click.secho('Cannot specify both a YAML file and --resume.', fg='red')
             raise SystemExit(1)
         if dry_run:
@@ -236,14 +231,18 @@ def run(target: str | None, dry_run: bool, resume: Path | None,
         from limen.cli.commands.resume import run_resume
 
         ok = run_resume(resume, progress_bar=not no_progress_bar, workers=workers)
-    elif target is not None:
+    elif target:
         from limen.cli.commands.run import run_experiment
 
-        yaml_path, manifest_id, results_base = _resolve_target(target)
-        if yaml_path is None:
-            raise SystemExit(1)
-        ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id,
-                            results_base=results_base, progress_bar=not no_progress_bar, workers=workers)
+        ok = True
+        for item in target:
+            yaml_path, manifest_id, results_base = _resolve_target(item)
+            if yaml_path is None:
+                raise SystemExit(1)
+            ok = run_experiment(yaml_path, dry_run=dry_run, manifest_id=manifest_id,
+                                results_base=results_base, progress_bar=not no_progress_bar, workers=workers)
+            if not ok:
+                raise SystemExit(1)
     else:
         click.secho('Provide a YAML file or --resume <results-dir>.', fg='red')
         raise SystemExit(1)
@@ -460,3 +459,6 @@ def backup() -> None:
 
     ok = run_backup(Path.cwd())
     raise SystemExit(0 if ok else 1)
+
+
+_register_assessment(cli)

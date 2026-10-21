@@ -1,6 +1,6 @@
 # Glossary
 
-These terms apply to the [Python project](examples/python-research/README.md), the [Compiled project](examples/compiled-research/README.md) and the reference appendices. Their distinction is methodological ownership: a Manifest invoked from Python remains Compiled Research.
+These terms apply to the [Python project](examples/python-research/README.md), the [Compiled project](examples/compiled-research/README.md) and the reference appendices. Their distinction is methodological ownership: Compiled Research uses YAML declarations and CLI commands.
 
 ## Core terms
 
@@ -8,8 +8,8 @@ These terms apply to the [Python project](examples/python-research/README.md), t
 | --- | --- |
 | Limen | Vaquum's Bitcoin research engine for Python and Compiled experiments, analysis, backtesting and reusable Sensors and Cohorts. |
 | Python Research | Caller-owned data, preparation, models, backtesting and selection in ordinary Python; no Manifest or built-in-model whitelist is required. |
-| Compiled Research | A declared Manifest pipeline, invoked through the CLI or Python, with its configured validation, preparation and evidence contracts. |
-| YAML manifest | A Compiled experiment definition consumed by the `limen` CLI or `CompiledSFD`. |
+| Compiled Research | A YAML experiment executed through the CLI, with its configured validation, preparation and evidence contracts. |
+| YAML manifest | A Compiled experiment definition validated, compiled and executed by the `limen` CLI. |
 | `Manifest` | The abstract experiment-pipeline interface. Runnable pipelines use `MLManifest` or `RuleBasedManifest`. |
 | `MLManifest` | Manifest implementation for trainable reference architectures. |
 | `RuleBasedManifest` | Manifest implementation for predicate-driven, non-learned strategies. |

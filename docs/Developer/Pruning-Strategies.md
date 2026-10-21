@@ -6,9 +6,9 @@ Use this page when implementing or reviewing a reducer. For user-facing configur
 
 The [Python project](../examples/python-research/README.md) and
 [Compiled project](../examples/compiled-research/README.md) both exercise a
-three-candidate budget and mixed reducer/callback/file feedback. Maintain their
-ordering, actual injected-candidate scores and checkpoint assertions when
-changing the controller or queue. The full functions below use their projects'
+three-candidate budget. The Python project also exercises mixed reducer, callback
+and file feedback. Maintain its ordering, injected-candidate scores and checkpoint
+assertions when changing the controller or queue. The full functions below use their projects'
 imports and recorded-data helpers.
 
 ## Prerequisites
@@ -117,6 +117,7 @@ The CLI compiles `uel.pruning_strategies` through `REDUCER_REGISTRY`. This is th
 
 <!-- example: pruning-compiled-definition source=docs/examples/compiled-research/adaptive.yaml region=__file__ scenario=search interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_adaptive
@@ -167,6 +168,7 @@ sfd:
     - 42
 # region budget_config
 uel:
+  output_path: compiled-adaptive
   n_permutations: 4
   search_strategy:
     type: grid
@@ -178,6 +180,7 @@ uel:
       max_permutations: 3
   feedback_interval: 1
 # endregion budget_config
+# endregion declaration
 ```
 
 Each entry must be a mapping with a registered `type`. `params` is optional but, when present, must be a mapping of constructor arguments. Unknown reducer keys, malformed entries, and invalid constructor values fail validation or compilation before the run starts.
@@ -246,30 +249,9 @@ def mixed_feedback(data_dir, output):
 
 ### Intervention file
 
-Artifact-backed runs poll `interventions.json` in the experiment directory. When its modification time changes, the controller expects a JSON array of ordinary intervention dictionaries. Missing `source` fields are filled with `intervention_file`. The Compiled project's callback writes a real injection after the fresh-run guard; the following file poll applies it once. Precreating the file in a new experiment directory would fail that guard:
+Artifact-backed controller integrations poll `interventions.json` in the experiment directory. When its modification time changes, the controller expects a JSON array of ordinary intervention dictionaries. Missing `source` fields are filled with `intervention_file`. The Python mixed-feedback example above creates the file during execution; precreating it in a fresh results directory fails the initial-state guard. An unchanged file is not applied twice within the same controller lifetime, and checkpoints retain its observed modification time.
 
-<!-- example: pruning-compiled-file source=docs/examples/compiled-research/scenarios.py region=mixed_feedback scenario=search interface=compiled role=executed -->
-```python
-def mixed_feedback(data_dir, output):
-    config = configuration('adaptive', data_dir)
-    config['uel']['recording'] = {'predictions': True, 'alignment': True, 'trade_ledger': False, 'fold_details': False}
-
-    def steer(log, msq):
-        if log.height == 2:
-            msq.keep_is('C', .1)
-            (output / 'interventions.json').write_text(json.dumps([
-                {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
-
-    loop = execute(config, output, callback=steer)
-    checkpoint = json.loads((output / 'checkpoint.json').read_text())
-    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
-        records = [json.loads(line) for line in stream]
-    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
-            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
-            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
-            'remaining': checkpoint['msq_state']['trim_budget'], 'records': records,
-            'predictions': {record['round_id']: recorded_predictions(output, record) for record in records}}
-```
+This is an optional component integration surface. The canonical Compiled project keeps its research controls in YAML through `uel.pruning_strategies`.
 
 ## Intervention operations
 

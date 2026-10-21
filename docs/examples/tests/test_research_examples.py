@@ -134,6 +134,9 @@ def test_complete_research_scenario(research_proof, interface, scenario):
     item = research_proof['scenarios'][(interface, scenario)]
     assert item['output_sha256'] and item['command']
     assert item['summary']
+    if (interface, scenario) == ('compiled', 'recovery'):
+        assert 0 < item['summary']['interrupted_rounds'] < item['summary']['resumed_rounds'] == 4
+        assert item['summary']['uninterrupted_equivalence'] is True
 
 
 @pytest.mark.parametrize('interface', ['python', 'compiled'])
@@ -145,7 +148,7 @@ def test_mixed_feedback_order_injected_results_and_checkpoint(interface, request
     verify_feedback(interface, result, inputs)
 
 
-def test_direct_yaml_selection_matches_python_driver(compiled_project, tmp_path):
+def test_cli_selection_matches_reconstruction_api(compiled_project, tmp_path):
     from wheel_proof import compare_selection_logs
     source = ROOT / 'docs/examples/compiled-research/selection.yaml'
     (tmp_path / 'compiled-research').mkdir()

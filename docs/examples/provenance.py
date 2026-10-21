@@ -59,7 +59,7 @@ def pull_associations(commit):
 def source_paths(root):
     from check_evidence import all_reference_bindings
     references = {item['path'] for item in all_reference_bindings(root)}
-    return sorted({'README.md', *references, *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json') and 'tests' not in path.parts]})
+    return sorted({'README.md', *references, *[str(path.relative_to(root)) for path in (root / 'docs').rglob('*.md')], *[str(path.relative_to(root)) for path in (root / 'limen').rglob('README.md')], *[str(path.relative_to(root)) for path in (root / 'docs/examples').rglob('*') if path.is_file() and path.suffix in ('.py', '.yaml', '.json', '.sh', '.toml') and 'tests' not in path.parts]})
 
 
 def tree_objects(root, revision):

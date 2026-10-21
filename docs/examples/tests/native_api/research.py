@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import polars as pl
 from ruamel.yaml import YAML
@@ -25,7 +25,7 @@ def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
 
 # region experiment
 def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
+    config = YAML(typ="safe").load(Path(__file__).resolve().parents[2] / "compiled-research/selection.yaml")
     source = data_dir / "spot_15m_20250101_20250531.parquet"
     expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
     if hashlib.sha256(source.read_bytes()).hexdigest() != expected:

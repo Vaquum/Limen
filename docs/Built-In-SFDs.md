@@ -1,6 +1,6 @@
 # Built-in SFDs
 
-Limen ships foundational SFDs under `limen.sfd.foundational_sfd`; most have matching YAML templates under `limen/yaml/templates`. These packaged experiments adopt the Compiled Research contract, whether invoked through YAML or from Python. The [Compiled project](examples/compiled-research/README.md) uses smaller recorded-data declarations to exercise the same model families. The [Python project](examples/python-research/README.md) instead owns its Ridge fitting, scoring and retained state directly; using sklearn does not make that workflow a packaged SFD.
+Limen ships model templates under `limen/yaml/templates` and their component implementations under `limen.sfd.foundational_sfd`. Compiled Research edits YAML and executes it through the CLI. The [Compiled project](examples/compiled-research/README.md) supplies recorded-data declarations for those model families. The [Python project](examples/python-research/README.md) owns its fitting, scoring and retained state directly.
 
 They show the packaged Limen experiment shape because each one combines:
 
@@ -145,29 +145,18 @@ because the feature pipeline and target can change.
 
 The Compiled project includes XGBoost in its recorded model-family comparison:
 
-<!-- example: builtins-compiled-model-families source=docs/examples/compiled-research/scenarios.py region=model_comparisons scenario=search interface=compiled role=executed -->
-```python
-def model_comparisons(data_dir, output):
-    families = {}
-    for family in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing'):
-        config = configuration('family_' + family, data_dir)
-        # This diagnostic baseline uses NumPy's caller-owned process RNG.
-        if family == 'random_binary':
-            np.random.seed(42)
-        directory = output / family
-        loop = execute(config, directory, post_processing=False)
-        log = research_project.completed_log(loop)
-        with gzip.open(directory / 'round_data.jsonl.gz', 'rt') as stream:
-            records = [json.loads(line) for line in stream]
-        metric = 'direction_accuracy' if family == 'direction_sizing' else 'accuracy' if family == 'random_binary' else 'rmse'
-        selected = log['id'].head(1).to_list()
-        sensors = [] if family == 'random_binary' else Trainer(directory).train(selected)
-        predictions = {record['round_id']: recorded_predictions(directory, record) for record in records}
-        families[family] = {'metrics': log.select('id', metric).to_dicts(), 'records': records, 'predictions': predictions, 'reconstructed_sensors': len(sensors), 'replay': 'stochastic baseline; replay is not asserted' if family == 'random_binary' else 'selected recorded round reconstructed by Trainer'}
-    return families
+<!-- example: builtins-compiled-model-families source=docs/examples/compiled-research/run.sh region=models scenario=search interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar \
+  compiled-research/common_strategies.yaml \
+  compiled-research/family_ridge_regressor.yaml \
+  compiled-research/family_dlinear_regressor.yaml \
+  compiled-research/family_xgboost_regressor.yaml \
+  compiled-research/family_random_binary.yaml \
+  compiled-research/family_direction_sizing.yaml
 ```
 
-This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains prediction payloads and reconstructs deterministic selected rounds. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
+This diagnostic uses one declared recorded-data case per family (two direction/sizing cases), retains native prediction payloads. The independent assertions recompute continuous-family RMSE from the original aligned labels. It establishes these declared cases, rather than the full packaged search spaces.
 
 The separate [XGBoost sweep driver](examples/xgboost_sweep.py) remains available for broader research. Its `test` mode selects a 5,000-row two-hour source; `prod` selects hourly observations from 2025-01-01. Its seed controls candidate sampling. CUDA additionally needs a compatible XGBoost build and GPU; inspect the fitted booster configuration to establish the actual backend. Those broader and GPU runs are outside the canonical project's recorded proof.
 
@@ -199,31 +188,18 @@ That optional status matters at execution time: discovery and template listing w
 
 ## Running one immediately
 
-The Compiled selection entry point shows how a declared configuration becomes an SFD, runs through UEL and reconstructs its chosen recorded round:
+The Compiled selection entry point validates the YAML, runs its declared search and assesses the selected recorded rounds:
 
-<!-- example: builtins-compiled-selection source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
-```python
-def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
-    source = data_dir / "spot_15m_20250101_20250531.parquet"
-    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise ValueError("Recorded quarter-hour input digest differs")
-    # Resolve the driver's public --data-dir argument into the recorded run definition.
-    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
-    compiled = CompiledSFD(config)
-    loop = UniversalExperimentLoop(
-        sfd=compiled, search_strategy=build_search_strategy(config),
-        experiment_dir=output_dir, yaml_reference=config,
-    )
-    loop.run("compiled-selection", n_permutations=2, workers=1,
-             post_processing=True, progress_bar=False)
-    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
-    sensors = Trainer(output_dir).train(selected)
-    return loop, sensors, selected
+<!-- example: builtins-compiled-selection source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
-The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template scaffolding and installed commands. Native invocation can supply a built-in or custom search strategy; adopting the Manifest keeps it Compiled Research. When `data=` is omitted, the Manifest fetches data through `fetch_data()`.
+The [CLI lifecycle](Command-Line-Interface.md#first-yaml-run) verifies template scaffolding and installed commands. Declare the data source and `uel.search_strategy` in YAML. The CLI compiles that declaration and fetches its input through the configured source.
 
 ## How to choose
 

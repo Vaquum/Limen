@@ -422,12 +422,14 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
     yaml_path = tmp_path / 'campaign.yaml'
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value.interrupted = False
         assert run_experiment(yaml_path, progress_bar=False, workers=2)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 2
         assert loop_factory.return_value.check_parallel_admission.call_args.args == (2, True)
     config['uel']['output_path'] = str(tmp_path / 'yaml')
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value.interrupted = False
         assert run_experiment(yaml_path, progress_bar=False)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 4
     without_workers = dict(config)
@@ -435,6 +437,7 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
     assert canonical_manifest_id(config) != canonical_manifest_id(without_workers)
     source = parallel_campaigns['grid'][2]
     with patch('limen.cli.commands.resume.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value.interrupted = False
         assert run_resume(source, progress_bar=False)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 4
 

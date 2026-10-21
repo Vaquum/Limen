@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_adaptive
@@ -48,6 +49,7 @@ sfd:
     - 42
 # region budget_config
 uel:
+  output_path: compiled-adaptive
   n_permutations: 4
   search_strategy:
     type: grid
@@ -59,3 +61,4 @@ uel:
       max_permutations: 3
   feedback_interval: 1
 # endregion budget_config
+# endregion declaration
