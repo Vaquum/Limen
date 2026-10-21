@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, fields, is_dataclass
 from hashlib import sha256
 from typing import Literal, TypeAlias, cast
@@ -195,6 +195,39 @@ def json_value(value: object) -> JsonValue:
 
 def contract_digest(contract: Mapping[str, JsonValue]) -> str:
     return sha256(json.dumps(contract, sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
+
+
+def expected_signal_intents(signals: Sequence[Mapping[str, object]], policy: Mapping[str, object], intents: Sequence[Mapping[str, object]], fills: Sequence[Mapping[str, object]]) -> list[tuple[int, float]]:
+    """Replicate TradeAccount signal emission: required (available_at_ns, target) pairs.
+
+    Mirrors the engine's change detection, flat threshold and forced-exit latch exactly: nonzero
+    change signals are excused only inside a latch window opened by a fill-evidenced forced exit
+    (a bare intent plants no latch) and closed by the next flat signal, which always emits.
+    """
+    rate = float(cast(float, policy['notional_rate']))
+    flat = float(cast(float, policy.get('flat_threshold') or 0.0))
+    step = float(cast(float, policy.get('signal_change_bps') or 0.0)) / BPS
+    filled = {row['intent_id'] for row in fills}
+    exits = sorted(int(cast(int, row['requested_at_ns'])) for row in intents if row['reason'] in ('time_stop', 'stop_loss', 'take_profit') and row['intent_id'] in filled)
+    required: list[tuple[int, float]] = []
+    last, latched, cursor = 0.0, False, 0
+    for signal in signals:
+        moment = int(cast(int, signal['available_at_ns']))
+        while cursor < len(exits) and exits[cursor] <= moment:
+            latched, cursor = True, cursor + 1
+        if signal['target'] is None:
+            continue
+        value = float(cast(float, signal['target']))
+        if abs(value) > 1:
+            raise ValueError('Invalid execution signal bounds')
+        current = 0.0 if abs(value) <= flat else value
+        if current == 0.0:
+            latched = False
+        if abs(current - last) > step or (current == 0.0 and last != 0.0) or current * last < 0:
+            last = current
+            if not latched:
+                required.append((moment, rate * current))
+    return required
 
 
 def source_binding(frame: pl.DataFrame, identity: str, start_ns: int, end_ns: int, precision_ns: int, interpretation: str) -> SourceBinding:

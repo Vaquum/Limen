@@ -63,6 +63,8 @@ def source_interval(source: SourceConfig | None) -> object:
 def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = None, timestamp_role: str = 'start') -> pl.DataFrame:
     if timestamp_role not in ('start', 'end'):
         raise ValueError('Source timestamp role must be start or end')
+    if set(_METADATA) & set(data.columns) and not set(_METADATA) <= set(data.columns):
+        raise ValueError('Explicit source timing requires all four metadata columns')
     if set(OBSERVATION_COLUMNS) <= set(data.columns):
         return data.select(OBSERVATION_COLUMNS)
     if not {'datetime', 'open', 'high', 'low', 'close'} <= set(data.columns):

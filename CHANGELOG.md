@@ -1939,6 +1939,11 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.46.0] - 2026-10-21
 
+- Assess frozen event execution contracts in final holdout: admit pinned single-Sensor binary cash_spot/linear_perpetual economics from protected research through classified freeze, single event execution and versioned read-back; scenario reports stay schema-1 byte-identical.
+- Raise the suite runtime ceiling to 260s for measured suite growth (main observed up to 238s).
+
+## [5.46.1] - 2026-10-21
+
 - Ground Compiled Research in comprehensive YAML declarations and CLI execution; align the book, reference, contracts and exact-source proof.
 - Add CLI assessment of validation-selected Sensors and Cohorts, declared guarded holdout reservation and assessment, and sequential execution of multiple YAML files.
 - Bundle and verify the recorded walk-forward subset and normalized funding history; preserve component API regression coverage separately from the public examples.
