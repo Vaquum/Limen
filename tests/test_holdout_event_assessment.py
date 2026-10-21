@@ -229,6 +229,30 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, trim_closed, 'closed-episode valuation')
 
+    def reassign(report_dict):
+        fills = report_dict['execution']['ledger']['fills']
+        intents = report_dict['execution']['ledger']['intents']
+        fills[0]['intent_id'] = intents[1]['intent_id']
+
+    _rewrite_report(root, report, reassign, 'fill request order')
+
+    def reverse(report_dict):
+        execution = report_dict['execution']
+        fill = execution['ledger']['fills'][0]
+        fill['quantity_delta'] = -fill['quantity_delta']
+        fill['slippage'] = fill['quantity_delta'] * (fill['fill_price'] - fill['reference_price'])
+        slip = sum(entry['slippage'] for entry in execution['ledger']['fills'])
+        execution['metrics']['slippage']['value'] = slip
+        execution['metrics']['gross_pnl']['value'] = (execution['metrics']['ending_equity']['value'] - execution['initial_equity']
+                                                      + execution['metrics']['fees']['value'] + slip - execution['metrics']['funding_pnl']['value'])
+
+    _rewrite_report(root, report, reverse, 'position transition')
+
+    def orphan(report_dict):
+        report_dict['execution']['ledger']['fills'][0]['time_ns'] += 1
+
+    _rewrite_report(root, report, orphan, 'fill state coverage')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
