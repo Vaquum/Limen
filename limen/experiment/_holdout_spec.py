@@ -9,13 +9,15 @@ import inspect
 import json
 import math
 import numbers
+import sys
 from typing import cast
 
 from limen.experiment._holdout_state import fitted_witness
 from limen.experiment._holdout_namespaces import namespace_bindings
-from limen.experiment._holdout_calls import call_functions, native_attribute
+from limen.experiment._holdout_calls import call_functions, function_module, native_attribute
 
 __all__ = ['digest', 'encoded', 'normalized']
+_LIBRARIES = ('numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy')
 
 
 def normalized(value: object) -> object:
@@ -44,7 +46,7 @@ def normalized(value: object) -> object:
                 break
             factory = native_attribute(provider, 'func')
         constructors = tuple(inspect.getattr_static(owner, name, None) for owner, name in ((factory, '__new__'), (factory, '__init__'), (type(factory), '__call__'))) if isinstance(factory, type) else ()
-        bindings = namespace_bindings(tuple(function for target in (callable_value, *constructors) for function in call_functions(target)))
+        bindings = namespace_bindings(tuple(function for target in (callable_value, *constructors) for function in call_functions(target)), lambda function: function_module(function, _LIBRARIES).split('.')[0] in sys.stdlib_module_names or function_module(function, _LIBRARIES).split('.')[0] in _LIBRARIES)
         target = cast(object, factory)
         owner: object = target.__self__ if inspect.ismethod(target) else target
         factory_class = owner if isinstance(owner, type) else type(owner)

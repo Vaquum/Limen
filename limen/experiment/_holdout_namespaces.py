@@ -1,4 +1,5 @@
 import dis
+from collections.abc import Callable
 from functools import lru_cache
 from types import CodeType, FunctionType, MethodType
 
@@ -37,7 +38,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
     return (*found, *((alias, key) for part in code.co_consts if isinstance(part, CodeType) for name, key in namespace_calls(part) for alias in aliases.get(name, {name})))
 
 
-def namespace_bindings(functions: tuple[FunctionType, ...]) -> tuple[tuple[FunctionType, dict[str, object]], ...]:
+def namespace_bindings(functions: tuple[FunctionType, ...], native: Callable[[FunctionType], bool]) -> tuple[tuple[FunctionType, dict[str, object]], ...]:
     pending, seen, bindings = list(functions), set[FunctionType](), list[tuple[FunctionType, dict[str, object]]]()
     while pending:
         function = pending.pop()
@@ -46,5 +47,5 @@ def namespace_bindings(functions: tuple[FunctionType, ...]) -> tuple[tuple[Funct
         seen.add(function)
         namespace = {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}
         bindings.append((function, namespace))
-        pending.extend(value.__func__ if isinstance(value, MethodType) else value for value in namespace.values() if isinstance(value, (FunctionType, MethodType)))
+        pending.extend(value.__func__ if isinstance(value, MethodType) else value for value in namespace.values() if isinstance(value, (FunctionType, MethodType)) and not native(value.__func__ if isinstance(value, MethodType) else value))
     return tuple(bindings)
