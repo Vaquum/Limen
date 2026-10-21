@@ -13,6 +13,7 @@ import os
 from importlib.metadata import version
 from pathlib import Path
 from threading import Thread
+from types import FunctionType
 from typing import ClassVar
 from unittest.mock import patch
 
@@ -20,6 +21,7 @@ import numpy as np
 import polars as pl
 import pytest
 
+from limen.calibration import fit_calibrator
 from limen.cohort import Cohort
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _holdout_attempts as attempts
@@ -49,6 +51,7 @@ _ALIAS_SENTINEL = object()
 _ALIAS_REGISTRY = {'default': _ALIAS_SENTINEL}
 _READ_GLOBALS = globals
 _FACTORY_PARAMS = {'C': 1.0}
+_HOLDOUT_ORIGINAL_PREDICT = LogRegBinary.predict
 
 
 def declared_model_factory(data, **params):
@@ -1103,6 +1106,88 @@ def test_frozen_nested_getattr_globals(native_assessment_case, defaulted, indexe
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(frozen, native_assessment_case)
         assert loader.call_count == 0
+
+
+def test_frozen_slot_namespace_reader(native_assessment_case):
+    class Reader:
+        __slots__ = ('read_globals',)
+        def __init__(self):
+            self.read_globals = globals
+        def offset(self):
+            return self.read_globals()['_LATE_RULES']['offset']
+    class SlotGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = np.clip(result['_probs'] + self.policy.offset(), 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = SlotGlobals
+    selected._model.policy = Reader()
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('nested', [False, True])
+@pytest.mark.parametrize('getter', [False, True])
+@pytest.mark.parametrize('closed', [False, True])
+def test_frozen_local_namespace_reader(native_assessment_case, nested, getter, closed):
+    class Reader:
+        __slots__ = ('read_globals',)
+        def __init__(self):
+            self.read_globals = globals
+    class AliasGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if nested:
+                reader = getattr(self.policy, 'read_globals', self.missing_reader) if getter else self.policy.read_globals
+            else:
+                reader = getattr(self, 'read_globals', self.missing_reader) if getter else self.read_globals
+            def offset():
+                return reader()['_LATE_RULES']['offset']
+            adjustment = offset() if closed else reader()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + adjustment, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = AliasGlobals
+    selected._model.missing_reader = None
+    if nested:
+        selected._model.policy = Reader()
+    else:
+        selected._model.read_globals = globals
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
+def test_frozen_native_predict_exemption(native_assessment_case):
+    def read_offset():
+        return _LATE_RULES['offset']
+    def template(self, data):
+        result = _HOLDOUT_ORIGINAL_PREDICT(self, data)
+        result['_probs'] = np.clip(result['_probs'] + fit_calibrator(), 0, 1)
+        return result
+    original = LogRegBinary.predict
+    namespace = original.__globals__
+    spoofed = FunctionType(template.__code__, namespace, 'predict')
+    spoofed.__qualname__ = 'LogRegBinary.predict'
+    class SpoofedGlobals(LogRegBinary):
+        predict = spoofed
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = SpoofedGlobals
+    with patch.dict(namespace, {'_HOLDOUT_ORIGINAL_PREDICT': original, 'fit_calibrator': read_offset}):
+        frozen = _freeze(selected)
+        assert _report(frozen, native_assessment_case)['state'] == 'completed'
+        with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='prediction dependency changed'):
+                _report(frozen, native_assessment_case)
+            assert loader.call_count == 0
 
 
 def test_trusted_component_implementation_and_globals(native_assessment_case):

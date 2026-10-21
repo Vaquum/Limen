@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -98,7 +98,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(value.__func__)
             visit(value.__self__)
         elif isinstance(value, partial):
-            for part in children(cast(object, value)):
+            for part in children(cast(object, value), namespace_readers=globals_names):
                 visit(part)
             if type(cast(object, value)) is not partial:
                 _ = objects.setdefault((id(type(cast(object, value))), False), cast(object, value))
@@ -110,7 +110,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             visit(value.__defaults__)
             visit(value.__kwdefaults__)
             for cell in value.__closure__ or ():
-                for part in children(cell):
+                for part in children(cell, namespace_readers=globals_names):
                     visit(part)
             function_module, function_name = _function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
             if fitting_call(function_module, function_name) or id(value) in sealed:
@@ -122,7 +122,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
             instructions = _instructions(value.__code__)
-            references = {name: list(children(cell)[1:]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
+            references = {name: list(children(cell, namespace_readers=globals_names)[1:]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             references.update({name: [part] for name, part in zip(value.__code__.co_varnames[value.__code__.co_argcount - len(value.__defaults__ or ()):value.__code__.co_argcount], value.__defaults__ or (), strict=True)})
             references.update({name: [part] for name, part in (value.__kwdefaults__ or {}).items()})
             imported: ModuleType | None = None
@@ -165,7 +165,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 elif instruction.opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME') and binding is not None:
                     references.setdefault(name, []).append(binding)
                     binding = None
-                if (name == 'fit_calibrator' and (function_module, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict'))) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
+                if (name == 'fit_calibrator' and (function_module, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict')) and value.__code__ in native_codes(function_module)) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
                 for candidate in tuple(references.get(name, ())):
                     item = candidate
@@ -208,7 +208,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if owner is not None and not isinstance(owner, ModuleType):
                 visit(owner)
         elif object_payload(value):
-            for part in children(cast(object, value)):
+            for part in children(cast(object, value), namespace_readers=globals_names):
                 visit(part, annotation=annotation)
             if type(value) is not np.ndarray:
                 _ = objects.setdefault((id(type(value)), False), value)
@@ -220,7 +220,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             if type(value) not in (dict, list, tuple, set, frozenset, defaultdict) and not (annotation and type(value).__module__ == 'typing'):
                 _ = objects.setdefault((id(value) if isinstance(value, type) else id(type(value)), isinstance(value, type)), value)
             if not isinstance(value, type):
-                for part in children(value):
+                for part in children(value, namespace_readers=globals_names):
                     visit(part, annotation=annotation)
 
     def methods(value: object) -> None:

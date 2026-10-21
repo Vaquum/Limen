@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from builtins import globals as _native_globals
 from collections import defaultdict, deque
 from collections.abc import Mapping
 from functools import lru_cache, partial
@@ -67,14 +68,14 @@ def _cell_parts(value: CellType) -> tuple[object, ...]:
         return (False,)
 
 
-def children(value: object) -> tuple[object, ...]:
+def children(value: object, *, namespace_readers: set[str] | None = None) -> tuple[object, ...]:
     if isinstance(value, Mapping):
         entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
-        return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value)).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
+        return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value), namespace_readers).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
-        return (*_native_values(cast(object, value)), *_attributes(cast(object, value)).values())
+        return (*_native_values(cast(object, value)), *_attributes(cast(object, value), namespace_readers).values())
     if object_payload(value):
-        return (npt.NDArray[np.generic].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value)).values())
+        return (npt.NDArray[np.generic].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
     metadata = _typing_metadata(value)
     if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)) or metadata is not None:
         parts: tuple[object, ...]
@@ -88,12 +89,12 @@ def children(value: object) -> tuple[object, ...]:
             parts = tuple(native_attribute(value, name) for name in ('fget', 'fset', 'fdel', '__doc__'))
         else:
             parts = tuple(native_attribute(cast(object, value), name) for name in ('func', 'args', 'keywords'))
-        return (*parts, _attributes(cast(object, value)))
+        return (*parts, _attributes(cast(object, value), namespace_readers))
     if isinstance(value, (type, ModuleType, pl.DataFrame, pl.Series)) or (inspect.isroutine(value) and type(value).__module__ == 'builtins') or _booster(value) or type(value) is np.ufunc:
         return ()
-    return _cell_parts(value) if type(value) is CellType else tuple(_attributes(value).values())
+    return _cell_parts(value) if type(value) is CellType else tuple(_attributes(value, namespace_readers).values())
 
-def _attributes(value: object) -> dict[str, object]:
+def _attributes(value: object, namespace_readers: set[str] | None = None) -> dict[str, object]:
     if type(value) in _FORM_TYPES or type(value) in _NO_ATTRIBUTE_TYPES:
         return {}
     values: dict[str, object] = {}
@@ -113,7 +114,9 @@ def _attributes(value: object) -> dict[str, object]:
                 continue
             key = f'{cls.__module__}.{cls.__qualname__}:{name}'
             try:
-                values[key] = (True, descriptor.__get__(value, type(value)))
+                values[key] = (True, content := descriptor.__get__(value, type(value)))
+                if namespace_readers is not None and content is _native_globals:
+                    namespace_readers.add(name)
             except AttributeError:
                 values[key] = (False,)
     return values
