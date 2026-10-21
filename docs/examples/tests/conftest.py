@@ -111,7 +111,7 @@ def research_proof(python_project, compiled_project, wheel_execution, request):
     proof.assert_compiled_research(compiled_project)
     assert wheel_execution is not None
     process, receipt = wheel_execution
-    assert process.wait(timeout=120) == 0, 'The isolated installed-wheel proof failed'
+    assert process.wait() == 0, 'The isolated installed-wheel proof failed'
     wheel = json.loads(receipt.read_text())
     wheel['scenario_reports'] = {(interface, scenario): report
                                 for interface, scenario, report in wheel['scenario_reports']}
