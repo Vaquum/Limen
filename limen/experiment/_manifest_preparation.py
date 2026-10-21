@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from datetime import datetime
-from typing import Protocol, TypeVar, cast
+from typing import TYPE_CHECKING, Protocol, TypeVar, cast
 import polars as pl
 
 from limen.backtest.trade_contract import TradePolicy
@@ -10,6 +10,9 @@ from limen.experiment._prepare_trade_context import FrozenTradeSources, Prepared
 from limen.experiment._prepare_backtest_data import prepare_backtest_data
 from limen.experiment._resolve_backtest_config import BACKTEST_KEYS, configured_barriers
 from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig
+
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import RuleBasedManifest
 
 _M = TypeVar('_M')
 
@@ -95,3 +98,32 @@ def apply_backtest_cost(manifest: SetupManifest, data: dict[str, object], round_
             data[f'backtest_{key}'] = resolved[key]
         else:
             _ = data.pop(f'backtest_{key}', None)
+
+
+def rule_predicates(manifest: RuleBasedManifest, data: pl.DataFrame, params: dict[str, object], *, split: str = 'input') -> tuple[pl.DataFrame, tuple[str, ...]]:
+    from limen.sfd.rule_based.predicates import build_predicate
+    config = manifest.strategy
+    if config is None:
+        raise ValueError('_finalize_rule_based_data manifest has no strategy configured')
+    conditions = [condition for condition in config.conditions if 'type' in condition]
+    names = tuple(cast(str, condition['id']) for condition in conditions)
+    collisions = sorted(set(data.columns) & set(names))
+    if collisions:
+        raise ValueError(f"Rule-based condition ids collide with existing columns in {split!r} split: {collisions}. Rename the affected conditions.")
+    return data.with_columns([build_predicate(condition, params).fill_null(False).alias(condition['id']) for condition in conditions]), names
+
+
+def finish_rule_data(manifest: RuleBasedManifest, splits: list[pl.DataFrame], datetimes: list[datetime] | list[int], params: dict[str, object]) -> dict[str, object]:
+    from limen.data.utils import split_data_to_rule_based_prep_output
+    from limen.experiment._fold_partitions import retained
+    data = cast(dict[str, object], split_data_to_rule_based_prep_output(splits, datetimes))
+    if manifest.split_walk_forward is not None:
+        cast(dict[str, object], data['_alignment'])['test_datetimes'] = splits[2]['datetime'].to_list()
+    names: tuple[str, ...] = ()
+    for split in ('train', 'val', 'test'):
+        frame, names = rule_predicates(manifest, cast(pl.DataFrame, data[split]), params, split=split)
+        data[split] = frame
+        data['x_' + split] = frame.select(names).cast(pl.Float64).to_numpy()
+    assert manifest.strategy is not None
+    data['strategy'] = {'conditions': manifest.strategy.conditions, 'entry': manifest.strategy.entry}
+    return retained(manifest, splits, data, input_columns=names)
