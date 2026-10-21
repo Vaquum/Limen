@@ -219,6 +219,5 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     result = node(value)
     aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
     encoded = pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
-    for graph in (seen, retained, classes):
-        graph.clear()
+    del node, structure
     return encoded
