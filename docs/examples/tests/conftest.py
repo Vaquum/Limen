@@ -1,6 +1,8 @@
 from importlib.util import module_from_spec, spec_from_file_location
 import sys
 import os
+import json
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -74,18 +76,45 @@ def compiled_scenarios(monkeypatch):
     return module_at('book_compiled_scenarios', directory / 'scenarios.py')
 
 
+def pytest_collection_modifyitems(items):
+    # The isolated wheel process can run while independent reference checks execute.
+    items.sort(key=lambda item: 'research_proof' in item.fixturenames)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def wheel_execution(tmp_path_factory, request):
+    if not any('research_proof' in item.fixturenames for item in request.session.items):
+        yield None
+        return
+    temporary = tmp_path_factory.mktemp('book_wheel')
+    receipt = temporary / 'proof.json'
+    environment = dict(os.environ, PYTHONPATH=os.pathsep.join([str(ROOT), str(ROOT / 'docs/examples')]))
+    argv = [sys.executable, '-u', str(ROOT / 'docs/examples/tests/run_wheel_proof.py'),
+            '--root', str(ROOT), '--temporary', str(temporary), '--output', str(receipt)]
+    for option in ('--released-wheel', '--released-bundle'):
+        value = request.config.getoption(option)
+        if value is not None:
+            argv.extend([option, str(value)])
+    with subprocess.Popen(argv, cwd=ROOT, env=environment) as process:
+        try:
+            yield process, receipt
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                process.wait(timeout=10)
+
+
 @pytest.fixture(scope='session')
-def research_proof(python_project, compiled_project, tmp_path_factory, request):
+def research_proof(python_project, compiled_project, wheel_execution, request):
     proof = module_at('book_semantic_oracles', ROOT / 'docs/examples/tests/test_research_examples.py')
     proof.assert_python_research(python_project)
     proof.assert_compiled_research(compiled_project)
-    wheel_proof = module_at('book_wheel_proof', ROOT / 'docs/examples/tests/wheel_proof.py')
-    # A caller's checkout must not replace the installed wheel in project runs.
-    with pytest.MonkeyPatch.context() as environment:
-        environment.setenv('PYTHONPATH', str(ROOT))
-        wheel = wheel_proof.prove_wheel(ROOT, tmp_path_factory.mktemp('book_wheel'),
-                                       released_wheel=request.config.getoption('--released-wheel'),
-                                       released_bundle=request.config.getoption('--released-bundle'))
+    assert wheel_execution is not None
+    process, receipt = wheel_execution
+    assert process.wait(timeout=120) == 0, 'The isolated installed-wheel proof failed'
+    wheel = json.loads(receipt.read_text())
+    wheel['scenario_reports'] = {(interface, scenario): report
+                                for interface, scenario, report in wheel['scenario_reports']}
     request.config.stash[PROOF] = wheel
     return {'python': {'rounds': python_project[2][1].experiment_log.height},
             'compiled': {'rounds': wheel['summaries']['compiled']['summary']['rounds']},
