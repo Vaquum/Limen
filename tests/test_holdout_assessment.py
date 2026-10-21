@@ -1213,6 +1213,32 @@ def test_frozen_mapping_namespace_reader(native_assessment_case, aliased, sequen
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('base', [list, tuple])
+@pytest.mark.parametrize('aliased', [False, True])
+def test_frozen_sequence_subclass_namespace_reader(native_assessment_case, base, aliased):
+    class Readers(base):
+        pass
+    class SequenceGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if aliased:
+                reader = self.readers[0]
+                offset = reader()['_LATE_RULES']['offset']
+            else:
+                offset = self.readers[0]()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = SequenceGlobals
+    selected._model.readers = Readers([globals])
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
 @pytest.mark.parametrize('factory_kind', ['class', 'instance', 'callable'])
 @pytest.mark.parametrize('inherited', [False, True])
 @pytest.mark.parametrize('wrapped', [False, True])
