@@ -1940,3 +1940,4 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.46.0] - 2026-10-21
 
 - Assess frozen event execution contracts in final holdout: admit pinned single-Sensor binary cash_spot/linear_perpetual economics from protected research through classified freeze, single event execution and versioned read-back; scenario reports stay schema-1 byte-identical.
+- Sync the ruleset snapshot and pinned live fixtures with the removed Copilot push-review rule.
