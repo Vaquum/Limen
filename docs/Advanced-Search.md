@@ -236,6 +236,7 @@ For resume to work cleanly, keep these stable:
 - the same `SearchStrategy` type
 - the same parameter content
 - the same configured reducer stack
+- the initial recording policy, with predictions/alignment and any applicable event ledger or walk-forward folds retained; see the [recording policy](Universal-Experiment-Loop.md#recording-policy)
 
 ## Capabilities shared with CLI
 

@@ -2,6 +2,10 @@
 
 Note: add all new changelog entries to the bottom of this file.
 
+## [5.45.28] - 2026-10-21
+
+- Allow resume with inapplicable recording groups disabled; require applicable committed payloads before recovery writes.
+
 ## [0.7.9] - 2025-05-25
 
 - Add `klines_size` as input argument to `get_klines_data` to define size of window in seconds
