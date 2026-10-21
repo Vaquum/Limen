@@ -2,7 +2,7 @@
 
 This guide covers how to propose and implement a new foundational SFD in Limen.
 
-A foundational SFD belongs to [Compiled Research](../examples/compiled-research/README.md), including when called from Python. The [Python project](../examples/python-research/README.md) shows the caller-owned alternative; a new template must not become a whitelist for ordinary Python research.
+A foundational SFD implements pipeline components used by the [Compiled YAML/CLI project](../examples/compiled-research/README.md). The [Python project](../examples/python-research/README.md) shows the caller-owned alternative; a new template must not become a whitelist for ordinary Python research.
 
 Foundational SFDs are Limen's reference-grade experiment templates. They are not one-off research scripts. A foundational SFD should be reusable, reviewable, and analytically justified inside a large Limen scan.
 
@@ -91,26 +91,13 @@ The Compiled project's selection function demonstrates the surrounding execution
 and reconstruction contract with recorded inputs. Calling it from Python still
 uses the Compiled interface:
 
-<!-- example: foundational-compiled-project source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
-```python
-def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
-    source = data_dir / "spot_15m_20250101_20250531.parquet"
-    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise ValueError("Recorded quarter-hour input digest differs")
-    # Resolve the driver's public --data-dir argument into the recorded run definition.
-    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
-    compiled = CompiledSFD(config)
-    loop = UniversalExperimentLoop(
-        sfd=compiled, search_strategy=build_search_strategy(config),
-        experiment_dir=output_dir, yaml_reference=config,
-    )
-    loop.run("compiled-selection", n_permutations=2, workers=1,
-             post_processing=True, progress_bar=False)
-    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
-    sensors = Trainer(output_dir).train(selected)
-    return loop, sensors, selected
+<!-- example: foundational-compiled-project source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
 The foundational factory declares `Manifest` (the base class) even though the body constructs `MLManifest`. This keeps the interface uniform across all foundational SFDs. For rule-based SFDs, use `RuleBasedManifest` instead — it provides `with_strategy()` and does not expose scalers or ablation.

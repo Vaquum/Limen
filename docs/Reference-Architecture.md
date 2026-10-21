@@ -147,6 +147,7 @@ normal Trainer reconstruction. Scaling belongs to the manifest, not the model.
 
 <!-- example: architecture-direction-sizing source=docs/examples/compiled-research/family_direction_sizing.yaml region=__file__ scenario=search interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_direction_sizing
@@ -205,6 +206,7 @@ sfd:
     seed:
     - 42
 uel:
+  output_path: compiled-family_direction_sizing
   n_permutations: 2
   search_strategy:
     type: grid
@@ -215,9 +217,10 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration
 ```
 
-This is the Compiled project's actual direction/sizing definition. Its model-family driver binds the recorded input path and executes both `conditional_size` candidates. The declared source interval is 900 seconds and the holding limit is 1,800 seconds. Inputs require recorded OHLC and UTC datetime with that regular interval, or explicit causal interval metadata. Funding is optional and independently [tunable](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+This is the Compiled project's actual direction/sizing definition. The CLI reads its literal bundled input path and executes both `conditional_size` candidates. The declared source interval is 900 seconds and the holding limit is 1,800 seconds. Inputs require recorded OHLC and UTC datetime with that regular interval, or explicit causal interval metadata. Funding is optional and independently [tunable](Backtest.md#signed-exposure-elapsed-exits-and-funding).
 
 When both candidates complete, direction is the strictly better positive side. Equal returns and neither side profitable map to flat. Magnitude is the better return divided by positive `return_scale` (default `0.01`), clipped to `max_size` (default `1`). One unavailable side excludes that row from paired fitting/metrics. Predictions still cover every feature-valid inference row.
 
@@ -298,59 +301,66 @@ That is why the reference-architecture layer is the bridge between raw model out
 
 ## Class-based usage in the project
 
-<!-- example: architecture-native-class source=docs/examples/compiled-research/scenarios.py region=preparation scenario=search interface=compiled role=executed -->
-```python
-def preparation(data_dir, output):
-    from limen.experiment import MLManifest
-    from limen.features import fractional_diff
-    from limen.indicators import roc
-    from limen.scalers import RobustScaler
-    from limen.sfd.reference_architecture import RidgeRegressor
-    from limen.targets import TripleBarrierTarget
-
-    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
-    cases = []
-    for compressed in (False, True):
-        name = 'compressed' if compressed else 'baseline'
-        directory = output / name
-        directory.mkdir(parents=True)
-
-        def surface(data):
-            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
-
-        def capture(data_dict, split_data, round_params, fitted_params):
-            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
-                frame.write_parquet(directory / (split + '.parquet'))
-            return data_dict
-
-        manifest = MLManifest()
-        (manifest.set_split_config(6, 2, 2)
-                    .add_indicator(roc, period=3, group='momentum')
-                    .add_indicator(roc, period=12, group='momentum')
-                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
-                    .add_feature(surface)
-                    .with_target_label('label', TripleBarrierTarget, fit_params={
-                        'upper_multiple': 1.5, 'lower_multiple': 1.,
-                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
-        (manifest.set_scaler(RobustScaler).set_feature_ablation()
-                    .set_pca_compression().add_to_data_dict(capture))
-        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
-                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
-        data = manifest.prepare_data(raw, params)
-        model = RidgeRegressor().train(data, alpha=1., solver='svd')
-        scored = model.evaluate(data, inline_metrics=False)
-        scaler = data['_scaler']
-        pca = data.get('_pca')
-        cases.append({'name': name,
-                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
-                      'dropped': params.get('_dropped_features', []),
-                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
-                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
-                      'pca_mean': None if pca is None else pca.mean_.tolist(),
-                      'components': None if pca is None else pca.components_.tolist(),
-                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
-    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
-            'fixed_d': .4, 'weight_threshold': .05}
+<!-- example: architecture-native-class source=docs/examples/compiled-research/family_ridge_regressor.yaml region=declaration scenario=search interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_ridge_regressor
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+      transform_params:
+        periods: 1
+        scale: 100.0
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.ridge_regressor
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: 5
+  params:
+    alpha:
+    - 1.0
+    solver:
+    - svd
+uel:
+  output_path: compiled-family_ridge_regressor
+  n_permutations: 1
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 This complete native preparation function uses its project imports/data helpers, constructs its Manifest and trains `RidgeRegressor` directly. It retains the matrices used by its independent closed-form prediction tests. The selection and model-family cases separately exercise Trainer reconstruction; direct class fitting alone does not create a saved round identity.

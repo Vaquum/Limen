@@ -41,7 +41,7 @@ The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canon
 
 For research behavior changes:
 
-1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. A Manifest called from Python still follows the latter contract. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
+1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. Verify the Compiled claim through unchanged YAML and actual CLI execution; Python component APIs are optional integration surfaces. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
 2. Confirm the signal layer: read the relevant [Indicators](../Indicators.md), [Features](../Features.md), [Transforms](../Transforms.md), and [Scalers](../Scalers.md) pages before changing prep.
 3. For Compiled Research prep, preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations. Python Research keeps methodology caller-owned.
 4. For target changes, read [Targets](../Targets.md); preserve training-only threshold fitting in the governed pipeline.

@@ -124,7 +124,8 @@
     "docs/Perturbation-Strategies.md",
     "docs/Experiment-Manifest.md",
     "docs/Reference-Architecture.md",
-    "docs/Common-Strategies.md"
+    "docs/Common-Strategies.md",
+    "docs/Compiled-Research.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -249,6 +250,16 @@
     "backup": {
       "interface": "compiled",
       "scenario": "command_line"
+    },
+    "assess": {
+      "interface": "compiled",
+      "scenario": "command_line",
+      "page": "docs/Command-Line-Interface.md"
+    },
+    "reserve": {
+      "interface": "compiled",
+      "scenario": "command_line",
+      "page": "docs/Command-Line-Interface.md"
     }
   },
   "surfaces": {
@@ -2076,6 +2087,26 @@
         ],
         "PRUNING_STRATEGY_OPTIONAL": [
           "params"
+        ],
+        "ASSESSMENT_REQUIRED": [
+          "direction",
+          "metric",
+          "top_k"
+        ],
+        "ASSESSMENT_OPTIONAL": [
+          "folds",
+          "inference_source",
+          "predict"
+        ],
+        "HOLDOUT_REQUIRED": [
+          "context_start",
+          "end",
+          "interval_seconds",
+          "scenarios",
+          "start"
+        ],
+        "HOLDOUT_OPTIONAL": [
+          "evaluation_target"
         ]
       }
     }
@@ -2114,17 +2145,19 @@
       "scenario": "selection",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/research.py",
-      "region": "experiment",
+      "source": "docs/examples/compiled-research/run.sh",
+      "region": "selection",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025, split January 15/18",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics. The same YAML also runs through the installed CLI; candidate identities and validation returns equal the Python driver.",
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Validation objective chooses the recorded round; Trainer reconstructs with original splits and validates metrics.",
       "extra_tests": [
-        "docs/examples/tests/test_research_examples.py::test_direct_yaml_selection_matches_python_driver"
+        "docs/examples/tests/test_research_examples.py::test_cli_selection_matches_reconstruction_api",
+        "docs/examples/tests/test_compiled_contract.py::test_compiled_project_is_yaml_and_cli",
+        "docs/examples/tests/test_compiled_contract.py::test_bundled_derivations_equal_the_recorded_sources"
       ]
     },
     "python/search": {
@@ -2151,7 +2184,7 @@
       "scenario": "search",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "search",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2159,7 +2192,7 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Exact full-budget candidate identities; deterministic factorization; public CPU families; independent RMSE and signed bounds; audited budget reduction from four rounds to three. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic.",
+      "assertions": "Unchanged CLI declarations cover finite traversal, factorization, audited resource reduction, eight composable candidates, ablation/PCA, recorded model-family predictions with independent return labels/RMSE, and eight baseline strategies. Callback ordering remains a separate component API regression.",
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
         "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
@@ -2188,7 +2221,7 @@
       "scenario": "recovery",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "recovery",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2196,7 +2229,7 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer.",
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Two completed rounds become four unique occurrence indices; selected recorded result reconstructs through Trainer.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry"
       ]
@@ -2221,7 +2254,7 @@
       "scenario": "walk_forward",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "walk_forward",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2229,7 +2262,7 @@
       ],
       "recorded_window": "hourly: first 384 rows for calibrated folds; complete 8784 rows for two-trial acceptance",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff; independent DSR/CSCV and timestamp checks verify retained acceptance reports and verdicts.",
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Qualified fold identities, fitting clocks and common campaign cutoff survive Trainer/Cohort handoff; independent DSR/CSCV and timestamp checks verify retained acceptance reports and verdicts.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_recorded_resume_refuses_changed_source_and_geometry",
         "docs/examples/tests/test_research_integrity.py::test_fold_fitting_calibration_and_objective_are_local",
@@ -2256,7 +2289,7 @@
       "scenario": "holdout",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "holdout",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2264,7 +2297,7 @@
       ],
       "recorded_window": "hourly: January 1\u20136 2024; reserved January 5\u20136",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown.",
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Actual project reservation and frozen final assessment; 24 final rows, 23 labels; retained report hash; exposure remains unknown.",
       "extra_tests": [
         "docs/examples/tests/test_research_integrity.py::test_guarded_holdout_excludes_research_and_never_refits"
       ]
@@ -2289,7 +2322,7 @@
       "scenario": "calibration",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "calibration",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2297,7 +2330,7 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "All four declared modes reconstruct; threshold-only statistics preserve unavailable values."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. All four declared modes reconstruct; threshold-only statistics preserve unavailable values."
     },
     "python/execution": {
       "interface": "python",
@@ -2322,7 +2355,7 @@
       "scenario": "execution",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "execution",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2330,7 +2363,7 @@
       ],
       "recorded_window": "hourly: January 2\u20136 2024; overlapping recorded funding",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Distinct dynamic-barrier contracts and actual completed trades; recorded funding cashflows reconcile to native metrics."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Distinct dynamic-barrier contracts and actual completed trades; recorded funding cashflows reconcile to native metrics."
     },
     "python/bars": {
       "interface": "python",
@@ -2352,7 +2385,7 @@
       "scenario": "bars",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "bars",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2360,14 +2393,14 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025; 90-second trade slice May 23 2025",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "All three post-split formation modes; shared recorded-trade preprocessing; no full ML population claimed for the short slice."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. All three post-split formation modes; shared recorded-trade preprocessing; no full ML population claimed for the short slice."
     },
     "compiled/allocation": {
       "interface": "compiled",
       "scenario": "allocation",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/scenarios.py",
+      "source": "docs/examples/compiled-research/run.sh",
       "region": "allocation",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
@@ -2375,22 +2408,22 @@
       ],
       "recorded_window": "hourly: January 2\u201319 2024; paired recorded funding January 1\u20138 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Original rule/learned primary predictions, independent prefix-fit digests, completed-outcome purging, per-opportunity risk caps and exact source bindings; paired recorded funding effects; batch research only."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Original rule/learned primary predictions, independent prefix-fit digests, completed-outcome purging, per-opportunity risk caps and exact source bindings; paired recorded funding effects; batch research only."
     },
     "compiled/command_line": {
       "interface": "compiled",
       "scenario": "command_line",
       "role": "executed",
       "page": "docs/examples/compiled-research/README.md",
-      "source": "docs/examples/compiled-research/command_line.py",
-      "region": "lifecycle",
+      "source": "docs/examples/compiled-research/run.sh",
+      "region": "command_line",
       "prerequisites": [
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025; local recorded campaign backup",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Installed CLI exits successfully; parent/child lineage, four unique result rows, CSV/Parquet agreement and exact restored tracked campaign bytes."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Installed CLI exits successfully; parent/child lineage, four unique result rows, CSV/Parquet agreement and exact restored tracked campaign bytes."
     },
     "python/observed_costs": {
       "interface": "python",
@@ -2410,8 +2443,7 @@
   },
   "shared_sources": {
     "docs/examples/recorded_inputs.py": [
-      "python",
-      "compiled"
+      "python"
     ],
     "docs/examples/commands.json": [
       "python",
@@ -2763,6 +2795,11 @@
     ],
     "docs/Common-Strategies.md": [
       "python/search",
+      "compiled/search"
+    ],
+    "docs/Compiled-Research.md": [
+      "python/selection",
+      "compiled/selection",
       "compiled/search"
     ]
   }

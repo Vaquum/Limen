@@ -41,7 +41,7 @@ The [Compiled project](examples/compiled-research/README.md) names the recorded 
         file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
 ```
 
-Its driver verifies the input digest and resolves the documented `--data-dir` argument into this file declaration. The archived source and exact commands preserve that resolution. Both projects acquire their matching recorded inputs from the project bundle; neither requires a live dataset download during research proof.
+The bundle pins the source by SHA-256. The YAML reads its literal `inputs/` path from the bundle root. Both projects use the matching recorded-input bundle; research proof requires no live dataset download.
 
 `HistoricalData` remains stateful for Manifest compatibility. Each retrieval method returns the loaded frame and stores it on the instance as `data`, with column names in `data_columns`.
 

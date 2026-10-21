@@ -41,7 +41,7 @@ def python_project(tmp_path_factory):
 
 @pytest.fixture(scope='session')
 def compiled_project(tmp_path_factory):
-    path = ROOT / 'docs/examples/compiled-research/research.py'
+    path = ROOT / 'docs/examples/tests/native_api/research.py'
     module = module_at('book_compiled_research', path)
     output = tmp_path_factory.mktemp('book_compiled') / 'experiment'
     result = module.run_research(ROOT / 'tests/fixtures', output)
@@ -63,7 +63,7 @@ def python_scenarios(monkeypatch):
 
 @pytest.fixture
 def compiled_scenarios(monkeypatch):
-    directory = ROOT / 'docs/examples/compiled-research'
+    directory = ROOT / 'docs/examples/tests/native_api'
     monkeypatch.syspath_prepend(str(directory))
     monkeypatch.setitem(sys.modules, 'research', module_at('book_compiled_driver', directory / 'research.py'))
     return module_at('book_compiled_scenarios', directory / 'scenarios.py')

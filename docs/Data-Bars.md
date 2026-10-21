@@ -105,9 +105,9 @@ The [Compiled project's](examples/compiled-research/README.md) `bars` scenario r
         liquidity_threshold: '{liquidity_threshold}'
 ```
 
-The complete configuration declares `bar_type` as volume, trade or liquidity, with volume threshold `1000.0`, trade threshold `100000`, and liquidity threshold `10000000.0`. The scenario tests verify all three completed rounds; the Python diagnostic independently checks complete-bar boundaries and conserved volume. Both also process the same short recorded trade slice for [CFR](Conserved-Flux-Renormalization.md), without claiming it supplies a full ML population.
+The complete configuration declares `bar_type` as volume, trade or liquidity, with volume threshold `1000.0`, trade threshold `100000`, and liquidity threshold `10000000.0`. The scenario tests verify all three completed rounds; the Python diagnostic independently checks complete-bar boundaries and conserved volume. The Python diagnostic also processes the short recorded trade slice for [CFR](Conserved-Flux-Renormalization.md); that diagnostic is separate from the Compiled ML population.
 
-`Manifest.set_bar_formation()` attaches the bar step. `set_required_bar_columns()` asserts that the resulting frame retains the columns required downstream. Parameter references in the bar declaration must resolve from the current round.
+For component authors, the optional API `Manifest.set_bar_formation()` attaches the bar step. `set_required_bar_columns()` asserts that the resulting frame retains the columns required downstream. Parameter references in the bar declaration must resolve from the current round.
 
 ## `compute_data_bars()`
 

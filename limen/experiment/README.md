@@ -11,7 +11,7 @@
 
 ## In the research projects
 
-The [Python project](../../docs/examples/python-research/README.md) supplies its own SFD functions and bounded parameter domain. The [Compiled project](../../docs/examples/compiled-research/README.md) supplies a Manifest-backed SFD and saved definition. Both execute through UEL/MSQ; Manifest construction through Python remains Compiled Research.
+The [Python project](../../docs/examples/python-research/README.md) supplies its own SFD functions and bounded parameter domain. The [Compiled project](../../docs/examples/compiled-research/README.md) supplies a Manifest-backed SFD and saved definition. Both execute through UEL/MSQ; Compiled Research supplies YAML to the CLI; direct Manifest construction is optional component integration.
 
 ## What this package owns
 

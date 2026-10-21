@@ -30,19 +30,19 @@ The base selection's CSV and summary do not serialize arbitrary fitted models. T
 
 <!-- example: workflow-compiled-selection source=docs/examples/commands.json region=compiled-selection scenario=selection interface=compiled role=executed -->
 ```bash
-python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
+limen run --no-progress-bar compiled-research/selection.yaml
 ```
 
 <!-- example: workflow-compiled-all source=docs/examples/commands.json region=compiled-all scenario=selection interface=compiled role=executed -->
 ```bash
-python compiled-research/research.py --scenario all --data-dir inputs --output-dir results/compiled-all
+sh compiled-research/run.sh
 ```
 
-The first command runs selection; the second executes search, recovery, walk-forward, final holdout, calibration, event execution, bar formation, batch allocation and command-line project operations. It validates declarations, preserves native artifacts and reconstructs selected recorded rounds through `Trainer`.
+The first command executes the small selection YAML. The shell script runs the complete collection of unchanged YAML declarations, CLI assessment and project operations. `limen assess` reconstructs validation-selected Sensors and their Cohort; the guarded declaration reserves, freezes and assesses its final window through the CLI.
 
 The selection declaration applies chronological splits before preparation, fits target/scaler state on training and ranks two logistic candidates by validation event-ledger return. Trainer reconstructs the selected recorded round using the original splits and checks replayed metrics. Reconstruction is a refit under the recorded contract, rather than restoration of arbitrary model weights.
 
-Its `command_line` scenario validates, profiles, compiles, commits and executes the same recorded configuration through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
+Its `project.sh` validates, profiles, compiles, commits and executes the same recorded configuration through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
 
 ## Review the evidence by decision
 
@@ -61,7 +61,9 @@ Its `command_line` scenario validates, profiles, compiles, commits and executes 
 
 | Artifact | Meaning |
 |---|---|
-| `summary.json` | Project report of the scenarios requested by the entry point. |
+| Python `summary.json` | Caller-owned project report of the requested scenarios. |
+| Compiled `assessment.json` and `predictions.parquet` | Validation selection, recorded membership, decisions and native unavailable/availability values. |
+| Compiled `final-report.json` | Guarded final assessment, retained rows and local exposure evidence. |
 | Python selection CSV | Candidate validation scores; fitted models remain in memory. |
 | Compiled `metadata.json` and copied definition | Declared configuration and provenance used for reconstruction. |
 | `results.csv` | Completed parameter rounds for a persisted experiment. |

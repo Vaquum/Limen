@@ -1,3 +1,4 @@
+from limen.yaml._assessment_spec import check_assessment
 from dataclasses import dataclass, field
 from typing import Any
 from typing import cast
@@ -203,15 +204,11 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     if errors:
         return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
+    check_assessment(yaml_dict, errors)
     check_objective_spec(yaml_dict, errors)
     _MAIN_ENGINE.run(yaml_dict, errors, warnings)
 
     _, mode = get_at(yaml_dict, 'metadata.mode')
     resolved_mode = str(mode) if mode in VALID_MODES else 'development'
 
-    return ValidationResult(
-        valid=len(errors) == 0,
-        errors=errors,
-        warnings=warnings,
-        mode=resolved_mode,
-    )
+    return ValidationResult(valid=len(errors) == 0, errors=errors, warnings=warnings, mode=resolved_mode)

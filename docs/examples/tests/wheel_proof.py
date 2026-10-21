@@ -35,10 +35,10 @@ def archive_bytes(archive: tarfile.TarFile, name: str) -> bytes:
 def unpack(bundle: Path, target: Path, root: Path):
     with tarfile.open(bundle) as archive:
         names = set(archive.getnames())
-        required = {'python-research/research.py', 'compiled-research/research.py',
+        required = {'python-research/research.py', 'compiled-research/research.yaml', 'compiled-research/run.sh',
                     'compiled-research/selection.yaml', 'evidence.schema.json', 'catalogue.json'}
         required |= {'inputs/' + name for name in INPUTS}
-        required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
+        required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/final/holdout.yaml', 'compiled-research/final/run.sh'}
         required |= {'retained/selection.json', 'retained/python-selection.json', 'retained/compiled-selection.json'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
@@ -66,7 +66,7 @@ def unpack(bundle: Path, target: Path, root: Path):
             raise ValueError('Candidate recorded input differs')
     for interface in ('python', 'compiled'):
         for source in (root / f'docs/examples/{interface}-research').rglob('*'):
-            if source.is_file() and source.suffix in ('.py', '.yaml', '.md'):
+            if source.is_file() and source.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
                 relative = source.relative_to(root / 'docs/examples')
                 if not (target / relative).is_file() or (target / relative).read_bytes() != source.read_bytes():
                     raise ValueError('Candidate project source differs: ' + str(relative))
@@ -145,7 +145,7 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
-    for interface in ('python', 'compiled'):
+    for interface in ('python',):
         command = shlex.split(canonical_commands[interface + '-selection'])
         run(command, cwd=project, env=runtime_environment)
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
@@ -174,6 +174,18 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             destination = output / f'{interface}-{name}.json'
             destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
             scenario_reports[(interface, name)] = {'summary': result, 'command': [str(arg) for arg in command], 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
+    from cli_proof import verify_project
+    command = shlex.split(canonical_commands['compiled-all'])
+    run(command, cwd=project, env=runtime_environment)
+    compiled = verify_project(project)
+    catalogue = json.loads((project / 'catalogue.json').read_text())
+    assert set(compiled) == {name for name, interfaces in catalogue['required_scenarios'].items() if 'compiled' in interfaces}
+    for name, result in compiled.items():
+        destination = output / ('compiled-' + name + '.json')
+        destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+        scenario_reports[('compiled', name)] = {'summary': result, 'command': command, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
+    summaries['compiled'] = scenario_reports[('compiled', 'selection')]
+    commands['compiled'] = command
     wheel_destination = output / wheel.name
     wheel_destination.write_bytes(wheel.read_bytes())
     native = output / 'native-results.tar.gz'

@@ -26,13 +26,21 @@ def features(bars, window):
 
 The [Compiled project](examples/compiled-research/README.md) declares `roc` in its Manifest. It produces percent-valued momentum as `roc_1`, then the Manifest carries that feature through fitting and reconstruction. These two projects use different units and models; their scores are not a controlled comparison.
 
-<!-- example: features-compiled-momentum source=docs/examples/compiled-research/selection.yaml region=momentum_indicator scenario=selection interface=compiled role=executed -->
+<!-- example: features-compiled-momentum source=docs/examples/compiled-research/research.yaml region=features scenario=selection interface=compiled role=executed -->
 ```yaml
-    indicators:
-      - func: limen.indicators.roc
+    features:
+      - func: limen.features.lag_range
         params:
-          period: 1
+          col: roc_1
+          start: 1
+          end: 3
           group: momentum
+      - func: limen.features.fractional_diff
+        params:
+          d: 0.4
+          cols: [close]
+          threshold: 0.05
+          group: price
 ```
 
 The excerpts belong to the complete selection runs, with the dependencies and recorded inputs described in each project. The helper tables below describe alternatives; a listed helper is not a claim that the selection run invokes it. Trade-derived helpers require the columns named in their notes.

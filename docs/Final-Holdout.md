@@ -35,37 +35,19 @@ def holdout(data_dir, output):
 
 ## Reserve and freeze a Compiled selection
 
-The Compiled scenario creates its project before reservation, runs research ending before January 5, 2024, reconstructs the selected round, and freezes its Cohort before assessing January 5–6. It verifies that the retained report matches the completed assessment. The local input keeps exposure classification `unknown`; a reservation cannot establish prior access outside the local project.
+The Compiled example uses its own Git project. `limen reserve` records the YAML's final interval before research, `limen run` enforces that reservation, and `limen assess --reservation` reconstructs the selected Cohort, freezes it and writes `final-report.json`. The local source keeps earlier exposure unknown.
 
-<!-- example: holdout-compiled-assessment source=docs/examples/compiled-research/scenarios.py region=holdout scenario=holdout interface=compiled role=executed -->
-```python
-def holdout(data_dir, output):
-    project = output / 'project'
-    project.mkdir(parents=True)
-    (project / 'limen.toml').write_text('[project]\nname="book-final-observations"\n')
-    subprocess.run(['git', 'init', '--quiet', str(project)], check=True, timeout=10)
-    reservation = reserve_holdout(project, '2024-01-05', '2024-01-06', interval_seconds=3600)
-    config = configuration('holdout', data_dir)
-    directory = project / 'experiment'
-    loop = execute(config, directory, project_root=project)
-    selected_ids = research_project.completed_log(loop)['id'].head(1).to_list()
-    selected = Trainer(directory, project_root=project).train(selected_ids)
-    cohort = Cohort(experiment_log_path=str(directory), permutation_ids=selected_ids)
-    cohort.set_members(selected)
-    frozen = freeze_holdout_selection(cohort, context_start='2024-01-04', scenarios=[dict(fee_bps=5.0, slip_bps=2.0, notional_rate=.25, execution_lag_bars=1, take_profit_bps=None, stop_loss_bps=None)], evaluation_target=NextBarUpTarget(pl.DataFrame(), 'observed_up'))
-    report = final_holdout_report(frozen, project_root=project, reservation_id=reservation)
-    attempt_id = report['attempt_id']
-    if not isinstance(attempt_id, str):
-        raise ValueError('The final report must have an attempt identity')
-    if read_holdout_report(project, attempt_id) != report:
-        raise ValueError('Retained final report differs')
-    (output / 'retained-report.json').write_text(json.dumps(report, indent=2, allow_nan=False))
-    return {'rounds': research_project.completed_log(loop).height, 'planned': report['planned'], 'classification': report['classification'], 'scenarios': report['scenarios'], 'exposure': report['exposure'], 'rows_sha256': report['rows_sha256'], 'source': report['source']}
+<!-- example: holdout-compiled-assessment source=docs/examples/compiled-research/final/run.sh region=final_assessment scenario=holdout interface=compiled role=executed -->
+```bash
+git init --quiet compiled-research/final
+reservation=$(limen reserve compiled-research/final/holdout.yaml)
+limen run --no-progress-bar compiled-research/final/holdout.yaml
+limen assess compiled-research/final/holdout.yaml --results results/dev/compiled-holdout --reservation "$reservation"
 ```
 
 ## Reservation lifecycle
 
-The guarded scenario calls `reserve_holdout()` before starting research in its Git project.
+The guarded scenario runs `limen reserve compiled-research/final/holdout.yaml` before research. The returned identity is supplied to `limen assess`. The API names below document the underlying reservation lifecycle for component authors.
 
 Dates must be valid `YYYY-MM-DD` UTC midnights. Windows are half-open and immutable. The interval must be an integer dividing one UTC day; the source must supply that native interval without local aggregation. Active windows are disjoint and share one interval. Their earliest start excludes the entire subsequent suffix from research, including gaps between later reservations.
 

@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_bars
@@ -61,8 +62,10 @@ sfd:
     liquidity_threshold:
     - 10000000.0
 uel:
+  output_path: compiled-bars
   n_permutations: 3
   search_strategy:
     type: grid
   output_format: csv
   checkpoint_interval: 1
+# endregion declaration

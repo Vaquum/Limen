@@ -279,24 +279,11 @@ remain `None`. Ordinary persisted rounds and [qualified binary folds](#recorded-
 
 Choose explicit zero-based folds with three-element selections; ordinary selections keep two elements. Reconstruct each selected fold through its own Trainer, then bind the returned Sensors:
 
-<!-- example: cohort-compiled-recorded-folds source=docs/examples/compiled-research/scenarios.py region=walk_forward scenario=walk_forward interface=compiled role=executed -->
-```python
-def walk_forward(data_dir, output):
-    config = configuration('walk_forward', data_dir)
-    bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
-    loop = execute(config, output / 'experiment', bars=bars)
-    round_id = research_project.completed_log(loop)['id'][0]
-    trainer = Trainer(output / 'experiment', data=bars)
-    sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
-    cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
-    cohort.set_members(sensors)
-    metadata = [fold_metadata(sensor) for sensor in sensors]
-    round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
-            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
-            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
-            'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
-            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+<!-- example: cohort-compiled-recorded-folds source=docs/examples/compiled-research/run.sh region=walk_forward scenario=walk_forward interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/walk_forward.yaml
+limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward
+limen run --no-progress-bar compiled-research/acceptance.yaml
 ```
 
 Selection and binding perform no fitting or source fetching. Missing files raise `FileNotFoundError`; malformed JSON, versioned witnesses or disagreeing metadata/YAML declarations raise `ReconstructionError` naming the source. Invalid selections and incompatible/bound members raise `ValueError`. Folds require nonnegative literal integers: booleans, floats, nulls and out-of-range indices reject. An unqualified walk-forward round rejects with `supply fold`; an ordinary source cannot take a fold index.

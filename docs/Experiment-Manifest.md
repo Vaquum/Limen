@@ -1,24 +1,13 @@
-# Experiment Manifest
+# Manifest API and YAML fields
 
-A Manifest declares the preparation and model contract Limen will apply. It
-belongs to **Compiled Research**, whether supplied through YAML, a native Python
-builder or `CompiledSFD`. The [Compiled project](examples/compiled-research/README.md)
-shows both its recorded-data YAML run and native preparation cases.
+Compiled Research is authored in YAML and executed through the CLI. The [book chapter](Compiled-Research.md) develops the complete declaration; the [Compiled project](examples/compiled-research/README.md) supplies its exact executable source. The [Python project](examples/python-research/README.md) owns ordinary Python research functions.
 
-The [Python project](examples/python-research/README.md) instead owns preparation,
-fitting, backtesting and selection as ordinary functions. It can use shared
-Limen helpers without adopting a Manifest. Choose the boundary your research
-needs; Python is not a fallback for experiments that fail to fit YAML.
-
-The native contract supplies split-first preparation, training-fitted target and
-scaler state, declared execution policies and reconstructible recorded runs.
-These checks do not establish the causality of an arbitrary user feature or the
-correctness of its provider's data.
+This appendix documents YAML fields and the Manifest component APIs that implement them. Builder signatures and direct component calls are implementation and optional integration reference. They are not steps in the Compiled research workflow.
 
 ## Prerequisites
 
 - `pip install "vaquum-limen[data]"` for the bundled data-backed templates
-- a YAML file created with `limen init` or a concrete Python `MLManifest`/`RuleBasedManifest`
+- a YAML file created with `limen init`; component authors may consult the optional builder APIs below
 - the optional model extra required by the selected reference architecture
 
 ## Run the recorded YAML project
@@ -32,10 +21,11 @@ The run writes a result directory containing the copied YAML manifest, `metadata
 
 ## YAML Shape
 
-This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the project driver binds its explicit input/output arguments separately:
+This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 
 <!-- example: manifest-selection source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: "1.0"
 metadata:
   name: book_compiled_selection
@@ -104,6 +94,15 @@ uel:
   search_strategy:
     type: grid
   output_format: csv
+
+# region assessment
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  predict: true
+# endregion assessment
+# endregion declaration
 ```
 
 `schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema. The current schema version is `1.0`; validation warns when a manifest uses a different string, but compatibility is governed by the Python validator and compiler in this repository.
@@ -219,66 +218,23 @@ There are two manifest subclasses under the YAML and Python surfaces:
 
 Both subclasses share a common base (`Manifest`) that owns data fetching, splitting, and model execution. The `manifest()` function in every foundational SFD returns the base `Manifest` type as a uniform interface, while internally constructing the correct subclass. `Manifest` itself is not meant to be instantiated directly — its `prepare_data()` raises `NotImplementedError`.
 
-## Native builder from Python
+## Optional builder API
 
 The Compiled project also constructs a native Manifest directly. This complete function compares baseline and compressed preparation, retains its actual matrices, and fits a native Ridge class to ternary labels. It uses the project's recorded-data and configuration helpers:
 
-<!-- example: manifest-native-preparation source=docs/examples/compiled-research/scenarios.py region=preparation scenario=search interface=compiled role=executed -->
-```python
-def preparation(data_dir, output):
-    from limen.experiment import MLManifest
-    from limen.features import fractional_diff
-    from limen.indicators import roc
-    from limen.scalers import RobustScaler
-    from limen.sfd.reference_architecture import RidgeRegressor
-    from limen.targets import TripleBarrierTarget
-
-    raw = pl.read_parquet(configuration('search', data_dir)['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=1440)
-    cases = []
-    for compressed in (False, True):
-        name = 'compressed' if compressed else 'baseline'
-        directory = output / name
-        directory.mkdir(parents=True)
-
-        def surface(data):
-            return data.select('datetime', 'close', 'roc_3', 'roc_12', 'close_fracdiff')
-
-        def capture(data_dict, split_data, round_params, fitted_params):
-            for split, frame in zip(('train', 'val', 'test'), split_data, strict=True):
-                frame.write_parquet(directory / (split + '.parquet'))
-            return data_dict
-
-        manifest = MLManifest()
-        (manifest.set_split_config(6, 2, 2)
-                    .add_indicator(roc, period=3, group='momentum')
-                    .add_indicator(roc, period=12, group='momentum')
-                    .add_feature(fractional_diff, d=.4, cols=['close'], threshold=.05, group='price')
-                    .add_feature(surface)
-                    .with_target_label('label', TripleBarrierTarget, fit_params={
-                        'upper_multiple': 1.5, 'lower_multiple': 1.,
-                        'max_horizon': 3, 'span': 8, 'min_periods': 8}))
-        (manifest.set_scaler(RobustScaler).set_feature_ablation()
-                    .set_pca_compression().add_to_data_dict(capture))
-        params = {'feature_groups': 'momentum|price', 'feature_drop_count': int(compressed),
-                  'feature_drop_seed': 7, 'auto_pca': compressed, 'pca_k': 2}
-        data = manifest.prepare_data(raw, params)
-        model = RidgeRegressor().train(data, alpha=1., solver='svd')
-        scored = model.evaluate(data, inline_metrics=False)
-        scaler = data['_scaler']
-        pca = data.get('_pca')
-        cases.append({'name': name,
-                      'features': data.get('_pca_input_feature_names', data['x_train'].columns),
-                      'dropped': params.get('_dropped_features', []),
-                      'rows': [data['x_' + split].height for split in ('train', 'val', 'test')],
-                      'medians': scaler.medians, 'iqrs': scaler.iqrs,
-                      'pca_mean': None if pca is None else pca.mean_.tolist(),
-                      'components': None if pca is None else pca.components_.tolist(),
-                      'predictions': np.asarray(scored['_preds']).tolist(), 'rmse': scored['rmse']})
-    return {'cases': cases, 'partition_rows': [864, 288, 288], 'carried_context': True,
-            'fixed_d': .4, 'weight_threshold': .05}
+<!-- example: manifest-native-preparation source=docs/examples/compiled-research/research.yaml region=preparation scenario=search interface=compiled role=executed -->
+```yaml
+    scaler:
+      class: limen.scalers.RobustScaler
+    feature_ablation:
+      drop_count_key: feature_drop_count
+      seed_key: feature_drop_seed
+    pca_compression:
+      enabled_param: auto_pca
+      n_components_param: pca_k
 ```
 
-To run a Manifest-built SFD through UEL, follow the [Compiled construction](Universal-Experiment-Loop.md#compiled-construction). This remains Compiled Research. Construct a search strategy from the SFD's `params()` and pass both the SFD and strategy to UEL. A manifest-driven SFD can fetch its own data when `data=` is omitted.
+Component authors can construct Manifest-backed SFDs through the optional Python APIs below. The Compiled user workflow is the [YAML definition and CLI execution](Compiled-Research.md); direct builder calls do not replace that interface.
 
 YAML and the native builder are both supported Compiled entry points. Use the complete project instructions for their exact dependencies, recorded inputs and working directory.
 
@@ -408,6 +364,7 @@ Use `sfd.manifest.split_walk_forward` instead of `split_dates` to evaluate every
 
 <!-- example: manifest-walk-definition source=docs/examples/compiled-research/walk_forward.yaml region=__file__ scenario=walk_forward interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_walk_forward
@@ -418,7 +375,7 @@ sfd:
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
-        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+        file_path_or_url: inputs/spot_1h_20240101_20240116.parquet
     indicators:
     - func: limen.indicators.roc
       params:
@@ -470,6 +427,7 @@ sfd:
     - 1.0
     random_state: [42]
 uel:
+  output_path: compiled-walk_forward
   n_permutations: 1
   search_strategy:
     type: grid
@@ -480,6 +438,15 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  folds: [0, 1]
+  predict: true
+  inference_source: inputs/spot_1h_20240101_20241231.parquet
+# endregion declaration
 ```
 
 The native equivalent is:
@@ -546,24 +513,11 @@ The canonical Compiled walk-forward case uses its complete project definition
 shown above. It restricts the source to 384 recorded hourly bars, executes the
 configured folds, reconstructs each selected fold and binds a qualified Cohort:
 
-<!-- example: manifest-walk-execution source=docs/examples/compiled-research/scenarios.py region=walk_forward scenario=walk_forward interface=compiled role=executed -->
-```python
-def walk_forward(data_dir, output):
-    config = configuration('walk_forward', data_dir)
-    bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
-    loop = execute(config, output / 'experiment', bars=bars)
-    round_id = research_project.completed_log(loop)['id'][0]
-    trainer = Trainer(output / 'experiment', data=bars)
-    sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
-    cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
-    cohort.set_members(sensors)
-    metadata = [fold_metadata(sensor) for sensor in sensors]
-    round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
-            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
-            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
-            'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
-            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+<!-- example: manifest-walk-execution source=docs/examples/compiled-research/run.sh region=walk_forward scenario=walk_forward interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/walk_forward.yaml
+limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward
+limen run --no-progress-bar compiled-research/acceptance.yaml
 ```
 
 ### Recorded acceptance example
@@ -574,11 +528,11 @@ two trials with two folds each. The retained tracks contain 96 returns per trial
 the default CSCV partition uses two blocks of 48 returns.
 
 The YAML keeps the repository fixture path so it can also run from a checkout.
-The project driver resolves that filename through its explicit `--data-dir`
-argument and checks the recorded input digest before execution.
+The declaration uses its literal bundled input path. Run it from the bundle root.
 
 <!-- example: manifest-recorded-acceptance source=docs/examples/compiled-research/acceptance.yaml region=__file__ scenario=walk_forward interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: "1.0"
 metadata:
   name: recorded_acceptance
@@ -589,7 +543,7 @@ sfd:
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
-        file_path_or_url: tests/fixtures/spot_1h_20240101_20241231.parquet
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
     split_walk_forward:
       n_folds: 2
       test_bars: 49
@@ -620,6 +574,7 @@ sfd:
   params:
     entry_return: [0.0, 0.001]
 uel:
+  output_path: compiled-acceptance
   recording:
     alignment: true
     fold_details: true
@@ -628,9 +583,10 @@ uel:
     type: grid
   prep_each_round: true
   output_format: parquet
+# endregion declaration
 ```
 
-The driver retains `trial_returns.parquet`, `acceptance_report.json`,
+The CLI retains `trial_returns.parquet`, `acceptance_report.json`,
 `acceptance_report.md` and the fold records under `walk_forward/acceptance/`.
 The independent project proof checks the timestamp population, recomputes the
 selected trial's Deflated Sharpe probability and both CSCV rankings, and compares
@@ -1020,6 +976,7 @@ A rule-based transform can emit its complete long/flat position directly. The st
 
 <!-- example: manifest-rule-execution-definition source=docs/examples/compiled-research/execution.yaml region=__file__ scenario=execution interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_execution
@@ -1073,6 +1030,7 @@ sfd:
     - 6
     - 12
 uel:
+  output_path: compiled-execution
   n_permutations: 2
   search_strategy:
     type: grid
@@ -1084,6 +1042,7 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+# endregion declaration
 ```
 
 This is the shape used by the bundled `dollar_bar_crash_reversal` template. `RuleBasedStrategy` evaluates the position with the declared costs and reports `pnl_per_trade_bps_{split}` with its `num_executed_trades_{split}` denominator in addition to the generic snapshot metrics.

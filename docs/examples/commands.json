@@ -1,8 +1,11 @@
 {
   "python-selection": "python python-research/research.py --scenario selection --data-dir inputs --output-dir results/python",
   "python-all": "python python-research/research.py --scenario all --data-dir inputs --output-dir results/python-all",
-  "compiled-selection": "python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled",
-  "compiled-all": "python compiled-research/research.py --scenario all --data-dir inputs --output-dir results/compiled-all",
+  "compiled-selection": "limen run --no-progress-bar compiled-research/selection.yaml",
+  "compiled-all": "sh compiled-research/run.sh",
   "install": "python -m pip install \"vaquum-limen[data]\"",
-  "compiled-yaml": "limen run --no-progress-bar compiled-research/selection.yaml"
+  "compiled-yaml": "limen run --no-progress-bar compiled-research/selection.yaml",
+  "compiled-research": "limen run --no-progress-bar compiled-research/research.yaml",
+  "compiled-assess": "limen assess compiled-research/research.yaml --results results/dev/compiled-research",
+  "compiled-folds": "limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward"
 }

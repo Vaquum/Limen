@@ -145,7 +145,7 @@ def test_mixed_feedback_order_injected_results_and_checkpoint(interface, request
     verify_feedback(interface, result, inputs)
 
 
-def test_direct_yaml_selection_matches_python_driver(compiled_project, tmp_path):
+def test_cli_selection_matches_reconstruction_api(compiled_project, tmp_path):
     from wheel_proof import compare_selection_logs
     source = ROOT / 'docs/examples/compiled-research/selection.yaml'
     (tmp_path / 'compiled-research').mkdir()

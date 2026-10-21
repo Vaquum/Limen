@@ -8,6 +8,9 @@ import tarfile
 
 
 INPUTS = {
+    'spot_1h_20240101_20240116.parquet': '170337b8e80843067b3934f194f304bb1e2697327e6784e70739811b3edfdadd',
+    'recorded-funding.parquet': '59d48b719df4bdb3545c1e742128e4513d6aa3078645375e0dc0db92d845ab92',
+
     'spot_1h_20240101_20241231.parquet': 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72',
     'spot_15m_20250101_20250531.parquet': 'eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a',
     'btcusdt_funding_20240101_20240108.json': '4352c58c5467ba48b5d13039052085e3bd59c089d6e1455bf99f4063279c3df2',
@@ -37,6 +40,10 @@ def build_results(project: Path, environment: Path, output: Path) -> str:
             raise ValueError('Native results cannot substitute an external file: ' + str(path))
         if path.is_file():
             entries[str(path.relative_to(project))] = path.read_bytes()
+    final = project / 'compiled-research/final/manifests'
+    for path in sorted(final.rglob('*')):
+        if path.is_file():
+            entries[str(path.relative_to(project))] = path.read_bytes()
     entries['files.json'] = (json.dumps({name: hashlib.sha256(data).hexdigest() for name, data in entries.items()}, indent=2) + '\n').encode()
     return write_archive(entries, output)
 
@@ -45,7 +52,7 @@ def build(root: Path, output: Path) -> str:
     entries = {}
     for interface in ('python', 'compiled'):
         for path in (root / f'docs/examples/{interface}-research').rglob('*'):
-            if path.is_file() and path.suffix in ('.py', '.yaml', '.md'):
+            if path.is_file() and path.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
                 entries[f'{interface}-research/{path.relative_to(root / f"docs/examples/{interface}-research")}'] = path.read_bytes()
     for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json'):
         entries[name] = (root / 'docs/examples' / name).read_bytes()

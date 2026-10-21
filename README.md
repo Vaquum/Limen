@@ -184,7 +184,7 @@ Continue with [custom SFDs](https://github.com/Vaquum/Limen/blob/main/docs/Singl
 
 ## Compiled Research
 
-Declare the experiment and let Limen enforce its pipeline contract. The Manifest specifies the data, chronological splits, preparation, model and parameter space; the CLI validates and compiles that definition before executing it. Invoking the same Manifest from Python remains Compiled Research.
+Declare the experiment and let Limen enforce its pipeline contract. The Manifest specifies the data, chronological splits, preparation, model and parameter space; the CLI validates and compiles that definition before executing it. The YAML is the complete research definition; run it through the CLI.
 
 The [complete Compiled project](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/README.md) starts with a recorded-data logistic experiment. Its selection declaration fixes the source, dates, train-fitted target/scaler, execution policy and validation objective:
 
@@ -193,6 +193,7 @@ The [complete Compiled project](https://github.com/Vaquum/Limen/blob/main/docs/e
 
 <!-- example: readme-compiled-definition source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
 ```yaml
+# region declaration
 schema_version: "1.0"
 metadata:
   name: book_compiled_selection
@@ -261,6 +262,15 @@ uel:
   search_strategy:
     type: grid
   output_format: csv
+
+# region assessment
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  predict: true
+# endregion assessment
+# endregion declaration
 ```
 
 </details>
@@ -274,7 +284,7 @@ limen run --no-progress-bar compiled-research/selection.yaml
 
 The command validates and compiles the declaration, executes two candidates and writes `results/dev/compiled-cli`. The [CLI lifecycle](https://github.com/Vaquum/Limen/blob/main/docs/Command-Line-Interface.md#first-yaml-run) also exercises template initialization, explicit validation/profiling, dry compilation, immutable committed definitions, recovery and project backup.
 
-The Compiled project's Python selection driver runs the same declared candidate comparison, selects by validation return and reconstructs the chosen recorded round through `Trainer`. The proof checks the direct CLI's candidate identities and validation returns against that driver. Reconstruction refits under the recorded pipeline and checks replayed metrics; it does not restore arbitrary saved weights.
+After execution, `limen assess` applies the YAML's validation selection, reconstructs the selected Sensors and binds their Cohort. Reconstruction refits under the recorded pipeline and checks replayed metrics. The [comprehensive YAML](https://github.com/Vaquum/Limen/blob/main/docs/examples/compiled-research/research.yaml) continues through feature ablation, PCA, calibration, threshold selection, full recording and inference; separate declarations cover incompatible research choices.
 
 | Artifact | What it records |
 |---|---|

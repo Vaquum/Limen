@@ -23,11 +23,7 @@ def run_experiment(yaml_path: Path,
                    progress_bar: bool = True,
                    workers: int | None = None) -> bool:
 
-    '''
-    Validate and run YAML, with CLI workers taking precedence over YAML.
-    Committed manifests retain their hash-based output layout and source YAML.
-
-    '''
+    '''Run the declared experiment, preserving its YAML and committed-manifest output layout.'''
 
     click.echo(f"Loading {yaml_path} ...")
 
@@ -56,6 +52,8 @@ def run_experiment(yaml_path: Path,
     results_dir = _build_results_dir(uel_cfg, experiment_name, test_mode, manifest_id, results_base)
 
     try:
+        from limen.cli.assessment import require_reservation
+        require_reservation(yaml_dict, yaml_path)
         search_strategy = build_search_strategy(yaml_dict)
         pruning_strategies = build_pruning_strategies(yaml_dict)
         compiled = CompiledSFD(yaml_dict, project_root=yaml_path.parent)

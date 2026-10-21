@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_recovery
@@ -45,8 +46,16 @@ sfd:
     - 2.0
     random_state: [42]
 uel:
+  output_path: compiled-recovery
   n_permutations: 4
   search_strategy:
     type: grid
   output_format: csv
   checkpoint_interval: 1
+
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+# endregion declaration

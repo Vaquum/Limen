@@ -72,15 +72,20 @@ def adaptive_search(data_dir, output):
             'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
 ```
 
-<!-- example: feedback-compiled-budget source=docs/examples/compiled-research/scenarios.py region=adaptive_search scenario=search interface=compiled role=executed -->
-```python
-def adaptive_search(data_dir, output):
-    config = configuration('adaptive', data_dir)
-    loop = execute(config, output)
-    checkpoint = json.loads((output / 'checkpoint.json').read_text())['msq_state']
-    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
-            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
-            'checkpoint_yielded': checkpoint['yielded_count'], 'checkpoint_remaining': checkpoint['trim_budget']}
+<!-- example: feedback-compiled-budget source=docs/examples/compiled-research/adaptive.yaml region=budget_config scenario=search interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-adaptive
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  pruning_strategies:
+  - type: budget
+    params:
+      max_permutations: 3
+  feedback_interval: 1
 ```
 
 These small runs exercise `BudgetReducer`. The four metric-driven alternatives below need enough observations for their respective analyses; a three-round example does not demonstrate their statistical reliability.
@@ -203,15 +208,15 @@ Every reducer takes `metric` (the column it reasons over) and `active` (default 
 
 ### `intra_callback`
 
-A callback receives `(log, msq)` and applies queue methods directly. It is supplied to `UniversalExperimentLoop` from Python. This does not determine the research interface: the Compiled project also invokes its declared pipeline from Python and supplies a callback.
+A Python Research callback receives `(log, msq)` and applies queue methods directly. Compiled Research declares reducers in YAML and can receive file interventions through the running CLI process.
 
-Use a callback for caller-owned control logic or experiment hooks. Each project below narrows the domain after two completed observations, alongside a resource reducer and an intervention file.
+Use a callback for caller-owned Python control logic. The Compiled example declares its resource limit with the budget reducer.
 
 ### `interventions.json`
 
 With an `experiment_dir`, the controller watches that directory's `interventions.json`. The caller supplies a JSON array of declarative operations; Limen does not create this control file for the caller. The controller polls modification time and applies changed contents on the next feedback trigger. An unchanged file is not applied again in the same controller lifetime; controller checkpoint state retains the observed modification time.
 
-The callbacks write the actual control files during the first feedback cycle, before the controller polls its file source. A fresh experiment rejects a directory containing a pre-existing intervention file as partial state; create that control file after execution starts. Python injects a new Ridge penalty of `2.0`; Compiled injects a new logistic penalty parameter `C=7.5`. Neither value belongs to its initial search domain.
+The Python callback example writes its file during the first feedback cycle. An operator may instead write a Compiled run's intervention file while the CLI is running. A fresh experiment rejects a pre-existing control file; create it after execution begins.
 
 ## Audit trail
 
@@ -249,30 +254,23 @@ def mixed_feedback(data_dir, output):
             'remaining': checkpoint['msq_state']['trim_budget']}
 ```
 
-<!-- example: feedback-compiled-mixed source=docs/examples/compiled-research/scenarios.py region=mixed_feedback scenario=search interface=compiled role=executed -->
-```python
-def mixed_feedback(data_dir, output):
-    config = configuration('adaptive', data_dir)
-    config['uel']['recording'] = {'predictions': True, 'alignment': True, 'trade_ledger': False, 'fold_details': False}
-
-    def steer(log, msq):
-        if log.height == 2:
-            msq.keep_is('C', .1)
-            (output / 'interventions.json').write_text(json.dumps([
-                {'op': 'inject_value', 'param': 'C', 'value': 7.5}]))
-
-    loop = execute(config, output, callback=steer)
-    checkpoint = json.loads((output / 'checkpoint.json').read_text())
-    with gzip.open(output / 'round_data.jsonl.gz', 'rt') as stream:
-        records = [json.loads(line) for line in stream]
-    return {'rows': research_project.completed_log(loop).select('id', 'C', 'accuracy').to_dicts(),
-            'audit': [json.loads(line) for line in (output / 'audit.jsonl').read_text().splitlines()],
-            'domain': checkpoint['domain_state'], 'yielded': checkpoint['msq_state']['yielded_count'],
-            'remaining': checkpoint['msq_state']['trim_budget'], 'records': records,
-            'predictions': {record['round_id']: recorded_predictions(output, record) for record in records}}
+<!-- example: feedback-compiled-mixed source=docs/examples/compiled-research/adaptive.yaml region=budget_config scenario=search interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-adaptive
+  n_permutations: 4
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  pruning_strategies:
+  - type: budget
+    params:
+      max_permutations: 3
+  feedback_interval: 1
 ```
 
-At the first feedback cycle, the budget reducer trims total work to three trials, the callback keeps one original parameter value, and the file injects a new value. The first two completed observations remain recorded. The third evaluates an injected value, rather than repeating a completed combination. The assertions check source order, absence of errors, one application of the unchanged file, the final domain and the exhausted budget. They independently recompute the Python score and the Compiled accuracy from recorded observations and predictions.
+The Python mixed-feedback example combines a reducer, callback and file injection. The Compiled YAML below demonstrates declared budget reduction; callbacks remain Python API extension behavior and are not part of the Compiled workflow.
 
 Feedback changes the observations collected. This example establishes control ordering and persistence; it does not establish that narrowing or expanding the domain improves selection.
 
@@ -302,6 +300,7 @@ The Compiled project declares its budget reducer with the same registry key and 
 <!-- example: feedback-compiled-budget-declaration source=docs/examples/compiled-research/adaptive.yaml region=budget_config scenario=search interface=compiled role=executed -->
 ```yaml
 uel:
+  output_path: compiled-adaptive
   n_permutations: 4
   search_strategy:
     type: grid
@@ -314,7 +313,7 @@ uel:
   feedback_interval: 1
 ```
 
-`feedback_interval` schedules the feedback cycles. Each `type` must be a registry key and each `params` mapping supplies the corresponding constructor arguments. Unknown types and fields are rejected by `limen validate` before execution. The controller still applies callbacks and file interventions when the same Compiled definition is invoked from Python.
+`feedback_interval` schedules the feedback cycles. Each reducer `type` is a registry key; `params` supplies its constructor arguments. `limen validate` rejects unknown types and fields before execution. File interventions are read by the same controller during CLI execution.
 
 ## Read next
 

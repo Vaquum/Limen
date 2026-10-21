@@ -1,0 +1,50 @@
+schema_version: '1.0'
+metadata:
+  name: book_compiled_holdout
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-03'
+      val_start: '2024-01-03'
+      val_end: '2024-01-04'
+      test_start: '2024-01-04'
+      test_end: '2024-01-05'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type: [logreg]
+    C:
+    - 1.0
+    random_state: [42]
+uel:
+  output_path: compiled-holdout
+  n_permutations: 1
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1

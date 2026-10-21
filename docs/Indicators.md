@@ -36,7 +36,7 @@ The [Compiled project](examples/compiled-research/README.md) declares a one-peri
           group: momentum
 ```
 
-Both excerpts belong to the complete selection programs. Their source footers lead to the inputs, current wheel execution and semantic assertions. A helper's presence does not make the research Compiled: a Manifest invoked from Python still adopts the Compiled contract.
+Both excerpts belong to the complete selection programs. Their source footers lead to the inputs, current wheel execution and semantic assertions. Python can use shared indicators in caller-owned preparation; Compiled Research declares them in YAML and executes them through the CLI.
 
 ### Rate-of-change signature
 

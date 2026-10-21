@@ -4,7 +4,7 @@ Read the book through one research question, two complete projects and the decis
 
 ## Limen in one page
 
-Limen is a research engine for Bitcoin traders. Python Research gives you control of data, preparation, models, backtesting and selection in ordinary Python. Compiled Research adopts the Manifest contract through the CLI or Python, with the configured pipeline checks and recorded evidence. Both use Universal Experiment Loop (UEL) with Mutable Search Queue (MSQ). Choose the interface by who should own the research methodology.
+Limen is a research engine for Bitcoin traders. Python Research gives you control of data, preparation, models, backtesting and selection in ordinary Python. Compiled Research declares the experiment in YAML and runs it through the CLI. Both use Universal Experiment Loop (UEL) with Mutable Search Queue (MSQ).
 
 Limen does not place venue orders or manage downstream trading decisions. In the wider Vaquum architecture, Origo sits upstream as the data layer, while Nexus, Praxis, and Veritas sit downstream for decisioning, execution, and oversight.
 
@@ -33,7 +33,7 @@ Limen does not place venue orders or manage downstream trading decisions. In the
 1. Start with [Experiment Manifest](Experiment-Manifest.md)
 2. Run manifests through [End-to-End Workflow](End-to-End-Workflow.md) and [Command-Line Interface](Command-Line-Interface.md)
 3. Review the shipped decoder patterns in [Built-In SFDs](Built-In-SFDs.md)
-4. Read [Single-File Decoder](Single-File-Decoder.md) for the compiled SFD boundary; invoking a Manifest from Python remains Compiled Research
+4. Define [Python SFD functions](Single-File-Decoder.md#custom-sfds), or write the [Compiled YAML](Compiled-Research.md).
 5. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
 6. Strengthen the research surface with [Perturbation Strategies](Perturbation-Strategies.md) for robustness, [Fractional Differentiation](Fractional-Differentiation.md) for stationary features, and [Triple-Barrier Method](Triple-Barrier-Method.md) for path-dependent labels
 7. Choose search in [Advanced Search](Advanced-Search.md); adaptive controls are optional in [Reducers And Feedback](Reducers-And-Feedback.md)
@@ -70,10 +70,10 @@ Limen does not place venue orders or manage downstream trading decisions. In the
 1. Data enters through [Historical Data](Historical-Data.md) or compatible external OHLC data.
 2. Data can be reshaped with [Data Bars](Data-Bars.md) when threshold bars are the right research surface.
 3. Indicators, features, transforms, and scalers define the research surface. Targets define supervised labels; calibration adjusts probabilities and thresholds after model output.
-4. Define Python Research with caller-owned [SFD functions](Single-File-Decoder.md#custom-sfds), or adopt the [Manifest contract](Experiment-Manifest.md) for Compiled Research through the CLI or Python.
+4. Define Python Research with caller-owned [SFD functions](Single-File-Decoder.md#custom-sfds), or declare [Compiled Research in YAML](Compiled-Research.md) and execute it with the CLI.
 5. Both routes use [Universal Experiment Loop](Universal-Experiment-Loop.md) with MSQ. [Advanced Search](Advanced-Search.md) controls candidate generation; [Reducers And Feedback](Reducers-And-Feedback.md) provides optional adaptive control.
 6. [Log](Log.md), [Benchmark](Benchmark.md), and [Backtest](Backtest.md) explain what happened and why.
-7. Python Research wraps selected evaluated fitted state in a [Sensor](Trainer.md#python-construction). Compiled Research uses [Trainer](Trainer.md) to reconstruct selected recorded rounds or qualified folds.
+7. Python Research wraps selected evaluated state in a [Sensor](Trainer.md#python-construction). Compiled Research uses `limen assess` to reconstruct validation-selected Sensors and their Cohort from recorded CLI artifacts.
 8. [Cohort](Cohort.md) combines selected Sensors through caller-owned Python composition or compatible recorded-member binding.
 9. Those outputs then move downstream into Nexus and the rest of the Vaquum stack.
 

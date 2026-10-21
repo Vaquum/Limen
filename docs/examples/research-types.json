@@ -10,6 +10,9 @@
   "pythonVersion": "3.10",
   "executionEnvironments": [
     {
+      "root": "tests/native_api"
+    },
+    {
       "root": "python-research"
     },
     {

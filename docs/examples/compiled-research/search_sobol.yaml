@@ -1,6 +1,7 @@
+# region declaration
 schema_version: '1.0'
 metadata:
-  name: book_compiled_holdout
+  name: book_compiled_search_sobol
   mode: development
 sfd:
   manifest:
@@ -11,11 +12,11 @@ sfd:
         file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
     split_dates:
       train_start: '2024-01-01'
-      train_end: '2024-01-03'
-      val_start: '2024-01-03'
-      val_end: '2024-01-04'
-      test_start: '2024-01-04'
-      test_end: '2024-01-05'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
     indicators:
     - func: limen.indicators.roc
       params:
@@ -39,11 +40,17 @@ sfd:
   params:
     scaler_type: [logreg]
     C:
+    - 0.1
+    - 0.5
     - 1.0
+    - 2.0
     random_state: [42]
 uel:
-  n_permutations: 1
+  output_path: compiled-search_sobol
+  n_permutations: 4
   search_strategy:
-    type: grid
+    type: sobol
+    seed: 7
   output_format: csv
   checkpoint_interval: 1
+# endregion declaration

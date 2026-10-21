@@ -64,20 +64,7 @@ def trade_profile(data_dir, output):
 
 ### Compiled Research
 
-<!-- example: cfr-compiled-profile source=docs/examples/recorded_inputs.py region=trade_profile scenario=bars interface=compiled role=executed -->
-```python
-def trade_profile(data_dir, output):
-    historical = HistoricalData()
-    historical.get_any_file(str(checked_path(data_dir, TRADES)), has_header=False,
-                            columns=['trade_id', 'price', 'quantity', 'quote_quantity', 'timestamp', 'is_buyer_maker', '_null'])
-    trades = historical.data
-    if not isinstance(trades, pl.DataFrame):
-        raise ValueError('The recorded trade source did not produce a dataframe')
-    profile = conserved_flux_renormalization(trades, kline_interval='30s', base_window_s=5, levels=3)
-    profile.write_parquet(output / 'trade-profile.parquet')
-    rows = [{**row, 'datetime': row['datetime'].isoformat()} for row in profile.to_dicts()]
-    return {'trade_rows': trades.height, 'bars': rows, 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
-```
+The recorded trade slice supplies three CFR diagnostic bars. The Python example above measures that transformation; it supplies no supervised training population. The Compiled project's [bar declaration](examples/compiled-research/bars.yaml) separately exercises volume, trade and liquidity bars on the recorded hourly source.
 
 The assertions independently reconstruct each bar's OHLC, volume, traded value and VWAP from the original trades. They check that the complete population is accounted for and all six diagnostics are finite and nonnegative. They do not turn the observed deviation measures into predictive or acceptance thresholds.
 

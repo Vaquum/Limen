@@ -510,5 +510,7 @@
   "limen/backtest/_cost_history.py": 230,
   "limen/backtest/_cost_statistics.py": 220,
   "limen/backtest/_cost_identity.py": 200,
-  "limen/backtest/_cost_comparison.py": 260
+  "limen/backtest/_cost_comparison.py": 260,
+  "limen/cli/assessment.py": 150,
+  "limen/yaml/_assessment_spec.py": 90
 }
