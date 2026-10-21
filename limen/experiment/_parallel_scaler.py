@@ -51,10 +51,10 @@ def capture_transform(cls: type) -> CapturedTransform:
                              getattr(cls, '__parallel_round_contract__', None))
 
 
-def constructor_state(cls: type, *, include_routines: bool = False) -> tuple[tuple[type, dict[str, object]], ...]:
+def constructor_state(cls: type, *, include_routines: bool = False, captured_transform: bool = False) -> tuple[tuple[type, dict[str, object]], ...]:
     states: list[tuple[type, dict[str, object]]] = []
     for base in cls.__mro__:
-        values = {name: value for name, value in vars(base).items() if not name.startswith('__') and not isinstance(value, type) and (include_routines or not isroutine(value)) and not isdatadescriptor(value)}
+        values = {name: getattr(value, '__func__', value) if isinstance(value, (staticmethod, classmethod)) else value for name, value in vars(base).items() if not name.startswith('__') and not isinstance(value, type) and (include_routines or not isroutine(value)) and not isdatadescriptor(value) and (name != 'transform' or not captured_transform)}
         if base.__init__ is not cls.__init__ and (isfunction(base.__init__) or ismethod(base.__init__)):
             values['__init__'] = base.__init__
         if values:
@@ -63,8 +63,8 @@ def constructor_state(cls: type, *, include_routines: bool = False) -> tuple[tup
 
 
 @identity_snapshot()
-def validate_constructor(cls: type, parents: tuple[tuple[type, dict[str, object]], ...], fingerprint: Callable[[object], str], *functions: object) -> None:
-    state = constructor_state(cls)
+def validate_constructor(cls: type, parents: tuple[tuple[type, dict[str, object]], ...], fingerprint: Callable[[object], str], *functions: object, include_routines: bool = False, captured_transform: bool = False) -> None:
+    state = constructor_state(cls, include_routines=include_routines, captured_transform=captured_transform)
     if (state or parents) and fingerprint((state, functions)) != fingerprint((parents, functions)):
         raise TypeError('Parallel constructor has unfrozen inherited initializer state or class state')
 

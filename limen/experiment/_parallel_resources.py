@@ -28,6 +28,7 @@ class FrozenClassFactory:
     initializer: Callable[..., object] | None
     allocator: Callable[..., object] | None
     parents: tuple[tuple[type, dict[str, object]], ...] = ()
+    captured_transform: bool = False
 
     @property
     def __signature__(self) -> Signature:
@@ -38,7 +39,7 @@ class FrozenClassFactory:
         return getattr(self.factory_class, '__parallel_round_contract__', None)
 
     def __call__(self, *args: object, **kwargs: object) -> object:
-        validate_constructor(self.factory_class, self.parents, component_digest, self.initializer, self.allocator)
+        validate_constructor(self.factory_class, self.parents, component_digest, self.initializer, self.allocator, include_routines=True, captured_transform=self.captured_transform)
         allocate = self.allocator or self.factory_class.__new__
         instance = allocate(self.factory_class, *(() if allocate is object.__new__ else args), **({} if allocate is object.__new__ else kwargs))
         if isinstance(instance, self.factory_class) and factory_initializer(self.factory_class, instance, self.initializer)(*args, **kwargs) is not None:
@@ -54,12 +55,11 @@ def factory_component(value: object, *, captured_transform: bool = False) -> obj
         if (inspect.ismethod(implementation)
                 or ((implementation := getattr(implementation, '__func__', implementation)) is not None and (not inspect.isroutine(implementation) or (inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or mutable_function(implementation)))))):
             raise TypeError('Parallel transport rejects unfrozen factory call state')
-        parents = constructor_state(value)
-        if any((callable(item) and not inspect.isroutine(item)) or inspect.ismethod(item)
-               or (inspect.isfunction(function := getattr(item, '__func__', item)) and mutable_function(function))
-               for _, attributes in constructor_state(value, include_routines=True) for name, item in attributes.items() if not name.startswith('__') and (name != 'transform' or not captured_transform)):
+        parents = constructor_state(value, include_routines=True, captured_transform=captured_transform)
+        if any((callable(item) and not inspect.isroutine(item)) or inspect.ismethod(item) or (inspect.isfunction(item) and mutable_function(item))
+               for _, attributes in parents for name, item in attributes.items() if not name.startswith('__')):
             raise TypeError('Parallel transport rejects unfrozen factory class callable state')
-        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parents)
+        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parents, captured_transform)
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None
