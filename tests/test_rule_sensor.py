@@ -146,7 +146,7 @@ def test_recorded_rule_sensor_decisions(rule_campaign):
 
 
 def test_recorded_rule_sensor_consumers(rule_campaign):
-    output, config, bars, _, ids, sensors, _, kind = rule_campaign
+    output, config, bars, _, ids, sensors, _, _ = rule_campaign
     selections = [(output, pid, 0) for pid in ids] if 'split_walk_forward' in config['sfd']['manifest'] else [(output, pid) for pid in ids]
     cohorts = [Cohort(rounds=selections)]
     if len(selections[0]) == 2:
