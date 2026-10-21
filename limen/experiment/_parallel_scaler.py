@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from inspect import Parameter, getattr_static, isdatadescriptor, isfunction, ismethod, ismethoddescriptor, signature
+from inspect import Parameter, getattr_static, isdatadescriptor, isfunction, ismethod, isroutine, signature
 from typing import Protocol, cast
 
 import polars as pl
@@ -54,7 +54,7 @@ def capture_transform(cls: type) -> CapturedTransform:
 def constructor_state(cls: type) -> tuple[tuple[type, dict[str, object]], ...]:
     states: list[tuple[type, dict[str, object]]] = []
     for base in cls.__mro__:
-        values = {name: value for name, value in vars(base).items() if not name.startswith('__') and not callable(value) and not isdatadescriptor(value) and not ismethoddescriptor(value)}
+        values = {name: value for name, value in vars(base).items() if not name.startswith('__') and not isinstance(value, type) and not isroutine(value) and not isdatadescriptor(value)}
         if base.__init__ is not cls.__init__ and (isfunction(base.__init__) or ismethod(base.__init__)):
             values['__init__'] = base.__init__
         if values:
