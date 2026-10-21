@@ -83,14 +83,16 @@ def test_wait_loop_returns_fast_paths_without_sleeping(monkeypatch):
         module, 'fetch_check_runs',
         lambda repo, sha: [_run('PR Checks Tests', 'completed', 'success')],
     )
-    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0, 1)
+    verdict, outcome = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0, 1)
+    assert outcome == 'passed'
     assert verdict.passed == ('PR Checks Tests',)
     assert sleeps == []
     monkeypatch.setattr(
         module, 'fetch_check_runs',
         lambda repo, sha: [_run('PR Checks Tests', 'completed', 'failure')],
     )
-    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    verdict, outcome = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert outcome == 'failed'
     assert verdict.failed == ('PR Checks Tests (failure)',)
     assert sleeps == []
 
@@ -111,7 +113,8 @@ def test_wait_loop_waits_then_settles(monkeypatch):
     monkeypatch.setattr(
         module, 'fetch_check_runs', lambda repo, sha: payloads.pop(0)
     )
-    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    verdict, outcome = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert outcome == 'passed'
     assert verdict.passed == ('PR Checks Tests',)
     assert verdict.pending == ()
 
@@ -128,8 +131,29 @@ def test_wait_loop_times_out_on_pending(monkeypatch):
         module, 'fetch_check_runs',
         lambda repo, sha: [_run('PR Checks Tests', 'in_progress')],
     )
-    verdict = module.wait_for_green('o/r', 'sha', [], 10.0, 30.0)
+    verdict, outcome = module.wait_for_green('o/r', 'sha', [], 10.0, 30.0)
+    assert outcome == 'timeout'
     assert verdict.pending == ('PR Checks Tests',)
+
+
+def test_wait_loop_deadline_green_is_a_timeout(monkeypatch):
+    module = _load_wait_for_checks()
+    now = [1000.0]
+    monkeypatch.setattr(module.time, 'monotonic', lambda: now[0])
+    monkeypatch.setattr(
+        module.time, 'sleep',
+        lambda s: now.__setitem__(0, now[0] + s),
+    )
+    payloads = [
+        [_run('PR Checks Tests', 'in_progress')],
+        [_run('PR Checks Tests', 'completed', 'success')],
+    ]
+    monkeypatch.setattr(
+        module, 'fetch_check_runs', lambda repo, sha: payloads.pop(0)
+    )
+    verdict, outcome = module.wait_for_green('o/r', 'sha', [], 10.0, 30.0)
+    assert outcome == 'timeout'
+    assert verdict.passed == ('PR Checks Tests',)
 
 
 def test_wait_main_exit_codes(monkeypatch, capsys):
@@ -137,26 +161,28 @@ def test_wait_main_exit_codes(monkeypatch, capsys):
     green = module.Verdict(
         pending=(), failed=(), passed=('PR Checks Tests',), excluded=()
     )
-    monkeypatch.setattr(module, 'wait_for_green', lambda *a: green)
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: (green, 'passed'))
     argv = ['--repo', 'o/r', '--sha', 'abc', '--exclude-substring', 'x']
     assert module.main(argv) == 0
     assert 'PASS' in capsys.readouterr().out
     bad = module.Verdict(
         pending=(), failed=('PR Checks Tests (failure)',), passed=(), excluded=()
     )
-    monkeypatch.setattr(module, 'wait_for_green', lambda *a: bad)
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: (bad, 'failed'))
     assert module.main(argv) == 1
     assert 'FAILING CHECKS' in capsys.readouterr().err
     empty = module.Verdict(pending=(), failed=(), passed=(), excluded=())
-    monkeypatch.setattr(module, 'wait_for_green', lambda *a: empty)
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: (empty, 'timeout'))
     assert module.main(argv) == 1
     assert 'refusing to ship' in capsys.readouterr().err
     stuck = module.Verdict(
         pending=('PR Checks Tests',), failed=(), passed=(), excluded=()
     )
-    monkeypatch.setattr(module, 'wait_for_green', lambda *a: stuck)
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: (stuck, 'timeout'))
     assert module.main(argv) == 1
-    assert 'timed out' in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert 'timed out' in err
+    assert 'PR Checks Tests' in err
 
 
 def test_wait_fetch_maps_failures_to_exit_2(monkeypatch):
@@ -237,7 +263,8 @@ def test_wait_loop_holds_for_late_registering_runs(monkeypatch):
         module, 'fetch_check_runs',
         lambda repo, sha: (calls.append(1), payloads.pop(0))[1],
     )
-    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    verdict, outcome = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert outcome == 'passed'
     assert verdict.passed == ('PR Checks Tests', 'PR Checks Coverage')
     assert len(calls) == 5
 

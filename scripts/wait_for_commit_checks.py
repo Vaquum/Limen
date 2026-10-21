@@ -110,12 +110,15 @@ def wait_for_green(
     timeout_seconds: float,
     poll_seconds: float,
     settle_polls: int = 3,
-) -> Verdict:
+) -> tuple[Verdict, str]:
     """Poll until the commit's validation settles or the timeout expires.
 
     A fully green snapshot passes only once the observed run set has
     stayed identical for ``settle_polls`` consecutive polls, so checks
-    that register late cannot miss the gate.
+    that register late cannot miss the gate. Returns the last verdict
+    with an outcome of ``'passed'``, ``'failed'``, or ``'timeout'``; only
+    ``'passed'`` means the settling requirement was met. A green snapshot
+    on the deadline poll is a timeout, never a pass.
     """
     if settle_polls < 1:
         raise SystemExit('wait_for_commit_checks: --settle-polls must be >= 1')
@@ -126,7 +129,7 @@ def wait_for_green(
     while True:
         last = partition_runs(fetch_check_runs(repo, sha), excluded_substrings)
         if last.failed:
-            return last
+            return last, 'failed'
         watched = last.pending + last.passed
         if watched and not last.pending:
             names = frozenset(watched + last.excluded)
@@ -136,12 +139,12 @@ def wait_for_green(
                 stable_rounds = 1
                 last_names = names
             if stable_rounds >= settle_polls:
-                return last
+                return last, 'passed'
         else:
             stable_rounds = 0
             last_names = None
         if time.monotonic() >= deadline:
-            return last
+            return last, 'timeout'
         time.sleep(poll_seconds)
 
 
@@ -154,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument('--settle-polls', type=int, default=3)
     parser.add_argument('--exclude-substring', action='append', default=[])
     args = parser.parse_args(argv)
-    verdict = wait_for_green(
+    verdict, outcome = wait_for_green(
         args.repo, args.sha, args.exclude_substring,
         args.timeout_seconds, args.poll_seconds, args.settle_polls,
     )
@@ -163,16 +166,21 @@ def main(argv: list[str] | None = None) -> int:
         for name in verdict.failed:
             print(f'  - {name}', file=sys.stderr)
         return 1
-    if not verdict.pending and not verdict.passed:
-        print(
-            'wait_for_commit_checks: no validation check-runs observed; refusing to ship',
-            file=sys.stderr,
-        )
-        return 1
-    if verdict.pending:
-        print('wait_for_commit_checks: timed out waiting for:', file=sys.stderr)
-        for name in verdict.pending:
-            print(f'  - {name}', file=sys.stderr)
+    if outcome == 'timeout':
+        if verdict.pending or verdict.passed:
+            print(
+                'wait_for_commit_checks: timed out before the validation '
+                'set settled; refusing to ship:',
+                file=sys.stderr,
+            )
+            for name in (*verdict.pending, *verdict.passed):
+                print(f'  - {name}', file=sys.stderr)
+        else:
+            print(
+                'wait_for_commit_checks: no validation check-runs observed; '
+                'refusing to ship',
+                file=sys.stderr,
+            )
         return 1
     print(f'wait_for_commit_checks: PASS ({len(verdict.passed)} green, '
           f'{len(verdict.excluded)} excluded)')
