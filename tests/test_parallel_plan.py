@@ -400,8 +400,8 @@ class DualDefaultTarget(AllocatedTarget):
         self.target_name = target_name
 
 
-class ReorderedJobsTarget(AllocatedTarget):
-    __new__ = object.__new__
+class ReorderedJobsTarget:
+    transform = AllocatedTarget.transform
 
     def __init__(self, train_data, n_jobs=2, target_name='target'):
         self.window, self.target_name = 2, target_name
