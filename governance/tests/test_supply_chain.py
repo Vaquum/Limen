@@ -23,12 +23,13 @@ one of them reds the required tests gate:
 And the install law over every ``pip install`` a workflow runs:
 
   5. Every install is either a hash-locked compiled set
-     (``--require-hashes -r requirements/ci/<set>.txt``) or the
-     first-party editable install with resolution disabled
-     (``--no-build-isolation --no-deps -e .``), so no job resolves a
-     third-party package outside the hash-pinned sets. The declared
-     runtime dependencies the ``--no-deps`` install skips come from
-     the ``runtime-env`` set, which mirrors ``[project.dependencies]``.
+     (``--require-hashes -r requirements/ci/<set>.txt``, plus the one
+     documented docs-owned set below) or the first-party editable
+     install with resolution disabled (``--no-build-isolation
+     --no-deps -e .``), so no job resolves a third-party package
+     outside the hash-pinned sets. The declared runtime dependencies
+     the ``--no-deps`` install skips come from the ``runtime-env``
+     set, which mirrors ``[project.dependencies]``.
   6. Every compiled set is hash-complete (each requirement entry
      carries at least one ``--hash=sha256``) and every ``.in`` source
      has its compiled ``.txt`` sibling and vice versa.
@@ -66,9 +67,18 @@ GIT_FETCH_RE = re.compile(r'^\s*git (?!-c "http\.https://github\.com/\.extrahead
 # prefix and the interpreter/uv prefix included), so a non-compliant
 # install cannot hide chained ahead of a compliant tail.
 INSTALL_PREFIX = r'(?:run: )?(?:[\w./-]+ -m |uv )?'
+# The one documented out-of-tree set: docs-owned source-check tools,
+# kept beside the docs tooling they serve. It is installed with
+# --require-hashes like every compiled set, and the completeness test
+# below holds it to the same hash standard -- it is a recorded
+# decision, not an unchecked gap.
+HASHED_INSTALL_EXTRA_SETS: frozenset[str] = frozenset({
+    'docs/examples/requirements-quality.txt',
+})
 HASHED_INSTALL_RE = re.compile(
     INSTALL_PREFIX
-    + r'pip install (?:--python \S+ )?--require-hashes -r requirements/ci/[a-z-]+\.txt'
+    + r'pip install (?:--python \S+ )?--require-hashes -r '
+    + r'(?:requirements/ci/[a-z-]+\.txt|docs/examples/requirements-quality\.txt)'
 )
 # Installing a distribution this workflow just built is not a dependency
 # resolution: the artifact comes from `dist/`, not an index, and proving it
@@ -163,6 +173,22 @@ def test_every_workflow_install_is_hash_locked() -> None:
     )
 
 
+def _hash_violations(path: Path) -> list[str]:
+    violations: list[str] = []
+    lines = path.read_text(encoding='utf-8').splitlines()
+    for lineno, line in enumerate(lines, start=1):
+        if not REQUIREMENT_ENTRY_RE.match(line):
+            continue
+        block = [line]
+        for follower in lines[lineno:]:
+            if not follower.startswith((' ', '\t')):
+                break
+            block.append(follower)
+        if '--hash=sha256' not in '\n'.join(block):
+            violations.append(f'{path.name}:{lineno}: {line.split(" ")[0]} has no hash')
+    return violations
+
+
 def test_requirement_sets_are_hash_complete_and_paired() -> None:
     sources = sorted(REQUIREMENTS_DIR.glob('*.in'))
     compiled = sorted(REQUIREMENTS_DIR.glob('*.txt'))
@@ -171,15 +197,15 @@ def test_requirement_sets_are_hash_complete_and_paired() -> None:
 
     violations: list[str] = []
     for path in compiled:
-        lines = path.read_text(encoding='utf-8').splitlines()
-        for lineno, line in enumerate(lines, start=1):
-            if not REQUIREMENT_ENTRY_RE.match(line):
-                continue
-            block = [line]
-            for follower in lines[lineno:]:
-                if not follower.startswith((' ', '\t')):
-                    break
-                block.append(follower)
-            if '--hash=sha256' not in '\n'.join(block):
-                violations.append(f'{path.name}:{lineno}: {line.split(" ")[0]} has no hash')
+        violations.extend(_hash_violations(path))
+    assert not violations, '\n'.join(violations)
+
+
+def test_documented_extra_sets_stay_hash_complete() -> None:
+    assert HASHED_INSTALL_EXTRA_SETS, 'exception set must stay non-empty and explicit'
+    violations: list[str] = []
+    for name in sorted(HASHED_INSTALL_EXTRA_SETS):
+        path = REPO_ROOT / name
+        assert path.is_file(), f'documented extra set missing: {name}'
+        violations.extend(_hash_violations(path))
     assert not violations, '\n'.join(violations)

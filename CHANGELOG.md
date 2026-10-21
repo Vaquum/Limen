@@ -1922,3 +1922,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.25] - 2026-10-21
 
 - Retire the slice delivery regime: remove the slice template, slice gate and workflows, and the interface-contract system; add the `pr_checks_prd` gate so every PR closes one open issue and `feat` PRs close a PRD.
+
+## [5.45.26] - 2026-10-21
+
+- Repair and collect the supply-chain contract test, add a Task issue template for non-feature work, and document the legacy branch-protection mirror.
