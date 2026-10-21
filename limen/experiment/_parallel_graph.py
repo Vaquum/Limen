@@ -42,6 +42,10 @@ def _value_node(node: object) -> bool:
     return parts[0] in ('null', 'str', 'bool', 'int', 'float', 'date', 'datetime', 'path', 'import', 'owner_call')
 
 
+def has_decoded_identity(value: object) -> bool:
+    return any(item is value for item in (_decoded.get() or ()))
+
+
 def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[object]:
     token = _encoded.set(({}, set())) if _encoded.get() is None else None
     try:

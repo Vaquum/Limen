@@ -15,6 +15,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from dataclasses import dataclass, fields, is_dataclass, replace
 from functools import partial, wraps
+from types import FunctionType
 
 import pytest
 import polars as pl
@@ -1020,6 +1021,15 @@ def test_frozen_manifest_round_plan() -> None:
         expected, _ = _shared_carried_probe(frozen)
         oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (2, 3)]
         assert actual == expected == oracle and pid != os.getpid()
+        twin = FunctionType(_caller_feature.__code__, _caller_feature.__globals__, _caller_feature.__name__, _caller_feature.__defaults__)
+        declare_parallel(twin, _caller_feature.__parallel_round_contract__)
+        for isolated in (False, True):
+            pair = decode(encode((_caller_feature, twin)), isolate_functions=isolated)
+            assert pair[0] is not pair[1]
+            if not isolated:
+                assert pair[0] is _caller_feature
+            data = recorded_source().head(24).select('close')
+            assert pair[0](data).equals(pair[1](data))
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_caller_feature, '__defaults__', (3,))
             first, second = FunctionRolling(_caller_feature), FunctionRolling(_caller_feature)
