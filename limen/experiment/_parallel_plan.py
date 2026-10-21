@@ -22,7 +22,7 @@ from limen.experiment._parallel_encoding import import_reference, decode, digest
 from limen.experiment._parallel_graph import copy_context
 from limen.experiment._parallel_callable import bind_call
 from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
-from limen.experiment._parallel_identity import captured_providers, declaration_changed, distribution_providers, identity_snapshot, module_identity
+from limen.experiment._parallel_identity import captured_providers, declaration_changed, distribution_providers, identity_snapshot, module_identity, restore_function_metadata
 from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
@@ -174,9 +174,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
         target = value
-        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params,
-                                    cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class),
-                                    None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__)
+        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params, cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class), None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__)
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)
@@ -208,14 +206,15 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
 
 def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
     if (callable(value) and not isinstance(value, type)) or isinstance(value, defaultdict):
-        imported = import_reference(reference(value.__func__ if isinstance(value, MethodType) else value)) if not snapshot and isinstance(value, (FunctionType, MethodType)) else None
+        imported = import_reference(reference(value.__func__ if isinstance(value, MethodType) else value)) if isinstance(value, (FunctionType, MethodType)) else None
         isolate = snapshot or (imported is not None and declaration_changed(imported, cast(object, value), encode))
         with shared_copy(state_memo):
-            clone = decode(encode(cast(object, value)), isolate_functions=isolate)
+            clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if snapshot and isinstance(value, FunctionType) else decode(encode(cast(object, value)), isolate_functions=isolate)
         if isinstance(value, FunctionType) and clone is not value and (snapshot or mutable_function(value)):
             cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
+            restore_function_metadata(cast(FunctionType, clone), value, _normalize(vars(value).get('__wrapped__'), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
         elif not inspect.isfunction(source := cast(object, value)):
             owner = source.__self__ if inspect.ismethod(source) else source
             restored = clone.__self__ if inspect.ismethod(clone) else clone
