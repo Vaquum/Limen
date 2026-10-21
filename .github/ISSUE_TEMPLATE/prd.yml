@@ -1,5 +1,7 @@
 name: PRD
 description: Define a product requirement and proposed delivery shape.
+labels:
+  - prd
 body:
   - type: textarea
     id: objective
@@ -126,36 +128,5 @@ body:
     attributes:
       label: Design
       description: Provide an end-to-end overview of the solution.
-    validations:
-      required: true
-
-  - type: textarea
-    id: interface_contract
-    attributes:
-      label: Interface Contract
-      description: |
-        Declare the complete parent outcome under CLAUDE.md's Research interface
-        contract (https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#research-interface-contract).
-        Use public, prerequisite or maintenance; interfaces are python and/or
-        compiled. Public outcomes need a named package test per interface.
-        Non-public work with no research behavior change uses interfaces: [] and
-        proof: {}. Keep this parent declaration authoritative when children ship.
-        Replace the example scope and proof; retain exactly one YAML fence.
-      value: |
-        ```yaml
-        delivery: public
-        interfaces: [python]
-        scope: "REPLACE: complete capability and justified exclusions."
-        proof:
-          python: [test:tests/test_example.py::test_python_capability]
-        ```
-    validations:
-      required: true
-
-  - type: textarea
-    id: work_slices
-    attributes:
-      label: Work Slices
-      description: Break down into one or more slices and link the underlying slice issues below.
     validations:
       required: true

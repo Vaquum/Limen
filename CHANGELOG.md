@@ -1919,6 +1919,14 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Stop automatic Copilot code review on every push; reviews remain available on request.
 - Sync the ruleset snapshot and pinned live fixtures with the disabled push-review setting.
 
+## [5.45.25] - 2026-10-21
+
+- Retire the slice delivery regime: remove the slice template, slice gate and workflows, and the interface-contract system; add the `pr_checks_prd` gate so every PR closes one open issue and `feat` PRs close a PRD.
+
+## [5.45.26] - 2026-10-21
+
+- Repair and collect the supply-chain contract test, add a Task issue template for non-feature work, and document the legacy branch-protection mirror.
+
 ## [5.46.0] - 2026-10-21
 
 - Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.

@@ -2,7 +2,7 @@
 
 This page documents what Limen intends to deliver over the next twelve months (2026-07 through 2027-06), what it intends not to do, and how this intent is kept current. Limen is a Bitcoin alpha research engine; the ranking below orders work by its contribution to credible alpha discovery per unit of research time, because that is the value the downstream Vaquum stack (Nexus, Praxis, Veritas) consumes.
 
-The issue states below were reconciled on 2026-10-20. Planned items link to issues that were open at that review; the linked issue remains authoritative afterwards. Items marked *to be filed* are committed intent without a filed issue yet; they enter delivery through the same PRD and slice process as everything else. A roadmap entry is intent, not a delivery date: work reaches `main` only through a filed slice, its gates, and review.
+The issue states below were reconciled on 2026-10-20. Planned items link to issues that were open at that review; the linked issue remains authoritative afterwards. Items marked *to be filed* are committed intent without a filed issue yet; they enter delivery through the same PRD and issue process as everything else. A roadmap entry is intent, not a delivery date: work reaches `main` only through a filed PRD or issue, its gates, and review.
 
 ## Horizon key
 

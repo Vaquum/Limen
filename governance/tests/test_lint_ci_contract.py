@@ -150,11 +150,9 @@ def test_ruleset_snapshot_requires_pr_checks_lint() -> None:
 
 
 def test_pr_checks_lint_runs_pinned_ruff_on_tools_and_tests_tools() -> None:
-    # Name kept for slice #11 Tests-table backward compatibility. The
-    # assertions inside now cover the broader post-#11 surface
-    # (ruff + every gate script + no-soft-fail). A future slice may
-    # split or rename this; doing so requires updating the slice body's
-    # Tests table in lockstep.
+    # Name kept for backward compatibility. The assertions inside cover
+    # the broader surface (ruff + every gate script + no-soft-fail).
+    # A future PR may split or rename this test.
     workflow = LINT_WORKFLOW.read_text(encoding='utf-8')
 
     assert '--require-hashes -r requirements/ci/dev-env.txt' in workflow
