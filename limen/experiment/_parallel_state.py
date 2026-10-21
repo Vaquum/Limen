@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from functools import partial
-from inspect import Parameter, ismethod, signature
+from inspect import Parameter, Signature, getattr_static, isfunction, ismethod, signature
 from types import FunctionType, MemberDescriptorType
 from typing import cast
 
@@ -92,3 +92,8 @@ def mutable_function(function: FunctionType, active: frozenset[int] = EMPTY_IDS)
     def mutable(value: object) -> bool:
         return mutable_function(value, active) if isinstance(value, FunctionType) else any(mutable(item) for item in cast(tuple[object, ...], value)) if isinstance(value, tuple) else not value_only(value)
     return bool(function.__closure__) or mutable(function.__defaults__) or any(mutable(item) for item in (function.__kwdefaults__ or {}).values())
+
+
+def factory_signature(cls: type, initializer: Callable[..., object] | None, allocator: Callable[..., object] | None) -> Signature:
+    view = signature(initializer or allocator or cls)
+    return view.replace(parameters=list(view.parameters.values())[int((initializer is not None and isfunction(getattr_static(cls, '__init__'))) or (initializer is None and allocator is not None)):])

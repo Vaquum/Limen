@@ -131,13 +131,6 @@ def factory_initializer(cls: type, instance: object, captured: Callable[..., obj
     return partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance) if bind else function
 
 
-def factory_signature(cls: type, initializer: Callable[..., object] | None, allocator: Callable[..., object] | None) -> inspect.Signature:
-    component = initializer or allocator or cls
-    skip = int((initializer is not None and inspect.isfunction(inspect.getattr_static(cls, '__init__'))) or (initializer is None and allocator is not None))
-    signature = inspect.signature(component)
-    return signature.replace(parameters=list(signature.parameters.values())[skip:])
-
-
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 22)
 
 
@@ -204,8 +197,16 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
 
 
 def _normalize_component(value: object, active: frozenset[int], *, snapshot: bool, memo: dict[int, tuple[object, object]], state_memo: dict[int, tuple[object, object]]) -> object:
+    if isinstance(value, MethodType):
+        owner = value.__self__
+        if isinstance(owner, type):
+            restored = owner
+        else:
+            restored = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active | {id(owner)}, snapshot=snapshot, memo=memo, state_memo=state_memo)), state_memo.get(id(owner), (owner, None))[1])
+            state_memo[id(owner)] = (owner, restored)
+        return MethodType(cast(FunctionType, _normalize(value.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
     if (callable(value) and not isinstance(value, type)) or isinstance(value, defaultdict):
-        imported = import_reference(reference(value.__func__ if isinstance(value, MethodType) else value)) if isinstance(value, (FunctionType, MethodType)) else None
+        imported = import_reference(reference(value)) if isinstance(value, FunctionType) else None
         isolate = snapshot or (imported is not None and declaration_changed(imported, cast(object, value), encode))
         with shared_copy(state_memo):
             clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if isinstance(value, FunctionType) and (isolate or mutable_function(value)) else decode(encode(cast(object, value)), isolate_functions=isolate)
@@ -215,12 +216,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
             restore_function_metadata(cast(FunctionType, clone), value, _normalize(vars(value).get('__wrapped__'), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
         elif not inspect.isfunction(source := cast(object, value)):
-            owner = source.__self__ if inspect.ismethod(source) else source
-            restored = clone.__self__ if inspect.ismethod(clone) else clone
-            if not isinstance(owner, type):
-                _ = restore_object(type(owner), cast(ObjectState, _normalize(object_state(owner), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), restored)
-            if inspect.ismethod(source):
-                _ = _normalize(source.__func__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
+            _ = restore_object(type(source), cast(ObjectState, _normalize(object_state(source), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), clone)
         if (hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value)
                 and (snapshot or not isinstance(value, (FunctionType, MethodType)) or encode(getattr(clone, '__parallel_round_contract__', None)) != encode(vars(value)['__parallel_round_contract__']))):
             vars(clone)['__parallel_round_contract__'] = _normalize(vars(value)['__parallel_round_contract__'], active, snapshot=snapshot, memo=memo, state_memo=state_memo)
