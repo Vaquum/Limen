@@ -42,7 +42,7 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
         instance = allocator(cls, **({} if allocator is object.__new__ else params))
         if isinstance(instance, cls):
             assert self._parallel_init is not None
-            _ = self._parallel_init(instance, **params)
+            _ = factory_initializer(cls, type(instance), self._parallel_init)(instance, **params)
         return instance
 
 
@@ -117,6 +117,12 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
         allocator = cast(Callable[..., object] | None, vars(value)['allocator'])
         return None if allocator is None else partial(allocator, vars(value)['factory_class'])
     return None
+
+
+def factory_initializer(cls: type, actual: type, captured: Callable[..., object] | None) -> Callable[..., object]:
+    if actual.__init__ is not cls.__init__:
+        raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
+    return captured or cls.__init__
 
 
 _PARALLEL_EVIDENCE_SINCE = (5, 45, 19)

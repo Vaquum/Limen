@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from inspect import Parameter, getattr_static, isfunction, signature
+from inspect import Parameter, getattr_static, isfunction, ismethod, signature
 from typing import Protocol, cast
 
 import polars as pl
@@ -19,13 +19,18 @@ class TransformClass(Protocol):
 class CapturedTransform:
     """Bind captured behavior without changing the fitted object's type or state."""
 
+    owner: type
     function: Callable[..., pl.DataFrame]
     bind_instance: bool
     __parallel_round_contract__: ParallelRoundContract | None
 
     def __call__(self, instance: object, data: pl.DataFrame, **params: object) -> pl.DataFrame:
+        if getattr_static(type(instance), 'transform') is not getattr_static(self.owner, 'transform'):
+            raise TypeError('Parallel transform has an uncaptured subclass implementation')
         if getattr_static(instance, 'transform') is not getattr_static(type(instance), 'transform'):
             return cast(TransformClass, instance).transform(data, **params)
+        if ismethod(self.function) and isinstance(self.function.__self__, type):
+            return cast(Callable[..., pl.DataFrame], self.function.__func__)(type(instance), data, **params)
         return self.function(instance, data, **params) if self.bind_instance and not (hasattr(instance, '__dict__') and 'transform' in vars(instance)) else self.function(data, **params)
 
     def resource_defaults(self) -> dict[str, object]:
@@ -34,7 +39,7 @@ class CapturedTransform:
 
 
 def capture_transform(cls: type) -> CapturedTransform:
-    return CapturedTransform(cast(TransformClass, cls).transform, isfunction(getattr_static(cls, 'transform')),
+    return CapturedTransform(cls, cast(TransformClass, cls).transform, isfunction(getattr_static(cls, 'transform')),
                              getattr(cls, '__parallel_round_contract__', None))
 
 
@@ -59,7 +64,10 @@ class ScalerFactory:
         return cast(Callable[..., object], self.selected(params))(data, **self.static_params, **extras)
 
     def transform(self, data: pl.DataFrame, fitted_transform: object) -> pl.DataFrame:
-        return self.transforms[type(fitted_transform)](fitted_transform, data)
+        for cls in type(fitted_transform).__mro__:
+            if cls in self.transforms:
+                return self.transforms[cls](fitted_transform, data)
+        raise TypeError('Parallel scaler allocated an uncaptured transform class')
 
 
 attach(ScalerFactory)

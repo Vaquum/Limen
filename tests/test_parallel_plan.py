@@ -146,6 +146,16 @@ class CallerRolling(CallerRollingBase):
         return self.transform(data)
 
 
+class AllocatedSubclassRolling(CallerRolling):
+    def __new__(cls, window):
+        return object.__new__(DifferentInitializerRolling)
+
+
+class DifferentInitializerRolling(AllocatedSubclassRolling):
+    def __init__(self, window):
+        self.window = window + 1
+
+
 class InheritedCallable(CallerRollingBase):
     def __init__(self, window):
         self.window = window
@@ -388,6 +398,13 @@ class DualDefaultTarget(AllocatedTarget):
     def __init__(self, train_data, target_name, window=3):
         self.window += window
         self.target_name = target_name
+
+
+class ReorderedJobsTarget(AllocatedTarget):
+    __new__ = object.__new__
+
+    def __init__(self, train_data, n_jobs=2, target_name='target'):
+        self.window, self.target_name = 2, target_name
 
 
 def _method_only_transform(owner, data):
@@ -640,6 +657,38 @@ class SelfAssignedThreadScaler(SelfAssignedScaler):
     transform = _self_assigned_thread_transform
 
 
+class AllocatedInheritedScaler(SelfAssignedScaler):
+    def __new__(cls, data):
+        return object.__new__(InheritedScalerResult)
+
+
+class InheritedScalerResult(AllocatedInheritedScaler):
+    """Retain the captured initializer and transform through allocation."""
+
+
+class AllocatedOverrideScaler(AllocatedInheritedScaler):
+    def __new__(cls, data):
+        return object.__new__(OverrideScalerResult)
+
+
+class OverrideScalerResult(AllocatedOverrideScaler):
+    transform = classmethod(ClassScaler.transform.__func__)
+
+
+class AllocatedClassScaler(ClassScaler):
+    def __new__(cls, data):
+        return object.__new__(ClassScalerResult)
+
+    @classmethod
+    def transform(cls, data):
+        assert cls is ClassScalerResult
+        return data.with_columns((pl.col('close') * 3).alias('close'))
+
+
+class ClassScalerResult(AllocatedClassScaler):
+    """Exercise native classmethod binding on the allocated subtype."""
+
+
 def _prepared_probe(plan, params):
     from tests.test_parallel_rounds import recorded_source
     from limen.experiment._parallel_plan import clone_manifest
@@ -843,14 +892,14 @@ def test_frozen_manifest_round_plan() -> None:
                 actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
-        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler):
+        for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler, AllocatedInheritedScaler, AllocatedClassScaler):
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
             from tests.test_parallel_rounds import recorded_source
             data = recorded_source().head(24).select('close')
             control = scaler_class(data).transform(data).to_dict(as_series=False)
             actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
             assert actual[5] == control and actual[3] != os.getpid()
-            if scaler_class is SelfAssignedScaler:
+            if scaler_class in (SelfAssignedScaler, AllocatedInheritedScaler):
                 before = digest(frozen)
                 with pytest.MonkeyPatch.context() as patch:
                     patch.setattr(SelfAssignedScaler.transform, '__defaults__', (4,))
@@ -883,6 +932,16 @@ def test_frozen_manifest_round_plan() -> None:
             expected = _frozen_probe(frozen, _parameters())
             assert actual[5] == expected[5] == control and actual[3] != os.getpid() and digest(frozen) == before
         assert SelfAssignedThreadScaler.transform.__defaults__ == (2,)
+        inherited = freeze_manifest(copy.deepcopy(native).set_scaler(AllocatedOverrideScaler), None)
+        before = digest(inherited)
+        assert AllocatedOverrideScaler(data).transform(data).equals(ClassScaler.transform(data))
+        for spawned in (False, True):
+            with pytest.raises(TypeError, match='uncaptured subclass implementation'):
+                if spawned:
+                    pool.submit(_frozen_probe, inherited, _parameters()).result(timeout=30)
+                else:
+                    _frozen_probe(inherited, _parameters())
+        assert digest(inherited) == before
         weights = ConfiguredScaler.transform.__closure__[0].cell_contents
         for dynamic in (False, True):
             manifest = copy.deepcopy(native).set_scaler_from_params() if dynamic else copy.deepcopy(native).set_scaler(ConfiguredScaler)
@@ -1196,6 +1255,21 @@ def test_frozen_manifest_round_plan() -> None:
             for _ in range(2):
                 assert pool.submit(_target_probe, dual, _parameters()).result(timeout=30) == _target_probe(dual, _parameters()) == expected
         assert digest(dual) == before
+        declare_parallel(ReorderedJobsTarget, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
+        target = copy.deepcopy(plan.manifest).with_target_label('ordered', ReorderedJobsTarget)
+        unsafe = freeze_manifest(target, None)
+        with pytest.raises(ValueError, match=r'target: effective n_jobs=1'):
+            validate_resources(unsafe, _parameters())
+        with pytest.raises(ValueError, match=r'target: effective n_jobs=1'):
+            validate_domain(unsafe, {key: [value] for key, value in _parameters().items()}, None)
+        target = copy.deepcopy(plan.manifest).with_target_label('ordered', ReorderedJobsTarget, fit_params={'n_jobs': 1})
+        native = target.prepare_data(recorded_source(), _parameters())
+        expected = {key: native[key].to_list() for key in ('y_train', 'y_val', 'y_test')}
+        safe = freeze_manifest(target, None)
+        before = digest(safe)
+        for _ in range(2):
+            assert pool.submit(_target_probe, safe, _parameters()).result(timeout=30) == _target_probe(safe, _parameters()) == expected
+        assert digest(safe) == before
         component = partial(_kwargs_feature, n_jobs=2)
         declare_parallel(component, ParallelRoundContract(deterministic_stage))
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(component), None)
@@ -1524,6 +1598,20 @@ def _assert_factory_resources(plan, params):
             actual, pid = pool.submit(_factory_probe, frozen, factory).result(timeout=30)
             expected, _ = _factory_probe(frozen, factory)
             assert actual == expected and pid != os.getpid()
+        declare_parallel(AllocatedSubclassRolling, ParallelRoundContract(_caller_validator, ('window',)))
+        allocated = freeze_manifest(manifest, None, {'auxiliary_factory': [AllocatedSubclassRolling]})
+        from tests.test_parallel_rounds import recorded_source
+        data = recorded_source().head(24)
+        assert AllocatedSubclassRolling(2)(data)['caller_mean'].to_list() == _caller_feature(data, 3)['caller_mean'].to_list()
+        before = digest(allocated)
+        extra = {'auxiliary_params': {'window': 2}}
+        for spawned in (False, True):
+            with pytest.raises(TypeError, match='uncaptured subclass initializer'):
+                if spawned:
+                    pool.submit(_factory_probe, allocated, AllocatedSubclassRolling, extra).result(timeout=30)
+                else:
+                    _factory_probe(allocated, AllocatedSubclassRolling, extra)
+        assert digest(allocated) == before
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(_auxiliary_factory, '__kwdefaults__', {'window': 4})
             captured_function = freeze_manifest(manifest, None, {'auxiliary_factory': [_auxiliary_factory]})
