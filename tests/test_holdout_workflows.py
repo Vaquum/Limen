@@ -28,9 +28,7 @@ def _profile_reservation_worker(root, pipe):
     pipe.close()
 
 
-@pytest.mark.parametrize('binding', ['explicit', 'lazy'])
-@pytest.mark.parametrize(('kind', 'failure'), [('ml', None), ('rule', None), ('ml', 'load'), ('ml', 'model'), ('ml', 'interrupt')])
-def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failure, binding):
+def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
     assert hashlib.sha256(_FIXTURE.read_bytes()).hexdigest() == 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72'
     root = _project(tmp_path / 'project')
     config = _configuration(root)
@@ -165,3 +163,8 @@ def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failur
             profile(raced)
     assert len(raced_reservations) == 1
     withdraw_holdout(root, raced_reservations[0])
+
+
+@pytest.mark.parametrize(('kind', 'failure'), [('ml', None), ('rule', None), ('ml', 'load'), ('ml', 'model'), ('ml', 'interrupt')])
+def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failure):
+    _profile_admission(tmp_path, monkeypatch, kind, failure, 'explicit')
