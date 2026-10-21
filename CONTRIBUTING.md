@@ -35,7 +35,7 @@ Commit a useful increment, push it and open a non-draft PR before local checks, 
 
 - read the relevant docs page for the touched subsystem
 - update tests and docs with the behavior change
-- update `CHANGELOG.md`, package version, citation and embedded version carriers on every PR
+- leave version surfaces alone (version/changelog move only at release time)
 - run `python3 -m tests.run`
 - run `python3 -m build` when packaging metadata, package data, or README links change
 - run `ruff check .` when Python source changes
