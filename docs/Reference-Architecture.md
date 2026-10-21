@@ -418,6 +418,8 @@ It expects a `data_dict` produced by a manifest configured with `with_strategy()
 
 The strategy walks the boolean logic tree defined in `strategy['conditions']`, resolves each leaf condition by reading its pre-computed boolean column from the split DataFrame, and folds compound conditions via AND/OR/NOT. Positions are 0 (flat) or 1 (long) per bar.
 
+`rule_based()` also returns its trained native model as `_model`. The model captures the selected strategy and leaf-column order and accepts a finite binary `x_test` matrix in that order for Sensor/fold inference; the existing named `test`/`strategy` route remains available. It declares `inference_output = ('binary', False)`. See [selected rule reconstruction](Trainer.md#selected-rule-rounds) for the raw-history and causality contract.
+
 ### Metrics produced
 
 `evaluate()` returns a flat dict with three tiers:

@@ -221,7 +221,7 @@ class Trainer:
             model = results.pop('_model', None)
             if model is None:
                 raise ValueError(
-                    f"Permutation {pid}: architecture result does not contain '_model'. Trainer requires a reference architecture that returns the trained model via result['_model']. Rule-based architectures are not supported."
+                    f"Permutation {pid}: architecture result does not contain '_model'. Trainer requires a reference architecture that returns the trained model via result['_model']."
                 )
             fitted_params = data_dict.pop('_fitted_params', {})
 

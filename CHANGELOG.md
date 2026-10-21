@@ -1910,6 +1910,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Batch candidate documentation source comparisons while preserving merged-source rejection and fatal Git errors.
 
+## [5.45.23] - 2026-10-21
+
+- Retain selected rule configuration and ordered predicate inputs in the native binary model without live fitting or probability output.
+
 ## [5.46.0] - 2026-10-21
 
 - Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
