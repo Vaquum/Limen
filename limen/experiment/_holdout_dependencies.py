@@ -180,7 +180,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             following += 2
                         else:
                             break
-                    if item is _native_globals and (following == len(instructions) or instructions[following].opname not in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME')):
+                    if item is _native_globals and (following == len(instructions) or instructions[following].opname not in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME')) and not (following + 1 < len(instructions) and instructions[following].opname in ('LOAD_FAST', 'LOAD_DEREF') and instructions[following + 1].opname == 'STORE_ATTR'):
                         lookup = [part for part in instructions[following:following + 5] if part.opname != 'PRECALL']
                         if not lookup[2:] or lookup[0].opname not in ('CALL', 'CALL_FUNCTION') or lookup[0].arg != 0 or lookup[1].opname != 'LOAD_CONST' or not isinstance(lookup[1].argval, str) or lookup[2].opname != 'BINARY_SUBSCR':
                             raise ValueError('Holdout requires a literal key for prediction globals lookup')
