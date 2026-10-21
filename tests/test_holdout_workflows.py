@@ -186,6 +186,8 @@ def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failur
 
 
 def _checkpoint_loop(config, root, directory, *, data=None):
+    config = copy.deepcopy(config)
+    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     compiled = CompiledSFD(config, project_root=root)
     loop = UniversalExperimentLoop(sfd=compiled, data=data, project_root=root, experiment_dir=directory,
                                    search_strategy=build_search_strategy(config), yaml_reference=config,
