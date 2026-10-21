@@ -1914,6 +1914,11 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Retain selected rule configuration and ordered predicate inputs in the native binary model without live fitting or probability output.
 
+## [5.45.24] - 2026-10-21
+
+- Stop automatic Copilot code review on every push; reviews remain available on request.
+- Sync the ruleset snapshot and pinned live fixtures with the disabled push-review setting.
+
 ## [5.46.0] - 2026-10-21
 
 - Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
