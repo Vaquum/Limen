@@ -1626,8 +1626,14 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     round_path = _round_storage.round_path(native_assessment_case[0] / 'native')
     copyfile(round_path, directory / round_path.name)
     assert Trainer(directory, project_root=native_assessment_case[0], components=configure)._manifest.architecture_function is declared
-    mutation = patch.object(package, 'helpers', changed_helpers) if kind == 'dotted-import' else patch.object(OrderedFactory, '__bases__', (Second, First)) if kind == 'mro' else patch.object(Depth, '__get__', changed_getter) if kind == 'descriptor' else patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
-    with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+    mutation = patch.object(package, 'helpers', changed_helpers) if kind == 'dotted-import' else patch.object(Depth, '__get__', changed_getter) if kind == 'descriptor' else patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
+    with ExitStack() as stack:
+        if kind == 'mro':
+            stack.callback(setattr, OrderedFactory, '__bases__', OrderedFactory.__bases__)
+            OrderedFactory.__bases__ = (Second, First)
+        else:
+            stack.enter_context(mutation)
+        loader = stack.enter_context(patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')))
         with pytest.raises(ValueError, match='differs from the recorded'):
             CompiledSFD(recorded, components=configure).manifest()
         with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
@@ -1649,11 +1655,16 @@ def test_frozen_same_named_base_order(native_assessment_case):
             result['_probs'] = self.adjust(result['_probs'])
             return result
     selected = copy.deepcopy(native_assessment_case[2][0][0])
-    selected._model.__class__ = OrderedPrediction
+    model = object.__new__(OrderedPrediction)
+    vars(model).update(copy.deepcopy(vars(selected._model)))
+    selected._model = model
     selected._model.base_choices = (First, Second)
     frozen = _freeze(selected)
     assert _report(frozen, native_assessment_case)['state'] == 'completed'
-    with patch.object(OrderedPrediction, '__bases__', (Second, First, LogRegBinary)), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+    with ExitStack() as stack:
+        stack.callback(setattr, OrderedPrediction, '__bases__', OrderedPrediction.__bases__)
+        OrderedPrediction.__bases__ = (Second, First, LogRegBinary)
+        loader = stack.enter_context(patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')))
         with pytest.raises(ValueError, match='prediction dependency changed'):
             _report(frozen, native_assessment_case)
         assert loader.call_count == 0

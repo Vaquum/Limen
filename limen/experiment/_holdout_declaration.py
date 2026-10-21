@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from builtins import globals as _native_globals
 from functools import lru_cache
+import dis
 import inspect
 import sys
 from types import CodeType, FunctionType, MethodWrapperType, ModuleType
@@ -16,8 +17,9 @@ _LIBRARIES = ('limen', 'numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scip
 
 
 @lru_cache(maxsize=2048)
-def _codes(code: CodeType) -> tuple[CodeType, ...]:
-    return (code, *(nested for part in code.co_consts if isinstance(part, CodeType) for nested in _codes(part)))
+def _codes(code: CodeType) -> tuple[tuple[CodeType, ...], frozenset[str]]:
+    codes = (code, *(nested for part in code.co_consts if isinstance(part, CodeType) for nested in _codes(part)[0]))
+    return codes, frozenset(str(instruction.argval) for part in codes for instruction in dis.get_instructions(part) if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME'))
 
 
 def _native(function: FunctionType) -> bool:
@@ -61,10 +63,10 @@ def declaration_witness(value: object) -> bytes:
         for function in call_functions(cast(object, item)):
             if function in bindings:
                 continue
-            codes = _codes(function.__code__)
+            codes, global_names = _codes(function.__code__)
             names = {name for code in codes for name in code.co_names}
             attributes.update(names | {part for code in codes for part in code.co_consts if isinstance(part, str)})
-            namespace = {name: (function.__globals__ if name in function.__globals__ else function.__builtins__)[name] for name in sorted(names) if name in function.__globals__ or name in function.__builtins__}
+            namespace = {name: (function.__globals__ if name in function.__globals__ else function.__builtins__)[name] for name in sorted(global_names) if name in function.__globals__ or name in function.__builtins__}
             namespace.update(factory_imports(function, codes) if not _native(function) else {})
             reflected.update(reflective_reads(function.__code__))
             parameters = cast(dict[str, object], dict(zip(function.__code__.co_varnames[function.__code__.co_argcount - len(function.__defaults__ or ()):function.__code__.co_argcount], function.__defaults__ or (), strict=True)) | (function.__kwdefaults__ or {}))
