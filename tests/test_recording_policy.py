@@ -212,6 +212,8 @@ def _recovery_run(loop, kind, **kwargs):
     options = {'n_permutations': 4, 'resume': False, 'progress_bar': False,
                'prep_each_round': True, 'post_processing': False,
                'workers': 2 if kind == 'parallel_snapshot' else 1,
+               'record_execution': not kind.startswith('native'),
+               'record_model_outputs': not kind.startswith('native'),
                'factorize': kind == 'factorized'}
     options.update(kwargs)
     with threadpool_limits(limits=1):
@@ -223,7 +225,7 @@ RECOVERY_KINDS = ('snapshot', 'cost_snapshot', 'event', 'walk_forward', 'event_w
 
 
 @pytest.fixture(scope='module')
-def recovery_campaigns(tmp_path_factory):
+def recovery_campaigns(tmp_path_factory, campaigns):
     result = {}
 
     def campaign(kind):
@@ -232,8 +234,13 @@ def recovery_campaigns(tmp_path_factory):
         policy = {**FULL, 'trade_ledger': kind in ('event', 'event_walk_forward', 'native_event'),
                   'fold_details': kind in ('walk_forward', 'event_walk_forward')}
         paths = {label: tmp_path_factory.mktemp(f'recovery-{kind}-{label}') for label in ('full', 'resumed')}
-        control = _recovery_loop(kind, paths['full'])
-        _recovery_run(control, kind, recording=FULL)
+        baseline = 'serial' if kind == 'event' else 'factorized' if kind in ('cost_snapshot', 'factorized', 'parallel_snapshot') else None
+        if baseline is None:
+            control = _recovery_loop(kind, paths['full'])
+            _recovery_run(control, kind, recording=FULL)
+        else:
+            control = campaigns[baseline]['full']['loop']
+            paths['full'] = campaigns[baseline]['full']['path']
         partial = _recovery_loop(kind, paths['resumed'])
         append = partial._append_round_data
 
