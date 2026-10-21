@@ -1,8 +1,13 @@
 from importlib.util import module_from_spec, spec_from_file_location
 import sys
+import os
 from pathlib import Path
 
 import pytest
+
+for variable in ('POLARS_MAX_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
+                 'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'OMP_NUM_THREADS', 'OMP_THREAD_LIMIT'):
+    os.environ[variable] = '1'
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'docs/examples'))

@@ -127,9 +127,11 @@ Use this for Binance source files rather than the curated kline dataset.
 
 <!-- reference: data-api-get-any-file source=limen/data/historical_data.py region=signature:HistoricalData.get_any_file role=signature -->
 ```python
-def get_any_file(self, file_path_or_url: str, has_header: bool=True, columns: list[str] | None=None, row_count_limit: int | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
+def get_any_file(self, file_path_or_url: str, has_header: bool=True, columns: list[str] | None=None, row_count_limit: int | None=None, *, n_rows: int | None=None, expected_sha256: str | None=None) -> pl.DataFrame:
     ...
 ```
+
+`expected_sha256` pins a local Parquet file. Limen verifies its bytes before decoding those same bytes, on both initial loading and CLI resume. The recovery YAML declares this digest; a changed source fails before another candidate can fit.
 
 It is the right choice for:
 

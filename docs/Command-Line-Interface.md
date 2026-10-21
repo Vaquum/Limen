@@ -10,6 +10,7 @@ Use Python 3.10–3.13, the matching wheel and example bundle, the declared mode
 
 <!-- example: cli-project-lifecycle source=docs/examples/compiled-research/project.sh region=lifecycle scenario=command_line interface=compiled role=executed -->
 ```bash
+bundle=$(pwd)
 limen --version
 limen list-templates
 mkdir -p results/compiled-project
@@ -47,7 +48,7 @@ The project script preserves its source YAML and uses a local Git remote. Runtim
 
 ## Sensor and Cohort assessment
 
-`limen assess YAML --results DIRECTORY` requires the exact declaration retained in that directory. Its `assessment` block names an explicit validation metric, direction and member count. Optional fold numbers select qualified recorded folds. The command reconstructs and validates each selected Sensor, binds the Cohort and writes `assessment.json`. `predict: true` additionally writes `predictions.parquet` with decision timestamps, unavailable reasons and optional native availability values.
+`limen assess YAML --results DIRECTORY` requires the exact declaration retained in that directory. A guarded assessment also requires the supplied reservation to contain the YAML-declared final window. Its `assessment` block names an explicit validation metric, direction and member count. Optional fold numbers select qualified recorded folds. The command reconstructs and validates each selected Sensor, binds the Cohort and writes `assessment.json`. `predict: true` additionally writes `predictions.parquet` with decision timestamps, unavailable reasons and optional native availability values.
 
 <!-- example: cli-assess-worked source=docs/examples/commands.json region=compiled-assess scenario=search interface=compiled role=executed -->
 ```bash

@@ -211,7 +211,7 @@ sh compiled-research/run.sh
 | `search.yaml`, `search_random.yaml`, `search_sobol.yaml` | Traverse the same four-candidate domain with explicit strategy seeds. |
 | `factorized.yaml` | Compare deterministic LightGBM tree-count and fee axes with factorization and seeded shuffle declared in YAML. |
 | `adaptive.yaml` | Limit a four-candidate search to three completed rounds; retain its budget intervention and checkpoint. |
-| `recovery.yaml` | Record all payload groups and checkpoint every round; continue with `limen run --resume`. Tests also interrupt an actual CLI process and compare resumed and uninterrupted results. |
+| `recovery.yaml` | Pin the Parquet source by SHA-256, record all payload groups and checkpoint every round; continue with `limen run --resume`. Tests also interrupt an actual CLI process and compare resumed and uninterrupted results. |
 | `walk_forward.yaml` | Fit and calibrate two qualified folds on the explicit 384-row input; reconstruct their Sensors with `limen assess`. |
 | `acceptance.yaml` | Retain two rule trials, 96-return tracks and independent statistical acceptance reports. |
 | `calibration.yaml` | Compare all four probability-calibration/threshold modes. |

@@ -125,6 +125,10 @@ def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypat
     reserved = runner.invoke(cli, ['reserve', 'final/holdout.yaml'])
     assert reserved.exit_code == 0, reserved.output
     identity = reserved.stdout.strip()
+    later = project / 'later.yaml'
+    later.write_text(source.read_text().replace('"2024-01-05"', '"2024-01-06"').replace('"2024-01-06"\n  interval_seconds', '"2024-01-07"\n  interval_seconds'))
+    second = runner.invoke(cli, ['reserve', 'final/later.yaml'])
+    assert second.exit_code == 0, second.output
     fitted = []
     original_train = LogRegBinary.train
     def train(model, prepared, **params):
@@ -134,6 +138,12 @@ def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypat
     monkeypatch.setattr(LogRegBinary, 'train', train)
     executed = runner.invoke(cli, ['run', '--no-progress-bar', 'final/holdout.yaml'])
     assert executed.exit_code == 0, executed.output
+    with monkeypatch.context() as guard:
+        def no_reconstruction(*args, **kwargs):
+            raise AssertionError('A mismatched reservation reached reconstruction')
+        guard.setattr('limen.Trainer', no_reconstruction)
+        rejected = runner.invoke(cli, ['assess', 'final/holdout.yaml', '--results', 'results/dev/compiled-holdout', '--reservation', second.stdout.strip()])
+        assert rejected.exit_code != 0 and 'must be contained' in rejected.output
     original_freeze = holdout.freeze_holdout_selection
     def forbidden(*args, **kwargs):
         raise AssertionError('Final CLI assessment fitted after the selection was frozen')
@@ -150,3 +160,25 @@ def test_cli_guarded_holdout_freezes_before_final_assessment(tmp_path, monkeypat
     assert report['exposure']['class'] == 'unknown'
     retained = holdout.read_holdout_report(project, report['attempt_id'])
     assert retained == report
+
+
+def test_cli_resume_rejects_changed_pinned_source(tmp_path, monkeypatch):
+    from limen.sfd.reference_architecture import LogRegBinary
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'inputs').mkdir()
+    source = tmp_path / 'inputs/spot_1h_20240101_20241231.parquet'
+    original = (ROOT / 'tests/fixtures' / source.name).read_bytes()
+    source.write_bytes(original)
+    shutil.copyfile(ROOT / 'docs/examples/compiled-research/recovery.yaml', tmp_path / 'recovery.yaml')
+    runner = CliRunner()
+    executed = runner.invoke(cli, ['run', '--no-progress-bar', 'recovery.yaml'])
+    assert executed.exit_code == 0, executed.output
+    output = tmp_path / 'results/dev/compiled-recovery'
+    before = {name: (output / name).read_bytes() for name in ('results.csv', 'metadata.json', 'checkpoint.json')}
+    source.write_bytes(original + b'changed')
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Changed source reached fitting')
+    monkeypatch.setattr(LogRegBinary, 'train', forbidden)
+    resumed = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(output)])
+    assert resumed.exit_code != 0 and 'Recorded source SHA-256 differs' in resumed.output
+    assert {name: (output / name).read_bytes() for name in before} == before

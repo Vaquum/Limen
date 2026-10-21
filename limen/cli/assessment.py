@@ -38,6 +38,9 @@ def _assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
     saved = json.loads((results / 'metadata.json').read_text())['yaml_reference']
     if saved != document:
         raise click.ClickException('Assessment YAML differs from the recorded experiment declaration')
+    if holdout is not None and reservation is not None:
+        from limen.experiment._holdout_attempts import reservation as declared_reservation
+        _ = declared_reservation(_project(yaml_file), reservation, str(holdout['start']), str(holdout['end']), str(holdout['context_start']))
     log = pl.read_csv(results / 'results.csv')
     if spec.metric not in log.columns:
         raise click.ClickException('The declared validation metric is absent from the result log')
@@ -67,7 +70,7 @@ def _assess(yaml_file: Path, results: Path, reservation: str | None) -> None:
             target = resolve(str(declaration['class']))(pl.DataFrame(), str(declaration['name']), **cast(dict[str, object], declaration.get('params', {})))
         frozen = freeze_holdout_selection(cohort, evaluation_target=target, context_start=str(holdout['context_start']),
                                           scenarios=cast(list[Mapping[str, object]], holdout['scenarios']))
-        final = final_holdout_report(frozen, project_root=_project(yaml_file), reservation_id=reservation)
+        final = final_holdout_report(frozen, project_root=_project(yaml_file), reservation_id=reservation, start=str(holdout['start']), end=str(holdout['end']))
         _write(results / 'final-report.json', final)
     elif reservation is not None:
         raise click.ClickException('--reservation requires a holdout declaration')

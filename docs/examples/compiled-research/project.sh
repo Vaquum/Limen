@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 # Run from the bundle root. This campaign has its own Git history and local backup.
-bundle=$(pwd)
 # region lifecycle
+bundle=$(pwd)
 limen --version
 limen list-templates
 mkdir -p results/compiled-project

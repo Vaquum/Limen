@@ -256,4 +256,11 @@ def prove_interrupted_recovery(project, environment):
     assert complete.drop('execution_time').equals(baseline.drop('execution_time'))
     assert set(first['id']) <= set(complete['id'])
     assert [row['_round_index'] for row in records(output)] == list(range(4))
-    return {'interrupted_rounds': first.height, 'resumed_rounds': complete.height, 'uninterrupted_equivalence': True}
+    source = directory / 'inputs/spot_1h_20240101_20241231.parquet'
+    source.write_bytes(source.read_bytes() + b'changed')
+    saved = (output / 'results.csv').read_bytes()
+    changed = subprocess.run(['limen', 'run', '--no-progress-bar', '--resume', 'results/dev/compiled-recovery'], cwd=directory, env=child_environment, text=True, capture_output=True, timeout=30)
+    print(changed.stdout, changed.stderr)
+    assert changed.returncode != 0 and 'Recorded source SHA-256 differs' in changed.stdout
+    assert (output / 'results.csv').read_bytes() == saved
+    return {'interrupted_rounds': first.height, 'resumed_rounds': complete.height, 'uninterrupted_equivalence': True, 'changed_source_rejected': True}

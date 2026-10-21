@@ -516,7 +516,7 @@ limen run --no-progress-bar compiled-research/recovery.yaml
 limen run --no-progress-bar --resume results/dev/compiled-recovery
 ```
 
-The recovery tests interrupt real execution, resume its checkpoint and compare final identities and metrics with uninterrupted runs. The Compiled project uses the installed CLI and its saved YAML; Python recovery restores the caller-defined queue and results.
+The recovery tests interrupt real execution, resume its checkpoint and compare final identities and metrics with uninterrupted runs. The Compiled recovery YAML pins its local Parquet source with `expected_sha256`; initial execution and resume reject changed bytes before fitting. Python recovery restores the caller-defined queue and results.
 
 Use the same `experiment_dir`, strategy type, and reducer configuration when resuming.
 
