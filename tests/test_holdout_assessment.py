@@ -170,8 +170,10 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert _report(_freeze(trained[1][0]), assessment_case)['state'] == 'completed'
     changed = copy.deepcopy(trained[1][0])
     changed._model.model.booster_.best_iteration = 1
-    with pytest.raises(ValueError, match='best_iteration'):
-        _freeze(changed)
+    _freeze(changed)
+    clone = owned_copy(changed)
+    assert clone._model.model.booster_.best_iteration == 1
+    assert clone.predict(probe) == changed.predict(probe)
     changed = copy.deepcopy(trained[0][1])
     changed._model._fitted_calibrator = None
     with pytest.raises(ValueError, match='unfitted calibration'):
