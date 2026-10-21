@@ -34,4 +34,12 @@ The publisher refuses activation while any independent trigger remains. A missin
 
 The workflow retains its proof and deployment diagnostics in `released-research-book-evidence`; public Release/static artifacts provide durable anonymous access. Inspect `.docs-evidence/deployment/staged.json`, `accepted.json` or `rollback.json` alongside Wrangler's structured operation receipts. A failed operation must not produce `accepted.json`.
 
+An anonymous HTTP failure also retains `activation-http-failure.json` or `rollback-http-failure.json`. Each receipt names the phase, the requested Worker version and the release being verified. A rollback names the predecessor's release; a legacy renderer has `release: null`. Activation preflight failures receive an activation receipt without deploying or rolling back a version.
+
+The request record contains the requested and final response URLs, HTTP status, selected response headers and a body fingerprint. URL userinfo, query strings and fragments are removed. The header set is limited to `Content-Type`, `Content-Length`, `Cache-Control`, `CF-Cache-Status`, `CF-Ray` and `ETag`. Raw bodies, server reasons, cookies and other headers are excluded from receipts and rendered HTTP exceptions.
+
+`body_state` distinguishes `complete`, `partial` and `unavailable`. `body_bytes` and `body_sha256` describe only the observed bytes; both are null when unavailable. `body_read_error_type` identifies a failed read without its message. Partial or unavailable error bodies cannot satisfy the sealed 404 check. Complete error bodies remain available to that check with their original headers.
+
+The sanitized observation is printed before receipt storage. Storage failure remains visible and fails the command; it cannot prevent required predecessor restoration. Each phase keeps its own observation when activation and rollback both fail, including HTTP errors wrapped by validation errors. `rollback.json` still requires successful predecessor verification. These diagnostics record the current attempt; they cannot reconstruct a request omitted from an earlier run.
+
 To inspect the active publication without credentials, use `python docs/examples/verify_publication.py --base-url https://docs.vaquum.fi/limen/ --release RELEASE_TAG` from the matching source revision. The detached manifest and rollback archive restore the exact site and its evidence into a fresh directory through `publication.restore`; activation still requires anonymous verification.
