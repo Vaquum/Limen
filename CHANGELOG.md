@@ -1908,5 +1908,9 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.22] - 2026-10-21
 
+- Batch candidate documentation source comparisons while preserving merged-source rejection and fatal Git errors.
+
+## [5.45.23] - 2026-10-21
+
 - Reject mapping-valued YAML keys before constructing them; return located parse errors for both retained fuzz timeout units while preserving ordinary manifest parsing.
 - Preserve malformed-tag diagnostics and report mapping-key locations through tagged outer mappings.

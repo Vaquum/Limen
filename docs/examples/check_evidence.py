@@ -364,6 +364,15 @@ def validate_cli_catalogue(root, catalogue) -> None:
             raise ValueError('CLI command has no required compiled scenario')
 
 
+def validate_source_status(root, sources, candidate_base):
+    changed = set(subprocess.check_output(['git', 'diff', '--no-renames', '--name-only', '-z', candidate_base, 'HEAD'], cwd=root).decode().split('\0')) - {''} if candidate_base is not None else set()
+    for source in sources:
+        if source['status'] == 'candidate' and source['merged_pr'] is not None:
+            raise ValueError('Candidate source cannot claim a merged PR')
+        if source['path'] in changed and source['status'] != 'candidate':
+            raise ValueError('Unmerged source presented as merged')
+
+
 def validate_evidence(record, root: Path, *, head: str, tree: str, version: str) -> None:
     schema = json.loads((root / 'docs/examples/evidence.schema.json').read_text())
     validate_shape(record, schema)
@@ -472,15 +481,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     for item in [*record['displays'], *record['validation']['scenarios']]:
         verified_file(item.get('path', item.get('output_path')), item.get('sha256', item.get('output_sha256')))
     candidate_base = subprocess.check_output(['git', 'merge-base', 'HEAD', 'origin/main'], cwd=root, text=True).strip() if record['mode'] == 'candidate' else None
-    changed_paths: dict[str, int] = {}
-    for source in record['sources']:
-        if source['status'] == 'candidate' and source['merged_pr'] is not None:
-            raise ValueError('Candidate source cannot claim a merged PR')
-        if candidate_base is not None:
-            if source['path'] not in changed_paths:
-                changed_paths[source['path']] = subprocess.run(['git', 'diff', '--quiet', candidate_base, 'HEAD', '--', source['path']], cwd=root, check=False).returncode
-            if changed_paths[source['path']] and source['status'] != 'candidate':
-                raise ValueError('Unmerged source presented as merged')
+    validate_source_status(root, record['sources'], candidate_base)
     if record['mode'] == 'production':
         from publication import validate_production
         validate_production(root, record)
