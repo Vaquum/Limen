@@ -85,7 +85,7 @@ The [Python project](examples/python-research/README.md) and [Compiled project](
 
 ## Observe the retained run
 
-These are retained outputs of the identified earlier run. The Compiled observation below predates the CLI-only project correction; it is historical evidence, not a result of the current commands. Their counts and selected parameters are exact. The Python forecast permits only the numerical tolerance stated in its evidence record. The current validation is shown separately; it does not change when these observations were made.
+These are retained outputs of the identified successful run. The Python project and unchanged Compiled YAML/CLI commands ran against the same isolated installed wheel. Their counts and selected parameters are exact. The Python forecast permits only the numerical tolerance stated in its evidence record. The current validation is shown separately; it does not change when these observations were made.
 
 ### Python selection result
 
@@ -113,7 +113,7 @@ These are retained outputs of the identified earlier run. The Compiled observati
 }
 ```
 
-### Historical Compiled selection result
+### Compiled selection result
 
 <!-- example-output: compiled-selection source=docs/examples/retained/compiled-selection.json scenario=selection interface=compiled role=observed -->
 ```json

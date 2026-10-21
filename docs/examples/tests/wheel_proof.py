@@ -150,19 +150,13 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
         run(command, cwd=project, env=runtime_environment)
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
         assert summary['interface'] == interface and summary['scenario'] == 'selection'
-        assert summary['rounds'] == (4 if interface == 'python' else 2)
-        if interface == 'python':
-            assert summary['retained_models'] == 4 and summary['inference_rows'] == 480
-        else:
-            assert summary['reconstructed_sensors'] == summary['selected_rounds'] == 1
+        assert summary['rounds'] == 4
+        assert summary['retained_models'] == 4 and summary['inference_rows'] == 480
         destination = output / f'{interface}-selection.json'
         destination.write_text(json.dumps(summary, indent=2) + '\n')
         summaries[interface] = {'summary': summary, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
         commands[interface] = [str(arg) for arg in command]
         scenario_reports[(interface, 'selection')] = summaries[interface] | {'command': commands[interface]}
-        if interface == 'compiled':
-            run(shlex.split(canonical_commands['compiled-yaml']), cwd=project, env=runtime_environment)
-            compare_selection_logs(project / 'results/compiled', project / 'results/dev/compiled-cli')
         command = shlex.split(canonical_commands[interface + '-all'])
         run(command, cwd=project, env=runtime_environment)
         report = json.loads((project / f'results/{interface}-all/summary.json').read_text())

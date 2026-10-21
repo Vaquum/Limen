@@ -254,12 +254,12 @@
     },
     "assess": {
       "interface": "compiled",
-      "scenario": "command_line",
+      "scenario": "selection",
       "page": "docs/Command-Line-Interface.md"
     },
     "reserve": {
       "interface": "compiled",
-      "scenario": "command_line",
+      "scenario": "holdout",
       "page": "docs/Command-Line-Interface.md"
     }
   },

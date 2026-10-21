@@ -394,7 +394,7 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
         if (display['path'], display['sha256']) != (binding['path'], binding['sha256']) or display['environment_sha256'] != digest(json.dumps(retained['environment'], sort_keys=True).encode()):
             raise ValueError('Observed output identity differs')
         current = next(item for item in record['validation']['scenarios'] if item['interface'] == binding['interface'] and item['id'] == binding['scenario'])
-        source = next(item for item in retained['sources'] if f"/{binding['interface']}-research/" in item['path'] and item['region'] == 'experiment')
+        source = next(item for item in retained['sources'] if f"/{binding['interface']}-research/" in item['path'] and item['sha256'] == display['source_sha256'])
         validate_retained_source(root, retained, source, display)
         compare_output(json.loads((root / current['output_path']).read_text()), json.loads((root / display['path']).read_text()), display['metrics'])
     if record['revision']['head'] != head or record['revision']['tree'] != tree:

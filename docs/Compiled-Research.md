@@ -4,6 +4,10 @@ The research definition determines what can vary, which observations can fit sta
 
 The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) are independent starting points. Their models, units and assessment populations differ. Running both does not turn their scores into a controlled comparison.
 
+## Prerequisites
+
+Use the matching Limen wheel, its recorded input bundle and the extras stated on each project page. Run Compiled commands from the bundle root. Python Research supplies its own data and functions; its complete project gives the corresponding entry point.
+
 ## Own the Python experiment
 
 The Python project supplies data, a parameter space and ordinary preparation and model functions to UEL. Its model function fits one candidate, scores validation and retains that fitted object. Selection wraps those same evaluated objects in Sensors and combines compatible forecasts in a Cohort.
