@@ -83,7 +83,7 @@ def test_wait_loop_returns_fast_paths_without_sleeping(monkeypatch):
         module, 'fetch_check_runs',
         lambda repo, sha: [_run('PR Checks Tests', 'completed', 'success')],
     )
-    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0, 1)
     assert verdict.passed == ('PR Checks Tests',)
     assert sleeps == []
     monkeypatch.setattr(
@@ -103,9 +103,10 @@ def test_wait_loop_waits_then_settles(monkeypatch):
         module.time, 'sleep',
         lambda s: now.__setitem__(0, now[0] + s),
     )
+    green = [_run('PR Checks Tests', 'completed', 'success')]
     payloads = [
         [_run('PR Checks Tests', 'in_progress')],
-        [_run('PR Checks Tests', 'completed', 'success')],
+        green, green, green,
     ]
     monkeypatch.setattr(
         module, 'fetch_check_runs', lambda repo, sha: payloads.pop(0)
@@ -167,6 +168,78 @@ def test_wait_fetch_maps_failures_to_exit_2(monkeypatch):
     monkeypatch.setattr(module.subprocess, 'run', missing)
     with pytest.raises(SystemExit, match='gh not found'):
         module.fetch_check_runs('o/r', 'sha')
+
+
+def test_wait_fetch_parses_paginated_line_delimited_runs(monkeypatch):
+    import json
+
+    module = _load_wait_for_checks()
+
+    class Completed:
+        returncode = 0
+        stdout = '\n'.join([
+            json.dumps(_run('PR Checks Tests', 'completed', 'success')),
+            '',
+            json.dumps(_run('PR Checks Coverage', 'in_progress')),
+        ])
+        stderr = ''
+
+    captured = {}
+
+    def fake_run(cmd, **kwargs):
+        captured['cmd'] = cmd
+        return Completed()
+
+    monkeypatch.setattr(module.subprocess, 'run', fake_run)
+    runs = module.fetch_check_runs('o/r', 'sha')
+    assert [run['name'] for run in runs] == ['PR Checks Tests', 'PR Checks Coverage']
+    assert captured['cmd'][-2:] == ['--jq', '.check_runs[]']
+
+
+def test_wait_fetch_rejects_malformed_lines(monkeypatch):
+    module = _load_wait_for_checks()
+
+    class BadJson:
+        returncode = 0
+        stdout = '{"name": "broken",\n'
+        stderr = ''
+
+    class BadShape:
+        returncode = 0
+        stdout = '[1, 2]\n'
+        stderr = ''
+
+    monkeypatch.setattr(
+        module.subprocess, 'run', lambda *a, **k: BadJson()
+    )
+    with pytest.raises(SystemExit, match='bad gh output on line 1'):
+        module.fetch_check_runs('o/r', 'sha')
+    monkeypatch.setattr(
+        module.subprocess, 'run', lambda *a, **k: BadShape()
+    )
+    with pytest.raises(SystemExit, match='unexpected gh output shape on line 1'):
+        module.fetch_check_runs('o/r', 'sha')
+
+
+def test_wait_loop_holds_for_late_registering_runs(monkeypatch):
+    module = _load_wait_for_checks()
+    now = [1000.0]
+    monkeypatch.setattr(module.time, 'monotonic', lambda: now[0])
+    monkeypatch.setattr(
+        module.time, 'sleep',
+        lambda s: now.__setitem__(0, now[0] + s),
+    )
+    green_tests = [_run('PR Checks Tests', 'completed', 'success')]
+    green_both = [*green_tests, _run('PR Checks Coverage', 'completed', 'success')]
+    payloads = [green_tests, green_tests, green_both, green_both, green_both]
+    calls = []
+    monkeypatch.setattr(
+        module, 'fetch_check_runs',
+        lambda repo, sha: (calls.append(1), payloads.pop(0))[1],
+    )
+    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert verdict.passed == ('PR Checks Tests', 'PR Checks Coverage')
+    assert len(calls) == 5
 
 
 def test_release_tag_authority_and_traceability() -> None:
