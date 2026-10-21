@@ -42,7 +42,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
 
 
 def reader_names(value: object, key: str | int) -> tuple[str, ...]:
-    size = list.__len__(cast(list[object], value)) if isinstance(value, list) else tuple.__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else deque.__len__(cast(deque[object], value)) if isinstance(value, deque) else None
+    size = list[object].__len__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else deque[object].__len__(cast(deque[object], value)) if isinstance(value, deque) else None
     return (str(key), str(key - size)) if isinstance(key, int) and size is not None else (str(key),)
 
 _Constant = type[StopIteration] | EllipsisType | bool | int | float | complex | str | bytes | CodeType | Buffer | tuple['_Constant', ...] | frozenset['_Constant'] | None

@@ -52,7 +52,7 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
             else:
                 provider = cast(partial[object], wrapped)
                 wrapped = provider
-                if inspect.getattr_static(cast(type[object], type(provider)), '__call__', None) is not partial.__call__:
+                if inspect.getattr_static(cast(type[object], type(provider)), '__call__', None) is not partial[object].__call__:
                     break
                 wrapped = native_attribute(provider, 'func')
         wrapped_entry: object
