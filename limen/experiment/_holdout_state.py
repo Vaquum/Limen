@@ -133,8 +133,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             return item
         if (reference := seen.get(id(item))) is not None:
             return ('ref', reference)
-        if class_aliases and type(item).__module__ != 'builtins':
-            classes[id(type(item))] = type(item)
+        if class_aliases and item_type.__module__ != 'builtins':
+            classes[id(item_type)] = item_type
         seen[id(item)] = len(retained)
         retained.append(item)
         if isinstance(item, ModuleType):
@@ -143,9 +143,6 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             return ('scalar', item_type.__name__, item)
         if isinstance(item, type):
             return ('class', item.__module__, item.__qualname__)
-        return structure(item, item_type)
-
-    def structure(item: object, item_type: type[object]) -> object:
         kind = (item_type.__module__, item_type.__qualname__, ('ref', reference) if (reference := seen.get(id(item_type))) is not None else node(item_type))
         if item_type is dict:
             return (kind, None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else ('ref', key_ref) if (key_ref := seen.get(id(key))) is not None else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part))) for key, part in cast(dict[object, object], item).items()), None)
@@ -153,11 +150,14 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
         if item_type is set or item_type is frozenset:
             return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
-        attributes = _attributes(item) if issubclass(type(item), _CONTAINER_TYPES) else {}
+        return structure(item, item_type, kind)
+
+    def structure(item: object, item_type: type[object], kind: tuple[str, str, object]) -> object:
+        attributes = _attributes(item) if issubclass(item_type, _CONTAINER_TYPES) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
             result = ('function', item.__module__, item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(item.__closure__), node(vars(item)), node(item.__annotations__))
-        elif type(item) is CellType:
+        elif item_type is CellType:
             result = ('cell', *(node(part) for part in children(item)))
         elif _booster(item):
             from lightgbm import Booster
@@ -169,9 +169,9 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             result = (kind, 'descriptor', node(native_attribute(cast(object, item), '__func__')), node(_attributes(cast(object, item))))
         elif isinstance(item, property):
             result = (kind, 'property', *(node(native_attribute(item, name)) for name in ('fget', 'fset', 'fdel', '__doc__')), node(_attributes(cast(object, item))))
-        elif type(item).__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
+        elif item_type.__module__ == 'builtins' and (inspect.ismethoddescriptor(item) or inspect.isdatadescriptor(item)):
             result = ('descriptor', node(getattr(item, '__objclass__', None)), getattr(item, '__name__', None))
-        elif type(item) is logging.Logger:
+        elif item_type is logging.Logger:
             result = ('logger', item.name, item.level, item.disabled, item.propagate, logging.Logger.getEffectiveLevel(item), item.manager.disable, node(logger_attributes(item)))
         elif inspect.isbuiltin(item) or isinstance(item, MethodWrapperType):
             owner = getattr(item, '__self__', None)
@@ -179,7 +179,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif (metadata := _typing_metadata(item)) is not None:
             result = (kind, 'typing-parameter', node(metadata), node(_attributes(item)))
         elif isinstance(item, GenericAlias):
-            metadata = {name: vars(GenericAlias)[name].__get__(item, type(item)) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
+            metadata = {name: vars(GenericAlias)[name].__get__(item, item_type) for name in ('__origin__', '__args__', '__unpacked__') if name in vars(GenericAlias)}
             result = (kind, 'generic-alias', node(metadata), node(_attributes(cast(object, item))))
         elif isinstance(item, partial):
             result = (kind, 'partial', *(node(native_attribute(cast(object, item), name)) for name in ('func', 'args', 'keywords')), node(_attributes(cast(object, item))))
@@ -204,13 +204,13 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         elif isinstance(item, (pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
         elif kind[0].split('.')[0] == 'numpy' and kind[1] == '_ArrayFunctionDispatcher':
-            result = (kind, node(vars(type(item))['_implementation'].__get__(item, type(item))), node(_attributes(item)))
-        elif type(item) is np.ufunc:
+            result = (kind, node(vars(item_type)['_implementation'].__get__(item, item_type)), node(_attributes(item)))
+        elif item_type is np.ufunc:
             result = (kind, pickle.dumps(item, protocol=5))
         elif isinstance(item, IOBase):
             raise ValueError('Holdout refuses opaque external prediction dependencies')
-        elif type(item).__dictoffset__ or any('__slots__' in cls.__dict__ for cls in type(item).__mro__):
-            if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in type(item).__mro__):
+        elif item_type.__dictoffset__ or any('__slots__' in cls.__dict__ for cls in item_type.__mro__):
+            if any(base is not object and inspect.isbuiltin(base.__dict__.get('__new__')) for base in item_type.__mro__):
                 raise ValueError(f'Holdout refuses opaque native prediction state: {kind[0]}.{kind[1]}')
             result = (kind, node(_attributes(item)))
         else:

@@ -47,8 +47,7 @@ def _native_annotation(value: object) -> bool:
     if not isinstance(value, type):
         return False
     module = sys.modules.get(value.__module__)
-    root = value.__module__.split('.')[0]
-    return module is not None and vars(module).get(value.__qualname__) is value and (root in sys.stdlib_module_names or root in _LIBRARIES)
+    return module is not None and vars(module).get(value.__qualname__) is value and (value.__module__.split('.')[0] in sys.stdlib_module_names or value.__module__.split('.')[0] in _LIBRARIES)
 
 
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
@@ -71,26 +70,27 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     constructor_names, constructor_revision = method_names | {'__new__', '__init__'}, len(method_names)
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
-        if value is None or type(value) in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (type(value).__module__ == 'numpy' and issubclass(type(value), np.generic) and not object_payload(value)):
+        value_type = type(value)
+        if value is None or value_type in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (value_type.__module__ == 'numpy' and issubclass(value_type, np.generic) and not object_payload(value)):
             if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)
                 fitted_names.add(value)
             return
-        if type(value) is logging.Logger or type(value) in (GetSetDescriptorType, MemberDescriptorType):
+        if value_type is logging.Logger or value_type in (GetSetDescriptorType, MemberDescriptorType):
             native_leaf_dependencies(value, seen, evidence, visit)
             return
         if isinstance(value, ModuleType):
             module_dynamic[id(value)] = module_dynamic.get(id(value), False) or fitted_module
-        if id(value) in seen or id(value) in omitted:
+        if (identity := id(value)) in seen or identity in omitted:
             return
-        seen[id(value)] = value
-        sequence = list[object].__iter__(cast(list[object], value)) if isinstance(cast(object, value), list) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if isinstance(cast(object, value), tuple) else ()
-        readers = dict[object, object].items(cast(dict[object, object], value)) if isinstance(cast(object, value), dict) else enumerate(sequence)
+        seen[identity] = value
+        sequence = list[object].__iter__(cast(list[object], value)) if issubclass(value_type, list) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, tuple) else ()
+        readers = dict[object, object].items(cast(dict[object, object], value)) if issubclass(value_type, dict) else enumerate(sequence)
         globals_names.update(alias for key, part in readers if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(value, key))
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value
-            origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or type(value).__module__
+            origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or value_type.__module__
             modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
             if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
                 raise ValueError('Holdout inference has an unowned random dependency')
@@ -101,8 +101,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         elif isinstance(value, partial):
             for part in children(cast(object, value), namespace_readers=globals_names):
                 visit(part)
-            if type(cast(object, value)) is not partial:
-                _ = objects.setdefault((id(type(cast(object, value))), False), cast(object, value))
+            if value_type is not partial:
+                _ = objects.setdefault((id(value_type), False), cast(object, value))
         elif inspect.isfunction(value):
             visit(vars(value))
             visit(value.__annotations__, annotation=True)
@@ -114,7 +114,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 for part in children(cell, namespace_readers=globals_names):
                     visit(part)
             function_module, function_name = _function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
-            if fitting_call(function_module, function_name) or id(value) in sealed:
+            if fitting_call(function_module, function_name) or identity in sealed:
                 return
             attributes.update(value.__code__.co_names)
             method_names.update(value.__code__.co_names)
@@ -198,28 +198,28 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                             aliases.append(item)
                     try:
                         visit(item)
-                        binding_key = (id(value), name, id(item))
+                        binding_key = (identity, name, id(item))
                         if binding_key not in recorded_bindings:
                             recorded_bindings.add(binding_key)
                             evidence.append((value.__module__, value.__qualname__, instruction.argval, item))
                     except (ValueError, TypeError, pickle.PickleError) as exc:
                         raise ValueError(f'Holdout dependency {value.__module__}.{value.__qualname__}:{name}: {exc}') from exc
-        elif type(value).__module__ == 'builtins' and type(value) not in (dict, list, tuple, set, frozenset) and inspect.isroutine(value):
+        elif value_type.__module__ == 'builtins' and value_type not in (dict, list, tuple, set, frozenset) and inspect.isroutine(value):
             owner = getattr(value, '__self__', None)
             if owner is not None and not isinstance(owner, ModuleType):
                 visit(owner)
         elif object_payload(value):
             for part in children(cast(object, value), namespace_readers=globals_names):
                 visit(part, annotation=annotation)
-            if type(value) is not np.ndarray:
-                _ = objects.setdefault((id(type(value)), False), value)
+            if value_type is not np.ndarray:
+                _ = objects.setdefault((id(value_type), False), value)
         elif isinstance(value, ModuleType):
-            _ = objects.setdefault((id(value), False), value)
-        elif not isinstance(value, (pl.DataFrame, pl.Series)) and type(value) is not np.ndarray:
-            if isinstance(value, type) and type(value) is not type:
-                visit(type(value))
-            if type(value) not in (dict, list, tuple, set, frozenset, defaultdict) and not (annotation and type(value).__module__ == 'typing'):
-                _ = objects.setdefault((id(value) if isinstance(value, type) else id(type(value)), isinstance(value, type)), value)
+            _ = objects.setdefault((identity, False), value)
+        elif not isinstance(value, (pl.DataFrame, pl.Series)) and value_type is not np.ndarray:
+            if isinstance(value, type) and value_type is not type:
+                visit(value_type)
+            if value_type not in (dict, list, tuple, set, frozenset, defaultdict) and not (annotation and value_type.__module__ == 'typing'):
+                _ = objects.setdefault((identity if isinstance(value, type) else id(value_type), isinstance(value, type)), value)
             if not isinstance(value, type):
                 for part in children(value, namespace_readers=globals_names):
                     visit(part, annotation=annotation)
