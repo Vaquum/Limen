@@ -1935,9 +1935,9 @@ def _assert_factory_resources(plan, params):
                     pool.submit(factory_component, factory).result(timeout=30)
                 assert owner.window == 4
         assert owner.window == 2
-        declare_parallel(RoutineDefaultFactory, ParallelRoundContract(deterministic_stage))
         assert _caller_feature.__defaults__ == (2,)
         for factory in (RoutineDefaultFactory, partial(RoutineDefaultFactory)):
+            declare_parallel(factory, ParallelRoundContract(deterministic_stage))
             baseline = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
             with pytest.MonkeyPatch.context() as patch:
                 patch.setattr(_caller_feature, '__defaults__', (4,))
