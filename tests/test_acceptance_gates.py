@@ -546,8 +546,12 @@ def test_pbo_configuration_reports(acceptance_runs, pbo_runs, tmp_path):
     assert missing['deflated_sharpe_probability'] is not None and missing['pbo_block_bars'] == 12
 
 
-def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path):
+def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path, monkeypatch):
     from limen.cli.commands.resume import run_resume
+
+    (tmp_path / 'inputs').mkdir()
+    (tmp_path / 'inputs' / _FIXTURE.name).write_bytes(_FIXTURE.read_bytes())
+    monkeypatch.chdir(tmp_path)
 
     _, config, path = pbo_runs['compiled_only']
     metadata = json.loads((path / 'metadata.json').read_text())
