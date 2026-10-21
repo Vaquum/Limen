@@ -508,8 +508,10 @@ class UniversalExperimentLoop:
         csv_path = components['csv_path']
         round_data_path = components['round_data_path']
 
-        if resume and self._experiment_dir is not None and round_data_path is not None:
+        if resume and self._experiment_dir is not None and round_data_path is not None and csv_path.exists():
             checkpoint = checkpoint_manager.validate(self._experiment_dir, content_hash=content_hash, strategy_type=strategy_type)
+            metadata_path = self._experiment_dir / 'metadata.json'
+            validate_walk_forward_resume(self.manifest, json.loads(metadata_path.read_text()) if metadata_path.exists() else {})
             expected = _storage.csv_prefix(round_data_path, checkpoint['metadata']['experiment_round'] + 1)
             _storage.validate_prefix(round_data_path, expected)
             if expected:
@@ -847,8 +849,8 @@ class UniversalExperimentLoop:
 
 
     def _validate_resume_payloads(self, entry: Mapping[str, object]) -> None:
-        message = 'Cannot resume a lighter recording policy: required recorded recovery evidence is missing'
         forward = None if self.manifest is None else self.manifest.split_walk_forward
+        message = 'Cannot resume a lighter recording policy: required recorded recovery evidence is missing' + (' for split_walk_forward' if forward is not None else '')
         leaves = entry.get('folds') if forward is not None else [entry]
         if not isinstance(leaves, list) or (forward is not None and len(cast(list[object], leaves)) != forward.n_folds):
             raise ValueError(message)
@@ -864,9 +866,7 @@ class UniversalExperimentLoop:
             if (event or 'trade_contract' in record) and (not self._recording or not self._recording['trade_ledger'] or not isinstance(ledger, Mapping) or not all(isinstance(cast(Mapping[str, object], ledger).get(key), list) for key in ('states', 'intents', 'fills', 'episodes', 'funding'))):
                 raise ValueError(message)
 
-    def _restore_checkpoint_state(self,
-                                   msq: MSQ,
-                                   domain: ParamDomain,
+    def _restore_checkpoint_state(self, msq: MSQ, domain: ParamDomain,
                                    feedback_controller: FeedbackController,
                                    checkpoint_manager: CheckpointManager,
                                    *,

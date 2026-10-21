@@ -225,7 +225,10 @@ RECOVERY_KINDS = ('snapshot', 'cost_snapshot', 'event', 'walk_forward', 'event_w
 @pytest.fixture(scope='module')
 def recovery_campaigns(tmp_path_factory):
     result = {}
-    for kind in RECOVERY_KINDS:
+
+    def campaign(kind):
+        if kind in result:
+            return result[kind]
         policy = {**FULL, 'trade_ledger': kind in ('event', 'event_walk_forward', 'native_event'),
                   'fold_details': kind in ('walk_forward', 'event_walk_forward')}
         paths = {label: tmp_path_factory.mktemp(f'recovery-{kind}-{label}') for label in ('full', 'resumed')}
@@ -247,12 +250,14 @@ def recovery_campaigns(tmp_path_factory):
         _recovery_run(resumed, kind, resume=True)
         result[kind] = {'paths': paths, 'control': control, 'resumed': resumed,
                         'policy': policy, 'prefix': prefix}
-    return result
+        return result[kind]
+
+    return campaign
 
 
 @pytest.mark.parametrize('kind', RECOVERY_KINDS)
 def test_resume_ignores_inapplicable_recording_groups(kind, recovery_campaigns):
-    captured = recovery_campaigns[kind]
+    captured = recovery_campaigns(kind)
     full, resumed = (_records(captured['paths'][label]) for label in ('full', 'resumed'))
     assert resumed == [_project(record, captured['policy']) for record in full]
     assert resumed[:len(captured['prefix'])] == captured['prefix']
@@ -287,7 +292,7 @@ def test_resume_requires_applicable_policy(kind, group, tmp_path):
     ('factorized', 'missing_datetimes'),
 ))
 def test_resume_requires_payloads_before_rewrites(kind, damage, recovery_campaigns, tmp_path):
-    source = recovery_campaigns[kind]['paths']['full']
+    source = recovery_campaigns(kind)['paths']['full']
     path = tmp_path / kind
     shutil.copytree(source, path)
     round_path = storage.round_path(path)
