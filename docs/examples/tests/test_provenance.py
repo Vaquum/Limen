@@ -176,3 +176,57 @@ def test_successful_response_requires_a_complete_json_array(monkeypatch, payload
     monkeypatch.setattr('provenance.subprocess.run', run)
     with pytest.raises(error):
         pull_associations('56b71e68c08fce5a1edbdb002bd0b23e91a6c527')
+
+
+def test_candidate_source_status_uses_one_exact_git_inventory(recorded_history, monkeypatch):
+    from check_evidence import validate_source_status
+    root, run, _, _ = recorded_history
+    chapter = (ROOT / 'docs/Research-Book.md').read_text()
+    (root / 'unchanged.md').write_text(chapter)
+    run('add', 'unchanged.md');run('commit', '-qm', 'docs: retain unchanged source')
+    base = git(root, 'rev-parse', 'HEAD')
+    names = ['page.md', 'project with spaces.md', 'project\nwith\ttabs.md', 'project\rwithCR.md']
+    continuation = (ROOT / 'docs/examples/python-research/README.md').read_text()
+    for name in names:
+        (root / name).write_text(chapter if name == 'page.md' else chapter + continuation)
+    run('add', '.');run('commit', '-qm', 'docs: retain candidate sources')
+    sources = [{'path': 'unchanged.md', 'status': 'merged', 'merged_pr': None}]
+    sources += [{'path': name, 'status': 'candidate', 'merged_pr': None} for name in names]
+    sources.append(sources[1] | {'region': 'selection'})
+    original = subprocess.check_output
+    calls = []
+
+    def observe(command, **kwargs):
+        if command[:2] == ['git', 'diff']:
+            calls.append(command)
+        return original(command, **kwargs)
+
+    monkeypatch.setattr('check_evidence.subprocess.check_output', observe)
+    validate_source_status(root, sources, base)
+    assert len(calls) == 1
+    assert '--name-only' in calls[0] and '-z' in calls[0] and '--no-renames' in calls[0]
+    for name in names:
+        changed = copy.deepcopy(sources)
+        next(item for item in changed if item['path'] == name)['status'] = 'merged'
+        with pytest.raises(ValueError, match='Unmerged source presented as merged'):
+            validate_source_status(root, changed, base)
+    for comparison in (base, None):
+        changed = copy.deepcopy(sources)
+        changed[1]['merged_pr'] = 'https://github.com/Vaquum/Limen/pull/1055'
+        count = len(calls)
+        with pytest.raises(ValueError, match='Candidate source cannot claim a merged PR'):
+            validate_source_status(root, changed, comparison)
+        assert len(calls) == count + int(comparison is not None)
+    (root / 'unchanged.md').write_text(continuation)
+    run('commit', '-qam', 'docs: change previously merged source')
+    with pytest.raises(ValueError, match='Unmerged source presented as merged'):
+        validate_source_status(root, sources, base)
+
+
+def test_candidate_source_status_does_not_relabel_git_errors(recorded_history):
+    from check_evidence import validate_source_status
+    root, _, _, _ = recorded_history
+    sources = [{'path': 'page.md', 'status': 'candidate', 'merged_pr': None}]
+    with pytest.raises(subprocess.CalledProcessError) as failure:
+        validate_source_status(root, sources, 'refs/heads/missing-research-source')
+    assert failure.value.returncode == 128
