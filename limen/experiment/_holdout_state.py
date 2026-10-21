@@ -38,14 +38,16 @@ def _typing_metadata(value: object) -> dict[str, object] | None:
 
 
 @lru_cache(maxsize=2048)
+def _code_hash(code: CodeType, _identity: int) -> str:
+    return sha256(marshal.dumps(code, 2)).hexdigest()
+
+
 def code_digest(code: CodeType) -> str:
-    return sha256(marshal.dumps(code)).hexdigest()
+    return _code_hash(code, id(code))
 
 def _native_values(value: object) -> tuple[object, ...]:
-    if isinstance(value, tuple):
-        return tuple(tuple[object, ...].__iter__(cast(tuple[object, ...], value)))
-    if isinstance(value, list):
-        return tuple(list[object].__iter__(cast(list[object], value)))
+    if isinstance(value, (tuple, list)):
+        return tuple(tuple[object, ...].__iter__(cast(tuple[object, ...], value))) if isinstance(value, tuple) else tuple(list[object].__iter__(cast(list[object], value)))
     if isinstance(value, deque):
         return tuple(deque[object].__iter__(cast(deque[object], value)))
     if isinstance(value, set):
@@ -98,13 +100,11 @@ def _attributes(value: object, namespace_readers: set[str] | None = None) -> dic
     if type(value) in _FORM_TYPES or type(value) in _NO_ATTRIBUTE_TYPES:
         return {}
     values: dict[str, object] = {}
-    native_dict = False
     for cls in type(value).__mro__:
         descriptor = cls.__dict__.get('__dict__')
         if isinstance(descriptor, GetSetDescriptorType):
             values[f'{cls.__module__}.{cls.__qualname__}:__dict__'] = descriptor.__get__(value, type(value))
-            native_dict = True
-    if type(value).__dictoffset__ and not native_dict and _typing_metadata(value) is None:
+    if type(value).__dictoffset__ and not values and _typing_metadata(value) is None:
         raise ValueError('Holdout refuses hidden native instance dictionaries')
     for cls in type(value).__mro__:
         if '__slots__' not in cls.__dict__:
@@ -217,8 +217,9 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         else:
             result = (kind, pickle.dumps(item, protocol=5))
         return result
-    result = node(value)
-    aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
-    encoded = pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
-    cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index('structure')].cell_contents = None
-    return encoded
+    try:
+        result = node(value)
+        aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
+        return pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
+    finally:
+        cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index('node')].cell_contents = cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index('structure')].cell_contents = None

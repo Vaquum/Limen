@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies, reader_names
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies, reader_names, native_annotation
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -44,12 +44,6 @@ def _dependency_positions(code: CodeType) -> tuple[int, ...]:
     return tuple(index for index, instruction in enumerate(_instructions(code)) if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_METHOD', 'IMPORT_NAME', 'IMPORT_FROM', 'STORE_FAST', 'STORE_DEREF', 'STORE_NAME') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)))
 
 
-def _native_annotation(value: object) -> bool:
-    if not isinstance(value, type):
-        return False
-    return (module := sys.modules.get(value.__module__)) is not None and vars(module).get(value.__qualname__) is value and ((root := value.__module__.split('.')[0]) in sys.stdlib_module_names or root in _LIBRARIES)
-
-
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
@@ -71,7 +65,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
         value_type = type(value)
-        if value is None or value_type in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (value_type.__module__ == 'numpy' and issubclass(value_type, cast(type[object], np.generic)) and not object_payload(value)):
+        if value is None or value_type in _ATOMIC_TYPES or (annotation and native_annotation(value, _LIBRARIES)) or (value_type.__module__ == 'numpy' and issubclass(value_type, cast(type[object], np.generic)) and not object_payload(value)):
             if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)
@@ -267,36 +261,37 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 if method is not None:
                     visit(method, annotation=name in ('__annotations__', '__type_params__', '__parameters__'))
 
-    for value in values:
-        visit(value)
-    previous = (-1, -1, -1, -1, -1, -1, -1, -1)
-    while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys or globals_names else 0, len(globals_names)):
-        previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys or globals_names else 0, len(globals_names))
-        for value in tuple(objects.values()):
-            methods(value)
-        if reflective_keys or globals_names:
-            functions = [value for value in seen.values() if inspect.isfunction(value)]
-            functions.extend(function for config in exclude for name in ('calibration_func', 'threshold_func') for function in call_functions(getattr(config, name, None)))
-            for function in functions:
-                for name, key in namespace_calls(function.__code__):
-                    if name in globals_names:
-                        if key is None:
-                            raise ValueError('Holdout requires a literal key for prediction globals lookup')
-                        reflective_keys.add(('__globals__', key))
-                done = reflected.setdefault(id(function), set())
-                for namespace_name, key in sorted(reflective_keys - done):
-                    done.add((namespace_name, key))
-                    namespace = cast(dict[str, object], getattr(function, namespace_name))
-                    if key not in namespace:
-                        continue
-                    part = namespace[key]
-                    visit(part)
-                    evidence.append((namespace_name, function.__module__, function.__qualname__, key, part))
-    if capture is not None:
-        capture.extend(seen.values())
-    result: list[object] = [fitted_witness((tuple(values), evidence))]
-    cast(tuple[CellType, ...], visit.__closure__)[visit.__code__.co_freevars.index('visit')].cell_contents = None
-    return result
+    try:
+        for value in values:
+            visit(value)
+        previous = (-1, -1, -1, -1, -1, -1, -1, -1)
+        while previous != (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys or globals_names else 0, len(globals_names)):
+            previous = (len(attributes), len(objects), len(module_attributes), len(fitted_names), sum(module_dynamic.values()), len(reflective_keys), len(seen) if reflective_keys or globals_names else 0, len(globals_names))
+            for value in tuple(objects.values()):
+                methods(value)
+            if reflective_keys or globals_names:
+                functions = [value for value in seen.values() if inspect.isfunction(value)]
+                functions.extend(function for config in exclude for name in ('calibration_func', 'threshold_func') for function in call_functions(getattr(config, name, None)))
+                for function in functions:
+                    for name, key in namespace_calls(function.__code__):
+                        if name in globals_names:
+                            if key is None:
+                                raise ValueError('Holdout requires a literal key for prediction globals lookup')
+                            reflective_keys.add(('__globals__', key))
+                    done = reflected.setdefault(id(function), set())
+                    for namespace_name, key in sorted(reflective_keys - done):
+                        done.add((namespace_name, key))
+                        namespace = cast(dict[str, object], getattr(function, namespace_name))
+                        if key not in namespace:
+                            continue
+                        part = namespace[key]
+                        visit(part)
+                        evidence.append((namespace_name, function.__module__, function.__qualname__, key, part))
+        if capture is not None:
+            capture.extend(seen.values())
+        return [fitted_witness((tuple(values), evidence))]
+    finally:
+        cast(tuple[CellType, ...], visit.__closure__)[visit.__code__.co_freevars.index('visit')].cell_contents = None
 
 
 def dependency_digest(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> str:
@@ -322,4 +317,7 @@ def restore_iterations(source: object, memo: Mapping[int, object]) -> None:
         for part in children(value):
             visit(part)
 
-    visit(source)
+    try:
+        visit(source)
+    finally:
+        cast(tuple[CellType, ...], visit.__closure__)[visit.__code__.co_freevars.index('visit')].cell_contents = None

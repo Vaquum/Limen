@@ -7,7 +7,7 @@ import inspect
 from functools import partial
 import random
 import sys
-from types import FrameType, FunctionType
+from types import CellType, FrameType, FunctionType
 from typing import cast
 
 import numpy as np
@@ -104,18 +104,21 @@ def readonly_prediction(sensors: list[Sensor], *, providers: Sequence[object] | 
         for part in parts:
             collect(part)
 
-    for sensor in sensors:
-        for root in _roots(sensor):
-            collect(root)
-    if providers is None:
-        reachable: list[object] = []
-        roots = [root for sensor in sensors for root in _roots(sensor)]
-        roots.extend(getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window'))
-        roots.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
-        _ = inference_evidence(roots, exclude=configs, resolved=(vars(Sensor)['_get_manifest'],), capture=reachable)
-        providers = reachable
-    for value in providers:
-        collect(value)
+    try:
+        for sensor in sensors:
+            for root in _roots(sensor):
+                collect(root)
+        if providers is None:
+            reachable: list[object] = []
+            roots = [root for sensor in sensors for root in _roots(sensor)]
+            roots.extend(getattr(Sensor, name) for name in ('predict', '_get_manifest', '_last_bar_inside_training_window'))
+            roots.extend((MLManifest.sensor_input_prep, MLManifest._prepare_column_shims, MLManifest.resolve_trade_policy))
+            _ = inference_evidence(roots, exclude=configs, resolved=(vars(Sensor)['_get_manifest'],), capture=reachable)
+            providers = reachable
+        for value in providers:
+            collect(value)
+    finally:
+        cast(tuple[CellType, ...], collect.__closure__)[collect.__code__.co_freevars.index('collect')].cell_contents = None
     numpy_state, python_state = fitted_witness(np.random.get_state()), random.getstate()
     previous = sys.getprofile()
     violation: str | None = None

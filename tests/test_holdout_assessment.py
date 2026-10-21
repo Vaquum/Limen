@@ -1566,6 +1566,48 @@ def test_frozen_primitive_alias_copy(native_assessment_case, binary):
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('operation', ['witness', 'dependencies', 'restore'])
+@pytest.mark.parametrize('failure', [False, True])
+def test_frozen_walkers_release_graphs(operation, failure):
+    import weakref
+    from limen.experiment._holdout_state import fitted_witness
+    from limen.experiment._holdout_dependencies import inference_evidence, restore_iterations
+    class Owner:
+        pass
+    class HiddenOwner:
+        __dict__ = property(lambda self: {})
+    owner = HiddenOwner() if failure else Owner()
+    reference = weakref.ref(owner)
+    rejected = False
+    try:
+        if operation == 'witness':
+            fitted_witness(owner)
+        elif operation == 'dependencies':
+            inference_evidence((owner,))
+        else:
+            restore_iterations(owner, {id(owner): owner})
+    except ValueError:
+        rejected = True
+    assert rejected == failure
+    del owner
+    assert reference() is None
+
+
+@pytest.mark.parametrize('metadata', ['co_filename', 'co_firstlineno'])
+def test_frozen_code_digest_ignores_reference_bookkeeping(metadata):
+    from limen.indicators.roc import roc
+    from limen.experiment._holdout_state import code_digest
+    code = roc.__code__.replace()
+    expected = code_digest(code)
+    references = [code.co_consts, code.co_code, code.co_names, code.co_varnames, *code.co_consts]
+    clones = [code.replace() for _ in range(3)]
+    assert all(code_digest(clone) == expected for clone in clones)
+    assert references[0] is code.co_consts
+    changed = code.replace(**{metadata: code.co_filename + '.changed' if metadata == 'co_filename' else code.co_firstlineno + 1})
+    assert code_digest(changed) != expected
+    assert code_digest(code) == expected
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:
