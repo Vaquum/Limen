@@ -53,5 +53,5 @@ def namespace_bindings(functions: tuple[FunctionType, ...], native: Callable[[Fu
 
 
 def reader_names(value: object, key: str | int) -> tuple[str, ...]:
-    size = list[object].__len__(cast(list[object], value)) if isinstance(cast(object, value), list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(cast(object, value), tuple) else None
+    size = list[object].__len__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else None
     return (str(key), str(key - size)) if isinstance(key, int) and size is not None else (str(key),)

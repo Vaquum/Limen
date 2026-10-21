@@ -27,7 +27,7 @@ _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpe
 _FORM_TYPES = (type(typing.Union), type(typing.Literal))
 _ATOMIC_TYPES = (str, bool, bytes)
 _NO_ATTRIBUTE_TYPES = (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray)
-_CONTAINER_TYPES = (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)
+_CONTAINER_TYPES: tuple[type[object], ...] = (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)
 # Verify canonical identity rather than assume the interpreter's integer cache.
 _CANONICAL_INTS: MappingProxyType[object, int] = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
@@ -137,20 +137,21 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             classes[id(item_type)] = item_type
         seen[id(item)] = len(retained)
         retained.append(item)
-        if isinstance(item, ModuleType):
-            return ('module', item.__name__)
+        if isinstance(item, (ModuleType, type)):
+            return ('module', item.__name__) if isinstance(item, ModuleType) else ('class', item.__module__, item.__qualname__)
         if item_type is int or item_type is float:
             return ('scalar', item_type.__name__, item)
-        if isinstance(item, type):
-            return ('class', item.__module__, item.__qualname__)
         kind = (item_type.__module__, item_type.__qualname__, ('ref', reference) if (reference := seen.get(id(item_type))) is not None else node(item_type))
+        result: object
         if item_type is dict:
-            return (kind, None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else ('ref', key_ref) if (key_ref := seen.get(id(key))) is not None else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part))) for key, part in cast(dict[object, object], item).items()), None)
-        if item_type is list or item_type is tuple:
-            return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
-        if item_type is set or item_type is frozenset:
-            return (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
-        return structure(item, item_type, kind)
+            result = (kind, None, tuple(((key if key is None or type(key) in _ATOMIC_TYPES else ('ref', key_ref) if (key_ref := seen.get(id(key))) is not None else node(key)), (part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part))) for key, part in cast(dict[object, object], item).items()), None)
+        elif item_type is list or item_type is tuple:
+            result = (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(list[object] | tuple[object, ...], item)), None, None)
+        elif item_type is set or item_type is frozenset:
+            result = (kind, tuple((part if part is None or type(part) in _ATOMIC_TYPES else ('ref', part_ref) if (part_ref := seen.get(id(part))) is not None else node(part)) for part in cast(set[object] | frozenset[object], item)), None)
+        else:
+            result = structure(item, item_type, kind)
+        return result
 
     def structure(item: object, item_type: type[object], kind: tuple[str, str, object]) -> object:
         attributes = _attributes(item) if issubclass(item_type, _CONTAINER_TYPES) else {}

@@ -26,6 +26,7 @@ __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'depe
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
 _LIBRARIES = ('numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy')
 _ATOMIC_TYPES = (str, bool, int, float, bytes, type(Union), type(Literal))
+_READER_TYPES: tuple[type[object], ...] = (list, tuple, dict)
 
 def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS
@@ -46,8 +47,7 @@ def _dependency_positions(code: CodeType) -> tuple[int, ...]:
 def _native_annotation(value: object) -> bool:
     if not isinstance(value, type):
         return False
-    module = sys.modules.get(value.__module__)
-    return module is not None and vars(module).get(value.__qualname__) is value and ((root := value.__module__.split('.')[0]) in sys.stdlib_module_names or root in _LIBRARIES)
+    return (module := sys.modules.get(value.__module__)) is not None and vars(module).get(value.__qualname__) is value and ((root := value.__module__.split('.')[0]) in sys.stdlib_module_names or root in _LIBRARIES)
 
 
 def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
@@ -71,7 +71,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
 
     def visit(value: object, *, fitted_module: bool = True, annotation: bool = False) -> None:
         value_type = type(value)
-        if value is None or value_type in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (value_type.__module__ == 'numpy' and issubclass(value_type, np.generic) and not object_payload(value)):
+        if value is None or value_type in _ATOMIC_TYPES or (annotation and _native_annotation(value)) or (value_type.__module__ == 'numpy' and issubclass(value_type, cast(type[object], np.generic)) and not object_payload(value)):
             if isinstance(value, str):
                 attributes.add(value)
                 method_names.add(value)
@@ -85,8 +85,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if (identity := id(value)) in seen or identity in omitted:
             return
         seen[identity] = value
-        sequence = list[object].__iter__(cast(list[object], value)) if issubclass(value_type, list) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, tuple) else ()
-        readers = dict[object, object].items(cast(dict[object, object], value)) if issubclass(value_type, dict) else enumerate(sequence)
+        sequence = list[object].__iter__(cast(list[object], value)) if issubclass(value_type, _READER_TYPES[0]) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, _READER_TYPES[1]) else ()
+        readers = dict[object, object].items(cast(dict[object, object], value)) if issubclass(value_type, _READER_TYPES[2]) else enumerate(sequence)
         globals_names.update(alias for key, part in readers if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(value, key))
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value
