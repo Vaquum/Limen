@@ -1784,6 +1784,13 @@ def _factory_encoded_probe(plan, factory, extra=None):
     return _factory_probe(plan, decode(factory, isolate_functions=True), extra)
 
 
+def _factory_repeat_probe(plan, factory, extra=None):
+    before = digest(plan)
+    results = [_factory_probe(plan, factory, extra) for _ in range(2)]
+    assert digest(plan) == before
+    return results
+
+
 def _assert_factory_resources(plan, params):
     from limen.experiment._parallel_resources import unfrozen_stage
     from limen.experiment._parallel_resources import deterministic_stage
@@ -1851,8 +1858,7 @@ def _assert_factory_resources(plan, params):
             assert expected == _caller_feature(data, window)['caller_mean'].to_list()
             owner_calls = _bound_initializer_owner.calls
             before = digest(candidate)
-            for _ in range(2):
-                actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
+            for actual, pid in pool.submit(_factory_repeat_probe, candidate, factory, extra).result(timeout=30):
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
             assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
             if factory in (StaticInitRolling, ForeignAllocationRolling):
