@@ -19,7 +19,7 @@ from limen.experiment._objective_run import finalize_objective_result, run_objec
 from limen.experiment._parallel_commit import context_parameter_keys, failed_parameters
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
-from limen.experiment import _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _saved_holdout
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.manifest_core import AblationConfig, Manifest
 from limen.experiment.msq import MSQ
@@ -154,7 +154,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
-    _holdout_checkpoint.validate(host, checkpoint, metadata)
+    _saved_holdout.validate(host, checkpoint, metadata)
     frontier = _mapping(checkpoint['metadata'], 'checkpoint metadata')['experiment_round']
     if type(frontier) is not int or frontier < -1:
         raise ValueError('Cannot resume parallel run with invalid terminal frontier')

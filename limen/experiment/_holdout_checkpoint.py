@@ -8,8 +8,8 @@ from typing import cast
 
 import polars as pl
 
-from limen.experiment import _holdout_history as history
-from limen.experiment import _round_storage as storage
+import limen.experiment._holdout_history as history
+import limen.experiment._round_storage as storage
 
 __all__: list[str] = []
 _HEADER = {'schema_version', 'project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds'}

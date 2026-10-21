@@ -15,7 +15,7 @@ import sys
 import polars as pl
 
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
-from limen.experiment import _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _saved_holdout
 from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec
 
 class ResearchManifest(SourceManifest, Protocol):
@@ -298,7 +298,7 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
     attrs = cast(dict[str, object], vars(host))
     manifest = cast(ResearchManifest, attrs['_manifest'])
     binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
-    saved = _holdout_checkpoint.trainer_metadata(manifest, cast(Mapping[str, object], attrs['_metadata']))
+    saved = _saved_holdout.trainer_metadata(manifest, cast(Mapping[str, object], attrs['_metadata']))
     if isinstance(saved, Mapping):
         saved = cast(Mapping[str, object], saved)
         if binding is None or any(saved.get(key) != value for key, value in (
@@ -313,7 +313,7 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
 
 
 def trainer_round(manifest: object, expected: Mapping[str, object]) -> None:
-    _holdout_checkpoint.trainer_round(manifest, expected)
+    _saved_holdout.trainer_round(manifest, expected)
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return

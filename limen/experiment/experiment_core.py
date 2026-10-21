@@ -1,5 +1,5 @@
 import limen.experiment._holdout_research as _holdout
-from limen.experiment import _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _saved_holdout
 import limen.experiment._round_storage as _storage
 import csv
 import importlib.metadata
@@ -853,7 +853,7 @@ class UniversalExperimentLoop:
         )
         metadata_path = self._experiment_dir / 'metadata.json'
         metadata: dict[str, object] = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-        _holdout_checkpoint.validate(self, checkpoint_data, metadata)
+        _saved_holdout.validate(self, checkpoint_data, metadata)
         if metadata.get('record_execution', False) != self._record_execution:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
@@ -1028,7 +1028,7 @@ class UniversalExperimentLoop:
 
         if holdout := _holdout.metadata(self.manifest):
             metadata['holdout'] = holdout
-        if binding := _holdout_checkpoint.header(self.manifest):
+        if binding := _saved_holdout.header(self.manifest):
             metadata['holdout_binding'] = binding
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
@@ -1068,7 +1068,7 @@ class UniversalExperimentLoop:
             feedback_controller=feedback_controller,
             pruning_strategies=pruning_strategies,
             failed_round_params=failed_round_params,
-            holdout_binding=_holdout_checkpoint.capture(self, current_round),
+            holdout_binding=_saved_holdout.capture(self, current_round),
         )
 
 
