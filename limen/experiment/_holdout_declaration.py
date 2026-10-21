@@ -10,8 +10,8 @@ from types import CodeType, FunctionType, ModuleType
 from typing import cast
 
 from limen.experiment._holdout_calls import call_functions, function_module, native_attribute
-from limen.experiment._holdout_namespaces import namespace_calls
-from limen.experiment._holdout_state import children, fitted_witness
+from limen.experiment._holdout_namespaces import namespace_calls, reader_names, reader_types
+from limen.experiment._holdout_state import children, fitted_witness, native_values
 
 __all__ = ['declaration_witness']
 _LIBRARIES = ('limen', 'numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy', '_pytest')
@@ -58,8 +58,8 @@ def declaration_witness(value: object) -> bytes:
             cls = cast(type[object], owner if isinstance(owner, type) else type(owner))
             owners[id(cls)] = cls
             owners[id(type(cls))] = type(cls)
-        if isinstance(item, dict):
-            readers.update(name for name, part in dict[object, object].items(cast(dict[object, object], item)) if isinstance(name, str) and part is _native_globals)
+        if isinstance(item, reader_types):
+            readers.update(alias for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else enumerate(native_values(item))) if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(item, key))
         for function in call_functions(item):
             if function in bindings:
                 continue

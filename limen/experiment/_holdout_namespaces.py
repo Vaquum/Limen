@@ -6,9 +6,9 @@ from types import CodeType, EllipsisType
 from typing import cast
 from typing_extensions import Buffer
 
-__all__ = ['code_aliases', 'namespace_calls', 'reader_names']
+__all__ = ['code_aliases', 'namespace_calls', 'reader_names', 'reader_types']
 _CALLS = frozenset({'CALL', 'CALL_FUNCTION', 'CALL_METHOD'})
-_LOOKUP_WIDTH = 2
+reader_types: tuple[type[object], ...] = (list, tuple, dict, deque)
 
 
 @lru_cache(maxsize=2048)
@@ -36,7 +36,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
                         break
         if lookup_start is not None:
             lookup = instructions[lookup_start:lookup_start + 2]
-            key = lookup[0].argval if len(lookup) == _LOOKUP_WIDTH and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
+            key = lookup[0].argval if len(lookup) == 2 and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
             found.extend((name, key) for name in names)
     return (*found, *((alias, key) for part in code.co_consts if isinstance(part, CodeType) for name, key in namespace_calls(part) for alias in aliases.get(name, {name})))
 

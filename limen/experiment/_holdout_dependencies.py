@@ -26,7 +26,6 @@ __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'depe
 FITTING_METHODS = frozenset({'fit', 'fit_transform', 'partial_fit', 'train', 'fit_calibrator', 'grid_threshold_optimizer'})
 _LIBRARIES = ('numpy', 'polars', 'pandas', 'sklearn', 'lightgbm', 'scipy')
 _ATOMIC_TYPES = (str, bool, int, float, bytes, type(Union), type(Literal))
-_READER_TYPES: tuple[type[object], ...] = (list, tuple, dict, deque)
 
 def fitting_call(module: str, name: str) -> bool:
     return (name.rsplit('.', 1)[-1] in FITTING_METHODS or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
@@ -78,8 +77,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if (identity := id(value)) in seen or identity in omitted:
             return
         seen[identity] = value
-        sequence = native_types[0].__iter__(cast(list[object], value)) if issubclass(value_type, _READER_TYPES[0]) else native_types[1].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, _READER_TYPES[1]) else native_types[3].__iter__(cast(deque[object], value)) if issubclass(value_type, _READER_TYPES[3]) else ()
-        readers = native_types[2].items(cast(dict[object, object], value)) if issubclass(value_type, _READER_TYPES[2]) else enumerate(sequence)
+        sequence = native_types[0].__iter__(cast(list[object], value)) if issubclass(value_type, reader_types[0]) else native_types[1].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, reader_types[1]) else native_types[3].__iter__(cast(deque[object], value)) if issubclass(value_type, reader_types[3]) else ()
+        readers = native_types[2].items(cast(dict[object, object], value)) if issubclass(value_type, reader_types[2]) else enumerate(sequence)
         globals_names.update(alias for key, part in readers if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(value, key))
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value

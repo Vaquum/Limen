@@ -20,7 +20,7 @@ import polars as pl
 
 from limen.experiment._holdout_calls import native_attribute, logger_attributes, code_aliases
 
-__all__ = ['children', 'code_digest', 'fitted_witness', 'native_types', 'object_payload']
+__all__ = ['children', 'code_digest', 'fitted_witness', 'native_types', 'native_values', 'object_payload']
 
 
 _PARAMETER_TYPES = tuple(getattr(typing, name) for name in ('TypeVar', 'ParamSpec', 'TypeVarTuple', 'ParamSpecArgs', 'ParamSpecKwargs') if hasattr(typing, name))
@@ -47,7 +47,7 @@ def _code_hash(code: CodeType, _identity: int) -> str:
 def code_digest(code: CodeType) -> str:
     return _code_hash(code, id(code))
 
-def _native_values(value: object) -> tuple[object, ...]:
+def native_values(value: object) -> tuple[object, ...]:
     iterator = _NATIVE_ITERATORS[1] if isinstance(value, tuple) else _NATIVE_ITERATORS[0] if isinstance(value, list) else _NATIVE_ITERATORS[2] if isinstance(value, deque) else _NATIVE_ITERATORS[3] if isinstance(value, set) else _NATIVE_ITERATORS[4]
     return tuple(iterator(value))
 
@@ -72,7 +72,7 @@ def children(value: object, *, namespace_readers: set[str] | None = None) -> tup
         entries = native_types[2].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
         return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value), namespace_readers).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
-        return (*_native_values(cast(object, value)), *_attributes(cast(object, value), namespace_readers).values())
+        return (*native_values(cast(object, value)), *_attributes(cast(object, value), namespace_readers).values())
     if object_payload(value):
         return (native_types[6].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
     metadata = _typing_metadata(value)
@@ -190,9 +190,9 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             factory = node(native_attribute(cast(object, item), 'default_factory', defaultdict)) if isinstance(item, defaultdict) else None
             result = (kind, factory, tuple((node(key), node(part)) for key, part in (native_types[2].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
         elif isinstance(item, (tuple, list, deque)):
-            result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), native_attribute(cast(object, item), 'maxlen', deque) if isinstance(item, deque) else None, state)
+            result = (kind, tuple(node(part) for part in native_values(cast(object, item))), native_attribute(cast(object, item), 'maxlen', deque) if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
-            result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), state)
+            result = (kind, tuple(node(part) for part in native_values(cast(object, item))), state)
         elif object_payload(item):
             payload_owner: type[object] = np.ndarray if isinstance(item, np.ndarray) else np.generic
             result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(native_types[6].tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)

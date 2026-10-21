@@ -1462,7 +1462,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 
 
 @pytest.mark.parametrize('wrapped', [False, True])
-@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property'])
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader'])
 def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind, monkeypatch):
     import sys
     from types import CellType, ModuleType
@@ -1537,12 +1537,17 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     class ClassReader:
         read_globals = staticmethod(globals)
         __call__ = Reader.__call__
+    from collections import deque
+    class SequenceReader:
+        readers: ClassVar[deque] = deque([globals])
+        def __call__(self, data, **params):
+            return logreg_binary(data, **(params | {'C': 1 + self.readers[-1]()['_LATE_RULES']['offset']}))
     def annotation_factory(data, **params):
         return annotation_factory.__annotations__['build'](data, **params)
     annotation_factory.__annotations__ = {'build': helper}
     def nested_module_factory(data, **params):
         return package.helpers.build(data, **params)
-    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build}[kind]
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader()}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
