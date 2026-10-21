@@ -32,7 +32,6 @@ sfd:
         shift: -1
 # region event_policy
     backtest:
-      source_interval_seconds: 3600
       fee_bps: 7.0
       slip_bps: 3.0
       notional_rate: 0.25

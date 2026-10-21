@@ -52,7 +52,6 @@ The separate `final-event/holdout.yaml` project selects one Sensor and retains t
 <!-- example: holdout-event-policy source=docs/examples/compiled-research/final-event/holdout.yaml region=event_policy scenario=holdout interface=compiled role=executed -->
 ```yaml
     backtest:
-      source_interval_seconds: 3600
       fee_bps: 7.0
       slip_bps: 3.0
       notional_rate: 0.25
