@@ -1632,6 +1632,20 @@ def test_frozen_function_lookup_metadata(native_assessment_case, kind):
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('binary', [False, True])
+def test_frozen_code_constant_aliases_are_sealed(binary):
+    import marshal
+    from limen.experiment._holdout_state import code_digest
+    original = identity_probabilities.__code__
+    value = original.co_code if binary else original.co_filename
+    duplicate = bytes(bytearray(value)) if binary else value.encode().decode()
+    assert value == duplicate and value is not duplicate
+    shared = original.replace(co_consts=(None, value, value))
+    split = shared.replace(co_consts=(None, value, duplicate))
+    assert marshal.dumps(shared, 2) == marshal.dumps(split, 2)
+    assert code_digest(shared) != code_digest(split)
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:

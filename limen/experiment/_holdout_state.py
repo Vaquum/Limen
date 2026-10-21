@@ -18,7 +18,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.experiment._holdout_calls import native_attribute, logger_attributes
+from limen.experiment._holdout_calls import native_attribute, logger_attributes, code_aliases
 
 __all__ = ['children', 'code_digest', 'fitted_witness', 'object_payload']
 
@@ -39,7 +39,7 @@ def _typing_metadata(value: object) -> dict[str, object] | None:
 
 @lru_cache(maxsize=2048)
 def _code_hash(code: CodeType, _identity: int) -> str:
-    return sha256(marshal.dumps(code, 2)).hexdigest()
+    return sha256(marshal.dumps(code, 2) + pickle.dumps(code_aliases(code), protocol=5)).hexdigest()
 
 
 def code_digest(code: CodeType) -> str:

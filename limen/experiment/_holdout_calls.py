@@ -9,9 +9,9 @@ from threading import RLock
 from types import CellType, CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
-from limen.experiment._holdout_namespaces import namespace_calls, reader_names
+from limen.experiment._holdout_namespaces import code_aliases, namespace_calls, reader_names
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'logger_attributes', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'native_leaf_dependencies', 'native_annotation', 'reader_names', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'code_aliases', 'constructor_entry', 'entropy_call', 'function_module', 'logger_attributes', 'matches', 'namespace_calls', 'native_annotation', 'native_attribute', 'native_codes', 'native_leaf_dependencies', 'reader_names', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
