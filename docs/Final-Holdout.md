@@ -81,9 +81,11 @@ While a reservation is active, the workflow refuses:
 
 - parallel, factorized, resumed or walk-forward execution and profiling;
 - custom SFD functions, replaced prep/model methods or callbacks;
-- alternate test sources, formed/dollar/event bars, event/funding execution and alternate execution sources;
+- alternate test sources, formed/dollar/event bars, funding execution and alternate execution sources;
 - source row limits, source/interval search parameters, unsupported file formats and resampling;
 - split dates extending beyond the research cutoff.
+
+Pinned event economics are admitted for a single exact binary Sensor with a cash_spot or linear_perpetual product on the same native source and interval, without funding, auxiliary sources, barriers, declared intervals or non-binary modes. Research refuses rule-based event declarations, prepared partitions crossing the reserved cutoff on actual availability, and per-round economics outside the allowlist.
 
 Without active reservations, ordinary numerical paths and supported modes remain available. A discovered Git project uses an admission lease even before first reservation, preventing first-reservation creation from racing an already-running operation. No protected provenance is added to ordinary zero-active artifacts.
 
@@ -113,11 +115,13 @@ The Compiled scenario freezes the validated Trainer selection with `freeze_holdo
 
 Context is an explicit UTC date strictly before the final start. Optional `start`/`end` narrow the reservation, retaining half-open bounds. Final start must follow every member's test end. The entire context and final interval must have complete native support. Each final bar uses the same context anchor and only observations through that bar. Each member predicts once; scenarios share that tape. No fitting, calibration, threshold selection or model promotion occurs.
 
-Supported selections are exact ordinary YAML-backed binary Sensor/Cohort objects with fitted LogRegBinary or LightGBMBinary, ordered Trainer schemas and matching completed project research records. Cached pipelines must still match their YAML declaration. Configured calibration must already be fitted; Python-backed Sensors, legacy provenance, custom predictors, nonordinary splits, formed bars, trade contracts and decoder lookback above one are refused before allocation. Original selection mutation cannot change the frozen copy. One handle permits sequential reuse; concurrent use is refused.
+Supported selections are exact ordinary YAML-backed binary Sensor/Cohort objects with fitted LogRegBinary or LightGBMBinary, ordered Trainer schemas and matching completed project research records. Cached pipelines must still match their YAML declaration. Configured calibration must already be fitted; Python-backed Sensors, legacy provenance, custom predictors, nonordinary splits, formed bars and decoder lookback above one are refused before allocation. Trade contracts are admitted only for a single Sensor with a recorded round locator, empty scenarios and frozen economics; mixed, cohort and locator-less contracts are refused. Original selection mutation cannot change the frozen copy. One handle permits sequential reuse; concurrent use is refused.
 
 Each scenario requires exactly the six keys shown. Fees and slippage are finite nonnegative basis points; notional is in `(0,1]`; execution lag is a positive integer; TP/SL are null or finite positive basis points. Boolean numbers are refused. Order and duplicates are retained. Execution starts flat, excludes context positions, applies lag and forces terminal exit using existing snapshot economics. Raw positions are 0/1 and raw returns are unit-notional fractions. Deployed positions and gross/net/cost returns multiply raw values by notional once; summary returns already use that deployed fraction.
 
 Optional `evaluation_target` accepts an initialized exact NextBarUpTarget, NextBarDownTarget, or ThresholdBinaryTarget with a fixed threshold over open, high, low, or close and horizon one. Labels are computed after predictions from final rows only; the terminal label is unavailable. Accuracy, precision, recall, FPR and AUC disclose denominators/support. Missing labels, zero denominators, one-class AUC, absent probabilities and undefined return summaries are null with an explicit reason. Majority-vote probabilities remain null.
+
+Contract selections execute their frozen event economics once over the final window and write schema-2 reports carrying the closed `execution` evidence: frozen research digest, recomputed assessment digest, pinned policy and equity, per-bar witness tape, executed signals, full ledger frames and the exported contract. Read-back verifies the evidence pin, contract digest, mark_without_close terminal, funding absence, partition bounds, accounting anchor and the prediction-to-signal-to-ledger chain; swapped or edited evidence refuses. Scenario reports stay schema-1 byte-identical.
 
 ## Attempts and evidence
 

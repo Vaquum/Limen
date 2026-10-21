@@ -1937,6 +1937,11 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve native LightGBM `best_iteration` across owned holdout copies instead of refusing it.
 - Bind `LogRegScaler` to the scaling rules it was fitted with, so frozen holdout state covers them and later rule changes cannot alter a frozen assessment.
 
-## [5.45.30] - 2026-10-21
+## [5.46.0] - 2026-10-21
+
+- Assess frozen event execution contracts in final holdout: admit pinned single-Sensor binary cash_spot/linear_perpetual economics from protected research through classified freeze, single event execution and versioned read-back; scenario reports stay schema-1 byte-identical.
+- Raise the suite runtime ceiling to 260s for measured suite growth (main observed up to 238s).
+
+## [5.46.1] - 2026-10-21
 
 - Admit every built-in CPU architecture to parallel rounds by checking only the thread and device knobs it exposes, and resume parallel runs whose rounds record continuous predictions or no probabilities.

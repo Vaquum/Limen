@@ -259,6 +259,7 @@ def test_package_rounding_inventory():
         'backtest/execution_events.py', 'backtest/funding_adapter.py',
         'backtest/trade_execution.py', 'experiment/_prepare_trade_context.py',
         'targets/trade_outcome.py', 'experiment/reducer/focus_reducer.py',
+        'experiment/_holdout_report.py',
     }
     found = set()
     for path in (ROOT / 'limen').rglob('*.py'):

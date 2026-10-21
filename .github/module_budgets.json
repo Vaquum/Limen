@@ -489,6 +489,7 @@
   "limen/inference/_python_sensor.py": 240,
   "limen/inference/_sensor_from_model.py": 240,
   "limen/experiment/_holdout_freeze.py": 325,
+  "limen/experiment/_holdout_events.py": 120,
   "limen/experiment/_holdout_attempts.py": 240,
   "limen/experiment/_holdout_assessment.py": 300,
   "limen/experiment/_holdout_report.py": 300,
