@@ -1886,4 +1886,8 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.17] - 2026-10-21
 
+- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit bound subclasses only when HistoricalData itself defines the store.
+
+## [5.45.18] - 2026-10-21
+
 - Restore compatible callable Manifest sources and override diagnostics while preserving native stateful and holdout admission behavior.
