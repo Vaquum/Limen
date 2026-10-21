@@ -1005,8 +1005,7 @@ def _frozen_manifest_round_plan() -> None:
                 with pytest.raises(ValueError, match='window outside captured bounds'):
                     validate_resources(invalid_validator_plan, _parameters())
                 assert digest(validator_plan) == validator_digest
-                for _ in range(2):
-                    actual = pool.submit(_frozen_probe, validator_plan, _parameters() | {'window': 3}).result(timeout=30)
+                for actual in pool.submit(_repeat_probe, _frozen_probe, validator_plan, _parameters() | {'window': 3}).result(timeout=30):
                     expected = _frozen_probe(validator_plan, _parameters() | {'window': 3})
                     assert actual[:2] == expected[:2] and actual[2] is False and expected[2] is True
                     assert actual[5:] == expected[5:] and actual[3] != os.getpid() and digest(validator_plan) == validator_digest
@@ -1033,8 +1032,7 @@ def _frozen_manifest_round_plan() -> None:
             assert captured_scaler.pipeline_digest != baseline.pipeline_digest and captured_scaler.resource_digest != baseline.resource_digest
             assert control != _frozen_probe(baseline, _parameters())[5]
             before = digest(captured_scaler)
-            for _ in range(2):
-                actual = pool.submit(_frozen_probe, captured_scaler, _parameters()).result(timeout=30)
+            for actual in pool.submit(_repeat_probe, _frozen_probe, captured_scaler, _parameters()).result(timeout=30):
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_scaler) == before
             assert RobustScaler.__init__.__defaults__ == ((0.25, 0.75),)
         for scaler_class in (StaticScaler, ClassScaler, CallableScaler, InstanceTransformScaler, SelfAssignedScaler, AllocatedInheritedScaler, AllocatedClassScaler):
@@ -1050,8 +1048,7 @@ def _frozen_manifest_round_plan() -> None:
                     patch.setattr(SelfAssignedScaler.transform, '__defaults__', (4,))
                     changed = freeze_manifest(copy.deepcopy(native).set_scaler(scaler_class), None)
                     assert changed.pipeline_digest != frozen.pipeline_digest and changed.resource_digest != frozen.resource_digest
-                    for _ in range(2):
-                        actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+                    for actual in pool.submit(_repeat_probe, _frozen_probe, frozen, _parameters()).result(timeout=30):
                         assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
             if scaler_class is CallableScaler:
                 before = digest(frozen)
@@ -1061,8 +1058,7 @@ def _frozen_manifest_round_plan() -> None:
                     assert unsafe.pipeline_digest != frozen.pipeline_digest and unsafe.resource_digest != frozen.resource_digest
                     with pytest.raises(ValueError, match=r'scaler\.class\.0\.0\.transform: effective n_jobs=1'):
                         validate_resources(unsafe, _parameters())
-                    for _ in range(2):
-                        actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+                    for actual in pool.submit(_repeat_probe, _frozen_probe, frozen, _parameters()).result(timeout=30):
                         assert actual[5] == control and actual[3] != os.getpid() and digest(frozen) == before
         declare_parallel(UnsafeInstanceTransformScaler, ParallelRoundContract(deterministic_stage, validation_keys=('n_jobs',)))
         assert UnsafeInstanceTransformScaler(data).transform(data).equals(data.with_columns((pl.col('close') * 2).alias('close')))
@@ -1114,8 +1110,7 @@ def _frozen_manifest_round_plan() -> None:
             frozen = freeze_manifest(copy.deepcopy(native).set_scaler(SelfAssignedThreadScaler), None)
             control = SelfAssignedThreadScaler(data).transform(data).to_dict(as_series=False)
         before = digest(frozen)
-        for _ in range(2):
-            actual = pool.submit(_frozen_probe, frozen, _parameters()).result(timeout=30)
+        for actual in pool.submit(_repeat_probe, _frozen_probe, frozen, _parameters()).result(timeout=30):
             expected = _frozen_probe(frozen, _parameters())
             assert actual[5] == expected[5] == control and actual[3] != os.getpid() and digest(frozen) == before
         assert SelfAssignedThreadScaler.transform.__defaults__ == (2,)
@@ -1145,8 +1140,7 @@ def _frozen_manifest_round_plan() -> None:
             assert captured_transform.pipeline_digest != baseline.pipeline_digest and captured_transform.resource_digest != baseline.resource_digest
             assert control != _frozen_probe(baseline, _parameters())[5]
             before = digest(captured_transform)
-            for _ in range(2):
-                actual = pool.submit(_frozen_probe, captured_transform, _parameters()).result(timeout=30)
+            for actual in pool.submit(_repeat_probe, _frozen_probe, captured_transform, _parameters()).result(timeout=30):
                 assert actual[5] == control and actual[3] != os.getpid() and digest(captured_transform) == before
             assert weights == [1]
         with pytest.MonkeyPatch.context() as patch:
@@ -1297,8 +1291,7 @@ def _frozen_manifest_round_plan() -> None:
         assert first != second
         frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(first).add_feature(second), None)
         before = digest(frozen)
-        for _ in range(2):
-            actual, pid = pool.submit(_shared_carried_probe, frozen, 'distinct').result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _shared_carried_probe, frozen, 'distinct').result(timeout=30):
             expected, _ = _shared_carried_probe(frozen, 'distinct')
             oracle = [_caller_feature(recorded_source().head(24).select('close'))['caller_mean'].to_list()] * 2
             assert actual == expected == oracle and pid != os.getpid() and digest(frozen) == before
@@ -1310,8 +1303,7 @@ def _frozen_manifest_round_plan() -> None:
                 declare_parallel(component, ParallelRoundContract(deterministic_stage))
             frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(first).add_feature(second), None)
         before = digest(frozen)
-        for _ in range(2):
-            actual, pid = pool.submit(_shared_carried_probe, frozen).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _shared_carried_probe, frozen).result(timeout=30):
             expected, _ = _shared_carried_probe(frozen)
             oracle = [_caller_feature(recorded_source().head(24).select('close'), 3)['caller_mean'].to_list()] * 2
             assert actual == expected == oracle and pid != os.getpid() and digest(frozen) == before
@@ -1336,8 +1328,7 @@ def _frozen_manifest_round_plan() -> None:
             frozen = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(shared_owner.transform).add_feature(shared_owner), None)
         before = digest(frozen)
         oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (3, 5)]
-        for _ in range(2):
-            actual, pid = pool.submit(_shared_carried_probe, frozen, 'owner').result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _shared_carried_probe, frozen, 'owner').result(timeout=30):
             expected, _ = _shared_carried_probe(frozen, 'owner')
             assert actual == expected == oracle and pid != os.getpid() and digest(frozen) == before
         assert shared_owner.window == 2 and type(shared_owner) is DefaultSharedRolling
@@ -1353,8 +1344,7 @@ def _frozen_manifest_round_plan() -> None:
         with pytest.MonkeyPatch.context() as patch:
             patch.setattr(SlottedDefaultRolling, '__parallel_round_contract__', ParallelRoundContract(unfrozen_stage))
             validate_resources(freeze_manifest(clone_manifest(frozen.manifest), None), _parameters())
-            for _ in range(2):
-                actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+            for (actual, pid) in pool.submit(_repeat_probe, _repeated_carried_probe, frozen, _parameters()).result(timeout=30):
                 expected, _ = _repeated_carried_probe(frozen, _parameters())
                 assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), 4)['caller_mean'].to_list()
                 assert pid != os.getpid() and digest(frozen) == before
@@ -1375,8 +1365,7 @@ def _frozen_manifest_round_plan() -> None:
             restored = decode(encode(frozen.manifest.feature_transforms[-1].func))
             assert left == right and left is not right and restored.left == restored.right and restored.left is not restored.right
             assert type(restored.left) is type(restored.right) and restored.left.__parallel_round_contract__ != restored.right.__parallel_round_contract__
-            for _ in range(2):
-                actual, pid = pool.submit(_repeated_carried_probe, frozen, _parameters()).result(timeout=30)
+            for (actual, pid) in pool.submit(_repeat_probe, _repeated_carried_probe, frozen, _parameters()).result(timeout=30):
                 expected, _ = _repeated_carried_probe(frozen, _parameters())
                 assert actual == expected == _caller_feature(recorded_source().head(24).select('close'), 5 if mutable else 3)['caller_mean'].to_list()
                 assert pid != os.getpid() and digest(frozen) == before and counter == [0]
@@ -1784,9 +1773,9 @@ def _factory_encoded_probe(plan, factory, extra=None):
     return _factory_probe(plan, decode(factory, isolate_functions=True), extra)
 
 
-def _factory_repeat_probe(plan, factory, extra=None):
+def _repeat_probe(probe, plan, *args):
     before = digest(plan)
-    results = [_factory_probe(plan, factory, extra) for _ in range(2)]
+    results = [probe(plan, *args) for _ in range(2)]
     assert digest(plan) == before
     return results
 
@@ -1858,7 +1847,7 @@ def _assert_factory_resources(plan, params):
             assert expected == _caller_feature(data, window)['caller_mean'].to_list()
             owner_calls = _bound_initializer_owner.calls
             before = digest(candidate)
-            for actual, pid in pool.submit(_factory_repeat_probe, candidate, factory, extra).result(timeout=30):
+            for actual, pid in pool.submit(_repeat_probe, _factory_probe, candidate, factory, extra).result(timeout=30):
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
             assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
             if factory in (StaticInitRolling, ForeignAllocationRolling):
@@ -1943,8 +1932,7 @@ def _assert_factory_resources(plan, params):
         expected = BoundAllocatedRolling(seed=3)(data)['caller_mean'].to_list()
         assert expected == _caller_feature(data, 3)['caller_mean'].to_list()
         before, owner_calls = digest(candidate), _bound_allocator_owner.calls
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, candidate, BoundAllocatedRolling, extra).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, candidate, BoundAllocatedRolling, extra).result(timeout=30):
             assert actual == _factory_probe(candidate, BoundAllocatedRolling, extra)[0] == expected and pid != os.getpid()
         assert digest(candidate) == before and _bound_allocator_owner.calls == owner_calls
         with pytest.MonkeyPatch.context() as patch:
@@ -1953,8 +1941,7 @@ def _assert_factory_resources(plan, params):
         before = digest(captured_function)
         validate_domain(captured_function, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [_auxiliary_factory]}, None)
         from tests.test_parallel_rounds import recorded_source
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, captured_function, _auxiliary_factory).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, captured_function, _auxiliary_factory).result(timeout=30):
             expected, _ = _factory_probe(captured_function, _auxiliary_factory)
             assert actual == expected == _caller_feature(recorded_source().head(24), 4)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(captured_function) == before and _auxiliary_factory.__kwdefaults__ == {'window': 3}
@@ -1965,8 +1952,7 @@ def _assert_factory_resources(plan, params):
         before = digest(captured_variants)
         validate_domain(captured_variants, {key: [value] for key, value in params.items()} | {'auxiliary_factory': variants}, None)
         for factory, window in zip(variants, (4, 5), strict=True):
-            for _ in range(2):
-                actual, pid = pool.submit(_factory_encoded_probe, captured_variants, encode(factory)).result(timeout=30)
+            for (actual, pid) in pool.submit(_repeat_probe, _factory_encoded_probe, captured_variants, encode(factory)).result(timeout=30):
                 expected, _ = _factory_probe(captured_variants, factory)
                 assert actual == expected == _caller_feature(recorded_source().head(24), window)['caller_mean'].to_list() and pid != os.getpid()
         undeclared = decode(encode(_auxiliary_factory), isolate_functions=True)
@@ -1981,8 +1967,7 @@ def _assert_factory_resources(plan, params):
             captured_partial_class = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
         before = digest(captured_partial_class)
         validate_domain(captured_partial_class, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, captured_partial_class, factory).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, captured_partial_class, factory).result(timeout=30):
             expected, _ = _factory_probe(captured_partial_class, factory)
             assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(captured_partial_class) == before and CallerRolling.__init__.__defaults__ is None
@@ -2003,8 +1988,7 @@ def _assert_factory_resources(plan, params):
                 captured_partial = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
             before = digest(captured_partial)
             validate_domain(captured_partial, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
-            for _ in range(2):
-                actual, pid = pool.submit(_factory_probe, captured_partial, factory).result(timeout=30)
+            for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, captured_partial, factory).result(timeout=30):
                 expected, _ = _factory_probe(captured_partial, factory)
                 assert actual == expected == _caller_feature(recorded_source().head(24), bound.get('window', 4))['caller_mean'].to_list() and pid != os.getpid()
             assert digest(captured_partial) == before and _auxiliary_factory.__kwdefaults__ == {'window': 3}
@@ -2026,8 +2010,7 @@ def _assert_factory_resources(plan, params):
             captured_instance = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
             validate_domain(captured_instance, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [factory]}, None)
         before = digest(captured_instance)
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, captured_instance, factory).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, captured_instance, factory).result(timeout=30):
             expected, _ = _factory_probe(captured_instance, factory)
             bound = captured_instance.manifest.resolve_model_kwargs(params | {'auxiliary_factory': factory})['auxiliary_factory']
             assert inspect.signature(bound).parameters['n_jobs'].default == 2
@@ -2053,8 +2036,7 @@ def _assert_factory_resources(plan, params):
             captured_method = freeze_manifest(manifest, None, {'auxiliary_factory': [method]})
         before = digest(captured_method)
         validate_domain(captured_method, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [method]}, None)
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, captured_method, method).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, captured_method, method).result(timeout=30):
             expected, _ = _factory_probe(captured_method, method)
             bound = captured_method.manifest.resolve_model_kwargs(params | {'auxiliary_factory': method})['auxiliary_factory']
             assert inspect.signature(bound).parameters['n_jobs'].default == 2
@@ -2068,8 +2050,7 @@ def _assert_factory_resources(plan, params):
             frozen_class = freeze_manifest(manifest, None, {'auxiliary_factory': [CallerRolling]})
             validate_domain(frozen_class, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [CallerRolling]}, None)
         before = digest(frozen_class)
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, frozen_class, CallerRolling).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, frozen_class, CallerRolling).result(timeout=30):
             expected, _ = _factory_probe(frozen_class, CallerRolling)
             assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(frozen_class) == before and CallerRolling.__init__.__defaults__ is None
@@ -2079,8 +2060,7 @@ def _assert_factory_resources(plan, params):
             frozen_allocator = freeze_manifest(manifest, None, {'auxiliary_factory': [AllocatedRolling]})
             validate_domain(frozen_allocator, {key: [value] for key, value in params.items()} | {'auxiliary_factory': [AllocatedRolling]}, None)
         before = digest(frozen_allocator)
-        for _ in range(2):
-            actual, pid = pool.submit(_factory_probe, frozen_allocator, AllocatedRolling).result(timeout=30)
+        for (actual, pid) in pool.submit(_repeat_probe, _factory_probe, frozen_allocator, AllocatedRolling).result(timeout=30):
             expected, _ = _factory_probe(frozen_allocator, AllocatedRolling)
             assert actual == expected == _caller_feature(recorded_source().head(24), 3)['caller_mean'].to_list() and pid != os.getpid()
         assert digest(frozen_allocator) == before and AllocatedRolling.__new__.__kwdefaults__ == {'seed': None}
