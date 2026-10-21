@@ -160,9 +160,9 @@ def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -
 def _configurations(plan: FrozenManifestPlan, params: Mapping[str, object]) -> dict[str, dict[str, object]]:
     configs = configurations(plan.manifest, params)
     for key, component in configs['architecture'].items():
-        if key.endswith('_factory') and callable(component):
-            if not any(stage.path == f'architecture.{key}' and same_component(stage.component, component) for stage in plan.stages):
-                raise ValueError(f'Parallel stage architecture.{key}: missing frozen independence contract')
+        if (key.endswith('_factory') and callable(component)
+                and not any(stage.path == f'architecture.{key}' and same_component(stage.component, component) for stage in plan.stages)):
+            raise ValueError(f'Parallel stage architecture.{key}: missing frozen independence contract')
     return configs
 
 
