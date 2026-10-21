@@ -119,7 +119,7 @@ def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
         raise ValueError('Parallel rounds require nonempty parameter domains')
     _ = _shape(effective)
     parameters = signature(cast(Callable[..., object], manifest.architecture_function)).parameters
-    _require_cpu({name: effective.get(name, [parameters[name].default]) for name in _CPU_KNOBS if name in effective or name in parameters})
+    _require_cpu({name: effective[name] if name in effective else [parameters[name].default] for name in _CPU_KNOBS if name in effective or name in parameters})
     sources: list[object] = [manifest.data_source_config]
     config = manifest.backtest_config
     if config is not None:

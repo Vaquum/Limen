@@ -74,6 +74,9 @@ def test_exposed_knobs_follow_backend_defaults():
         admit(template('xgboost_regressor'), {'device': 'cuda'})
     with pytest.raises(ValueError, match='n_jobs=1'):
         admit(template('xgboost_regressor', n_jobs=[None]))
+    admit(template('dlinear_regressor'), {'n_jobs': 1})
+    with pytest.raises(ValueError, match='n_jobs=1'):
+        admit(template('dlinear_regressor'), {'n_jobs': 2})
 
 
 @pytest.mark.parametrize('family', FAMILIES)
