@@ -140,8 +140,8 @@ def test_merge_readiness_workflow_contract() -> None:
     assert parsed['concurrency']['group'] == expected_group, (
         'readiness events must share one PR concurrency lane'
     )
-    # Informational only: never itself a required context, so it cannot
-    # deadlock the merge it reports on.
+    # This snapshot excludes the reporter. Limen's separate classic
+    # protection still requires it and can block a merge on cancellation.
     snapshot = json.loads(RULESET_SNAPSHOT.read_text(encoding='utf-8'))
     for rule in snapshot['rules']:
         if rule['type'] == 'required_status_checks':

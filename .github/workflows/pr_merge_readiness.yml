@@ -9,9 +9,10 @@ name: pr_merge_readiness
 # event only, not a workflow trigger); inline-comment activity, reviews,
 # pushes, and check-suite completions refresh the comment instead.
 #
-# Informational only: this workflow is not a required check, so it can
-# never deadlock the merge it reports on. Fail-closed: when the
-# required-check inventory cannot be established, the comment says so,
+# Reports ruleset-required checks. The ruleset snapshot excludes this
+# workflow; Limen's separate classic protection requires it. The comment
+# does not cover every condition that can block a merge. Fail-closed: when
+# the ruleset check inventory cannot be established, the comment says so,
 # reports NOT MERGEABLE, and the run fails loud. First proven
 # downstream in Vaquum/Limen (its S724 series).
 
@@ -32,10 +33,10 @@ on:
 #
 # cancel-in-progress is false because cancelling is not serialising: it
 # kills the earlier run, and a cancelled run surfaces as a failed check.
-# This workflow fires on four event types, so an active PR reliably
-# produced cancelled runs and the readiness reporter made its own output
-# look red while reporting correctly. Queuing gives the serialisation the
-# group was added for and leaves no failed runs behind.
+# An incoming event can cancel a running evaluation and leave a cancelled
+# required context even when a later ruleset-only comment says ready.
+# Preserve running evaluations and serialize marker updates. GitHub may
+# still replace pending runs under the same group.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.event.check_suite.pull_requests[0].number || github.event.check_suite.head_sha || github.run_id }}
   cancel-in-progress: false
