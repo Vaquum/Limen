@@ -144,6 +144,7 @@ def _scaler_factory(cls: object, params: dict[str, object], selector: str | None
     return scaler_factory(cls, params, selector, cast(Callable[[object], object], vars(import_module('limen.experiment._parallel_resources'))['factory_component']))
 
 
+@identity_snapshot()
 def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None,
                state_memo: dict[int, tuple[object, object]] | None = None) -> object:
     if id(value) in active:
