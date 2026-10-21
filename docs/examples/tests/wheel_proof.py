@@ -8,6 +8,7 @@ import subprocess
 import shlex
 import tarfile
 import venv
+import time
 import zipfile
 
 from build_bundle import INPUTS, build, build_results
@@ -21,7 +22,9 @@ def run(argv, *, cwd, env=None):
     for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
         environment.pop(name, None)
     environment['PYTHONNOUSERSITE'] = '1'
+    started = time.monotonic()
     subprocess.run([str(arg) for arg in argv], cwd=cwd, env=environment, check=True, timeout=90)
+    print(f'Wheel proof stage {time.monotonic() - started:.2f}s: ' + ' '.join(map(str, argv)), flush=True)
 
 
 def archive_bytes(archive: tarfile.TarFile, name: str) -> bytes:

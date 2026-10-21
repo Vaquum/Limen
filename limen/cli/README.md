@@ -49,6 +49,7 @@ Does **not** own manifest semantics, experiment execution internals, model behav
 cli/
 ├── README.md
 ├── __init__.py
+├── assessment.py
 ├── commands/
 ├── git_utils.py
 └── main.py

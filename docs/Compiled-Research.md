@@ -14,6 +14,44 @@ The Python project supplies data, a parameter space and ordinary preparation and
 
 The complete [selection function](examples/python-research/research.py) keeps each of those decisions visible. The [SFD reference](Single-File-Decoder.md#custom-sfds) describes its function signatures; the [UEL reference](Universal-Experiment-Loop.md#direct-python-run) describes execution, recording and recovery.
 
+<!-- example: book-definition-python source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+```python
+def run_research(bars, experiment_name):
+    research = bars[:1440]
+    space = {"window": [4, 12], "alpha": [0.1, 1.0]}
+    retained = {}
+
+    def model(data, round_params):
+        fitted = fit(data["train"], round_params)
+        forecasts = fitted.predict(data["validation"].select("momentum"))
+        score = backtest(data["validation"], forecasts)
+        retained[(round_params["window"], round_params["alpha"])] = fitted
+        return {"validation_net_return": score}
+
+    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
+    uel = UniversalExperimentLoop(
+        data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
+    )
+    # An absolute filename stem writes only this CSV; no persisted round artifacts.
+    uel.run(experiment_name, n_permutations=4, workers=1,
+            post_processing=False, progress_bar=False)
+    selected = (
+        completed_log(uel).sort(
+            ["window", "validation_net_return", "alpha"],
+            descending=[False, True, False],
+        ).unique(subset="window", keep="first", maintain_order=True)
+        .select("window", "alpha").to_dicts()
+    )
+    sensors = [
+        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
+                          params=p, fitting_cutoff=bars["datetime"][960],
+                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
+        for p in selected
+    ]
+    cohort = Cohort.from_python(sensors)
+    return cohort, uel, selected, retained
+```
+
 ## Declare the Compiled experiment
 
 `compiled-research/research.yaml` is the complete, composable worked declaration. It compares regularization, feature ablation and optional PCA over eight candidates. Incompatible decisions have separate complete YAML files: rule-based models, continuous targets, alternate bars, walk-forward folds and guarded final assessment.

@@ -58,6 +58,7 @@ The package also owns `parser.py`, `schema.py`, `validator.py`, `resolver.py`, `
 yaml/
 ├── README.md
 ├── __init__.py
+├── _assessment_spec.py
 ├── _backtest_spec.py
 ├── _feature_shim_spec.py
 ├── _objective_spec.py
