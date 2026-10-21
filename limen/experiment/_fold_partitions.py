@@ -106,7 +106,7 @@ def bars(manifest: object, before: pl.DataFrame, formed: pl.DataFrame, datetimes
     return datetimes, formed
 
 
-def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, object], *, input_columns: Sequence[str] | None = None) -> dict[str, object]:
+def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, object], *, feature_columns: Sequence[str] | None = None) -> dict[str, object]:
     context = cast(dict[str, object] | None, getattr(manifest, '_fold_capture', None))
     if context is None:
         return data
@@ -123,7 +123,7 @@ def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, objec
             rows = [groups[value] for value in clock(frame)] if frame.height else []
             if len(cast(Sequence[object], data['x_' + suffix])) != len(rows):
                 raise FoldEvidenceError('row_membership', f'{name} extension changed model rows without recoverable carriers')
-            if input_columns is None:
+            if feature_columns is None:
                 columns = [column for column in frame.columns if column not in ('datetime', '__backtest_source_row__')]
                 target = getattr(manifest, 'target_column', None)
                 label = target if isinstance(target, str) and target in columns else columns[-1]
@@ -131,7 +131,7 @@ def retained(manifest: object, splits: list[pl.DataFrame], data: dict[str, objec
                     raise FoldEvidenceError('row_membership', f'{name} model rows differ from their retained source carriers')
             else:
                 native = cast(pl.DataFrame, data[suffix])
-                if not native.equals(frame.drop('datetime')) or not _same_inputs(data['x_' + suffix], frame.select(input_columns)):
+                if not native.drop(feature_columns).equals(frame.drop('datetime')) or not _same_inputs(data['x_' + suffix], native.select(feature_columns)):
                     raise FoldEvidenceError('row_membership', f'{name} native predicate rows differ from their retained source carriers')
             allowed = {index for first, last in cast(list[list[int]], raw_witnesses[name]['segments']) for index in range(first, last)}
             if any(index not in allowed for group in rows for index in group):

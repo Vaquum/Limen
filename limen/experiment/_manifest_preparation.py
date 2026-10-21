@@ -127,12 +127,10 @@ def finish_rule_data(manifest: RulePreparation, splits: list[pl.DataFrame], date
     if manifest.split_walk_forward is not None:
         cast(dict[str, object], data['_alignment'])['test_datetimes'] = splits[2]['datetime'].to_list()
     names: tuple[str, ...] = ()
-    predicate_splits: list[pl.DataFrame] = []
-    for split, source in zip(('train', 'val', 'test'), splits, strict=True):
-        frame, names = rule_predicates(manifest, source, params, split=split)
-        predicate_splits.append(frame)
-        data[split] = frame.drop('datetime')
+    for split in ('train', 'val', 'test'):
+        frame, names = rule_predicates(manifest, cast(pl.DataFrame, data[split]), params, split=split)
+        data[split] = frame
         data['x_' + split] = frame.select(names).cast(pl.Float64).to_numpy()
     assert manifest.strategy is not None
     data['strategy'] = {'conditions': manifest.strategy.conditions, 'entry': manifest.strategy.entry}
-    return retained(manifest, predicate_splits, data, input_columns=names)
+    return retained(manifest, splits, data, feature_columns=names)
