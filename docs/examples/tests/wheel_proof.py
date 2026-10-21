@@ -149,11 +149,12 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
-    # Independent project commands write disjoint results; retain each real CLI run.
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    # Complete the first scientific import before starting the disjoint campaigns.
+    run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
+    with ThreadPoolExecutor(max_workers=2) as executor:
         executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
                                            cwd=project, env=runtime_environment)
-                      for name in ('python-selection', 'python-all', 'compiled-all')}
+                      for name in ('python-all', 'compiled-all')}
         for execution in executions.values():
             execution.result()
     for interface in ('python',):
