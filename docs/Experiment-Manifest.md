@@ -46,7 +46,9 @@ receive the matching configurator on every reload; missing or mismatched authori
 fails before fetching research data. Sensors retain it for reconstruction and
 owned holdout copies, which compare the fresh configured Manifest with the cached
 pipeline. The configurator modifies its Manifest and returns `None`. Its code,
-defaults and captured state must remain consistent with the saved declaration.
+defaults, closures, helper bindings and literal class settings must remain
+consistent with the saved declaration. Construction declarations are checked
+separately from the owned fitted inference dependencies.
 The metadata marker is descriptive evidence; it never loads executable code.
 
 `build_manifest(reference, components=configure_components)` also accepts the

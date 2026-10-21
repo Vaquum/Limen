@@ -35,13 +35,13 @@ def fitting_call(module: str, name: str) -> bool:
 
 
 @lru_cache(maxsize=2048)
-def _instructions(code: CodeType, declaration: bool = False) -> tuple[dis.Instruction, ...]:
-    return (*dis.get_instructions(code), *(instruction for part in code.co_consts if isinstance(part, CodeType) and (declaration or part.co_name not in FITTING_METHODS) for instruction in _instructions(part, declaration)))
+def _instructions(code: CodeType) -> tuple[dis.Instruction, ...]:
+    return (*dis.get_instructions(code), *(instruction for part in code.co_consts if isinstance(part, CodeType) and part.co_name not in FITTING_METHODS for instruction in _instructions(part)))
 
 
 @lru_cache(maxsize=2048)
-def _dependency_positions(code: CodeType, declaration: bool = False) -> tuple[int, ...]:
-    return tuple(index for index, instruction in enumerate(_instructions(code, declaration)) if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_METHOD', 'IMPORT_NAME', 'IMPORT_FROM', 'STORE_FAST', 'STORE_DEREF', 'STORE_NAME') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)))
+def _dependency_positions(code: CodeType) -> tuple[int, ...]:
+    return tuple(index for index, instruction in enumerate(_instructions(code)) if instruction.opname in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST', 'LOAD_ATTR', 'LOAD_METHOD', 'IMPORT_NAME', 'IMPORT_FROM', 'STORE_FAST', 'STORE_DEREF', 'STORE_NAME') or (instruction.opname == 'LOAD_CONST' and isinstance(instruction.argval, str)))
 
 
 def _native_annotation(value: object) -> bool:
@@ -50,7 +50,7 @@ def _native_annotation(value: object) -> bool:
     return (module := sys.modules.get(value.__module__)) is not None and vars(module).get(value.__qualname__) is value and ((root := value.__module__.split('.')[0]) in sys.stdlib_module_names or root in _LIBRARIES)
 
 
-def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None, declaration: bool = False) -> list[object]:
+def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = (), resolved: Sequence[object] = (), capture: list[object] | None = None) -> list[object]:
     seen: dict[int, object] = {}
     evidence: list[object] = []
     omitted, sealed = ({id(value) for value in exclude}, {id(value) for value in resolved})
@@ -92,7 +92,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             function = value.__func__ if inspect.ismethod(value) else value
             origin = _function_module(function, _LIBRARIES) if inspect.isfunction(function) else getattr(value, '__module__', None) or value_type.__module__
             modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
-            if not declaration and (entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules)):
+            if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
                 raise ValueError('Holdout inference has an unowned random dependency')
             visit(getattr(value, '__name__', None), annotation=True)
         if inspect.ismethod(value):
@@ -114,22 +114,22 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 for part in children(cell, namespace_readers=globals_names):
                     visit(part)
             function_module, function_name = _function_module(value, _LIBRARIES), getattr(value.__code__, 'co_qualname', value.__code__.co_name)
-            if (not declaration and fitting_call(function_module, function_name)) or identity in sealed:
+            if fitting_call(function_module, function_name) or identity in sealed:
                 return
             attributes.update(value.__code__.co_names)
             method_names.update(value.__code__.co_names)
             if function_module.split('.')[0] in sys.stdlib_module_names or function_module.split('.')[0] in _LIBRARIES:
                 return
-            if not declaration and any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
+            if any(name in value.__code__.co_names for name in ('random', 'default_rng', 'RandomState', 'Generator')):
                 raise ValueError('Holdout inference has an unowned random dependency')
-            instructions = _instructions(value.__code__, declaration)
+            instructions = _instructions(value.__code__)
             references = {name: list(children(cell, namespace_readers=globals_names)[1:]) for name, cell in zip(value.__code__.co_freevars, value.__closure__ or (), strict=True)}
             references.update({name: [part] for name, part in zip(value.__code__.co_varnames[value.__code__.co_argcount - len(value.__defaults__ or ()):value.__code__.co_argcount], value.__defaults__ or (), strict=True)})
             references.update({name: [part] for name, part in (value.__kwdefaults__ or {}).items()})
             imported: ModuleType | None = None
             chained_import = False
             binding: object = None
-            for index in _dependency_positions(value.__code__, declaration):
+            for index in _dependency_positions(value.__code__):
                 instruction = instructions[index]
                 name = str(instruction.argval)
                 if instruction.opname in ('LOAD_FAST', 'LOAD_DEREF') and name not in references:
@@ -166,7 +166,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 elif instruction.opname in ('STORE_FAST', 'STORE_DEREF', 'STORE_NAME') and binding is not None:
                     references.setdefault(name, []).append(binding)
                     binding = None
-                if (not declaration and name == 'fit_calibrator' and (function_module, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict')) and value.__code__ in native_codes(function_module)) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
+                if (name == 'fit_calibrator' and (function_module, value.__qualname__) in (('limen.sfd.reference_architecture.logreg_binary', 'LogRegBinary.predict'), ('limen.sfd.reference_architecture.lightgbm_binary', 'LightGBMBinary.predict')) and value.__code__ in native_codes(function_module)) or instruction.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_DEREF', 'LOAD_FAST'):
                     continue
                 for candidate in tuple(references.get(name, ())):
                     item = candidate
@@ -249,7 +249,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             done = processed.setdefault(id(parent), set())
             for name in names.intersection(parent.__dict__) - done:
                 done.add(name)
-                if not declaration and fitting_call(parent.__module__, f'{parent.__qualname__}.{name}'):
+                if fitting_call(parent.__module__, f'{parent.__qualname__}.{name}'):
                     continue
                 key = f'{parent.__module__}.{parent.__qualname__}:{name}'
                 method = parent.__dict__[name]

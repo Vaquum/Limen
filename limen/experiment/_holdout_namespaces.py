@@ -1,11 +1,10 @@
 import dis
 from collections import deque
-from collections.abc import Callable
 from functools import lru_cache
-from types import CodeType, FunctionType, MethodType
+from types import CodeType
 from typing import cast
 
-__all__ = ['namespace_bindings', 'namespace_calls', 'reader_names']
+__all__ = ['namespace_calls', 'reader_names']
 _CALLS = frozenset({'CALL', 'CALL_FUNCTION', 'CALL_METHOD'})
 _LOOKUP_WIDTH = 2
 
@@ -16,7 +15,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
     found: list[tuple[str, str | None]] = []
     aliases: dict[str, set[str]] = {}
     for index, part in enumerate(instructions[:-1]):
-        if part.opname not in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST', 'LOAD_FAST', 'LOAD_DEREF') or not isinstance(part.argval, (str, int)):
+        if part.opname not in ('LOAD_GLOBAL', 'LOAD_NAME', 'LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST', 'LOAD_FAST', 'LOAD_DEREF') or not isinstance(part.argval, (str, int)):
             continue
         names = aliases.get(str(part.argval), {str(part.argval)}) if part.opname in ('LOAD_FAST', 'LOAD_DEREF') else {str(part.argval)}
         call_index = index + 2 if instructions[index + 1].opname == 'BINARY_SUBSCR' and index + 2 < len(instructions) else index + 1
@@ -38,18 +37,6 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
             key = lookup[0].argval if len(lookup) == _LOOKUP_WIDTH and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
             found.extend((name, key) for name in names)
     return (*found, *((alias, key) for part in code.co_consts if isinstance(part, CodeType) for name, key in namespace_calls(part) for alias in aliases.get(name, {name})))
-
-
-def namespace_bindings(functions: tuple[FunctionType, ...], native: Callable[[FunctionType], bool]) -> tuple[tuple[FunctionType, dict[str, object]], ...]:
-    pending, seen, bindings = list(functions), set[FunctionType](), list[tuple[FunctionType, dict[str, object]]]()
-    while pending:
-        if (function := pending.pop()) in seen:
-            continue
-        seen.add(function)
-        namespace = {name: (function.__globals__ if name in function.__globals__ else function.__builtins__)[name] for name in function.__code__.co_names if name in function.__globals__ or name in function.__builtins__}
-        bindings.append((function, namespace))
-        pending.extend(value.__func__ if isinstance(value, MethodType) else value for value in namespace.values() if isinstance(value, (FunctionType, MethodType)) and not native(value.__func__ if isinstance(value, MethodType) else value))
-    return tuple(bindings)
 
 
 def reader_names(value: object, key: str | int) -> tuple[str, ...]:

@@ -518,5 +518,6 @@
   "limen/yaml/_component_declaration.py": 65,
   "limen/experiment/_holdout_spec.py": 60,
   "limen/experiment/_holdout_profile.py": 50,
-  "limen/experiment/_holdout_namespaces.py": 50
+  "limen/experiment/_holdout_namespaces.py": 50,
+  "limen/experiment/_holdout_declaration.py": 90
 }

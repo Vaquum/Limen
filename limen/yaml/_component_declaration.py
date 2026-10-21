@@ -6,7 +6,7 @@ from typing import cast
 
 from limen.experiment._holdout_calls import call_functions
 from limen.experiment._holdout_state import fitted_witness
-from limen.experiment._holdout_spec import digest, normalized
+from limen.experiment._holdout_spec import digest
 from limen.experiment.manifest_core import Manifest
 
 __all__ = ['Components', 'bind_components', 'configure_manifest']
@@ -51,7 +51,7 @@ def configure_manifest(manifest: Manifest, reference: Mapping[str, object], comp
     if components is not None:
         sfd = cast(dict[str, object], reference['sfd'])
         marker = cast(dict[str, object], sfd['components'])
-        pipeline = digest({field.name: normalized(getattr(manifest, field.name), declaration=field.name not in ('data_source_config', 'test_data_source_config')) for field in fields(manifest)})
+        pipeline = digest({field.name: getattr(manifest, field.name) for field in fields(manifest)})
         if type(marker) is _Pending:
             sfd['components'] = {**marker, 'pipeline_sha256': pipeline}
         elif marker['pipeline_sha256'] != pipeline:
