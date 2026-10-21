@@ -207,6 +207,13 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     wheel_destination.write_bytes(wheel.read_bytes())
     native = output / 'native-results.tar.gz'
     native_sha = build_results(project, info_file, native)
+    with tarfile.open(native) as retained:
+        for name in ('final', 'final-event'):
+            prefix = f'compiled-research/{name}/manifests/'
+            assert prefix + 'holdout-project.json' in retained.getnames()
+            assert prefix + 'holdout.sqlite3' in retained.getnames()
+            for report in (project / prefix / 'holdout').glob('*/report.json'):
+                assert archive_bytes(retained, str(report.relative_to(project))) == report.read_bytes()
     return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info, 'offline': offline,
             'native_outputs': {'path': str(native.relative_to(root)), 'sha256': native_sha},
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},

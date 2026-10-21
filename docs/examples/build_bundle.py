@@ -40,10 +40,10 @@ def build_results(project: Path, environment: Path, output: Path) -> str:
             raise ValueError('Native results cannot substitute an external file: ' + str(path))
         if path.is_file():
             entries[str(path.relative_to(project))] = path.read_bytes()
-    final = project / 'compiled-research/final/manifests'
-    for path in sorted(final.rglob('*')):
-        if path.is_file():
-            entries[str(path.relative_to(project))] = path.read_bytes()
+    for marker in sorted((project / 'compiled-research').rglob('limen.toml')):
+        for path in sorted((marker.parent / 'manifests').rglob('*')):
+            if path.is_file():
+                entries[str(path.relative_to(project))] = path.read_bytes()
     entries['files.json'] = (json.dumps({name: hashlib.sha256(data).hexdigest() for name, data in entries.items()}, indent=2) + '\n').encode()
     return write_archive(entries, output)
 
