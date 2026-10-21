@@ -1905,3 +1905,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 ## [5.45.21] - 2026-10-21
 
 - Retain sanitized publication HTTP failure evidence for activation and rollback, including partial response bodies, without changing release verification or recovery ordering.
+
+## [5.45.22] - 2026-10-21
+
+- Batch candidate documentation source comparisons while preserving merged-source rejection and fatal Git errors.
