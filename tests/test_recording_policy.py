@@ -203,6 +203,8 @@ def _recovery_loop(kind, path):
         config['sfd']['manifest'].pop('backtest')
     if kind == 'event_walk_forward':
         config['sfd']['manifest']['backtest'] = _config()['sfd']['manifest']['backtest']
+    if base == 'walk_forward':
+        config['sfd']['params']['C'] = [0.1, 1.0, 10.0, 30.0]
     return _loop(config, path, bars=_bars(base))
 
 
@@ -230,8 +232,17 @@ def recovery_campaigns(tmp_path_factory):
         control = _recovery_loop(kind, paths['full'])
         _recovery_run(control, kind, recording=FULL)
         partial = _recovery_loop(kind, paths['resumed'])
-        _recovery_run(partial, kind, recording=policy, n_permutations=2)
+        append = partial._append_round_data
+
+        def stop_after_two(*args, _append=append, _partial=partial, **kwargs):
+            _append(*args, **kwargs)
+            if kwargs['round_index'] == 1:
+                _partial._shutdown_requested = True
+
+        partial._append_round_data = stop_after_two
+        _recovery_run(partial, kind, recording=policy)
         prefix = _records(paths['resumed'])
+        assert len(prefix) == 2
         resumed = _recovery_loop(kind, paths['resumed'])
         _recovery_run(resumed, kind, resume=True)
         result[kind] = {'paths': paths, 'control': control, 'resumed': resumed,
@@ -245,8 +256,8 @@ def test_resume_ignores_inapplicable_recording_groups(kind, recovery_campaigns):
     full, resumed = (_records(captured['paths'][label]) for label in ('full', 'resumed'))
     assert resumed == [_project(record, captured['policy']) for record in full]
     assert resumed[:len(captured['prefix'])] == captured['prefix']
-    assert_frame_equal(captured['control'].experiment_log.drop('execution_time'),
-                       captured['resumed'].experiment_log.drop('execution_time'),
+    assert_frame_equal(pl.read_csv(captured['paths']['full'] / 'results.csv').drop('execution_time'),
+                       pl.read_csv(captured['paths']['resumed'] / 'results.csv').drop('execution_time'),
                        check_exact=False, rel_tol=1e-10, abs_tol=1e-12)
     assert captured['resumed']._recording == captured['policy']
     if kind.startswith('native'):
@@ -261,7 +272,7 @@ def test_resume_ignores_inapplicable_recording_groups(kind, recovery_campaigns):
 ))
 def test_resume_requires_applicable_policy(kind, group, tmp_path):
     policy = {**FULL, group: False}
-    _recovery_run(_recovery_loop(kind, tmp_path), kind, recording=policy, n_permutations=1)
+    _recovery_run(_recovery_loop(kind, tmp_path), kind, recording=policy, n_permutations=2)
     before = _snapshot(tmp_path)
     with pytest.raises(ValueError, match='Cannot resume a lighter recording policy'):
         _recovery_run(_recovery_loop(kind, tmp_path), kind, resume=True)
@@ -296,7 +307,7 @@ def test_resume_requires_payloads_before_rewrites(kind, damage, recovery_campaig
         for record in records:
             storage.append_record(round_path, record)
     before = _snapshot(path)
-    with pytest.raises((ValueError, FileNotFoundError), match='Missing preds|Cannot resume a lighter recording policy'):
+    with pytest.raises((ValueError, FileNotFoundError), match=r'Missing preds|Cannot resume a lighter recording policy'):
         _recovery_run(_recovery_loop(kind, path), kind, resume=True)
     assert _snapshot(path) == before
 
