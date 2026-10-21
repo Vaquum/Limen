@@ -48,13 +48,14 @@ class LogRegScaler:
 
         self.means: dict[str, float] = {}
         self.stds: dict[str, float] = {}
+        self.rules = dict(SCALING_RULES)
 
         for col in x_train.columns:
 
-            if col not in SCALING_RULES:
+            if col not in self.rules:
                 continue
 
-            rule = SCALING_RULES[col]
+            rule = self.rules[col]
 
             if rule == 'log_standard':
                 self.means[col] = x_train.select(pl.col(col).log1p().mean()).item()
@@ -80,10 +81,10 @@ class LogRegScaler:
 
         for col in df.columns:
 
-            if col not in SCALING_RULES:
+            if col not in self.rules:
                 continue
 
-            rule = SCALING_RULES[col]
+            rule = self.rules[col]
 
             if rule == 'standard':
                 exprs.append(((pl.col(col) - self.means[col]) / self.stds[col]).alias(col))
@@ -117,10 +118,10 @@ def inverse_transform(df: pl.DataFrame, scaler: LogRegScaler) -> pl.DataFrame:
 
     for col in df.columns:
 
-        if col not in SCALING_RULES:
+        if col not in scaler.rules:
             continue
 
-        rule = SCALING_RULES[col]
+        rule = scaler.rules[col]
 
         if rule == 'standard':
             exprs.append((pl.col(col) * scaler.stds[col] + scaler.means[col]).alias(col))
