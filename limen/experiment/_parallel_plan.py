@@ -27,7 +27,7 @@ from limen.experiment.manifest_core import Manifest, MLManifest
 import limen.experiment.manifest_core as _manifest
 
 from limen.scalers.registry import SCALER_REGISTRY
-from limen.experiment._parallel_scaler import ScalerFactory, capture_transform, parent_initializers, scaler_factory, validate_initializers
+from limen.experiment._parallel_scaler import ScalerFactory, capture_transform, constructor_state, scaler_factory, validate_constructor
 
 
 @dataclass
@@ -35,7 +35,7 @@ class _FrozenTargetConfig(_manifest.TargetClassConfig):
     _parallel_init: Callable[..., object] | None = None
     _parallel_transform: Callable[..., object] | None = None
     _parallel_new: Callable[..., object] | None = None
-    _parallel_parents: tuple[tuple[type, Callable[..., object]], ...] = ()
+    _parallel_parents: tuple[tuple[type, dict[str, object]], ...] = ()
 
     def _parallel_make(self, **params: object) -> object:
         cls = self.target_class
@@ -121,8 +121,8 @@ def factory_allocator(value: object) -> Callable[..., object] | None:
     return None
 
 
-def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None, parents: tuple[tuple[type, Callable[..., object]], ...] = ()) -> Callable[..., object]:
-    validate_initializers(cls, parents, digest)
+def factory_initializer(cls: type, instance: object, captured: Callable[..., object] | None, parents: tuple[tuple[type, dict[str, object]], ...] = ()) -> Callable[..., object]:
+    validate_constructor(cls, parents, digest)
     method = inspect.getattr_static(cls, '__init__')
     if inspect.getattr_static(type(instance), '__init__') is not method:
         raise TypeError('Parallel factory allocated an uncaptured subclass initializer')
@@ -175,7 +175,7 @@ def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapsho
     is_component = callable(value)
     if type(value) is _manifest.TargetClassConfig:
         target = value
-        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params, cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class), None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__, parent_initializers(target.target_class))
+        value = _FrozenTargetConfig(target.target_class, target.fit_params, target.transform_params, cast(Callable[..., object], target.target_class.__init__), capture_transform(target.target_class), None if inspect.isbuiltin(target.target_class.__new__) else target.target_class.__new__, constructor_state(target.target_class))
     if inspect.isfunction(value) and value.__module__ == 'limen.experiment.manifest_core':
         if value.__qualname__ == 'make_fitted_scaler.<locals>._factory':
             cls, params = cast(tuple[object, dict[str, object]], value.__defaults__)

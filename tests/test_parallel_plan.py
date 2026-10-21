@@ -1822,6 +1822,22 @@ def _assert_factory_resources(plan, params):
                 actual, pid = pool.submit(_factory_probe, candidate, factory, extra).result(timeout=30)
                 assert actual == _factory_probe(candidate, factory, extra)[0] == expected and pid != os.getpid()
             assert digest(candidate) == before and _bound_initializer_owner.calls == owner_calls
+            if factory is StaticInitRolling:
+                with pytest.MonkeyPatch.context() as patch:
+                    patch.setattr(StaticInitRolling, 'window', 4)
+                    changed = freeze_manifest(manifest, None, {'auxiliary_factory': [factory]})
+                    changed_output = factory()(data)['caller_mean'].to_list()
+                    assert changed_output == _caller_feature(data, 4)['caller_mean'].to_list() and changed_output != expected
+                    assert changed.pipeline_digest != candidate.pipeline_digest and changed.resource_digest != candidate.resource_digest
+                    with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
+                        _factory_probe(candidate, factory)
+                    assert pool.submit(_factory_probe, candidate, factory).result(timeout=30)[0] == expected
+                    assert _factory_probe(changed, factory)[0] == changed_output
+                    with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
+                        pool.submit(_factory_probe, changed, factory).result(timeout=30)
+                with pytest.raises(TypeError, match='unfrozen inherited initializer state or class state'):
+                    _factory_probe(changed, factory)
+                assert digest(candidate) == before
         declare_parallel(BoundAllocatedRolling, ParallelRoundContract(seeded_stage, validation_keys=('seed',)))
         candidate = freeze_manifest(manifest, None, {'auxiliary_factory': [BoundAllocatedRolling]})
         with pytest.raises(ValueError, match=r'architecture\.auxiliary_factory\.allocate: fixed integer seed required'):

@@ -12,7 +12,7 @@ import limen.experiment.manifest_core as _manifest
 from limen.experiment.manifest_core import DataSourceConfig, Manifest, MLManifest
 from typing import cast
 
-from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, parent_initializers
+from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, constructor_state
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, object_state, restore_object
 from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer, factory_signature
@@ -27,7 +27,7 @@ class FrozenClassFactory:
     factory_class: type
     initializer: Callable[..., object] | None
     allocator: Callable[..., object] | None
-    parents: tuple[tuple[type, Callable[..., object]], ...] = ()
+    parents: tuple[tuple[type, dict[str, object]], ...] = ()
 
     @property
     def __signature__(self) -> Signature:
@@ -51,7 +51,7 @@ def factory_component(value: object) -> object:
     if isinstance(value, type):
         if type(value).__call__ is not type.__call__:
             raise TypeError('Parallel transport rejects unfrozen factory metaclass state')
-        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, parent_initializers(value))
+        return FrozenClassFactory(value, None if inspect.ismethoddescriptor(value.__init__) else value.__init__, None if inspect.isbuiltin(value.__new__) else value.__new__, constructor_state(value))
     if isinstance(value, partial):
         attributes, slots, bound, native = object_state(cast(partial[object], value))
         assert bound is not None

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from importlib import import_module
-from inspect import Parameter, getattr_static, isfunction, ismethod, signature
+from inspect import Parameter, getattr_static, isdatadescriptor, isfunction, ismethod, ismethoddescriptor, signature
 from typing import Protocol, cast
 
 import polars as pl
@@ -51,14 +51,21 @@ def capture_transform(cls: type) -> CapturedTransform:
                              getattr(cls, '__parallel_round_contract__', None))
 
 
-def parent_initializers(cls: type) -> tuple[tuple[type, Callable[..., object]], ...]:
-    return tuple((base, base.__init__) for base in cls.__mro__[1:] if base.__init__ is not cls.__init__ and (isfunction(base.__init__) or ismethod(base.__init__)))
+def constructor_state(cls: type) -> tuple[tuple[type, dict[str, object]], ...]:
+    states: list[tuple[type, dict[str, object]]] = []
+    for base in cls.__mro__:
+        values = {name: value for name, value in vars(base).items() if not name.startswith('__') and not callable(value) and not isdatadescriptor(value) and not ismethoddescriptor(value)}
+        if base.__init__ is not cls.__init__ and (isfunction(base.__init__) or ismethod(base.__init__)):
+            values['__init__'] = base.__init__
+        if values:
+            states.append((base, values))
+    return tuple(states)
 
 
 @identity_snapshot()
-def validate_initializers(cls: type, parents: tuple[tuple[type, Callable[..., object]], ...], fingerprint: Callable[[object], str]) -> None:
-    if fingerprint(parent_initializers(cls)) != fingerprint(parents):
-        raise TypeError('Parallel constructor has unfrozen inherited initializer state')
+def validate_constructor(cls: type, parents: tuple[tuple[type, dict[str, object]], ...], fingerprint: Callable[[object], str]) -> None:
+    if fingerprint(constructor_state(cls)) != fingerprint(parents):
+        raise TypeError('Parallel constructor has unfrozen inherited initializer state or class state')
 
 
 @dataclass(frozen=True)
