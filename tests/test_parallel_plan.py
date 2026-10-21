@@ -554,6 +554,11 @@ class TransformSeedTarget(CallerTarget):
         return RandomBinaryTarget(data, self.target_name, random_state).transform(data)
 
 
+class IndependentSeedTarget(CallerTarget):
+    def transform(self, data, seed=None):
+        return RandomBinaryTarget(data, self.target_name, seed).transform(data)
+
+
 class StaticTarget(CallerTarget):
     @staticmethod
     def transform(data, random_state=42):
@@ -1208,20 +1213,21 @@ def _assert_transform_bindings(params, pool):
     from tests.test_parallel_rounds import parallel_config
     base = build_manifest(parallel_config())
     domain = {key: [value] for key, value in params.items()}
-    declare_parallel(TransformSeedTarget, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
-    target = copy.deepcopy(base).with_target_label('noise', TransformSeedTarget, fit_params={'random_state': 42})
-    with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
-        validate_resources(freeze_manifest(target, None), params)
-    target.with_target_label('noise', TransformSeedTarget, fit_params={'random_state': 42},
-                             transform_params={'random_state': '{transform_seed}'})
-    frozen = freeze_manifest(target, None)
-    for candidates, context in ((domain | {'transform_seed': [42, None]}, None),
-                                (domain | {'transform_seed': [42]}, {'transform_seed': None})):
+    for cls, seed_key in ((TransformSeedTarget, 'random_state'), (IndependentSeedTarget, 'seed')):
+        declare_parallel(cls, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
+        target = copy.deepcopy(base).with_target_label('noise', cls, fit_params={'random_state': 42})
         with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
-            validate_domain(frozen, candidates, context)
-    safe = params | {'transform_seed': 42}
-    validate_domain(frozen, domain | {'transform_seed': [42]}, None)
-    assert pool.submit(_target_probe, frozen, safe).result(timeout=30) == _target_probe(frozen, safe)
+            validate_resources(freeze_manifest(target, None), params)
+        target.with_target_label('noise', cls, fit_params={'random_state': 42},
+                                 transform_params={seed_key: '{transform_seed}'})
+        frozen = freeze_manifest(target, None)
+        for candidates, context in ((domain | {'transform_seed': [42, None]}, None),
+                                    (domain | {'transform_seed': [42]}, {'transform_seed': None})):
+            with pytest.raises(ValueError, match=r'target\.transform: fixed integer seed'):
+                validate_domain(frozen, candidates, context)
+        safe = params | {'transform_seed': 42}
+        validate_domain(frozen, domain | {'transform_seed': [42]}, None)
+        assert pool.submit(_target_probe, frozen, safe).result(timeout=30) == _target_probe(frozen, safe)
     from tests.test_parallel_rounds import recorded_source
     for cls in (StaticTarget, ClassTarget):
         declare_parallel(cls, ParallelRoundContract(seeded_stage, ('random_state',), ('numpy',)))
@@ -1633,6 +1639,13 @@ def test_effective_resources_and_output_evidence(tmp_path) -> None:
     with pytest.raises(ValueError, match='fixed integer seed'):
         validate_domain(plan, {'n_jobs': [1], 'solver': ['lbfgs', 'saga'], 'random_state': [None],
                                **{key: [value] for key, value in params.items() if key not in ('n_jobs', 'solver', 'random_state')}}, None)
+    seeded_stage({'random_state': 42, 'seed': 42})
+    for key in ('random_state', 'seed'):
+        for value in (None, True, '42'):
+            with pytest.raises(ValueError, match='fixed integer seed required for ' + key):
+                seeded_stage({'random_state': 42, 'seed': 42} | {key: value})
+    with pytest.raises(ValueError, match='fixed integer seed required for seed'):
+        seeded_stage({})
     sklearn_stage({'solver': 'lbfgs', 'random_state': None})
     for option in ({'device': 'cuda'}, {'tree_method': 'gpu_hist'}, {'sampling_method': 'gradient_based'}):
         with pytest.raises(ValueError, match='CPU backend required'):

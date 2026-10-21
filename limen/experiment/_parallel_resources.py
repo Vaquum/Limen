@@ -103,9 +103,9 @@ def deterministic_stage(params: Mapping[str, object]) -> None:
 
 def seeded_stage(params: Mapping[str, object]) -> None:
     deterministic_stage(params)
-    key = 'random_state' if 'random_state' in params else 'seed'
-    if type(params.get(key)) is not int:
-        raise ValueError(f'fixed integer seed required for {key}')
+    for key in tuple(key for key in ('random_state', 'seed') if key in params) or ('seed',):
+        if type(params.get(key)) is not int:
+            raise ValueError(f'fixed integer seed required for {key}')
 
 
 def sklearn_stage(params: Mapping[str, object]) -> None:
