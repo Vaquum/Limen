@@ -12,7 +12,13 @@ from limen.features.fractional_diff import find_min_d
 from limen.features.fractional_diff import fractional_diff
 from limen.targets import RandomBinaryTarget
 from limen.utils.adf_test import adf_test
+from limen.yaml.compiler import CompiledSFD
+from limen.yaml.parser import parse
+from limen.yaml.validator import validate
 from tests.utils.historical_data import get_cached_spot_klines_2h
+
+
+RECORDED_BARS = Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet'
 
 
 INVALID_PARAMETERS = [
@@ -135,12 +141,80 @@ def test_fractional_diff_empty_dataframe():
     assert result.height == 0
 
 
-def test_fractional_diff_missing_column_skips():
+@pytest.fixture(scope='module')
+def recorded_fractional_bars():
+    return pl.read_parquet(RECORDED_BARS, n_rows=512)
 
-    df = pl.DataFrame({'close': [100.0, 101.0, 102.0]})
-    result = fractional_diff(df, d=0.0, cols=['close', 'nonexistent'])
-    assert 'close_fracdiff' in result.columns
-    assert 'nonexistent_fracdiff' not in result.columns
+
+@pytest.mark.parametrize('cols, message', [
+    (['missing_first'], r'fractional_diff.*missing_first'),
+    (['missing_first', 'close', 'missing_second'], r'fractional_diff.*missing_first.*missing_second'),
+])
+@pytest.mark.parametrize('d', [0.0, 1.0])
+@pytest.mark.parametrize('lazy', [False, True])
+def test_fractional_diff_missing_columns_raise_before_work(recorded_fractional_bars, monkeypatch, cols, message, d, lazy):
+    before = recorded_fractional_bars.clone()
+    data = recorded_fractional_bars.lazy() if lazy else recorded_fractional_bars
+
+    def fail_work(*_args, **_kwargs):
+        raise AssertionError('Missing columns reached weight generation or collection')
+
+    with monkeypatch.context() as patch:
+        patch.setitem(fractional_diff.__globals__, '_get_weights_ffd', fail_work)
+        patch.setattr(pl.LazyFrame, 'collect', fail_work)
+        with pytest.raises(ValueError, match=message) as raised:
+            fractional_diff(data, d=d, cols=cols)
+    assert 'close' not in str(raised.value)
+    assert (data.collect() if lazy else data).equals(before)
+
+
+@pytest.mark.parametrize('cols', [None, [], 'close'])
+@pytest.mark.parametrize('lazy', [False, True])
+def test_fractional_diff_cols_validation_precedes_numerics(recorded_fractional_bars, cols, lazy):
+    data = recorded_fractional_bars.lazy() if lazy else recorded_fractional_bars
+    with pytest.raises(ValueError, match='fractional_diff cols must be a non-empty list of column names'):
+        fractional_diff(data, d=float('nan'), cols=cols, threshold=0.0)
+
+
+@pytest.mark.parametrize('d, threshold, parameter', [
+    (float('nan'), 0.0, 'd'),
+    (0.0, float('nan'), 'threshold'),
+    (1.0, 0.0, 'threshold'),
+])
+def test_fractional_diff_numerics_precede_missing_columns(recorded_fractional_bars, d, threshold, parameter):
+    with pytest.raises(ValueError, match=f'fractional_diff {parameter} must be'):
+        fractional_diff(recorded_fractional_bars.lazy(), d=d, cols=['missing_first'], threshold=threshold)
+
+
+def test_find_min_d_propagates_missing_column(recorded_fractional_bars):
+    with pytest.raises(ValueError, match=r'fractional_diff.*missing_first'):
+        find_min_d(recorded_fractional_bars, col='missing_first')
+
+
+@pytest.mark.parametrize('cols, message', [
+    (['missing_first'], r'fractional_diff.*missing_first'),
+    ('close', 'fractional_diff cols must be a non-empty list of column names'),
+])
+def test_fractional_diff_compiled_preparation_rejects_invalid_columns(recorded_fractional_bars, cols, message):
+    config, errors = parse(Path(__file__).parents[1] / 'limen/yaml/templates/ridge_regressor.yaml')
+    assert errors == []
+    declaration = config['sfd']['manifest']
+    declaration['data_source'] = {
+        'method': 'limen.data.HistoricalData.get_any_file',
+        'params': {'file_path_or_url': str(RECORDED_BARS)},
+    }
+    declaration['split_dates'] = {
+        'train_start': '2025-01-01', 'train_end': '2025-01-03',
+        'val_start': '2025-01-03', 'val_end': '2025-01-04',
+        'test_start': '2025-01-04', 'test_end': '2025-01-06',
+    }
+    declaration['features'] = [{'func': 'limen.features.fractional_diff', 'params': {'d': 1.0, 'cols': cols}}]
+    result = validate(config)
+    assert result.valid, [error.message for error in result.errors]
+    compiled = CompiledSFD(config)
+    parameters = {name: values[0] for name, values in compiled.params().items()}
+    with pytest.raises(ValueError, match=message):
+        compiled.manifest().prepare_data(recorded_fractional_bars, parameters)
 
 
 def test_adf_test_empty_series():

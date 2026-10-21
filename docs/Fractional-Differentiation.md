@@ -95,7 +95,7 @@ def fractional_diff(data: pl.DataFrame, d: float=0.0, cols: list[str] | None=Non
 | `cols` | `None` | columns to differentiate — **required**, a non-empty list |
 | `threshold` | `1e-5` | drops fixed-width weights below this magnitude (AFML fixed-width FFD) |
 
-It raises `ValueError` if `cols` is empty, if `d` is negative, or if `threshold` is not positive.
+It raises `ValueError` if `cols` is `None`, empty, a scalar string, or names missing input columns; if `d` is non-finite or negative; if `threshold` is non-finite or nonpositive; or if a recurrence weight becomes non-finite.
 
 ### Python Research
 
