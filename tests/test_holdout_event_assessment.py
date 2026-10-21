@@ -365,6 +365,46 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, dent, 'flat-state valuation')
 
+    def dent2(report_dict):
+        execution = report_dict['execution']
+        states = execution['ledger']['states']
+        fills = execution['ledger']['fills']
+        times = [row['time_ns'] for row in states]
+        moments = [fill['time_ns'] for fill in fills]
+        by_time = {row['time_ns']: row for row in states}
+        target = next(by_time[fill['time_ns']] for fill in fills if moments.count(fill['time_ns']) == 1 and times.count(fill['time_ns']) == 1 and by_time[fill['time_ns']]['quantity'] != 0)
+        target['equity'] -= 500.0
+        initial = execution['initial_equity']
+        running, worst = 0.0, 0.0
+        for value in [row['equity'] for row in states]:
+            running = max(running, value)
+            worst = min(worst, value / max(running, initial) - 1)
+        execution['metrics']['max_drawdown']['value'] = worst
+
+    _rewrite_report(root, report, dent2, 'fill-state valuation')
+
+    def reenter(report_dict):
+        execution = report_dict['execution']
+        ending = execution['metrics']['ending_equity']['value']
+        target = next(episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is None)
+        target['entry_equity'] += 200.0
+        target['net_pnl'] = ending - target['entry_equity']
+
+    _rewrite_report(root, report, reenter, 'episode entry')
+
+    def shutter(report_dict):
+        execution = report_dict['execution']
+        episodes = execution['ledger']['episodes']
+        moments = {fill['time_ns'] for fill in execution['ledger']['fills']}
+        target = next(episode for episode in episodes if episode['closed_at_ns'] is None)
+        target['closed_at_ns'] = next(row['time_ns'] for row in execution['ledger']['states'] if row['time_ns'] not in moments and row['time_ns'] > target['first_fill_ns'])
+        closed = [episode for episode in episodes if episode['closed_at_ns'] is not None]
+        execution['metrics']['completed_trades']['value'] = float(len(closed))
+        execution['metrics']['open_trades']['value'] = float(len(episodes) - len(closed))
+        execution['metrics']['episode_win_rate']['value'] = sum(episode['net_pnl'] > 0 for episode in closed) / len(closed)
+
+    _rewrite_report(root, report, shutter, 'episode close')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
