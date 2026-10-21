@@ -1422,6 +1422,94 @@ def test_trusted_factory_builtin_bindings(native_assessment_case, wrapped):
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('wrapped', [False, True])
+@pytest.mark.parametrize('kind', ['globals', 'default', 'callable', 'literal-class'])
+def test_trusted_factory_transitive_construction(native_assessment_case, wrapped, kind):
+    def reflective(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + globals()['_LATE_RULES']['offset']}))
+    def default_bound(data, helper=later_probabilities, **params):
+        return logreg_binary(data, **(params | {'C': 1 + float(helper(0))}))
+    class Helper:
+        def __call__(self, values):
+            return later_probabilities(values)
+    helper = Helper()
+    def callable_bound(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + float(helper(0))}))
+    class Factory:
+        depth = 1.0
+        @classmethod
+        def build(cls, data, **params):
+            return logreg_binary(data, **(params | {'C': getattr(cls, 'depth')}))
+    factory = {'globals': reflective, 'default': default_bound, 'callable': callable_bound, 'literal-class': Factory.build}[kind]
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    assert CompiledSFD(recorded, components=configure).manifest().architecture_function is declared
+    directory = native_assessment_case[0] / f'transitive-factory-{kind}-{wrapped}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    mutation = patch.object(Factory, 'depth', 2.0) if kind == 'literal-class' else patch.dict(_LATE_RULES, {'offset': 0.1})
+    with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('negative', [False, True])
+@pytest.mark.parametrize('aliased', [False, True])
+def test_frozen_deque_namespace_reader(native_assessment_case, negative, aliased):
+    from collections import deque
+    class DequeGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if negative:
+                reader = self.readers[-1]
+                offset = reader()['_LATE_RULES']['offset']
+            elif aliased:
+                reader = self.readers[0]
+                offset = reader()['_LATE_RULES']['offset']
+            else:
+                offset = self.readers[0]()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = DequeGlobals
+    selected._model.readers = deque([globals])
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('callback', [False, True])
+def test_frozen_logger_handler_dependencies(native_assessment_case, callback):
+    class LoggerHandlers(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            offset = self.logger.handlers[0](0) if callback else len(self.logger.handlers) / 10
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = LoggerHandlers
+    selected._model.logger = logging.getLogger(f'holdout-handler-dependencies-{callback}')
+    with patch.object(selected._model.logger, 'handlers', [later_probabilities] if callback else []):
+        frozen = _freeze(selected)
+        assert _report(frozen, native_assessment_case)['state'] == 'completed'
+        mutation = patch.dict(_LATE_RULES, {'offset': 0.1}) if callback else patch.object(selected._model.logger, 'handlers', [None])
+        with mutation, patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+            with pytest.raises(ValueError, match='changed'):
+                _report(frozen, native_assessment_case)
+            assert loader.call_count == 0
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:

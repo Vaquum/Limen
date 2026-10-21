@@ -51,7 +51,7 @@ def configure_manifest(manifest: Manifest, reference: Mapping[str, object], comp
     if components is not None:
         sfd = cast(dict[str, object], reference['sfd'])
         marker = cast(dict[str, object], sfd['components'])
-        pipeline = digest({field.name: getattr(manifest, field.name) for field in fields(manifest)})
+        pipeline = digest({field.name: getattr(manifest, field.name) for field in fields(manifest)}, declaration=True)
         if type(marker) is _Pending:
             sfd['components'] = {**marker, 'pipeline_sha256': pipeline}
         elif marker['pipeline_sha256'] != pipeline:

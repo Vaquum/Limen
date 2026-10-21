@@ -1,4 +1,5 @@
 import dis
+from collections import deque
 from collections.abc import Callable
 from functools import lru_cache
 from types import CodeType, FunctionType, MethodType
@@ -42,8 +43,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
 def namespace_bindings(functions: tuple[FunctionType, ...], native: Callable[[FunctionType], bool]) -> tuple[tuple[FunctionType, dict[str, object]], ...]:
     pending, seen, bindings = list(functions), set[FunctionType](), list[tuple[FunctionType, dict[str, object]]]()
     while pending:
-        function = pending.pop()
-        if function in seen:
+        if (function := pending.pop()) in seen:
             continue
         seen.add(function)
         namespace = {name: (function.__globals__ if name in function.__globals__ else function.__builtins__)[name] for name in function.__code__.co_names if name in function.__globals__ or name in function.__builtins__}
@@ -53,5 +53,5 @@ def namespace_bindings(functions: tuple[FunctionType, ...], native: Callable[[Fu
 
 
 def reader_names(value: object, key: str | int) -> tuple[str, ...]:
-    size = list[object].__len__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else None
+    size = list[object].__len__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else deque[object].__len__(cast(deque[object], value)) if isinstance(value, deque) else None
     return (str(key), str(key - size)) if isinstance(key, int) and size is not None else (str(key),)
