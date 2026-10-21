@@ -158,7 +158,7 @@ The [controller extension reference](Developer/Pruning-Strategies.md#manual-inte
 
 ## Resume flow
 
-Python/MSQ can resume from a saved checkpoint when all four [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
+Python/MSQ can resume from a saved checkpoint when the applicable [recording groups](Universal-Experiment-Loop.md#recording-policy) were enabled on the initial run, and the original strategy and configuration are reconstructed:
 
 Recovery tests interrupt after completed rounds, resume the saved queue and compare it with uninterrupted execution. The Compiled entry point is `limen run --resume RESULTS_DIR`; its YAML records the initial recording and checkpoint policy.
 
@@ -216,6 +216,7 @@ For resume to work cleanly, keep these stable:
 - the same `SearchStrategy` type
 - the same parameter content
 - the same configured reducer stack
+- the initial recording policy, with predictions/alignment and any applicable event ledger or walk-forward folds retained; see the [recording policy](Universal-Experiment-Loop.md#recording-policy)
 
 ## Capabilities shared with CLI
 

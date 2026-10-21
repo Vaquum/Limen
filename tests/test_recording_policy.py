@@ -12,6 +12,7 @@ import pytest
 from click.testing import CliRunner
 from polars.testing import assert_frame_equal
 from ruamel.yaml import YAML
+from sklearn.linear_model import Ridge
 from threadpoolctl import threadpool_limits
 
 from limen.cli.main import cli
@@ -19,6 +20,11 @@ from limen.cohort import Cohort
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _round_storage as storage
 from limen.experiment._recording import parse_recording
+from limen.experiment._prepare_trade_context import normalize_observations
+from limen.experiment.param_domain import ParamDomain
+from limen.experiment.param_search import GridStrategy
+from limen.backtest.trade_contract import ProductSpec, TradeInputs, TradePolicy, export_trade_contract, source_binding
+from limen.backtest.trade_execution import trade_execution
 from limen.experiment.acceptance_report import acceptance_report
 from limen.experiment.errors import StrictModeError
 from limen.inference import Trainer
@@ -151,6 +157,174 @@ def campaigns(tmp_path_factory):
             pairs.append({'loop': loop, 'path': path, 'records': _records(path)})
         result[kind] = {'config': config, 'bars': bars, 'full': pairs[0], 'lean': pairs[1]}
     return result
+
+
+def _native_recovery_loop(path, *, event=False):
+    space = {'alpha': [0.1, 1.0, 10.0, 30.0]}
+
+    def prep(bars, round_params):
+        evaluation = bars.slice(96)
+        return {'train': bars.head(96), 'evaluation': evaluation, '_alignment': {
+            'missing_datetimes': [], 'first_test_datetime': evaluation['datetime'][0],
+            'last_test_datetime': evaluation['datetime'][-1],
+        }}
+
+    def model(data, round_params):
+        train, evaluation = data['train'], data['evaluation']
+        fitted = Ridge(alpha=round_params['alpha']).fit(train.select('open'), train['close'])
+        forecasts = fitted.predict(evaluation.select('open'))
+        predictions = (forecasts >= evaluation['open'].to_numpy()).astype(int)
+        result = {'_preds': predictions, 'price_error': float(np.mean((forecasts - evaluation['close'].to_numpy()) ** 2))}
+        if event:
+            observations = normalize_observations(evaluation, interval_seconds=3600)
+            signals = pl.DataFrame({'row_id': [str(i) for i in range(evaluation.height)],
+                                   'available_at_ns': observations['available_at_ns'], 'target': predictions})
+            start, end = int(observations['start_ns'][0]), int(observations['available_at_ns'][-1])
+            binding = source_binding(observations, str(FIXTURE), start, end, 3600000000000, 'recorded hourly OHLC')
+            inputs = TradeInputs(10000.0, start, end, signals, observations, None, (binding,))
+            policy = TradePolicy(ProductSpec('cash_spot', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0.0))
+            ledger = trade_execution(inputs, policy)
+            data['_alignment'].update(trade_contract=export_trade_contract(policy, inputs),
+                                      trade_contract_digest=ledger.contract_digest,
+                                      trade_ledger={key: getattr(ledger, key).to_dicts() for key in ('states', 'intents', 'fills', 'episodes', 'funding')})
+        return result
+
+    sfd = SimpleNamespace(__name__=__name__, params=lambda: space, prep=prep, model=model)
+    return UniversalExperimentLoop(sfd=sfd, data=_bars(), experiment_dir=path,
+                                   search_strategy=GridStrategy(ParamDomain(space)), checkpoint_interval=1)
+
+
+def _recovery_loop(kind, path):
+    if kind.startswith('native'):
+        return _native_recovery_loop(path, event=kind == 'native_event')
+    base = 'walk_forward' if kind in ('walk_forward', 'event_walk_forward') else 'serial' if kind == 'event' else 'factorized'
+    config = _config(base)
+    if kind == 'snapshot':
+        config['sfd']['manifest'].pop('backtest')
+    if kind == 'event_walk_forward':
+        config['sfd']['manifest']['backtest'] = _config()['sfd']['manifest']['backtest']
+    if base == 'walk_forward':
+        config['sfd']['params']['C'] = [0.1, 1.0, 10.0, 30.0]
+    return _loop(config, path, bars=_bars(base))
+
+
+def _recovery_run(loop, kind, **kwargs):
+    options = {'n_permutations': 4, 'resume': False, 'progress_bar': False,
+               'prep_each_round': True, 'post_processing': False,
+               'workers': 2 if kind == 'parallel_snapshot' else 1,
+               'record_execution': not kind.startswith('native'),
+               'record_model_outputs': not kind.startswith('native'),
+               'factorize': kind == 'factorized'}
+    options.update(kwargs)
+    with threadpool_limits(limits=1):
+        loop.run('recovery', **options)
+
+
+RECOVERY_KINDS = ('snapshot', 'cost_snapshot', 'event', 'walk_forward', 'event_walk_forward',
+                  'parallel_snapshot', 'factorized', 'native', 'native_event')
+
+
+@pytest.fixture(scope='module')
+def recovery_campaigns(tmp_path_factory, campaigns):
+    result = {}
+
+    def campaign(kind):
+        if kind in result:
+            return result[kind]
+        policy = {**FULL, 'trade_ledger': kind in ('event', 'event_walk_forward', 'native_event'),
+                  'fold_details': kind in ('walk_forward', 'event_walk_forward')}
+        paths = {label: tmp_path_factory.mktemp(f'recovery-{kind}-{label}') for label in ('full', 'resumed')}
+        baseline = 'serial' if kind == 'event' else 'factorized' if kind in ('cost_snapshot', 'factorized', 'parallel_snapshot') else None
+        if baseline is None:
+            control = _recovery_loop(kind, paths['full'])
+            _recovery_run(control, kind, recording=FULL)
+        else:
+            control = campaigns[baseline]['full']['loop']
+            paths['full'] = campaigns[baseline]['full']['path']
+        partial = _recovery_loop(kind, paths['resumed'])
+        append = partial._append_round_data
+
+        def stop_after_two(*args, _append=append, _partial=partial, **kwargs):
+            _append(*args, **kwargs)
+            if kwargs['round_index'] == 1:
+                _partial._shutdown_requested = True
+
+        partial._append_round_data = stop_after_two
+        _recovery_run(partial, kind, recording=policy)
+        prefix = _records(paths['resumed'])
+        columns = pl.read_csv(paths['resumed'] / 'results.csv').drop('execution_time').columns
+        assert len(prefix) == 2
+        resumed = _recovery_loop(kind, paths['resumed'])
+        _recovery_run(resumed, kind, resume=True)
+        result[kind] = {'paths': paths, 'control': control, 'resumed': resumed,
+                        'policy': policy, 'prefix': prefix, 'columns': columns}
+        return result[kind]
+
+    return campaign
+
+
+@pytest.mark.parametrize('kind', RECOVERY_KINDS)
+def test_resume_ignores_inapplicable_recording_groups(kind, recovery_campaigns):
+    captured = recovery_campaigns(kind)
+    full, resumed = (_records(captured['paths'][label]) for label in ('full', 'resumed'))
+    assert resumed == [_project(record, captured['policy']) for record in full]
+    assert resumed[:len(captured['prefix'])] == captured['prefix']
+    left, right = (pl.read_csv(captured['paths'][label] / 'results.csv').drop('execution_time') for label in ('full', 'resumed'))
+    assert right.columns == captured['columns']
+    assert set(left.columns) == set(right.columns)
+    assert_frame_equal(left, right.select(left.columns),
+                       check_exact=False, rel_tol=1e-10, abs_tol=1e-12)
+    assert captured['resumed']._recording == captured['policy']
+    if kind.startswith('native'):
+        assert captured['resumed'].manifest is None
+    if kind in ('walk_forward', 'event_walk_forward'):
+        assert_frame_equal(*[pl.read_parquet(captured['paths'][label] / 'trial_returns.parquet') for label in ('full', 'resumed')])
+
+
+@pytest.mark.parametrize(('kind', 'group'), (
+    ('snapshot', 'predictions'), ('snapshot', 'alignment'), ('event', 'trade_ledger'),
+    ('walk_forward', 'fold_details'), ('native_event', 'trade_ledger'),
+))
+def test_resume_requires_applicable_policy(kind, group, tmp_path):
+    policy = {**FULL, group: False}
+    _recovery_run(_recovery_loop(kind, tmp_path), kind, recording=policy, n_permutations=2)
+    before = _snapshot(tmp_path)
+    with pytest.raises(ValueError, match='Cannot resume a lighter recording policy'):
+        _recovery_run(_recovery_loop(kind, tmp_path), kind, resume=True)
+    assert _snapshot(tmp_path) == before
+
+
+@pytest.mark.parametrize(('kind', 'damage'), (
+    ('snapshot', 'preds'), ('snapshot', 'missing_datetimes'), ('snapshot', 'preds_blob'),
+    ('event', 'trade_ledger'), ('native_event', 'trade_ledger'),
+    ('walk_forward', 'folds'), ('walk_forward', 'preds'), ('walk_forward', 'missing_datetimes'),
+    ('event_walk_forward', 'trade_ledger'), ('parallel_snapshot', 'preds'),
+    ('factorized', 'missing_datetimes'),
+))
+def test_resume_requires_payloads_before_rewrites(kind, damage, recovery_campaigns, tmp_path):
+    source = recovery_campaigns(kind)['paths']['resumed' if kind == 'parallel_snapshot' else 'full']
+    path = tmp_path / kind
+    shutil.copytree(source, path)
+    round_path = storage.round_path(path)
+    if damage == 'preds_blob':
+        wire = json.loads(gzip.decompress(round_path.read_bytes()).splitlines()[-1])
+        (path / 'round_signals' / (wire['preds_ref']['sha256'] + '.json.gz')).unlink()
+    else:
+        records = _records(path)
+        target = records[-1]
+        if kind in ('walk_forward', 'event_walk_forward') and damage != 'folds':
+            target = target['folds'][-1]
+        if damage == 'missing_datetimes':
+            target['alignment'].pop(damage)
+        else:
+            target.pop(damage)
+        round_path.unlink()
+        for record in records:
+            storage.append_record(round_path, record)
+    before = _snapshot(path)
+    with pytest.raises((ValueError, FileNotFoundError), match=r'Missing preds|Cannot resume a lighter recording policy'):
+        _recovery_run(_recovery_loop(kind, path), kind, resume=True)
+    assert _snapshot(path) == before
 
 
 @pytest.mark.parametrize('profile', ('full', 'lean'))

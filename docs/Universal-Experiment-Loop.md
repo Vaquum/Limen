@@ -393,7 +393,7 @@ Use `uel.recording` in YAML or `run(recording={...})` in a persisted Python/MSQ 
 | `trade_ledger` | Omit the complete event ledger; retain the trade contract, its digest and learning binding. |
 | `fold_details` | Omit the entire nested `folds` payload, including fold-local results, bounds and provenance; retain the outer occurrence identity and parameters. |
 
-Choose the evidence policy before the first candidate runs. The two recovery functions below enable all four groups explicitly before the first run. Keep that complete policy when resumability is required.
+Choose the evidence policy before the first candidate runs. The two recovery functions below enable all four groups explicitly before the first run. Full recording supports every recovery mode; a smaller policy may omit groups the run does not use.
 
 The Python equivalent is `uel.run(..., recording=dict.fromkeys(("predictions", "alignment", "trade_ledger", "fold_details"), True))`. On a new run, `recording=None` uses the configured YAML policy, or all-false defaults when absent. An explicit native mapping replaces the entire YAML policy before unspecified groups default to `false`: native `{"trade_ledger": True}` overrides YAML `{"predictions": True}` with predictions disabled.
 
@@ -403,7 +403,9 @@ This policy filters copied serialized records only. Models, predictions used for
 
 Disabling `fold_details` or `alignment` makes PBO unavailable because the saved log lacks fold/timestamp evidence. Explicit `acceptance.max_pbo` or `acceptance.pbo_blocks` requires both payloads; count-only declarations, including two, request the same evidence. Conflicts reject before run artifacts, and direct explicit requests reject incompatible saved policies before report writes. Omitted-count defaults retain unavailable PBO plus independently supported DSR. Explicit counts also require a search strategy and experiment directory. See [acceptance configuration](Experiment-Manifest.md#acceptance-thresholds) for the canonical count, persistence and regeneration rules.
 
-Default runs and any policy containing `false` are non-resumable, even if that group is absent from its particular records. Python and CLI reject lighter saved/requested policies or changed policies before modifying artifacts. On resume, an omitted policy uses saved metadata; legacy metadata without a policy means all-true recording. Existing full logs retain their resume behavior; enable all four groups when creating a new resumable run.
+Resume requires `predictions` and `alignment`, including saved `missing_datetimes`, even with `post_processing=False`. Event execution also requires `trade_ledger`; walk-forward requires `fold_details` and the applicable evidence within every fold. Ordinary single-split snapshots may disable both ledger and fold recording, including snapshots with only backtest costs. A persisted trade contract requires ledger evidence even for a custom Python SFD without a Manifest; caller-owned ledger payload alone does not establish an engine recovery contract.
+
+Choose that policy on the initial run. Resume rejects changed policies or YAML declarations and missing required committed payloads before truncating round data, rewriting CSV/checkpoints or regenerating fold returns. Artifact references must still resolve through the ordinary integrity checks. An omitted resume policy uses saved metadata; legacy metadata without a policy means all-true recording. Default all-false runs remain non-resumable.
 
 Supported single-split Trainer/Sensor reconstruction and built-in Cohort selection retain their identities, parameters, scalar results and required exact trade/learning bindings. Omitted row-level evidence cannot be inspected from the log; custom readers must require the fields they use. Walk-forward reconstruction requires the separate [promotion evidence](Trainer.md#recorded-walk-forward-folds). Reducing recording changes stored evidence, not live retention or model/preparation memory.
 
@@ -471,7 +473,7 @@ The budget reducer can trim the remaining queue during a feedback cycle, so the 
 
 ## Resume in practice
 
-Python/MSQ runs can resume when all four recording groups were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
+Python/MSQ runs can resume when the applicable [recording groups](#recording-policy) were enabled on the initial run, and an `experiment_dir` and a checkpoint are available:
 
 ### Resume Python Research
 
