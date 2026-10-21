@@ -1893,3 +1893,7 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve active merge-readiness runs when review and check-suite events arrive; backport the upstream scheduling correction and contract guard.
 - Enforce the shared per-PR readiness lane and reject event-specific lane mutations; backport the merged upstream regression guard.
 - Clarify that the readiness comment reports ruleset checks while separate classic protection can still block a merge.
+
+## [5.45.19] - 2026-10-21
+
+- Hold Compiled profiling admission through loading, evaluation and cleanup so first reservations cannot race real model fitting. Preserve active-reservation refusal and ordinary profiling results.
