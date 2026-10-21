@@ -48,6 +48,7 @@ EXPECTED_RULESET_COMMAND = (
     'governance/tests/test_version_gate.py '
     'governance/tests/test_governance_config.py '
     'governance/tests/test_prd_gate.py '
+    'governance/tests/test_supply_chain.py '
     '-q'
 )
 
@@ -113,6 +114,7 @@ def test_pr_checks_tests_pins_python_and_runtime_suite_command() -> None:
     ('missing_governance_module', 'ruleset contract command changed'),
     ('missing_workflow_contract', 'ruleset contract command changed'),
     ('missing_prd_gate', 'ruleset contract command changed'),
+    ('missing_supply_chain', 'ruleset contract command changed'),
     ('filtered_collection', 'ruleset contract command changed'),
     ('missing_backend_step', 'missing or duplicated step: Verify coverage backend contract'),
     ('conditional_backend_step', 'backend contract step changed'),
@@ -145,6 +147,8 @@ def test_coverage_contract_rejects_workflow_mutations(mutation, reason, monkeypa
             collection['run'] = collection['run'].replace('governance/tests/test_tests_ci_contract.py ', '')
         case 'missing_prd_gate':
             collection['run'] = collection['run'].replace('governance/tests/test_prd_gate.py ', '')
+        case 'missing_supply_chain':
+            collection['run'] = collection['run'].replace('governance/tests/test_supply_chain.py ', '')
         case 'filtered_collection':
             collection['run'] += ' -k "not governance_config"'
         case 'missing_backend_step':

@@ -1,0 +1,19 @@
+name: Task
+description: Track a chore, test, refactor, docs, or maintenance change.
+labels:
+  - task
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State the change and why it is needed.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance
+      description: Name the verifiable done criteria.
+    validations:
+      required: true
