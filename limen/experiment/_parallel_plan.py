@@ -135,7 +135,7 @@ def factory_initializer(cls: type, instance: object, captured: Callable[..., obj
     return partial(cast(Callable[..., object], getattr(function, '__func__', function)), type(instance) if isinstance(method, classmethod) else instance) if bind else function
 
 
-_PARALLEL_EVIDENCE_SINCE = (5, 45, 22)
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 23)
 
 
 def legacy_metadata(metadata: Mapping[str, object]) -> bool:
