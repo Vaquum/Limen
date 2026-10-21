@@ -44,7 +44,9 @@ def normalized(value: object) -> object:
             factory = native_attribute(provider, 'func')
         constructors = tuple(inspect.getattr_static(owner, name, None) for owner, name in ((factory, '__new__'), (factory, '__init__'), (type(factory), '__call__'))) if isinstance(factory, type) else ()
         bindings = tuple((function, {name: function.__globals__[name] for name in function.__code__.co_names if name in function.__globals__}) for target in (callable_value, *constructors) for function in call_functions(target))
-        classes = (cast(type[object], factory), cast(type[object], type(factory))) if isinstance(factory, type) else ()
+        owner = factory.__self__ if inspect.ismethod(factory) else factory
+        factory_class = owner if isinstance(owner, type) else type(owner)
+        classes = (cast(type[object], factory_class), cast(type[object], type(factory_class))) if isinstance(factory, type) or inspect.ismethod(factory) else ()
         class_state = tuple((owner, {name: inspect.getattr_static(owner, name) for function, _ in bindings for name in function.__code__.co_names if any(name in vars(parent) for parent in owner.__mro__)}) for owner in classes)
         result = {'callable': f'{getattr(callable_value, "__module__", type(callable_value).__module__)}.{getattr(callable_value, "__qualname__", type(callable_value).__qualname__)}',
                   'implementation': sha256(fitted_witness((callable_value, constructors, bindings, class_state))).hexdigest()}

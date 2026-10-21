@@ -17,7 +17,7 @@ from typing import Literal, Union, cast
 import numpy as np
 import polars as pl
 
-from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes
+from limen.experiment._holdout_calls import call_functions, function_module as _function_module, native_attribute, entropy_call, namespace_calls, native_codes, native_leaf_dependencies
 from limen.experiment._holdout_state import children, code_digest, fitted_witness, object_payload
 
 __all__ = ['FITTING_METHODS', 'call_functions', 'children', 'code_digest', 'dependency_digest', 'entropy_call', 'fitted_witness', 'fitting_call', 'inference_evidence', 'object_payload', 'restore_iterations']
@@ -78,7 +78,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
                 fitted_names.add(value)
             return
         if type(value) is logging.Logger or type(value) in (GetSetDescriptorType, MemberDescriptorType):
-            evidence.append(value)
+            native_leaf_dependencies(value, seen, evidence, visit)
             return
         if isinstance(value, ModuleType):
             module_dynamic[id(value)] = module_dynamic.get(id(value), False) or fitted_module

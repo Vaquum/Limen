@@ -16,10 +16,11 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
         if part.opname not in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST', 'LOAD_FAST', 'LOAD_DEREF') or not isinstance(part.argval, str):
             continue
         names = aliases.get(part.argval, {part.argval}) if part.opname in ('LOAD_FAST', 'LOAD_DEREF') else {part.argval}
-        call = instructions[index + 1]
-        if call.opname in ('STORE_FAST', 'STORE_DEREF') and part.opname != 'LOAD_CONST':
+        call_index = index + 2 if instructions[index + 1].opname == 'BINARY_SUBSCR' and index + 2 < len(instructions) else index + 1
+        call = instructions[call_index]
+        if call.opname in ('STORE_FAST', 'STORE_DEREF') and (part.opname != 'LOAD_CONST' or call_index > index + 1):
             aliases.setdefault(str(call.argval), set()).update(names)
-        lookup_start: int | None = index + 2 if call.opname in _CALLS and call.arg == 0 else None
+        lookup_start: int | None = call_index + 1 if call.opname in _CALLS and call.arg == 0 else None
         if lookup_start is None and part.opname == 'LOAD_CONST':
             for position in range(index + 1, len(instructions) - 1):
                 getter, invocation = instructions[position:position + 2]

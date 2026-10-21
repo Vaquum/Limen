@@ -1,7 +1,8 @@
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
 from functools import lru_cache, partial
 import inspect
+import logging
 from importlib.abc import InspectLoader
 import sys
 from threading import RLock
@@ -10,7 +11,7 @@ from typing import NamedTuple, cast
 
 from limen.experiment._holdout_namespaces import namespace_calls
 
-__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'logger_attributes', 'native_leaf_dependencies', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
@@ -206,3 +207,14 @@ def _cell_binding(cell: CellType) -> tuple[bool, object]:
         return True, cell.cell_contents
     except ValueError:
         return False, None
+
+
+def logger_attributes(value: logging.Logger) -> dict[str, object]:
+    return {name: part for name, part in cast(dict[str, object], vars(value)).items() if name not in ('name', 'level', 'disabled', 'propagate', 'parent', 'manager', 'handlers', 'filters', '_cache')}
+
+
+def native_leaf_dependencies(value: object, seen: dict[int, object], evidence: list[object], visit: Callable[[object], None]) -> None:
+    evidence.append(value)
+    if type(value) is logging.Logger and id(value) not in seen:
+        seen[id(value)] = value
+        visit(logger_attributes(cast(logging.Logger, value)))
