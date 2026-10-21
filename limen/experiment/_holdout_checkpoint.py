@@ -13,7 +13,7 @@ import limen.experiment._round_storage as storage
 
 __all__: list[str] = []
 _HEADER = {'schema_version', 'project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds'}
-_BINDING_SINCE = (5, 45, 27)
+_BINDING_SINCE = (5, 45, 28)
 
 
 def _json(value: object) -> str:

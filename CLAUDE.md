@@ -54,7 +54,7 @@ The list is long because this repository ships a package: alongside the governan
 
 18. **Live branch protection on `main` matches `.github/rulesets/main.json`.** Changing branch protection out-of-band (in the GitHub UI) blocks the next PR until the snapshot is updated in a PR of its own. *(pr_checks_ruleset)*
 
-19. **No direct push to `main`. No force-push. No branch deletion.** Branch must be up-to-date with `main` before merge. One approving review, code-owner review on the enforcement surfaces owned in `.github/CODEOWNERS`, and every review thread resolved. *(branch protection, server-side)*
+19. **No direct push to `main`. No force-push. No branch deletion.** Branches may merge without rebasing onto latest `main`; conflicting merges stay blocked and the push-triggered suite on `main` guards against stale-green breaks. One approving review, code-owner review on the enforcement surfaces owned in `.github/CODEOWNERS`, and every review thread resolved. *(branch protection, server-side)*
 
 Beyond the gates, `audit_main_ruleset` re-checks the live ruleset on every push to `main` with a privileged token — including `bypass_actors`, which the PR-time ruleset gate (`pr_checks_ruleset`) cannot observe. It is a post-merge alarm, not a merge gate, so it carries no law of its own. The release and publish path (`pr_post_release`, `pr_publish_pypi`), the weekly fuzz smoke, and the OpenSSF Scorecard analysis run outside the merge gate for the same reason.
 
@@ -66,7 +66,7 @@ Branch off `main`. Commit the first working increment and push to a remote branc
 
 Each push re-runs every gate. Prefer new commits to amends — amends don't give you anything and they muddle the PR history. Keep one logical change per commit; don't batch unrelated changes together. Before you request review, read your own full diff in GitHub — catch what you'd flag in someone else's PR.
 
-Merge unlocks when every required gate is green **and** the branch is up-to-date with `main`. Up-to-date is enforced server-side; rebase when main advances.
+Merge unlocks when every required gate is green. Branches need not be up-to-date with `main`; rebase only to resolve a conflict or to pick up a main-side fix the PR needs.
 
 When a gate fails, the gate's own output names the reason. Read the output, fix the code or the linked issue, push again. If the failure is the gate being wrong rather than the PR being wrong, fix the gate in its own PR — the ruleset drift gate (`pr_checks_ruleset`) will force the matching ruleset-snapshot update so no gate relaxation side-enters.
 

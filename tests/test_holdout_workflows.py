@@ -358,7 +358,7 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, retain):
         # Metadata predating this envelope remains valid only with its genuine ordinary V1 source proof.
         legacy = copy.deepcopy(metadata)
         legacy.pop('holdout_binding')
-        legacy['limen_version'] = '5.45.26'
+        legacy['limen_version'] = '5.45.27'
         (directory / 'metadata.json').write_text(json.dumps(legacy))
         sensor = Trainer(directory, project_root=root).train([rows[0]['round_id']])[0]
         assert sensor._fitted_params['_holdout']['experiment_record_id'] == rows[0]['holdout']['research_record_id']
@@ -416,6 +416,6 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, retain):
     _refuse_trainer(control_dir, control_root, monkeypatch, data=raw)
     before = json.loads((control_dir / 'metadata.json').read_text())
     before.pop('holdout_binding')
-    before['limen_version'] = '5.45.26'
+    before['limen_version'] = '5.45.27'
     (control_dir / 'metadata.json').write_text(json.dumps(before))
     _refuse_trainer(control_dir, control_root, monkeypatch, data=raw)
