@@ -1562,10 +1562,10 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     attribute_settings = AttributeSettings()
     def attribute_factory(data, **params):
         return logreg_binary(data, **(params | {'C': attribute_settings.depth}))
-    class Registry(dict):
+    class IndexedRegistry(dict):
         def __getitem__(self, key):
             return helper
-    indexed = Registry()
+    indexed = IndexedRegistry()
     def index_factory(data, **params):
         return indexed['build'](data, **params)
     def annotation_factory(data, **params):
