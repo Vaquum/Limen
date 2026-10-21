@@ -1890,8 +1890,14 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.18] - 2026-10-21
 
+- Preserve active merge-readiness runs when review and check-suite events arrive; backport the upstream scheduling correction and contract guard.
+- Enforce the shared per-PR readiness lane and reject event-specific lane mutations; backport the merged upstream regression guard.
+- Clarify that the readiness comment reports ruleset checks while separate classic protection can still block a merge.
+
+## [5.45.19] - 2026-10-21
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
-- Preserve legacy parallel recovery through 5.45.17 and isolate captured callable declarations from newer caller contracts.
+- Preserve legacy parallel recovery through 5.45.18 and isolate captured callable declarations from newer caller contracts.
 - Retain compatible built-in callable identity when captured declarations are unchanged.
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
 - Freeze scaler transformation behavior without changing fitted scaler objects.
