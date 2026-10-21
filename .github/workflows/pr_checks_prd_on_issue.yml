@@ -1,0 +1,198 @@
+name: pr_checks_prd_on_issue
+
+# Re-run the PRD gate on every open PR that closes an issue when that
+# issue's state changes, and heal each such PR's `pr_checks_prd`
+# verdict by rerunning the canonical pull_request run when it disagrees
+# with the fresh verdict.
+#
+# Why: `pr_checks_prd` runs on pull_request activity and caches its
+# verdict, but rules 3-4 depend on mutable issue state (OPEN, `prd`
+# label). A green PR goes stale if its linked issue is subsequently
+# closed, reopened, (un)labeled, edited, or deleted: branch protection
+# sees only the latest check-run per name per commit SHA and does not
+# re-fetch issue state. This workflow closes that gap.
+#
+# Delivery is rerun-only: this workflow never POSTs check-runs, so no
+# API-posted layer exists that could outrank the canonical run and no
+# posted-verdict reconciliation is needed. A rerun-API failure fails
+# this workflow loudly instead of silently keeping the stale verdict.
+# A linked PR with no canonical run yet (e.g. opened before this
+# workflow existed) is left to its next pull_request event.
+
+on:
+  issues:
+    types: [edited, labeled, unlabeled, closed, reopened, deleted]
+
+concurrency:
+  # Keyed per issue, so rapid-fire edits collapse.
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  rerun_prd_gate_for_linked_prs:
+    name: pr_checks_prd_on_issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      actions: write  # required to rerun the canonical pr_checks_prd run
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd  # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+        with:
+          python-version: '3.10'
+
+      - name: Find linked PRs
+        id: linked
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Why scan, not GraphQL: when the issue action is `deleted`
+          # the issue node is gone, `repository.issue(number:$num)`
+          # returns null, and `closedByPullRequestsReferences` is
+          # unreachable. A GraphQL-first path silently finds no PRs
+          # for deleted issues -- the very gap this workflow exists
+          # to close.
+          #
+          # Scanning every open PR's body with the SAME closing-keyword
+          # regex the gate uses produces the same set of linked PRs
+          # the gate would recognise, for every event action including
+          # `deleted`. Issues-event runs execute the default branch's
+          # code, so the imported parser is the trusted one.
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          ISSUE_NUM="${{ github.event.issue.number }}"
+
+          gh pr list --repo "$REPO" --state open --base main --limit 1000 \
+            --json number,body,headRefOid > open_prs.json
+
+          python3 - "$ISSUE_NUM" <<'PYEOF' > linked_prs.json
+          import json, sys
+          sys.path.insert(0, "governance")
+          from _common import CLOSING_KEYWORD_RE
+          target = int(sys.argv[1])
+          with open('open_prs.json', encoding='utf-8') as fh:
+              prs = json.load(fh)
+          linked = []
+          for pr in prs:
+              body = pr.get('body') or ''
+              if any(int(m.group(1)) == target for m in CLOSING_KEYWORD_RE.finditer(body)):
+                  linked.append({
+                      'number': pr['number'],
+                      'headRefOid': pr['headRefOid'],
+                  })
+          json.dump(linked, sys.stdout)
+          PYEOF
+
+          echo "linked PRs:"
+          jq -c '.[]' linked_prs.json
+          COUNT=$(jq 'length' linked_prs.json)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Re-run PRD gate per linked PR
+        if: steps.linked.outputs.count != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          ISSUE_NUM="${{ github.event.issue.number }}"
+          FAILURES=0
+
+          # Process substitution, not a pipe: the loop must export
+          # FAILURES to the final check below.
+          while IFS= read -r pr; do
+            PR_NUM=$(echo "$pr" | jq -r .number)
+            HEAD_SHA=$(echo "$pr" | jq -r .headRefOid)
+            echo "::group::re-running PRD gate for PR #$PR_NUM @ $HEAD_SHA"
+
+            gh pr view "$PR_NUM" --repo "$REPO" \
+              --json title,body,headRefOid > pr_view.json
+            if [ "$(jq -r '.headRefOid' pr_view.json)" != "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUM moved after discovery; leave the new head to its own run"
+              echo "::endgroup::"
+              continue
+            fi
+            jq -r '.title' pr_view.json > pr_title.txt
+            jq -r '.body // ""' pr_view.json > pr_body.txt
+
+            # Run the PRD gate; capture output and exit code.
+            PR_TITLE=$(cat pr_title.txt)
+            set +e
+            GATE_OUT=$(python governance/prd_gate.py \
+              --pr-title "$PR_TITLE" \
+              --pr-body-file pr_body.txt \
+              --repo "$REPO" 2>&1)
+            GATE_EXIT=$?
+            set -e
+            echo "$GATE_OUT"
+            if [ "$GATE_EXIT" -eq 2 ]; then
+              echo "::error::PRD gate setup failed for PR #$PR_NUM; refusing to leave a possibly stale verdict unflagged"
+              FAILURES=$((FAILURES + 1))
+              echo "::endgroup::"
+              continue
+            fi
+            if [ "$GATE_EXIT" -eq 0 ]; then
+              CONCLUSION="success"
+            else
+              CONCLUSION="failure"
+            fi
+
+            # Heal the canonical pull_request run when it disagrees
+            # with the fresh verdict. A queued or in-progress run for
+            # this head already computes a fresh verdict, so it takes
+            # precedence over any rerun.
+            RUNS=$(gh api \
+              "repos/$REPO/actions/workflows/pr_checks_prd.yml/runs?head_sha=$HEAD_SHA&per_page=100" \
+              --jq '[.workflow_runs[] | select(.event == "pull_request")]')
+            if [ "$(echo "$RUNS" | jq '[.[] | select(.status != "completed")] | length')" -gt 0 ]; then
+              echo "a fresh run is already in flight for $HEAD_SHA; skipping rerun"
+              echo "::endgroup::"
+              continue
+            fi
+            CANONICAL=$(echo "$RUNS" | jq -c '[.[] | select(.status == "completed")][0] // empty')
+            if [ -z "$CANONICAL" ]; then
+              echo "::warning::no completed pr_checks_prd run for $HEAD_SHA; leaving verdict to the next pull_request event"
+              echo "::endgroup::"
+              continue
+            fi
+            RUN_ID=$(echo "$CANONICAL" | jq -r .id)
+            RUN_CONCLUSION=$(echo "$CANONICAL" | jq -r .conclusion)
+            if [ "$RUN_CONCLUSION" = "$CONCLUSION" ]; then
+              echo "canonical run $RUN_ID already $CONCLUSION"
+              echo "::endgroup::"
+              continue
+            fi
+
+            LIVE_HEAD=$(gh pr view "$PR_NUM" --repo "$REPO" --json headRefOid --jq .headRefOid)
+            if [ "$LIVE_HEAD" != "$HEAD_SHA" ]; then
+              echo "PR #$PR_NUM moved during validation; skipping rerun"
+              echo "::endgroup::"
+              continue
+            fi
+            if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" > /dev/null; then
+              echo "canonical run $RUN_ID rerun requested ($RUN_CONCLUSION -> expected $CONCLUSION)"
+            else
+              echo "::error::rerun of canonical run $RUN_ID failed; verdict for $HEAD_SHA may be stale"
+              FAILURES=$((FAILURES + 1))
+            fi
+            echo "::endgroup::"
+          done < <(jq -c '.[]' linked_prs.json)
+
+          if [ "$FAILURES" -gt 0 ]; then
+            echo "::error::$FAILURES linked PR(s) could not be revalidated"
+            exit 1
+          fi

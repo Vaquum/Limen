@@ -48,6 +48,34 @@ def test_prd_workflow_contract() -> None:
     assert 'continue-on-error' not in workflow
 
 
+def test_prd_on_issue_workflow_contract() -> None:
+    workflow = (REPO_ROOT / '.github/workflows/pr_checks_prd_on_issue.yml').read_text(encoding='utf-8')
+
+    assert 'name: pr_checks_prd_on_issue' in workflow
+    assert 'types: [edited, labeled, unlabeled, closed, reopened, deleted]' in workflow
+    assert 'governance/prd_gate.py' in workflow
+    # Same-parser scan: linked PRs are found with the gate's own
+    # closing-keyword regex (a GraphQL-first path misses deleted
+    # issues, the gap this workflow exists to close).
+    assert 'CLOSING_KEYWORD_RE' in workflow
+    assert 'closedByPullRequestsReferences' in workflow
+    # Rerun-first delivery, and rerun-ONLY: no check-run POSTs means
+    # no API-posted layer to reconcile.
+    assert 'actions/runs/$RUN_ID/rerun' in workflow
+    assert 'actions: write' in workflow
+    assert 'checks: write' not in workflow
+    assert 'check-runs"' not in workflow
+    assert 'check-runs?' not in workflow
+    # A fresh in-flight run takes precedence over any rerun; a moved
+    # head is left to its own run; failures fail loud.
+    assert 'already in flight' in workflow
+    assert 'moved' in workflow
+    assert 'could not be revalidated' in workflow
+    assert 'done < <(jq' in workflow
+    assert '|| true' not in workflow
+    assert 'continue-on-error' not in workflow
+
+
 def test_merge_readiness_workflow_contract() -> None:
     workflow = READINESS_WORKFLOW.read_text(encoding='utf-8')
 

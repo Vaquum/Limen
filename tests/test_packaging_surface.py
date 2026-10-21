@@ -95,6 +95,12 @@ def test_prd_gate_surfaces() -> None:
     assert 'name: pr_checks_prd' in prd_workflow
     assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in prd_workflow
     assert 'governance/prd_gate.py' in prd_workflow
+    on_issue_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_prd_on_issue.yml').read_text(encoding='utf-8')
+    assert 'name: pr_checks_prd_on_issue' in on_issue_workflow
+    assert 'types: [edited, labeled, unlabeled, closed, reopened, deleted]' in on_issue_workflow
+    assert 'governance/prd_gate.py' in on_issue_workflow
+    assert 'actions/runs/$RUN_ID/rerun' in on_issue_workflow
+    assert 'checks: write' not in on_issue_workflow
     # The slice regime is gone without a trace: no template, no gate,
     # no interface-contract machinery, no workflows, no contract tests.
     for gone in (
