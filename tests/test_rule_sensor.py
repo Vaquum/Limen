@@ -18,7 +18,7 @@ from limen.yaml.resolver import resolve
 from tests.test_temporal_parameters import _config, _conditions
 
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
-KINDS = ['default', 'recorded', 'fold', 'leaves', 'already-formed', 'common', 'nulls', 'policy', 'sql-window', 'neutral-alias', 'logreg-alias']
+KINDS = ['default', 'recorded', 'fold', 'leaves', 'already-formed', 'common', 'nulls', 'policy', 'sql-window', 'neutral-alias', 'logreg-alias', 'optional-off']
 
 
 @pytest.fixture(scope='module')
@@ -59,8 +59,11 @@ def rule_campaign(request, tmp_path_factory, admitted_rule_aliases):
             {'id': 'choice', 'operator': 'or', 'operands': ['cross', 'slope', 'sql', 'not_above']},
             {'id': 'combined', 'operator': 'and', 'operands': ['entry', 'choice']},
         ]
-        config['sfd']['params']['price_floor'] = [float(bars['close'].median())]
+        config['sfd']['params']['price_floor'] = [float(bars.head(168)['close'].median())]
         manifest['strategy']['entry'] = 'combined'
+    if kind == 'optional-off':
+        manifest['indicators'] = [{'func': 'limen.indicators.ema', 'params': {'period': '{period}'}, 'include_if': 'use_ema'}]
+        config['sfd']['params'].update(period=[3], use_ema=[False])
     if kind == 'common':
         manifest['indicators'] = [{'func': 'limen.features.common_strategy_positions.common_strategy_positions', 'params': {'strategy': '{strategy}'}}]
         manifest['strategy'] = {'conditions': [{'id': 'entry', 'type': 'threshold', 'column': 'common_strategy_position', 'operator': '>', 'value': 0}], 'entry': 'entry'}
@@ -139,6 +142,8 @@ def test_recorded_rule_sensor_decisions(rule_campaign):
         assert rows and [row.datetime for row in rows] == valid['datetime'].to_list()
         assert [row.prediction for row in rows] == expected and sensor.predict(history) == actual[-1]
         assert len(actual) == history.height and len(rows) == valid.height
+        if kind == 'optional-off':
+            assert lookback == 0
         if kind == 'nulls':
             assert lookback == 2 and actual[0].reason == 'warm-up' and actual[32].reason == 'null-features'
         if kind == 'policy':
@@ -223,7 +228,7 @@ def test_rule_sensor_evidence_refusals(rule_campaign):
             trainer.train(['not-a-recorded-round'])
         altered = copy.deepcopy(trainer)
         selected = altered._original_log[ids[0]]
-        metric = next(name for name, value in selected.items() if name.startswith('test_') and isinstance(value, (int, float)) and np.isfinite(value))
-        selected[metric] += 1.0
+        assert isinstance(selected['position_rate_test'], (int, float)) and np.isfinite(selected['position_rate_test'])
+        selected['position_rate_test'] += 1.0
         with pytest.raises(ReconstructionError, match='metric mismatch'):
             altered.train([ids[0]])
