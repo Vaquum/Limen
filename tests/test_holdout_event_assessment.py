@@ -494,6 +494,15 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, wipe, 'episode linkage')
 
+    def relabel(report_dict):
+        execution = report_dict['execution']
+        intent_id = execution['ledger']['fills'][0]['intent_id']
+        target = next(row for row in execution['ledger']['intents'] if row['intent_id'] == intent_id)
+        target['reason'] = 'time_stop'
+        target['target'] = 0.5
+
+    _rewrite_report(root, report, relabel, 'signal linkage')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
