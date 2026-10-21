@@ -101,12 +101,10 @@ def run_experiment(yaml_path: Path,
                 factorize=uel_cfg.get('factorize', False),
                 workers=effective_workers,
             )
+            if uel.interrupted:
+                raise InterruptedError('Interrupted; checkpoint retained.')
         except Exception as exc:  # noqa: BLE001
             click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
-            return False
-
-        if uel._shutdown_requested:
-            click.secho('  Interrupted; checkpoint retained.', fg='yellow')
             return False
 
         output_format: str = uel_cfg.get('output_format', 'csv')

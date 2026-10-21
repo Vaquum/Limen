@@ -175,6 +175,8 @@ limen run --no-progress-bar compiled-research/selection.yaml
 limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
+`loop.interrupted` reports whether shutdown was requested during the run. CLI commands retain its checkpoint and exit unsuccessfully when this is true; a batch does not start another YAML file.
+
 ## Constructor contract
 
 <!-- reference: uel-constructor source=limen/experiment/experiment_core.py region=signature:UniversalExperimentLoop.__init__ role=signature -->

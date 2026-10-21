@@ -125,6 +125,10 @@ class UniversalExperimentLoop:
     check_parallel_admission = _parallel.admit_parallel
 
     @_holdout.run_guard
+    @property
+    def interrupted(self) -> bool:
+        return self._shutdown_requested
+
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
             context_params: dict[str, object] | None = None, params: Callable[[], dict[str, object]] | None = None,
