@@ -179,6 +179,11 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
     _rewrite_report(root, report, lambda tampered: tampered['execution'].update(
         ledger={name: getattr(flat, name).to_dicts() for name in ('states', 'intents', 'fills', 'episodes', 'funding')}), 'ledger activity')
 
+    def fabricate(report_dict):
+        report_dict['execution']['metrics']['ending_equity']['value'] += 1000.0
+
+    _rewrite_report(root, report, fabricate, 'metrics evidence')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:

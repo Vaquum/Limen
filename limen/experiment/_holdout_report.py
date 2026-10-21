@@ -230,7 +230,7 @@ def read_holdout_report(project_root: str | Path, attempt_id: str) -> dict[str, 
             raise ValueError('Invalid retained source/role columns')
         _verify(report, record, rows)
         return report
-    except (OSError, ValueError, KeyError, TypeError, sqlite3.Error, pl.exceptions.PolarsError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, ZeroDivisionError, sqlite3.Error, pl.exceptions.PolarsError) as exc:
         raise ValueError(f'Holdout attempt {attempt_id}: {exc}') from exc
 
 
@@ -293,24 +293,24 @@ def _verify(report: dict[str, object], record: dict[str, object], rows: pl.DataF
 def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: Mapping[str, object], planned: Mapping[str, int]) -> dict[str, object]:
     members = cast(list[dict[str, object]], spec['members'])
     pin = cast(dict[str, object], members[0].get('execution', {})) if len(members) == 1 else {}
-    ledger = cast(dict[str, list[dict[str, object]]], execution['ledger'])
-    contract = cast(dict[str, object], execution['contract'])
-    initial = cast(dict[str, object], contract['initial_conditions'])
-    product = cast(dict[str, object], cast(dict[str, object], execution['policy'])['product'])
-    partition = cast(list[int], contract['partition'])
-    tape = cast(list[dict[str, object]], execution['tape'])
-    signals = cast(list[dict[str, object]], execution['signals'])
-    rows = cast(list[dict[str, object]], contract['signal_rows'])
-    opens = final['open_ns'].to_list()
-    intents = {row['intent_id'] for row in ledger['intents']}
-    episodes = {row['episode_id'] for row in ledger['episodes']}
-    times = [cast(int, row['time_ns']) for row in ledger['states']]
-    fills = [cast(int, row['time_ns']) for row in ledger['fills']]
-    requested = [cast(int, row['requested_at_ns']) for row in ledger['intents']]
+    ledger, contract = cast(dict[str, list[dict[str, object]]], execution['ledger']), cast(dict[str, object], execution['contract'])
+    initial, product = cast(dict[str, object], contract['initial_conditions']), cast(dict[str, object], cast(dict[str, object], execution['policy'])['product'])
+    partition, tape, signals = cast(list[int], contract['partition']), cast(list[dict[str, object]], execution['tape']), cast(list[dict[str, object]], execution['signals'])
+    rows, opens = cast(list[dict[str, object]], contract['signal_rows']), final['open_ns'].to_list()
+    intents, episodes = {row['intent_id'] for row in ledger['intents']}, {row['episode_id'] for row in ledger['episodes']}
+    times, fills, requested = [cast(int, row['time_ns']) for row in ledger['states']], [cast(int, row['time_ns']) for row in ledger['fills']], [cast(int, row['requested_at_ns']) for row in ledger['intents']]
+    equities = [cast(float, row['equity']) for row in ledger['states']]
+    ending, initial_equity = equities[-1], cast(float, execution['initial_equity'])
+    drawdown = float(pl.DataFrame({'equity': equities}).select((pl.col('equity') / pl.max_horizontal(pl.col('equity').cum_max(), pl.lit(initial_equity)) - 1).min()).item())
+    fees, slip, funding = (sum(cast(float, row[key]) for row in ledger[frame]) for frame, key in (('fills', 'fee'), ('fills', 'slippage'), ('funding', 'recognized_delta')))
+    closed = [row for row in ledger['episodes'] if row['closed_at_ns'] is not None]
+    exposures = [cast(float, row['absolute_exposure']) for row in ledger['states'] if row['signal_sample']]
+    replayed = {'total_return': ending / initial_equity - 1, 'ending_equity': ending, 'max_drawdown': drawdown, 'net_pnl': ending - initial_equity, 'gross_pnl': ending - initial_equity + fees + slip - funding, 'fees': fees, 'slippage': slip, 'funding_pnl': funding, 'completed_trades': float(len(closed)), 'open_trades': float(len(ledger['episodes']) - len(closed)), 'episode_win_rate': sum(cast(float, row['net_pnl']) > 0 for row in closed) / len(closed) if closed else 0.0, 'avg_absolute_exposure': sum(exposures) / len(exposures) if exposures else 0.0}
+    values = {name: field['value'] for name, field in cast(dict[str, dict[str, object]], execution['metrics']).items()}
+    mismatch = set(values) != set(replayed) or any(values[name] != (value if math.isfinite(value) else None) for name, value in replayed.items())
     aligned = len(tape) == len(opens) == len(signals) == len(rows)
     chained = aligned and not any(point['open_ns'] != open_ns or point['trade_contract_digest'] != execution['research_digest'] or point['available_at_ns'] != signal['available_at_ns'] or signal['target'] != point['prediction'] or (signal['row_id'], signal['available_at_ns']) != (row['row_id'], row['available_at_ns']) for point, signal, row, open_ns in zip(tape, signals, rows, opens, strict=True))
-    checks = ((set(execution) != _EXECUTION_KEYS or set(ledger) != _LEDGER_KEYS, 'Invalid execution evidence schema'),
-        (execution['research_digest'] != pin.get('research_digest') or execution['policy'] != pin.get('policy') or execution['initial_equity'] != pin.get('initial_equity'), 'Invalid execution evidence pin'),
+    checks = ((set(execution) != _EXECUTION_KEYS or set(ledger) != _LEDGER_KEYS, 'Invalid execution evidence schema'), (execution['research_digest'] != pin.get('research_digest') or execution['policy'] != pin.get('policy') or execution['initial_equity'] != pin.get('initial_equity'), 'Invalid execution evidence pin'),
         (contract_digest(cast(Mapping[str, JsonValue], contract)) != execution['assessment_digest'], 'Invalid execution contract digest'),
         (cast(dict[str, object], contract['rules']).get('terminal') != 'mark_without_close', 'Invalid execution terminal semantics'),
         (initial.get('equity') != pin.get('initial_equity') or initial.get('quantity') != 0 or initial.get('currency') != product.get('quote_currency'), 'Invalid execution economics'),
@@ -322,7 +322,7 @@ def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: M
         (times != sorted(times) or fills != sorted(fills) or requested != sorted(requested), 'Invalid execution time order'),
         (any(moment < partition[0] or moment > partition[1] for moment in (*times, *fills, *requested)), 'Invalid execution time bounds'),
         (not times or times[0] != partition[0] or ledger['states'][0]['equity'] != pin.get('initial_equity') or ledger['states'][0]['quantity'] != 0, 'Invalid execution accounting anchor'), (any(all((row['requested_at_ns'], row['target']) != (signal['available_at_ns'], cast(float, signal['target']) * cast(float, cast(dict[str, object], execution['policy'])['notional_rate'])) for signal in signals) for row in ledger['intents'] if row['reason'] == 'signal'), 'Invalid execution signal linkage'),
-        ([point['prediction'] for point in tape] != final['aggregate_prediction'].to_list(), 'Invalid execution retained predictions'), (contract['policy'] != execution['policy'], 'Invalid execution contract policy'))
+        ([point['prediction'] for point in tape] != final['aggregate_prediction'].to_list(), 'Invalid execution retained predictions'), (contract['policy'] != execution['policy'], 'Invalid execution contract policy'), (mismatch, 'Invalid execution metrics evidence'))
     for failed, message in checks:
         if failed:
             raise ValueError(message)
