@@ -284,7 +284,7 @@ def test_manifest_source_holdout_rejection(manifest_type, tmp_path):
             _holdout_research.bind_manifest(manifest, root)
             with patch.object(DataSourceResolver, 'resolve', side_effect=AssertionError('resolver must not run')) as resolver, \
                     patch('limen.data.historical_data._read_any_file', side_effect=AssertionError('loader must not run')) as loader:
-                with pytest.raises(ValueError, match='Holdout source must be native default spot klines or local Parquet'):
+                with pytest.raises(ValueError, match='Holdout source must be native default spot klines or a local Parquet or CSV file'):
                     manifest.fetch_data()
                 resolver.assert_not_called()
                 loader.assert_not_called()
