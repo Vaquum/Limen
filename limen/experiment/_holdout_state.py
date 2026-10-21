@@ -29,7 +29,7 @@ _ATOMIC_TYPES = (str, bool, bytes)
 _NO_ATTRIBUTE_TYPES = (dict, list, tuple, set, frozenset, defaultdict, deque, np.ndarray, str, int, float, bytes, bytearray)
 _CONTAINER_TYPES = (Mapping, tuple, list, set, frozenset, deque, np.ndarray, np.generic)
 # Verify canonical identity rather than assume the interpreter's integer cache.
-_CANONICAL_INTS = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
+_CANONICAL_INTS: MappingProxyType[object, int] = MappingProxyType({value: int(str(value)) for value in range(-5, 257) if int(str(value)) is int(str(value))})
 
 def _typing_metadata(value: object) -> dict[str, object] | None:
     if type(value) in _FORM_TYPES:
@@ -129,7 +129,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
 
     def node(item: object) -> object:
         item_type = type(item)
-        if item is None or item_type in _ATOMIC_TYPES or (item_type is int and item is _CANONICAL_INTS.get(cast(int, item))):
+        if item is None or item_type in _ATOMIC_TYPES or (item_type is int and item is _CANONICAL_INTS.get(item)):
             return item
         if (reference := seen.get(id(item))) is not None:
             return ('ref', reference)
@@ -219,5 +219,5 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
     result = node(value)
     aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
     encoded = pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
-    del node, structure
+    cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index('structure')].cell_contents = None
     return encoded

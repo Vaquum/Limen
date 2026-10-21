@@ -11,7 +11,7 @@ import dis
 import logging
 import pickle
 import sys
-from types import CodeType, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, ModuleType
+from types import CellType, CodeType, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, ModuleType
 from typing import Literal, Union, cast
 
 import numpy as np
@@ -294,7 +294,7 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
     if capture is not None:
         capture.extend(seen.values())
     result: list[object] = [fitted_witness((tuple(values), evidence))]
-    del visit, methods
+    cast(tuple[CellType, ...], visit.__closure__)[visit.__code__.co_freevars.index('visit')].cell_contents = None
     return result
 
 

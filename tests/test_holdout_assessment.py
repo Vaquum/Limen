@@ -21,7 +21,6 @@ import numpy as np
 import polars as pl
 import pytest
 
-from limen.calibration import fit_calibrator
 from limen.cohort import Cohort
 from limen.experiment import UniversalExperimentLoop
 from limen.experiment import _holdout_attempts as attempts
