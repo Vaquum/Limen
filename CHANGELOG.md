@@ -1932,6 +1932,11 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Allow merging without rebasing onto latest main; retain conflict blocking, review dismissal, and all required checks.
 - Sync the ruleset snapshot and pinned live fixtures with the relaxed status check policy.
 
+## [5.45.29] - 2026-10-21
+
+- Preserve native LightGBM `best_iteration` across owned holdout copies instead of refusing it.
+- Bind `LogRegScaler` to the scaling rules it was fitted with, so frozen holdout state covers them and later rule changes cannot alter a frozen assessment.
+
 ## [5.46.0] - 2026-10-21
 
 - Ground Compiled Research in comprehensive YAML declarations and CLI execution; align the book, reference, contracts and exact-source proof.
