@@ -515,6 +515,15 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, tripguard, 'signal linkage')
 
+    def suppress(report_dict):
+        execution = report_dict['execution']
+        target = next(row for row in execution['ledger']['intents'] if row['reason'] == 'signal' and row['target'] == 0.0
+                      and any(fill['intent_id'] == row['intent_id'] for fill in execution['ledger']['fills']))
+        execution['ledger']['intents'] = [row for row in execution['ledger']['intents'] if row['intent_id'] != target['intent_id']]
+        execution['ledger']['fills'] = [row for row in execution['ledger']['fills'] if row['intent_id'] != target['intent_id']]
+
+    _rewrite_report(root, report, suppress, 'signal coverage')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
