@@ -102,7 +102,7 @@ def prove_wheel(root: Path, temporary: Path, *, released_wheel: Path | None = No
     isolated = temporary / 'isolated'
     venv.EnvBuilder(with_pip=True).create(isolated)
     python = isolated / 'bin/python'
-    run([python, '-m', 'pip', 'install', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
+    run([python, '-m', 'pip', 'install', '--no-compile', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
          '--require-hashes', '-r', root / offline['runtime_lock'], '-r', root / 'docs/examples/requirements-build.txt'], cwd=temporary)
     if released_wheel is None:
         wheel_dir = temporary / 'wheels'

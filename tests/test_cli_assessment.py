@@ -58,6 +58,24 @@ def test_assessment_rejects_changed_declaration_before_reconstruction(recorded_c
     assert result.exit_code != 0 and 'differs from the recorded' in result.output
 
 
+def test_cli_promotes_yaml_walk_forward_folds(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'inputs').mkdir()
+    for name in ('spot_1h_20240101_20240116.parquet', 'spot_1h_20240101_20241231.parquet'):
+        shutil.copyfile(ROOT / 'tests/fixtures' / name, tmp_path / 'inputs' / name)
+    shutil.copyfile(ROOT / 'docs/examples/compiled-research/walk_forward.yaml', tmp_path / 'folds.yaml')
+    runner = CliRunner()
+    executed = runner.invoke(cli, ['run', '--no-progress-bar', 'folds.yaml'])
+    assert executed.exit_code == 0, executed.output
+    assessed = runner.invoke(cli, ['assess', 'folds.yaml', '--results', 'results/dev/compiled-walk_forward'])
+    assert assessed.exit_code == 0, assessed.output
+    report = json.loads((tmp_path / 'results/dev/compiled-walk_forward/assessment.json').read_text())
+    assert report['folds'] == [0, 1] and report['members'] == 2
+    assert {member[2] for member in report['member_ids']} == {0, 1}
+    tape = pl.read_parquet(tmp_path / 'results/dev/compiled-walk_forward/predictions.parquet')
+    assert tape.filter(pl.col('reason').is_null()).height > 0
+
+
 @pytest.mark.parametrize('change', [{'metric': 'accuracy'}, {'top_k': True}, {'folds': [0, 0]}, {'predict': 'yes'}, {'unused': True}])
 def test_invalid_assessment_is_rejected(change):
     document, errors = parse(ROOT / 'docs/examples/compiled-research/selection.yaml')

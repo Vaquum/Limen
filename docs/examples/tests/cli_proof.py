@@ -8,7 +8,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from scenario_oracles import verify_acceptance
+from scenario_oracles import execution_clocks, verify_acceptance
 
 
 DIRECTORIES = {
@@ -69,11 +69,22 @@ def verify_execution(project, name):
     assert set(log['risk_span']) == {6, 12}
     raw_funding = json.loads((project / 'inputs/btcusdt_funding_20240101_20240108.json').read_text())['records']
     rates = {row['fundingTime'] * 1_000_000: (float(row['fundingRate']), float(row['markPrice'])) for row in raw_funding}
+    raw = pl.read_parquet(project / 'inputs/spot_1h_20240101_20241231.parquet')
     for row, record in zip(log.iter_rows(named=True), records(directory), strict=True):
         ledger = record['trade_ledger']
         fills = ledger['fills']
         assert fills and row['backtest_completed_trades'] > 0
-        assert all(fill['time_ns'] >= fill['available_at_ns'] for fill in fills if 'available_at_ns' in fill)
+        contract = record['trade_contract']
+        partition = contract['partition']
+        interval = contract['policy']['source_interval_seconds'] * 1_000_000_000
+        source = raw.filter(pl.col('datetime').dt.epoch('ns').is_between(*partition, closed='left'))
+        observations = [dict(item, row_id=f'row:{index}', start_ns=stamp, end_ns=stamp + interval,
+                             open_available_at_ns=stamp, available_at_ns=stamp + interval)
+                        for index, (item, stamp) in enumerate(zip(source.to_dicts(), source['datetime'].dt.epoch('ns'), strict=True))]
+        execution_clocks({'observations': observations, 'contract': contract, 'partition': partition}, ledger, raw)
+        final = ledger['states'][-1]
+        assert row['backtest_total_return'] == pytest.approx(final['equity'] / contract['initial_conditions']['equity'] - 1)
+        assert row['backtest_fees'] == pytest.approx(sum(fill['fee'] for fill in fills))
         if name == 'funded':
             assert ledger['funding']
             for payment in ledger['funding']:
@@ -84,6 +95,39 @@ def verify_execution(project, name):
                 assert payment['recognized_delta'] == pytest.approx(-quantity * rate * price, rel=1e-12, abs=1e-12)
             assert row['backtest_funding_pnl'] == pytest.approx(sum(payment['recognized_delta'] for payment in ledger['funding']))
     return {'rounds': log.height, 'risk_spans': log['risk_span'].to_list()}
+
+
+def verify_allocation(project, name):
+    directory = project / 'results/dev' / ('compiled-' + name)
+    log = checked_log(directory, 2)
+    metadata = json.loads((directory / 'metadata.json').read_text())
+    dates = metadata['yaml_reference']['sfd']['manifest']['split_dates']
+    raw = pl.read_parquet(project / 'inputs/spot_1h_20240101_20241231.parquet')
+    window = [datetime.fromisoformat(dates[key]).replace(tzinfo=raw['datetime'][0].tzinfo) for key in ('train_start', 'train_end')]
+    training = raw.filter(pl.col('datetime').is_between(*window, closed='left'))
+    raw_digest = hashlib.sha256(str(training.schema).encode() + training.hash_rows(seed=0).to_numpy().tobytes()).hexdigest()
+    for row, record in zip(log.iter_rows(named=True), records(directory), strict=True):
+        model = record['learning_binding']['model']
+        assert model['training']['raw_train'] == raw_digest
+        assert model['primary']['reference'].endswith('.logreg_binary' if name == 'allocation_ml' else '.rule_based')
+        outcomes = pl.DataFrame(record['trade_ledger']['allocation_training'])
+        complete = outcomes.filter(pl.col('available'))
+        assert complete.height == row['allocation_training_completed'] >= 2
+        assert outcomes['opportunity_id'].n_unique() == outcomes.height
+        np.testing.assert_allclose(complete['net_return_on_entry_notional'], complete['net_pnl'] / complete['entry_notional'])
+        for fold in model['training']['folds']:
+            samples = complete.filter(pl.col('opening_block') == fold['block'])
+            assert samples['label_available_ns'].lt(fold['end_ns']).all()
+            assert samples['decision_available_at_ns'].ge(fold['start_ns']).all()
+            if name == 'allocation_ml':
+                assert 0 < fold['fit_prefix_rows'] < training.height
+        exposure = predictions(directory, record)
+        assert (exposure >= 0).all() and (exposure <= model['allocation_params']['max_size']).all()
+        if name == 'allocation_funded':
+            policy = model['training']['economics']['funding']
+            assert policy['preset_id'] == 'binance_btcusdt' and policy['approximation'] == 'recorded_exact'
+            assert record['trade_ledger']['funding']
+    return log.height
 
 
 def verify_project(project):
@@ -143,9 +187,26 @@ def verify_project(project):
     bars = checked_log(base / 'compiled-bars', 3)
     assert set(bars['bar_type']) == {'volume', 'trade', 'liquidity'}
     summaries['bars'] = {'modes': bars['bar_type'].to_list()}
-    allocation = {name: checked_log(base / ('compiled-' + name), 2).height for name in ('allocation', 'allocation_ml', 'allocation_funded')}
+    allocation = {name: verify_allocation(project, name) for name in ('allocation', 'allocation_ml', 'allocation_funded')}
     summaries['allocation'] = allocation
     original, restored = project / 'results/compiled-project', project / 'results/compiled-restored'
+    index = json.loads((original / 'manifests/committed/index.json').read_text())['manifests']
+    assert len(index) == 2
+    parent = next(item for item in index if item['parent_id'] is None)
+    child = next(item for item in index if item['parent_id'] is not None)
+    assert child['parent_id'] == parent['id']
+    runs = list(original.glob('results/*/*/metadata.json'))
+    assert len(runs) == 1 and json.loads(runs[0].read_text())['manifest_id'] == parent['id']
+    campaign = pl.read_csv(runs[0].parent / 'results.csv')
+    parquet = pl.read_parquet(runs[0].parent / 'results.parquet')
+    assert campaign.height == campaign['id'].n_unique() == 4
+    assert set(campaign['C']) == {.1, .5, 1., 2.}
+    assert campaign.columns == parquet.columns
+    for column in campaign.columns:
+        if campaign[column].dtype.is_numeric():
+            np.testing.assert_allclose(campaign[column], parquet[column], equal_nan=True)
+        else:
+            assert campaign[column].to_list() == parquet[column].to_list()
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=original, text=True).split('\0')
     assert all((original / path).read_bytes() == (restored / path).read_bytes() for path in tracked if path and not (original / path).is_symlink())
     summaries['command_line'] = {'restored_files': len([name for name in tracked if name])}

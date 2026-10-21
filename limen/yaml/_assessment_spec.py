@@ -55,7 +55,7 @@ def assessment_spec(document: Mapping[str, object]) -> Assessment | None:
     source = spec.get('inference_source')
     if source is not None and (not isinstance(source, str) or not source.strip() or not predict):
         raise ValueError('assessment.inference_source requires prediction and a nonblank file path')
-    return Assessment(metric, cast(str, direction), count, tuple(cast(list[int], folds)), predict, source)
+    return Assessment(metric, cast(str, direction), int(count), tuple(int(fold) for fold in cast(list[int], folds)), predict, source)
 
 
 def holdout_spec(document: Mapping[str, object]) -> dict[str, object] | None:

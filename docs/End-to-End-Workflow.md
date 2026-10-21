@@ -42,13 +42,13 @@ The first command executes the small selection YAML. The shell script runs the c
 
 The selection declaration applies chronological splits before preparation, fits target/scaler state on training and ranks two logistic candidates by validation event-ledger return. Trainer reconstructs the selected recorded round using the original splits and checks replayed metrics. Reconstruction is a refit under the recorded contract, rather than restoration of arbitrary model weights.
 
-Its `project.sh` validates, profiles, compiles, commits and executes the same recorded configuration through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
+Its `project.sh` validates, profiles, compiles, commits and executes the recorded production declaration in `project.yaml` through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
 
 ## Review the evidence by decision
 
 | Decision | Python project | Compiled project | Contract |
 |---|---|---|---|
-| Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison and model families; shared feedback | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
+| Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison, model families and YAML reducers | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
 | Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Reconstruct declaration, queue/results and a selected Sensor; compare complete artifacts | [Recovery](Advanced-Search.md#resume-flow) |
 | Evaluate across time | Own fold fitting, validation selection and later Sensor decisions | Declared folds, purge/embargo and qualified fold reconstruction | [Walk-forward](Walk-Forward.md) |
 | Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four configured modes and recorded Sensor reconstruction | [Calibration](Calibration.md) |

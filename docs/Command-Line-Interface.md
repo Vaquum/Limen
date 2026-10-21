@@ -14,7 +14,7 @@ limen --version
 limen list-templates
 mkdir -p results/compiled-project
 cp compiled-research/limen.toml results/compiled-project/limen.toml
-cp compiled-research/selection.yaml results/compiled-project/research.yaml
+cp compiled-research/project.yaml results/compiled-project/research.yaml
 cp -R "$bundle/inputs" results/compiled-project/inputs
 printf 'inputs/\nresults/dev/\n' > results/compiled-project/.gitignore
 git init --quiet --bare results/compiled-backup.git
@@ -34,7 +34,8 @@ for definition in manifests/committed/*.yaml; do
 done
 limen lineage "$identity"
 limen fork "$identity" recorded-child
-limen commit manifests/recorded-child.yaml --message "docs: record the child definition"
+cp "$bundle/compiled-research/project_child.yaml" manifests/recorded-child-production.yaml
+limen commit manifests/recorded-child-production.yaml --parent "sha256:$identity" --message "docs: record the child definition"
 limen reindex
 limen run --no-progress-bar "manifest://sha256:$identity"
 limen backup

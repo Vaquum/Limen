@@ -144,7 +144,7 @@ Use feedback when changing the remaining search belongs to the research design. 
 
 ## What `experiment_dir` stores
 
-When `experiment_dir` is set, Python/MSQ writes:
+Python Research persists these files when `experiment_dir` is set. The Compiled CLI writes them beneath its resolved YAML output path:
 
 | File | Meaning |
 |---|---|
@@ -153,9 +153,8 @@ When `experiment_dir` is set, Python/MSQ writes:
 | `checkpoint.json` | search state for resume |
 | `audit.jsonl` | feedback-cycle audit trail |
 | `metadata.json` | experiment metadata used by `Trainer` |
-| `interventions.json` | optional input file polled by the feedback controller when the file exists |
 
-Unlike the other files above, `interventions.json` is not produced by the run. It is an optional external control file that the feedback controller watches when `experiment_dir` is present.
+The [controller extension reference](Developer/Pruning-Strategies.md#manual-intervention) describes caller-owned callback and file controls. Compiled Research declares its adaptive controls in YAML.
 
 ## Resume flow
 

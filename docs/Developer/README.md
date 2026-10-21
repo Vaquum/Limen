@@ -46,7 +46,7 @@ For research behavior changes:
 3. For Compiled Research prep, preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations. Python Research keeps methodology caller-owned.
 4. For target changes, read [Targets](../Targets.md); preserve training-only threshold fitting in the governed pipeline.
 5. Declare Compiled Research search spaces through Manifest/YAML params; preserve caller-owned parameter and search choices in Python Research.
-6. Run compiled experiments through CLI/Manifest, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
+6. Run Compiled experiments through unchanged YAML and CLI, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
 7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
 8. Make affected code, canonical examples, docs and tests change together. Every PR also updates changelog and version metadata.
 9. Review the full GitHub diff before requesting review.

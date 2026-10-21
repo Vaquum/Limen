@@ -2331,7 +2331,7 @@
       ],
       "recorded_window": "quarter-hour: January 1\u201322 2025",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. All four declared modes reconstruct; threshold-only statistics preserve unavailable values."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate all four calibration/threshold combinations and preserve unavailable threshold statistics. Native API regression tests separately cover reconstruction."
     },
     "python/execution": {
       "interface": "python",
@@ -2392,9 +2392,9 @@
         "matching Limen wheel and recorded input bundle",
         "data, stats and boosting extras for the complete project"
       ],
-      "recorded_window": "quarter-hour: January 1\u201322 2025; 90-second trade slice May 23 2025",
+      "recorded_window": "quarter-hour: January 1\u201322 2025",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. All three post-split formation modes; shared recorded-trade preprocessing; no full ML population claimed for the short slice."
+      "assertions": "Execute unchanged YAML through the installed CLI; validate three post-split formation modes and recorded payloads. The short recorded-trade diagnostic belongs to the Python project."
     },
     "compiled/allocation": {
       "interface": "compiled",
@@ -2409,7 +2409,7 @@
       ],
       "recorded_window": "hourly: January 2\u201319 2024; paired recorded funding January 1\u20138 2024",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Execute unchanged YAML through the installed CLI; validate actual native artifacts, source identities, scenario semantics and declared Sensor/Cohort handoff. Original rule/learned primary predictions, independent prefix-fit digests, completed-outcome purging, per-opportunity risk caps and exact source bindings; paired recorded funding effects; batch research only."
+      "assertions": "Execute unchanged YAML through the installed CLI; verify rule and learned primary identities, exact recorded training-source digests, completed-outcome purging, exposure limits, native prediction payload hashes and declared recorded funding. Component regression tests additionally establish prefix-fit identities and independent risk mapping."
     },
     "compiled/command_line": {
       "interface": "compiled",

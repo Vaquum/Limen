@@ -231,3 +231,7 @@ Search seeds govern candidate order. The random-binary diagnostic is stochastic 
 The guarded project reserves January 5–6, 2024, before research. Earlier exposure remains unknown for local recorded files. Reservation and freezing protect this local workflow; they cannot prove that another person or process never read those observations.
 
 The [documentation contract](../../Developer/Documentation-System.md) requires exact excerpt equality, execution of every declared scenario, independent assertions, and source-changing commit/merged-PR provenance. Candidate checks are distinct from released-wheel publication. Historical observations retain their original revision and cannot be relabelled as current CLI output.
+
+The project lifecycle uses the static production declaration in `project.yaml`. Its four candidates share the selection pipeline; production mode permits content-addressed commits and lineage. The shell script copies that declaration unchanged.
+
+`limen fork` leaves an editable development declaration. The lifecycle commits the separately reviewed `project_child.yaml` unchanged, with the original identity supplied through `--parent`; its content and lineage are explicit.

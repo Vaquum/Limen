@@ -6,9 +6,9 @@ Use this page when implementing or reviewing a reducer. For user-facing configur
 
 The [Python project](../examples/python-research/README.md) and
 [Compiled project](../examples/compiled-research/README.md) both exercise a
-three-candidate budget and mixed reducer/callback/file feedback. Maintain their
-ordering, actual injected-candidate scores and checkpoint assertions when
-changing the controller or queue. The full functions below use their projects'
+three-candidate budget. The Python project also exercises mixed reducer, callback
+and file feedback. Maintain its ordering, injected-candidate scores and checkpoint
+assertions when changing the controller or queue. The full functions below use their projects'
 imports and recorded-data helpers.
 
 ## Prerequisites
@@ -249,23 +249,9 @@ def mixed_feedback(data_dir, output):
 
 ### Intervention file
 
-Artifact-backed runs poll `interventions.json` in the experiment directory. When its modification time changes, the controller expects a JSON array of ordinary intervention dictionaries. Missing `source` fields are filled with `intervention_file`. The Compiled project declares its resource reducer in YAML. Operators can create an intervention file after a CLI run starts; precreating it in a fresh results directory fails the initial-state guard:
+Artifact-backed controller integrations poll `interventions.json` in the experiment directory. When its modification time changes, the controller expects a JSON array of ordinary intervention dictionaries. Missing `source` fields are filled with `intervention_file`. The Python mixed-feedback example above creates the file during execution; precreating it in a fresh results directory fails the initial-state guard. An unchanged file is not applied twice within the same controller lifetime, and checkpoints retain its observed modification time.
 
-<!-- example: pruning-compiled-file source=docs/examples/compiled-research/adaptive.yaml region=budget_config scenario=search interface=compiled role=executed -->
-```yaml
-uel:
-  output_path: compiled-adaptive
-  n_permutations: 4
-  search_strategy:
-    type: grid
-  output_format: csv
-  checkpoint_interval: 1
-  pruning_strategies:
-  - type: budget
-    params:
-      max_permutations: 3
-  feedback_interval: 1
-```
+This is an optional component integration surface. The canonical Compiled project keeps its research controls in YAML through `uel.pruning_strategies`.
 
 ## Intervention operations
 
