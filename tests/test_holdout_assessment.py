@@ -1474,7 +1474,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     def module_factory(data, **params):
         return helpers.build(data, **params)
     class Registry:
-        registry = {'build': helper}
+        registry: ClassVar[dict[str, object]] = {'build': helper}
         @classmethod
         def build(cls, data, **params):
             return cls.registry['build'](data, **params)
