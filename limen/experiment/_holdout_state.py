@@ -157,7 +157,7 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         attributes = _attributes(item) if issubclass(item_type, _CONTAINER_TYPES) else {}
         state = node(attributes) if attributes else None
         if inspect.isfunction(item):
-            result = ('function', item.__module__, item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(item.__closure__), node(vars(item)), node(item.__annotations__))
+            result = ('function', node(item.__module__), item.__qualname__, item.__name__, node(item.__doc__), node(getattr(item, '__type_params__', ())), code_digest(item.__code__), node(item.__defaults__), node(item.__kwdefaults__), node(item.__closure__), node(vars(item)), node(item.__annotations__))
         elif item_type is CellType:
             result = ('cell', *(node(part) for part in children(item)))
         elif _booster(item):

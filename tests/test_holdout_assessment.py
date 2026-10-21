@@ -1608,6 +1608,30 @@ def test_frozen_code_digest_ignores_reference_bookkeeping(metadata):
     assert code_digest(code) == expected
 
 
+@pytest.mark.parametrize('kind', ['module', 'qualname'])
+def test_frozen_function_lookup_metadata(native_assessment_case, kind):
+    class MetadataPolicy(LogRegBinary):
+        adjust = staticmethod(later_probabilities)
+        def predict(self, data):
+            result = super().predict(data)
+            result['_probs'] = self.policy.__module__(result['_probs']) if kind == 'module' else getattr(self, self.policy.__qualname__)(result['_probs'])
+            return result
+    policy = FunctionType(identity_probabilities.__code__, identity_probabilities.__globals__, 'metadata_policy')
+    if kind == 'module':
+        policy.__module__ = later_probabilities
+    else:
+        policy.__qualname__ = 'adjust'
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = MetadataPolicy
+    selected._model.policy = policy
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:

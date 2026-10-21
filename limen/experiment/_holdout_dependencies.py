@@ -29,8 +29,7 @@ _ATOMIC_TYPES = (str, bool, int, float, bytes, type(Union), type(Literal))
 _READER_TYPES: tuple[type[object], ...] = (list, tuple, dict, deque)
 
 def fitting_call(module: str, name: str) -> bool:
-    return (name.rsplit('.', 1)[-1] in FITTING_METHODS
-            or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
+    return (name.rsplit('.', 1)[-1] in FITTING_METHODS or f'{module}.{name}' in ('limen.experiment._shim_fractional_diff.fit_order', 'limen.features.fractional_diff.find_min_d')
             or (module.startswith(('limen.scalers.', 'limen.targets.')) and name.rsplit('.', 1)[-1] == '__init__'))
 
 
@@ -88,7 +87,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
             modules = (origin, type(getattr(value, '__self__', None)).__module__, getattr(getattr(value, '__objclass__', None), '__module__', ''))
             if entropy_call(value) or any(isinstance(module, str) and module.startswith(('numpy.random', 'random', 'secrets')) for module in modules):
                 raise ValueError('Holdout inference has an unowned random dependency')
-            visit(getattr(value, '__name__', None), annotation=True)
+            for name in ('__name__', '__module__', '__qualname__'):
+                visit(getattr(value, name, None), annotation=True)
         if inspect.ismethod(value):
             visit(value.__func__)
             visit(value.__self__)
