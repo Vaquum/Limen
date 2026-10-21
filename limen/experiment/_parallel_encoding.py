@@ -19,7 +19,7 @@ import polars as pl
 
 from limen.experiment._parallel_identity import declaration_changed, identity_snapshot, module_identity, restore_function_metadata
 from limen.experiment._parallel_callable import bind_call, source_class
-from limen.experiment._parallel_graph import EMPTY_IDS as _EMPTY_IDS, copied_source, decode_graph, encode_graph, has_decoded_identity, isolated_encoding, value_only
+from limen.experiment._parallel_graph import EMPTY_IDS as _EMPTY_IDS, copied_source, decode_graph, encode_graph, has_decoded_identity, isolated_encoding
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
@@ -44,16 +44,12 @@ def reference(value: object) -> list[object]:
 
 
 def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool = False) -> list[object]:
-    return _encode(value, active, ordered=ordered) if value_only(value) else encode_graph(value, lambda: _encode(value, active, ordered=ordered))
-
-
-def _encode(value: object, active: frozenset[int], *, ordered: bool) -> list[object]:
     if callable(value):
-        return _encode_composite(value, active, ordered=ordered)
+        return encode_graph(value, lambda: _encode_composite(value, active, ordered=ordered))
     if isinstance(value, CellType):
-        return ['cell', encode(value.cell_contents, active, ordered=ordered)]
+        return encode_graph(value, lambda: ['cell', encode(value.cell_contents, active, ordered=ordered)])
     if isinstance(value, defaultdict):
-        return _encode_component(cast(object, value), active | {id(cast(object, value))}, owner_only=True)
+        return encode_graph(value, lambda: _encode_component(cast(object, value), active | {id(cast(object, value))}, owner_only=True))
     if value is None:
         node: list[object] = ['null']
     elif isinstance(value, str):
@@ -71,7 +67,7 @@ def _encode(value: object, active: frozenset[int], *, ordered: bool) -> list[obj
     elif isinstance(value, Path):
         node = ['path', str(value)]
     else:
-        node = _encode_composite(value, active, ordered=ordered)
+        return encode_graph(value, lambda: _encode_composite(value, active, ordered=ordered))
     return node
 
 
