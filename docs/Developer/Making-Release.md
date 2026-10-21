@@ -1,6 +1,6 @@
 # Making a release
 
-Limen release publication is automated and destructive: a qualifying push to `main` can create and push a tag, publish a GitHub release, build distributions, attach provenance, and publish to PyPI. Review the release candidate before merge; the release script has no approval prompt or dry-run mode.
+Limen release publication is manual and destructive: dispatching release creation can create and push a tag, publish a GitHub release, build distributions, attach provenance, and publish to PyPI. Review the release candidate and dispatch promptly after its merge; the release script has no approval prompt or dry-run mode.
 
 Release validation must run the [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md) against the actual published wheel. A successful upload alone does not establish that the displayed research still runs.
 
@@ -18,7 +18,7 @@ Release validation must run the [Python project](../examples/python-research/REA
 | `CHANGELOG.md` | human-readable release history |
 | `CITATION.cff` | citation version and release date |
 | `limen/yaml/templates/*.yaml` | embedded `metadata.limen_version` values |
-| `.github/workflows/pr_post_release.yml` | runs release creation after every push to `main` |
+| `.github/workflows/pr_post_release.yml` | runs release creation when manually dispatched |
 | `scripts/create_release.py` | computes and validates the tag, generates notes with mechanical traceability, and publishes the GitHub release |
 | `.github/workflows/pr_publish_pypi.yml` | guards filename availability, builds, attests, publishes, and attaches release assets |
 
@@ -39,7 +39,7 @@ Required merge checks verify version coherence, tests and package contracts. Rel
 
 ## Automated sequence
 
-After a push to `main`, `pr_post_release.yml` installs the `release` extra and runs:
+When dispatched, `pr_post_release.yml` installs the `release` extra and runs:
 
 | Step | Command |
 |---|---|

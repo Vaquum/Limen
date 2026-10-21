@@ -4,11 +4,10 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches: [main]
+  # Releases are cut manually: dispatch after merging the release prep,
+  # never per push, so no two release runs can overlap or queue-drop.
+  workflow_dispatch:
 
-# One release run at a time: versions stay static across ordinary merges,
-# so overlapping runs would race to tag different commits with one version.
 concurrency:
   group: automated-release
   cancel-in-progress: false
