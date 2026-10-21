@@ -10,7 +10,7 @@ import polars as pl
 import pytest
 
 from limen.backtest.execution_events import with_predictions
-from limen.backtest.trade_contract import TradeInputs, contract_digest
+from limen.backtest.trade_contract import BPS, TradeInputs, contract_digest
 from limen.backtest.trade_execution import trade_execution
 from limen.cohort import Cohort
 from limen.experiment import UniversalExperimentLoop
@@ -236,15 +236,24 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, reassign, 'fill request order')
 
+    def reprice_costs(execution):
+        bps = execution['policy']['fee_bps']
+        for fill in execution['ledger']['fills']:
+            fill['fee'] = abs(fill['quantity_delta']) * fill['fill_price'] * bps / BPS
+            fill['slippage'] = fill['quantity_delta'] * (fill['fill_price'] - fill['reference_price'])
+        fees = sum(fill['fee'] for fill in execution['ledger']['fills'])
+        slip = sum(fill['slippage'] for fill in execution['ledger']['fills'])
+        execution['metrics']['fees']['value'] = fees
+        execution['metrics']['slippage']['value'] = slip
+        execution['metrics']['gross_pnl']['value'] = (execution['metrics']['ending_equity']['value'] - execution['initial_equity']
+                                                      + fees + slip - execution['metrics']['funding_pnl']['value'])
+
     def reverse(report_dict):
         execution = report_dict['execution']
         fill = execution['ledger']['fills'][0]
         fill['quantity_delta'] = -fill['quantity_delta']
-        fill['slippage'] = fill['quantity_delta'] * (fill['fill_price'] - fill['reference_price'])
-        slip = sum(entry['slippage'] for entry in execution['ledger']['fills'])
-        execution['metrics']['slippage']['value'] = slip
-        execution['metrics']['gross_pnl']['value'] = (execution['metrics']['ending_equity']['value'] - execution['initial_equity']
-                                                      + execution['metrics']['fees']['value'] + slip - execution['metrics']['funding_pnl']['value'])
+        fill['fill_price'] = fill['reference_price'] * (1 + math.copysign(execution['policy']['slip_bps'] / BPS, fill['quantity_delta']))
+        reprice_costs(execution)
 
     _rewrite_report(root, report, reverse, 'position transition')
 
@@ -257,6 +266,24 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
         report_dict['execution']['ledger']['states'][0]['cash'] += 100.0
 
     _rewrite_report(root, report, skim, 'accounting anchor')
+
+    def double(report_dict):
+        execution = report_dict['execution']
+        for row in execution['ledger']['states']:
+            row['quantity'] *= 2.0
+        for fill in execution['ledger']['fills']:
+            fill['quantity_delta'] *= 2.0
+        reprice_costs(execution)
+
+    _rewrite_report(root, report, double, 'position sizing')
+
+    def reslip(report_dict):
+        execution = report_dict['execution']
+        for fill in execution['ledger']['fills']:
+            fill['fill_price'] *= 1.5
+        reprice_costs(execution)
+
+    _rewrite_report(root, report, reslip, 'fill price')
 
 
 def _rewrite_report(root, report, mutate, match):
