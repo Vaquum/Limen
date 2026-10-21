@@ -2,8 +2,9 @@ import dis
 import marshal
 from collections import deque
 from functools import lru_cache
-from types import CodeType
+from types import CodeType, EllipsisType
 from typing import cast
+from typing_extensions import Buffer
 
 __all__ = ['code_aliases', 'namespace_calls', 'reader_names']
 _CALLS = frozenset({'CALL', 'CALL_FUNCTION', 'CALL_METHOD'})
@@ -44,15 +45,14 @@ def reader_names(value: object, key: str | int) -> tuple[str, ...]:
     size = list[object].__len__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else deque[object].__len__(cast(deque[object], value)) if isinstance(value, deque) else None
     return (str(key), str(key - size)) if isinstance(key, int) and size is not None else (str(key),)
 
-_CODE_FIELDS = ('co_code', 'co_consts', 'co_names', 'co_varnames', 'co_freevars', 'co_cellvars', 'co_filename', 'co_name', 'co_qualname', 'co_linetable', 'co_exceptiontable')
+_Constant = type[StopIteration] | EllipsisType | bool | int | float | complex | str | bytes | CodeType | Buffer | tuple['_Constant', ...] | frozenset['_Constant'] | None
 
 
-def code_aliases(code: CodeType) -> tuple[int, ...]:
+def code_aliases(code: CodeType, fields: tuple[str, ...]) -> tuple[int, ...]:
     pending, seen, aliases = [cast(object, code)], dict[int, tuple[int, object]](), list[int]()
     while pending:
-        item = pending.pop()
-        repeated = id(item) in seen
+        repeated = id(item := pending.pop()) in seen
         aliases.append(seen.setdefault(id(item), (len(seen), item))[0])
         if not repeated:
-            pending.extend(tuple(getattr(item, name, None) for name in _CODE_FIELDS) if isinstance(item, CodeType) else cast(tuple[object, ...], item) if isinstance(item, tuple) else sorted(cast(frozenset[object], item), key=lambda constant: marshal.dumps(constant, 2)) if isinstance(item, frozenset) else ())
+            pending.extend(tuple(getattr(item, name, None) for name in fields) if isinstance(item, CodeType) else cast(tuple[object, ...], item) if isinstance(item, tuple) else sorted(cast(frozenset[object], item), key=lambda constant: marshal.dumps(cast(_Constant, constant), 2)) if isinstance(item, frozenset) else ())
     return tuple(aliases)

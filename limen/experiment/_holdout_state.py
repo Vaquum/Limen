@@ -39,7 +39,7 @@ def _typing_metadata(value: object) -> dict[str, object] | None:
 
 @lru_cache(maxsize=2048)
 def _code_hash(code: CodeType, _identity: int) -> str:
-    return sha256(marshal.dumps(code, 2) + pickle.dumps(code_aliases(code), protocol=5)).hexdigest()
+    return sha256(marshal.dumps(code, 2) + pickle.dumps(code_aliases(code, ('co_code', 'co_consts', 'co_names', 'co_varnames', 'co_freevars', 'co_cellvars', 'co_filename', 'co_name', 'co_qualname', 'co_linetable', 'co_exceptiontable')), protocol=5)).hexdigest()
 
 
 def code_digest(code: CodeType) -> str:
