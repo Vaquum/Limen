@@ -839,3 +839,8 @@ def test_parallel_serial_omitted_matches_explicit_one(tmp_path):
 
 if __name__ == '__main__':
     _subprocess_campaign(*sys.argv[1:])
+
+
+def test_effective_resources_and_output_evidence(tmp_path) -> None:
+    from tests.test_parallel_plan import _effective_resources_and_output_evidence
+    _effective_resources_and_output_evidence(tmp_path)

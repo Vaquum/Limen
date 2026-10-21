@@ -1696,7 +1696,7 @@ def _assert_factory_resources(plan, params):
 
 
 
-def test_effective_resources_and_output_evidence(tmp_path) -> None:
+def _effective_resources_and_output_evidence(tmp_path) -> None:
     declare_parallel(_caller_feature, ParallelRoundContract(_caller_validator, ('window',)))
     config = _configuration()
     plan = freeze_manifest(build_manifest(config), config)
