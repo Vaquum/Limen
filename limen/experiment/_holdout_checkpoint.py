@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -39,11 +39,22 @@ def header(manifest: object) -> dict[str, object] | None:
             'cutoff_ns': binding.cutoff_ns, 'interval_seconds': binding.interval_seconds}
 
 
-def trainer_metadata(manifest: object, metadata: Mapping[str, object]) -> object:
+def trainer_metadata(manifest: object, metadata: Mapping[str, object], rounds: object) -> object:
     if 'holdout_binding' not in metadata and header(manifest) is not None and not _legacy(metadata):
         raise ValueError('Holdout Trainer metadata lacks its saved checkpoint binding')
     if 'holdout_binding' in metadata and _json(metadata['holdout_binding']) != _json(header(manifest)):
         raise ValueError('Holdout Trainer checkpoint binding changed')
+    binding = _binding(manifest)
+    if binding is not None and binding.cutoff_ns is not None and isinstance(rounds, Mapping) and rounds:
+        proofs = [_proof(binding, cast(Mapping[str, object], row), completed_parent=True) for row in cast(Mapping[str, object], rounds).values()]
+        sources = {_json(proof['source']) for proof in proofs}
+        if len(sources) != 1:
+            raise ValueError('Holdout Trainer requires one completed experiment source')
+        source = cast(Mapping[str, object], proofs[0]['source'])
+        if source['kind'] == 'local_file':
+            from limen.data import HistoricalData
+            setter = cast(Callable[..., None], getattr(manifest, 'set_data_source'))
+            setter(HistoricalData.get_any_file, dict(cast(Mapping[str, object], source['identity'])))
     return metadata.get('holdout')
 
 
@@ -71,6 +82,8 @@ def _proof(binding: history.ProjectBinding, row: Mapping[str, object], *, comple
 
 def _rows(directory: Path, frontier: int) -> list[dict[str, object]]:
     path = storage.round_path(directory)
+    if frontier >= 0 and not path.exists() and not (directory / 'results.csv').exists():
+        raise ValueError('Holdout checkpoint round_data.jsonl not found')
     expected = storage.csv_prefix(path, frontier + 1) if frontier >= 0 else []
     storage.validate_prefix(path, expected)
     if not expected:

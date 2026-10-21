@@ -298,7 +298,7 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
     attrs = cast(dict[str, object], vars(host))
     manifest = cast(ResearchManifest, attrs['_manifest'])
     binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
-    saved = _saved_holdout.trainer_metadata(manifest, cast(Mapping[str, object], attrs['_metadata']))
+    saved = _saved_holdout.trainer_metadata(manifest, cast(Mapping[str, object], attrs['_metadata']), attrs.get('_round_data'))
     if isinstance(saved, Mapping):
         saved = cast(Mapping[str, object], saved)
         if binding is None or any(saved.get(key) != value for key, value in (
