@@ -31,23 +31,21 @@ def declaration_witness(value: object) -> bytes:
     bindings: dict[FunctionType, dict[str, object]] = {}
     owners: dict[int, type[object]] = {}
     modules: dict[int, ModuleType] = {}
-    inspected: set[tuple[int, int]] = set()
+    inspected: set[tuple[int, ...]] = set()
     readers: set[str] = set()
     attributes: set[str] = {'__new__', '__init__', '__call__'}
     class_state: dict[tuple[type[object] | ModuleType, str], object] = {}
     while pending:
-        for function, namespace in tuple(bindings.items()):
-            stamp = (id(function), len(readers))
-            if stamp in inspected:
-                continue
+        if (stamp := (len(bindings), len(readers), 0, 0)) not in inspected:
             inspected.add(stamp)
-            for name, key in namespace_calls(function.__code__):
-                if name in readers:
-                    if key is None:
-                        raise ValueError('Holdout requires a literal key for factory globals lookup')
-                    if key not in namespace and key in function.__globals__:
-                        namespace[key] = function.__globals__[key]
-                        pending.append(namespace[key])
+            for function, namespace in tuple(bindings.items()):
+                for name, key in namespace_calls(function.__code__):
+                    if name in readers:
+                        if key is None:
+                            raise ValueError('Holdout requires a literal key for factory globals lookup')
+                        if key not in namespace and key in function.__globals__:
+                            namespace[key] = function.__globals__[key]
+                            pending.append(namespace[key])
         if id(item := pending.pop()) in seen:
             continue
         seen[id(item)] = item
@@ -83,6 +81,10 @@ def declaration_witness(value: object) -> bytes:
             attributes.add(str.__str__(item))
         if not isinstance(item, ModuleType):
             pending.extend(children(item, namespace_readers=readers))
+        stamp = (len(owners), len(modules), len(attributes))
+        if stamp in inspected:
+            continue
+        inspected.add(stamp)
         parents = (*modules.values(), *(parent for cls in tuple(owners.values()) for parent in cls.__mro__))
         for parent in parents:
             stamp = (id(parent), len(attributes))
@@ -90,10 +92,8 @@ def declaration_witness(value: object) -> bytes:
                 continue
             inspected.add(stamp)
             for name in sorted(attributes.intersection(vars(parent))):
-                key = (parent, name)
-                if key not in class_state:
-                    part = vars(parent)[name]
-                    class_state[key] = part
+                if (key := (parent, name)) not in class_state:
+                    class_state[key] = part = vars(parent)[name]
                     readers.update((name,) if (native_attribute(part, '__func__') if isinstance(part, (staticmethod, classmethod)) else part) is _native_globals else ())
                     pending.extend((part,) if name in ('__new__', '__init__', '__call__') or not (calls := call_functions(part)) or any(not _native(function) for function in calls) else ())
     return fitted_witness((value, tuple(bindings.items()), tuple((cls, name, part) for (cls, name), part in class_state.items())))
