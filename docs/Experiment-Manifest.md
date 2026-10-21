@@ -124,7 +124,7 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
-| `recording` | mapping of bool | all groups `false` | choose saved predictions, alignment arrays, event ledger and fold details; lighter policies cannot resume; see [UEL recording policy](Universal-Experiment-Loop.md#recording-policy) |
+| `recording` | mapping of bool | all groups `false` | choose saved predictions, alignment arrays, event ledger and fold details; resume requires applicable groups; see [UEL recording policy](Universal-Experiment-Loop.md#recording-policy) |
 | `factorize` | bool | `false` | reuse deterministic snapshot signal work across independent backtest-only grid axes; see [UEL](Universal-Experiment-Loop.md) |
 | `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
@@ -190,7 +190,7 @@ empty-prefix checkpoint before dispatch and a final checkpoint on graceful stop
 or completion. A subsequent signal may force termination. SIGKILL or power loss
 inside an artifact write has no additional recovery guarantee.
 
-With full [recording evidence](Universal-Experiment-Loop.md#recording-policy) enabled on the initial run,
+With applicable [recording evidence](Universal-Experiment-Loop.md#recording-policy) enabled on the initial run,
 `limen run --resume RESULTS_DIR` reuses saved workers and thread policy; old
 metadata without these fields resumes serially. An explicit changed policy is
 rejected before truncation or rewriting. Committed CSV occurrences must join to
@@ -474,7 +474,7 @@ In saved CLI or Python/MSQ runs, `round_data.jsonl.gz` omits nested `folds` by d
 
 Every fold starts execution independently. Snapshot net returns are the existing notional-scaled `execution.net` values. Event execution samples its recorded equity at retained test-bar endpoints, including the terminal mark in the final value; each return is current equity divided by prior equity minus one, starting from the policy's initial equity. The return track is captured for walk-forward trials even when `record_execution` is off; that flag retains its existing optional JSONL fields. Existing snapshot metrics and their columns remain unchanged.
 
-Explicit full recording allows resume, which rejects a changed walk-forward declaration or native train-to-validation ratio before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. Any lighter recording policy rejects resume before artifact changes. Promotion separately requires [versioned fold evidence](Trainer.md#recorded-walk-forward-folds). New single-split runs use the same lean defaults; existing full logs retain resume behavior.
+Walk-forward resume requires predictions, alignment and fold details; event execution additionally requires its ledger. It rejects a changed walk-forward declaration or native train-to-validation ratio and missing applicable committed payloads before rewriting artifacts. A matching resume restores the saved nested fold records and regenerates the Parquet return track without replaying execution. Promotion separately requires [versioned fold evidence](Trainer.md#recorded-walk-forward-folds). New single-split runs use the same lean defaults; existing full logs retain resume behavior.
 
 These folds provide recorded out-of-sample evaluations. The selection report below assesses the recorded sweep; its statistics provide no guarantee against selection optimism or future loss. Omitting `split_walk_forward` preserves the existing single-split path.
 
@@ -498,7 +498,7 @@ def set_acceptance(self: _TManifest, *, min_deflated_sharpe_probability: float |
 
 Each key is optional, but the block must contain a probability threshold or `pbo_blocks`. Thresholds must be finite literal numbers in `[0, 1]`. The optional partition count must be a literal integer in `{2, 4, 6, 8}`; booleans, floats, strings, parameter references and larger counts reject. Omission defaults to two; there is no automatic choice or fallback. An acceptance declaration requires `split_walk_forward`.
 
-For example, `acceptance: {pbo_blocks: 8}` selects eight without adding a threshold. The native equivalent is `.set_acceptance(pbo_blocks=8)`. An explicit count (including two) requires both `search_strategy` and `experiment_dir`, with `recording.alignment` and `recording.fold_details` enabled, before run artifacts. Count-only reporting needs only those two payloads; resumable runs still require all four recording groups. Omitted-count and existing nonpersisted threshold-only runs retain their behavior.
+For example, `acceptance: {pbo_blocks: 8}` selects eight without adding a threshold. The native equivalent is `.set_acceptance(pbo_blocks=8)`. An explicit count (including two) requires both `search_strategy` and `experiment_dir`, with `recording.alignment` and `recording.fold_details` enabled, before run artifacts. Count-only reporting needs only those two payloads; resumable runs additionally require predictions and any applicable event ledger. Omitted-count and existing nonpersisted threshold-only runs retain their behavior.
 
 Selecting `max_pbo` or an explicit `pbo_blocks` also requires `recording.fold_details` and `recording.alignment` to be explicitly `true`; a conflicting policy raises before artifacts are created. With neither setting explicit, either group may be omitted: return tracks and DSR remain available, while PBO is `null` with an explanation. Direct `acceptance_report(..., acceptance={"max_pbo": ...})` or an explicit count rejects an incompatible saved policy before writing reports. Explicit full recording retains existing behavior; see the [recording policy](Universal-Experiment-Loop.md#recording-policy).
 

@@ -78,7 +78,7 @@ Keep the definition, recorded input identities, package/environment identity and
 
 For parallel CPU classification rounds, set every model `n_jobs` value to `1`
 and supply `--workers 4` to `limen run` for a compatible declaration. YAML `uel.workers` supplies the
-default; the CLI overrides it. Runs created with full
+default; the CLI overrides it. Runs created with the applicable
 [recording evidence](Universal-Experiment-Loop.md#recording-policy) can resume with
 `limen run --resume RESULTS_DIR`, reusing the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
 for admission, feedback ordering and stop/recovery limits. The canonical projects use one worker to keep their proof population explicit; a larger search is needed to occupy several workers.

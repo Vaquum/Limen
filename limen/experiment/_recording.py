@@ -51,10 +51,10 @@ def validate_recorded_pbo(directory: Path, acceptance: Mapping[str, object]) -> 
         validate_pbo_recording(parse_recording(metadata['recording']), acceptance)
 
 
-def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
-                      compiled_reference: Mapping[str, object] | None,
-                      directory: Path | None, has_search: bool,
-                      resume: bool, acceptance: Mapping[str, object] | None = None) -> dict[str, bool] | None:
+def prepare_recording(value: object, *, reference: Mapping[str, object] | None, compiled_reference: Mapping[str, object] | None,
+                      directory: Path | None, has_search: bool, resume: bool,
+                      acceptance: Mapping[str, object] | None = None,
+                      applicable: tuple[str, ...] = ('predictions', 'alignment', 'trade_ledger', 'fold_details')) -> dict[str, bool] | None:
     acceptance = prepare_pbo_settings(acceptance, reference=reference, compiled_reference=compiled_reference, directory=directory, has_search=has_search, resume=resume)
     if compiled_reference is not None and reference is not None and (_configured(compiled_reference) or _DEFAULTS) != (_configured(reference) or _DEFAULTS):
         raise ValueError('Conflicting compiled YAML and yaml_reference recording declarations')
@@ -86,7 +86,7 @@ def prepare_recording(value: object, *, reference: Mapping[str, object] | None,
     if resume and has_search and directory is not None:
         if saved is not None and saved != policy:
             raise ValueError('Cannot resume with a different recording policy')
-        if not all(policy.values()):
+        if not all(policy[key] for key in applicable):
             raise ValueError('Cannot resume a lighter recording policy: complete recorded recovery evidence is required')
     return policy if has_search and directory is not None else None
 
