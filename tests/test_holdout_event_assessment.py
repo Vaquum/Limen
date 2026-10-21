@@ -483,6 +483,17 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, preshift, 'episode entry')
 
+    def wipe(report_dict):
+        execution = report_dict['execution']
+        execution['ledger']['episodes'] = []
+        for row in (*execution['ledger']['fills'], *execution['ledger']['intents']):
+            row['episode_id'] = None
+        execution['metrics']['completed_trades']['value'] = 0.0
+        execution['metrics']['open_trades']['value'] = 0.0
+        execution['metrics']['episode_win_rate']['value'] = 0.0
+
+    _rewrite_report(root, report, wipe, 'episode linkage')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
