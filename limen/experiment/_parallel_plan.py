@@ -138,7 +138,7 @@ def factory_signature(cls: type, initializer: Callable[..., object] | None, allo
     return signature.replace(parameters=list(signature.parameters.values())[skip:])
 
 
-_PARALLEL_EVIDENCE_SINCE = (5, 45, 21)
+_PARALLEL_EVIDENCE_SINCE = (5, 45, 22)
 
 
 def legacy_metadata(metadata: Mapping[str, object]) -> bool:

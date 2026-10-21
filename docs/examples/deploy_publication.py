@@ -4,15 +4,31 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import time
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-from verify_publication import fetch, sha256, verify
+from verify_publication import PublicationHTTPError, fetch, sha256, verify
 
 ACCOUNT = '758576157d0685fa4eb2aeaf16781577'
 ORIGIN = 'https://docs.vaquum.fi/limen/'
 DEPLOYMENT_SETTLE_SECONDS = 5
+
+
+def record_http_failure(output: Path, phase: str, release: str | None, version: str, error: Exception) -> None:
+    cause: BaseException | None = error
+    while cause is not None:
+        if isinstance(cause, PublicationHTTPError):
+            print(f'Publication HTTP failure [{phase}]: {cause}', flush=True)
+            record = {'phase': phase, 'release': release, 'worker_version': version, 'request': cause.evidence}
+            try:
+                (output / f'{phase}-http-failure.json').write_text(json.dumps(record, indent=2) + '\n')
+            except Exception as failure:
+                print(f'Publication HTTP receipt failed [{phase}]: {type(failure).__name__}', file=sys.stderr, flush=True)
+                raise RuntimeError('Could not retain the publication HTTP failure receipt') from None
+            return
+        cause = cause.__cause__
 
 
 def cloudflare(path: str):
@@ -125,15 +141,19 @@ def activate(root: Path, wrangler: Path):
     output = root / '.docs-evidence/deployment'
     staged = json.loads((output / 'staged.json').read_text())
     config = root / 'docs-site/publisher/wrangler.json'
-    require_disconnected_builds()
-    require_latest_release(staged['release'])
-    verify(staged['preview_url'], staged['release'])
-    if sha256(fetch(staged['preview_url'] + 'publication.json')) != staged['manifest_sha256']:
-        raise ValueError('The staged preview changed before activation')
     previous = staged['previous']
-    if current_version(wrangler, config) != previous['version_id']:
-        raise ValueError('Another deployment changed the rollback baseline; stage again')
-    require_latest_release(staged['release'])
+    try:
+        require_disconnected_builds()
+        require_latest_release(staged['release'])
+        verify(staged['preview_url'], staged['release'])
+        if sha256(fetch(staged['preview_url'] + 'publication.json')) != staged['manifest_sha256']:
+            raise ValueError('The staged preview changed before activation')
+        if current_version(wrangler, config) != previous['version_id']:
+            raise ValueError('Another deployment changed the rollback baseline; stage again')
+        require_latest_release(staged['release'])
+    except Exception as error:
+        record_http_failure(output, 'activation', staged['release'], staged['version_id'], error)
+        raise
     try:
         deploy_version(wrangler, config, staged['version_id'], output / 'activation.ndjson')
         require_latest_release(staged['release'])
@@ -141,16 +161,23 @@ def activate(root: Path, wrangler: Path):
         if sha256(fetch(ORIGIN + 'publication.json')) != staged['manifest_sha256']:
             raise ValueError('Production serves another publication manifest')
         require_latest_release(staged['release'])
-    except Exception:
+    except Exception as error:
         print('Activation or production verification failed; restore and verify the previous Worker version.')
-        deploy_version(wrangler, config, previous['version_id'], output / 'rollback.ndjson')
-        if sha256(fetch(ORIGIN)) != previous['home_sha256']:
-            raise ValueError('Rollback did not restore the retained home page')
-        if previous['mode'] == 'released':
-            verify(ORIGIN, previous['release'])
-            if sha256(fetch(ORIGIN + 'publication.json')) != previous['manifest_sha256']:
-                raise ValueError('Rollback restored another publication envelope')
-        (output / 'rollback.json').write_text(json.dumps(previous, indent=2) + '\n')
+        try:
+            record_http_failure(output, 'activation', staged['release'], staged['version_id'], error)
+        finally:
+            try:
+                deploy_version(wrangler, config, previous['version_id'], output / 'rollback.ndjson')
+                if sha256(fetch(ORIGIN)) != previous['home_sha256']:
+                    raise ValueError('Rollback did not restore the retained home page')
+                if previous['mode'] == 'released':
+                    verify(ORIGIN, previous['release'])
+                    if sha256(fetch(ORIGIN + 'publication.json')) != previous['manifest_sha256']:
+                        raise ValueError('Rollback restored another publication envelope')
+                (output / 'rollback.json').write_text(json.dumps(previous, indent=2) + '\n')
+            except Exception as rollback_error:
+                record_http_failure(output, 'rollback', previous.get('release'), previous['version_id'], rollback_error)
+                raise
         raise
     (output / 'accepted.json').write_text(json.dumps(staged | {'production': verified}, indent=2) + '\n')
     return verified

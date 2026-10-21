@@ -1904,8 +1904,13 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.21] - 2026-10-21
 
+- Retain sanitized publication HTTP failure evidence for activation and rollback, including partial response bodies, without changing release verification or recovery ordering.
+
+## [5.45.22] - 2026-10-21
+
 - Prepare private isolated Manifest contracts and typed parallel recovery identities; retain the public architecture boundary.
-- Preserve legacy parallel recovery through 5.45.20 and isolate captured callable declarations from newer caller contracts.
+- Preserve legacy parallel recovery through 5.45.21 and isolate captured callable declarations from newer caller contracts.
 - Retain compatible built-in callable identity when captured declarations are unchanged.
 - Preserve runtime-configured scaler constructors and bound-method factory selection in frozen worker plans.
 - Freeze scaler transformation behavior without changing fitted scaler objects.
+
