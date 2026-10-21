@@ -78,8 +78,8 @@ def inference_evidence(values: Sequence[object], *, exclude: Sequence[object] = 
         if (identity := id(value)) in seen or identity in omitted:
             return
         seen[identity] = value
-        sequence = list[object].__iter__(cast(list[object], value)) if issubclass(value_type, _READER_TYPES[0]) else tuple[object, ...].__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, _READER_TYPES[1]) else deque[object].__iter__(cast(deque[object], value)) if issubclass(value_type, _READER_TYPES[3]) else ()
-        readers = dict[object, object].items(cast(dict[object, object], value)) if issubclass(value_type, _READER_TYPES[2]) else enumerate(sequence)
+        sequence = list.__iter__(cast(list[object], value)) if issubclass(value_type, _READER_TYPES[0]) else tuple.__iter__(cast(tuple[object, ...], value)) if issubclass(value_type, _READER_TYPES[1]) else deque.__iter__(cast(deque[object], value)) if issubclass(value_type, _READER_TYPES[3]) else ()
+        readers = dict.items(cast(dict[object, object], value)) if issubclass(value_type, _READER_TYPES[2]) else enumerate(sequence)
         globals_names.update(alias for key, part in readers if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(value, key))
         if callable(value):
             function = value.__func__ if inspect.ismethod(value) else value

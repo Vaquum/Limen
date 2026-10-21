@@ -116,7 +116,7 @@ def _call_offset(value: object, active: frozenset[int]) -> int | None:
     if isinstance(value, (staticmethod, classmethod)):
         return _descriptor_offset(cast('staticmethod[..., object] | classmethod[object, ..., object]', value), active)
     call = inspect.getattr_static(type(value), '__call__', None)
-    if isinstance(value, partial) and call is partial[object].__call__:
+    if isinstance(value, partial) and call is partial.__call__:
         provider = cast(partial[object], value)
         offset = _call_offset(native_attribute(provider, 'func'), active)
         return None if offset is None else offset + len(cast(tuple[object, ...], native_attribute(provider, 'args')))
@@ -140,7 +140,7 @@ def call_functions(value: object) -> tuple[FunctionType, ...]:
     if isinstance(value, partial):
         provider = cast(partial[object], value)
         call = inspect.getattr_static(cast(type[object], type(provider)), '__call__', None)
-        return call_functions(native_attribute(provider, 'func')) if call is partial[object].__call__ else _bound_functions(call)
+        return call_functions(native_attribute(provider, 'func')) if call is partial.__call__ else _bound_functions(call)
     if isinstance(value, type):
         call = inspect.getattr_static(cast(type[object], type(value)), '__call__', None)
         return _bound_functions(constructor_entry(cast(type[object], value)).target) if call is type.__call__ else _bound_functions(call)

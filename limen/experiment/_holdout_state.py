@@ -47,12 +47,12 @@ def code_digest(code: CodeType) -> str:
 
 def _native_values(value: object) -> tuple[object, ...]:
     if isinstance(value, (tuple, list)):
-        return tuple(tuple[object, ...].__iter__(cast(tuple[object, ...], value))) if isinstance(value, tuple) else tuple(list[object].__iter__(cast(list[object], value)))
+        return tuple(tuple.__iter__(cast(tuple[object, ...], value))) if isinstance(value, tuple) else tuple(list.__iter__(cast(list[object], value)))
     if isinstance(value, deque):
-        return tuple(deque[object].__iter__(cast(deque[object], value)))
+        return tuple(deque.__iter__(cast(deque[object], value)))
     if isinstance(value, set):
-        return tuple(set[object].__iter__(cast(set[object], value)))
-    return tuple(frozenset[object].__iter__(cast(frozenset[object], value)))
+        return tuple(set.__iter__(cast(set[object], value)))
+    return tuple(frozenset.__iter__(cast(frozenset[object], value)))
 
 
 def _booster(value: object) -> bool:
@@ -72,12 +72,12 @@ def _cell_parts(value: CellType) -> tuple[object, ...]:
 
 def children(value: object, *, namespace_readers: set[str] | None = None) -> tuple[object, ...]:
     if isinstance(value, Mapping):
-        entries = dict[object, object].items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
+        entries = dict.items(cast(dict[object, object], value)) if isinstance(value, dict) else cast(Mapping[object, object], value).items()
         return (*tuple(part for pair in entries for part in pair), *_attributes(cast(object, value), namespace_readers).values(), *((native_attribute(cast(object, value), 'default_factory', defaultdict),) if isinstance(value, defaultdict) else ()))
     if isinstance(value, (tuple, list, set, frozenset, deque)):
         return (*_native_values(cast(object, value)), *_attributes(cast(object, value), namespace_readers).values())
     if object_payload(value):
-        return (npt.NDArray[np.generic].tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
+        return (np.ndarray.tolist(value) if isinstance(value, np.ndarray) else np.generic.item(value), *_attributes(cast(object, value), namespace_readers).values())
     metadata = _typing_metadata(value)
     if isinstance(value, (partial, property, staticmethod, classmethod, GenericAlias)) or metadata is not None:
         parts: tuple[object, ...]
@@ -191,16 +191,16 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             result = (kind, payload, node(_attributes(item)))
         elif isinstance(item, Mapping):
             factory = node(native_attribute(cast(object, item), 'default_factory', defaultdict)) if isinstance(item, defaultdict) else None
-            result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
+            result = (kind, factory, tuple((node(key), node(part)) for key, part in (dict.items(cast(dict[object, object], item)) if isinstance(item, dict) else cast(Mapping[object, object], item).items())), state)
         elif isinstance(item, (tuple, list, deque)):
             result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), native_attribute(cast(object, item), 'maxlen', deque) if isinstance(item, deque) else None, state)
         elif isinstance(item, (set, frozenset)):
             result = (kind, tuple(node(part) for part in _native_values(cast(object, item))), state)
         elif object_payload(item):
             payload_owner: type[object] = np.ndarray if isinstance(item, np.ndarray) else np.generic
-            result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(npt.NDArray[np.generic].tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
+            result = (kind, native_attribute(cast(object, item), 'shape', payload_owner), cast(np.dtype[np.generic], native_attribute(cast(object, item), 'dtype', payload_owner)).descr, node(np.ndarray.tolist(item) if isinstance(item, np.ndarray) else np.generic.item(item)), state)
         elif isinstance(item, np.ndarray):
-            native = cast(object, npt.NDArray[np.generic].view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
+            native = cast(object, np.ndarray.view(cast(npt.NDArray[np.generic], item), type=np.ndarray))
             result = (kind, pickle.dumps(native, protocol=5), state)
         elif isinstance(item, (pl.DataFrame, pl.Series)):
             result = (kind, pickle.dumps(item, protocol=5), state)
