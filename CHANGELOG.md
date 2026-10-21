@@ -1886,6 +1886,10 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.17] - 2026-10-21
 
+- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit bound subclasses only when HistoricalData itself defines the store.
+
+## [5.45.18] - 2026-10-21
+
 - Preserve active merge-readiness runs when review and check-suite events arrive; backport the upstream scheduling correction and contract guard.
 - Enforce the shared per-PR readiness lane and reject event-specific lane mutations; backport the merged upstream regression guard.
 - Clarify that the readiness comment reports ruleset checks while separate classic protection can still block a merge.
