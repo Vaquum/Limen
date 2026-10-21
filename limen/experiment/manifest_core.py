@@ -2042,7 +2042,10 @@ def _finalize_rule_based_data(
 ) -> dict[str, Any]:
 
     from limen.experiment._manifest_preparation import finish_rule_data
-    return finish_rule_data(manifest, split_data, all_datetimes, round_params)
+    data = finish_rule_data(manifest, split_data, all_datetimes, round_params)
+    if getattr(manifest, '_parallel_evidence', False):
+        cast(dict[str, object], data['_alignment'])['test_datetimes'] = split_data[2]['datetime'].to_list()
+    return data
 
 _parallel(_apply_feature_ablation, 'seeded_stage')
 

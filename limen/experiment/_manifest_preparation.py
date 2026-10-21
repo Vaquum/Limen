@@ -124,7 +124,7 @@ def finish_rule_data(manifest: RulePreparation, splits: list[pl.DataFrame], date
     from limen.data.utils import split_data_to_rule_based_prep_output
     from limen.experiment._fold_partitions import retained
     data = cast(dict[str, object], split_data_to_rule_based_prep_output(splits, datetimes))
-    if manifest.split_walk_forward is not None or getattr(manifest, '_parallel_evidence', False):
+    if manifest.split_walk_forward is not None:
         cast(dict[str, object], data['_alignment'])['test_datetimes'] = splits[2]['datetime'].to_list()
     names: tuple[str, ...] = ()
     for split in ('train', 'val', 'test'):
