@@ -62,6 +62,11 @@ def test_prd_on_issue_workflow_contract() -> None:
     # Rerun-first delivery, and rerun-ONLY: no check-run POSTs means
     # no API-posted layer to reconcile.
     assert 'actions/runs/$RUN_ID/rerun' in workflow
+    # Canonical runs are matched on branch and repository, never by
+    # head SHA alone (two PRs can share a commit).
+    assert 'headRefName' in workflow
+    assert 'head_branch == $branch' in workflow
+    assert 'head_repository.full_name == $repo' in workflow
     assert 'actions: write' in workflow
     assert 'checks: write' not in workflow
     assert 'check-runs"' not in workflow

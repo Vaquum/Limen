@@ -127,7 +127,7 @@ jobs:
             echo "::group::re-running PRD gate for PR #$PR_NUM @ $HEAD_SHA"
 
             gh pr view "$PR_NUM" --repo "$REPO" \
-              --json title,body,headRefOid > pr_view.json
+              --json title,body,headRefOid,headRefName,headRepository > pr_view.json
             if [ "$(jq -r '.headRefOid' pr_view.json)" != "$HEAD_SHA" ]; then
               echo "PR #$PR_NUM moved after discovery; leave the new head to its own run"
               echo "::endgroup::"
@@ -135,6 +135,12 @@ jobs:
             fi
             jq -r '.title' pr_view.json > pr_title.txt
             jq -r '.body // ""' pr_view.json > pr_body.txt
+            # Branch identity for run lookups below: a head SHA alone
+            # is ambiguous across PRs (two branches can share a
+            # commit), so canonical runs are matched on branch and
+            # repository too -- never by SHA alone.
+            HEAD_BRANCH=$(jq -r '.headRefName' pr_view.json)
+            HEAD_REPO=$(jq -r '.headRepository.nameWithOwner' pr_view.json)
 
             # Run the PRD gate; capture output and exit code.
             PR_TITLE=$(cat pr_title.txt)
@@ -170,7 +176,11 @@ jobs:
             for i in $(seq 1 21); do
               RUNS=$(gh api \
                 "repos/$REPO/actions/workflows/pr_checks_prd.yml/runs?head_sha=$HEAD_SHA&per_page=100" \
-                --jq '[.workflow_runs[] | select(.event == "pull_request")]')
+                --jq '.workflow_runs' \
+                | jq --arg branch "$HEAD_BRANCH" --arg repo "$HEAD_REPO" \
+                  '[.[] | select(.event == "pull_request"
+                                 and .head_branch == $branch
+                                 and .head_repository.full_name == $repo)]')
               INFLIGHT=$(echo "$RUNS" | jq '[.[] | select(.status != "completed")] | length')
               LIVE_HEAD=$(gh pr view "$PR_NUM" --repo "$REPO" --json headRefOid --jq .headRefOid)
               if [ "$LIVE_HEAD" != "$HEAD_SHA" ]; then
