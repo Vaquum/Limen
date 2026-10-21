@@ -871,13 +871,9 @@ class UniversalExperimentLoop:
                 raise ValueError(message)
 
     def _restore_checkpoint_state(self, msq: MSQ, domain: ParamDomain,
-                                   feedback_controller: FeedbackController,
-                                   checkpoint_manager: CheckpointManager,
-                                   *,
-                                   content_hash: str,
-                                   strategy_type: str,
-                                   csv_path: Path,
-                                   round_data_path: Path | None,
+                                   feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
+                                   *, content_hash: str, strategy_type: str,
+                                   csv_path: Path, round_data_path: Path | None,
                                    retain_round_artifacts: bool) -> int:
 
 
