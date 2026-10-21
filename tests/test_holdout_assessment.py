@@ -1439,7 +1439,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
         depth = 1.0
         @classmethod
         def build(cls, data, **params):
-            return logreg_binary(data, **(params | {'C': getattr(cls, 'depth')}))
+            return logreg_binary(data, **(params | {'C': getattr(cls, 'depth', 1.0)}))
     factory = {'globals': reflective, 'default': default_bound, 'callable': callable_bound, 'literal-class': Factory.build}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
