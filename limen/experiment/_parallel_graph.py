@@ -46,6 +46,10 @@ def has_decoded_identity(value: object) -> bool:
     return any(item is value for item in (_decoded.get() or ()))
 
 
+def copied_source() -> object | None:
+    return None if (copy := copy_context.get()) is None else copy[1][len(_decoded.get() or ()) - 1]
+
+
 def encode_graph(value: object, visit: Callable[[], list[object]]) -> list[object]:
     token = _encoded.set(({}, set())) if _encoded.get() is None else None
     try:

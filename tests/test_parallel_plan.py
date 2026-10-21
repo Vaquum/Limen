@@ -1021,6 +1021,18 @@ def test_frozen_manifest_round_plan() -> None:
         expected, _ = _shared_carried_probe(frozen)
         oracle = [_caller_feature(recorded_source().head(24).select('close'), window)['caller_mean'].to_list() for window in (2, 3)]
         assert actual == expected == oracle and pid != os.getpid()
+        first, second = FunctionRolling(_caller_feature), FunctionRolling(_caller_feature)
+        for component in (first, second):
+            declare_parallel(component, ParallelRoundContract(deterministic_stage))
+        captured = freeze_manifest(copy.deepcopy(plan.manifest).add_feature(first).add_feature(second), None)
+        declaration = digest(_caller_feature.__parallel_round_contract__)
+        revoked = ParallelRoundContract(unfrozen_stage)
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(_caller_feature, '__parallel_round_contract__', revoked)
+            restored = clone_manifest(captured.manifest).feature_transforms[-2:]
+            assert _caller_feature.__parallel_round_contract__ is revoked
+            assert restored[0].func.function is restored[1].func.function
+            assert digest(restored[0].func.function.__parallel_round_contract__) == declaration
         twin = FunctionType(_caller_feature.__code__, _caller_feature.__globals__, _caller_feature.__name__, _caller_feature.__defaults__)
         declare_parallel(twin, _caller_feature.__parallel_round_contract__)
         for isolated in (False, True):

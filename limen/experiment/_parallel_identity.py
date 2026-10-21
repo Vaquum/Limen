@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import sys
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from functools import cache
 from importlib import metadata, util
 from pathlib import Path
-from types import FunctionType
+from types import FunctionType, MethodType
 
 _providers: ContextVar[Mapping[str, list[str]] | None] = ContextVar('parallel_distribution_providers', default=None)
 _snapshot: ContextVar[tuple[dict[str, list[object]], dict[tuple[type, tuple[str, int, int]], type]] | None] = ContextVar('parallel_identity_snapshot', default=None)
@@ -55,6 +55,10 @@ def execution_class(cls: type, identity: tuple[str, int, int], attributes: dict[
     if key not in classes:
         classes[key] = type(cls.__name__, (cls,), attributes)
     return classes[key]
+
+
+def declaration_changed(source: object, original: object, fingerprint: Callable[[object], object]) -> bool:
+    return isinstance(original, (FunctionType, MethodType)) and fingerprint(getattr(source, '__parallel_round_contract__', None)) != fingerprint(getattr(original, '__parallel_round_contract__', None))
 
 
 def restore_function_metadata(function: FunctionType, source: FunctionType, wrapped: object) -> None:
