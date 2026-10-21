@@ -137,8 +137,8 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
             classes[id(item_type)] = item_type
         seen[id(item)] = len(retained)
         retained.append(item)
-        if isinstance(item, (ModuleType, type)):
-            return ('module', item.__name__) if isinstance(item, ModuleType) else ('class', item.__module__, item.__qualname__)
+        if (module := isinstance(item, ModuleType)) or isinstance(item, type):
+            return ('module', item.__name__) if module else ('class', item.__module__, item.__qualname__)
         if item_type is int or item_type is float:
             return ('scalar', item_type.__name__, item)
         kind = (item_type.__module__, item_type.__qualname__, ('ref', reference) if (reference := seen.get(id(item_type))) is not None else node(item_type))
