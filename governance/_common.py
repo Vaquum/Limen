@@ -25,7 +25,8 @@ CC_RE: Final[re.Pattern[str]] = re.compile(
     r': (?P<description>.+)$'
 )
 
-# Issue-closing keyword regex, shared by cc_gate and slice_gate.
+# Issue-closing keyword regex, shared by cc_gate (commit-closure
+# declaration) and prd_gate (the PR's single closing reference).
 CLOSING_KEYWORD_RE: Final[re.Pattern[str]] = re.compile(
     r'\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)(?:\s*:\s*|\s+)#(\d+)\b',
     re.IGNORECASE,

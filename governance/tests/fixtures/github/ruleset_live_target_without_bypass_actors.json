@@ -37,16 +37,9 @@
       }
     },
     {
-      "type": "copilot_code_review",
-      "parameters": {
-        "review_on_push": false,
-        "review_draft_pull_requests": false
-      }
-    },
-    {
       "type": "required_status_checks",
       "parameters": {
-        "strict_required_status_checks_policy": true,
+        "strict_required_status_checks_policy": false,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
           {
@@ -62,7 +55,7 @@
             "context": "pr_checks_ruleset"
           },
           {
-            "context": "pr_checks_slice"
+            "context": "pr_checks_prd"
           },
           {
             "context": "pr_checks_fail_loud"
@@ -104,6 +97,13 @@
             "context": "PR Checks Package Install (3.13)"
           }
         ]
+      }
+    },
+    {
+      "type": "copilot_code_review",
+      "parameters": {
+        "review_on_push": false,
+        "review_draft_pull_requests": false
       }
     }
   ],

@@ -23,7 +23,7 @@ Before opening or updating a Limen PR:
 
 | Task | Read this next | Why |
 |---|---|---|
-| planning or delivering research, maintenance or private prerequisites | [Research interface contract](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#research-interface-contract) | Defines complete interface delivery, declarations, proof and parent progression. |
+| planning or delivering research, maintenance or private prerequisites | [Constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) | Defines the delivery laws: every PR closes one issue, `feat` work goes through a PRD. |
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
 | updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
@@ -37,7 +37,7 @@ Before opening or updating a Limen PR:
 
 ## Contributor workflow
 
-The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canonical. Every implementation PR declares its Interface Contract, including maintenance and prerequisites. Issue forms require it; a PR can supply its own slice's missing section, while a parent's contract must persist in the parent issue. Neutral work may declare no research interfaces; it still satisfies ordinary slice proof and required checks.
+The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canonical. Every PR closes exactly one issue — a PRD for `feat` work, any issue otherwise. All PRs satisfy the required checks.
 
 For research behavior changes:
 
@@ -52,13 +52,7 @@ For research behavior changes:
 9. Review the full GitHub diff before requesting review.
 10. Confirm the PR template items are true, not just checked.
 
-Complete single-interface delivery may ship while another interface remains unavailable. Private groundwork must not expose an unfinished public capability. A last child can leave its parent open by naming the remaining outcome or next slice; a later completion slice can close both with complete parent evidence. See the canonical contract for grammar, role compatibility and proof-reference rules.
-
-Material contract edits require renewed semantic review of the current head and declaration. Static proof references do not establish passing execution or methodological completeness. Manual parent closure has no automatic evidence guard and must not bypass review. If a corrected PR remains blocked by a stale API-posted sweep verdict, run the existing sweep from the trusted default branch:
-
-| Step | Command |
-|---|---|
-| 1 | `gh workflow run pr_checks_slice_sweep.yml --ref main` |
+Complete single-interface delivery may ship while another interface remains unavailable. Private groundwork must not expose an unfinished public capability.
 
 Canonical bootstrap:
 
