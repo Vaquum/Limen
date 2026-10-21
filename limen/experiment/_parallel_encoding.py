@@ -49,7 +49,7 @@ def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool 
     if isinstance(value, CellType):
         return encode_graph(value, lambda: ['cell', encode(value.cell_contents, active, ordered=ordered)])
     if isinstance(value, defaultdict):
-        return encode_graph(value, lambda: _encode_component(cast(object, value), active | {id(cast(object, value))}, owner_only=True))
+        return encode_graph(cast(object, value), lambda: _encode_component(cast(object, value), active | {id(cast(object, value))}, owner_only=True))
     if value is None:
         node: list[object] = ['null']
     elif isinstance(value, str):
