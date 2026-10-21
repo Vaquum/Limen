@@ -369,13 +369,11 @@ def test_parallel_workers_native_rejects_before_artifacts(tmp_path, workers):
     assert not (tmp_path / 'invalid').exists()
 
 
-@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'architecture', 'context', 'prepare_once', 'params_override', 'prep_override', 'model_override'))
+@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'context', 'prepare_once', 'params_override', 'prep_override', 'model_override'))
 def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
     config = parallel_config()
     if case in ('n_jobs', 'null_jobs', 'negative_jobs'):
         config['sfd']['params']['n_jobs'] = [{'n_jobs': 2, 'null_jobs': None, 'negative_jobs': -1}[case]]
-    if case == 'architecture':
-        config['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.random_binary'
     path = tmp_path / 'admission'
     loop = make_loop(config, path)
     if case == 'standard':

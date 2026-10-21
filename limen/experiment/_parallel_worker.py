@@ -9,7 +9,7 @@ from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, is_dataclass
 from importlib import import_module
-from inspect import isfunction
+from inspect import isfunction, signature
 from pathlib import Path
 from string import Formatter
 from typing import Protocol, cast
@@ -19,10 +19,9 @@ import polars as pl
 from limen.experiment._parallel_sources import SourceSnapshot
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.errors import StrictModeError
-from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest, MLManifest
+from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.sfd.reference_architecture.lightgbm_binary import lightgbm_binary
-from limen.sfd.reference_architecture.logreg_binary import logreg_binary
 
 __all__ = ['FrozenRoundSources', 'RoundPayload', 'evaluate_round', 'freeze_sources',
            'startup_limits', 'validate_parallel', 'worker_init']
@@ -31,6 +30,7 @@ _THREAD_ENV = ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS',
                'VECLIB_MAXIMUM_THREADS', 'BLIS_NUM_THREADS', 'NUMEXPR_NUM_THREADS', 'POLARS_MAX_THREADS')
 _SCALER_FACTORIES = ('make_fitted_scaler.<locals>._factory',
                      'MLManifest.set_scaler_from_params.<locals>._scaler_factory')
+_CPU_KNOBS = ('n_jobs', 'device', 'device_type')
 
 
 @dataclass(frozen=True)
@@ -99,12 +99,17 @@ def _static_source(value: object, domain: Mapping[str, list[object]]) -> None:
             _static_source(item, domain)
 
 
+def _require_cpu(knobs: Mapping[str, list[object]]) -> None:
+    if any(type(value) is not int or value != 1 for value in knobs.get('n_jobs', [])):
+        raise ValueError('Parallel rounds require effective n_jobs=1 for every admitted round')
+    if any(value not in (None, 'cpu') for name in ('device', 'device_type') for value in knobs.get(name, [])):
+        raise ValueError('Parallel rounds require the CPU backend')
+
+
 def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
                       domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> None:
     from limen.yaml.compiler import build_manifest
 
-    if type(manifest) is not MLManifest or manifest.architecture_function not in (logreg_binary, lightgbm_binary):
-        raise ValueError('Parallel rounds require compiled CPU logreg_binary or lightgbm_binary')
     rebuilt = build_manifest(dict(yaml_reference))
     if _shape(vars(manifest)) != _shape(vars(rebuilt)):
         raise ValueError('Parallel rounds require the unchanged compiled YAML manifest pipeline')
@@ -113,12 +118,8 @@ def validate_parallel(manifest: Manifest, yaml_reference: Mapping[str, object],
     if any(not values for values in effective.values()):
         raise ValueError('Parallel rounds require nonempty parameter domains')
     _ = _shape(effective)
-    jobs = effective.get('n_jobs', [manifest.resolve_model_kwargs({})['n_jobs']])
-    if any(type(value) is not int or value != 1 for value in jobs):
-        raise ValueError('Parallel rounds require effective n_jobs=1 for every admitted round')
-    devices = effective.get('device_type', effective.get('device', ['cpu']))
-    if any(value != 'cpu' for value in devices):
-        raise ValueError('Parallel rounds require the CPU backend')
+    parameters = signature(cast(Callable[..., object], manifest.architecture_function)).parameters
+    _require_cpu({name: effective.get(name, [parameters[name].default]) for name in _CPU_KNOBS if name in effective or name in parameters})
     sources: list[object] = [manifest.data_source_config]
     config = manifest.backtest_config
     if config is not None:
@@ -214,9 +215,7 @@ def evaluate_round(round_params: dict[str, object]) -> RoundPayload:
         with limit(limits=1), warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter('always')
             manifest = build_manifest(_worker_yaml)
-            jobs = manifest.resolve_model_kwargs(params)['n_jobs']
-            if type(jobs) is not int or jobs != 1:
-                raise ValueError('Parallel round requires effective n_jobs=1')
+            _require_cpu({name: [value] for name, value in manifest.resolve_model_kwargs(params).items() if name in _CPU_KNOBS})
             vars(manifest)['_frozen_trade_sources'] = (_worker_sources.execution, _worker_sources.funding)
             folds = None
             if manifest.split_walk_forward is None:
