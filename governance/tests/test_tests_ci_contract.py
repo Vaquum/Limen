@@ -45,7 +45,6 @@ EXPECTED_RULESET_COMMAND = (
     'governance/tests/test_ci_contract.py '
     'governance/tests/test_lint_ci_contract.py '
     'governance/tests/test_tests_ci_contract.py '
-    'governance/tests/test_version_gate.py '
     'governance/tests/test_governance_config.py '
     'governance/tests/test_prd_gate.py '
     'governance/tests/test_supply_chain.py '
