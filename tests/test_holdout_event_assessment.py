@@ -477,6 +477,12 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, phantom, 'position continuity')
 
+    def preshift(report_dict):
+        target = next(episode for episode in report_dict['execution']['ledger']['episodes'] if episode['closed_at_ns'] is not None)
+        target['first_fill_ns'] = report_dict['planned']['end_ns'] + 1
+
+    _rewrite_report(root, report, preshift, 'episode entry')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
