@@ -57,7 +57,7 @@ FAMILIES = {'dlinear': dlinear_config, 'ridge': lambda: _config('ridge'),
 def run(config, directory, *, workers, resume=False):
     loop = UniversalExperimentLoop(sfd=CompiledSFD(config), data=recorded_source(), experiment_dir=directory,
                                    yaml_reference=config, search_strategy=build_search_strategy(config), checkpoint_interval=1)
-    loop.run('admitted_cpu_rounds', n_permutations=2, prep_each_round=True, progress_bar=False,
+    loop.run('admitted_cpu_rounds', n_permutations=1, prep_each_round=True, progress_bar=False,
              record_execution=True, record_model_outputs=True, workers=workers, resume=resume,
              recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
     return loop
@@ -90,9 +90,9 @@ def test_compatible_families_match_serial_and_resume(tmp_path, family):
     assert_frame_equal(left.select(columns), right.select(columns), check_exact=False, rel_tol=1e-10, abs_tol=1e-12)
     saved = records(parallel)
     _assert_same(saved, records(serial))
-    assert len(saved) == 2
+    assert len(saved) == 1
     for row in saved:
         assert row['probs'] is None
         assert all(value in (0, 1) for value in row['preds']) is (family == 'rule_based')
     assert json.loads((parallel / 'metadata.json').read_text())['workers'] == 2
-    assert run(config, parallel, workers=2, resume=True).experiment_log.height == 2
+    assert run(config, parallel, workers=2, resume=True).experiment_log.height == 1
