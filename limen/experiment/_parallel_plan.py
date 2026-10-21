@@ -216,7 +216,8 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
             if isinstance(value, FunctionType):
                 clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if isolate or mutable_function(value) else decode(encode(value), isolate_functions=isolate)
             else:
-                clone = restore_object(type(value), cast(ObjectState, _normalize(object_state(value), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), state_memo.get(id(value), (value, None))[1])
+                source = cast(object, value)
+                clone = restore_object(type(source), cast(ObjectState, _normalize(object_state(source), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), state_memo.get(id(source), (source, None))[1])
         if isinstance(value, FunctionType) and clone is not value and (isolate or mutable_function(value)):
             cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
@@ -236,7 +237,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         clone = copy.deepcopy(cast(object, value))
     implementation = call_implementation(cast(object, value))
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
-    if (snapshot or source_class(type(value)) is not type(value)) and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
+    if (snapshot or source_class(type(cast(object, value))) is not type(cast(object, value))) and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         with shared_copy(state_memo):
             bind_call(clone, (decode(encode(implementation), isolate_functions=True),
                              _normalize(getattr(cast(object, value), '__parallel_round_contract__', None), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), digest)

@@ -18,7 +18,7 @@ from limen.experiment._parallel_sources import SourceSnapshot
 from limen.experiment._parallel_identity import distribution_providers
 from limen.experiment._parallel_plan import FrozenManifestPlan, clone_manifest, freeze_manifest, plan_identity, plan_digests
 from limen.experiment._parallel_evidence import round_record
-from limen.experiment._parallel_resources import backend_imports, validate_resources, validate_domain
+from limen.experiment._parallel_resources import validate_resources, validate_domain
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.errors import StrictModeError
 from limen.experiment.manifest_core import DataSourceConfig, DataSourceResolver, Manifest, MLManifest
@@ -117,6 +117,10 @@ def _native_pools() -> list[dict[str, object]]:
     if pl.thread_pool_size() != 1 or any(pool.get('num_threads') != 1 for pool in pools):
         raise ValueError('Parallel worker native thread pools must all be limited to one')
     return pools
+
+
+def backend_imports(plan: FrozenManifestPlan) -> tuple[str, ...]:
+    return tuple(sorted({name for stage in plan.stages for name in stage.contract.backend_imports}))
 
 
 def worker_init(plan: FrozenManifestPlan, sources: SourceSnapshot,

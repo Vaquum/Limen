@@ -15,7 +15,7 @@ from typing import cast
 from limen.experiment._parallel_scaler import CapturedTransform, ScalerFactory, TransformClass, constructor_state, validate_constructor
 from limen.experiment._parallel_encoding import encode
 from limen.experiment._parallel_state import component_state, factory_signature, mutable_function, object_state, restore_object
-from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, same_component, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
+from limen.experiment._parallel_plan import FrozenManifestPlan, FrozenStage, identity_snapshot, same_component, component_digest, static_source, parameter_references, factory_reference, factory_allocator, factory_initializer
 
 _resolve_params = cast(Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]], vars(import_module('limen.experiment.manifest_core'))['_resolve_params'])
 
@@ -144,6 +144,7 @@ def unfrozen_stage(_params: Mapping[str, object]) -> None:
     raise ValueError('unfrozen external state')
 
 
+@identity_snapshot()
 def validate_resources(plan: FrozenManifestPlan, params: Mapping[str, object]) -> None:
     configs = _configurations(plan, params)
     for stage in plan.stages:
@@ -232,10 +233,7 @@ def _scaler_bindings(manifest: MLManifest, path: str) -> tuple[Mapping[str, obje
     return dict(arguments), ()
 
 
-def backend_imports(plan: FrozenManifestPlan) -> tuple[str, ...]:
-    return tuple(sorted({name for stage in plan.stages for name in stage.contract.backend_imports}))
-
-
+@identity_snapshot()
 def validate_domain(plan: FrozenManifestPlan, domain: Mapping[str, list[object]], context: Mapping[str, object] | None) -> None:
     effective = dict(domain) | {key: [value] for key, value in (context or {}).items()}
     if any(not values for values in effective.values()):
