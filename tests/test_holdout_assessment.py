@@ -1462,7 +1462,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 
 
 @pytest.mark.parametrize('wrapped', [False, True])
-@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook'])
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook', 'numeric-hook', 'reflect-globals', 'reflect-builtins', 'getattr-globals', 'getattr-builtins'])
 def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind, monkeypatch):
     import sys
     from types import CellType, ModuleType
@@ -1568,12 +1568,27 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     indexed = IndexedRegistry()
     def index_factory(data, **params):
         return indexed['build'](data, **params)
+    class NumericSettings:
+        def __float__(self):
+            return 1.0 + _LATE_RULES['offset']
+    numeric_settings = NumericSettings()
+    def numeric_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': float(numeric_settings)}))
+    policy = FunctionType(identity_probabilities.__code__, {'__name__': __name__, 'rules': _LATE_RULES, '__builtins__': {'rules': _LATE_RULES}}, 'construction_policy')
+    def globals_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + policy.__globals__['rules']['offset']}))
+    def builtins_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + policy.__builtins__['rules']['offset']}))
+    def getattr_globals_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + getattr(policy, '__globals__')['rules']['offset']}))
+    def getattr_builtins_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': 1 + getattr(policy, '__builtins__')['rules']['offset']}))
     def annotation_factory(data, **params):
         return annotation_factory.__annotations__['build'](data, **params)
     annotation_factory.__annotations__ = {'build': helper}
     def nested_module_factory(data, **params):
         return package.helpers.build(data, **params)
-    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory}[kind]
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory, 'numeric-hook': numeric_factory, 'reflect-globals': globals_factory, 'reflect-builtins': builtins_factory, 'getattr-globals': getattr_globals_factory, 'getattr-builtins': getattr_builtins_factory}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
@@ -1617,6 +1632,25 @@ def test_trusted_factory_rejects_assertion_runtime_spoof(native_assessment_case,
     with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
         with pytest.raises(ValueError, match='differs from the recorded'):
             CompiledSFD(recorded, components=configure).manifest()
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('wrapped', [False, True])
+@pytest.mark.parametrize('namespace', ['globals', 'builtins'])
+def test_trusted_factory_requires_literal_reflective_keys(native_assessment_case, wrapped, namespace):
+    policy = identity_probabilities
+    key = 'rules'
+    def globals_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': policy.__globals__[key]}))
+    def builtins_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': policy.__builtins__[key]}))
+    factory = globals_factory if namespace == 'globals' else builtins_factory
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    with patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='literal key'):
+            CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure).manifest()
         assert loader.call_count == 0
 
 

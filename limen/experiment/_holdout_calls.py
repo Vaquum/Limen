@@ -1,17 +1,19 @@
 from collections.abc import Callable, Iterator, Sequence
 from contextlib import contextmanager
-from functools import lru_cache, partial
+from functools import partial
 import inspect
 import logging
-from importlib.abc import InspectLoader
+from importlib.util import resolve_name
+import dis
 import sys
 from threading import RLock
 from types import CellType, CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
 
-from limen.experiment._holdout_namespaces import code_aliases, namespace_calls, reader_names, reader_types
+from limen.experiment._holdout_code import code_aliases, function_module, native_codes, reader_names, reader_types
+from limen.experiment._holdout_namespaces import namespace_calls
 
-__all__ = ['call_codes', 'call_functions', 'code_aliases', 'constructor_entry', 'entropy_call', 'function_module', 'logger_attributes', 'matches', 'namespace_calls', 'native_annotation', 'native_attribute', 'native_codes', 'native_leaf_dependencies', 'reader_names', 'reader_types', 'receiver_position', 'same_callback']
+__all__ = ['call_codes', 'call_functions', 'code_aliases', 'constructor_entry', 'entropy_call', 'factory_imports', 'function_module', 'logger_attributes', 'matches', 'namespace_calls', 'native_annotation', 'native_attribute', 'native_codes', 'native_leaf_dependencies', 'reader_names', 'reader_types', 'receiver_position', 'same_callback']
 
 _LOCK = RLock()
 
@@ -175,27 +177,6 @@ def matches(function: FunctionType, frame: FrameType, owner: object | None, inst
         for name, cell in zip(function.__code__.co_freevars, function.__closure__ or (), strict=True) for binding in (_cell_binding(cell),))
 
 
-@lru_cache(maxsize=256)
-def native_codes(name: str) -> frozenset[CodeType]:
-    loader = getattr(sys.modules[name], '__loader__', None)
-    code = loader.get_code(name) if isinstance(loader, InspectLoader) else None
-    pending, codes = [code] if code is not None else [], set[CodeType]()
-    while pending:
-        current = pending.pop()
-        codes.add(current)
-        pending.extend(part for part in current.co_consts if isinstance(part, CodeType))
-    return frozenset(codes)
-
-
-def function_module(value: FunctionType, libraries: tuple[str, ...]) -> str:
-    name = value.__globals__.get('__name__')
-    module = sys.modules.get(name) if isinstance(name, str) else None
-    if module is None or vars(module) is not value.__globals__:
-        return ''
-    if (module.__name__.split('.')[0] in sys.stdlib_module_names or module.__name__.split('.')[0] in libraries) and value.__code__ not in native_codes(module.__name__):
-        return ''
-    return module.__name__
-
 
 def entropy_call(value: object) -> bool:
     name, module = getattr(value, '__name__', None), getattr(value, '__module__', None)
@@ -222,3 +203,14 @@ def native_leaf_dependencies(value: object, seen: dict[int, object], evidence: l
 
 def native_annotation(value: object, libraries: tuple[str, ...]) -> bool:
     return isinstance(value, type) and (module := sys.modules.get(value.__module__)) is not None and vars(module).get(value.__qualname__) is value and ((root := value.__module__.split('.')[0]) in sys.stdlib_module_names or root in libraries)
+
+
+def factory_imports(function: FunctionType, codes: tuple[CodeType, ...]) -> dict[str, object]:
+    bindings: dict[str, object] = {}
+    for code in codes:
+        instructions = tuple(dis.get_instructions(code))
+        for index, instruction in enumerate(instructions):
+            if instruction.opname == 'IMPORT_NAME':
+                imported = resolve_name('.' * int(instructions[index - 2].argval) + str(instruction.argval), function.__globals__.get('__package__', ''))
+                bindings[f'import:{imported}'] = sys.modules[imported]
+    return bindings

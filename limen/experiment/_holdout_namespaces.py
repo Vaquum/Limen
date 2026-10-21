@@ -1,14 +1,11 @@
 import dis
-import marshal
-from collections import deque
 from functools import lru_cache
-from types import CodeType, EllipsisType
-from typing import cast
-from typing_extensions import Buffer
+from types import CodeType
 
-__all__ = ['code_aliases', 'namespace_calls', 'reader_names', 'reader_types']
+from limen.experiment._holdout_code import code_aliases, reader_names, reader_types
+
+__all__ = ['code_aliases', 'namespace_calls', 'reader_names', 'reader_types', 'reflective_reads']
 _CALLS = frozenset({'CALL', 'CALL_FUNCTION', 'CALL_METHOD'})
-reader_types: tuple[type[object], ...] = (list, tuple, dict, deque)
 
 
 @lru_cache(maxsize=2048)
@@ -41,18 +38,17 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
     return (*found, *((alias, key) for part in code.co_consts if isinstance(part, CodeType) for name, key in namespace_calls(part) for alias in aliases.get(name, {name})))
 
 
-def reader_names(value: object, key: str | int) -> tuple[str, ...]:
-    size = list[object].__len__(cast(list[object], value)) if isinstance(value, list) else tuple[object, ...].__len__(cast(tuple[object, ...], value)) if isinstance(value, tuple) else deque[object].__len__(cast(deque[object], value)) if isinstance(value, deque) else None
-    return (str(key), str(key - size)) if isinstance(key, int) and size is not None else (str(key),)
-
-_Constant = type[StopIteration] | EllipsisType | bool | int | float | complex | str | bytes | CodeType | Buffer | tuple['_Constant', ...] | frozenset['_Constant'] | None
-
-
-def code_aliases(code: CodeType, fields: tuple[str, ...]) -> tuple[int, ...]:
-    pending, seen, aliases = [cast(object, code)], dict[int, tuple[int, object]](), list[int]()
-    while pending:
-        repeated = id(item := pending.pop()) in seen
-        aliases.append(seen.setdefault(id(item), (len(seen), item))[0])
-        if not repeated:
-            pending.extend(tuple(getattr(item, name, None) for name in fields) if isinstance(item, CodeType) else cast(tuple[object, ...], item) if isinstance(item, tuple) else sorted(cast(frozenset[object], item), key=lambda constant: marshal.dumps(cast(_Constant, constant), 2)) if isinstance(item, frozenset) else ())
-    return tuple(aliases)
+@lru_cache(maxsize=2048)
+def reflective_reads(code: CodeType) -> tuple[tuple[str, str], ...]:
+    instructions = tuple(dis.get_instructions(code))
+    found: list[tuple[str, str]] = []
+    for index, part in enumerate(instructions):
+        indirect = part.opname == 'LOAD_CONST' and part.argval in ('__globals__', '__builtins__') and any(item.opname in _CALLS for item in instructions[index + 1:index + 4])
+        if part.argval in ('__globals__', '__builtins__') and (part.opname in ('LOAD_ATTR', 'LOAD_METHOD') or indirect):
+            lookup = tuple(item for item in instructions[index + 1:index + 6] if item.opname != 'PRECALL')
+            if indirect:
+                lookup = lookup[next(offset for offset, item in enumerate(lookup) if item.opname in _CALLS) + 1:]
+            if tuple(item.opname for item in lookup[:2]) != ('LOAD_CONST', 'BINARY_SUBSCR') or not isinstance(lookup[0].argval, str):
+                raise ValueError('Holdout requires a literal key for reflective factory namespaces')
+            found.append((str(part.argval), lookup[0].argval))
+    return (*found, *(entry for part in code.co_consts if isinstance(part, CodeType) for entry in reflective_reads(part)))

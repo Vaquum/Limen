@@ -3,12 +3,10 @@ from __future__ import annotations
 from builtins import globals as _native_globals
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterator, Mapping
-from functools import lru_cache, partial
-from hashlib import sha256
+from functools import partial
 import inspect
 from io import IOBase
 import logging
-import marshal
 import pickle
 import typing
 from types import CellType, CodeType, GenericAlias, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, MethodWrapperType, ModuleType
@@ -18,7 +16,8 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
-from limen.experiment._holdout_calls import native_attribute, logger_attributes, code_aliases
+from limen.experiment._holdout_calls import native_attribute, logger_attributes
+from limen.experiment._holdout_code import code_digest
 
 __all__ = ['children', 'code_digest', 'fitted_witness', 'native_types', 'native_values', 'object_payload']
 
@@ -39,13 +38,6 @@ def _typing_metadata(value: object) -> dict[str, object] | None:
     return {name: getattr(value, name) for name in ('__name__', '__bound__', '__constraints__', '__covariant__', '__contravariant__', '__infer_variance__', '__default__', '__origin__') if hasattr(value, name)} if type(value) in _PARAMETER_TYPES else None
 
 
-@lru_cache(maxsize=2048)
-def _code_hash(code: CodeType, _identity: int) -> str:
-    return sha256(marshal.dumps(code, 2) + pickle.dumps(code_aliases(code, ('co_code', 'co_consts', 'co_names', 'co_varnames', 'co_freevars', 'co_cellvars', 'co_filename', 'co_name', 'co_qualname', 'co_linetable', 'co_exceptiontable')), protocol=5)).hexdigest()
-
-
-def code_digest(code: CodeType) -> str:
-    return _code_hash(code, id(code))
 
 def native_values(value: object) -> tuple[object, ...]:
     iterator = _NATIVE_ITERATORS[1] if isinstance(value, tuple) else _NATIVE_ITERATORS[0] if isinstance(value, list) else _NATIVE_ITERATORS[2] if isinstance(value, deque) else _NATIVE_ITERATORS[3] if isinstance(value, set) else _NATIVE_ITERATORS[4]
