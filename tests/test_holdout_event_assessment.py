@@ -275,7 +275,17 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
             fill['quantity_delta'] *= 2.0
         reprice_costs(execution)
 
-    _rewrite_report(root, report, double, 'position sizing')
+    _rewrite_report(root, report, double, 'terminal valuation')
+
+    def resize(report_dict):
+        execution = report_dict['execution']
+        for row in execution['ledger']['states'][:-1]:
+            row['quantity'] *= 2.0
+        for fill in execution['ledger']['fills']:
+            fill['quantity_delta'] *= 2.0
+        reprice_costs(execution)
+
+    _rewrite_report(root, report, resize, 'position sizing')
 
     def reslip(report_dict):
         execution = report_dict['execution']
@@ -284,6 +294,28 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
         reprice_costs(execution)
 
     _rewrite_report(root, report, reslip, 'fill price')
+
+    def inflate(report_dict):
+        execution = report_dict['execution']
+        states = execution['ledger']['states']
+        states[-1]['equity'] += 1000.0
+        ending = states[-1]['equity']
+        initial = execution['initial_equity']
+        metrics = execution['metrics']
+        metrics['ending_equity']['value'] = ending
+        metrics['total_return']['value'] = ending / initial - 1
+        metrics['net_pnl']['value'] = ending - initial
+        metrics['gross_pnl']['value'] = ending - initial + metrics['fees']['value'] + metrics['slippage']['value'] - metrics['funding_pnl']['value']
+        running, worst = 0.0, 0.0
+        for value in [row['equity'] for row in states]:
+            running = max(running, value)
+            worst = min(worst, value / max(running, initial) - 1)
+        metrics['max_drawdown']['value'] = worst
+        for episode in execution['ledger']['episodes']:
+            if episode['closed_at_ns'] is None:
+                episode['net_pnl'] = ending - episode['entry_equity']
+
+    _rewrite_report(root, report, inflate, 'terminal valuation')
 
 
 def _rewrite_report(root, report, mutate, match):
