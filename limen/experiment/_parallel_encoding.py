@@ -224,7 +224,7 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only
     frozen = len(call) == _CAPTURED_CALL_ARITY and call[0] == 'captured_call'
     captured = decode(call[1] if frozen else cast(object, implementation), isolate_functions=isolate_functions)
     if frozen:
-        bind_call(instance, captured)
+        bind_call(instance, captured, digest)
     elif not owner_only and encode(call_implementation(instance)) != encode(captured):
         raise ValueError('Parallel callable implementation changed')
     return instance

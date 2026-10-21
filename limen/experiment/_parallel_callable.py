@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from inspect import getattr_static
 from types import FunctionType
 from typing import cast
@@ -15,7 +16,7 @@ def source_class(cls: type) -> type:
     return cast(type, vars(cls).get('_parallel_source_class', cls))
 
 
-def bind_call(instance: object, captured: object) -> None:
+def bind_call(instance: object, captured: object, fingerprint: Callable[[object], str]) -> None:
     if not isinstance(captured, tuple) or len(cast(tuple[object, ...], captured)) != _CAPTURED_CALL_PARTS:
         raise ValueError('Invalid captured parallel call')
     implementation, contract = cast(tuple[object, object], captured)
@@ -26,9 +27,8 @@ def bind_call(instance: object, captured: object) -> None:
     descriptor: object = classmethod(implementation) if isinstance(raw, classmethod) else staticmethod(implementation) if isinstance(raw, staticmethod) else implementation
     if hasattr(instance, '__dict__'):
         vars(instance)['__parallel_round_contract__'] = contract
-    from limen.experiment._parallel_encoding import digest
     with isolated_encoding():
-        identity = (digest(implementation), id(implementation) if mutable_function(implementation) else 0, 0 if hasattr(instance, '__dict__') else id(contract))
+        identity = (fingerprint(implementation), id(implementation) if mutable_function(implementation) else 0, 0 if hasattr(instance, '__dict__') else id(contract))
     attributes: dict[str, object] = {'__slots__': (), '__module__': cls.__module__, '__qualname__': cls.__qualname__,
                   '_parallel_source_class': cls, '__call__': descriptor, '__parallel_round_contract__': contract}
     object.__setattr__(instance, '__class__', execution_class(cls, identity, attributes))
