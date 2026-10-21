@@ -524,6 +524,33 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, suppress, 'signal coverage')
 
+    def reopen(report_dict):
+        execution = report_dict['execution']
+        ending = execution['metrics']['ending_equity']['value']
+        target = next(episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is not None)
+        target['closed_at_ns'] = None
+        target['net_pnl'] = ending - target['entry_equity']
+        closed = [episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is not None]
+        execution['metrics']['completed_trades']['value'] = float(len(closed))
+        execution['metrics']['open_trades']['value'] = float(len(execution['ledger']['episodes']) - len(closed))
+        execution['metrics']['episode_win_rate']['value'] = sum(episode['net_pnl'] > 0 for episode in closed) / len(closed) if closed else 0.0
+
+    _rewrite_report(root, report, reopen, 'episode state evidence')
+
+    def latch(report_dict):
+        execution = report_dict['execution']
+        cash = {row['time_ns']: row['cash'] for row in execution['ledger']['states']}
+        target = next(episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is None)
+        moment = next(fill['time_ns'] for fill in reversed(execution['ledger']['fills']) if fill['episode_id'] == target['episode_id'])
+        target['closed_at_ns'] = moment
+        target['net_pnl'] = cash[moment] - target['entry_equity']
+        closed = [episode for episode in execution['ledger']['episodes'] if episode['closed_at_ns'] is not None]
+        execution['metrics']['completed_trades']['value'] = float(len(closed))
+        execution['metrics']['open_trades']['value'] = float(len(execution['ledger']['episodes']) - len(closed))
+        execution['metrics']['episode_win_rate']['value'] = sum(episode['net_pnl'] > 0 for episode in closed) / len(closed) if closed else 0.0
+
+    _rewrite_report(root, report, latch, 'episode state evidence')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
