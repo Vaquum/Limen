@@ -2,12 +2,13 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from functools import lru_cache, partial
 import inspect
-import dis
 from importlib.abc import InspectLoader
 import sys
 from threading import RLock
 from types import CellType, CodeType, FrameType, FunctionType, GetSetDescriptorType, MemberDescriptorType, MethodType
 from typing import NamedTuple, cast
+
+from limen.experiment._holdout_namespaces import namespace_calls
 
 __all__ = ['call_codes', 'call_functions', 'constructor_entry', 'entropy_call', 'function_module', 'matches', 'namespace_calls', 'native_attribute', 'native_codes', 'receiver_position', 'same_callback']
 
@@ -198,19 +199,6 @@ def function_module(value: FunctionType, libraries: tuple[str, ...]) -> str:
 def entropy_call(value: object) -> bool:
     name, module = getattr(value, '__name__', None), getattr(value, '__module__', None)
     return isinstance(name, str) and isinstance(module, str) and name in ('urandom', 'getrandom') and module in ('os', 'posix', 'nt')
-
-
-@lru_cache(maxsize=2048)
-def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
-    instructions = tuple(part for part in dis.get_instructions(code) if part.opname != 'PRECALL')
-    found: list[tuple[str, str | None]] = []
-    for index, part in enumerate(instructions[:-1]):
-        call = instructions[index + 1]
-        if part.opname in ('LOAD_ATTR', 'LOAD_METHOD', 'LOAD_CONST') and isinstance(part.argval, str) and call.opname in ('CALL', 'CALL_FUNCTION', 'CALL_METHOD') and call.arg == 0:
-            lookup = instructions[index + 2:index + 4]
-            key = lookup[0].argval if bool(lookup[1:]) and lookup[0].opname == 'LOAD_CONST' and isinstance(lookup[0].argval, str) and lookup[1].opname == 'BINARY_SUBSCR' else None
-            found.append((part.argval, key))
-    return (*found, *(entry for part in code.co_consts if isinstance(part, CodeType) for entry in namespace_calls(part)))
 
 
 def _cell_binding(cell: CellType) -> tuple[bool, object]:

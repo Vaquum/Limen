@@ -30,7 +30,7 @@ from limen.experiment._holdout_freeze import members, owned_copy
 from limen.experiment.holdout import FrozenHoldoutSelection, final_holdout_report, freeze_holdout_selection, read_holdout_report, release_holdout, reserve_holdout, withdraw_holdout
 from limen.inference import Trainer
 from limen.inference.sensor import Sensor
-from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
+from limen.sfd.reference_architecture.logreg_binary import LogRegBinary, logreg_binary
 from limen.targets.next_bar_up import NextBarUpTarget
 from limen.targets.threshold_binary import ThresholdBinaryTarget
 from limen.yaml import CompiledSFD
@@ -47,6 +47,11 @@ _GLOBAL_FITTED_PROVIDER = None
 _ALIAS_SENTINEL = object()
 _ALIAS_REGISTRY = {'default': _ALIAS_SENTINEL}
 _READ_GLOBALS = globals
+_FACTORY_PARAMS = {'C': 1.0}
+
+
+def declared_model_factory(data, **params):
+    return logreg_binary(data, **(params | _FACTORY_PARAMS))
 
 
 def later_probabilities(values):
@@ -1013,6 +1018,58 @@ def test_trusted_component_class_constructor_binding(native_assessment_case, ent
             CompiledSFD(recorded, components=configure).manifest()
         with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
             Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('kind', ['function', 'class', 'inherited'])
+@pytest.mark.parametrize('wrapped', [False, True])
+def test_trusted_factory_globals_and_class_attributes(native_assessment_case, kind, wrapped):
+    class ParentFactory:
+        depth = 1.0
+        def __new__(cls, data, **params):
+            return logreg_binary(data, **(params | {'C': cls.depth}))
+    class Factory(ParentFactory):
+        pass
+    if kind == 'class':
+        Factory.depth = 1.0
+    factory = declared_model_factory if kind == 'function' else Factory
+    declared = partial(factory) if wrapped else factory
+    def configure(manifest):
+        manifest.with_reference_architecture(declared)
+    compiled = CompiledSFD(native_assessment_case[2][0][0]._yaml_reference, components=configure)
+    recorded = compiled.yaml_reference
+    architecture = CompiledSFD(recorded, components=configure).manifest().architecture_function
+    assert architecture.func is factory if wrapped else architecture is factory
+    directory = native_assessment_case[0] / f'factory-state-{kind}-{wrapped}'
+    directory.mkdir()
+    metadata = json.loads((native_assessment_case[0] / 'native' / 'metadata.json').read_text())
+    metadata['yaml_reference'] = recorded
+    (directory / 'metadata.json').write_text(json.dumps(metadata))
+    changed = patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'function' else patch.object(Factory if kind == 'class' else ParentFactory, 'depth', 2.0)
+    with changed, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
+        with pytest.raises(ValueError, match='differs from the recorded'):
+            CompiledSFD(recorded, components=configure).manifest()
+        with pytest.raises(ValueError, match='not a valid YAML SFD reference'):
+            Trainer(directory, project_root=native_assessment_case[0], components=configure)
+        assert loader.call_count == 0
+
+
+@pytest.mark.parametrize('defaulted', [False, True])
+def test_frozen_literal_getattr_globals(native_assessment_case, defaulted):
+    class AttributeGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            offset = getattr(self, 'read_globals', None)()['_LATE_RULES']['offset'] if defaulted else getattr(self, 'read_globals')()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = AttributeGlobals
+    selected._model.read_globals = globals
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
         assert loader.call_count == 0
 
 
