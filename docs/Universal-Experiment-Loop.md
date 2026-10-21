@@ -341,7 +341,7 @@ The same flag records the sibling `market: {"ret": [...]}`: unscaled returns fro
 
 When no snapshot runs (missing prices, disabled inline metrics, a custom producer, or event execution), both `execution` and `market` are `null`. A flat snapshot has full-length zero execution arrays and still records market returns. Event execution retains its existing `trade_ledger` by default. With recording off, neither field is added.
 
-Read retained arrays according to the declared storage format. The Compiled project's family comparisons use this exact version-2 prediction reader; its independent tests check the decoded values against the model/label population. This helper requires a validated v2 prediction reference and is not a general reader for all formats:
+Declare the required artifacts before execution. The Compiled project retains predictions, alignment, trade ledgers and fold details through YAML; its proof verifies prediction payload hashes and compares the decoded values with the original label population:
 
 <!-- example: uel-compiled-recorded-predictions source=docs/examples/compiled-research/research.yaml region=run scenario=search interface=compiled role=executed -->
 ```yaml
