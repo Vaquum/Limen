@@ -327,6 +327,7 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, retain):
         altered(metadata_change=lambda value: value['holdout_binding'].update(schema_version=True))
         altered(cp_change=lambda value: value['holdout_binding']['population'].update(input_sha256=''))
         altered(row_change=lambda values: values[0].pop('holdout'))
+        altered(row_change=lambda values: values[0].update(folds=[]))
         altered(row_change=lambda values: values[0]['holdout']['selected'].update(rows=0))
         altered(row_change=lambda values: values[0]['holdout'].update(model_schema=[]))
         altered(row_change=lambda values: values[0]['holdout']['source'].update(admitted_sha256=''))

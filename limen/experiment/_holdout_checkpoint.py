@@ -115,11 +115,13 @@ def capture(host: object, frontier: int, *, completed_parents: bool = False) -> 
                 raise ValueError('Protected checkpoint cannot resume after reservation release')
             continue
         entries = cast(list[dict[str, object]], row['folds']) if 'folds' in row else [row]
-        for entry in entries:
+        if not entries or ('folds' in row and len(entries) != getattr(getattr(manifest, 'split_walk_forward', None), 'n_folds', None)):
+            raise ValueError('Holdout checkpoint lacks its complete fold population')
+        for fold, entry in enumerate(entries):
             proof = _proof(binding, entry | {'round_id': row['round_id']}, completed_parent=completed_parents)
             if entry is not row:
                 workflow = proof.get('workflow')
-                if (not isinstance(workflow, dict) or type(entry.get('fold')) is not int
+                if (not isinstance(workflow, dict) or type(entry.get('fold')) is not int or entry['fold'] != fold
                         or _json({key: cast(dict[str, object], workflow).get(key) for key in ('schema_version', 'fold')}) != _json({'schema_version': 1, 'fold': entry['fold']})):
                     raise ValueError('Holdout checkpoint fold association/version changed')
             witnesses.append(proof)
