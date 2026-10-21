@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 import shlex
+import signal
 import tarfile
 import venv
 import time
@@ -18,13 +19,21 @@ from released_wheel import verify_download
 from scenario_oracles import verify
 
 
-def run(argv, *, cwd, env=None):
+def run(argv, *, cwd, env=None, timeout=90):
     environment = dict(os.environ if env is None else env)
     for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
         environment.pop(name, None)
     environment['PYTHONNOUSERSITE'] = '1'
     started = time.monotonic()
-    subprocess.run([str(arg) for arg in argv], cwd=cwd, env=environment, check=True, timeout=90)
+    command = [str(arg) for arg in argv]
+    with subprocess.Popen(command, cwd=cwd, env=environment, start_new_session=True) as process:
+        try:
+            status = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            raise
+        if status:
+            raise subprocess.CalledProcessError(status, command)
     print(f'Wheel proof stage {time.monotonic() - started:.2f}s: ' + ' '.join(map(str, argv)), flush=True)
 
 
@@ -152,8 +161,9 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     # Complete the first scientific import before starting the disjoint campaigns.
     run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
     with ThreadPoolExecutor(max_workers=2) as executor:
+        # The CI suite's 120-second gate bounds these complete campaigns.
         executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
-                                           cwd=project, env=runtime_environment)
+                                           cwd=project, env=runtime_environment, timeout=None)
                       for name in ('python-all', 'compiled-all')}
         for execution in executions.values():
             execution.result()
