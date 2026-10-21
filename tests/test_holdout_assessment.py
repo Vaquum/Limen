@@ -1513,7 +1513,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     (directory / 'metadata.json').write_text(json.dumps(metadata))
     from limen.experiment import _round_storage
     with _round_storage.open_text(_round_storage.round_path(native_assessment_case[0] / 'native')) as stream:
-        (directory / 'round_data.jsonl').write_text(stream.read())
+        (directory / 'round_data.jsonl').write_text(''.join(stream))
     assert Trainer(directory, project_root=native_assessment_case[0], components=configure)._manifest.architecture_function is declared
     mutation = patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
     with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
