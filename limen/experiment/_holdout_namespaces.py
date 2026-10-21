@@ -16,7 +16,7 @@ def namespace_calls(code: CodeType) -> tuple[tuple[str, str | None], ...]:
             continue
         call = instructions[index + 1]
         lookup_start: int | None = index + 2 if call.opname in _CALLS and call.arg == 0 else None
-        if lookup_start is None and part.opname == 'LOAD_CONST' and index >= _LOOKUP_WIDTH and instructions[index - 2].argval == 'getattr':
+        if lookup_start is None and part.opname == 'LOAD_CONST':
             for position in range(index + 1, min(index + 3, len(instructions) - 1)):
                 getter, invocation = instructions[position:position + 2]
                 if getter.opname in _CALLS and getter.arg in (2, 3) and invocation.opname in _CALLS and invocation.arg == 0:

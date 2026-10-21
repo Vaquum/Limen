@@ -1075,6 +1075,36 @@ def test_frozen_literal_getattr_globals(native_assessment_case, defaulted):
         assert loader.call_count == 0
 
 
+@pytest.mark.parametrize('defaulted', [False, True])
+@pytest.mark.parametrize('indexed', [False, True])
+def test_frozen_nested_getattr_globals(native_assessment_case, defaulted, indexed):
+    runtime = builtins
+    class Policy:
+        def __init__(self):
+            self.read_globals = globals
+    class AttributeGlobals(LogRegBinary):
+        def predict(self, data):
+            result = super().predict(data)
+            if indexed:
+                offset = getattr(self.policies['active'], 'read_globals', None)()['_LATE_RULES']['offset'] if defaulted else runtime.getattr(self.policies['active'], 'read_globals')()['_LATE_RULES']['offset']
+            else:
+                offset = getattr(self.policy, 'read_globals', None)()['_LATE_RULES']['offset'] if defaulted else runtime.getattr(self.policy, 'read_globals')()['_LATE_RULES']['offset']
+            result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
+            return result
+    selected = copy.deepcopy(native_assessment_case[2][0][0])
+    selected._model.__class__ = AttributeGlobals
+    if indexed:
+        selected._model.policies = {'active': Policy()}
+    else:
+        selected._model.policy = Policy()
+    frozen = _freeze(selected)
+    assert _report(frozen, native_assessment_case)['state'] == 'completed'
+    with patch.dict(_LATE_RULES, {'offset': 0.1}), patch.object(assessment, 'load_admitted_source', side_effect=AssertionError('final access')) as loader:
+        with pytest.raises(ValueError, match='prediction dependency changed'):
+            _report(frozen, native_assessment_case)
+        assert loader.call_count == 0
+
+
 def test_trusted_component_implementation_and_globals(native_assessment_case):
     reference = native_assessment_case[2][0][0]._yaml_reference
     class Builder:
