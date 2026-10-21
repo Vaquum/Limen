@@ -20,7 +20,7 @@ from typing_extensions import override
 from limen._parallel_contract import ParallelRoundContract
 from limen.experiment._parallel_encoding import import_reference, decode, digest, encode, reference, source_digest
 from limen.experiment._parallel_graph import EMPTY_IDS as _NO_ANCESTORS, copy_context, value_only
-from limen.experiment._parallel_callable import bind_call
+from limen.experiment._parallel_callable import bind_call, source_class
 from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
 from limen.experiment._parallel_identity import captured_providers, declaration_changed, distribution_providers, identity_snapshot, module_identity, restore_function_metadata
 from limen.experiment.manifest_core import Manifest, MLManifest
@@ -213,14 +213,15 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         imported = import_reference(reference(value)) if isinstance(value, FunctionType) else None
         isolate = snapshot or (imported is not None and declaration_changed(imported, cast(object, value), encode))
         with shared_copy(state_memo):
-            clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if isinstance(value, FunctionType) and (isolate or mutable_function(value)) else decode(encode(cast(object, value)), isolate_functions=isolate)
+            if isinstance(value, FunctionType):
+                clone = FunctionType(value.__code__, value.__globals__, value.__name__, value.__defaults__, cast(tuple[CellType, ...] | None, _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))) if isolate or mutable_function(value) else decode(encode(value), isolate_functions=isolate)
+            else:
+                clone = restore_object(type(value), cast(ObjectState, _normalize(object_state(value), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), state_memo.get(id(value), (value, None))[1])
         if isinstance(value, FunctionType) and clone is not value and (isolate or mutable_function(value)):
             cast(FunctionType, clone).__defaults__ = cast(tuple[object, ...] | None, _normalize(value.__defaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             cast(FunctionType, clone).__kwdefaults__ = cast(dict[str, object] | None, _normalize(value.__kwdefaults__, active, snapshot=snapshot, memo=memo, state_memo=state_memo))
             _ = _normalize(value.__closure__, active, snapshot=snapshot, memo=memo, state_memo=state_memo)
             restore_function_metadata(cast(FunctionType, clone), value, _normalize(vars(value).get('__wrapped__'), active, snapshot=snapshot, memo=memo, state_memo=state_memo))
-        elif not inspect.isfunction(source := cast(object, value)):
-            _ = restore_object(type(source), cast(ObjectState, _normalize(object_state(source), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), clone)
         if (hasattr(cast(object, value), '__dict__') and '__parallel_round_contract__' in vars(value)
                 and (snapshot or not isinstance(value, (FunctionType, MethodType)) or encode(getattr(clone, '__parallel_round_contract__', None)) != encode(vars(value)['__parallel_round_contract__']))):
             vars(clone)['__parallel_round_contract__'] = _normalize(vars(value)['__parallel_round_contract__'], active, snapshot=snapshot, memo=memo, state_memo=state_memo)
@@ -235,7 +236,7 @@ def _normalize_component(value: object, active: frozenset[int], *, snapshot: boo
         clone = copy.deepcopy(cast(object, value))
     implementation = call_implementation(cast(object, value))
     implementation = implementation.__func__ if inspect.ismethod(implementation) else implementation
-    if snapshot and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
+    if (snapshot or source_class(type(value)) is not type(value)) and inspect.isfunction(implementation) and (implementation.__defaults__ or implementation.__kwdefaults__ or implementation.__closure__):
         with shared_copy(state_memo):
             bind_call(clone, (decode(encode(implementation), isolate_functions=True),
                              _normalize(getattr(cast(object, value), '__parallel_round_contract__', None), active, snapshot=snapshot, memo=memo, state_memo=state_memo)), digest)
@@ -313,8 +314,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
 
     source = copy.copy(manifest)
     vars(source)['_parallel_factory_options'] = factory_bindings(manifest, factory_options)
-    with identity_snapshot():
-        frozen, factory_options = cast(tuple[Manifest, Mapping[str, list[object]] | None], _normalize((source, factory_options), snapshot=True))
+    frozen, factory_options = cast(tuple[Manifest, Mapping[str, list[object]] | None], _normalize((source, factory_options), snapshot=True))
     comparison = copy.copy(frozen)
     vars(comparison)['_parallel_factory_options'] = {}
     if yaml_reference is not None and digest(comparison) != digest(_normalize(build_manifest(dict(yaml_reference)))):
@@ -331,8 +331,7 @@ def freeze_manifest(manifest: Manifest, yaml_reference: Mapping[str, object] | N
     pipeline, resources = plan_digests(frozen, stages)
     plan = FrozenManifestPlan(frozen, stages, pipeline, resources, captured_providers())
     # Include factory variants that exist only in the stage inventory.
-    with identity_snapshot():
-        _ = decode(encode(plan))
+    _ = decode(encode(plan))
     return plan
 
 
