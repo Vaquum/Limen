@@ -62,3 +62,8 @@ def test_parallel_absolute_output_does_not_write_working_directory(tmp_path, mon
     assert pl.read_csv(output / 'recorded.csv').height == 2
     assert list(locked.iterdir()) == []
     assert list(output.glob('.limen-parallel-*')) == []
+
+
+def test_frozen_manifest_round_plan() -> None:
+    from tests.test_parallel_plan import _frozen_manifest_round_plan
+    _frozen_manifest_round_plan()

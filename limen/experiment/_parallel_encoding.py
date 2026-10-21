@@ -19,7 +19,7 @@ import polars as pl
 
 from limen.experiment._parallel_identity import declaration_changed, identity_snapshot, module_identity, restore_function_metadata
 from limen.experiment._parallel_callable import bind_call, source_class
-from limen.experiment._parallel_graph import EMPTY_IDS as _EMPTY_IDS, copied_source, decode_graph, encode_graph, has_decoded_identity, isolated_encoding
+from limen.experiment._parallel_graph import EMPTY_IDS as _EMPTY_IDS, copied_source, decode_graph, encode_graph, has_decoded_identity, isolated_encoding, value_only
 from limen.experiment._parallel_state import ObjectState, call_implementation, component_state, mutable_function, object_state, restore_object
 
 VERSION = 1
@@ -44,7 +44,7 @@ def reference(value: object) -> list[object]:
 
 
 def encode(value: object, active: frozenset[int] = _EMPTY_IDS, *, ordered: bool = False) -> list[object]:
-    return encode_graph(value, lambda: _encode(value, active, ordered=ordered))
+    return _encode(value, active, ordered=ordered) if value_only(value) else encode_graph(value, lambda: _encode(value, active, ordered=ordered))
 
 
 def _encode(value: object, active: frozenset[int], *, ordered: bool) -> list[object]:
@@ -136,8 +136,7 @@ def import_reference(node: object) -> object:
     return value.__func__ if inspect.ismethod(value) else value
 
 
-_ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2,
-          'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
+_ARITY = {'null': 1, 'str': 2, 'bool': 2, 'int': 2, 'float': 2, 'date': 2, 'datetime': 2, 'path': 2, 'list': 2, 'tuple': 2, 'map': 2, 'keyed_map': 2, 'state_map': 2, 'import': 2,
           'function': 6, 'method': 4, 'dataclass': 4, 'instance': 4, 'cell': 2, 'owner_call': 4}
 
 
@@ -230,6 +229,7 @@ def _decode_instance(parts: list[object], *, isolate_functions: bool, owner_only
     return instance
 
 
+@identity_snapshot()
 def digest(value: object) -> str:
     return hashlib.sha256(json.dumps(encode(value), ensure_ascii=False, separators=(',', ':'), allow_nan=False).encode()).hexdigest()
 

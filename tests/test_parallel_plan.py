@@ -880,7 +880,7 @@ def _frozen_probe(plan, params):
             Path(__file__).resolve().as_posix(), transformed.to_dict(as_series=False), actual)
 
 
-def test_frozen_manifest_round_plan() -> None:
+def _frozen_manifest_round_plan() -> None:
     defaults = defaultdict(int)
     transported = decode(encode([defaults, defaults]))
     assert transported[0] is transported[1] and type(transported[0]) is defaultdict
@@ -1634,6 +1634,18 @@ def _assert_plan_identity(plan):
     from tests.test_parallel_rounds import recorded_source
     import limen.experiment._parallel_encoding as codec
     import limen.experiment._parallel_plan as plans
+    from limen.experiment import _parallel_identity as identities
+    reads = defaultdict(int)
+    original_read = identities._read_identity
+    def read_identity(name):
+        reads[name] += 1
+        return original_read(name)
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(identities, '_read_identity', read_identity)
+        before = digest([_caller_feature, _kwargs_feature])
+        assert reads and all(count == 1 for count in reads.values())
+        assert digest([_caller_feature, _kwargs_feature]) == before
+        assert all(count == 2 for count in reads.values())
     def check(value):
         assert not isinstance(value, (pl.DataFrame, pl.LazyFrame)) and not hasattr(value, 'read')
         if is_dataclass(value) and not isinstance(value, type):
