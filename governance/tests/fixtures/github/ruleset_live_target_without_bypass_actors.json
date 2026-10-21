@@ -64,9 +64,6 @@
             "context": "pr_checks_typing"
           },
           {
-            "context": "pr_checks_version"
-          },
-          {
             "context": "pr_checks_honesty"
           },
           {

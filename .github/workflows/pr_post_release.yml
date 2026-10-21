@@ -7,6 +7,12 @@ on:
   push:
     branches: [main]
 
+# One release run at a time: versions stay static across ordinary merges,
+# so overlapping runs would race to tag different commits with one version.
+concurrency:
+  group: automated-release
+  cancel-in-progress: false
+
 jobs:
   create_release:
     name: Create Automated Release

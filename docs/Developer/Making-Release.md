@@ -35,7 +35,7 @@ Confirm that one candidate commit contains:
 - green tests, docs-site, packaging, lint, type, and security checks
 - reviewed dependency licenses, including the separate optional TabPFN surface when relevant
 
-Required merge checks verify version coherence, changelog presence, tests and package contracts. Release creation separately checks the version/tag and matching changelog entry. Semantic review of the release scope and dependency licenses remains a pre-merge obligation; automation does not establish that judgment.
+Required merge checks verify version coherence, tests and package contracts. Release creation checks the version/tag and matching changelog entry. Semantic review of the release scope and dependency licenses remains a pre-merge obligation; automation does not establish that judgment.
 
 ## Automated sequence
 
