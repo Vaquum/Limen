@@ -1875,8 +1875,23 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Report post-experiment confusion only for binary classification; record explicit unavailability for exposure, continuous, and unclassifiable outputs while preserving backtests, correlation, and the convergence report.
 
-## [5.45.16] - 2026-10-20
+## [5.45.16] - 2026-10-21
 
+- Preserve the mainline provenance boundary when qualifying original PR heads after merge; allow the reviewed checker to inspect an explicit retained checkout.
+- Use one reviewed provenance dependency for retained source acquisition, original book tests and reader evidence validation; retain separate checker identities and unchanged product sources.
+- Keep restored pre-PR source bytes candidate when they differ from ordinary merged ancestry, preserving the original evidence guard.
+- Record raised checker failures with their actual exit codes; reuse captured original-head source metadata in bounded regression setup while retaining every assertion.
+- Run retained-checker regressions before research proof in the same required documentation job, preserving test coverage, source checks and existing proof time limits.
+- Include checker regressions in source distributions and update markdown-it to 14.3.3 for GHSA-vfgh-jcmw-g37q.
+
+## [5.45.17] - 2026-10-21
+
+- Admit local CSV sources with declared parser options to protected holdout research; forward has_header, require numeric OHLC and parseable UTC datetimes, and admit bound subclasses only when HistoricalData itself defines the store.
+
+## [5.46.0] - 2026-10-21
+
+- Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
+- Seal instance-held namespace readers and preserve module alias identity; restrict the fixed-label fitting exemption to installed native code.
 - Admit cyclic fitted mappings and sequences once per object, and preserve logger settings that affect selected prediction.
 
 - Schedule the measured longest holdout proof first under native item distribution while preserving every case, assertion and serial selection.
@@ -1889,8 +1904,3 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Reuse exact native type groups during dependency sealing and fitted-state encoding.
 - Seal default-bound namespace readers, reject unstable fitting bindings and preserve native provider-type relationships.
 - Release completed traversal graphs and reduce witness allocations while preserving frozen type and alias relationships.
-
-## [5.46.0] - 2026-10-20
-
-- Bind explicit trusted Manifest component configurators to persisted Compiled research, Trainer reconstruction and owned final-holdout copies without expanding YAML resolution.
-- Seal instance-held namespace readers and preserve module alias identity; restrict the fixed-label fitting exemption to installed native code.

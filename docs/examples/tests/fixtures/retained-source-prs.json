@@ -1,0 +1,1952 @@
+{
+  "head": "f1d78fb436e6e92c3b645eb2ac773ab52f0d30a4",
+  "base": "dadf6be64548e03d00d20d7d757191297db34002",
+  "captured_source_record_sha256": "7cd0c82876e9347bafac567b376cf00a076ac0a191e6aa5925d31e19eb2d1675",
+  "responses": {
+    "05d3ca3e46c9a5887487e253f604ccfb382b80e7": [
+      {
+        "merged_at": "2026-07-13T14:35:46Z",
+        "merge_commit_sha": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+        "html_url": "https://github.com/Vaquum/Limen/pull/682",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "12e7ef4e9a982d0570cc236ea16836bf577b7ad0": [
+      {
+        "merged_at": "2026-10-16T22:28:11Z",
+        "merge_commit_sha": "12e7ef4e9a982d0570cc236ea16836bf577b7ad0",
+        "html_url": "https://github.com/Vaquum/Limen/pull/929",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "158376c276d462711ce0ddbfd4e612f9343aac4e": [
+      {
+        "merged_at": "2026-06-06T07:04:07Z",
+        "merge_commit_sha": "158376c276d462711ce0ddbfd4e612f9343aac4e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/566",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "15bf95279275ee12a13edc2b6dbe463c2aa740f5": [
+      {
+        "merged_at": "2026-10-18T17:45:14Z",
+        "merge_commit_sha": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+        "html_url": "https://github.com/Vaquum/Limen/pull/967",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "17b73d57f602e19c01e3efce9148c5b7c1c34a0e": [
+      {
+        "merged_at": "2026-10-19T22:36:13Z",
+        "merge_commit_sha": "17b73d57f602e19c01e3efce9148c5b7c1c34a0e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1076",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "294b2a3d38231eefc14500077bb8a8e9de373e2a": [
+      {
+        "merged_at": "2026-07-10T13:38:23Z",
+        "merge_commit_sha": "294b2a3d38231eefc14500077bb8a8e9de373e2a",
+        "html_url": "https://github.com/Vaquum/Limen/pull/666",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2": [
+      {
+        "merged_at": "2026-07-13T20:32:15Z",
+        "merge_commit_sha": "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2",
+        "html_url": "https://github.com/Vaquum/Limen/pull/679",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "2bb55d1892233cc2501b290e653b3a05ee1ff682": [
+      {
+        "merged_at": "2026-10-18T23:12:09Z",
+        "merge_commit_sha": "2bb55d1892233cc2501b290e653b3a05ee1ff682",
+        "html_url": "https://github.com/Vaquum/Limen/pull/977",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da": [
+      {
+        "merged_at": "2026-10-20T01:01:10Z",
+        "merge_commit_sha": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1068",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "367e4a41a6bc680b5a664952b5e22772360fbd0f": [
+      {
+        "merged_at": "2026-10-20T06:04:11Z",
+        "merge_commit_sha": "367e4a41a6bc680b5a664952b5e22772360fbd0f",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1095",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "3b30e18643e976840572c11498344eb73c23d3b0": [
+      {
+        "merged_at": "2026-10-13T12:33:10Z",
+        "merge_commit_sha": "3b30e18643e976840572c11498344eb73c23d3b0",
+        "html_url": "https://github.com/Vaquum/Limen/pull/916",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "405029b9cecc1b79c325c95944eebe03bf618804": [
+      {
+        "merged_at": "2026-10-19T11:23:19Z",
+        "merge_commit_sha": "405029b9cecc1b79c325c95944eebe03bf618804",
+        "html_url": "https://github.com/Vaquum/Limen/pull/998",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "4606dfd0323f641d482f21c509438dc0de296b09": [
+      {
+        "merged_at": "2026-10-17T18:03:12Z",
+        "merge_commit_sha": "4606dfd0323f641d482f21c509438dc0de296b09",
+        "html_url": "https://github.com/Vaquum/Limen/pull/954",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "52ce3eeca53987fc5c3e6fc81c0d675f406327f2": [
+      {
+        "merged_at": "2026-10-20T03:32:11Z",
+        "merge_commit_sha": "52ce3eeca53987fc5c3e6fc81c0d675f406327f2",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1088",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "563ad03410aeb2faf32355e7623af14c838f2080": [
+      {
+        "merged_at": "2026-10-18T15:49:13Z",
+        "merge_commit_sha": "563ad03410aeb2faf32355e7623af14c838f2080",
+        "html_url": "https://github.com/Vaquum/Limen/pull/963",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "5fd2edf297176cdad46c337af17789076ea6640a": [
+      {
+        "merged_at": "2026-05-21T06:35:25Z",
+        "merge_commit_sha": "5fd2edf297176cdad46c337af17789076ea6640a",
+        "html_url": "https://github.com/Vaquum/Limen/pull/528",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "65b613d48bc1076a17ebac79cde13224c9efd9b1": [
+      {
+        "merged_at": "2026-10-09T09:39:10Z",
+        "merge_commit_sha": "65b613d48bc1076a17ebac79cde13224c9efd9b1",
+        "html_url": "https://github.com/Vaquum/Limen/pull/862",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "724a4ebf7896f93ea0f8beaa3dc42a3f0b9a8a22": [
+      {
+        "merged_at": "2026-09-16T10:12:24Z",
+        "merge_commit_sha": "724a4ebf7896f93ea0f8beaa3dc42a3f0b9a8a22",
+        "html_url": "https://github.com/Vaquum/Limen/pull/813",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "792dfed5c9a527c4c33bcf4f0c5020e17ce6af92": [
+      {
+        "merged_at": "2026-10-14T08:14:11Z",
+        "merge_commit_sha": "792dfed5c9a527c4c33bcf4f0c5020e17ce6af92",
+        "html_url": "https://github.com/Vaquum/Limen/pull/921",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "872d1c8af6f11e5e80f919f1977d634ef05223a8": [
+      {
+        "merged_at": "2026-10-19T17:00:13Z",
+        "merge_commit_sha": "872d1c8af6f11e5e80f919f1977d634ef05223a8",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1040",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "94445fdccdb0a645bd90d558541da3209c1d0681": [
+      {
+        "merged_at": "2026-10-19T19:27:12Z",
+        "merge_commit_sha": "94445fdccdb0a645bd90d558541da3209c1d0681",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1041",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "98767d50970ae852cfbaf6d4c62701fc667a8ba9": [
+      {
+        "merged_at": "2026-10-19T19:46:13Z",
+        "merge_commit_sha": "98767d50970ae852cfbaf6d4c62701fc667a8ba9",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1053",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "9be1234d891087f5a7f13c5d0142c8e73d436c01": [
+      {
+        "merged_at": "2026-10-20T19:35:25Z",
+        "merge_commit_sha": "9be1234d891087f5a7f13c5d0142c8e73d436c01",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1115",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "ad5b70f2c5ad9be39d0cc4d4b89fb726b857354d": [
+      {
+        "merged_at": "2026-10-19T14:25:10Z",
+        "merge_commit_sha": "ad5b70f2c5ad9be39d0cc4d4b89fb726b857354d",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1010",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "b8a8c5594155b0052d4269465cf9a505b03839c7": [
+      {
+        "merged_at": "2026-10-18T21:25:09Z",
+        "merge_commit_sha": "b8a8c5594155b0052d4269465cf9a505b03839c7",
+        "html_url": "https://github.com/Vaquum/Limen/pull/974",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "bd7a901f2ed4c6c182bb80fe0517833cbbb18fa1": [
+      {
+        "merged_at": "2026-07-09T10:51:23Z",
+        "merge_commit_sha": "bd7a901f2ed4c6c182bb80fe0517833cbbb18fa1",
+        "html_url": "https://github.com/Vaquum/Limen/pull/665",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "bf2df33f97f1f7ca551fc43dde01ffa7d3be063d": [
+      {
+        "merged_at": "2026-10-05T06:22:13Z",
+        "merge_commit_sha": "bf2df33f97f1f7ca551fc43dde01ffa7d3be063d",
+        "html_url": "https://github.com/Vaquum/Limen/pull/843",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38": [
+      {
+        "merged_at": "2026-07-08T14:28:11Z",
+        "merge_commit_sha": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+        "html_url": "https://github.com/Vaquum/Limen/pull/657",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "ce77964bffdc6e4b015277cec207d707d779688d": [
+      {
+        "merged_at": "2026-10-10T20:30:57Z",
+        "merge_commit_sha": "ce77964bffdc6e4b015277cec207d707d779688d",
+        "html_url": "https://github.com/Vaquum/Limen/pull/907",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "dadf6be64548e03d00d20d7d757191297db34002": [
+      {
+        "merged_at": "2026-10-20T19:43:19Z",
+        "merge_commit_sha": "dadf6be64548e03d00d20d7d757191297db34002",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1117",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "dde4ba0e0f81ce498c2185e258358c409d4434d6": [
+      {
+        "merged_at": "2026-07-11T12:34:36Z",
+        "merge_commit_sha": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+        "html_url": "https://github.com/Vaquum/Limen/pull/675",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "e0c18671239bd39289730f6426cbf183c916e86e": [
+      {
+        "merged_at": "2026-10-19T07:17:13Z",
+        "merge_commit_sha": "e0c18671239bd39289730f6426cbf183c916e86e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/988",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "ec254c73f0ff47cfcc2017e262458b2d5f671fb0": [
+      {
+        "merged_at": "2026-10-18T20:09:10Z",
+        "merge_commit_sha": "ec254c73f0ff47cfcc2017e262458b2d5f671fb0",
+        "html_url": "https://github.com/Vaquum/Limen/pull/970",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f07daaee76e3a787481792bf332b27c045b2caf9": [
+      {
+        "merged_at": "2026-05-24T11:07:37Z",
+        "merge_commit_sha": "f07daaee76e3a787481792bf332b27c045b2caf9",
+        "html_url": "https://github.com/Vaquum/Limen/pull/546",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f0c121a44f811a9d5a49554c38d6da89fa84ebe8": [
+      {
+        "merged_at": "2026-10-19T22:11:14Z",
+        "merge_commit_sha": "f0c121a44f811a9d5a49554c38d6da89fa84ebe8",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1072",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f1804ec1c599027d751909999f08d18a8b2a65b6": [
+      {
+        "merged_at": "2026-03-31T20:59:29Z",
+        "merge_commit_sha": "f1804ec1c599027d751909999f08d18a8b2a65b6",
+        "html_url": "https://github.com/Vaquum/Limen/pull/423",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f323297d8c0ac46380f742ab2e115acdb8decad2": [
+      {
+        "merged_at": "2026-10-14T07:33:10Z",
+        "merge_commit_sha": "f323297d8c0ac46380f742ab2e115acdb8decad2",
+        "html_url": "https://github.com/Vaquum/Limen/pull/920",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f45023322470e49eb3e12c8c5a49a3210cde203c": [
+      {
+        "merged_at": "2026-10-10T06:47:02Z",
+        "merge_commit_sha": "f45023322470e49eb3e12c8c5a49a3210cde203c",
+        "html_url": "https://github.com/Vaquum/Limen/pull/893",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "f78356f49496ccbe90a4b1da9929b8d890369fcb": [
+      {
+        "merged_at": "2026-10-20T13:49:23Z",
+        "merge_commit_sha": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1085",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ],
+    "fb5dc4f26ccc1cbb5667258e4531e63b51da569e": [
+      {
+        "merged_at": "2026-10-19T18:02:14Z",
+        "merge_commit_sha": "fb5dc4f26ccc1cbb5667258e4531e63b51da569e",
+        "html_url": "https://github.com/Vaquum/Limen/pull/1044",
+        "base": {
+          "ref": "main",
+          "repo": {
+            "full_name": "Vaquum/Limen"
+          }
+        }
+      }
+    ]
+  },
+  "schema_version": 1,
+  "files": [
+    {
+      "path": "README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "69c47e744fdddabce30834276bee9300643ed34c41479888be9702051cd03ff0"
+    },
+    {
+      "path": "docs/Advanced-Search.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "aaa212d7f854ecb8ed4197d4bee0b7515fee9b055ef5a6c5a5bf1175ee822d67"
+    },
+    {
+      "path": "docs/Backtest-Benchmarks.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "31e667c122e1c9b869bff1ac2a392f31b85e081154c4f1f2bff0809d981beaf9"
+    },
+    {
+      "path": "docs/Backtest.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "ab5bea980bfa831564c1bdc646c20b9ae2d0efa8475aafe7df0b4432d2dada47"
+    },
+    {
+      "path": "docs/Benchmark.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "d5136b528d94510096bafc599c200f36b64d270ea302aebda52e2e171d7d09fd"
+    },
+    {
+      "path": "docs/Built-In-SFDs.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "1b3661f8338ec3d2fa169efefbb9b0f8a32c267a611a1accfbe82aadc528023d"
+    },
+    {
+      "path": "docs/Calibration.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "04d756af309f7e79e40a858ac0bcac428ae52052f803e7beabd04c80dfc40a58"
+    },
+    {
+      "path": "docs/Cohort.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "124cda9b003522e1aab1cb67054c0e12952df62e4bcd63e1ed81a70243eb840c"
+    },
+    {
+      "path": "docs/Command-Line-Interface.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "b2fb825f6fcb083e86cf618b898a8c113355458724824bd107b93ed1a05aedf1"
+    },
+    {
+      "path": "docs/Common-Strategies.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "bc0b11b9f72e1103c15ab43c2180060b5d58196066f173f23fda576024d0e8b6"
+    },
+    {
+      "path": "docs/Conserved-Flux-Renormalization.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "15f6c7a70236483f8c29026565a88113eee3c8d77231f19c1960d6553fef8380"
+    },
+    {
+      "path": "docs/Data-Bars.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "88b28689f80e327926b47de16d315bb50b91d9ebaa52f759c559a5d65cc476a6"
+    },
+    {
+      "path": "docs/Developer/Contributing-Foundational-SFDs.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "700870633bffdf59dcf62f370ce5044208c11a7601ff6e7e34abff4fb86850b4"
+    },
+    {
+      "path": "docs/Developer/Documentation-System.md",
+      "commit": "9be1234d891087f5a7f13c5d0142c8e73d436c01",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1115",
+      "sha256": "fbbd6b839c3b866a6ec041a8f4995d286465ccdb27e611a5250719323ffbd5a0"
+    },
+    {
+      "path": "docs/Developer/Indicator-Performance.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "b9b5af7445459db15e64cb12b6ea7d81d9192f9c437d68bb9bfb8c9901b1bea7"
+    },
+    {
+      "path": "docs/Developer/Making-Release.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "ffa62e9e47b82b6238a23b9f5e507ca7cf148acbf723be466158f871d3316771"
+    },
+    {
+      "path": "docs/Developer/Packaging.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "d8a64a4651948b791f0e735159fc55444bf15cc07654806d4ba77db8ac25f3c1"
+    },
+    {
+      "path": "docs/Developer/Pruning-Strategies.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "4e066e4d1d4552f03ccdaaeaf078cadb10e45fa057eda38478f6de9246fcc97e"
+    },
+    {
+      "path": "docs/Developer/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "691dd3a374b9ae83641dac1f3807ddc3948aecdb901b08bb3ac1c02e7d91d683"
+    },
+    {
+      "path": "docs/Developer/Release-Policy.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "8d5f70db0ab2290ba234c38600e0553419a8b8811d14f670af858f19ababede2"
+    },
+    {
+      "path": "docs/Developer/Security-Assurance-Case.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "06402e9fe87868bd3dbfeb6fc5fed582fc37ea89670d0ba36fe0795954ba0b91"
+    },
+    {
+      "path": "docs/Developer/Writing-Docstrings.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "d281f87dd42d6a458618f0ff1a40138cdf3eee863ebb3edd0e3fe0221f843c94"
+    },
+    {
+      "path": "docs/End-to-End-Workflow.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "250e3e7432e47d1d4a6d437f2a036f8232f93650fadc29cf405bd7c43d7915d5"
+    },
+    {
+      "path": "docs/Experiment-Manifest.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "8a6203bf6a4194e9ec8c9fe0386dba9f21f04ad9a105425e8641ddd536a335d3"
+    },
+    {
+      "path": "docs/Features.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "2e5adb0fffe56942ed726eead2dfa92ec9c3d0f40d48d4e5a1a9c0b40a8cdc49"
+    },
+    {
+      "path": "docs/Final-Holdout.md",
+      "commit": "dadf6be64548e03d00d20d7d757191297db34002",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1117",
+      "sha256": "e4a191bcf3fd068899a68a11d1595d92a7f01f996accd5f8128a0644458a95f9"
+    },
+    {
+      "path": "docs/Fractional-Differentiation.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "fe9c918ed3e891ff6331d9fc77764815d7694aa9aa1781c562caf18e7653f1c3"
+    },
+    {
+      "path": "docs/Glossary.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "5140234cd364b33865cde394ce60c329468226246cb72d228a8d98e2ac90f71d"
+    },
+    {
+      "path": "docs/Historical-Data.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "6abbcc162ea3ee8eb22485cfc0f5f4a41d2f9fba11681d1c253c4e7760876756"
+    },
+    {
+      "path": "docs/Indicators.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "cf769d51cd84f7e549da0dd4719fe0a0364421d28af4ff80505f99b7c1d70eb5"
+    },
+    {
+      "path": "docs/Log.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "910250d20f38dc64e89643dcfccff61d6845b63643c1a3305ea9e10e660afec3"
+    },
+    {
+      "path": "docs/Perturbation-Strategies.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "c1b54588a820c6212a3053499b7ec45f631cf7111b60af9785320239b2bc90ee"
+    },
+    {
+      "path": "docs/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "3824e5f154b5669962c60dbe23458b3512f1af5223b9502f84628fbe6b3baf53"
+    },
+    {
+      "path": "docs/Reducers-And-Feedback.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "e54fd8ec89c6649bb01763225b99627e8e7eb8d0b1449b147e62d093c81b047d"
+    },
+    {
+      "path": "docs/Reference-Architecture.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "e9a5338ade50bda1c0c79f7fcd7fa3392d343ee7dd2c7fcc00a44b8932fa74b2"
+    },
+    {
+      "path": "docs/Research-Book.md",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "e61fba90a1a6d470b57b961e0869f3992f3ae42ff1ed161c733a22c5ae0cce6b"
+    },
+    {
+      "path": "docs/Roadmap.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "2957c88817ab9ade183d38b94808c93cab4bb1e9dfe16d7b87a2b21d8cfadc8a"
+    },
+    {
+      "path": "docs/Scalers.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "9fbd8eeb9ceb19d64b68090641afceb068a9ef284f8eb1a5d392e33b4ebfc3a5"
+    },
+    {
+      "path": "docs/Semantic-Versioning.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "5e374c512e36a729634caf74fcfa29ee11ecd5965bb9a77d377cbf31e9b64a79"
+    },
+    {
+      "path": "docs/Single-File-Decoder.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "14bcad7199a43564c02e5d8636820bb1cb35a7308c662964cad864d4a7f10d6c"
+    },
+    {
+      "path": "docs/Standard-Metrics-Library.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "aa9edeb3a59b83568f9672c2f62cc993ecc2ca013dfef54143f37dba556b683e"
+    },
+    {
+      "path": "docs/Targets.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "81155010a22b6e6a2887baa2a6fb4df867c17906dfd894351b33990c73e3dc23"
+    },
+    {
+      "path": "docs/TechnicalDebt.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "b6e226bad995d091e867bceb63a5aad8c151526336d4d1705042cfe66e59b48e"
+    },
+    {
+      "path": "docs/Trainer.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "427fecd4fa549cf7c391d50b9b284d3175eda63162de30653cfb4c40135cc807"
+    },
+    {
+      "path": "docs/Transforms.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "149b9de8a40a7d2d7298594354cdd23ff1fa8ec589109d5e0780c7353d4d6ee2"
+    },
+    {
+      "path": "docs/Triple-Barrier-Method.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "1ec0a794f370ed0d3542fbda82e38896ecff0e335306463b768049b3900fa11a"
+    },
+    {
+      "path": "docs/Universal-Experiment-Loop.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "107fbbe9d2bb0f982220594367551edd3476f32a9e6f44fa9f34d608ac9a5cca"
+    },
+    {
+      "path": "docs/Utilities.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "8409e444dfc8d46a639b276fbea75ce55a1aa658e5ba4f87ee5434bc5dc51102"
+    },
+    {
+      "path": "docs/Walk-Forward.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "11c0c9d7ad93c13b0bb12a6fb56eb4c21b706d7c2df8d297b763507024760520"
+    },
+    {
+      "path": "docs/examples/build_bundle.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "4c5afd59e3af4d0a06ac774ee58d55ff9291892deff62d42156eb413246ba72d"
+    },
+    {
+      "path": "docs/examples/catalogue.json",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "281a86bc0020962015669c9c734cc60dab6c6be376280b96a70731b394172d15"
+    },
+    {
+      "path": "docs/examples/catalogue_surfaces.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "2fdf723e927430327123c48d3a702d3b2be26817ccb3935005b9c78fa6d0b423"
+    },
+    {
+      "path": "docs/examples/catalogue_tests.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "c2cf7afbfcedeedc80f2b72b06f8affe71460155c9768720bdcb2cc651de1ba7"
+    },
+    {
+      "path": "docs/examples/check_evidence.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "20154d6b81bbd1da8bc914b07f498c3cb1141d235415bf99a21831c14b0c4e5f"
+    },
+    {
+      "path": "docs/examples/check_sources.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "0a61a1ba728ea7bd113f3f263ecac74cdd688cb1bb1e0331c79e8704be572b0a"
+    },
+    {
+      "path": "docs/examples/commands.json",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "dcb6f1dcb864ece06fc9ddad46ee8f32edeaad1b809e6b71dfde042ae429eada"
+    },
+    {
+      "path": "docs/examples/compiled-research/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "4607b4f0709cc84dec27d2f4a59f1284ab5d31ea810742bbf52703c30f9e3098"
+    },
+    {
+      "path": "docs/examples/compiled-research/acceptance.yaml",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "bab7e873c04edc2edae562af96ca8c06e88b96037de5863d0b7fb71fcb891058"
+    },
+    {
+      "path": "docs/examples/compiled-research/adaptive.yaml",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "27583636b48e515bc05445e8ec6cbbdb5ba3027205c99e9c0b8b72404d9cbfc0"
+    },
+    {
+      "path": "docs/examples/compiled-research/allocation.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "f030f92305ecc8f3db08d33819873372eaff05bedab31f34fcb12efc59292611"
+    },
+    {
+      "path": "docs/examples/compiled-research/allocation_funded.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "80cb5c75759973ed4e0e249211b2b2f1cd7c11f813d1de0391705601fb164383"
+    },
+    {
+      "path": "docs/examples/compiled-research/allocation_ml.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "b8f8a81019709408ebdb361128b789a9052523943194b47633ec7e5e4b161a4c"
+    },
+    {
+      "path": "docs/examples/compiled-research/allocation_research.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "ef53b53c6398a1e87961c46c58db7e1363910ba9eb4e871ba186fa764c8945b3"
+    },
+    {
+      "path": "docs/examples/compiled-research/bars.yaml",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "c74ce765ba379d3c5b7fcf9aa3577795ab7a316f013cef506b34d013edf44744"
+    },
+    {
+      "path": "docs/examples/compiled-research/calibration.yaml",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "96e26f1409b63b8dd799c773a3dd104152367eb22bd1c46732fcf657200d253d"
+    },
+    {
+      "path": "docs/examples/compiled-research/command_line.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "0e9b0dbf46200b4edfcf498baebd7719a2ebc35ed3113d0ee1f9db7e96f17f79"
+    },
+    {
+      "path": "docs/examples/compiled-research/execution.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "1247cbd9b2d4fda1d969eace12af42cc4fa8ff266cd20368b51f77b60f3fe010"
+    },
+    {
+      "path": "docs/examples/compiled-research/factorized.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "4f4253d655d73770b6ad96cb11312ec36350441c51d727d11bb3aee02ea5809f"
+    },
+    {
+      "path": "docs/examples/compiled-research/family_direction_sizing.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "2f18dbe1e1b2d52227086484b25bdbb372ca5ee326d2e940afa6f608be06afb3"
+    },
+    {
+      "path": "docs/examples/compiled-research/family_dlinear_regressor.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "b8f9e5b41b31467cf8c8a148437387d8e93bc9ab105743748706b0b7c08040dc"
+    },
+    {
+      "path": "docs/examples/compiled-research/family_random_binary.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "92b29b75aa41f3a4968a42eb0cb25fd3881919eb27b07b8288006f5e83644c1b"
+    },
+    {
+      "path": "docs/examples/compiled-research/family_ridge_regressor.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "655e3acaa102a7c955e09726a892d9f4362fa17bcd038f819c3fce8a65024a32"
+    },
+    {
+      "path": "docs/examples/compiled-research/family_xgboost_regressor.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "86d248b98ef64edbf69081c41b395651840f5d87b2cf4e1a830e88f7c91f3d70"
+    },
+    {
+      "path": "docs/examples/compiled-research/funded.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "3aacd2c2d2bc4a474c11bcb41efd81022d488400e0cb1e8eb800ff01175fff32"
+    },
+    {
+      "path": "docs/examples/compiled-research/holdout.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "6130e44b3ebfdb541216f0202c12ea990ebe5e0121e5eabae2c2dcb9ccb070e2"
+    },
+    {
+      "path": "docs/examples/compiled-research/recovery.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "55c0476a4c8f1cb6ca1a6091d4ace38f2011be1503c6059339dc7e69194e0ff4"
+    },
+    {
+      "path": "docs/examples/compiled-research/research.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "362194f3bb66e964e5f8d282ed1ec5728ab638978b89f1c97af3c751669085ff"
+    },
+    {
+      "path": "docs/examples/compiled-research/scenarios.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "3e8fd824904c8132f06a8d3b9c30f76b2081190603feb514b0e12db71531a7cc"
+    },
+    {
+      "path": "docs/examples/compiled-research/search.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "1b82fa099b6edb6425059d6b7925bc30cfd1d2c9357e3d3b0fefc1c8f12ad0b9"
+    },
+    {
+      "path": "docs/examples/compiled-research/selection.yaml",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "25ff66884cc91c614d569f9ed2ee0ecc32b61ec1740db9a6d1fe5503b9a6c495"
+    },
+    {
+      "path": "docs/examples/compiled-research/walk_forward.yaml",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "a03e23448ba6c7225c277c80d42382f1b66197d3e7ceb4842ce5ee37e6ed943f"
+    },
+    {
+      "path": "docs/examples/deploy_publication.py",
+      "commit": "9be1234d891087f5a7f13c5d0142c8e73d436c01",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1115",
+      "sha256": "877696138f876c4b5c1fe6c516b8e98b88e4a039409acf3bb52cd76be8f9718c"
+    },
+    {
+      "path": "docs/examples/evidence.schema.json",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "97028fbed83ea19a68ada4c3be3a6756945e06e7db9458d5bb42b1f82114e8ee"
+    },
+    {
+      "path": "docs/examples/factorized_shuffle.yaml",
+      "commit": "f1d78fb436e6e92c3b645eb2ac773ab52f0d30a4",
+      "status": "candidate",
+      "merged_pr": null,
+      "sha256": "6cae15f87823bdd30e8225c0e15cf436ec7790715d31d8aa334b27047fc1a314"
+    },
+    {
+      "path": "docs/examples/logreg_return.yaml",
+      "commit": "f1d78fb436e6e92c3b645eb2ac773ab52f0d30a4",
+      "status": "candidate",
+      "merged_pr": null,
+      "sha256": "044529609055a837e0a7c655cc3dc97664c801b96bd70a20c376739300473457"
+    },
+    {
+      "path": "docs/examples/prepare_environment.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "4fe31dc71723d632af1f59f190cfc31b9588075e89caf01448300e6072e9da46"
+    },
+    {
+      "path": "docs/examples/provenance.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "ee8152191a7c81fc87d439ca80bd0210f67457271cdbc95402d65bbf404a5fd7"
+    },
+    {
+      "path": "docs/examples/publication.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "7efca2cf6d418d9c2d1650a5d5f6e660efdf6029720c371142f9cddb6a5e7401"
+    },
+    {
+      "path": "docs/examples/python-research/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "7c9566c5737bd87da093558638cbf455e10b7d2a08ff752c78116d96e0235017"
+    },
+    {
+      "path": "docs/examples/python-research/cost_research.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "e56497411c8b2085ee469bf6df49e22f1c35cbb2cdcf38279173e7681d4b23ae"
+    },
+    {
+      "path": "docs/examples/python-research/research.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "ec06757a92f23d1a1130f886ee46c820f6bb8e4bf5ce12822fefff1e33839d45"
+    },
+    {
+      "path": "docs/examples/python-research/scenarios.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "dfeda647fdcdf1efcc902946d507718bf04d96d677b5c19c9025a52efbb6311f"
+    },
+    {
+      "path": "docs/examples/recorded_inputs.py",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "14f964f258c3f9ace74609623c2436d1d6c9c68f053d07bce466d3c377aaebb7"
+    },
+    {
+      "path": "docs/examples/release_assets.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "0f206c17d84329050a3e88c921a9f317e040f80e4f1c40f56a43efca4478a2ec"
+    },
+    {
+      "path": "docs/examples/release_identity.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "12db63c234b0c09b91be45d6258e59026576776fd23e06b4df8de428a9757374"
+    },
+    {
+      "path": "docs/examples/released_wheel.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "a6cb1a9853dd33b9358af255d06a0d61d295a9bbbd0ae8f18ab67e0d528e537c"
+    },
+    {
+      "path": "docs/examples/research-types.json",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "6bc71294c1d5d8f6bee39794e41451cb3ce89c8b83a516681b0a0ba03ac3a794"
+    },
+    {
+      "path": "docs/examples/retained/compiled-selection.json",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "67d02350500cd6454b6b0621a408b68665738b5f44be7903dc242f0db121e824"
+    },
+    {
+      "path": "docs/examples/retained/python-selection.json",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "d51c57f27c605fa1ab5e9048b49e69b5faaac2b728f19bd6a499a6d2f23071c4"
+    },
+    {
+      "path": "docs/examples/retained/selection.json",
+      "commit": "2bb7df71a1a0ffd2c9e2a5b6bd28421242dd29da",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1068",
+      "sha256": "bca8d0626c8f4fb62037cbafde9bbca4ddf546b84f5ef14d66ff0f8e253f8743"
+    },
+    {
+      "path": "docs/examples/verify_publication.py",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "ae8866f9ba7d99a405097bf470304dea5261d3e9dcf93cd6767a7f71ed64318f"
+    },
+    {
+      "path": "docs/examples/xgboost_sweep.py",
+      "commit": "12e7ef4e9a982d0570cc236ea16836bf577b7ad0",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/929",
+      "sha256": "1e6979e54eb17d8cd715e7ea068964bf784bbe4efa5ad1debb998908aa17b228"
+    },
+    {
+      "path": "limen/backtest/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "1b89df4025665da27665cb637fa96a77e4b4407faf0f09c6f623dc3b05c032fe"
+    },
+    {
+      "path": "limen/backtest/backtest_snapshot.py",
+      "commit": "bf2df33f97f1f7ca551fc43dde01ffa7d3be063d",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/843",
+      "sha256": "f2ffaf2b8ce78c109fa93d34dbb4c367f8095067561dde15f4cb76c13c91815c"
+    },
+    {
+      "path": "limen/backtest/long_flat_strategy.py",
+      "commit": "724a4ebf7896f93ea0f8beaa3dc42a3f0b9a8a22",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/813",
+      "sha256": "4d0fdbbe0672179c1cc93582042b8682a24aa1ca1b720a00ba9c56d802b0e893"
+    },
+    {
+      "path": "limen/backtest/observed_costs.py",
+      "commit": "f0c121a44f811a9d5a49554c38d6da89fa84ebe8",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1072",
+      "sha256": "1a22cf83ca5d4580442338c91e4c3fee3017702ae5312f7fc0acefebc69d2c5a"
+    },
+    {
+      "path": "limen/backtest/trade_contract.py",
+      "commit": "94445fdccdb0a645bd90d558541da3209c1d0681",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1041",
+      "sha256": "7c61798f239583215a11d50ad6a3874c2a14692bb2434daeef4fe88de2f0d3c6"
+    },
+    {
+      "path": "limen/calibration/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "99c4a59eef66bd54c11e3d12ba3f754525a8fa4d65c44e8922fffca0f3a19995"
+    },
+    {
+      "path": "limen/calibration/pipeline.py",
+      "commit": "f323297d8c0ac46380f742ab2e115acdb8decad2",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/920",
+      "sha256": "6024d0cd543869b26f8eb0a4bfa8b494324f59fd33d7e983bf40f147092bb2e2"
+    },
+    {
+      "path": "limen/calibration/probability.py",
+      "commit": "f323297d8c0ac46380f742ab2e115acdb8decad2",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/920",
+      "sha256": "52defebd193f1926f8c66edfe1d534f85a78eb5c45f91ad0704a46cda4c4e6d3"
+    },
+    {
+      "path": "limen/calibration/threshold.py",
+      "commit": "f45023322470e49eb3e12c8c5a49a3210cde203c",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/893",
+      "sha256": "849a78a3b8efb3433ebf3bb5042fe292c8f9d7e4315b689127ba4d47b5470903"
+    },
+    {
+      "path": "limen/cli/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "775bd9ac1b28a1a894fd93ce75dfea24e09a71ee9fe5857035661db9dac530cf"
+    },
+    {
+      "path": "limen/cli/commands/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "2b9d47b30fa55cc671b2cd32e9fb80b3f75304891e22b3bbf4986e2ffd132089"
+    },
+    {
+      "path": "limen/cohort/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "124558612181bd08673f0d6070b7c67680edf3c996bcb064bbdb3f8cdbed1120"
+    },
+    {
+      "path": "limen/cohort/cohort.py",
+      "commit": "52ce3eeca53987fc5c3e6fc81c0d675f406327f2",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1088",
+      "sha256": "925ae1b0003e1164d4f6e29b8acdadb131e9bf032c876c1c4b94868addd9b30d"
+    },
+    {
+      "path": "limen/cohort/sfc/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "2eaaf33da39b675762ab4b103352bfbae68a7ddba1f6fc3a026a1941de52a323"
+    },
+    {
+      "path": "limen/cohort/sfc/__init__.py",
+      "commit": "f07daaee76e3a787481792bf332b27c045b2caf9",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/546",
+      "sha256": "50e268d450d7f520621183de06f2da2f6478016868a3b3a8307e275e4fd62398"
+    },
+    {
+      "path": "limen/cohort/sfc/all.py",
+      "commit": "f07daaee76e3a787481792bf332b27c045b2caf9",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/546",
+      "sha256": "f5798a5518d1e9112d29ecae6384c9ec1baad69a5f3c20bdfa04e2859d02742a"
+    },
+    {
+      "path": "limen/cohort/sfc/backtest_pareto.py",
+      "commit": "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/679",
+      "sha256": "83775d6fe0bfe3eafa176989aaf6cb39a000384c5e7afc5acf084740fac86354"
+    },
+    {
+      "path": "limen/cohort/sfc/diverse_metrics.py",
+      "commit": "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/679",
+      "sha256": "9e6e689bd89f52312ddad1329919fed17a35d2a8dd7d902876adab390fb81da2"
+    },
+    {
+      "path": "limen/cohort/sfc/top_n.py",
+      "commit": "29e2b89c600375a51f2ff4b7cd6fa6c1d43e1ba2",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/679",
+      "sha256": "e6c4a52958188573f55a7bc7d0f8ab41cf6087849aca1dc3e0e07c5281204402"
+    },
+    {
+      "path": "limen/data/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "996af8150b7507204641d67a943bec349262fde1fbaf7212fd38c9bc09145eae"
+    },
+    {
+      "path": "limen/data/bars/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "29d8aeb52697bd14eae50e016474395c9c4573bb66027103248d89339cdaa513"
+    },
+    {
+      "path": "limen/data/historical_data.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "965f47aa7777508afe28bc77d67f5013770411fdb5a2183af7b3988736dc3ea0"
+    },
+    {
+      "path": "limen/data/utils/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "dceeffb2f82a9203dc973bd39123615f913cda9c188e66b910c8aecc6e43cc57"
+    },
+    {
+      "path": "limen/data/utils/splits.py",
+      "commit": "65b613d48bc1076a17ebac79cde13224c9efd9b1",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/862",
+      "sha256": "1a2a8119091deca861238c20e68c4d6f20133f297eff2e5b573c1334f42296db"
+    },
+    {
+      "path": "limen/experiment/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "bc7adc60879c6bba8f98bd379b6bd73d2ea056f5c58b4288b2e746ae9f0bb521"
+    },
+    {
+      "path": "limen/experiment/_column_shims.py",
+      "commit": "98767d50970ae852cfbaf6d4c62701fc667a8ba9",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1053",
+      "sha256": "c9916e0037d54e6276512af0c91acaa2b7f3e13a66d7b91e9f9bfb0560ac872e"
+    },
+    {
+      "path": "limen/experiment/experiment_core.py",
+      "commit": "872d1c8af6f11e5e80f919f1977d634ef05223a8",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1040",
+      "sha256": "c942c39cea5ac57295522d04020226587b482f5e93f2ba7eeedccd472dfd62b2"
+    },
+    {
+      "path": "limen/experiment/family_acceptance_report.py",
+      "commit": "e0c18671239bd39289730f6426cbf183c916e86e",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/988",
+      "sha256": "b1a15c0541433581a25cb5acc095a689f5f820a06f79539a0dc4f5ba93f7fa51"
+    },
+    {
+      "path": "limen/experiment/manifest_core.py",
+      "commit": "367e4a41a6bc680b5a664952b5e22772360fbd0f",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1095",
+      "sha256": "f9ad01168882be63926554602344290a4ea752ff5d73a14ffe71ae90b5f2219f"
+    },
+    {
+      "path": "limen/experiment/param_search/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "887ab20bef117c63a77988a57036515a38f0e21ba90a6be4b83f088df85ae37a"
+    },
+    {
+      "path": "limen/experiment/reducer/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "6784a8f4a422c4e439a53513c19200c155fdc5acbcd4791ee4d069b782519d95"
+    },
+    {
+      "path": "limen/experiment/reducer/budget_reducer.py",
+      "commit": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/675",
+      "sha256": "24b197924de1ddcd51d9a2ba8748f0b2857a2a9639b5e32c99d23b1979341d8d"
+    },
+    {
+      "path": "limen/experiment/reducer/correlation_reducer.py",
+      "commit": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/675",
+      "sha256": "ab984a80efac06dc52acf12c6ffc107456ed174d1e27639b7922afd6cfb76cab"
+    },
+    {
+      "path": "limen/experiment/reducer/focus_reducer.py",
+      "commit": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/675",
+      "sha256": "ab75187ef076fb1b07d5ae1479bb0d214ce7a6a3a5896d37e2f6b56ad47b9a60"
+    },
+    {
+      "path": "limen/experiment/reducer/pruning_strategy.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "95d65763141cf38706bea94b6a48b99e966e5d5dc73978262a79e22ef95c9fd7"
+    },
+    {
+      "path": "limen/experiment/reducer/registry.py",
+      "commit": "f1804ec1c599027d751909999f08d18a8b2a65b6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/423",
+      "sha256": "56590ddcb2151c9adfeee200201a7678763226d4aea8a03e4185d9cd15949c28"
+    },
+    {
+      "path": "limen/experiment/reducer/sanity_reducer.py",
+      "commit": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/675",
+      "sha256": "ab43f65eb67745a3002d9937d74691e4e38ec9e9c638dae57e59b30a8ea96375"
+    },
+    {
+      "path": "limen/experiment/reducer/saturation_reducer.py",
+      "commit": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/675",
+      "sha256": "a75527b2145cdf58f79d619f433c9910eb5800653f51c8dac65f63c1e2bde677"
+    },
+    {
+      "path": "limen/features/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "e5d224613516874b8a336a723316be8eca2c563686ba30506bc785ee3514ba25"
+    },
+    {
+      "path": "limen/features/conserved_flux_renormalization.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "7bf8774cfc2d41c9865857bf7ca395b7572acd0395e777d298490473836ee287"
+    },
+    {
+      "path": "limen/features/fractional_diff.py",
+      "commit": "17b73d57f602e19c01e3efce9148c5b7c1c34a0e",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1076",
+      "sha256": "59db7046b67816662acc4d1657b6e62a117b9197618894902c530a6f2f19f0b7"
+    },
+    {
+      "path": "limen/indicators/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "7fce7f632b2dd6ed183cfa92d40cd629174340ee0e9fff24cf84e044513316fd"
+    },
+    {
+      "path": "limen/indicators/roc.py",
+      "commit": "158376c276d462711ce0ddbfd4e612f9343aac4e",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/566",
+      "sha256": "ddb15f471d4660afbb6198084e14022f2d1a89b41106b3be338c460000a0f007"
+    },
+    {
+      "path": "limen/inference/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "8bca8d4f9c12c0cf15d82f28b54ab4b6de13d3100d9a8e7a0b5c950fd7bdeb11"
+    },
+    {
+      "path": "limen/inference/_python_sensor.py",
+      "commit": "ad5b70f2c5ad9be39d0cc4d4b89fb726b857354d",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1010",
+      "sha256": "b784452360e4d1c0c5c474cd58ddf266746b864f83d441f7b4c7508a16de0da8"
+    },
+    {
+      "path": "limen/inference/sensor.py",
+      "commit": "48eb769e4dcb3005f1445b19cc7b5f9d18b9082b",
+      "status": "candidate",
+      "merged_pr": null,
+      "sha256": "6f1450020efe9737c7b5076257b8e006b6b0fd16868c16ae58051b3b37bcd0b7"
+    },
+    {
+      "path": "limen/inference/trainer.py",
+      "commit": "872d1c8af6f11e5e80f919f1977d634ef05223a8",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1040",
+      "sha256": "f0af830d96f697acf7a0eb041509473940a6224c08a7a1ddd0016672c59ef7a4"
+    },
+    {
+      "path": "limen/log/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "6d985847c0404f4129673d514373ffb43c2d65fe2713bedf2f6f1f7e48350f6b"
+    },
+    {
+      "path": "limen/log/_experiment_backtest_results.py",
+      "commit": "2bb55d1892233cc2501b290e653b3a05ee1ff682",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/977",
+      "sha256": "1e679dc48d9bcc1611af03bff9f3aabfdc0ead8bfe31f3df579699f82e2ca633"
+    },
+    {
+      "path": "limen/log/_experiment_confusion_metrics.py",
+      "commit": "3b30e18643e976840572c11498344eb73c23d3b0",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/916",
+      "sha256": "6a38b3c44ec9d301d91799efcc22b72e6a29e886af18712f70fff5a0b31d6910"
+    },
+    {
+      "path": "limen/log/_experiment_parameter_correlation.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "1aa615e5376a2fb0e7fd2c36a59a339ee3c179a7c513b4f5c0271aec0479e98c"
+    },
+    {
+      "path": "limen/log/_experiment_parameter_importance.py",
+      "commit": "563ad03410aeb2faf32355e7623af14c838f2080",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/963",
+      "sha256": "7c0b0607d8d59aef225bc573823803ae4027cc9d284480d21ebaab219e7627ba"
+    },
+    {
+      "path": "limen/log/_permutation_confusion_metrics.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "725c7372d390e5dcdcbf233b9f4191d031b1fbe5f4936ce11d7fc1d609e82630"
+    },
+    {
+      "path": "limen/log/_read_from_file.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "6b31da0e4e0bbba67147763601dee255c1cf99feaea0947b2e5e702dae1f8716"
+    },
+    {
+      "path": "limen/log/log.py",
+      "commit": "405029b9cecc1b79c325c95944eebe03bf618804",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/998",
+      "sha256": "ed9f08e20e3194576a67f2ae5f3ad42d7df0c61212a781b6243eeee106cd6ac9"
+    },
+    {
+      "path": "limen/metrics/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "0157126aafb80664f415e24f617832e9aa4579677ab1422063dab56c4554101e"
+    },
+    {
+      "path": "limen/metrics/balanced_metric.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "d47ef7f8842806fc0ffeadfde9991dd1b9ce3256a355c86466a25874fcff123c"
+    },
+    {
+      "path": "limen/metrics/binary_metrics.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "49f1fb995c90c228f2af4425ae9c0a754a1f4259f71937967dd41854851e6505"
+    },
+    {
+      "path": "limen/metrics/continuous_metrics.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "dad9fd9262148a238046049b3dc74c5aee511b4be96d29d8e0703598b121f430"
+    },
+    {
+      "path": "limen/metrics/deflated_sharpe_ratio.py",
+      "commit": "ce77964bffdc6e4b015277cec207d707d779688d",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/907",
+      "sha256": "d5ea9c5a17716fcd1669d07fb022e3f31af6ec4ffcf929d9f312e0bfb969adc9"
+    },
+    {
+      "path": "limen/metrics/multiclass_metrics.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "f6ceef3f456713f7c0a873cf2a450694997b93eb6a8a9d1fad4a676a90fc6980"
+    },
+    {
+      "path": "limen/metrics/probability_of_backtest_overfitting.py",
+      "commit": "ce77964bffdc6e4b015277cec207d707d779688d",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/907",
+      "sha256": "88a2496cd7d50da3ffb5dc418417154849b699413eb4246a427feaa9e3ea122c"
+    },
+    {
+      "path": "limen/metrics/rule_based_metrics.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "555cba95e2495de2ec7d1f05c28743773e8b9395a445e8e1a939e6461969b15a"
+    },
+    {
+      "path": "limen/metrics/safe_ovr_auc.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "7e98fd7f1ff85144e14f2d089edb1ad40d4a3ead13144ad686c1ff3a9b66df3f"
+    },
+    {
+      "path": "limen/scalers/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "b0105f39938dadaa451352abf246f2dab194afd728ac57ec505b545dfcbb4254"
+    },
+    {
+      "path": "limen/scalers/causal_rolling_robust_scaler.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "25979ca885248b246022655c40f985c38811b556dfbe49b12fb8ada4fc4cd6dc"
+    },
+    {
+      "path": "limen/scalers/registry.py",
+      "commit": "5fd2edf297176cdad46c337af17789076ea6640a",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/528",
+      "sha256": "a45ba915c2b092d5e9765865cd566e635047a761939c223a5736154385684da7"
+    },
+    {
+      "path": "limen/scalers/robust_scaler.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "80e0c94e1973982b37fe783d96997ee26cc2d30bdf9a0778d56831065fcca1ab"
+    },
+    {
+      "path": "limen/sfd/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "54519694df8f8c6308a1a2ad76e1c88cf250d717a108d43560069d80b86e9a67"
+    },
+    {
+      "path": "limen/sfd/foundational_sfd/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "9488877cf170a8c18a4cdd9006f681e70400f48e83f52fbf42c9a248b369881e"
+    },
+    {
+      "path": "limen/sfd/foundational_sfd/common_strategies.py",
+      "commit": "ec254c73f0ff47cfcc2017e262458b2d5f671fb0",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/970",
+      "sha256": "8e8daf8e2c66538860e08d8785ab29b727e07fe9a1002704a8693e407591f2ff"
+    },
+    {
+      "path": "limen/sfd/foundational_sfd/logreg_binary.py",
+      "commit": "294b2a3d38231eefc14500077bb8a8e9de373e2a",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/666",
+      "sha256": "56d808576df3f9c373b11205f7468760faa32fb5013fe74c5ab4620e85dbf8dc"
+    },
+    {
+      "path": "limen/sfd/reference_architecture/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "fd519035192a391506caf0ae1144c7b36636635b7e490e47025f67c4c7e82fb1"
+    },
+    {
+      "path": "limen/sfd/reference_architecture/base.py",
+      "commit": "15bf95279275ee12a13edc2b6dbe463c2aa740f5",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/967",
+      "sha256": "a233996110cbe7faa56b3557d3afb39fa2079e098648c5abbf8181b3e8c8d91e"
+    },
+    {
+      "path": "limen/sfd/reference_architecture/logreg_binary.py",
+      "commit": "872d1c8af6f11e5e80f919f1977d634ef05223a8",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1040",
+      "sha256": "80788eba5856aa65f385b223af4d4ea247459a79e95dbe2ec8444a027ab75621"
+    },
+    {
+      "path": "limen/sfd/reference_architecture/ridge_regressor.py",
+      "commit": "872d1c8af6f11e5e80f919f1977d634ef05223a8",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1040",
+      "sha256": "cec41523234c2034b7260d2d52e2c58eee02781c5c104f9f8a01d4d03473132d"
+    },
+    {
+      "path": "limen/sfd/rule_based/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "7e6d5c0d58101673a89831a8f56b17e31e7df2631a51421a4ce926e62f3b1989"
+    },
+    {
+      "path": "limen/targets/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "5ac6df63371ccebb2d93b32e9ec5c1033f7eb9903c577f7e6b934d32f62bc6ee"
+    },
+    {
+      "path": "limen/targets/ema_breakout.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "77fa6ea0f4b9761cb1099b70129d1ff9e433de3073765d1e53ecf2d0ffb5dce4"
+    },
+    {
+      "path": "limen/targets/exit_quality.py",
+      "commit": "792dfed5c9a527c4c33bcf4f0c5020e17ce6af92",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/921",
+      "sha256": "e4c1f0a58b23b47d1fb18a267f7950ec952986c5dc53f9ab3a8a1b21a090d7d1"
+    },
+    {
+      "path": "limen/targets/forward_breakout.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "b090a010e3e388bf3f0caabf50bcac5c468c682af23565b9edbf9de340ea8c07"
+    },
+    {
+      "path": "limen/targets/forward_vol_normalized_return.py",
+      "commit": "dde4ba0e0f81ce498c2185e258358c409d4434d6",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/675",
+      "sha256": "14aa3e700e350020abe591df49497f15b2edd565740011bab9247d83a0ed9b07"
+    },
+    {
+      "path": "limen/targets/identity.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "42c3a9ae1aed5e664fd25d23dcfb108e7eb7a092db6bc28b4bb6c50cf3ff50fc"
+    },
+    {
+      "path": "limen/targets/next_bar_down.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "deea34a088a8655f41823618f84e99fd51f49a37ffd58992993e587c28cb3860"
+    },
+    {
+      "path": "limen/targets/next_bar_up.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "9cd85091ef7b291a41e6c2197053bf625b0ce24161743bbb0efa8f7c1ce27108"
+    },
+    {
+      "path": "limen/targets/next_return.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "dc396c813df1382f5fe3b8d5d1a1372308b475d7663b9e9291c1755f31c26d46"
+    },
+    {
+      "path": "limen/targets/quantile_binary.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "9453b62d5a3997fca940bd61714731edcbf45db7b339d17fe3587dded2f0bfce"
+    },
+    {
+      "path": "limen/targets/random_binary.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "918b649f54e9e9a1d37296ac23b6e05a3c7b3dd540c3250354df89c2d76b39da"
+    },
+    {
+      "path": "limen/targets/risk_reward_ratio.py",
+      "commit": "792dfed5c9a527c4c33bcf4f0c5020e17ce6af92",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/921",
+      "sha256": "f089d4e8aec22fe8da2b12267c17597e97efadf3f4e2849d73b2e2e24ed4b01f"
+    },
+    {
+      "path": "limen/targets/threshold_binary.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "0ec67e7c3358f1a2b4daebcc807693b6c9b7acd951f972f8b9343a46f38eb840"
+    },
+    {
+      "path": "limen/targets/trade_outcome.py",
+      "commit": "fb5dc4f26ccc1cbb5667258e4531e63b51da569e",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1044",
+      "sha256": "fb726034941ff02487453a62e91f5fe7b1e07379907883dde4abc0c78ea04f81"
+    },
+    {
+      "path": "limen/targets/tradeline_long_binary.py",
+      "commit": "b8a8c5594155b0052d4269465cf9a505b03839c7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/974",
+      "sha256": "102d6c3c4cd7ce277c69312e14bf56f7ae168c58a7d55bb76f81ecb27189b846"
+    },
+    {
+      "path": "limen/targets/triple_barrier.py",
+      "commit": "bd7a901f2ed4c6c182bb80fe0517833cbbb18fa1",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/665",
+      "sha256": "91457e862737ef52f622fa07cac30cc0b160dc0dc17c9d41b98387023029b2b4"
+    },
+    {
+      "path": "limen/targets/vol_normalized_return.py",
+      "commit": "c3239401decc1f45ebcf02ec9fab1ab73f6cfb38",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/657",
+      "sha256": "0d19ef9f38267ff5117b53a0a3e47f0357ab4be700ec56526c7827ae9d28e7fb"
+    },
+    {
+      "path": "limen/transforms/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "a5998fdb456c1416c21e5d42b9f3907843ad3e33a4bbe5b0de9d2da243173276"
+    },
+    {
+      "path": "limen/utils/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "577d6cb98e26ee95cf7866643f45e023879d1994d33fab03f78f8891517239d6"
+    },
+    {
+      "path": "limen/utils/adf_test.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "c0df49a19e55fd841c59b8a758de45d761e19ea528098d0e2088a15d62476787"
+    },
+    {
+      "path": "limen/utils/confidence_filtering_system.py",
+      "commit": "05d3ca3e46c9a5887487e253f604ccfb382b80e7",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/682",
+      "sha256": "379f9a7fbf957d01daec6cc84fbb86ce0adc10e36daf3fb05eca2606b245ee20"
+    },
+    {
+      "path": "limen/utils/data_dict_to_numpy.py",
+      "commit": "294b2a3d38231eefc14500077bb8a8e9de373e2a",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/666",
+      "sha256": "a5fc7c03fe1b10bb0b7a63c4baa85dc129f952972ca4e5f08572239db38fcf05"
+    },
+    {
+      "path": "limen/utils/param_space.py",
+      "commit": "4606dfd0323f641d482f21c509438dc0de296b09",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/954",
+      "sha256": "7363c28434e8dcd494816e5a7ce1318172b54fe5d29b5d87eb77aff8a3b73717"
+    },
+    {
+      "path": "limen/yaml/README.md",
+      "commit": "f78356f49496ccbe90a4b1da9929b8d890369fcb",
+      "status": "merged",
+      "merged_pr": "https://github.com/Vaquum/Limen/pull/1085",
+      "sha256": "90fef71071da4a440f35693ff7d4f8533eb657e34d2cdb5476a5a236b071dbd3"
+    }
+  ],
+  "capture_note": "Source-only metadata captured by the canonical checker in passed run 7e7fa543-2200-40d9-a11f-c9769df18fc4. The negative test deliberately zeroed the first digest; its original digest is recaptured from the unchanged recorded Git blob. This is no research execution or passing product envelope."
+}
