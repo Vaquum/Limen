@@ -1462,7 +1462,7 @@ def test_trusted_factory_transitive_construction(native_assessment_case, wrapped
 
 
 @pytest.mark.parametrize('wrapped', [False, True])
-@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader'])
+@pytest.mark.parametrize('kind', ['module', 'registry', 'empty-cell', 'static-helper', 'super-constructor', 'function-metadata', 'property', 'import', 'reader', 'annotations', 'nested-module', 'relative-import', 'slot-reader', 'class-reader', 'class-property', 'sequence-reader', 'descriptor', 'bound-get', 'attribute-hook', 'index-hook'])
 def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kind, monkeypatch):
     import sys
     from types import CellType, ModuleType
@@ -1542,12 +1542,38 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
         readers: ClassVar[deque] = deque([globals])
         def __call__(self, data, **params):
             return logreg_binary(data, **(params | {'C': 1 + self.readers[-1]()['_LATE_RULES']['offset']}))
+    class Depth:
+        def __get__(self, instance, owner=None):
+            return 1 + _LATE_RULES['offset']
+    def changed_getter(self, instance, owner=None):
+        return 2.0
+    class DescriptorSettings:
+        depth = Depth()
+    descriptor_settings = DescriptorSettings()
+    def descriptor_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': descriptor_settings.depth}))
+    registry = {'build': helper}
+    getter = registry.get
+    def bound_get_factory(data, **params):
+        return getter('build')(data, **params)
+    class AttributeSettings:
+        def __getattribute__(self, name):
+            return 1 + _LATE_RULES['offset'] if name == 'depth' else object.__getattribute__(self, name)
+    attribute_settings = AttributeSettings()
+    def attribute_factory(data, **params):
+        return logreg_binary(data, **(params | {'C': attribute_settings.depth}))
+    class Registry(dict):
+        def __getitem__(self, key):
+            return helper
+    indexed = Registry()
+    def index_factory(data, **params):
+        return indexed['build'](data, **params)
     def annotation_factory(data, **params):
         return annotation_factory.__annotations__['build'](data, **params)
     annotation_factory.__annotations__ = {'build': helper}
     def nested_module_factory(data, **params):
         return package.helpers.build(data, **params)
-    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader()}[kind]
+    factory = {'module': module_factory, 'registry': Registry.build, 'empty-cell': unused_cell_factory(), 'static-helper': static_factory, 'super-constructor': Derived, 'function-metadata': metadata_factory, 'property': property_factory, 'import': imported_factory, 'reader': Reader(), 'annotations': annotation_factory, 'nested-module': nested_module_factory, 'relative-import': relative_factory, 'slot-reader': SlotReader(), 'class-reader': ClassReader(), 'class-property': PropertyFactory.build, 'sequence-reader': SequenceReader(), 'descriptor': descriptor_factory, 'bound-get': bound_get_factory, 'attribute-hook': attribute_factory, 'index-hook': index_factory}[kind]
     declared = partial(factory) if wrapped else factory
     def configure(manifest):
         manifest.with_reference_architecture(declared)
@@ -1565,7 +1591,7 @@ def test_trusted_factory_owned_helper_paths(native_assessment_case, wrapped, kin
     round_path = _round_storage.round_path(native_assessment_case[0] / 'native')
     copyfile(round_path, directory / round_path.name)
     assert Trainer(directory, project_root=native_assessment_case[0], components=configure)._manifest.architecture_function is declared
-    mutation = patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
+    mutation = patch.object(Depth, '__get__', changed_getter) if kind == 'descriptor' else patch.object(Helpers, 'build', staticmethod(replacement)) if kind == 'static-helper' else patch.dict(_FACTORY_PARAMS, {'C': 2.0}) if kind == 'empty-cell' else patch.dict(_LATE_RULES, {'offset': 0.1})
     with mutation, patch.object(manifest_core.MLManifest, 'fetch_data', side_effect=AssertionError('research source access')) as loader:
         with pytest.raises(ValueError, match='differs from the recorded'):
             CompiledSFD(recorded, components=configure).manifest()

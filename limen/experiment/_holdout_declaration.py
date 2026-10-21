@@ -6,7 +6,7 @@ from importlib.util import resolve_name
 import dis
 import inspect
 import sys
-from types import CodeType, FunctionType, ModuleType
+from types import CodeType, FunctionType, MethodWrapperType, ModuleType
 from typing import cast
 
 from limen.experiment._holdout_calls import call_functions, function_module, native_attribute
@@ -27,12 +27,11 @@ def _native(function: FunctionType) -> bool:
 
 
 def declaration_witness(value: object) -> bytes:
-    pending, seen = [value], dict[int, object]()
+    pending, seen, readers = [value], dict[int, object](), set[str]()
     bindings: dict[FunctionType, dict[str, object]] = {}
     owners: dict[int, type[object]] = {}
     modules: dict[int, ModuleType] = {}
     inspected: set[tuple[int, ...]] = set()
-    readers: set[str] = set()
     attributes: set[str] = {'__new__', '__init__', '__call__'}
     class_state: dict[tuple[type[object] | ModuleType, str], object] = {}
     while pending:
@@ -56,9 +55,10 @@ def declaration_witness(value: object) -> bytes:
             cls = cast(type[object], owner if isinstance(owner, type) else type(owner))
             owners[id(cls)] = cls
             owners[id(type(cls))] = type(cls)
+        pending.extend((getattr(item, '__self__', None),) if inspect.isbuiltin(item) or isinstance(item, MethodWrapperType) else ())
         if isinstance(item, reader_types):
-            readers.update(alias for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else enumerate(native_values(item))) if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(item, key))
-        for function in call_functions(item):
+            readers.update(alias for key, part in (dict[object, object].items(cast(dict[object, object], item)) if isinstance(item, dict) else enumerate(native_values(item))) if isinstance(key, (str, int)) and part is _native_globals for alias in reader_names(cast(object, item), key))
+        for function in call_functions(cast(object, item)):
             if function in bindings:
                 continue
             codes = _codes(function.__code__)
@@ -80,7 +80,7 @@ def declaration_witness(value: object) -> bytes:
         if isinstance(item, str):
             attributes.add(str.__str__(item))
         if not isinstance(item, ModuleType):
-            pending.extend(children(item, namespace_readers=readers))
+            pending.extend(children(cast(object, item), namespace_readers=readers))
         stamp = (len(owners), len(modules), len(attributes))
         if stamp in inspected:
             continue
@@ -91,9 +91,9 @@ def declaration_witness(value: object) -> bytes:
             if stamp in inspected:
                 continue
             inspected.add(stamp)
-            for name in sorted(attributes.intersection(vars(parent))):
+            for name in sorted(attributes.intersection(vars(parent)) | {name for name, part in vars(parent).items() if name.startswith('__') and name.endswith('__') and any(not _native(function) for function in call_functions(cast(object, part)))}):
                 if (key := (parent, name)) not in class_state:
                     class_state[key] = part = vars(parent)[name]
-                    readers.update((name,) if (native_attribute(part, '__func__') if isinstance(part, (staticmethod, classmethod)) else part) is _native_globals else ())
-                    pending.extend((part,) if name in ('__new__', '__init__', '__call__') or not (calls := call_functions(part)) or any(not _native(function) for function in calls) else ())
+                    readers.update((name,) if (native_attribute(cast(object, part), '__func__') if isinstance(part, (staticmethod, classmethod)) else part) is _native_globals else ())
+                    pending.extend((cast(object, part),) if name in ('__new__', '__init__', '__call__') or not (calls := call_functions(cast(object, part))) or any(not _native(function) for function in calls) else ())
     return fitted_witness((value, tuple(bindings.items()), tuple((cls, name, part) for (cls, name), part in class_state.items())))

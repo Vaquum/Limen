@@ -49,7 +49,7 @@ def code_digest(code: CodeType) -> str:
 
 def native_values(value: object) -> tuple[object, ...]:
     iterator = _NATIVE_ITERATORS[1] if isinstance(value, tuple) else _NATIVE_ITERATORS[0] if isinstance(value, list) else _NATIVE_ITERATORS[2] if isinstance(value, deque) else _NATIVE_ITERATORS[3] if isinstance(value, set) else _NATIVE_ITERATORS[4]
-    return tuple(iterator(value))
+    return tuple(iterator(cast(object, value)))
 
 
 def _booster(value: object) -> bool:
