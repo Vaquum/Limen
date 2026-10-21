@@ -9,7 +9,7 @@ from io import IOBase
 import logging
 import pickle
 import typing
-from types import CellType, CodeType, GenericAlias, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, MethodWrapperType, ModuleType
+from types import CellType, GenericAlias, GetSetDescriptorType, MappingProxyType, MemberDescriptorType, MethodWrapperType, ModuleType
 from typing import TypeGuard, cast
 
 import numpy as np
