@@ -202,6 +202,12 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, backdate, 'availability floor')
 
+    def reprice_fills(report_dict):
+        for fill in report_dict['execution']['ledger']['fills']:
+            fill['reference_price'] *= 2.0
+
+    _rewrite_report(root, report, reprice_fills, 'fill reference')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:

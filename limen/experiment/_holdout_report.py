@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from bisect import bisect_right
 from collections.abc import Callable, Mapping, Sequence
 from hashlib import sha256
 import json
@@ -297,6 +298,7 @@ def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: M
     initial, product = cast(dict[str, object], contract['initial_conditions']), cast(dict[str, object], cast(dict[str, object], execution['policy'])['product'])
     partition, tape, signals = cast(list[int], contract['partition']), cast(list[dict[str, object]], execution['tape']), cast(list[dict[str, object]], execution['signals'])
     rows, opens = cast(list[dict[str, object]], contract['signal_rows']), final['open_ns'].to_list()
+    grid, lo, hi = final['open_ns'].to_list(), final['low'].to_list(), final['high'].to_list()
     intents, episodes = {row['intent_id'] for row in ledger['intents']}, {row['episode_id'] for row in ledger['episodes']}
     times, fills, requested = [cast(int, row['time_ns']) for row in ledger['states']], [cast(int, row['time_ns']) for row in ledger['fills']], [cast(int, row['requested_at_ns']) for row in ledger['intents']]
     equities = [cast(float, row['equity']) for row in ledger['states']]
@@ -312,16 +314,15 @@ def _verify_execution(execution: dict[str, object], final: pl.DataFrame, spec: M
     chained = aligned and not any(point['open_ns'] != open_ns or point['trade_contract_digest'] != execution['research_digest'] or point['available_at_ns'] != signal['available_at_ns'] or signal['target'] != point['prediction'] or (signal['row_id'], signal['available_at_ns']) != (row['row_id'], row['available_at_ns']) for point, signal, row, open_ns in zip(tape, signals, rows, opens, strict=True))
     checks = ((set(execution) != _EXECUTION_KEYS or set(ledger) != _LEDGER_KEYS, 'Invalid execution evidence schema'), (execution['research_digest'] != pin.get('research_digest') or execution['policy'] != pin.get('policy') or execution['initial_equity'] != pin.get('initial_equity'), 'Invalid execution evidence pin'),
         (contract_digest(cast(Mapping[str, JsonValue], contract)) != execution['assessment_digest'], 'Invalid execution contract digest'), (cast(dict[str, object], contract['rules']).get('terminal') != 'mark_without_close', 'Invalid execution terminal semantics'), (initial.get('equity') != pin.get('initial_equity') or initial.get('quantity') != 0 or initial.get('currency') != product.get('quote_currency'), 'Invalid execution economics'),
-        (ledger['funding'] != [] or contract.get('calibration') is not None or cast(dict[str, object], execution['policy']).get('funding') is not None, 'Invalid execution funding absence'),
-        (partition != [planned['context_start_ns'], planned['end_ns']], 'Invalid execution partition bounds'),
+        (ledger['funding'] != [] or contract.get('calibration') is not None or cast(dict[str, object], execution['policy']).get('funding') is not None, 'Invalid execution funding absence'), (partition != [planned['context_start_ns'], planned['end_ns']], 'Invalid execution partition bounds'),
         (not aligned, 'Invalid execution tape identity'), (not chained, 'Invalid execution prediction chain'),
         (any(row['intent_id'] not in intents for row in ledger['fills']), 'Invalid execution intent linkage'), (any(row['episode_id'] not in episodes for row in (*ledger['intents'], *ledger['fills']) if row['episode_id'] is not None), 'Invalid execution episode linkage'),
         (any(signal['target'] != 0 for signal in signals) and not any(row['reason'] == 'signal' for row in ledger['intents']), 'Invalid execution ledger activity'),
-        (times != sorted(times) or fills != sorted(fills) or requested != sorted(requested), 'Invalid execution time order'),
-        (any(moment < partition[0] or moment > partition[1] for moment in (*times, *fills, *requested)), 'Invalid execution time bounds'),
+        (times != sorted(times) or fills != sorted(fills) or requested != sorted(requested), 'Invalid execution time order'), (any(moment < partition[0] or moment > partition[1] for moment in (*times, *fills, *requested)), 'Invalid execution time bounds'),
         (not times or times[0] != partition[0] or ledger['states'][0]['equity'] != pin.get('initial_equity') or ledger['states'][0]['quantity'] != 0, 'Invalid execution accounting anchor'), (any(all((row['requested_at_ns'], row['target']) != (signal['available_at_ns'], cast(float, signal['target']) * cast(float, cast(dict[str, object], execution['policy'])['notional_rate'])) for signal in signals) for row in ledger['intents'] if row['reason'] == 'signal'), 'Invalid execution signal linkage'),
         ([point['prediction'] for point in tape] != final['aggregate_prediction'].to_list(), 'Invalid execution retained predictions'), (contract['policy'] != execution['policy'], 'Invalid execution contract policy'), (mismatch, 'Invalid execution metrics evidence'),
-        (any(cast(int, point['available_at_ns']) < close_ns for point, close_ns in zip(tape, final['close_ns'].to_list(), strict=True)), 'Invalid execution availability floor'), (any(row['closed_at_ns'] is None and cast(float, row['net_pnl']) != ending - cast(float, row['entry_equity']) for row in ledger['episodes']), 'Invalid execution open-episode valuation'))
+        (any(cast(int, point['available_at_ns']) < close_ns for point, close_ns in zip(tape, final['close_ns'].to_list(), strict=True)), 'Invalid execution availability floor'), (any(row['closed_at_ns'] is None and cast(float, row['net_pnl']) != ending - cast(float, row['entry_equity']) for row in ledger['episodes']), 'Invalid execution open-episode valuation'),
+        (any((position := bisect_right(grid, cast(int, row['time_ns']))) <= 1 or not (lo[position - 1] <= cast(float, row['reference_price']) <= hi[position - 1] or lo[position - 2] <= cast(float, row['reference_price']) <= hi[position - 2]) for row in ledger['fills']), 'Invalid execution fill reference'))
     for failed, message in checks:
         if failed:
             raise ValueError(message)
