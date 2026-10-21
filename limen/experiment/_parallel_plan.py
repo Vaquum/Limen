@@ -19,7 +19,7 @@ from typing_extensions import override
 
 from limen._parallel_contract import ParallelRoundContract
 from limen.experiment._parallel_encoding import import_reference, decode, digest, encode, reference, source_digest
-from limen.experiment._parallel_graph import copy_context
+from limen.experiment._parallel_graph import EMPTY_IDS as _NO_ANCESTORS, copy_context, value_only
 from limen.experiment._parallel_callable import bind_call
 from limen.experiment._parallel_state import ObjectState, call_implementation, object_state, restore_object, mutable_function
 from limen.experiment._parallel_identity import captured_providers, declaration_changed, distribution_providers, identity_snapshot, module_identity, restore_function_metadata
@@ -164,6 +164,8 @@ def _scaler_factory(cls: object, params: dict[str, object], selector: str | None
 
 @identity_snapshot()
 def _normalize(value: object, active: frozenset[int] = _NO_ANCESTORS, *, snapshot: bool = False, memo: dict[int, tuple[object, object]] | None = None, state_memo: dict[int, tuple[object, object]] | None = None) -> object:
+    if value_only(value):
+        return value
     if id(value) in active:
         raise ValueError('Parallel encoding rejects cycles')
     memo = {} if memo is None else memo
