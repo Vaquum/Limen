@@ -30,7 +30,7 @@ sfd:
         quantile: 0.5
       transform_params:
         shift: -1
-    # region event_policy
+# region event_policy
     backtest:
       source_interval_seconds: 3600
       fee_bps: 7.0
@@ -43,7 +43,7 @@ sfd:
         quote_currency: USDT
         quantity_step: 1.0e-9
         min_notional: 0.0
-    # endregion event_policy
+# endregion event_policy
     calibration:
       threshold_function:
         func: limen.calibration.grid_threshold_optimizer
