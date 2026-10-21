@@ -144,18 +144,24 @@ resources without rewriting the source YAML, `yaml_reference` or manifest hash.
 Different YAML documents retain their different content-based manifest IDs.
 
 Parallel admission requires an MSQ search, a YAML-compiled manifest, per-round
-preparation, CPU `logreg_binary` or `lightgbm_binary`, and `post_processing=False`.
-Set the model search parameter `n_jobs: [1]`: every effective value, including
-defaults and context overrides, must be exactly 1. LightGBM's null default is
-rejected, rather than silently overriding a searched parameter. Workers use one
-native thread each for BLAS/OpenMP and Polars; the parent environment is restored.
+preparation and `post_processing=False`. Every built-in architecture is admitted
+when the CPU knobs it exposes resolve to one thread. Where the architecture
+exposes `n_jobs`, set the search parameter `n_jobs: [1]`: every effective value,
+including defaults and context overrides, must be exactly 1, so the LightGBM
+and XGBoost null defaults are rejected rather than silently overriding a
+searched parameter. Where it exposes `device`, every value must be `cpu` or the
+backend's null CPU default. Architectures without these knobs, such as DLinear,
+Ridge and rule-based strategies, need no setting. Each worker verifies after
+every round that all native pools ran one thread. TabPFN is neither refused nor
+proven on this path. Workers use one native thread each for BLAS/OpenMP and
+Polars; the parent environment is restored.
 The run records `workers` and `worker_native_threads` separately in metadata.
 Serial runs retain their existing metadata schema and native thread behavior.
 
 Existing calibration, validation-return objectives, recording and walk-forward
 remain usable on this path. Walk-forward folds run sequentially within each
 worker's round. Parallel mode rejects custom/native SFD callables, overridden
-prep/model functions, other backends, non-MSQ execution, retained live
+prep/model functions, non-CPU backends, non-MSQ execution, retained live
 post-processing and `factorize=True` before output creation. These combinations
 remain available with one worker. There is no implicit serial fallback.
 
