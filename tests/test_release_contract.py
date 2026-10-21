@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from pathlib import Path
 from types import ModuleType
 
@@ -25,6 +26,147 @@ def _load_create_release() -> ModuleType:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def _load_wait_for_checks() -> ModuleType:
+    spec = importlib.util.spec_from_file_location(
+        'wait_for_commit_checks',
+        ROOT / 'scripts' / 'wait_for_commit_checks.py',
+    )
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules['wait_for_commit_checks'] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _run(name, status, conclusion=None):
+    payload = {'name': name, 'status': status}
+    if conclusion is not None:
+        payload['conclusion'] = conclusion
+    return payload
+
+
+def test_wait_partition_sorts_runs_by_state():
+    module = _load_wait_for_checks()
+    verdict = module.partition_runs([
+        _run('PR Checks Tests', 'completed', 'success'),
+        _run('PR Checks Coverage', 'completed', 'skipped'),
+        _run('PR Checks Runtime', 'in_progress'),
+        _run('PR Checks Docs Site', 'completed', 'failure'),
+    ], [])
+    assert verdict.passed == ('PR Checks Tests', 'PR Checks Coverage')
+    assert verdict.pending == ('PR Checks Runtime',)
+    assert verdict.failed == ('PR Checks Docs Site (failure)',)
+    assert verdict.excluded == ()
+
+
+def test_wait_partition_excludes_release_machinery_case_insensitively():
+    module = _load_wait_for_checks()
+    verdict = module.partition_runs([
+        _run('Create Automated Release', 'completed', 'success'),
+        _run('Publish Wheel', 'in_progress'),
+        _run('PR Checks Tests', 'completed', 'success'),
+    ], ['automated release', 'PUBLISH'])
+    assert verdict.excluded == ('Create Automated Release', 'Publish Wheel')
+    assert verdict.passed == ('PR Checks Tests',)
+    assert verdict.pending == ()
+    assert verdict.failed == ()
+
+
+def test_wait_loop_returns_fast_paths_without_sleeping(monkeypatch):
+    module = _load_wait_for_checks()
+    sleeps = []
+    monkeypatch.setattr(module.time, 'sleep', lambda s: sleeps.append(s))
+    monkeypatch.setattr(
+        module, 'fetch_check_runs',
+        lambda repo, sha: [_run('PR Checks Tests', 'completed', 'success')],
+    )
+    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert verdict.passed == ('PR Checks Tests',)
+    assert sleeps == []
+    monkeypatch.setattr(
+        module, 'fetch_check_runs',
+        lambda repo, sha: [_run('PR Checks Tests', 'completed', 'failure')],
+    )
+    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert verdict.failed == ('PR Checks Tests (failure)',)
+    assert sleeps == []
+
+
+def test_wait_loop_waits_then_settles(monkeypatch):
+    module = _load_wait_for_checks()
+    now = [1000.0]
+    monkeypatch.setattr(module.time, 'monotonic', lambda: now[0])
+    monkeypatch.setattr(
+        module.time, 'sleep',
+        lambda s: now.__setitem__(0, now[0] + s),
+    )
+    payloads = [
+        [_run('PR Checks Tests', 'in_progress')],
+        [_run('PR Checks Tests', 'completed', 'success')],
+    ]
+    monkeypatch.setattr(
+        module, 'fetch_check_runs', lambda repo, sha: payloads.pop(0)
+    )
+    verdict = module.wait_for_green('o/r', 'sha', [], 60.0, 5.0)
+    assert verdict.passed == ('PR Checks Tests',)
+    assert verdict.pending == ()
+
+
+def test_wait_loop_times_out_on_pending(monkeypatch):
+    module = _load_wait_for_checks()
+    now = [1000.0]
+    monkeypatch.setattr(module.time, 'monotonic', lambda: now[0])
+    monkeypatch.setattr(
+        module.time, 'sleep',
+        lambda s: now.__setitem__(0, now[0] + s),
+    )
+    monkeypatch.setattr(
+        module, 'fetch_check_runs',
+        lambda repo, sha: [_run('PR Checks Tests', 'in_progress')],
+    )
+    verdict = module.wait_for_green('o/r', 'sha', [], 10.0, 30.0)
+    assert verdict.pending == ('PR Checks Tests',)
+
+
+def test_wait_main_exit_codes(monkeypatch, capsys):
+    module = _load_wait_for_checks()
+    green = module.Verdict(
+        pending=(), failed=(), passed=('PR Checks Tests',), excluded=()
+    )
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: green)
+    argv = ['--repo', 'o/r', '--sha', 'abc', '--exclude-substring', 'x']
+    assert module.main(argv) == 0
+    assert 'PASS' in capsys.readouterr().out
+    bad = module.Verdict(
+        pending=(), failed=('PR Checks Tests (failure)',), passed=(), excluded=()
+    )
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: bad)
+    assert module.main(argv) == 1
+    assert 'FAILING CHECKS' in capsys.readouterr().err
+    empty = module.Verdict(pending=(), failed=(), passed=(), excluded=())
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: empty)
+    assert module.main(argv) == 1
+    assert 'refusing to ship' in capsys.readouterr().err
+    stuck = module.Verdict(
+        pending=('PR Checks Tests',), failed=(), passed=(), excluded=()
+    )
+    monkeypatch.setattr(module, 'wait_for_green', lambda *a: stuck)
+    assert module.main(argv) == 1
+    assert 'timed out' in capsys.readouterr().err
+
+
+def test_wait_fetch_maps_failures_to_exit_2(monkeypatch):
+    module = _load_wait_for_checks()
+
+    def missing(*args, **kwargs):
+        raise FileNotFoundError('no gh')
+
+    monkeypatch.setattr(module.subprocess, 'run', missing)
+    with pytest.raises(SystemExit, match='gh not found'):
+        module.fetch_check_runs('o/r', 'sha')
 
 
 def test_release_tag_authority_and_traceability() -> None:
