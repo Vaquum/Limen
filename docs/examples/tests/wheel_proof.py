@@ -178,6 +178,9 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     compiled["recovery"].update(prove_interrupted_recovery(project, runtime_environment))
     catalogue = json.loads((project / 'catalogue.json').read_text())
     assert set(compiled) == {name for name, interfaces in catalogue['required_scenarios'].items() if 'compiled' in interfaces}
+    for directory, report in [('compiled', compiled['selection']), ('compiled-all', {'scenarios': {key: value for key, value in compiled.items() if key != 'selection'}})]:
+        (project / 'results' / directory).mkdir(exist_ok=True)
+        (project / 'results' / directory / 'summary.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
     for name, result in compiled.items():
         destination = output / ('compiled-' + name + '.json')
         destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')

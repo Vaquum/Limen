@@ -216,10 +216,6 @@ def verify_project(project):
         assert inventory[scenario]
     inventory['command_line'] = {str(path.relative_to(project)): hashlib.sha256(path.read_bytes()).hexdigest() for path in original.rglob('*.yaml')}
     (project / 'results/compiled-artifacts.json').write_text(json.dumps(inventory, indent=2) + '\n')
-    (project / 'results/compiled').mkdir(exist_ok=True)
-    (project / 'results/compiled/summary.json').write_text(json.dumps(summaries['selection'], indent=2) + '\n')
-    (project / 'results/compiled-all').mkdir(exist_ok=True)
-    (project / 'results/compiled-all/summary.json').write_text(json.dumps({'scenarios': {key: value for key, value in summaries.items() if key != 'selection'}}, indent=2, allow_nan=False) + '\n')
     return summaries
 
 

@@ -134,6 +134,9 @@ def test_complete_research_scenario(research_proof, interface, scenario):
     item = research_proof['scenarios'][(interface, scenario)]
     assert item['output_sha256'] and item['command']
     assert item['summary']
+    if (interface, scenario) == ('compiled', 'recovery'):
+        assert 0 < item['summary']['interrupted_rounds'] < item['summary']['resumed_rounds'] == 4
+        assert item['summary']['uninterrupted_equivalence'] is True
 
 
 @pytest.mark.parametrize('interface', ['python', 'compiled'])
