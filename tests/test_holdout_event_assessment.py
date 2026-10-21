@@ -317,6 +317,15 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
 
     _rewrite_report(root, report, inflate, 'terminal valuation')
 
+    def inject(report_dict):
+        states = report_dict['execution']['ledger']['states']
+        moments = {fill['time_ns'] for fill in report_dict['execution']['ledger']['fills']}
+        target = next(row for row in states[1:] if row['quantity'] == 0 and row['time_ns'] not in moments)
+        target['cash'] += 500.0
+        target['equity'] = target['cash'] + target['accrued_funding']
+
+    _rewrite_report(root, report, inject, 'cash reconciliation')
+
 
 def _rewrite_report(root, report, mutate, match):
     with history.connection(root / 'manifests/holdout.sqlite3') as db:
