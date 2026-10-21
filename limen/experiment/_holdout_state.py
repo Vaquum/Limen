@@ -222,4 +222,5 @@ def fitted_witness(value: object, *, class_aliases: bool = False) -> bytes:
         aliases = tuple((cls.__module__, cls.__qualname__, parent.__module__, parent.__qualname__, name, seen[id(part)]) for cls in classes.values() for parent in cls.__mro__ for name, part in vars(parent).items() if id(part) in seen)
         return pickle.dumps((result, aliases) if class_aliases else result, protocol=5)
     finally:
-        cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index('node')].cell_contents = cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index('structure')].cell_contents = None
+        for cell in tuple(cast(tuple[CellType, ...], node.__closure__)[node.__code__.co_freevars.index(name)] for name in ('node', 'structure')):
+            cell.cell_contents = None
