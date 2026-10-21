@@ -1,3 +1,4 @@
+import builtins
 import copy
 from contextlib import ExitStack, contextmanager, nullcontext
 from concurrent.futures import ThreadPoolExecutor
@@ -1056,10 +1057,11 @@ def test_trusted_factory_globals_and_class_attributes(native_assessment_case, ki
 
 @pytest.mark.parametrize('defaulted', [False, True])
 def test_frozen_literal_getattr_globals(native_assessment_case, defaulted):
+    runtime = builtins
     class AttributeGlobals(LogRegBinary):
         def predict(self, data):
             result = super().predict(data)
-            offset = getattr(self, 'read_globals', None)()['_LATE_RULES']['offset'] if defaulted else getattr(self, 'read_globals')()['_LATE_RULES']['offset']
+            offset = getattr(self, 'read_globals', None)()['_LATE_RULES']['offset'] if defaulted else runtime.getattr(self, 'read_globals')()['_LATE_RULES']['offset']
             result['_probs'] = np.clip(result['_probs'] + offset, 0, 1)
             return result
     selected = copy.deepcopy(native_assessment_case[2][0][0])
