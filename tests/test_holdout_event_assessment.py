@@ -174,6 +174,10 @@ def test_recorded_event_ledger_matches_engine_replay(event_case):
         del report_dict['execution']
 
     _rewrite_report(root, report, downgrade, 'schema for pinned')
+    flat = trade_execution(with_predictions(replace(spot, initial_equity=equity), [0] * 24), policy)
+    assert flat.intents.height == 0
+    _rewrite_report(root, report, lambda tampered: tampered['execution'].update(
+        ledger={name: getattr(flat, name).to_dicts() for name in ('states', 'intents', 'fills', 'episodes', 'funding')}), 'ledger activity')
 
 
 def _rewrite_report(root, report, mutate, match):
