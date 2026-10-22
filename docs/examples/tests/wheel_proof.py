@@ -163,9 +163,9 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     # Complete the first scientific import before starting the disjoint campaigns.
     run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
     with ThreadPoolExecutor(max_workers=2) as executor:
-        # The CI suite's 120-second gate bounds these complete campaigns.
+        # Bound each complete entry command separately from wheel setup and assertions.
         executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
-                                           cwd=project, env=runtime_environment, timeout=None)
+                                           cwd=project, env=runtime_environment, timeout=120)
                       for name in ('python-all', 'compiled-all')}
         for execution in executions.values():
             execution.result()

@@ -421,6 +421,12 @@
       "route": "/book/selected-behavior/",
       "part": "Book",
       "bookOrder": 9
+    },
+    "docs/Public-API.md": {
+      "route": "/reference/public-api/",
+      "part": "Reference",
+      "navigationTitle": "Public API index",
+      "navigationGroup": "Lookup"
     }
   }
 }

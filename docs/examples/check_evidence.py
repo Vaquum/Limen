@@ -44,6 +44,15 @@ def package_reference(source: str, name: str) -> str:
         if kind == 'definition' and len(parts) == 1:
             matches += [node for node in scope if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == part for target in node.targets)]
             matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
+        if len(matches) > 1 and kind == 'signature' and index == len(parts) - 1 and all(
+                isinstance(node, ast.FunctionDef) and any(
+                    isinstance(decorator, ast.Name) and decorator.id == 'property' or
+                    isinstance(decorator, ast.Attribute) and decorator.attr == 'setter'
+                    for decorator in node.decorator_list) for node in matches):
+            members = deepcopy(matches)
+            for member in members:
+                member.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
+            return ast.unparse(ast.fix_missing_locations(ast.Module(body=members, type_ignores=[]))) + '\n'
         if len(matches) != 1:
             raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
         selected = matches[0]
@@ -434,6 +443,8 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
     validate_surface_catalogue(root, catalogue_data)
+    from catalogue_admission import validate_admission
+    validate_admission(root, json.loads((root / 'docs/examples/api-contracts.json').read_text()))
     contexts = validate_page_catalogue(root, catalogue_data)
     for page, scenarios in contexts.items():
         interfaces = tuple(sorted({catalogue_data['scenario_details'][name]['interface'] for name in scenarios}))

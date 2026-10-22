@@ -129,7 +129,8 @@
     "docs/Guarded-Holdout-Reference.md",
     "docs/Run-And-Recover.md",
     "docs/Trading-Behavior.md",
-    "docs/Selected-Behavior.md"
+    "docs/Selected-Behavior.md",
+    "docs/Public-API.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2861,6 +2862,10 @@
       "compiled/calibration",
       "python/execution",
       "compiled/execution"
+    ],
+    "docs/Public-API.md": [
+      "python/selection",
+      "compiled/selection"
     ]
   }
 }

@@ -27,6 +27,8 @@ Obtain the matching wheel and recorded inputs from the project page before runni
 
 ## Reference
 
+The [public API index](Public-API.md) maps every declared export and public class member to its exact source contract. Use topic pages for the decision and semantics; this index closes aliases, methods and ownership.
+
 Use [Manifest fields](Experiment-Manifest.md) and the [CLI](Command-Line-Interface.md) for Compiled authoring. Use [ordinary Python SFD functions](Single-File-Decoder.md#custom-sfds) and the [UEL API](Universal-Experiment-Loop.md) for caller-owned execution. Shared preparation components have their own [indicator](Indicators.md), [feature](Features.md), [target](Targets.md), [transform](Transforms.md), [scaler](Scalers.md) and [calibration](Calibration.md) contracts.
 
 [Log](Log.md), [Benchmark](Benchmark.md), [execution](Backtest.md), [Trainer and Sensors](Trainer.md), [Cohort](Cohort.md) and [guarded holdout](Guarded-Holdout-Reference.md) preserve the exact outputs, evidence requirements and failure behavior. Optional native component integration is appendix material; it is not a Python step in the Compiled journey. Package READMEs identify their public entry points and adjacent ownership. The [glossary](Glossary.md) fixes the terminology.

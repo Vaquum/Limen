@@ -177,3 +177,16 @@ def test_current_results_reject_wrong_scenarios_fields_and_changed_artifacts(tmp
             result_bindings(ROOT, document, [record])
     finally:
         artifact.unlink()
+
+
+def test_every_declared_export_and_public_member_has_an_exact_reference():
+    from catalogue_admission import validate_admission
+    contracts = json.loads((ROOT / 'docs/examples/api-contracts.json').read_text())
+    validate_admission(ROOT, contracts)
+    changed = dict(contracts)
+    del changed['limen.Sensor.from_model']
+    with pytest.raises(ValueError, match='admission differs'):
+        validate_admission(ROOT, changed)
+    assert 'limen.Log.experiment_parameter_importance' in contracts
+    property_source = region(ROOT / 'limen/experiment/reducer/pruning_strategy.py', 'signature:PruningStrategy.active')
+    assert '@property' in property_source and '@active.setter' in property_source
