@@ -154,9 +154,7 @@ def run_parallel(host: object, msq: MSQ, domain: ParamDomain,
 
     def checkpoint(*, rewind: bool = False) -> None:
         if directory is not None:
-            if rewind:
-                msq.set_state(committed)
-            checkpoint_call(msq, domain, directory, checkpoint_manager,
+            checkpoint_call(committed if rewind else msq, domain, directory, checkpoint_manager,
                             last, n_permutations, strategy_type=strategy_type,
                             content_hash=content_hash, feedback_controller=feedback_controller,
                             pruning_strategies=cast(list[PruningStrategy], attributes['_pruning_strategies']),
