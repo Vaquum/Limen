@@ -2,13 +2,23 @@
 
 The repository law, operating discipline, and code stance — the single canonical constitution for every contributor, human or agent.
 
-Adopted from [`Vaquum/new-repository-template`](https://github.com/Vaquum/new-repository-template), which is upstream for the governance plane. Divergences from upstream are deliberate and are named where they occur; a gate that is wrong here is fixed upstream in its own PR rather than forked locally.
-
 ## Motivation
+
+**This applies to both the author and the reviewer:**
 
 We don't want saga ornamentation. We want commits that move the needle. The needle is the thing that humans actually benefit from in the software. Always ask "what are the key usage paths here, and how is this proposed change moving those?". Never be satisfied with work that seems to check the boxes, but doesn't really move the capability where the actual benefit is.
 
-A gate earns its place by catching a defect class this repository actually has. Adopting a gate because upstream runs it is not a reason — upstream is a 2,000-line enforcement repository with no domain data, and constraints that are free there can be expensive here. When a gate demands work that delivers nothing, the gate is what changes.
+We want work that is the minimal footprint representation of the ask. Minimal, clinical interventions all the way. Get in, get out, do the thing that actually has to be done, never expand it beyond that. Keep asking "is this truly the cleanest and simplest and least intrusive way to get this done" and do it that way and only that way. Don't let others come expand it, let them come make it cleaner.
+
+When addressing review comments on your own issue or PR, handle every one — blocking or not — with either a commit/change (and name that commit in the thread) or a reply explaining the resolution, or why it is not addressed; then resolve the thread. Both are ok, do not sink into endless rabbit holes. 
+
+Merge stays blocked until every thread is resolved (`required_review_thread_resolution`, server-side). 
+
+## Review work
+
+**Reviewing a pull request?** 
+
+When reviewing an issue, post comments directly in the thread. Do not grind endlessly turn after turn.
 
 ## The laws
 
@@ -62,31 +72,23 @@ Beyond the gates, `audit_main_ruleset` re-checks the live ruleset on every push 
 
 Branch off `main`. Commit the first working increment and push to a remote branch of the same name, then **open the PR right away — before you run the gates locally, and never as a draft.** Opening it first starts CI immediately; run the local gate suite afterwards, keep working while GitHub runs the gates too, and don't wait for CI in the foreground. Never sit on local verification without an open PR; open a real PR or none.
 
-**`zero-bang` is the approving authority — the operator.** ("The operator" throughout this document is that human reviewer: the one who judges the work at review time and whose approval unlocks merge.) Request their review the moment the PR is open. Once every requested change is addressed, re-request `zero-bang`'s review.
-
 Each push re-runs every gate. Prefer new commits to amends — amends don't give you anything and they muddle the PR history. Keep one logical change per commit; don't batch unrelated changes together. Before you request review, read your own full diff in GitHub — catch what you'd flag in someone else's PR.
 
 Merge unlocks when every required gate is green. Branches need not be up-to-date with `main`; rebase only to resolve a conflict or to pick up a main-side fix the PR needs.
 
 When a gate fails, the gate's own output names the reason. Read the output, fix the code or the linked issue, push again. If the failure is the gate being wrong rather than the PR being wrong, fix the gate in its own PR — the ruleset drift gate (`pr_checks_ruleset`) will force the matching ruleset-snapshot update so no gate relaxation side-enters.
 
-## Review work
-
-**Reviewing a pull request?** The canonical brief is [`.github/copilot-instructions.md`](.github/copilot-instructions.md) — how to read a diff beyond its own lines, what to hunt, the verdict ladder, and how to post. Work entirely from it; it is also what GitHub's built-in Copilot review reads, so every reviewer (Copilot, agent, or human) holds one shared standard.
-
-The same posture governs the rest of review work. When reviewing an issue, post comments directly in the thread. When addressing comments on your own issue or PR, handle every one — blocking or not — with either a commit (and name that commit in the thread) or a reply explaining the resolution, or why it is not addressed; then resolve the thread. Merge stays blocked until every thread is resolved (`required_review_thread_resolution`, server-side). The opinion is the deliverable; never confirm with the operator before posting — it only adds a round-trip.
-
 ## Beyond the laws
 
-The gates check shape, scope, format, ratchets, and named test suites. They do not check whether the PR's capability actually works. The operator judges that at review time, against the following stance:
+The gates check shape, scope, format, ratchets, and named test suites. They do not check whether the PR's capability actually works. 
 
 **Radical simplicity.** The simplest code that meets the requirement wins. Complexity earns its place by naming the specific concern it addresses — not "robustness" or "future-proofing" in general.
 
-**No defensive fog; fail loud.** Agents are primed to produce defensible-looking code: `try/except` that swallows, fallbacks for cases that don't happen, docstrings that restate the signature, comments that narrate the line, parameters that might be useful someday. None of it belongs. When something is wrong, find the root cause and fail loudly and early — never paper over missing state with a workaround, a fallback, or a swallowed error. The fail-loud gate (`pr_checks_fail_loud`) catches the AST-detectable forms; the rest is operator-caught at review.
+**No defensive fog; fail loud.** Agents are primed to produce defensible-looking code: `try/except` that swallows, fallbacks for cases that don't happen, docstrings that restate the signature, comments that narrate the line, parameters that might be useful someday. None of it belongs. When something is wrong, find the root cause and fail loudly and early — never paper over missing state with a workaround, a fallback, or a swallowed error. The fail-loud gate (`pr_checks_fail_loud`) catches the AST-detectable forms.
 
 **No sitting in the dark.** Never suppress callable output, script output, or sub-agent logs to save context — stay fully aware of what the running process is doing.
 
-**No long-running commands.** Do not repeatedly run long-running commands. If something needs to be run repeatedly, immediately profile it, and report back to operator the profile results. The operator is expert in performance hacking, you are not. 
+**No long-running commands.** Do not repeatedly run long-running commands. If something needs to be run repeatedly, and immediately profile it.
 
 **Minimal scope.** Touch only the files the task demands. Drive-by cleanups go in a separate PR.
 
@@ -110,9 +112,9 @@ Concrete house style the gates don't check — not judgment calls, just the defa
 - **Docs.** Author each thing once: one page is canonical, the rest link to it. Show real, runnable examples and current behavior — never imaginary examples or aspirational framing.
 - **Release notes.** Technically correct, concise in summary, specific in detail, and tied to the pushed tag.
 
-## When in doubt, stop
+## When in doubt, stop and reduce
 
-This is collaboration. If the requirement is unclear, if the scope is ambiguous, if a gate's meaning is unobvious, if the fix would require touching something that wasn't asked for — stop and ask the operator. Proceeding through doubt is where harm accumulates.
+For the most part, PRs become too big, and very rarely too small, so optimize towards the hard, optimize towards keeping them small and simple.
 
 ## Task-concluding messages
 
