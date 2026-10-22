@@ -160,21 +160,25 @@ def stochf(
     if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
         raise ValueError('stochf fastd_ma_type must be between 0 and 8')
 
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
-    fastk_values, fastd_values = stochf_from_arrays(
-        high_values,
-        low_values,
-        close_values,
-        fastk_period,
-        fastd_period,
-        fastd_ma_type,
-    )
+    def calculate(s: pl.Series) -> pl.Series:
+        fastk_values, fastd_values = stochf_from_arrays(
+            s.struct.field('high').to_numpy().astype(float, copy=False),
+            s.struct.field('low').to_numpy().astype(float, copy=False),
+            s.struct.field('close').to_numpy().astype(float, copy=False),
+            fastk_period,
+            fastd_period,
+            fastd_ma_type,
+        )
+        return pl.DataFrame({'stochf_fastk': fastk_values, 'stochf_fastd': fastd_values}).to_struct()
 
+    inputs = pl.struct(
+        pl.col(high_col).alias('high'),
+        pl.col(low_col).alias('low'),
+        pl.col(close_col).alias('close'),
+    )
     return data.with_columns(
-        [
-            pl.Series(name='stochf_fastk', values=fastk_values),
-            pl.Series(name='stochf_fastd', values=fastd_values),
-        ]
+        inputs.map_batches(
+            calculate,
+            return_dtype=pl.Struct({'stochf_fastk': pl.Float64, 'stochf_fastd': pl.Float64}),
+        ).struct.field('*')
     )

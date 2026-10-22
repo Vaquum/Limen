@@ -75,18 +75,19 @@ def stochrsi(
     if fastd_ma_type < 0 or fastd_ma_type > CMP_N_8:
         raise ValueError('stochrsi fastd_ma_type must be between 0 and 8')
 
-    values = data[price_col].to_numpy().astype(float, copy=False)
-    fastk_values, fastd_values = _stochrsi_from_values(
-        values,
-        period,
-        fastk_period,
-        fastd_period,
-        fastd_ma_type,
-    )
+    def calculate(s: pl.Series) -> pl.Series:
+        fastk_values, fastd_values = _stochrsi_from_values(
+            s.to_numpy().astype(float, copy=False),
+            period,
+            fastk_period,
+            fastd_period,
+            fastd_ma_type,
+        )
+        return pl.DataFrame({'stochrsi_fastk': fastk_values, 'stochrsi_fastd': fastd_values}).to_struct()
 
     return data.with_columns(
-        [
-            pl.Series(name='stochrsi_fastk', values=fastk_values),
-            pl.Series(name='stochrsi_fastd', values=fastd_values),
-        ]
+        pl.col(price_col).map_batches(
+            calculate,
+            return_dtype=pl.Struct({'stochrsi_fastk': pl.Float64, 'stochrsi_fastd': pl.Float64}),
+        ).struct.field('*')
     )
