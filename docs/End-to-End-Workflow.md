@@ -89,7 +89,15 @@ and supply `--workers 4` to `limen run` for a compatible declaration. YAML `uel.
 default; the CLI overrides it. Runs created with the applicable
 [recording evidence](Universal-Experiment-Loop.md#recording-policy) can resume with
 `limen run --resume RESULTS_DIR`, reusing the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
-for admission, feedback ordering and stop/recovery limits. The canonical projects use one worker to keep their proof population explicit; a larger search is needed to occupy several workers.
+for admission, feedback ordering and stop/recovery limits. The base project uses one worker. The Compiled `parallel.yaml` variant evaluates the same four-candidate domain with two isolated workers and one native thread per worker; its ordered committed results must agree with the serial candidates. Its completed checkpoint also resumes through the CLI without repeating rows. Python function campaigns do not enter this native worker path.
+
+<!-- example: workflow-compiled-parallel source=docs/examples/compiled-research/run.sh region=parallel scenario=search interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar --workers 2 compiled-research/parallel.yaml
+limen run --no-progress-bar --resume results/dev/compiled-parallel --workers 2
+```
+
+<!-- result: workflow-compiled-workers interface=compiled scenario=search fields=parallel.workers,parallel.rounds,parallel.ordered_commit_indices -->
 
 ## Interpret the result
 

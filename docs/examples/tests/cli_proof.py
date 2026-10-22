@@ -13,7 +13,7 @@ from scenario_oracles import execution_clocks, verify_acceptance, verify_common_
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
@@ -379,5 +379,12 @@ def verify_extended_campaigns(project):
     sources = {kind: checked_log(base / ('compiled-source-' + kind), 2) for kind in ('csv', 'zip', 'arrow')}
     assert sources['csv'].select('id', 'accuracy').equals(sources['zip'].select('id', 'accuracy'))
     assert sources['csv'].select('id', 'accuracy').equals(sources['arrow'].select('id', 'accuracy'))
+    parallel = checked_log(base / 'compiled-parallel', 4)
+    serial = sources['csv']
+    assert dict(zip(parallel['id'], parallel['accuracy'], strict=True)).items() >= dict(zip(serial['id'], serial['accuracy'], strict=True)).items()
+    metadata = json.loads((base / 'compiled-parallel/metadata.json').read_text())
+    assert metadata['workers'] == 2 and metadata['worker_native_threads'] == 1
+    assert [row['_round_index'] for row in records(base / 'compiled-parallel')] == list(range(4))
+    summary['parallel'] = {'workers': 2, 'rounds': parallel.height, 'ordered_commit_indices': list(range(4))}
     summary['input_formats'] = {kind: log.height for kind, log in sources.items()}
     return summary

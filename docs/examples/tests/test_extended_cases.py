@@ -46,7 +46,7 @@ def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     with tarfile.open(archive) as bundle:
         bundle.extractall(project, filter='data')
     monkeypatch.chdir(project)
-    names = ['analysis', *['reducer_' + name for name in ('sanity', 'saturation', 'focus', 'correlation')],
+    names = ['analysis', 'parallel', *['reducer_' + name for name in ('sanity', 'saturation', 'focus', 'correlation')],
              *['recording_' + name for name in ('lean', 'full', 'outputs')],
              *['source_' + name for name in ('csv', 'zip', 'arrow')]]
     result = CliRunner().invoke(cli, ['run', '--no-progress-bar', *['compiled-research/' + name + '.yaml' for name in names]])

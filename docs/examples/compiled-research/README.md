@@ -220,6 +220,7 @@ sh compiled-research/run.sh
 |---|---|
 | `research.yaml`, `preparation.yaml` | Compare preparation and regularization; retain predictions, metrics and the selected handoff. The preparation variant uses a triple-barrier target. |
 | `search.yaml`, `search_random.yaml`, `search_sobol.yaml` | Traverse the same four-candidate domain with explicit strategy seeds. |
+| `parallel.yaml` | Evaluate four candidates with two isolated workers; retain deterministic commit order and resume the completed checkpoint without duplicate rows. |
 | `factorized.yaml` | Compare deterministic LightGBM tree-count and fee axes with factorization and seeded shuffle declared in YAML. |
 | `adaptive.yaml` | Limit a four-candidate search to three completed rounds; retain its budget intervention and checkpoint. |
 | `recovery.yaml` | Pin the Parquet source by SHA-256, record all payload groups and checkpoint every round; continue with `limen run --resume`. Tests also interrupt an actual CLI process and compare resumed and uninterrupted results. |

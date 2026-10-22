@@ -60,6 +60,10 @@ limen run --no-progress-bar \
   compiled-research/factorized.yaml \
   compiled-research/adaptive.yaml
 # endregion search
+# region parallel
+limen run --no-progress-bar --workers 2 compiled-research/parallel.yaml
+limen run --no-progress-bar --resume results/dev/compiled-parallel --workers 2
+# endregion parallel
 # region recording
 limen run --no-progress-bar \
   compiled-research/recording_lean.yaml \
