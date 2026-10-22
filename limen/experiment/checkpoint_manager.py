@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from collections.abc import Mapping
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -102,7 +103,8 @@ class CheckpointManager:
              content_hash: str,
              feedback_controller: FeedbackController | None = None,
              pruning_strategies: list[PruningStrategy] | None = None,
-             failed_round_params: list[dict[str, object]] | None = None) -> None:
+             failed_round_params: list[dict[str, object]] | None = None,
+             holdout_state: Mapping[str, object] | None = None) -> None:
 
         '''
         NOTE: All state is written atomically to a single file via a
@@ -136,17 +138,16 @@ class CheckpointManager:
         }
 
         if feedback_controller is not None:
-            checkpoint['feedback_controller_state'] = (
-                feedback_controller.get_state()
-            )
+            checkpoint['feedback_controller_state'] = feedback_controller.get_state()
 
         if pruning_strategies is not None:
-            checkpoint['pruning_strategy_states'] = [
-                ps.get_state() for ps in pruning_strategies
-            ]
+            checkpoint['pruning_strategy_states'] = [ps.get_state() for ps in pruning_strategies]
 
         if failed_round_params is not None:
             checkpoint['failed_round_params'] = failed_round_params
+        if holdout_state is not None:
+            checkpoint['holdout_binding'] = holdout_state['binding']
+            checkpoint['holdout_population'] = holdout_state['population']
 
         self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 

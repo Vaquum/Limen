@@ -1,4 +1,5 @@
 import limen.experiment._holdout_research as _holdout
+from limen.experiment import _holdout_checkpoint
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import csv
@@ -885,6 +886,8 @@ class UniversalExperimentLoop:
                                                       content_hash=content_hash, strategy_type=strategy_type)
         metadata_path = self._experiment_dir / 'metadata.json'
         metadata: dict[str, object] = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
+        _holdout_checkpoint.validate_checkpoint(self._experiment_dir, checkpoint_data, metadata, _holdout.binding_of(self.manifest),
+                                                getattr(self.manifest, '_holdout_source', None))
         if metadata.get('record_execution', False) != self._record_execution:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
@@ -1047,6 +1050,8 @@ class UniversalExperimentLoop:
 
         if holdout := _holdout.metadata(self.manifest):
             metadata['holdout'] = holdout
+        if (header := _holdout_checkpoint.binding_header(_holdout.binding_of(self.manifest))) is not None:
+            metadata['holdout_binding'] = header
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
 
@@ -1074,11 +1079,14 @@ class UniversalExperimentLoop:
                     pruning_strategies: list[PruningStrategy] | None = None,
                     failed_round_params: list[dict[str, object]] | None = None) -> None:
 
+        manifest = getattr(self, 'manifest', None)
         checkpoint_manager.save(
             checkpoint_dir, msq, domain, current_round, target_permutations,
             strategy_type=strategy_type, content_hash=content_hash,
             feedback_controller=feedback_controller, pruning_strategies=pruning_strategies,
             failed_round_params=failed_round_params,
+            holdout_state=_holdout_checkpoint.checkpoint_state(checkpoint_dir, current_round, _holdout.binding_of(manifest),
+                                                                 getattr(manifest, '_holdout_source', None)),
         )
 
 
@@ -1159,7 +1167,7 @@ class UniversalExperimentLoop:
                     self.round_params.append(entry['round_params'])
                     self.preds.append(entry['preds'])
                     self._alignment.append({
-                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding') if key in entry},
+                        **{key: entry[key] for key in ('trade_contract', 'trade_contract_digest', 'trade_ledger', 'learning_binding', 'holdout') if key in entry},
                         'missing_datetimes': [
                             datetime.fromisoformat(dt)
                             for dt in entry['alignment']['missing_datetimes']

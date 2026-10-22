@@ -1,5 +1,6 @@
 import copy
 import hashlib
+import json
 import logging
 import multiprocessing
 import sqlite3
@@ -9,8 +10,13 @@ import pytest
 
 from limen.experiment import _holdout_history as history
 from limen.experiment import _holdout_research as research
-from limen.experiment.holdout import reserve_holdout, withdraw_holdout
+from limen.experiment import _holdout_checkpoint as checkpoint_binding
+from limen.experiment import _round_storage
+from limen.experiment import UniversalExperimentLoop
+from limen.experiment.holdout import reserve_holdout, withdraw_holdout, release_holdout
 from limen.yaml import CompiledSFD
+from limen.yaml.compiler import build_search_strategy
+from limen.inference import Trainer
 from limen.yaml.profiler import profile
 from tests.test_holdout_research import _configuration, _project, _FIXTURE
 
@@ -168,3 +174,132 @@ def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
 @pytest.mark.parametrize(('kind', 'failure'), [('ml', None), ('rule', None), ('ml', 'load'), ('ml', 'model'), ('ml', 'interrupt')])
 def test_profile_admission_covers_evaluation(tmp_path, monkeypatch, kind, failure):
     _profile_admission(tmp_path, monkeypatch, kind, failure, 'explicit')
+
+@pytest.mark.parametrize('post_processing', [True, False])
+def test_protected_checkpoint_binding(tmp_path, monkeypatch, post_processing):
+    assert hashlib.sha256(_FIXTURE.read_bytes()).hexdigest() == 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72'
+    root = _project(tmp_path / 'protected')
+    config = _configuration(root)
+    config['sfd']['params']['C'] = [0.5, 1.0, 2.0]
+    config['uel']['n_permutations'] = 3
+    reservation_id = reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(
+        sfd=CompiledSFD(config, project_root=root), project_root=root,
+        search_strategy=build_search_strategy(config), yaml_reference=config,
+        experiment_dir=directory, checkpoint_interval=1,
+    )
+    checkpoint_now = loop._checkpoint
+    def interrupt(*args, **kwargs):
+        checkpoint_now(*args, **kwargs)
+        raise RuntimeError('interrupted after saved real rounds')
+    monkeypatch.setattr(loop, '_checkpoint', interrupt)
+    with pytest.raises(RuntimeError, match='interrupted after saved real rounds'):
+        loop.run('protected-checkpoint', n_permutations=3, progress_bar=False, post_processing=post_processing)
+    binding = history.bind(root)
+    checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+    metadata = json.loads((directory / 'metadata.json').read_text())
+    header = checkpoint_binding.binding_header(binding)
+    assert header == checkpoint['holdout_binding'] == metadata['holdout_binding']
+    assert len(checkpoint['holdout_population']['prefix']) == 2
+    assert len(checkpoint['holdout_population']['completed']) == 2
+    checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, binding,
+                                           vars(loop.manifest)['_holdout_source'])
+    with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
+        rounds = [json.loads(line) for line in stream]
+    assert [item['research_record_id'] for item in checkpoint['holdout_population']['completed']] == [
+        item['holdout']['research_record_id'] for item in rounds
+    ]
+    source = rounds[0]['holdout']['source']
+    forged_source = dict(source, admitted_sha256='changed-recorded-frame')
+    with pytest.raises(ValueError, match='admitted source changed'):
+        checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, binding, forged_source)
+    snapshot = {path.relative_to(directory): (path.read_bytes(), path.stat().st_mtime_ns)
+                for path in directory.rglob('*') if path.is_file()}
+    for field in ('reservation_revision', 'project_id', 'cutoff_ns', 'interval_seconds', 'schema_version'):
+        altered = copy.deepcopy(checkpoint)
+        altered['holdout_binding'][field] = -1
+        with pytest.raises(ValueError, match='binding/revision'):
+            checkpoint_binding.validate_checkpoint(directory, altered, metadata, binding)
+    for part in ('holdout_binding', 'holdout_population'):
+        altered = copy.deepcopy(checkpoint)
+        altered.pop(part)
+        with pytest.raises(ValueError, match=r'binding|population'):
+            checkpoint_binding.validate_checkpoint(directory, altered, metadata, binding)
+    no_envelope = dict(checkpoint)
+    no_envelope.pop('holdout_binding')
+    no_metadata = dict(metadata)
+    no_metadata.pop('holdout_binding')
+    with pytest.raises(ValueError, match='original checkpoint population'):
+        checkpoint_binding.validate_checkpoint(directory, no_envelope, no_metadata, binding)
+    other_root = _project(tmp_path / 'other_project')
+    reserve_holdout(other_root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    with pytest.raises(ValueError, match='binding/revision'):
+        checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, history.bind(other_root))
+    altered = copy.deepcopy(checkpoint)
+    altered['holdout_population']['completed'][0]['research_record_id'] = rounds[1]['holdout']['research_record_id']
+    with pytest.raises(ValueError, match='population'):
+        checkpoint_binding.validate_checkpoint(directory, altered, metadata, binding)
+    forged = dict(rounds[0]['holdout'], research_record_id=rounds[1]['holdout']['research_record_id'])
+    with pytest.raises(ValueError, match=r'history|occurrence'):
+        checkpoint_binding.validate_trainer_round(binding, rounds[0]['round_id'], forged)
+    for key, value in (('selected', {}), ('splits', {}), ('input_schema', None), ('model_schema', None), ('source', {})):
+        altered_proof = dict(rounds[0]['holdout'], **{key: value})
+        with pytest.raises(ValueError, match=r'source|membership|model-input|history'):
+            checkpoint_binding.validate_trainer_round(binding, rounds[0]['round_id'], altered_proof)
+    with history.connection(root / 'manifests/holdout.sqlite3') as db:
+        db.execute('UPDATE research SET state=? WHERE id=?', ('failed', rounds[0]['holdout']['research_record_id']))
+    with pytest.raises(ValueError, match='history'):
+        checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, binding)
+    with history.connection(root / 'manifests/holdout.sqlite3') as db:
+        db.execute('UPDATE research SET state=? WHERE id=?', ('completed', rounds[0]['holdout']['research_record_id']))
+    sensors = Trainer(directory, project_root=root).train([rounds[0]['round_id']])
+    assert sensors[0]._fitted_params['_holdout']['experiment_record_id'] == rounds[0]['holdout']['research_record_id']
+    assert {path.relative_to(directory): (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in directory.rglob('*') if path.is_file()} == snapshot
+    release_holdout(root, reservation_id)
+    with pytest.raises(ValueError, match='binding/revision'):
+        Trainer(directory, project_root=root)
+
+    zero_root = _project(tmp_path / 'zero_active')
+    zero_config = _configuration(zero_root)
+    old_reservation = reserve_holdout(zero_root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    withdraw_holdout(zero_root, old_reservation)
+    zero_dir = zero_root / 'results'
+    zero_loop = UniversalExperimentLoop(
+        sfd=CompiledSFD(zero_config, project_root=zero_root), project_root=zero_root,
+        search_strategy=build_search_strategy(zero_config), yaml_reference=zero_config,
+        experiment_dir=zero_dir, checkpoint_interval=1,
+    )
+    zero_loop.run('zero-active', n_permutations=1, progress_bar=False, post_processing=False)
+    zero_metadata = json.loads((zero_dir / 'metadata.json').read_text())
+    zero_header = zero_metadata['holdout_binding']
+    assert zero_header['cutoff_ns'] is None
+    zero_checkpoint = checkpoint_binding.checkpoint_state(zero_dir, 0, history.bind(zero_root))
+    assert zero_checkpoint['binding'] == zero_header
+    reserve_holdout(zero_root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    with pytest.raises(ValueError, match='binding/revision'):
+        checkpoint_binding.validate_checkpoint(
+            zero_dir,
+            {'metadata': {'experiment_round': 0}, 'holdout_binding': zero_header,
+             'holdout_population': zero_checkpoint['population']},
+            zero_metadata, history.bind(zero_root),
+        )
+    with pytest.raises(ValueError, match='original saved project/population evidence'):
+        Trainer(zero_dir, project_root=zero_root)
+
+    ordinary_root = _project(tmp_path / 'ordinary')
+    ordinary_config = _configuration(ordinary_root)
+    ordinary_dir = ordinary_root / 'results'
+    ordinary = UniversalExperimentLoop(
+        sfd=CompiledSFD(ordinary_config, project_root=ordinary_root), project_root=ordinary_root,
+        search_strategy=build_search_strategy(ordinary_config), yaml_reference=ordinary_config,
+        experiment_dir=ordinary_dir, checkpoint_interval=1,
+    )
+    ordinary.run('ordinary', n_permutations=1, progress_bar=False, post_processing=False)
+    with _round_storage.open_text(_round_storage.round_path(ordinary_dir)) as stream:
+        ordinary_round = json.loads(next(stream))
+    assert Trainer(ordinary_dir, project_root=ordinary_root).train([ordinary_round['round_id']])
+    reserve_holdout(ordinary_root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    with pytest.raises(ValueError, match='original saved project/population evidence'):
+        Trainer(ordinary_dir, project_root=ordinary_root)
