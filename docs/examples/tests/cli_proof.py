@@ -381,7 +381,7 @@ def verify_extended_campaigns(project):
     assert sources['csv'].select('id', 'accuracy').equals(sources['arrow'].select('id', 'accuracy'))
     parallel = checked_log(base / 'compiled-parallel', 4)
     serial = sources['csv']
-    assert dict(zip(parallel['id'], parallel['accuracy'], strict=True)).items() >= dict(zip(serial['id'], serial['accuracy'], strict=True)).items()
+    assert dict(zip(parallel['C'], parallel['accuracy'], strict=True)).items() >= dict(zip(serial['C'], serial['accuracy'], strict=True)).items()
     metadata = json.loads((base / 'compiled-parallel/metadata.json').read_text())
     assert metadata['workers'] == 2 and metadata['worker_native_threads'] == 1
     assert [row['_round_index'] for row in records(base / 'compiled-parallel')] == list(range(4))
