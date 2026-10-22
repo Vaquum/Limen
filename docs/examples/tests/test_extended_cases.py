@@ -7,11 +7,10 @@ from scenario_oracles import verify_analysis, verify_source_formats, verify
 
 
 def test_recorded_analysis_population_and_every_reducer(python_scenarios, tmp_path):
-    from analysis_cases import analyze_candidates
     from conftest import ROOT
     inputs = ROOT / 'tests/fixtures'
     raw = python_scenarios.hourly(inputs, 1440)
-    result = analyze_candidates(raw, tmp_path)
+    result = python_scenarios.analyze_candidates(raw, tmp_path)
     verify_analysis(result, inputs)
 
 

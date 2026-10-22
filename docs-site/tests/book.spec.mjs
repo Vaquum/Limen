@@ -56,6 +56,14 @@ test('published routes agree with robots and sitemap while other products remain
   expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>new URL(match[1]).pathname).sort()).toEqual(routes.map(route=>route.url).sort());
   const htmlByUrl=new Map();
   for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
+  for(const [url,html] of htmlByUrl){
+    for(const match of html.matchAll(/href="([^"]+)"/g)){
+      const target=new URL(match[1].replaceAll('&amp;','&'),new URL(url,'https://docs.vaquum.fi'));
+      if(target.origin!=='https://docs.vaquum.fi'||!target.hash||!htmlByUrl.has(target.pathname))continue;
+      const anchor=decodeURIComponent(target.hash.slice(1));
+      expect(htmlByUrl.get(target.pathname),url+' → '+target.pathname+target.hash).toContain('id="'+anchor+'"');
+    }
+  }
   const decisions=await (await request.get('/limen/route-decisions.json')).json();
   expect(decisions).toEqual(JSON.parse(await fs.readFile(path.join(root,'docs-site/reader/route-decisions.json'),'utf8')));
   for(const item of decisions.legacy_routes){
