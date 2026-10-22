@@ -1,3 +1,4 @@
+import csv
 import gzip
 from limen.experiment import _round_storage as _storage
 import copy
@@ -424,6 +425,7 @@ def test_resume_rejects_changed_geometry_and_retains_tracks(tmp_path, monkeypatc
 def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, monkeypatch, stop_after_success):
     config = _config()
     config['sfd']['params']['entry_return'] = [0.0, 0.001, 0.002]
+    config['sfd']['params'].update(label=['001'], flag=[True])
     bars = _bars()
     original = RuleBasedManifest.run_model
 
@@ -494,6 +496,15 @@ def test_resume_accounts_for_failed_trials_before_rewriting_returns(tmp_path, mo
     assert resumed.experiment_log.select(full.experiment_log.columns).drop('execution_time').equals(full.experiment_log.drop('execution_time'))
     assert resumed.fold_results.equals(full.fold_results)
     assert pl.read_csv(path / 'results.csv').drop('execution_time').equals(pl.read_csv(tmp_path / 'full/results.csv').drop('execution_time'))
+    for loop in (full, resumed):
+        assert loop.experiment_log['label'].to_list() == ['001'] * 3
+        assert loop.experiment_log.schema['label'] == pl.String
+        assert loop.experiment_log['flag'].to_list() == [True] * 3
+        assert loop.experiment_log.schema['flag'] == pl.Boolean
+    for output in (path, tmp_path / 'full'):
+        with (output / 'results.csv').open(newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        assert [(row['label'], row['flag']) for row in rows] == [('001', 'True')] * 3
     assert _records(path) == _records(tmp_path / 'full')
     assert pq.ParquetFile(path / 'trial_returns.parquet').metadata.num_row_groups == 2
     assert pl.read_parquet(path / 'trial_returns.parquet').equals(pl.read_parquet(tmp_path / 'full/trial_returns.parquet'))

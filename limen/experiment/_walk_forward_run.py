@@ -178,7 +178,7 @@ class WalkForwardRun:
     def complete_failed_header(self, path: Path, columns: list[str], keys: list[str]) -> list[str]:
         if len(self.rows) == self.config.n_folds and set(keys) - set(columns):
             header = list(dict.fromkeys([*keys, *columns]))
-            previous = pl.read_csv(path)
+            previous = pl.read_csv(path, infer_schema=False)
             previous.select(pl.col(key) if key in columns else pl.lit(None).alias(key) for key in header).write_csv(path)
             return header
         return columns
