@@ -8,11 +8,7 @@ In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.c
 
 ## Follow the two projects
 
-Both projects use the same small reader: require completed rows and return the
-loop's Polars frame. The Python project sorts its caller-defined validation
-return; the Compiled project sorts the recorded native validation objective.
-The helper does not manufacture a native metric group for arbitrary Python
-results.
+Python Research reads the completed loop's Polars frame and sorts its caller-defined validation return. Compiled Research retains the configured native results on disk; `limen assess` ranks their declared validation objective. The Python helper below is not a Compiled prerequisite and does not manufacture native metric groups for arbitrary results.
 
 ### Python Research
 
@@ -27,7 +23,7 @@ def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
 
 ### Compiled Research
 
-<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.yaml region=run scenario=selection interface=compiled role=executed -->
+<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.yaml region=run scenario=search interface=compiled role=executed -->
 ```yaml
 uel:
   output_path: compiled-research

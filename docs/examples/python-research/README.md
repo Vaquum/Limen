@@ -2,7 +2,7 @@
 
 Your functions own preparation, fitting, backtesting and selection. The selected Sensors reuse the evaluated fitted objects.
 
-The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the proof required before this candidate is published as the complete book.
+The [research chapter](../../Research-Book.md) develops the project. The [documentation contract](../../Developer/Documentation-System.md) defines the source, execution and publication proof maintained with the book.
 
 The search scenario also compares baseline and compressed preparation on 1,440 recorded hourly bars. It retains each prepared train/validation/test matrix, a fixed-order fractional feature, ternary forward-close labels, training-fitted robust statistics, an explicit feature drop and optional two-component PCA. Independent tests reconstruct the labels, differenced values, scaler statistics, PCA subspace and Ridge forecasts. Python owns separate partition preparation. The Compiled YAML variant uses the native pipeline's admitted CCO context and its own declared date population. These are preparation checks, not a feature-importance ranking or profitability claim.
 

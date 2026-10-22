@@ -2108,6 +2108,14 @@
         ],
         "HOLDOUT_OPTIONAL": [
           "evaluation_target"
+        ],
+        "MANIFEST_OPTIONAL_SHARED": [
+          "allocation",
+          "backtest",
+          "indicators",
+          "required_columns",
+          "split_dates",
+          "split_walk_forward"
         ]
       }
     }

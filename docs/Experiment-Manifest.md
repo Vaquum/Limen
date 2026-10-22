@@ -500,7 +500,7 @@ Walk-forward runs with `trial_returns.parquet` produce `acceptance_report.json` 
 |---|---|
 | `min_deflated_sharpe_probability` | Finite minimum probability in `[0, 1]`. |
 | `max_pbo` | Finite maximum probability in `[0, 1]`. |
-| `pbo_blocks` | Literal partition count: 2, 4, 6 or 8. |
+| `pbo_blocks` | Representable even integer of at least two, dividing the retained bar count exactly and leaving at least two bars per block. |
 
 The native equivalent, after `set_split_walk_forward(...)`, is:
 

@@ -363,7 +363,7 @@ uel:
     fold_details: true
 ```
 
-This complete native preparation function uses its project imports/data helpers, constructs its Manifest and trains `RidgeRegressor` directly. It retains the matrices used by its independent closed-form prediction tests. The selection and model-family cases separately exercise Trainer reconstruction; direct class fitting alone does not create a saved round identity.
+This complete YAML defines the recorded Ridge family case. The CLI fits its declared training population and retains the predictions used to recompute RMSE independently. The selection scenario separately proves CLI reconstruction; training a family case does not by itself prove its reconstruction.
 
 ## Function Wrappers Versus Classes
 
@@ -407,7 +407,7 @@ Deterministic models use near-exact metric tolerance; stochastic models use a wi
 - **Direction mapping** — `evaluate()` mirrors `XGBoostRegressor`: `preds > 0` becomes the long/flat signal for the inline confusion and backtest metrics.
 
 The Compiled project's recorded family case checks its prediction/target
-alignment, recomputes RMSE and reconstructs the selected round. Those assertions
+alignment and recomputes RMSE. Separate component tests cover reconstruction. Those assertions
 establish the declared case; they do not establish predictive edge or transfer a
 historical performance number to a new window.
 

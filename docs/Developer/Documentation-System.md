@@ -19,7 +19,7 @@ For the existing source checks, a fresh Python installation is `.[dev,data]`. Re
 
 ## Implementation status
 
-The owned reader and research projects are candidates in this repository. Their execution and browser checks run in `PR Checks Docs Site`. The complete book and released-package publication remain separate delivery obligations; a candidate's successful run does not establish production publication.
+The owned reader and research projects are published together with release-bound execution evidence. Their execution and browser checks run in `PR Checks Docs Site`. The public publication manifest identifies the active release; a successful candidate run does not establish production publication.
 
 | Delivery | Responsibility |
 |---|---|
@@ -27,7 +27,7 @@ The owned reader and research projects are candidates in this repository. Their 
 | [Reader and projects](https://github.com/Vaquum/Limen/issues/1052) | Build the reader inside Limen, both comprehensive projects, their semantic tests and bindings, and the first complete chapter. |
 | [Complete book and publication](https://github.com/Vaquum/Limen/issues/1047) | Complete the maintained corpus and reference coverage, prove released-package reproduction, activate validated publication and retain rollback. |
 
-The owned reader is the sole renderer in this checkout. `docs-site/reader/content.json` maps every maintained source into Book, Reference and Developer. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the evidence-consuming static build. The retained production Worker still serves the predecessor until the first released-book proof passes. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
+The owned reader is the sole renderer in this checkout. `docs-site/reader/content.json` maps every maintained source into Book, Reference and Developer. Existing checks cover source inventory, local links and anchors, fence syntax, selected semantic assertions, public exports, versions, lint, dependency auditing and the evidence-consuming static build. The production Worker serves the release named in its public publication manifest. `tests/test_python_sensor.py` also executes the marked Python workflow and checks its selection, fitted-state reuse and causal inference.
 
 The complete candidate corpus binds exact source regions and retained observations to both projects. The scenario catalogue defines required executions; the evidence checker rejects missing, skipped or stale proof. Selected tests can run independently, but their incomplete evidence cannot publish a reader. The complete suite must execute every required scenario and integrity test before producing successful publication evidence. The reader consumes the tested wheel, input bundle, source identities and current results. Browser checks exercise the real base path and Worker policy, including keyboard use, reduced motion, saved passages, code copying, reference return and mobile navigation. Retained screenshots record the candidate's rendered state.
 
@@ -241,7 +241,7 @@ Missing, failed, skipped required proof or wrong-revision evidence fails the che
 
 The book tests provide documentation evidence. They do not replace a public research change’s ordinary `tests/` proof. Documentation maintenance may cite the required Docs Site check as its evidence.
 
-Keep comprehensive docs execution outside default `tests.run` discovery. The package's required test, coverage and 240-second runtime obligations remain unchanged. The measured suite executes on Python 3.12; separate runtime and coverage jobs use Python 3.10 to read its artifacts. The initial `fb5dc4f2` baseline measured 252.659 seconds against 240 seconds. Isolating new docs work does not repair or waive that failure, nor establish the health of a later revision; judge the actual candidate's checks.
+Keep comprehensive docs execution outside default `tests.run` discovery. The package's required test and coverage obligations remain unchanged; `tests/runtime_budget.json` is the current runtime authority. The measured suite executes on Python 3.12; separate runtime and coverage jobs use Python 3.10 to read its artifacts. The initial `fb5dc4f2` baseline measured 252.659 seconds against 240 seconds. Isolating new docs work does not repair or waive that failure, nor establish the health of a later revision; judge the actual candidate's checks.
 
 ## Visual and motion contract
 

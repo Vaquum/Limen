@@ -91,7 +91,7 @@ def inventory(root: Path):
     groups = {}
     for node in schema.body:
         targets = node.targets if isinstance(node, ast.Assign) else [node.target] if isinstance(node, ast.AnnAssign) else []
-        names = [target.id for target in targets if isinstance(target, ast.Name) and target.id.endswith(('_REQUIRED', '_OPTIONAL'))]
+        names = [target.id for target in targets if isinstance(target, ast.Name) and target.id.endswith(('_REQUIRED', '_OPTIONAL', '_OPTIONAL_SHARED'))]
         for name in names:
             value = assignment(schema, name)
             if name == 'BACKTEST_OPTIONAL':

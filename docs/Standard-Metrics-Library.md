@@ -188,7 +188,7 @@ def probability_of_backtest_overfitting(returns_matrix: npt.NDArray[np.float64],
 
 Both interfaces can use these helpers without adopting the other interface's methodology:
 
-The Python calibration scenario calls the shared threshold optimizer with `balanced_metric`; its custom scorer remains caller-owned. The Compiled calibration scenario declares the same metric and reconstructs all four fitted modes. These are the same project sources used in the [calibration chapter](Calibration.md):
+The Python calibration scenario calls the shared threshold optimizer with `balanced_metric`; its custom scorer remains caller-owned. The Compiled calibration scenario declares the same metric and trains all four fitted modes. Reconstruction is a separate obligation. These are the same project sources used in the [calibration chapter](Calibration.md):
 
 <!-- example: metrics-python-calibration source=docs/examples/python-research/scenarios.py region=calibration scenario=calibration interface=python role=executed -->
 ```python

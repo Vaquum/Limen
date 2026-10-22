@@ -1,6 +1,6 @@
 # Cloudflare deployment
 
-The retained predecessor Worker still serves [docs.vaquum.fi/limen/](https://docs.vaquum.fi/limen/). The replacement research reader and release-bound publisher live in Limen. Their first production cutover remains an acceptance obligation; candidate execution does not establish deployment.
+The Limen-owned research reader serves [docs.vaquum.fi/limen/](https://docs.vaquum.fi/limen/). Its public `publication.json` identifies the active release, source, wheel and sealed artifacts. Candidate execution alone does not establish deployment.
 
 ## Serving boundary
 

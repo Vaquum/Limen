@@ -33,7 +33,7 @@ Limen does not place venue orders or manage downstream trading decisions. In the
 1. Start with [Experiment Manifest](Experiment-Manifest.md)
 2. Run manifests through [End-to-End Workflow](End-to-End-Workflow.md) and [Command-Line Interface](Command-Line-Interface.md)
 3. Review the shipped decoder patterns in [Built-In SFDs](Built-In-SFDs.md)
-4. Define [Python SFD functions](Single-File-Decoder.md#custom-sfds), or write the [Compiled YAML](Compiled-Research.md).
+4. Define the experiment in [Compiled YAML](Compiled-Research.md), then validate and run it with the CLI.
 5. Use [Indicators](Indicators.md), [Features](Features.md), [Targets](Targets.md), [Transforms](Transforms.md), [Scalers](Scalers.md), [Calibration](Calibration.md), and [Reference Architecture](Reference-Architecture.md) as the reference layer
 6. Strengthen the research surface with [Perturbation Strategies](Perturbation-Strategies.md) for robustness, [Fractional Differentiation](Fractional-Differentiation.md) for stationary features, and [Triple-Barrier Method](Triple-Barrier-Method.md) for path-dependent labels
 7. Choose search in [Advanced Search](Advanced-Search.md); adaptive controls are optional in [Reducers And Feedback](Reducers-And-Feedback.md)

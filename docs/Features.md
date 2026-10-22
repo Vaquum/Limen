@@ -24,9 +24,9 @@ def features(bars, window):
     )
 ```
 
-The [Compiled project](examples/compiled-research/README.md) declares `roc` in its Manifest. It produces percent-valued momentum as `roc_1`, then the Manifest carries that feature through fitting and reconstruction. These two projects use different units and models; their scores are not a controlled comparison.
+The [Compiled project](examples/compiled-research/README.md) declares percent-valued `roc` indicators, then adds the lags and fractional feature below in its `search` preparation case. These projects use different units and models; their scores are not a controlled comparison.
 
-<!-- example: features-compiled-momentum source=docs/examples/compiled-research/research.yaml region=features scenario=selection interface=compiled role=executed -->
+<!-- example: features-compiled-momentum source=docs/examples/compiled-research/research.yaml region=features scenario=search interface=compiled role=executed -->
 ```yaml
     features:
       - func: limen.features.lag_range
@@ -43,7 +43,7 @@ The [Compiled project](examples/compiled-research/README.md) declares `roc` in i
           group: price
 ```
 
-The excerpts belong to the complete selection runs, with the dependencies and recorded inputs described in each project. The helper tables below describe alternatives; a listed helper is not a claim that the selection run invokes it. Trade-derived helpers require the columns named in their notes.
+The Python excerpt belongs to selection; the YAML excerpt belongs to search and preparation, with the dependencies and recorded inputs described in each project. The helper tables below describe alternatives; a listed helper is not a claim that the selection run invokes it. Trade-derived helpers require the columns named in their notes.
 
 ## Kline-derived position and volatility features
 

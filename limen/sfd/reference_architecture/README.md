@@ -8,7 +8,7 @@
 
 ## In the research projects
 
-The [Python project](../../../docs/examples/python-research/README.md) fits its ordinary caller-owned Ridge pipeline. The [Compiled project](../../../docs/examples/compiled-research/README.md) `search` scenario runs the declared CPU model comparisons, retains their metrics and reconstructs eligible selected rounds. The architecture reference describes the prepared-data and output contracts.
+The [Python project](../../../docs/examples/python-research/README.md) fits its ordinary caller-owned Ridge pipeline. The [Compiled project](../../../docs/examples/compiled-research/README.md) `search` scenario runs the declared CPU model comparisons, retains their metrics and prediction payloads; the selection scenario separately proves CLI reconstruction. The architecture reference describes the prepared-data and output contracts.
 
 ## What this package owns
 

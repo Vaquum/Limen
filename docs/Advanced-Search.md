@@ -88,7 +88,7 @@ Factorized traversal retains its [snapshot admission and cache limits](Universal
 
 Install the existing statistics extra with `pip install 'vaquum-limen[stats]'` for SciPy `>=1.15,<2`.
 
-Each traversal comparison uses four candidate combinations. Both seeded strategies use a literal `42`; the assertions compare completed candidate identities and retain the resulting scores. The Compiled scenario also runs its separate model-family diagnostics.
+Each traversal comparison uses four candidate combinations. The Python variants use seed `42`; Compiled random and Sobol use `7`, and its factorized grid uses `13`; the assertions compare completed candidate identities and retain the resulting scores. The Compiled scenario also runs its separate model-family diagnostics.
 
 Native equivalent: `SobolStrategy(domain, seed=42)`, imported from `limen.experiment.param_search`. The seed is a required literal, non-boolean, nonnegative integer. Scrambling is always enabled; `scramble`, `shuffle` and other unsupported Sobol fields are rejected. This selects a candidate generator for the existing MSQ path, without changing model execution or its randomness. `factorize=True` still requires GridStrategy and rejects Sobol.
 
