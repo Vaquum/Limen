@@ -246,7 +246,7 @@ def ad(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_col: 
 
 Compute Chaikin Accumulation/Distribution (A/D) line.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with high/low/close/volume columns
 
@@ -258,7 +258,7 @@ close_col (str): Column name for close prices
 
 volume_col (str): Column name for volume
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ad'
 
@@ -272,7 +272,7 @@ def adosc(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_co
 
 Compute Chaikin A/D Oscillator (ADOSC).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with high/low/close/volume columns
 
@@ -288,7 +288,7 @@ fast_period (int): Fast EMA period
 
 slow_period (int): Slow EMA period
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'adosc_{fast_period}_{slow_period}'
 
@@ -302,7 +302,7 @@ def apo(data: pl.DataFrame, price_col: str='close', fast_period: int=12, slow_pe
 
 Compute Absolute Price Oscillator (APO).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -314,7 +314,7 @@ slow_period (int): Number of periods for slow MA (2..100000, must be greater tha
 
 ma_type (int): TA-Lib MA type (0..8)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'apo_{fast_period}_{slow_period}_{ma_type}'
 
@@ -328,7 +328,7 @@ def atr(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_col:
 
 Compute Average True Range (ATR).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with high/low/close columns
 
@@ -340,7 +340,7 @@ close_col (str): Column name for close prices
 
 period (int): Number of periods for ATR calculation
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'atr_{period}'
 
@@ -354,7 +354,7 @@ def avgprice(data: pl.DataFrame, open_col: str='open', high_col: str='high', low
 
 Compute Average Price.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with OHLC columns
 
@@ -366,7 +366,7 @@ low_col (str): Column name for low prices
 
 close_col (str): Column name for close prices
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'avgprice'
 
@@ -380,7 +380,7 @@ def bbands(data: pl.DataFrame, price_col: str='close', period: int=5, nb_dev_up:
 
 Compute Bollinger Bands (upper/middle/lower).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with price column
 
@@ -394,7 +394,7 @@ nb_dev_dn (float): Lower-band deviation multiplier
 
 ma_type (int): TA-Lib MA type
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Input data with 'bbands_upper', 'bbands_middle', 'bbands_lower'
 
@@ -408,11 +408,11 @@ def body_pct(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute the body percentage (candle body size relative to open).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'open' and 'close' columns
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'body_pct'
 
@@ -426,7 +426,7 @@ def bollinger_bands(df: pl.DataFrame, price_col: str='close', window: int=20, nu
 
 Compute Bollinger Bands using Simple Moving Average (SMA).
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Klines dataset with 'close' column
 
@@ -436,7 +436,7 @@ window (int): Number of periods for SMA and standard deviation calculation
 
 num_std (float): Number of standard deviations for upper and lower bands
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with three new columns: 'bb_middle', 'bb_upper', and 'bb_lower'
 
@@ -452,11 +452,11 @@ Compute price position within Bollinger Bands as percentage.
 
 Returns 0 when price is at lower band, 1 when at upper band, 0.5 at middle.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close', 'bb_upper', 'bb_lower' columns
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'bollinger_position'
 
@@ -470,7 +470,7 @@ def bop(data: pl.DataFrame, open_col: str='open', high_col: str='high', low_col:
 
 Compute Balance of Power (BOP).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with OHLC columns
 
@@ -482,7 +482,7 @@ low_col (str): Column name for low prices
 
 close_col (str): Column name for close prices
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'bop'
 
@@ -882,7 +882,7 @@ def cmo(data: pl.DataFrame, price_col: str='close', period: int=14) -> pl.DataFr
 
 Compute Chande Momentum Oscillator (CMO).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -890,7 +890,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (2..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'cmo_{period}'
 
@@ -904,7 +904,7 @@ def dema(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.DataF
 
 Compute Double Exponential Moving Average (DEMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -912,7 +912,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'dema_{period}'
 
@@ -926,7 +926,7 @@ def ema(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.DataFr
 
 Compute Exponential Moving Average (EMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -934,7 +934,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ema_{period}'
 
@@ -948,13 +948,13 @@ def ht_dcperiod(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute Hilbert Transform - Dominant Cycle Period.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
 price_col (str): Column name for input price
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ht_dcperiod'
 
@@ -968,13 +968,13 @@ def ht_dcphase(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute Hilbert Transform - Dominant Cycle Phase.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
 price_col (str): Column name for input price
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ht_dcphase'
 
@@ -988,13 +988,13 @@ def ht_phasor(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute Hilbert Transform - Phasor Components.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
 price_col (str): Column name for input price
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with new columns 'ht_phasor_inphase' and
 
@@ -1010,13 +1010,13 @@ def ht_sine(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute Hilbert Transform - SineWave.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
 price_col (str): Column name for input price
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with new columns 'ht_sine' and
 
@@ -1032,13 +1032,13 @@ def ht_trendline(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute Hilbert Transform - Instantaneous Trendline.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
 price_col (str): Column name for input price
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ht_trendline'
 
@@ -1052,13 +1052,13 @@ def ht_trendmode(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute Hilbert Transform - Trend vs Cycle Mode.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
 price_col (str): Column name for input price
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ht_trendmode'
 
@@ -1072,7 +1072,7 @@ def kama(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.DataF
 
 Compute Kaufman Adaptive Moving Average (KAMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1080,7 +1080,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'kama_{period}'
 
@@ -1104,7 +1104,7 @@ def linearreg_angle(data: pl.DataFrame, price_col: str='close', period: int=14) 
 
 Compute Linear Regression Angle.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1112,7 +1112,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'linearreg_angle_{period}'
 
@@ -1126,7 +1126,7 @@ def linearreg_intercept(data: pl.DataFrame, price_col: str='close', period: int=
 
 Compute Linear Regression Intercept.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1134,7 +1134,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'linearreg_intercept_{period}'
 
@@ -1148,7 +1148,7 @@ def linearreg_slope(data: pl.DataFrame, price_col: str='close', period: int=14) 
 
 Compute Linear Regression Slope.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1156,7 +1156,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'linearreg_slope_{period}'
 
@@ -1170,7 +1170,7 @@ def ma(data: pl.DataFrame, price_col: str='close', period: int=30, ma_type: int=
 
 Compute Moving Average with selectable MA type (TA-Lib MA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1180,7 +1180,7 @@ period (int): Number of periods
 
 ma_type (int): TA-Lib MA type
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ma_{period}_{ma_type}'
 
@@ -1194,7 +1194,7 @@ def macd(data: pl.DataFrame, price_col: str='close', fast_period: int=12, slow_p
 
 Compute Moving Average Convergence/Divergence (MACD).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1206,7 +1206,7 @@ slow_period (int): Number of periods for slow EMA (2..100000)
 
 signal_period (int): Number of periods for signal EMA (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with columns 'macd', 'macd_signal', 'macd_hist'
 
@@ -1220,7 +1220,7 @@ def macdext(data: pl.DataFrame, price_col: str='close', fast_period: int=12, fas
 
 Compute MACD with controllable MA types (MACDEXT).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1238,7 +1238,7 @@ signal_period (int): Number of periods for signal MA (1..100000)
 
 signal_ma_type (int): TA-Lib MA type for signal MA (0..8)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with columns 'macdext', 'macdext_signal', 'macdext_hist'
 
@@ -1252,7 +1252,7 @@ def macdfix(data: pl.DataFrame, price_col: str='close', signal_period: int=9) ->
 
 Compute MACD Fix 12/26 (MACDFIX).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1260,7 +1260,7 @@ price_col (str): Column name for input price
 
 signal_period (int): Number of periods for signal EMA (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with columns 'macdfix', 'macdfix_signal', 'macdfix_hist'
 
@@ -1274,7 +1274,7 @@ def mama(data: pl.DataFrame, price_col: str='close', fast_limit: float=0.5, slow
 
 Compute MESA Adaptive Moving Average (MAMA) and Following Adaptive MA (FAMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1284,7 +1284,7 @@ fast_limit (float): Upper adaptive limit
 
 slow_limit (float): Lower adaptive limit
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with new columns 'mama' and 'fama'
 
@@ -1298,7 +1298,7 @@ def medprice(data: pl.DataFrame, high_col: str='high', low_col: str='low') -> pl
 
 Compute Median Price.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high and low columns
 
@@ -1306,7 +1306,7 @@ high_col (str): Column name for high prices
 
 low_col (str): Column name for low prices
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'medprice'
 
@@ -1320,7 +1320,7 @@ def mfi(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_col:
 
 Compute Money Flow Index (MFI).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with high/low/close/volume columns
 
@@ -1334,7 +1334,7 @@ volume_col (str): Column name for volume
 
 period (int): MFI period
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'mfi_{period}'
 
@@ -1348,7 +1348,7 @@ def midpoint(data: pl.DataFrame, price_col: str='close', period: int=14) -> pl.D
 
 Compute MidPoint over period.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1356,7 +1356,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (2..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'midpoint_{period}'
 
@@ -1380,7 +1380,7 @@ def mom(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataFr
 
 Compute Momentum (MOM).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1388,7 +1388,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'mom_{period}'
 
@@ -1402,7 +1402,7 @@ def natr(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_col
 
 Compute Normalized Average True Range (NATR).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with high/low/close columns
 
@@ -1414,7 +1414,7 @@ close_col (str): Column name for close prices
 
 period (int): Number of periods for NATR calculation
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'natr_{period}'
 
@@ -1428,7 +1428,7 @@ def obv(data: pl.DataFrame, price_col: str='close', volume_col: str='volume') ->
 
 Compute On-Balance Volume (OBV).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with price and volume columns
 
@@ -1436,7 +1436,7 @@ price_col (str): Column name for price series
 
 volume_col (str): Column name for volume series
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'obv'
 
@@ -1450,7 +1450,7 @@ def ppo(data: pl.DataFrame, price_col: str='close', fast_period: int=12, slow_pe
 
 Compute Percentage Price Oscillator (PPO).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1462,7 +1462,7 @@ slow_period (int): Number of periods for slow MA (2..100000, must be greater tha
 
 ma_type (int): TA-Lib MA type (0..8)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ppo_{fast_period}_{slow_period}_{ma_type}'
 
@@ -1476,13 +1476,13 @@ def price_change_pct(data: pl.DataFrame, period: int=1) -> pl.DataFrame:
 
 Compute price change percentage over a specific period.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close' column
 
 period (int): Number of periods to look back
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'price_change_pct_{period}'
 
@@ -1496,11 +1496,11 @@ def returns(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute period-over-period returns of close prices.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close' column
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'returns'
 
@@ -1514,7 +1514,7 @@ def roc(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataFr
 
 Compute Rate of Change (ROC): ((price / prev_price) - 1) * 100.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1522,7 +1522,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'roc_{period}'
 
@@ -1536,7 +1536,7 @@ def rocp(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataF
 
 Compute Rate of Change Percentage (ROCP): (price - prev_price) / prev_price.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1544,7 +1544,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'rocp_{period}'
 
@@ -1558,7 +1558,7 @@ def rocr(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.DataF
 
 Compute Rate of Change Ratio (ROCR): price / prev_price.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1566,7 +1566,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'rocr_{period}'
 
@@ -1580,7 +1580,7 @@ def rocr100(data: pl.DataFrame, price_col: str='close', period: int=10) -> pl.Da
 
 Compute Rate of Change Ratio 100 scale (ROCR100): (price / prev_price) * 100.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1588,7 +1588,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'rocr100_{period}'
 
@@ -1602,7 +1602,7 @@ def rolling_volatility(data: pl.DataFrame, column: str='close', window: int=12) 
 
 Compute rolling volatility (standard deviation) over a specified period.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with price/returns column
 
@@ -1610,7 +1610,7 @@ column (str): Column name to calculate volatility on (typically returns)
 
 window (int): Number of periods for rolling window calculation
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column '{column}_volatility_{window}'
 
@@ -1624,7 +1624,7 @@ def rsi(data: pl.DataFrame, price_col: str='close', period: int=14) -> pl.DataFr
 
 Compute Relative Strength Index (RSI) using Wilder smoothing.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1632,7 +1632,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (2..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'rsi_{period}'
 
@@ -1648,13 +1648,13 @@ Compute RSI using Simple Moving Average smoothing (not Wilder's method).
 
 NOTE: Different from wilder_rsi which uses exponential smoothing.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close' column
 
 period (int): Number of periods for RSI calculation
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'rsi_sma_{period}'
 
@@ -1668,7 +1668,7 @@ def sar(data: pl.DataFrame, high_col: str='high', low_col: str='low', accelerati
 
 Compute Parabolic SAR.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high/low columns
 
@@ -1680,7 +1680,7 @@ acceleration (float): Acceleration factor
 
 maximum (float): Maximum acceleration factor
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'sar'
 
@@ -1694,7 +1694,7 @@ def sarext(data: pl.DataFrame, high_col: str='high', low_col: str='low', start_v
 
 Compute Parabolic SAR - Extended (SAREXT).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high/low columns
 
@@ -1718,7 +1718,7 @@ acceleration_short (float): AF increment for short
 
 acceleration_max_short (float): AF max for short
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'sarext'
 
@@ -1732,7 +1732,7 @@ def sma(data: pl.DataFrame, price_col: str='close', period: int=30, column: str 
 
 Compute Simple Moving Average (SMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1742,7 +1742,7 @@ period (int): Number of periods
 
 column (str \| None): Backward-compatible alias for price_col
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Input data with a new column 'sma_{period}'.
 
@@ -1758,7 +1758,7 @@ def sma_deviation_std(data: pl.DataFrame, period: int=30, window: int=30) -> pl.
 
 Compute rolling standard deviation of the detrended price relative to SMA(period).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close' column
 
@@ -1766,7 +1766,7 @@ period (int): Period for the SMA
 
 window (int): Rolling window for std of (close - SMA(period))
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column named using the pattern 'sma{period}_dev_std'
 
@@ -1780,7 +1780,7 @@ def stddev(data: pl.DataFrame, price_col: str='close', period: int=5, nb_dev: fl
 
 Compute Standard Deviation.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1790,7 +1790,7 @@ period (int): Number of periods
 
 nb_dev (float): Number of deviations to scale the output
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'stddev_{period}_{nb_dev:g}'
 
@@ -1804,7 +1804,7 @@ def stoch(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_co
 
 Compute Stochastic Oscillator (TA_STOCH): slow %K and slow %D.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high/low/close columns
 
@@ -1824,7 +1824,7 @@ slowd_period (int): Smoothing period for Slow-D (1..100000)
 
 slowd_ma_type (int): MA type for Slow-D (0..8)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with 'stoch_slowk' and 'stoch_slowd'
 
@@ -1838,7 +1838,7 @@ def stochastic_oscillator(df: pl.DataFrame, window_k: int=14, window_d: int=3) -
 
 Compute Stochastic Oscillator (%K and %D) using rolling highs and lows.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
 
@@ -1846,7 +1846,7 @@ window_k (int): Number of periods for %K calculation
 
 window_d (int): Number of periods for %D smoothing (SMA of %K)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with two new columns 'stoch_k' and 'stoch_d'
 
@@ -1860,7 +1860,7 @@ def stochf(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_c
 
 Compute Fast Stochastic Oscillator (TA_STOCHF): fast %K and fast %D.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high/low/close columns
 
@@ -1876,7 +1876,7 @@ fastd_period (int): Smoothing period for Fast-D (1..100000)
 
 fastd_ma_type (int): MA type for Fast-D (0..8)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with 'stochf_fastk' and 'stochf_fastd'
 
@@ -1890,7 +1890,7 @@ def stochrsi(data: pl.DataFrame, price_col: str='close', period: int=14, fastk_p
 
 Compute Stochastic RSI (TA_STOCHRSI): fast %K and fast %D on RSI values.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1904,7 +1904,7 @@ fastd_period (int): Smoothing period for Fast-D (1..100000)
 
 fastd_ma_type (int): MA type for Fast-D (0..8)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with 'stochrsi_fastk' and 'stochrsi_fastd'
 
@@ -1918,7 +1918,7 @@ def t3(data: pl.DataFrame, price_col: str='close', period: int=5, vfactor: float
 
 Compute Triple Exponential Moving Average (T3).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1928,7 +1928,7 @@ period (int): Number of periods
 
 vfactor (float): Volume factor
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 't3_{period}_{vfactor}'
 
@@ -1942,7 +1942,7 @@ def tema(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.DataF
 
 Compute Triple Exponential Moving Average (TEMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1950,7 +1950,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'tema_{period}'
 
@@ -1964,7 +1964,7 @@ def trange(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_c
 
 Compute True Range (TRANGE).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with high/low/close columns
 
@@ -1974,7 +1974,7 @@ low_col (str): Column name for low prices
 
 close_col (str): Column name for close prices
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'trange'
 
@@ -1988,7 +1988,7 @@ def trima(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.Data
 
 Compute Triangular Moving Average (TRIMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -1996,7 +1996,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'trima_{period}'
 
@@ -2010,7 +2010,7 @@ def trix(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.DataF
 
 Compute TRIX: 1-day ROC of a triple-smoothed EMA.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -2018,7 +2018,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'trix_{period}'
 
@@ -2032,7 +2032,7 @@ def tsf(data: pl.DataFrame, price_col: str='close', period: int=14) -> pl.DataFr
 
 Compute Time Series Forecast (TSF).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -2040,7 +2040,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'tsf_{period}'
 
@@ -2054,7 +2054,7 @@ def typprice(data: pl.DataFrame, high_col: str='high', low_col: str='low', close
 
 Compute Typical Price.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high, low, and close columns
 
@@ -2064,7 +2064,7 @@ low_col (str): Column name for low prices
 
 close_col (str): Column name for close prices
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'typprice'
 
@@ -2078,7 +2078,7 @@ def ultosc(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_c
 
 Compute Ultimate Oscillator (ULTOSC).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high/low/close columns
 
@@ -2094,7 +2094,7 @@ period2 (int): Number of bars for 2nd period (1..100000)
 
 period3 (int): Number of bars for 3rd period (1..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'ultosc_{period1}_{period2}_{period3}'
 
@@ -2108,7 +2108,7 @@ def var(data: pl.DataFrame, price_col: str='close', period: int=5, nb_dev: float
 
 Compute Variance.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -2118,7 +2118,7 @@ period (int): Number of periods
 
 nb_dev (float): Kept for TA-Lib compatibility; does not affect VAR output
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'var_{period}_{nb_dev:g}'
 
@@ -2132,7 +2132,7 @@ def wclprice(data: pl.DataFrame, high_col: str='high', low_col: str='low', close
 
 Compute Weighted Close Price.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high, low, and close columns
 
@@ -2142,7 +2142,7 @@ low_col (str): Column name for low prices
 
 close_col (str): Column name for close prices
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'wclprice'
 
@@ -2156,13 +2156,13 @@ def wilder_rsi(data: pl.DataFrame, period: int=14) -> pl.DataFrame:
 
 Compute Wilder's RSI using canonical Wilder smoothing.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close' column
 
 period (int): Number of periods for RSI calculation
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'wilder_rsi_{period}'
 
@@ -2176,7 +2176,7 @@ def willr(data: pl.DataFrame, high_col: str='high', low_col: str='low', close_co
 
 Compute Williams' %R (WILLR).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with high/low/close columns
 
@@ -2188,7 +2188,7 @@ close_col (str): Column name for close prices
 
 period (int): Number of periods (2..100000)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'willr_{period}'
 
@@ -2202,13 +2202,13 @@ def window_return(data: pl.DataFrame, period: int=24) -> pl.DataFrame:
 
 Compute windowed return close/close.shift(period) - 1 for a given period.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Klines dataset with 'close' column
 
 period (int): Window length for the return
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column named using the pattern 'ret_{period}'
 
@@ -2222,7 +2222,7 @@ def wma(data: pl.DataFrame, price_col: str='close', period: int=30) -> pl.DataFr
 
 Compute Weighted Moving Average (WMA).
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Dataset with input price column
 
@@ -2230,7 +2230,7 @@ price_col (str): Column name for input price
 
 period (int): Number of periods
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with a new column 'wma_{period}'
 

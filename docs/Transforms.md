@@ -139,13 +139,13 @@ def mad_transform(df: pl.DataFrame, *, time_col: str='datetime'):
 
 Compute Median Absolute Deviation (MAD) Transform.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): The input DataFrame.
 
 time_col (str): The name of the time column.
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The transformed DataFrame.
 
@@ -159,13 +159,13 @@ def quantile_trim_transform(df: pl.DataFrame, *, time_col: str='datetime') -> pl
 
 Compute outlier trimming by removing rows outside fixed quantile bounds across numeric columns.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Klines dataset with numeric columns to trim
 
 time_col (str): Column name to exclude from numeric transforms
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data filtered within bounds for all numeric columns
 
@@ -179,7 +179,7 @@ def shift_column_transform(data: pl.DataFrame, shift: int, column: str) -> pl.Da
 
 Shift a column by a specified number of periods.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Input DataFrame
 
@@ -187,7 +187,7 @@ shift (int): Number of periods to shift (negative for forward shift)
 
 column (str): Name of column to shift
 
-**Returns**
+#### Returns
 
 pl.DataFrame: DataFrame with shifted column
 
@@ -201,13 +201,13 @@ def winsorize_transform(df: pl.DataFrame, *, time_col: str='datetime') -> pl.Dat
 
 Compute winsorization by clipping numeric columns to fixed quantile bounds.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Klines dataset with numeric columns to clip
 
 time_col (str): Column name to exclude from numeric transforms
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with winsorized numeric columns
 
@@ -221,13 +221,13 @@ def zscore_transform(df: pl.DataFrame, *, time_col: str='datetime') -> pl.DataFr
 
 Compute standard Z-score scaling for numeric columns.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Klines dataset with numeric columns to scale
 
 time_col (str): Column name to exclude from numeric transforms
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The input data with Z-scored numeric columns
 

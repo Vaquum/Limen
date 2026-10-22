@@ -178,7 +178,7 @@ fallback used for rows whose trailing window holds fewer than
 
 plain median and IQR scaling.
 
-**Args**
+#### Args
 
 x_train (pl.DataFrame): Training data
 
@@ -221,11 +221,11 @@ trailing observations fall back to the train-fitted median and IQR.
 
 The scaled output is clipped to +/- `clip`.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Data to transform
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Transformed data
 
@@ -247,7 +247,7 @@ def __init__(self, x_train: pl.DataFrame, rules: dict[str, str] | None=None, def
 
 Linear transformation utility for scaling features.
 
-**Args**
+#### Args
 
 x_train: Training DataFrame.
 
@@ -265,11 +265,11 @@ def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
 Apply linear scaling transformation.
 
-**Args**
+#### Args
 
 df: DataFrame to transform.
 
-**Returns**
+#### Returns
 
 Transformed DataFrame.
 
@@ -293,7 +293,7 @@ def __init__(self, x_train: pl.DataFrame) -> None:
 
 Initialize the LogRegScaler object.
 
-**Args**
+#### Args
 
 x_train (pl.DataFrame): The training data
 
@@ -307,11 +307,11 @@ def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
 Transform the data using the scaling rules.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): The input DataFrame
 
-**Returns**
+#### Returns
 
 pl.DataFrame: The transformed DataFrame
 
@@ -335,7 +335,7 @@ def __init__(self, x_train: pl.DataFrame, n_quantiles: int=1000) -> None:
 
 Fit scaler by storing training quantile boundaries per column.
 
-**Args**
+#### Args
 
 x_train (pl.DataFrame): Training data
 
@@ -357,11 +357,11 @@ convert to uniform [eps, 1-eps], apply inverse normal CDF.
 
 NaN values are preserved as NaN in the output.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Data to transform
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Transformed data with approximately normal distributions
 
@@ -385,7 +385,7 @@ def __init__(self, x_train: pl.DataFrame, quantile_range: tuple[float, float]=(0
 
 Fit scaler on training data using median and interquartile range.
 
-**Args**
+#### Args
 
 x_train (pl.DataFrame): Training data
 
@@ -401,11 +401,11 @@ def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
 Apply robust scaling: (x - median) / IQR.
 
-**Args**
+#### Args
 
 df (pl.DataFrame): Data to transform
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Transformed data
 

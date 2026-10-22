@@ -501,7 +501,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -519,7 +519,7 @@ Label 1 when the price `breakout_horizon` bars ahead exceeds the EMA
 
 of `target_col` by at least `breakout_delta` of the EMA value.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have `target_col` column)
 
@@ -531,7 +531,7 @@ breakout_delta (float): Threshold for breakout detection
 
 breakout_horizon (int): Forward window in bars
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -555,7 +555,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -573,7 +573,7 @@ Score each closed trade as high, low, or medium quality based on its
 
 `exit_reason` and `exit_net_return`.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have `exit_reason`, `exit_net_return` columns)
 
@@ -583,11 +583,11 @@ exit_quality_low (float): Score for stop-loss or unprofitable timeout exits
 
 exit_quality_medium (float): Score for neutral exits
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
-**Raises**
+#### Raises
 
 ValueError: If the required user-supplied columns are absent
 
@@ -611,7 +611,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -627,7 +627,7 @@ def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: floa
 
 Label 1 if price rises >= threshold over next forward_periods bars.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have 'close' column)
 
@@ -637,7 +637,7 @@ threshold (float): Minimum return for positive label (0.02 = 2%)
 
 shift (int): Additional shift applied after labeling
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -661,7 +661,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, periods: int=1, a
 
 Store target settings and validate Parkinson volatility on train.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split used for the volatility sanity gate
 
@@ -694,11 +694,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Compute `log(close.shift(-periods) / close) / parkinson_sigma`.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform; must have open/high/low/close columns
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Cleaned data with target column added
 
@@ -722,7 +722,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Validate the target column exists; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split; used to validate the target column exists
 
@@ -738,11 +738,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Return data unchanged after validating the target column is present.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data unchanged
 
@@ -766,7 +766,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -782,11 +782,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Label 1 if the next close is lower than the current close.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have 'close' column)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -810,7 +810,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -826,11 +826,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Label 1 if the next close is higher than the current close.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have 'close' column)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -854,7 +854,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -870,7 +870,7 @@ def transform(self, data: pl.DataFrame, periods: int=1, scale: float=100.0) -> p
 
 Compute percentage return over the next N periods.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have 'close' column)
 
@@ -878,7 +878,7 @@ periods (int): Look-ahead window in bars
 
 scale (float): Multiplier applied to the raw return (100 = percentage points)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -912,7 +912,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: st
 
 Fit quantile cutoff on training data.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split to compute cutoff from
 
@@ -932,13 +932,13 @@ def transform(self, data: pl.DataFrame, shift: int=0) -> pl.DataFrame:
 
 Apply binary flag and optional temporal shift.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform
 
 shift (int): Periods to shift the label (negative = forward-looking)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -962,7 +962,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, random_state: int
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -982,11 +982,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Apply random binary labels.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -1010,7 +1010,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -1026,15 +1026,15 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Compute `capturable_breakout / (\|max_drawdown\| + EPSILON)` per row.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have `capturable_breakout`, `max_drawdown` columns)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
-**Raises**
+#### Raises
 
 ValueError: If the required user-supplied columns are absent
 
@@ -1058,7 +1058,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: st
 
 Store the fixed threshold; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -1078,13 +1078,13 @@ def transform(self, data: pl.DataFrame, shift: int=-1) -> pl.DataFrame:
 
 Apply binary flag and optional temporal shift.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform
 
 shift (int): Periods to shift the label (negative = forward-looking)
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with target column added
 
@@ -1154,7 +1154,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, max_duration_hour
 
 Fit the breakout threshold from long lines detected on the training split.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split with a 'close' column
 
@@ -1168,7 +1168,7 @@ long_threshold_percentile (float): Percentile of long-line heights used
 
 as the breakout threshold, in [0, 100]
 
-**Raises**
+#### Raises
 
 ValueError: If 'close' is missing, the percentile is outside [0, 100],
 
@@ -1192,7 +1192,7 @@ the threshold AND the point return at +confirmation_hours or at
 
 forward window become null.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform (must have 'close' column)
 
@@ -1200,11 +1200,11 @@ lookahead_hours (int): Forward window for the breakout check
 
 confirmation_hours (int): Forward offset for the point-confirmation check
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with the target column added
 
-**Raises**
+#### Raises
 
 ValueError: If 'close' is missing, a window is below 1, or
 
@@ -1230,7 +1230,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, upper_multiple: f
 
 Store barrier settings and validate them; no fitting is performed.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
 
@@ -1258,11 +1258,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Label each bar by the first barrier its forward close path touches.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform; must have the close column
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Data with a ternary target column added (1 upper, -1 lower,
 
@@ -1290,7 +1290,7 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, high_col: str='hi
 
 Store target settings and validate Parkinson against close-to-close volatility on train.
 
-**Args**
+#### Args
 
 train_data (pl.DataFrame): Training split used for the volatility sanity gate
 
@@ -1318,11 +1318,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Compute `log(close / close.shift(1)) / parkinson_sigma.shift(1)`.
 
-**Args**
+#### Args
 
 data (pl.DataFrame): Split to transform; must have open/high/low/close columns
 
-**Returns**
+#### Returns
 
 pl.DataFrame: Cleaned data with target column added
 

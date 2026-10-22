@@ -256,13 +256,13 @@ with trade frequency. Higher scores indicate better balance between
 
 accurate predictions and sufficient trading activity.
 
-**Args**
+#### Args
 
 y_true: Ground truth binary labels
 
 y_pred: Predicted binary labels
 
-**Returns**
+#### Returns
 
 float: Balanced metric score (0.0 if no positive predictions)
 
@@ -282,7 +282,7 @@ negatives, and auc is NaN when y_test contains a single class, mirroring
 
 the safe_ovr_auc convention.
 
-**Args**
+#### Args
 
 data (dict): Data dictionary with 'y_test' key containing true binary labels
 
@@ -290,7 +290,7 @@ preds (list): Predicted binary class labels
 
 probs (list): Predicted class probabilities
 
-**Returns**
+#### Returns
 
 dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
 
@@ -306,13 +306,13 @@ Compute regression metrics from continuous predictions.
 
 NOTE: This function is experimental and may change in future versions.
 
-**Args**
+#### Args
 
 data (dict): Data dictionary with 'y_test' key containing true continuous values
 
 preds (list): Predicted continuous values
 
-**Returns**
+#### Returns
 
 dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
 
@@ -344,7 +344,7 @@ def multiclass_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.i
 
 Compute multiclass classification metrics from predictions and probabilities.
 
-**Args**
+#### Args
 
 data (dict): Data dictionary with 'y_test' key containing true class labels
 
@@ -354,7 +354,7 @@ probs (list): Predicted class probabilities
 
 average (str): Averaging strategy for precision and recall
 
-**Returns**
+#### Returns
 
 dict: Dictionary containing precision, recall, auc, and accuracy metrics
 
@@ -386,7 +386,7 @@ def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]], backt
 
 Compute rule-based strategy metrics across train, val, and test splits.
 
-**Args**
+#### Args
 
 positions (dict): Per-split position arrays (0/1) keyed by 'train', 'val', 'test'
 
@@ -396,7 +396,7 @@ sharpe_std_threshold (float): Legacy parameter retained for call compatibility
 
 sharpe_degradation_threshold (float): Legacy parameter retained for call compatibility
 
-**Returns**
+#### Returns
 
 dict: Tier 1 position stats, Tier 2 backtest metrics per split, Tier 3 stability metrics
 
@@ -410,13 +410,13 @@ def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str], probs: npt.ND
 
 Compute one-vs-rest AUC safely handling missing classes.
 
-**Args**
+#### Args
 
 y_true (np.ndarray \| list[int] \| list[str]): True class labels, shape (n_samples,)
 
 probs (np.ndarray \| list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
 
-**Returns**
+#### Returns
 
 float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
 
