@@ -131,6 +131,8 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
     try:
         values = _matrix(frame, trials)
         report.update(n_bars=values.shape[1], **partition_geometry(values.shape[1], count))
+        if report['pbo_block_bars'] is not None and report['pbo_combinations'] is None:
+            errors['pbo_geometry'] = 'Nominal combinations exceed the interpreter decimal representation limit; bars/block remains valid'
         _score(directory, values, trials, count, report, errors)
     except ValueError as exc:
         _storage.propagate(exc)
@@ -147,11 +149,12 @@ def acceptance_report(directory: Path, *, acceptance: Mapping[str, float] | None
              'Per-bar Sharpe; the reported winner has the largest Sharpe. Exact ties keep recorded trial order.',
              'These statistics describe the recorded sweep; they do not establish independence or future performance.',
              'Nominal partitions reuse the same n_bars/2 observations per half; blocks can cross folds with no additional purge/embargo.',
-             'Finer partitions can make sparse half samples unavailable; few trials limit rank resolution. Null is not pass.', '']
+             'Finer partitions can make sparse half samples unavailable; few trials limit rank resolution. Null is not pass.',
+             'The exact positive counting step is 1 / nominal combinations; the float approximation 0.0 means floating underflow.', '']
     lines.extend(f'- {label}: {report[key]}' for key, label in (
         ('winner_trial', 'Winner trial'), ('winner_sharpe', 'Per-bar Sharpe'),
         ('deflated_sharpe_probability', 'Deflated Sharpe probability'), ('pbo', 'PBO'),
-        ('pbo_block_bars', 'Retained bars/block'), ('pbo_combinations', 'Nominal combinations'), ('pbo_resolution', 'Nominal counting step'),
+        ('pbo_block_bars', 'Retained bars/block'), ('pbo_combinations', 'Nominal combinations'), ('pbo_resolution', 'Nominal counting step (float approximation)'),
     ))
     lines.extend(f'- {key} ({thresholds[key]}): {"unavailable" if passed is None else "pass" if passed else "fail"}' for key, passed in verdicts.items())
     lines.extend(f'- {key} unavailable: {reason}' for key, reason in errors.items())

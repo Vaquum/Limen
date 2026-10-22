@@ -438,7 +438,7 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
     from limen.yaml import build_search_strategy
 
     base = copy.deepcopy(acceptance_runs[0][1])
-    for count in (2, 4, 6, 8):
+    for count in (2, 4, 6, 8, 10, 12, 10**1000):
         config = copy.deepcopy(base)
         config['sfd']['manifest']['acceptance'] = {'pbo_blocks': count}
         assert validate(config).valid
@@ -450,7 +450,7 @@ def test_pbo_configuration_routes(acceptance_runs, pbo_runs, tmp_path):
         for policy in ({}, {'alignment': True}, {'fold_details': True}):
             config['uel']['recording'] = policy
             assert not validate(config).valid
-    for value in (True, False, 0, -2, 1, 3, 9, 10, 8.0, '8', '{blocks}', 10**1000):
+    for value in (True, False, 0, -2, 1, 3, 9, 8.0, '8', '{blocks}'):
         config = copy.deepcopy(base)
         config['sfd']['manifest']['acceptance'] = {'pbo_blocks': value}
         validation = validate(config)
@@ -526,7 +526,7 @@ def test_pbo_configuration_reports(acceptance_runs, pbo_runs, tmp_path):
         assert report[field] == default[field]
     markdown = (path / 'acceptance_report.md').read_text()
     assert 'CSCV blocks: 8' in markdown and 'Nominal combinations: 70' in markdown
-    assert 'Nominal counting step: 0.014285714285714285' in markdown and 'Null is not pass' in markdown
+    assert 'Nominal counting step (float approximation): 0.014285714285714285' in markdown and 'Null is not pass' in markdown
     sparse_path = pbo_runs['sparse'][2]
     sparse = json.loads((sparse_path / 'acceptance_report.json').read_text())
     assert sparse['pbo'] is sparse['verdicts']['max_pbo'] is None
@@ -581,13 +581,18 @@ def test_pbo_configuration_persistence(acceptance_runs, pbo_runs, tmp_path, monk
         _run(native_loop, resume=True)
     assert _artifact_snapshot(native_path) == native_before
     native_loop.manifest.set_acceptance(pbo_blocks=8)
-    for invalid in (3, 10, True, '8', 8.0):
+    for invalid in (3, True, '8', 8.0):
         corrupted = {**metadata, 'pbo_blocks': invalid}
         (path / 'metadata.json').write_text(json.dumps(corrupted))
         snapshot = _artifact_snapshot(path)
         with pytest.raises(ValueError, match='pbo_blocks'):
             acceptance_report(path)
         assert _artifact_snapshot(path) == snapshot
+    (path / 'metadata.json').write_text(json.dumps({**metadata, 'pbo_blocks': 10}))
+    snapshot = _artifact_snapshot(path)
+    with pytest.raises(ValueError, match='Saved pbo_blocks conflicts'):
+        acceptance_report(path)
+    assert _artifact_snapshot(path) == snapshot
     corrupted = copy.deepcopy(metadata)
     corrupted['yaml_reference']['sfd']['manifest']['acceptance']['pbo_blocks'] = 2
     (path / 'metadata.json').write_text(json.dumps(corrupted))

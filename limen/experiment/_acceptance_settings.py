@@ -8,14 +8,14 @@ from typing import cast
 __all__: list[str] = []
 
 _THRESHOLDS = {'min_deflated_sharpe_probability', 'max_pbo'}
-_COUNTS = (2, 4, 6, 8)
 _MINIMUM_BLOCK_BARS = 2
 
 
 def pbo_blocks(settings: Mapping[str, object] | None) -> int:
     value = 2 if settings is None else settings.get('pbo_blocks', 2)
-    if type(value) is not int or value not in _COUNTS:
-        raise ValueError('acceptance.pbo_blocks must be a literal even integer in {2, 4, 6, 8}')
+    if type(value) is not int or value < 2 or value % 2:
+        raise ValueError('acceptance.pbo_blocks must be a literal even integer of at least two')
+    _ = str(value)
     return value
 
 
@@ -103,13 +103,18 @@ def report_settings(directory: Path, acceptance: Mapping[str, float] | None) -> 
 
 
 def partition_geometry(n_bars: int | None, count: int) -> dict[str, object]:
-    combinations = math.comb(count, count // 2)
     valid = n_bars is not None and n_bars % count == 0 and n_bars // count >= _MINIMUM_BLOCK_BARS
-    return {'pbo_combinations': combinations, 'pbo_resolution': 1 / combinations,
+    combinations = math.comb(count, count // 2) if valid else None
+    try:
+        _ = str(combinations)
+    except ValueError:
+        combinations = None
+    return {'pbo_combinations': combinations, 'pbo_resolution': 1 / combinations if combinations is not None else None,
             'pbo_block_bars': n_bars // count if valid and n_bars is not None else None}
 
 
 def require_partition(n_bars: int, count: int) -> None:
-    if partition_geometry(n_bars, count)['pbo_block_bars'] is None:
-        supported = [value for value in _COUNTS if n_bars % value == 0 and n_bars // value >= _MINIMUM_BLOCK_BARS]
+    if n_bars % count or n_bars // count < _MINIMUM_BLOCK_BARS:
+        supported = sorted({value for factor in range(1, math.isqrt(n_bars) + 1) if n_bars % factor == 0
+                            for value in (factor, n_bars // factor) if value >= 2 and value % 2 == 0 and n_bars // value >= _MINIMUM_BLOCK_BARS})
         raise ValueError(f'PBO requires equal blocks with at least two bars: n_bars={n_bars}, n_blocks={count}; supported counts: {supported or "none"}')
