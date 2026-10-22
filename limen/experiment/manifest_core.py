@@ -1289,6 +1289,7 @@ class RuleBasedManifest(Manifest):
 
 
     def sensor_input_prep(self, raw_klines: pl.DataFrame, fitted_params: dict[str, object], round_params: dict[str, object]) -> tuple[pl.DataFrame, int]:
+        '''Prepare rule features without fitting targets or recomputing evaluation labels.'''
         from limen.experiment._manifest_preparation import rule_predicates
         _, data = _process_bars(self, raw_klines, round_params)
         clock = data.select('datetime')
@@ -1298,7 +1299,12 @@ class RuleBasedManifest(Manifest):
             data = data.drop([name for name in ('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns') if name in data.columns])
         data = _apply_feature_transforms(self, data.lazy(), round_params).collect()
         if self.target_class_config is not None:
-            data, _ = _apply_class_based_target(self, data, round_params, copy.deepcopy(fitted_params), False)
+            instance_key = f'_target_cls_{self.target_column}'
+            if instance_key not in fitted_params:
+                raise RuntimeError(
+                    f"Target instance '{instance_key}' not found — training split must run before validation/test."
+                )
+            data = _drop_target_source_columns(data, fitted_params[instance_key], self.target_column)
         predicates, names = rule_predicates(self, data.fill_nan(None).drop_nulls(), round_params)
         result = clock.join(predicates.select('datetime', *names), on='datetime', how='left', maintain_order='left')
         lookback = _count_leading_nulls(result)
