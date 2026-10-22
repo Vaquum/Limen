@@ -68,4 +68,7 @@ uel:
     type: grid
   output_format: csv
   checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
 # endregion declaration

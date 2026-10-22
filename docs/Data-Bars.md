@@ -136,7 +136,7 @@ This keeps train-only fitting and test-only evaluation aligned with the actual p
 
 ## Inspect the completed bars
 
-The Python diagnostic reports each threshold and the number of source rows admitted into completed bars. Its incomplete tail remains excluded. The Compiled table counts completed bars inside each declared split, before ROC warm-up and the forward label remove one row at either end. The proof checks those model rows against the saved prediction alignment. `last_available` is the end of the final source interval consumed by a completed bar; `datetime` alone is its start, not its availability.
+The Python diagnostic reports each threshold and the number of source rows admitted into completed bars. Its incomplete tail remains excluded. The Compiled table counts completed bars inside each declared split, before model preparation. The fitting split loses its ROC warm-up; later splits carry the preceding completed bar as context. The forward label removes the final row in each split. The proof checks the test rows against the saved prediction alignment. `last_available` is the end of the final source interval consumed by a completed bar; `datetime` alone is its start, not its availability.
 
 <!-- result: bars-python-population interface=python scenario=bars fields=formed[].kind,formed[].threshold,formed[].rows,formed[].source_rows_in_complete_bars,formed[].first_start,formed[].last_start,formed[].last_available -->
 

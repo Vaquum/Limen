@@ -133,8 +133,8 @@ def verify_bars(project):
                                 'last_start': formed['datetime'][-1].isoformat(),
                                 'last_available': (source['datetime'][bounds[-1][1] - 1] + timedelta(seconds=900)).isoformat()})
             if split == 'test':
-                assert len(predictions(directory, record)) == formed.height - 2
-                assert datetime.fromisoformat(record['alignment']['first_test_datetime']) == formed['datetime'][1]
+                assert len(predictions(directory, record)) == formed.height - 1
+                assert datetime.fromisoformat(record['alignment']['first_test_datetime']) == formed['datetime'][0]
                 assert datetime.fromisoformat(record['alignment']['last_test_datetime']) == formed['datetime'][-2]
     return {'modes': log['bar_type'].to_list(), 'populations': populations}
 
