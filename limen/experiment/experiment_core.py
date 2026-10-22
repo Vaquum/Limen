@@ -845,7 +845,7 @@ class UniversalExperimentLoop:
             'msq': msq,
             'feedback_controller': feedback_controller,
             'checkpoint_manager': checkpoint_manager,
-            'content_hash': CheckpointManager.compute_content_hash(self.params),
+            'content_hash': CheckpointManager.compute_content_hash(self.params) if self._experiment_dir is not None else None,
             'strategy_type': type(self._search_strategy).__name__,
             'csv_path': csv_path,
             'round_data_path': round_data_path,
