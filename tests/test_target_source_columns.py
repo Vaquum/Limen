@@ -13,7 +13,8 @@ from limen.experiment import MLManifest, RuleBasedManifest
 from limen.inference import Sensor
 from limen.scalers.robust_scaler import RobustScaler
 from limen.sfd.reference_architecture import LogRegBinary
-from limen.targets import ExitQualityTarget, RiskRewardRatioTarget
+from limen.sfd.reference_architecture.rule_based import RuleBasedStrategy
+from limen.targets import ExitQualityTarget, NextReturnTarget, RiskRewardRatioTarget
 
 
 FIXTURE = Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet'
@@ -281,3 +282,178 @@ def test_target_source_columns_sensor_matches_recorded_holdouts_without_refittin
         assert sensor.predict(recorded_source_bars.tail(1)).reason == 'warm-up'
     assert target_class.fit_count == 1
     assert target.transform_count == 3
+
+
+def _rule_manifest():
+    return RuleBasedManifest().set_split_config(6, 2, 2).with_strategy(
+        [{'id': 'higher_close', 'type': 'relative', 'column': 'close',
+          'operator': '>', 'other_column': 'open'}], entry='higher_close',
+    )
+
+
+def _rule_sensor(manifest, research):
+    sensor = Sensor({}, RuleBasedStrategy().train(research), research['_fitted_params'], {})
+    sensor._manifest = manifest
+    return sensor
+
+
+def _forbid_target_inference(monkeypatch, target_class):
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Inference must not fit or transform an evaluation target')
+    monkeypatch.setattr(target_class, '__init__', forbidden)
+    monkeypatch.setattr(target_class, 'transform', forbidden)
+
+
+@pytest.mark.parametrize('periods', (1, 2))
+def test_rule_sensor_omits_forward_labels_from_feature_availability(
+    recorded_source_bars, monkeypatch, periods,
+):
+    gap = recorded_source_bars['datetime'][12]
+
+    def features(data):
+        return _recorded_close_lag(data).with_columns(
+            pl.when(pl.col('datetime') == gap).then(None)
+              .otherwise(pl.col('close')).alias('unused_close'),
+        )
+
+    baseline = _rule_manifest().add_feature(features).set_backtest_config(
+        product={'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
+                 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0},
+        source_interval_seconds=3600,
+    )
+    manifest = _rule_manifest().add_feature(features).set_backtest_config(
+        product={'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
+                 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0},
+        source_interval_seconds=3600,
+    ).with_target_label('next_return', NextReturnTarget, transform_params={'periods': periods})
+    expected_research = baseline.prepare_data(recorded_source_bars, {})
+    research = manifest.prepare_data(recorded_source_bars, {})
+    for split, raw in zip(SPLITS, split_sequential(recorded_source_bars, (6, 2, 2)), strict=True):
+        expected = features(raw).with_columns(
+            ((pl.col('close').shift(-periods) - pl.col('close')) / pl.col('close') * 100)
+              .alias('next_return'),
+        ).drop_nulls()
+        assert research[split]['next_return'].equals(expected['next_return'])
+        assert research[split]['higher_close'].equals(expected['close'] > expected['open'])
+    sensor = _rule_sensor(manifest, research)
+    expected_sensor = _rule_sensor(baseline, expected_research)
+    _forbid_target_inference(monkeypatch, NextReturnTarget)
+    frame, lookback = manifest.sensor_input_prep(recorded_source_bars, research['_fitted_params'], {})
+    expected_frame, expected_lookback = baseline.sensor_input_prep(recorded_source_bars, {}, {})
+    assert frame.equals(expected_frame)
+    assert frame['datetime'].equals(recorded_source_bars['datetime'])
+    assert lookback == expected_lookback == 3
+    observed = sensor.predict_all(recorded_source_bars)
+    assert observed == expected_sensor.predict_all(recorded_source_bars)
+    assert [row.reason for row in observed[:3]] == ['warm-up'] * 3
+    assert observed[12].reason == 'null-features'
+    assert all(row.reason is None for row in observed[3:12] + observed[13:])
+    assert frame['higher_close'].tail(periods).null_count() == 0
+    assert all(row.reason is None for row in observed[-periods:])
+    assert observed[-1].available_at_ns == int(recorded_source_bars['datetime'].dt.epoch('ns')[-1]) + 3600_000_000_000
+    assert sensor.predict(recorded_source_bars) == observed[-1]
+
+
+def _recorded_forward_close(data):
+    return data.with_columns(pl.col('close').shift(-1).alias('future_close'))
+
+
+class _DeclaredForwardCloseTarget(NextReturnTarget):
+    source_columns: ClassVar[list[str]] = ['future_close']
+
+
+class _InstanceForwardCloseTarget(NextReturnTarget):
+    def __init__(self, train_data, target_name):
+        super().__init__(train_data, target_name)
+        self.source_columns = ['future_close']
+
+
+@pytest.mark.parametrize('target_class', (_DeclaredForwardCloseTarget, _InstanceForwardCloseTarget))
+def test_rule_sensor_applies_fitted_source_exclusions(recorded_source_bars, monkeypatch, target_class):
+    manifest = (_rule_manifest().add_feature(_recorded_forward_close)
+                .with_target_label('next_return', target_class))
+    research = manifest.prepare_data(recorded_source_bars, {})
+    fitted = research['_fitted_params']
+    assert fitted['_target_cls_next_return'].source_columns == ['future_close']
+    if target_class is _InstanceForwardCloseTarget:
+        assert not hasattr(target_class, 'source_columns')
+    assert _recorded_forward_close(recorded_source_bars)['future_close'][-1] is None
+    baseline = _rule_manifest()
+    expected_sensor = _rule_sensor(baseline, baseline.prepare_data(recorded_source_bars, {}))
+    sensor = _rule_sensor(manifest, research)
+    _forbid_target_inference(monkeypatch, target_class)
+    actual, lookback = manifest.sensor_input_prep(recorded_source_bars, fitted, {})
+    expected, expected_lookback = baseline.sensor_input_prep(recorded_source_bars, {}, {})
+    assert actual.equals(expected)
+    assert lookback == expected_lookback == 0
+    observed = sensor.predict_all(recorded_source_bars)
+    assert observed == expected_sensor.predict_all(recorded_source_bars)
+    assert all(row.reason is None for row in observed)
+    assert sensor.predict(recorded_source_bars) == observed[-1]
+
+
+class _LegacyForwardCloseTarget(NextReturnTarget):
+    def transform(self, data):
+        return super().transform(data).drop('future_close')
+
+
+@pytest.mark.parametrize('declared', (False, True))
+def test_rule_sensor_only_replays_declared_target_drops(recorded_source_bars, monkeypatch, declared):
+    if declared:
+        monkeypatch.setattr(_LegacyForwardCloseTarget, 'source_columns', ['future_close'], raising=False)
+    manifest = (_rule_manifest().add_feature(_recorded_forward_close)
+                .with_target_label('next_return', _LegacyForwardCloseTarget))
+    research = manifest.prepare_data(recorded_source_bars, {})
+    assert all('future_close' not in research[split].columns for split in SPLITS)
+    sensor = _rule_sensor(manifest, research)
+    _forbid_target_inference(monkeypatch, _LegacyForwardCloseTarget)
+    observed = sensor.predict_all(recorded_source_bars)
+    assert all(row.reason is None for row in observed[:-1])
+    assert observed[-1].reason == (None if declared else 'null-features')
+    assert sensor.predict(recorded_source_bars) == observed[-1]
+
+
+@pytest.mark.parametrize('defect,error,message', (
+    ('missing', RuntimeError, "Target instance '_target_cls_next_return' not found — training split must run before validation/test."),
+    ('invalid', TypeError, 'source_columns must be a list of strings'),
+    ('collision', ValueError, 'source_columns must not include target column'),
+))
+def test_rule_sensor_preserves_fitted_target_failures(recorded_source_bars, monkeypatch, defect, error, message):
+    manifest = (_rule_manifest().add_feature(_recorded_forward_close)
+                .with_target_label('next_return', _InstanceForwardCloseTarget))
+    research = manifest.prepare_data(recorded_source_bars, {})
+    fitted = research['_fitted_params']
+    if defect == 'missing':
+        fitted.pop('_target_cls_next_return')
+    else:
+        fitted['_target_cls_next_return'].source_columns = 'future_close' if defect == 'invalid' else ['next_return']
+    sensor = _rule_sensor(manifest, research)
+    _forbid_target_inference(monkeypatch, _InstanceForwardCloseTarget)
+    with pytest.raises(error, match=message) as raised:
+        manifest.sensor_input_prep(recorded_source_bars, fitted, {})
+    if defect == 'missing':
+        assert str(raised.value) == message
+    assert sensor.predict(recorded_source_bars).reason == 'sensor-error'
+    assert all(row.reason == 'sensor-error' for row in sensor.predict_all(recorded_source_bars))
+
+
+@pytest.mark.parametrize('column', ('future_close', 'next_return'))
+def test_rule_sensor_cannot_read_excluded_sources_or_labels(recorded_source_bars, monkeypatch, column):
+    manifest = (_rule_manifest().add_feature(_recorded_forward_close)
+                .with_target_label('next_return', _DeclaredForwardCloseTarget))
+    research = manifest.prepare_data(recorded_source_bars, {})
+    manifest.with_strategy(
+        [{'id': 'positive', 'type': 'threshold', 'column': column, 'operator': '>', 'value': 0}],
+        entry='positive',
+    )
+    if column == 'future_close':
+        with pytest.raises(pl.exceptions.ColumnNotFoundError, match=column):
+            manifest.prepare_data(recorded_source_bars, {})
+    else:
+        research = manifest.prepare_data(recorded_source_bars, {})
+    sensor = _rule_sensor(manifest, research)
+    _forbid_target_inference(monkeypatch, _DeclaredForwardCloseTarget)
+    with pytest.raises(pl.exceptions.ColumnNotFoundError, match=column):
+        manifest.sensor_input_prep(recorded_source_bars, research['_fitted_params'], {})
+    assert sensor.predict(recorded_source_bars).reason == 'sensor-error'
+    assert all(row.reason == 'sensor-error' for row in sensor.predict_all(recorded_source_bars))

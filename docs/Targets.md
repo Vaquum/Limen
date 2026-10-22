@@ -450,10 +450,12 @@ There is no base class to inherit from — the convention is enforced structural
 list of column names consumed to build labels that must not become features.
 Manifest preparation removes any declared columns still present after
 `transform()`, before scaling and feature extraction, on all three splits and
-fitted-target replay. Live Sensor preparation applies the same exclusion from
-the fitted target metadata before warm-up counting, scaling and PCA, without
-recomputing labels or fitting the target. Missing or empty declarations preserve the existing path;
-columns already removed by the target are accepted.
+fitted-target replay. ML and native rule Sensor preparation apply declared
+exclusions from fitted target metadata before deciding feature availability,
+without recomputing labels or fitting the target. ML scaling and PCA then retain
+their existing order. Missing or empty declarations exclude no live columns;
+undeclared drops or mutations inside `transform()` are not replayed at inference.
+Rule Sensor preparation requires the fitted target instance and raises if it is missing.
 
 A declaration must be a list of strings and must not include `target_name`.
 Invalid declarations raise `TypeError`; excluding the target raises `ValueError`.
@@ -463,7 +465,9 @@ excludes only named inputs; it does not automatically detect look-ahead features
 `ExitQualityTarget` declares `exit_reason` and `exit_net_return`;
 `RiskRewardRatioTarget` declares `capturable_breakout` and `max_drawdown`.
 Their directly called `transform()` methods retain their existing column removal.
-Custom targets may keep their own removal or rely on manifest enforcement.
+Custom targets may keep their own removal during research or rely on manifest
+enforcement; declare those source columns to exclude them during live preparation.
+Columns already removed by a research target are accepted.
 
 ## Read Next
 
