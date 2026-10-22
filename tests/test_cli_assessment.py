@@ -42,7 +42,7 @@ def recorded_cli_admission(tmp_path_factory):
     shutil.copyfile(ROOT / 'tests/fixtures' / name, project / 'inputs' / name)
     source = (ROOT / 'docs/examples/compiled-research/recovery.yaml').read_text().replace(
         'output_format: csv', 'output_format: parquet',
-    )
+    ).replace('    random_state: [42]', '    random_state: [42]\n    n_jobs: [1]')
     submitted = project / 'recovery.yaml'
     submitted.write_text(source)
     (project / 'limen.toml').write_text('[project]\nname = "recorded-cli-admission"\n')

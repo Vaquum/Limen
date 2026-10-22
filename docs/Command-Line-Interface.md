@@ -48,7 +48,7 @@ The project script preserves its source YAML and uses a local Git remote. Runtim
 
 A multi-file run stops after a signalled interruption and retains the current experiment's checkpoint; later YAML files are not launched.
 
-Fresh runs check for existing run artifacts before copying their YAML declaration. Use `--resume` when the saved recording policy permits recovery, or choose a new output path. A directory containing only an old YAML copy still accepts a fresh run and replaces that copy with the submitted declaration.
+Fresh runs check for existing run artifacts before copying their YAML declaration. Use `--resume` when the saved recording policy permits recovery, or choose a new output path. A directory containing only an old YAML copy still accepts a fresh run; an existing file at the declaration's copy destination is replaced.
 
 ## Sensor and Cohort assessment
 
