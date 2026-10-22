@@ -166,10 +166,11 @@ def verify_acceptance(result, output, inputs):
 def verify(interface, name, result, output, inputs):
     if name == 'search':
         if interface == 'python':
-            from helper_oracles import verify_helpers, verify_targets, verify_multiclass
+            from helper_oracles import verify_helpers, verify_targets, verify_multiclass, verify_rules
             verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
             verify_targets(result['target_diagnostics'], output / 'targets', inputs)
             verify_multiclass(result['multiclass'], inputs)
+            verify_rules(result['rules'], inputs)
             verify_analysis(result['analysis'], inputs)
             verify_source_formats(result['input_formats'], inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
@@ -302,7 +303,11 @@ def verify(interface, name, result, output, inputs):
         assert len(result['modes']) == 4 and result['validation_reused'] is True
         if interface == 'python':
             verify_composition(result['composition'])
-            for row in result['modes']:
+            assert {row['method'] for row in result['probability_methods']} == {'sigmoid', 'isotonic'}
+            original = np.asarray(result['modes'][0]['validation_probabilities'])
+            isotonic = next(row for row in result['probability_methods'] if row['method'] == 'isotonic')
+            assert (np.diff(np.asarray(isotonic['validation_probabilities'])[np.argsort(original)]) >= -1e-14).all()
+            for row in [*result['modes'], *result['probability_methods']]:
                 assert row['inference_rows'] == 480 and 0 <= row['positive_predictions'] <= 480
                 probabilities = np.asarray(row['validation_probabilities'])
                 truth = np.asarray(row['validation_labels'])

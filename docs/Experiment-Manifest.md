@@ -1435,3 +1435,84 @@ These parsers impose additional conditions beyond the field lists. Their source 
 | `uel.recording` | Conditional validation in `parse_recording`; see its subject section above. | [parse_recording](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_recording.py) |
 | `assessment` | Conditional validation in `assessment_spec`; see its subject section above. | [assessment_spec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_assessment_spec.py) |
 | `holdout` | Conditional validation in `holdout_spec`; see its subject section above. | [holdout_spec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_assessment_spec.py) |
+
+## Recorded predicate and history evaluation
+
+These variants compare two declared price floors on the 96 recorded hourly bars from January 18 through January 21, 2024. Threshold, relative, crossover, slope and SQL leaves combine through `and`, `or` and `not`; persistence requires two consecutive up bars, and recency retains a cross for three bars. History restarts at the assessment split. These are fixed rule demonstrations, not thresholds selected for profitability. Independent array arithmetic verifies every resulting decision in both interfaces. The SQL expression reads only the current open and close; arbitrary SQL still requires its own causal review.
+
+### Python Research rules
+
+<!-- example: manifest-python-rule-decisions source=docs/examples/python-research/rule_cases.py region=rule_signals scenario=search interface=python role=executed -->
+```python
+def evaluate_rules(raw):
+    bars = raw.filter(pl.col('datetime').is_between(
+        pl.datetime(2024, 1, 18, time_zone='UTC'), pl.datetime(2024, 1, 22, time_zone='UTC'), closed='left'))
+    up = pl.col('close') > pl.col('open')
+    cross = up & (pl.col('close').shift(1) <= pl.col('open').shift(1))
+    persistent = (up.cast(pl.Int8).rolling_sum(2, min_samples=2) == 2).fill_null(False)
+    recent = (cross.fill_null(False).cast(pl.Int8).rolling_sum(3, min_samples=1) >= 1)
+    rising = (pl.col('close') > pl.col('close').shift(3)).fill_null(False)
+    rows = []
+    for floor in (40000., 41000.):
+        signal = bars.select(((pl.col('close') >= floor) & (persistent | recent) & rising &
+                              ~(pl.col('close') < pl.col('open'))).cast(pl.Int8).alias('signal'))['signal']
+        rows.append({'price_floor': floor, 'signals': signal.to_list(), 'positive_decisions': int(signal.sum())})
+    return {'rows': rows, 'assessment_rows': bars.height, 'history_resets_at_split': True}
+```
+
+<!-- result: manifest-python-rule-results interface=python scenario=search fields=rules.rows[].price_floor,rules.rows[].positive_decisions -->
+
+### Compiled Research rules
+
+The complete declaration runs with the project's CLI campaign; it requires no Python research driver.
+
+<!-- example: manifest-compiled-rule-decisions source=docs/examples/compiled-research/rule_contracts.yaml region=declaration scenario=search interface=compiled role=executed -->
+```yaml
+schema_version: '1.0'
+metadata:
+  name: book_rule_contracts
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    strategy:
+      conditions:
+      - {id: floor, name: Close above the declared floor, type: threshold, column: close, operator: '>=', value: '{price_floor}'}
+      - {id: persistent_up, name: Two up bars, type: relative, column: close, operator: '>', other_column: open, persistence_n: 2}
+      - {id: recent_cross, name: Recent close-open cross, type: crossover, column: close, other_column: open, direction: above, recency_n: 3}
+      - {id: rising, name: Close above three bars ago, type: slope, column: close, direction: rising, lookback: 3}
+      - {id: down, name: Current down bar, type: sql_expr, expr: 'close < open'}
+      - {id: not_down, name: Exclude down bars, operator: not, operands: [down]}
+      - {id: activity, name: Persistent or recent activity, operator: or, operands: [persistent_up, recent_cross]}
+      - {id: entry, name: Combine the entry conditions, operator: and, operands: [floor, activity, rising, not_down]}
+      entry: entry
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+  params:
+    price_floor: [40000.0, 41000.0]
+uel:
+  output_path: compiled-rule-contracts
+  n_permutations: 2
+  search_strategy: {type: grid}
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+```
+
+<!-- result: manifest-compiled-rule-results interface=compiled scenario=search fields=rules.rows[].price_floor,rules.rows[].positive_decisions -->

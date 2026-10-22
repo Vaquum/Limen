@@ -2197,7 +2197,8 @@
         "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics",
         "docs/examples/tests/test_extended_cases.py::test_recorded_analysis_population_and_every_reducer",
         "docs/examples/tests/test_extended_cases.py::test_recorded_local_source_encodings",
-        "docs/examples/tests/test_extended_cases.py::test_recorded_multiclass_metrics"
+        "docs/examples/tests/test_extended_cases.py::test_recorded_multiclass_metrics",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_causal_rules"
       ]
     },
     "compiled/search": {
@@ -2815,7 +2816,8 @@
       "compiled/selection",
       "compiled/search",
       "compiled/walk_forward",
-      "compiled/execution"
+      "compiled/execution",
+      "python/search"
     ],
     "docs/Reference-Architecture.md": [
       "python/selection",

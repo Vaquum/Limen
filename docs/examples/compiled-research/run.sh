@@ -50,7 +50,8 @@ limen run --no-progress-bar \
   compiled-research/reducer_saturation.yaml \
   compiled-research/reducer_focus.yaml \
   compiled-research/reducer_correlation.yaml \
-  compiled-research/analysis.yaml
+  compiled-research/analysis.yaml \
+  compiled-research/rule_contracts.yaml
 # endregion reducers
 # region search
 limen run --no-progress-bar \
@@ -80,8 +81,9 @@ limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-
 limen run --no-progress-bar compiled-research/acceptance.yaml
 # endregion walk_forward
 # region calibration
-limen run --no-progress-bar compiled-research/calibration.yaml compiled-research/calibration_assessment.yaml
+limen run --no-progress-bar compiled-research/calibration.yaml compiled-research/calibration_assessment.yaml compiled-research/calibration_isotonic.yaml
 limen assess compiled-research/calibration_assessment.yaml --results results/dev/compiled-calibration-assessment
+limen assess compiled-research/calibration_isotonic.yaml --results results/dev/compiled-calibration-isotonic
 # endregion calibration
 # region execution
 limen run --no-progress-bar \

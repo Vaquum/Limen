@@ -83,7 +83,8 @@ limen run --no-progress-bar \
   compiled-research/reducer_saturation.yaml \
   compiled-research/reducer_focus.yaml \
   compiled-research/reducer_correlation.yaml \
-  compiled-research/analysis.yaml
+  compiled-research/analysis.yaml \
+  compiled-research/rule_contracts.yaml
 ```
 
 The [reducer reference](Developer/Pruning-Strategies.md#constructor-reference) lists each constructor and its validation rules. In YAML, its arguments belong under the reducer's `params` mapping.

@@ -226,10 +226,11 @@ sh compiled-research/run.sh
 | `recovery.yaml` | Pin the Parquet source by SHA-256, record all payload groups and checkpoint every round; continue with `limen run --resume`. Tests also interrupt an actual CLI process and compare resumed and uninterrupted results. |
 | `walk_forward.yaml` | Fit and calibrate two qualified folds on the explicit 384-row input; reconstruct their Sensors with `limen assess`. |
 | `acceptance.yaml` | Retain two rule trials, 96-return tracks and independent statistical acceptance reports. |
-| `calibration.yaml` | Compare all four probability-calibration/threshold modes. |
+| `calibration.yaml`, `calibration_assessment.yaml`, `calibration_isotonic.yaml` | Compare all four probability-calibration/threshold modes and reconstruct sigmoid and isotonic campaigns through CLI assessment. |
 | `execution.yaml`, `funded.yaml` | Retain dynamic-barrier ledgers, clock bindings, costs and recorded funding. |
 | `bars.yaml` | Form volume, trade and liquidity bars separately after each split; omit incomplete final bars. |
 | `allocation.yaml`, `allocation_ml.yaml`, `allocation_funded.yaml` | Compare rule and learned primaries with completed-opportunity allocation and recorded funding. |
+| `rule_contracts.yaml` | Exercise every predicate family, Boolean composition and both temporal modifiers on a declared recorded partition. |
 | `common_strategies.yaml`, `family_*.yaml` | Compare eight fixed baselines and the admitted model families on their own declared populations. |
 | `final/holdout.yaml` | Reserve the final window before research; reconstruct, freeze and assess the selected Cohort through the CLI. Preserve its project history and final report together. |
 | `final-event/holdout.yaml` | Reserve a separate project and assess one selected Sensor under its frozen event contract, with schema-2 ledger evidence. |

@@ -136,3 +136,20 @@ def verify_multiclass(result, inputs):
     np.testing.assert_allclose([result['metrics'][key] for key in ('precision', 'recall', 'auc')],
                                [np.mean(precisions), np.mean(recalls), np.mean(aucs)], atol=1e-12)
     assert result['missing_class_auc'] is None
+
+
+def verify_rules(result, inputs):
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
+    bars = raw.filter(pl.col('datetime').is_between(pl.datetime(2024, 1, 18, time_zone='UTC'), pl.datetime(2024, 1, 22, time_zone='UTC'), closed='left'))
+    close, opening = bars['close'].to_numpy(), bars['open'].to_numpy()
+    up = close > opening
+    persistent = np.r_[False, up[1:] & up[:-1]]
+    cross = np.r_[False, up[1:] & (close[:-1] <= opening[:-1])]
+    recent = np.asarray([cross[max(0, i-2):i+1].any() for i in range(len(close))])
+    rising = np.r_[np.zeros(3, dtype=bool), close[3:] > close[:-3]]
+    assert result['assessment_rows'] == len(close) == 96 and result['history_resets_at_split'] is True
+    assert {row['price_floor'] for row in result['rows']} == {40000., 41000.}
+    for row in result['rows']:
+        expected = (close >= row['price_floor']) & (persistent | recent) & rising & ~(close < opening)
+        np.testing.assert_array_equal(row['signals'], expected.astype(int))
+        assert row['positive_decisions'] == expected.sum() and 0 < expected.sum() < len(close)

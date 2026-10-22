@@ -35,6 +35,13 @@ def test_recorded_multiclass_metrics(python_scenarios):
     verify_multiclass(python_scenarios.evaluate_three_classes(python_scenarios.hourly(inputs, 1440)), inputs)
 
 
+def test_recorded_causal_rules(python_scenarios):
+    from conftest import ROOT
+    from helper_oracles import verify_rules
+    inputs = ROOT / 'tests/fixtures'
+    verify_rules(python_scenarios.evaluate_rules(python_scenarios.hourly(inputs, 1440)), inputs)
+
+
 def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     from click.testing import CliRunner
     from limen.cli.main import cli
@@ -46,7 +53,7 @@ def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     with tarfile.open(archive) as bundle:
         bundle.extractall(project, filter='data')
     monkeypatch.chdir(project)
-    names = ['analysis', 'parallel', *['reducer_' + name for name in ('sanity', 'saturation', 'focus', 'correlation')],
+    names = ['analysis', 'parallel', 'rule_contracts', 'calibration_isotonic', *['reducer_' + name for name in ('sanity', 'saturation', 'focus', 'correlation')],
              *['recording_' + name for name in ('lean', 'full', 'outputs')],
              *['source_' + name for name in ('csv', 'zip', 'arrow')]]
     result = CliRunner().invoke(cli, ['run', '--no-progress-bar', *['compiled-research/' + name + '.yaml' for name in names]])
@@ -55,5 +62,8 @@ def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     resumed = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', 'results/dev/compiled-parallel', '--workers', '2'])
     print(resumed.output)
     assert resumed.exit_code == 0, resumed.exception
+    assessed = CliRunner().invoke(cli, ['assess', 'compiled-research/calibration_isotonic.yaml', '--results', 'results/dev/compiled-calibration-isotonic'])
+    print(assessed.output)
+    assert assessed.exit_code == 0, assessed.exception
     summary = verify_extended_campaigns(project)
     assert summary['analysis']['n_trials'] == 20
