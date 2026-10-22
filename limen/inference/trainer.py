@@ -5,6 +5,7 @@ import json
 from collections.abc import Mapping
 from limen.backtest.trade_contract import JsonValue
 import logging
+import math
 from pathlib import Path
 from typing import Any, cast
 
@@ -154,6 +155,12 @@ class Trainer:
             if original_value is None:
                 continue
             if not isinstance(original_value, (int, float)):
+                continue
+
+            values = (original_value, new_value)
+            if any(isinstance(value, float) and not math.isfinite(value) for value in values):
+                if original_value != new_value and not all(isinstance(value, float) and math.isnan(value) for value in values):
+                    mismatches.append(f"{key}: original={original_value}, new={new_value}")
                 continue
 
             if is_deterministic:

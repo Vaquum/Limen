@@ -1,4 +1,5 @@
 import json
+import math
 from pathlib import Path
 import shutil
 
@@ -7,6 +8,7 @@ import polars as pl
 import pytest
 
 from limen.cli.main import cli
+from limen.inference import ReconstructionError, Trainer
 from limen.yaml import parse, validate
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,6 +30,79 @@ def recorded_cli(tmp_path_factory):
     finally:
         os.chdir(previous)
     return project
+
+
+@pytest.mark.parametrize('deterministic', (False, True))
+@pytest.mark.parametrize('original_index', range(4))
+@pytest.mark.parametrize('replay_index', range(4))
+def test_recorded_metric_nonfinite_comparison(recorded_cli, deterministic, original_index, replay_index):
+    finite = pl.read_csv(recorded_cli / 'results/dev/compiled-cli/results.csv')['auc'][0]
+    assert isinstance(finite, float) and math.isfinite(finite)
+    values = (finite, math.nan, math.inf, -math.inf)
+    original, replayed = values[original_index], values[replay_index]
+    trainer = object.__new__(Trainer)
+    trainer._param_keys = frozenset()
+    trainer._original_log = {'recorded': {'auc': original}}
+    mismatches = trainer._validate_metrics('recorded', {'auc': replayed}, deterministic)
+    assert mismatches == ([] if original_index == replay_index else
+                          [f'auc: original={original}, new={replayed}'])
+
+
+@pytest.mark.parametrize('deterministic', (False, True))
+def test_metric_comparison_preserves_scalar_policy(deterministic):
+    trainer = object.__new__(Trainer)
+    trainer._param_keys = frozenset()
+    for original, replayed, exact_match, stochastic_match in (
+        (0.0, 1e-6, True, True),
+        (0.0, math.nextafter(1e-6, math.inf), False, True),
+        (0.0, 0.01, False, True),
+        (0.0, math.nextafter(0.01, math.inf), False, False),
+        (99.0, 100.0, False, True),
+        (99.0, math.nextafter(100.0, math.inf), False, False),
+        (2**53, 2**53 + 1, False, True),
+        (7, 7.0, True, True), (7.0, 7, True, True),
+        (True, 1, True, True), (1, True, True, True), (False, 0, True, True),
+        (None, math.nan, True, True), (math.nan, None, True, True),
+        ('nan', math.nan, True, True), (math.nan, 'nan', True, True),
+    ):
+        trainer._original_log = {'recorded': {'auc': original}}
+        mismatches = trainer._validate_metrics('recorded', {'auc': replayed}, deterministic)
+        assert (not mismatches) == (exact_match if deterministic else stochastic_match)
+    if deterministic:
+        for replayed, matches in ((10**400, True), (10**400 + 1, False)):
+            trainer._original_log = {'recorded': {'count': 10**400}}
+            assert (not trainer._validate_metrics('recorded', {'count': replayed}, True)) == matches
+
+
+def test_recorded_replay_rejects_nan_before_sensor(recorded_cli, monkeypatch):
+    monkeypatch.chdir(recorded_cli)
+    trainer = Trainer(recorded_cli / 'results/dev/compiled-cli')
+    permutation_id = next(iter(trainer._round_data))
+    original = trainer._original_log[permutation_id]['auc']
+    assert isinstance(original, float) and math.isfinite(original)
+    sensors = trainer.train([permutation_id])
+    assert len(sensors) == 1 and sensors[0].permutation_id == permutation_id
+    assert sensors[0]._model.deterministic is False
+    run_model = trainer._manifest.run_model
+    replayed, constructions = [], []
+
+    def faulty_metric(data, params):
+        results = run_model(data, params)
+        assert results['_model'].deterministic is sensors[0]._model.deterministic
+        results['auc'] = math.nan
+        replayed.append(permutation_id)
+        return results
+
+    def forbidden_sensor(**kwargs):
+        constructions.append(kwargs['permutation_id'])
+        raise AssertionError('A nonfinite metric mismatch reached Sensor construction')
+
+    monkeypatch.setattr(trainer._manifest, 'run_model', faulty_metric)
+    monkeypatch.setattr('limen.inference.trainer.Sensor', forbidden_sensor)
+    with pytest.raises(ReconstructionError, match='auc'):
+        trainer.train([permutation_id])
+    assert replayed == [permutation_id]
+    assert constructions == []
 
 
 def test_cli_reconstructs_selected_sensor_and_cohort(recorded_cli, monkeypatch):
