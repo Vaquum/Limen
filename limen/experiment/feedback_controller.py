@@ -16,6 +16,11 @@ from limen.experiment.param_search.search_strategy import SearchStrategy
 
 logger = logging.getLogger(__name__)
 
+
+def _error_entry(source: str, error: Exception) -> dict[str, str]:
+    return {'source': source, 'error': str(error), 'traceback': traceback.format_exc()}
+
+
 _SOURCE_ERRORS = (
     ValueError,
     KeyError,
@@ -143,11 +148,11 @@ class FeedbackController:
         '''
 
         all_interventions: list[dict[str, Any]] = []
-        errors: list[dict[str, Any]] = []
+        errors: list[dict[str, str]] = []
 
         sources = [
-            ('pruning_strategies', lambda: self._collect_from_pruning(log, msq), True),
-            ('intra_callback', lambda: self._collect_from_intra(log, msq), False),
+            ('pruning_strategies', lambda: self._collect_from_pruning(log, msq, errors), True),
+            ('intra_callback', lambda: self._collect_from_intra(log, msq, errors), False),
             ('intervention_file', lambda: self._collect_from_file(), True),
         ]
 
@@ -176,7 +181,7 @@ class FeedbackController:
                     needs_dispatch: bool,
                     msq: MSQ,
                     all_interventions: list[dict[str, Any]],
-                    errors: list[dict[str, Any]]) -> None:
+                    errors: list[dict[str, str]]) -> None:
 
         '''
         Execute a single feedback source with error isolation.
@@ -201,16 +206,13 @@ class FeedbackController:
             all_interventions.extend(interventions)
         except _SOURCE_ERRORS as e:
             logger.warning('%s failed: %s', name, e)
-            errors.append({
-                'source': name,
-                'error': str(e),
-                'traceback': traceback.format_exc(),
-            })
+            errors.append(_error_entry(name, e))
 
 
     def _collect_from_pruning(self,
                               log: Any,
-                              msq: MSQ) -> list[dict[str, Any]]:
+                              msq: MSQ,
+                              errors: list[dict[str, str]]) -> list[dict[str, Any]]:
 
         '''
         Collect interventions from all active pruning strategies.
@@ -236,13 +238,15 @@ class FeedbackController:
                     'PruningStrategy %s failed: %s',
                     ps.__class__.__name__, e,
                 )
+                errors.append(_error_entry(ps.__class__.__name__, e))
 
         return interventions
 
 
     def _collect_from_intra(self,
                             log: Any,
-                            msq: MSQ) -> list[dict[str, Any]]:
+                            msq: MSQ,
+                            errors: list[dict[str, str]]) -> list[dict[str, Any]]:
 
         '''
         Collect interventions from the intra-experiment callback.
@@ -262,6 +266,7 @@ class FeedbackController:
             self._intra_callback(log, msq)
         except _SOURCE_ERRORS as e:
             logger.warning('Intra callback failed: %s', e)
+            errors.append(_error_entry('intra_callback', e))
 
         new_entries = msq.intervention_log[log_len_before:]
         return [{'source': 'intra_callback', **entry} for entry in new_entries]
@@ -338,7 +343,7 @@ class FeedbackController:
     def _write_audit_entry(self,
                            current_round: int,
                            interventions: list[dict[str, Any]],
-                           errors: list[dict[str, Any]],
+                           errors: list[dict[str, str]],
                            msq: MSQ,
                            *,
                            suggestions: list[dict[str, Any]] | None = None) -> None:
