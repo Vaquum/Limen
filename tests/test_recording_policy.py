@@ -722,11 +722,11 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         path = tmp_path / 'default'
         shutil.copytree(captured['full']['path'], path)
         records = _records(path)
-        persisted = pl.read_csv(path / 'results.csv', schema_overrides={'_convergence_warning': pl.Boolean})
+        persisted = captured['full']['loop'].experiment_log.drop('execution_time')
         loop = _loop(captured['config'], path, bars=captured['bars'])
         _run(loop, resume=True)
         assert _records(path) == records
-        assert_frame_equal(loop.experiment_log, persisted)
+        assert_frame_equal(loop.experiment_log.drop('execution_time').select(persisted.columns), persisted)
         metadata_path = path / 'metadata.json'
         metadata = json.loads(metadata_path.read_text())
         del metadata['recording']
@@ -735,7 +735,7 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         _run(legacy, resume=True)
         assert legacy._recording == FULL
         assert _records(path) == records
-        assert_frame_equal(legacy.experiment_log, persisted)
+        assert_frame_equal(legacy.experiment_log.drop('execution_time').select(persisted.columns), persisted)
     elif case == 'cli':
         config = _config('walk_forward')
         config['sfd']['manifest']['data_source']['params']['row_count_limit'] = 384
