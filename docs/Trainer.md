@@ -80,6 +80,8 @@ with the original round parameters and wraps the resulting model in a `Sensor`. 
 
 Deterministic models require near-exact metric matches. Stochastic models use a scaled tolerance.
 
+Among compared numeric values, NaN matches only NaN and infinities match only with the same sign. Other finite/non-finite transitions fail before Sensor construction. This applies only to operands that pass the existing numeric guards; a metric column inferred as text while loading CSV remains skipped.
+
 If validation fails, Trainer raises `ReconstructionError`.
 
 Catch `limen.ReconstructionError` at the caller boundary when reconstruction failure needs explicit handling. A failed replay must remain visible.
