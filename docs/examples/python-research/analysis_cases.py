@@ -22,8 +22,8 @@ def recordable_prep(raw, round_params):
 def analyze_candidates(bars, output):
     space = {'window': list(range(4, 14)), 'alpha': [.01, .1, 1.]}
 
-    def model(data, params):
-        fitted = project.fit(data['train'], params)
+    def model(data, round_params):
+        fitted = project.fit(data['train'], round_params)
         forecasts = fitted.predict(data['validation'].select('momentum'))
         return {'validation_rmse': float(np.sqrt(np.mean((forecasts - data['validation']['next_return'].to_numpy())**2))),
                 'validation_net_return': project.backtest(data['validation'], forecasts)}
