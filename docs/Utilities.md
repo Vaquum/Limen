@@ -143,3 +143,320 @@ These are text-formatting utilities, not a canonical reporting framework.
 - Continue to the [legacy execution reference](Universal-Experiment-Loop.md#legacy-execution-reference) for the contract that still uses `ParamSpace`.
 - Continue to [Advanced Search](Advanced-Search.md) for the strategies used by CLI and Python/MSQ runs.
 - Continue to [Reference Architecture](Reference-Architecture.md) for `data_dict_to_numpy()` usage inside model code.
+
+## Callable contracts
+
+These entries give the exact public signatures and the source-owned argument, return and failure contracts. Use the project examples above for the research context; a signature is reference evidence, not a claim that every option ran in the base experiment.
+
+### `limen.utils.AdfResult`
+
+<!-- reference: api-limen-utils-adfresult source=limen/utils/adf_test.py region=signature:AdfResult role=signature -->
+```python
+@dataclass
+class AdfResult:
+    stationary: bool
+    p_value: float
+    test_statistic: float
+    critical_values: dict[str, float]
+```
+
+Result of an Augmented Dickey-Fuller stationarity test.
+
+### `limen.utils.ParamSpace`
+
+<!-- reference: api-limen-utils-paramspace source=limen/utils/param_space.py region=signature:ParamSpace role=signature -->
+```python
+class ParamSpace:
+    ...
+```
+
+Sample parameter combinations without constructing the Cartesian product.
+
+Preserve stdlib sampling beyond Py_ssize_t; sample=False selects the grid prefix.
+
+### `limen.utils.ParamSpace.__init__`
+
+<!-- reference: api-limen-utils-paramspace---init-- source=limen/utils/param_space.py region=signature:ParamSpace.__init__ role=signature -->
+```python
+def __init__(self, params: dict[str, list[Any]], n_permutations: int, seed: int | None=None, *, sample: bool=True) -> None:
+    ...
+```
+
+### `limen.utils.ParamSpace.generate`
+
+<!-- reference: api-limen-utils-paramspace-generate source=limen/utils/param_space.py region=signature:ParamSpace.generate role=signature -->
+```python
+def generate(self, random_search: bool=True) -> dict[str, Any] | None:
+    ...
+```
+
+Compute next parameter combination from the parameter space.
+
+**Args**
+
+random_search (bool): Whether to select parameters randomly or sequentially
+
+**Returns**
+
+dict: Dictionary of parameter names and selected values, or None if space is exhausted
+
+### `limen.utils.adf_test`
+
+<!-- reference: api-limen-utils-adf-test source=limen/utils/adf_test.py region=signature:adf_test role=signature -->
+```python
+def adf_test(series: pl.Series, significance_level: float=0.05) -> AdfResult:
+    ...
+```
+
+Run Augmented Dickey-Fuller test for stationarity.
+
+**Args**
+
+series (pl.Series): Time series to test
+
+significance_level (float): Threshold for rejecting non-stationarity
+
+**Returns**
+
+AdfResult: Structured test result with stationary flag, p-value,
+
+test statistic, and critical values
+
+### `limen.utils.binary_metrics`
+
+<!-- reference: api-limen-utils-binary-metrics source=limen/metrics/binary_metrics.py region=signature:binary_metrics role=signature -->
+```python
+def binary_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.integer[Any]], probs: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
+    ...
+```
+
+Compute binary classification metrics from predictions and probabilities.
+
+Degenerate one-class outcomes never crash: fpr is NaN when y_test has no
+
+negatives, and auc is NaN when y_test contains a single class, mirroring
+
+the safe_ovr_auc convention.
+
+**Args**
+
+data (dict): Data dictionary with 'y_test' key containing true binary labels
+
+preds (list): Predicted binary class labels
+
+probs (list): Predicted class probabilities
+
+**Returns**
+
+dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
+
+### `limen.utils.confidence_filtering_system`
+
+<!-- reference: api-limen-utils-confidence-filtering-system source=limen/utils/confidence_filtering_system.py region=signature:confidence_filtering_system role=signature -->
+```python
+def confidence_filtering_system(models: list[Any], data: dict[str, Any], target_confidence: float=0.8) -> tuple[dict[str, Any], pl.DataFrame, dict[str, Any]]:
+    ...
+```
+
+Compute complete confidence filtering system with validation-based calibration.
+
+**Args**
+
+models (list): List of trained models for confidence estimation
+
+data (dict): Dictionary with validation and test data splits containing 'x_val', 'y_val', 'x_test', 'y_test', 'dt_test' keys
+
+target_confidence (float): Target percentage of predictions to classify as confident
+
+**Returns**
+
+tuple: Filtered test results, per-row results DataFrame sorted by
+
+confidence score, and calibration statistics
+
+### `limen.utils.continuous_metrics`
+
+<!-- reference: api-limen-utils-continuous-metrics source=limen/metrics/continuous_metrics.py region=signature:continuous_metrics role=signature -->
+```python
+def continuous_metrics(data: dict[str, Any], preds: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
+    ...
+```
+
+Compute regression metrics from continuous predictions.
+
+NOTE: This function is experimental and may change in future versions.
+
+**Args**
+
+data (dict): Data dictionary with 'y_test' key containing true continuous values
+
+preds (list): Predicted continuous values
+
+**Returns**
+
+dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
+
+### `limen.utils.data_dict_to_numpy`
+
+<!-- reference: api-limen-utils-data-dict-to-numpy source=limen/utils/data_dict_to_numpy.py region=signature:data_dict_to_numpy role=signature -->
+```python
+def data_dict_to_numpy(data: dict[str, Any], keys: list[str] | None=None) -> dict[str, Any]:
+    ...
+```
+
+Convert data dictionary entries from polars/pandas to numpy arrays.
+
+**Args**
+
+data (dict): Dictionary with data entries (e.g., x_train, y_train, etc.)
+
+keys (list): Keys to convert. Defaults to x_train, y_train, x_val, y_val, x_test, y_test
+
+**Returns**
+
+dict: Dictionary with values converted to numpy arrays where applicable
+
+### `limen.utils.filter_lines_by_quantile`
+
+<!-- reference: api-limen-utils-filter-lines-by-quantile source=limen/utils/filter_lines_by_quantile.py region=signature:filter_lines_by_quantile role=signature -->
+```python
+def filter_lines_by_quantile(lines: list[dict[str, float]], quantile: float) -> list[dict[str, float]]:
+    ...
+```
+
+Compute the subset of lines at or above a height quantile.
+
+**Args**
+
+lines (list[dict]): Line dicts with a 'height_pct' key, as produced
+
+by find_price_lines
+
+quantile (float): Quantile of absolute heights below which lines are dropped
+
+**Returns**
+
+list[dict]: Lines whose absolute height is at or above the quantile cutoff
+
+**Raises**
+
+ValueError: If quantile is outside [0, 1]
+
+### `limen.utils.find_price_lines`
+
+<!-- reference: api-limen-utils-find-price-lines source=limen/utils/find_price_lines.py region=signature:find_price_lines role=signature -->
+```python
+def find_price_lines(close: npt.NDArray[np.floating[Any]] | npt.NDArray[np.integer[Any]], max_duration_hours: int, min_height_pct: float) -> tuple[list[dict[str, float]], list[dict[str, float]]]:
+    ...
+```
+
+Compute linear price movements (lines) from a close-price series.
+
+A line is any pair of bars (start, end) with duration in
+
+[1, max_duration_hours) whose relative close-to-close change is at
+
+least min_height_pct in absolute terms. Lines with a positive change
+
+are long lines, negative are short lines.
+
+**Args**
+
+close (np.ndarray): One-dimensional array of close prices
+
+max_duration_hours (int): Exclusive upper bound on line duration in bars
+
+min_height_pct (float): Minimum absolute height as a fraction of the start price
+
+**Returns**
+
+tuple[list[dict], list[dict]]: (long_lines, short_lines), each a list of
+
+dicts with keys 'start_idx', 'end_idx', 'height_pct', 'duration_hours'
+
+**Raises**
+
+ValueError: If max_duration_hours is below 2 or min_height_pct is not positive
+
+NOTE: Lines are detected only within the array passed in, so per-split
+
+invocation cannot observe other splits.
+
+### `limen.utils.format_report_footer`
+
+<!-- reference: api-limen-utils-format-report-footer source=limen/utils/reporting.py region=signature:format_report_footer role=signature -->
+```python
+def format_report_footer(width: int=50) -> str:
+    ...
+```
+
+Create standardized report footer with consistent styling.
+
+**Args**
+
+width (int): Width of the separator line
+
+**Returns**
+
+str: Formatted footer string
+
+### `limen.utils.format_report_header`
+
+<!-- reference: api-limen-utils-format-report-header source=limen/utils/reporting.py region=signature:format_report_header role=signature -->
+```python
+def format_report_header(title: str, width: int=50) -> str:
+    ...
+```
+
+Create standardized report header with consistent styling.
+
+**Args**
+
+title (str): Title of the report section
+
+width (int): Width of the separator line
+
+**Returns**
+
+str: Formatted header string with separators
+
+### `limen.utils.format_report_section`
+
+<!-- reference: api-limen-utils-format-report-section source=limen/utils/reporting.py region=signature:format_report_section role=signature -->
+```python
+def format_report_section(title: str, width: int=50) -> str:
+    ...
+```
+
+Create standardized report section with consistent styling.
+
+**Args**
+
+title (str): Title of the report section
+
+width (int): Width of the separator line
+
+**Returns**
+
+str: Formatted section string with separators
+
+### `limen.utils.safe_ovr_auc`
+
+<!-- reference: api-limen-utils-safe-ovr-auc source=limen/metrics/safe_ovr_auc.py region=signature:safe_ovr_auc role=signature -->
+```python
+def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str], probs: npt.NDArray[np.floating[Any]] | list[list[float]]) -> float:
+    ...
+```
+
+Compute one-vs-rest AUC safely handling missing classes.
+
+**Args**
+
+y_true (np.ndarray \| list[int] \| list[str]): True class labels, shape (n_samples,)
+
+probs (np.ndarray \| list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
+
+**Returns**
+
+float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
+

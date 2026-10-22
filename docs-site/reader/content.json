@@ -17,18 +17,16 @@
     },
     "docs/examples/python-research/README.md": {
       "route": "/book/python-research/",
-      "part": "Book",
-      "bookOrder": 10
+      "part": "Book"
     },
     "docs/examples/compiled-research/README.md": {
       "route": "/book/compiled-research/",
-      "part": "Book",
-      "bookOrder": 11
+      "part": "Book"
     },
     "docs/Final-Holdout.md": {
       "route": "/book/final-holdout/",
       "part": "Book",
-      "bookOrder": 8
+      "bookOrder": 10
     },
     "README.md": {
       "route": "/about/",
@@ -51,7 +49,7 @@
     "docs/End-to-End-Workflow.md": {
       "route": "/book/end-to-end-workflow/",
       "part": "Book",
-      "bookOrder": 9
+      "bookOrder": 11
     },
     "docs/Data-Bars.md": {
       "route": "/book/data-bars/",
@@ -101,8 +99,7 @@
     },
     "docs/Backtest.md": {
       "route": "/book/backtest/",
-      "part": "Book",
-      "bookOrder": 7
+      "part": "Reference"
     },
     "docs/Backtest-Benchmarks.md": {
       "route": "/developer/backtest-benchmarks/",
@@ -330,7 +327,7 @@
     "docs/Walk-Forward.md": {
       "route": "/book/walk-forward/",
       "part": "Book",
-      "bookOrder": 6
+      "bookOrder": 7
     },
     "docs/Developer/Indicator-Performance.md": {
       "route": "/developer/indicator-performance/",
@@ -344,6 +341,21 @@
     "docs/Guarded-Holdout-Reference.md": {
       "route": "/reference/guarded-holdout/",
       "part": "Reference"
+    },
+    "docs/Run-And-Recover.md": {
+      "route": "/book/run-and-recover/",
+      "part": "Book",
+      "bookOrder": 6
+    },
+    "docs/Trading-Behavior.md": {
+      "route": "/book/trading-behavior/",
+      "part": "Book",
+      "bookOrder": 8
+    },
+    "docs/Selected-Behavior.md": {
+      "route": "/book/selected-behavior/",
+      "part": "Book",
+      "bookOrder": 9
     }
   }
 }

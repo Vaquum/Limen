@@ -24,8 +24,10 @@ const pages=await Promise.all(Object.entries(overrides).map(async([source,chosen
 const referenceLinks=pages.filter(p=>p.part==='Reference').sort((a,b)=>pageLabel(a).localeCompare(pageLabel(b))).map(p=>`- [${pageLabel(p)}](${p.url})`).join('\n');
 pages.push({source:null,route:'/reference/',url:content.product.basePath+'/reference/',part:'Reference',title:'Reference',markdown:'# Reference\n\nNames, parameters, return values and the boundaries of the two research interfaces.\n\n'+referenceLinks+'\n'});
 const output=path.resolve(site,values.output);if(output===site||!output.startsWith(site+path.sep))throw Error('Reader output must be inside the site directory');
+const catalogue=JSON.parse(await fs.readFile(path.join(root,'docs/examples/catalogue.json'),'utf8')),results={};
+for(const scenario of evidence.validation.scenarios){const identity=scenario.interface+'/'+scenario.id;const bytes=await fs.readFile(path.join(root,scenario.output_path));if(hash(bytes)!==scenario.output_sha256)throw Error('Changed scenario result: '+identity);results[identity]={value:JSON.parse(bytes),source:catalogue.scenario_details[identity].source};}
 await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'assets/fonts'),{recursive:true});
-for(const page of pages){const target=path.join(output,page.route,'index.html');await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,renderPage(page,pages,evidence));}
+for(const page of pages){const target=path.join(output,page.route,'index.html');await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,renderPage(page,pages,evidence,{results}));}
 await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'},pages,evidence));
 for(const name of ['main','motion','code','place','navigation','search','interfaces'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
 await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/book.css'));

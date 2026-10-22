@@ -24,8 +24,19 @@ function documentText(markdown,{omitPreamble=false}={}){
   if(paragraph)removed.push(paragraph.map);
   return {body:lines.filter((_,line)=>!removed.some(range=>range&&line>=range[0]&&line<range[1])).join('\n'),introduction,introductionSource:inline?.content||''};
 }
-export function renderMarkdown(page,pages,evidence){
+export function renderMarkdown(page,pages,evidence,results={}){
   const md=new MarkdownIt({html:true,linkify:false,typographer:false});const headings=[],seen=new Map();let codeCount=0,linkCount=0;
+  const htmlBlock=md.renderer.rules.html_block;
+  md.renderer.rules.html_block=(tokens,index,options,env,renderer)=>{
+    const match=tokens[index].content.trim().match(/^<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.,]+) -->$/);
+    if(!match)return htmlBlock(tokens,index,options,env,renderer);
+    const result=results[match[2]+'/'+match[3]];
+    if(!result)throw Error('Missing current result: '+match[1]);
+    const rows=match[4].split(',').map(field=>{const value=field.split('.').reduce((current,key)=>current?.[key],result.value);if(value===undefined)throw Error('Missing result field: '+field);return `<dt>${escape(field.replaceAll('_',' '))}</dt><dd><pre>${escape(JSON.stringify(value,null,2))}</pre></dd>`;}).join('');
+    const source=evidence.sources.find(item=>item.path===result.source&&item.region==='__file__');
+    if(!source)throw Error('Result has no source identity: '+match[1]);
+    return `<figure class="result" id="${escape(match[1])}"><figcaption>${match[2]==='python'?'Python':'Compiled'} Research · ${escape(match[3])} · current execution</figcaption><dl>${rows}</dl><p class="status">${escape(content.product.name)} ${escape(evidence.package.version)} · <a href="${content.product.repository}/blob/${source.commit}/${escape(source.path)}">${source.commit.slice(0,8)}</a>${source.merged_pr?` · <a href="${escape(source.merged_pr)}">Merged source PR</a>`:' · candidate source'} · <a href="${content.product.basePath}/evidence/current.json">Validation and result digest</a> · <a href="${content.product.basePath}/evidence/${escape(evidence.native_outputs.path.split('/').at(-1))}">Native records</a></p></figure>`;
+  };
   md.renderer.rules.heading_open=(tokens,index,options,env,renderer)=>{const token=tokens[index],text=tokens[index+1].content.replaceAll('`','');const stem=slug(text),count=seen.get(stem)||0;seen.set(stem,count+1);const id=count?`${stem}-${count}`:stem;token.attrSet('id',id);token.attrSet('tabindex','-1');if(token.tag==='h2')headings.push({title:text,id});return renderer.renderToken(tokens,index,options);};
   md.renderer.rules.paragraph_open=(tokens,index,options,env,renderer)=>{const text=tokens[index+1]?.content||'';const id=`p-${hash(text).slice(0,12)}`;const count=seen.get(id)||0;seen.set(id,count+1);tokens[index].attrSet('id',count?`${id}-${count}`:id);tokens[index].attrSet('data-passage','');return renderer.renderToken(tokens,index,options);};
   const originalLink=md.renderer.rules.link_open||((tokens,index,options,env,renderer)=>renderer.renderToken(tokens,index,options));
@@ -67,8 +78,8 @@ export function renderMarkdown(page,pages,evidence){
   md.renderer.rules.table_close=(...args)=>originalTableClose(...args)+'</div>';
   const {body,introduction,introductionSource}=documentText(page.markdown,page);const introductionHtml=md.renderInline(introductionSource);return {html:md.render(body),headings,introduction,introductionHtml};
 }
-export function renderPage(page,pages,evidence,{product=content.product.id}={}){
-  const {html,headings,introduction,introductionHtml}=renderMarkdown(page,pages,evidence);const book=pages.filter(p=>p.bookOrder!==undefined).sort((a,b)=>a.bookOrder-b.bookOrder);const at=book.indexOf(page),next=at>=0?book[at+1]:null,previous=at>0?book[at-1]:null;
+export function renderPage(page,pages,evidence,{product=content.product.id,results={}}={}){
+  const {html,headings,introduction,introductionHtml}=renderMarkdown(page,pages,evidence,results);const book=pages.filter(p=>p.bookOrder!==undefined).sort((a,b)=>a.bookOrder-b.bookOrder);const at=book.indexOf(page),next=at>=0?book[at+1]:null,previous=at>0?book[at-1]:null;
   const home=book[0];const reference=pages.find(p=>p.route==='/reference/'),developer=pages.find(p=>p.source==='docs/Developer/README.md');
   const navigation=page.part==='Book'?book:pages.filter(p=>p.part===page.part&&p.source).sort((a,b)=>pageLabel(a).localeCompare(pageLabel(b)));
   const nav=navigation.map(p=>`<li><a href="${p.url}"${p===page?' aria-current="page"':''}>${escape(pageLabel(p))}</a></li>`).join('');

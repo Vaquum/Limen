@@ -137,3 +137,5 @@ The [developer appendix](Developer/Pruning-Strategies.md) covers the reducer reg
 ## Read next
 
 Continue to [search and recovery](Advanced-Search.md) for candidate generation and checkpointing, [the experiment loop](Universal-Experiment-Loop.md) for feedback scheduling, and [Trainer](Trainer.md) for reconstructible Compiled experiments.
+
+Continue to [retention and recovery](Run-And-Recover.md) to keep the result and unfinished queue together.

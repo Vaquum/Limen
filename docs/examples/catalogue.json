@@ -126,7 +126,10 @@
     "docs/Reference-Architecture.md",
     "docs/Common-Strategies.md",
     "docs/Compiled-Research.md",
-    "docs/Guarded-Holdout-Reference.md"
+    "docs/Guarded-Holdout-Reference.md",
+    "docs/Run-And-Recover.md",
+    "docs/Trading-Behavior.md",
+    "docs/Selected-Behavior.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2457,6 +2460,10 @@
     "docs/examples/commands.json": [
       "python",
       "compiled"
+    ],
+    "docs/examples/acquire.sh": [
+      "python",
+      "compiled"
     ]
   },
   "page_contexts": {
@@ -2814,6 +2821,42 @@
     "docs/Guarded-Holdout-Reference.md": [
       "python/holdout",
       "compiled/holdout"
+    ],
+    "docs/Run-And-Recover.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/recovery",
+      "compiled/recovery",
+      "python/search",
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Trading-Behavior.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/recovery",
+      "compiled/recovery",
+      "python/search",
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Selected-Behavior.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/recovery",
+      "compiled/recovery",
+      "python/search",
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
     ]
   }
 }

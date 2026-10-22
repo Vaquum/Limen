@@ -8,5 +8,7 @@
   "compiled-research": "limen run --no-progress-bar compiled-research/research.yaml",
   "compiled-assess": "limen assess compiled-research/research.yaml --results results/dev/compiled-research",
   "compiled-folds": "limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward",
-  "compiled-selection-assess": "limen assess compiled-research/selection.yaml --results results/dev/compiled-cli"
+  "compiled-selection-assess": "limen assess compiled-research/selection.yaml --results results/dev/compiled-cli",
+  "download-project": "curl --fail --location https://docs.vaquum.fi/limen/source/docs/examples/acquire.sh -o acquire.sh",
+  "acquire-project": "sh acquire.sh limen-research"
 }

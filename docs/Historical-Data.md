@@ -12,6 +12,12 @@ All five return `polars.DataFrame`, and each call also updates `historical.data`
 
 Install `vaquum-limen[data]` when using Hugging Face parquet datasets or Arrow IPC paths. The base package does not install PyArrow.
 
+## Decide which observations remain final
+
+Before researching a protected final window, choose the Compiled project's separate `final/` or `final-event/` branch and reserve its declared dates. The complete branch starts with `limen reserve`, runs its YAML and finishes with `limen assess --reservation`; follow [final assessment](Final-Holdout.md) for those exact commands. Do not run exploratory cases against that branch's reserved observations first. The project ledger records local known exposure; downloading a file or starting a new Git directory does not establish a global never-observed claim.
+
+Python Research excludes final observations in its caller-owned preparation and selection code. It does not acquire a native reservation merely by supplying a cutoff. Both projects state the population each result measures.
+
 ## Prerequisites
 
 - Python 3.10-3.13

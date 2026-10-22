@@ -124,3 +124,110 @@ A stateless shift and a fitted target have different responsibilities. The shift
 - [Scalers](Scalers.md) for train-fitted preprocessing
 - [Features](Features.md) for target and regime helpers paired with transforms
 - [Experiment Manifest](Experiment-Manifest.md) for where transforms live in the split-first execution order
+
+## Callable contracts
+
+These entries give the exact public signatures and the source-owned argument, return and failure contracts. Use the project examples above for the research context; a signature is reference evidence, not a claim that every option ran in the base experiment.
+
+### `limen.transforms.mad_transform`
+
+<!-- reference: api-limen-transforms-mad-transform source=limen/transforms/mad_transform.py region=signature:mad_transform role=signature -->
+```python
+def mad_transform(df: pl.DataFrame, *, time_col: str='datetime'):
+    ...
+```
+
+Compute Median Absolute Deviation (MAD) Transform.
+
+**Args**
+
+df (pl.DataFrame): The input DataFrame.
+
+time_col (str): The name of the time column.
+
+**Returns**
+
+pl.DataFrame: The transformed DataFrame.
+
+### `limen.transforms.quantile_trim_transform`
+
+<!-- reference: api-limen-transforms-quantile-trim-transform source=limen/transforms/quantile_trim_transform.py region=signature:quantile_trim_transform role=signature -->
+```python
+def quantile_trim_transform(df: pl.DataFrame, *, time_col: str='datetime') -> pl.DataFrame:
+    ...
+```
+
+Compute outlier trimming by removing rows outside fixed quantile bounds across numeric columns.
+
+**Args**
+
+df (pl.DataFrame): Klines dataset with numeric columns to trim
+
+time_col (str): Column name to exclude from numeric transforms
+
+**Returns**
+
+pl.DataFrame: The input data filtered within bounds for all numeric columns
+
+### `limen.transforms.shift_column_transform`
+
+<!-- reference: api-limen-transforms-shift-column-transform source=limen/transforms/shift_column_transform.py region=signature:shift_column_transform role=signature -->
+```python
+def shift_column_transform(data: pl.DataFrame, shift: int, column: str) -> pl.DataFrame:
+    ...
+```
+
+Shift a column by a specified number of periods.
+
+**Args**
+
+data (pl.DataFrame): Input DataFrame
+
+shift (int): Number of periods to shift (negative for forward shift)
+
+column (str): Name of column to shift
+
+**Returns**
+
+pl.DataFrame: DataFrame with shifted column
+
+### `limen.transforms.winsorize_transform`
+
+<!-- reference: api-limen-transforms-winsorize-transform source=limen/transforms/winsorize_transform.py region=signature:winsorize_transform role=signature -->
+```python
+def winsorize_transform(df: pl.DataFrame, *, time_col: str='datetime') -> pl.DataFrame:
+    ...
+```
+
+Compute winsorization by clipping numeric columns to fixed quantile bounds.
+
+**Args**
+
+df (pl.DataFrame): Klines dataset with numeric columns to clip
+
+time_col (str): Column name to exclude from numeric transforms
+
+**Returns**
+
+pl.DataFrame: The input data with winsorized numeric columns
+
+### `limen.transforms.zscore_transform`
+
+<!-- reference: api-limen-transforms-zscore-transform source=limen/transforms/zscore_transform.py region=signature:zscore_transform role=signature -->
+```python
+def zscore_transform(df: pl.DataFrame, *, time_col: str='datetime') -> pl.DataFrame:
+    ...
+```
+
+Compute standard Z-score scaling for numeric columns.
+
+**Args**
+
+df (pl.DataFrame): Klines dataset with numeric columns to scale
+
+time_col (str): Column name to exclude from numeric transforms
+
+**Returns**
+
+pl.DataFrame: The input data with Z-scored numeric columns
+

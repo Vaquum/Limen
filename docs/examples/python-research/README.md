@@ -6,6 +6,17 @@ The [research chapter](../../Research-Book.md) develops the project. The [docume
 
 The search scenario also compares baseline and compressed preparation on 1,440 recorded hourly bars. It retains each prepared train/validation/test matrix, a fixed-order fractional feature, ternary forward-close labels, training-fitted robust statistics, an explicit feature drop and optional two-component PCA. Independent tests reconstruct the labels, differenced values, scaler statistics, PCA subspace and Ridge forecasts. Python owns separate partition preparation. The Compiled YAML variant uses the native pipeline's admitted CCO context and its own declared date population. These are preparation checks, not a feature-importance ranking or profitability claim.
 
+## Acquire the matching project
+
+Download [acquire.sh](https://docs.vaquum.fi/limen/source/docs/examples/acquire.sh). It reads one public publication manifest, verifies the exact project-bundle and wheel digests, extracts the recorded inputs and installs the matching wheel with `data`, `stats` and `boosting` extras into a new environment. It requires Python 3.10–3.13, `curl`, `jq`, `tar` and OpenSSL. Package installation is setup; Compiled research itself uses YAML and the Limen CLI.
+
+<!-- example: acquire-python-project source=docs/examples/commands.json region=acquire-project scenario=selection interface=python role=executed -->
+```bash
+sh acquire.sh limen-research
+```
+
+Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
+
 ## Prerequisites
 
 Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats]`; Sobol uses statistics.

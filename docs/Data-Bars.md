@@ -139,3 +139,5 @@ This keeps train-only fitting and test-only evaluation aligned with the actual p
 - Continue to [Single-File Decoder](Single-File-Decoder.md) for experiment packaging.
 - Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline that bar formation plugs into.
 - Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run the resulting experiment.
+
+Continue to [define the experiment](Compiled-Research.md); helper details remain in the [bar reference](../limen/data/bars/README.md).

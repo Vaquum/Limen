@@ -65,3 +65,5 @@ The resulting Cohort binds the recorded fold identities. Its common selection cu
 Repeated windows provide several later assessment populations. Using their outcomes to choose the research definition makes those outcomes part of selection. A collection of folds therefore does not create an untouched final sample.
 
 Inspect the fold geometry, fitting and selection cutoffs, calibration population, validation objective and retained predictions before comparing results. Python supplies those decisions through the caller's functions and assertions. Compiled Research supplies the declared pipeline and recorded promotion evidence. Continue to [final observations](Final-Holdout.md) when the question requires an assessment reserved from research, or to [execution](Backtest.md) when predictions must be interpreted as trades.
+
+Continue to [trading behavior](Trading-Behavior.md) to interpret those later decisions under their declared execution policy.

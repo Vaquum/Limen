@@ -210,7 +210,7 @@ def calibration(data_dir, output):
             if any(point.prediction not in (0, 1) for point in tape):
                 raise ValueError('Classifier inference must provide a binary decision for every assessment row')
             modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
-    return {'modes': modes, 'validation_reused': True}
+    return {'modes': modes, 'decisions': [{key: mode[key] for key in ('calibrated', 'tuned', 'threshold', 'inference_rows', 'positive_predictions')} for mode in modes], 'validation_reused': True}
 ```
 
 <!-- example: metrics-compiled-calibration source=docs/examples/compiled-research/calibration.yaml region=calibration_config scenario=calibration interface=compiled role=executed -->
@@ -235,3 +235,188 @@ Keep the measured task, evaluation population and output units explicit when add
 - Continue to [Log](Log.md) for experiment-level analysis built on top of these low-level metrics.
 - Continue to [Benchmark](Benchmark.md) for the benchmark layer that uses reconstructed round outputs rather than these raw helper functions directly.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the model layer that wraps these task metrics into richer evaluation payloads.
+
+## Callable contracts
+
+These entries give the exact public signatures and the source-owned argument, return and failure contracts. Use the project examples above for the research context; a signature is reference evidence, not a claim that every option ran in the base experiment.
+
+### `limen.metrics.balanced_metric`
+
+<!-- reference: api-limen-metrics-balanced-metric source=limen/metrics/balanced_metric.py region=signature:balanced_metric role=signature -->
+```python
+def balanced_metric(y_true: Any, y_pred: Any) -> float:
+    ...
+```
+
+Compute balanced precision metric that accounts for trade rate.
+
+Calculates precision * sqrt(trade_rate) to balance signal quality
+
+with trade frequency. Higher scores indicate better balance between
+
+accurate predictions and sufficient trading activity.
+
+**Args**
+
+y_true: Ground truth binary labels
+
+y_pred: Predicted binary labels
+
+**Returns**
+
+float: Balanced metric score (0.0 if no positive predictions)
+
+### `limen.metrics.binary_metrics`
+
+<!-- reference: api-limen-metrics-binary-metrics source=limen/metrics/binary_metrics.py region=signature:binary_metrics role=signature -->
+```python
+def binary_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.integer[Any]], probs: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
+    ...
+```
+
+Compute binary classification metrics from predictions and probabilities.
+
+Degenerate one-class outcomes never crash: fpr is NaN when y_test has no
+
+negatives, and auc is NaN when y_test contains a single class, mirroring
+
+the safe_ovr_auc convention.
+
+**Args**
+
+data (dict): Data dictionary with 'y_test' key containing true binary labels
+
+preds (list): Predicted binary class labels
+
+probs (list): Predicted class probabilities
+
+**Returns**
+
+dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
+
+### `limen.metrics.continuous_metrics`
+
+<!-- reference: api-limen-metrics-continuous-metrics source=limen/metrics/continuous_metrics.py region=signature:continuous_metrics role=signature -->
+```python
+def continuous_metrics(data: dict[str, Any], preds: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
+    ...
+```
+
+Compute regression metrics from continuous predictions.
+
+NOTE: This function is experimental and may change in future versions.
+
+**Args**
+
+data (dict): Data dictionary with 'y_test' key containing true continuous values
+
+preds (list): Predicted continuous values
+
+**Returns**
+
+dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
+
+### `limen.metrics.deflated_sharpe_ratio`
+
+<!-- reference: api-limen-metrics-deflated-sharpe-ratio source=limen/metrics/deflated_sharpe_ratio.py region=signature:deflated_sharpe_ratio role=signature -->
+```python
+def deflated_sharpe_ratio(returns: npt.NDArray[np.float64], *, n_trials: int, trial_sharpe_variance: float) -> float:
+    ...
+```
+
+Return the per-bar DSR probability from Bailey and López de Prado (2014).
+
+https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf, equation 2.
+
+Sharpe uses sample standard deviation; skew and Pearson kurtosis use
+
+centered population moments. Four observations and positive return
+
+variance are required. One trial has a zero selection benchmark.
+
+### `limen.metrics.multiclass_metrics`
+
+<!-- reference: api-limen-metrics-multiclass-metrics source=limen/metrics/multiclass_metrics.py region=signature:multiclass_metrics role=signature -->
+```python
+def multiclass_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.integer[Any]], probs: list[list[float]] | npt.NDArray[np.floating[Any]], average: str='macro') -> dict[str, Any]:
+    ...
+```
+
+Compute multiclass classification metrics from predictions and probabilities.
+
+**Args**
+
+data (dict): Data dictionary with 'y_test' key containing true class labels
+
+preds (list): Predicted class labels
+
+probs (list): Predicted class probabilities
+
+average (str): Averaging strategy for precision and recall
+
+**Returns**
+
+dict: Dictionary containing precision, recall, auc, and accuracy metrics
+
+### `limen.metrics.probability_of_backtest_overfitting`
+
+<!-- reference: api-limen-metrics-probability-of-backtest-overfitting source=limen/metrics/probability_of_backtest_overfitting.py region=signature:probability_of_backtest_overfitting role=signature -->
+```python
+def probability_of_backtest_overfitting(returns_matrix: npt.NDArray[np.float64], *, n_blocks: int) -> float:
+    ...
+```
+
+Return CSCV logit mass at or below zero using per-bar Sharpe ranks.
+
+https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf, algorithm 2.3.
+
+Rows are trials, columns synchronous bars. Equal contiguous blocks need
+
+at least two bars. In-sample ties select the first trial; out-of-sample
+
+ties receive their average ascending rank. Median ties count as overfit.
+
+### `limen.metrics.rule_based_metrics`
+
+<!-- reference: api-limen-metrics-rule-based-metrics source=limen/metrics/rule_based_metrics.py region=signature:rule_based_metrics role=signature -->
+```python
+def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]], backtest_results: dict[str, dict[str, float]], sharpe_std_threshold: float=0.5, sharpe_degradation_threshold: float=0.3) -> dict[str, Any]:
+    ...
+```
+
+Compute rule-based strategy metrics across train, val, and test splits.
+
+**Args**
+
+positions (dict): Per-split position arrays (0/1) keyed by 'train', 'val', 'test'
+
+backtest_results (dict): Per-split backtest metric dicts keyed by 'train', 'val', 'test'
+
+sharpe_std_threshold (float): Legacy parameter retained for call compatibility
+
+sharpe_degradation_threshold (float): Legacy parameter retained for call compatibility
+
+**Returns**
+
+dict: Tier 1 position stats, Tier 2 backtest metrics per split, Tier 3 stability metrics
+
+### `limen.metrics.safe_ovr_auc`
+
+<!-- reference: api-limen-metrics-safe-ovr-auc source=limen/metrics/safe_ovr_auc.py region=signature:safe_ovr_auc role=signature -->
+```python
+def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str], probs: npt.NDArray[np.floating[Any]] | list[list[float]]) -> float:
+    ...
+```
+
+Compute one-vs-rest AUC safely handling missing classes.
+
+**Args**
+
+y_true (np.ndarray \| list[int] \| list[str]): True class labels, shape (n_samples,)
+
+probs (np.ndarray \| list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
+
+**Returns**
+
+float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
+

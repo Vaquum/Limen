@@ -4,6 +4,17 @@ Write the research definition in YAML and run it with `limen`. This project carr
 
 The [research chapter](../../Research-Book.md) introduces both interfaces. The [definition chapter](../../Compiled-Research.md) develops this project's full manifest. The [Python project](../python-research/README.md) is the independent caller-owned alternative.
 
+## Acquire the matching project
+
+Download [acquire.sh](https://docs.vaquum.fi/limen/source/docs/examples/acquire.sh). It reads one public publication manifest, verifies the exact project-bundle and wheel digests, extracts the recorded inputs and installs the matching wheel with `data`, `stats` and `boosting` extras into a new environment. It requires Python 3.10–3.13, `curl`, `jq`, `tar` and OpenSSL. Package installation is setup; Compiled research itself uses YAML and the Limen CLI.
+
+<!-- example: acquire-compiled-project source=docs/examples/commands.json region=acquire-project scenario=selection interface=compiled role=executed -->
+```bash
+sh acquire.sh limen-research
+```
+
+Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
+
 ## Prerequisites
 
 Use the recorded example bundle and its matching Limen wheel, Python 3.10–3.13, Git, and `vaquum-limen[data,stats,boosting]`. Run every command from the bundle root. The project uses local recorded inputs and performs no live data download.

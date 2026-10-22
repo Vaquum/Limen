@@ -145,3 +145,267 @@ An inverse is optional and must reflect the information the transform retains. A
 - [Transforms](Transforms.md) for stateless preprocessing and post-model helpers
 - [Experiment Manifest](Experiment-Manifest.md) for where scaling happens inside the split-first pipeline
 - [Trainer](Trainer.md) for the replay path that reconstructs manifests and preserves fitted preprocessing behavior
+
+## Callable contracts
+
+These entries give the exact public signatures and the source-owned argument, return and failure contracts. Use the project examples above for the research context; a signature is reference evidence, not a claim that every option ran in the base experiment.
+
+### `limen.scalers.CausalRollingRobustScaler`
+
+<!-- reference: api-limen-scalers-causalrollingrobustscaler source=limen/scalers/causal_rolling_robust_scaler.py region=signature:CausalRollingRobustScaler role=signature -->
+```python
+class CausalRollingRobustScaler:
+    ...
+```
+
+Causal trailing-window median and IQR scaling, with no look-ahead.
+
+### `limen.scalers.CausalRollingRobustScaler.__init__`
+
+<!-- reference: api-limen-scalers-causalrollingrobustscaler---init-- source=limen/scalers/causal_rolling_robust_scaler.py region=signature:CausalRollingRobustScaler.__init__ role=signature -->
+```python
+def __init__(self, x_train: pl.DataFrame, window: int=1000, quantile_range: tuple[float, float]=(0.25, 0.75), clip: float=8.0, min_samples: int=50) -> None:
+    ...
+```
+
+Fit fallback median and IQR statistics on training data.
+
+The fitted statistics are not applied directly. They are the warmup
+
+fallback used for rows whose trailing window holds fewer than
+
+`min_samples` observations, where this scaler degrades gracefully to
+
+plain median and IQR scaling.
+
+**Args**
+
+x_train (pl.DataFrame): Training data
+
+window (int): Trailing window length, in rows, for rolling statistics
+
+quantile_range (tuple[float, float]): Lower and upper quantiles for IQR
+
+clip (float): Symmetric bound applied to the scaled output
+
+min_samples (int): Minimum trailing observations before a rolling statistic is used
+
+### `limen.scalers.CausalRollingRobustScaler.context_rows`
+
+<!-- reference: api-limen-scalers-causalrollingrobustscaler-context-rows source=limen/scalers/causal_rolling_robust_scaler.py region=signature:CausalRollingRobustScaler.context_rows role=signature -->
+```python
+@property
+def context_rows(self) -> int:
+    ...
+```
+
+Number of raw preceding rows needed to produce a fully warm scaled output.
+
+### `limen.scalers.CausalRollingRobustScaler.transform`
+
+<!-- reference: api-limen-scalers-causalrollingrobustscaler-transform source=limen/scalers/causal_rolling_robust_scaler.py region=signature:CausalRollingRobustScaler.transform role=signature -->
+```python
+def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+    ...
+```
+
+Apply causal rolling robust scaling: (x - rolling_median) / rolling_IQR.
+
+For each row the median and IQR are taken from the trailing `window`
+
+rows strictly before it (`.shift(1)`), so the transform never reads
+
+the current row or any future row. Rows with fewer than `min_samples`
+
+trailing observations fall back to the train-fitted median and IQR.
+
+The scaled output is clipped to +/- `clip`.
+
+**Args**
+
+df (pl.DataFrame): Data to transform
+
+**Returns**
+
+pl.DataFrame: Transformed data
+
+### `limen.scalers.LinearScaler`
+
+<!-- reference: api-limen-scalers-linearscaler source=limen/scalers/linear_scaler.py region=signature:LinearScaler role=signature -->
+```python
+class LinearScaler:
+    ...
+```
+
+### `limen.scalers.LinearScaler.__init__`
+
+<!-- reference: api-limen-scalers-linearscaler---init-- source=limen/scalers/linear_scaler.py region=signature:LinearScaler.__init__ role=signature -->
+```python
+def __init__(self, x_train: pl.DataFrame, rules: dict[str, str] | None=None, default: str='standard') -> None:
+    ...
+```
+
+Linear transformation utility for scaling features.
+
+**Args**
+
+x_train: Training DataFrame.
+
+rules: Regex-to-rule mapping.
+
+default: Fallback scaling rule.
+
+### `limen.scalers.LinearScaler.transform`
+
+<!-- reference: api-limen-scalers-linearscaler-transform source=limen/scalers/linear_scaler.py region=signature:LinearScaler.transform role=signature -->
+```python
+def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+    ...
+```
+
+Apply linear scaling transformation.
+
+**Args**
+
+df: DataFrame to transform.
+
+**Returns**
+
+Transformed DataFrame.
+
+### `limen.scalers.LogRegScaler`
+
+<!-- reference: api-limen-scalers-logregscaler source=limen/scalers/logreg_scaler.py region=signature:LogRegScaler role=signature -->
+```python
+class LogRegScaler:
+    ...
+```
+
+LogRegScaler class for scaling and inverse scaling data.
+
+### `limen.scalers.LogRegScaler.__init__`
+
+<!-- reference: api-limen-scalers-logregscaler---init-- source=limen/scalers/logreg_scaler.py region=signature:LogRegScaler.__init__ role=signature -->
+```python
+def __init__(self, x_train: pl.DataFrame) -> None:
+    ...
+```
+
+Initialize the LogRegScaler object.
+
+**Args**
+
+x_train (pl.DataFrame): The training data
+
+### `limen.scalers.LogRegScaler.transform`
+
+<!-- reference: api-limen-scalers-logregscaler-transform source=limen/scalers/logreg_scaler.py region=signature:LogRegScaler.transform role=signature -->
+```python
+def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+    ...
+```
+
+Transform the data using the scaling rules.
+
+**Args**
+
+df (pl.DataFrame): The input DataFrame
+
+**Returns**
+
+pl.DataFrame: The transformed DataFrame
+
+### `limen.scalers.RankGaussScaler`
+
+<!-- reference: api-limen-scalers-rankgaussscaler source=limen/scalers/rank_gauss_scaler.py region=signature:RankGaussScaler role=signature -->
+```python
+class RankGaussScaler:
+    ...
+```
+
+Rank transformation to Gaussian distribution via inverse normal CDF.
+
+### `limen.scalers.RankGaussScaler.__init__`
+
+<!-- reference: api-limen-scalers-rankgaussscaler---init-- source=limen/scalers/rank_gauss_scaler.py region=signature:RankGaussScaler.__init__ role=signature -->
+```python
+def __init__(self, x_train: pl.DataFrame, n_quantiles: int=1000) -> None:
+    ...
+```
+
+Fit scaler by storing training quantile boundaries per column.
+
+**Args**
+
+x_train (pl.DataFrame): Training data
+
+n_quantiles (int): Number of quantile bins for rank interpolation
+
+### `limen.scalers.RankGaussScaler.transform`
+
+<!-- reference: api-limen-scalers-rankgaussscaler-transform source=limen/scalers/rank_gauss_scaler.py region=signature:RankGaussScaler.transform role=signature -->
+```python
+def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+    ...
+```
+
+Compute rank-based Gaussian transformation.
+
+For each column: rank values against training quantiles,
+
+convert to uniform [eps, 1-eps], apply inverse normal CDF.
+
+NaN values are preserved as NaN in the output.
+
+**Args**
+
+df (pl.DataFrame): Data to transform
+
+**Returns**
+
+pl.DataFrame: Transformed data with approximately normal distributions
+
+### `limen.scalers.RobustScaler`
+
+<!-- reference: api-limen-scalers-robustscaler source=limen/scalers/robust_scaler.py region=signature:RobustScaler role=signature -->
+```python
+class RobustScaler:
+    ...
+```
+
+Median and IQR scaling, resilient to outliers.
+
+### `limen.scalers.RobustScaler.__init__`
+
+<!-- reference: api-limen-scalers-robustscaler---init-- source=limen/scalers/robust_scaler.py region=signature:RobustScaler.__init__ role=signature -->
+```python
+def __init__(self, x_train: pl.DataFrame, quantile_range: tuple[float, float]=(0.25, 0.75)) -> None:
+    ...
+```
+
+Fit scaler on training data using median and interquartile range.
+
+**Args**
+
+x_train (pl.DataFrame): Training data
+
+quantile_range (tuple[float, float]): Lower and upper quantiles for IQR
+
+### `limen.scalers.RobustScaler.transform`
+
+<!-- reference: api-limen-scalers-robustscaler-transform source=limen/scalers/robust_scaler.py region=signature:RobustScaler.transform role=signature -->
+```python
+def transform(self, df: pl.DataFrame) -> pl.DataFrame:
+    ...
+```
+
+Apply robust scaling: (x - median) / IQR.
+
+**Args**
+
+df (pl.DataFrame): Data to transform
+
+**Returns**
+
+pl.DataFrame: Transformed data
+

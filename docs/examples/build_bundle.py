@@ -54,7 +54,7 @@ def build(root: Path, output: Path) -> str:
         for path in (root / f'docs/examples/{interface}-research').rglob('*'):
             if path.is_file() and path.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
                 entries[f'{interface}-research/{path.relative_to(root / f"docs/examples/{interface}-research")}'] = path.read_bytes()
-    for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json'):
+    for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json', 'acquire.sh'):
         entries[name] = (root / 'docs/examples' / name).read_bytes()
     for path in (root / 'docs/examples/retained').glob('*.json'):
         entries['retained/' + path.name] = path.read_bytes()

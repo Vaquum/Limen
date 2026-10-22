@@ -60,7 +60,7 @@ def calibration(data_dir, output):
             if any(point.prediction not in (0, 1) for point in tape):
                 raise ValueError('Classifier inference must provide a binary decision for every assessment row')
             modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
-    return {'modes': modes, 'validation_reused': True}
+    return {'modes': modes, 'decisions': [{key: mode[key] for key in ('calibrated', 'tuned', 'threshold', 'inference_rows', 'positive_predictions')} for mode in modes], 'validation_reused': True}
 ```
 
 ### Compiled Research
