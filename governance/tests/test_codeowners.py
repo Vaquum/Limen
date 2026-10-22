@@ -31,7 +31,7 @@ ENFORCEMENT_PATHS = frozenset({
     # and release invariants, so loosening it is an enforcement change.
     '/tests/test_packaging_surface.py',
 })
-EXPECTED_OWNERS = frozenset({'@mikkokotila', '@pdey', '@bit-mis', '@zero-bang'})
+EXPECTED_OWNERS = frozenset({'@mikkokotila', '@pdey', '@bit-mis'})
 
 
 def _rule_lines() -> list[list[str]]:

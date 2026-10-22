@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+The measure is if the merge button is green or not. Never stand down before the merge button is green.
+
 The repository law, operating discipline, and code stance — the single canonical constitution for every contributor, human or agent.
 
 ## Motivation
@@ -76,6 +78,8 @@ Each push re-runs every gate. Prefer new commits to amends — amends don't give
 
 Merge unlocks when every required gate is green. Branches need not be up-to-date with `main`; rebase only to resolve a conflict or to pick up a main-side fix the PR needs.
 
+Reviews are triggered automatically by changes, and once the PR comes ready it will be auto-merged through triggers. The responsibility of the author is to never drop the ball before the merge button is green: watch every gate, answer every review comment, and keep pushing until the button is green.
+
 When a gate fails, the gate's own output names the reason. Read the output, fix the code or the linked issue, push again. If the failure is the gate being wrong rather than the PR being wrong, fix the gate in its own PR — the ruleset drift gate (`pr_checks_ruleset`) will force the matching ruleset-snapshot update so no gate relaxation side-enters.
 
 ## Beyond the laws
@@ -121,3 +125,5 @@ For the most part, PRs become too big, and very rarely too small, so optimize to
 If a commit was made, show the hash.
 If a review was left, share the link. 
 If a PR was made, share the link.
+
+The measure is if the merge button is green or not. Never stand down before the merge button is green.

@@ -8,9 +8,9 @@
 # would make that owner a required approver for every PR, not just the
 # enforcement surfaces. Ordinary PRs keep the plain one-approval rule.
 
-/governance/ @mikkokotila @pdey @bit-mis @zero-bang
-/.github/ @mikkokotila @pdey @bit-mis @zero-bang
-/governance.yml @mikkokotila @pdey @bit-mis @zero-bang
-/pyproject.toml @mikkokotila @pdey @bit-mis @zero-bang
-/requirements/ @mikkokotila @pdey @bit-mis @zero-bang
-/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis @zero-bang
+/governance/ @mikkokotila @pdey @bit-mis
+/.github/ @mikkokotila @pdey @bit-mis
+/governance.yml @mikkokotila @pdey @bit-mis
+/pyproject.toml @mikkokotila @pdey @bit-mis
+/requirements/ @mikkokotila @pdey @bit-mis
+/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis
