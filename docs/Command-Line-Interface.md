@@ -48,6 +48,8 @@ The project script preserves its source YAML and uses a local Git remote. Runtim
 
 A multi-file run stops after a signalled interruption and retains the current experiment's checkpoint; later YAML files are not launched.
 
+Fresh runs check for existing run artifacts before copying their YAML declaration. Use `--resume` when the saved recording policy permits recovery, or choose a new output path. A directory containing only an old YAML copy still accepts a fresh run; an existing file at the declaration's copy destination is replaced.
+
 ## Sensor and Cohort assessment
 
 `limen assess YAML --results DIRECTORY` requires the exact declaration retained in that directory. A guarded assessment also requires the supplied reservation to contain the YAML-declared final window. Its `assessment` block names an explicit validation metric, direction and member count. Optional fold numbers select qualified recorded folds. The command reconstructs and validates each selected Sensor, binds the Cohort and writes `assessment.json`. `predict: true` additionally writes `predictions.parquet` with decision timestamps, unavailable reasons and optional native availability values.

@@ -1007,6 +1007,9 @@ class UniversalExperimentLoop:
             )
 
 
+    check_fresh_directory = _guard_stale_artifacts
+
+
     def _initialize_fresh(self,
                           checkpoint_dir: Path,
                           checkpoint_manager: CheckpointManager) -> Path:
