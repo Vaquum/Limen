@@ -4,6 +4,10 @@ A model can fit the past and still fail as a trading signal. The research questi
 
 These projects use recorded Bitcoin observations. Their results describe those observations and decisions; they do not establish future returns. The same research question does not require identical models or make unlike evaluation populations comparable.
 
+## Prerequisites
+
+Use Python 3.10–3.13 and the matching wheel and recorded project bundle. The acquisition steps below establish the environment and working directory for either interface.
+
 ## Acquire the project
 
 Choose the [Python project](examples/python-research/README.md#acquire-the-matching-project) or [Compiled project](examples/compiled-research/README.md#acquire-the-matching-project). Each begins with the same digest-verified bundle and wheel acquisition, environment and working directory. You can follow either path independently. This chapter uses the small selection run; later chapters develop its decisions through named variants.

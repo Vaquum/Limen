@@ -4,6 +4,10 @@ Selection freezes a research decision. Inference should use the behavior that de
 
 Continue with the evaluated objects returned by the [Python project](examples/python-research/README.md), or the completed result directory of the [Compiled project](examples/compiled-research/README.md). The handoff preserves different kinds of state.
 
+## Prerequisites
+
+Retain the completed research definition and its selection rule. Python needs the evaluated fitted objects; Compiled Research needs its original YAML and result directory. Calibration also needs the validation population it consumes.
+
 ## Python Research
 
 The project selects the best validation return separately for each momentum window, breaking ties by alpha. It retains every fitted pipeline and wraps the selected objects in `Sensor.from_model`; `Cohort.from_python` averages their compatible next-bar return forecasts. No fit is performed after selection. The complete [Python project](examples/python-research/README.md) returns that Cohort, its loop, selected parameters and retained objects in the same process.

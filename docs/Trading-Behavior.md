@@ -4,6 +4,10 @@ A forecast does not determine a return until entry, exit, exposure, prices and c
 
 The execution variants of the [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) use recorded hourly observations and a separately pinned funding history. Their ledgers state the actual policy and evaluated window.
 
+## Prerequisites
+
+Start with the selected predictions and their declared availability. Use the unchanged recorded bars and funding input for the execution variant; changing the product, capital or trading policy creates a different comparison.
+
 ## Python Research
 
 The base experiment trades the next bar from open to close. A positive forecast takes positive exposure, a negative forecast takes negative exposure, and each nonzero decision pays two basis points round trip. The returned value is the mean net return per evaluated observation:

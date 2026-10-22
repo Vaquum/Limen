@@ -4,6 +4,10 @@ A completed score is useful only while its parameters, observations and research
 
 Keep the saved definition and completed candidate identities from the [Python project](examples/python-research/README.md) or [Compiled project](examples/compiled-research/README.md). Decide which evidence later analysis will need before launching a larger search.
 
+## Prerequisites
+
+Keep the acquired project and its matching wheel. A persisted recovery run needs its original source, result directory and checkpoint together; the small Python selection CSV alone does not contain them.
+
 ## Python Research
 
 The small selection run writes a CSV and a summary. Its evaluated models remain in memory, returned by `run_research`; the CSV does not restore them. Read the completed frame when choosing candidates:
