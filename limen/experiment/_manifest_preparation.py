@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Protocol, TypeVar, cast
 import polars as pl
 
-from limen.data import HistoricalData
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, prepare_trade_context, source_interval, validate_cached_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data
@@ -26,6 +25,7 @@ def admit_native_date_ends(manifest: Manifest) -> None:
     dates = manifest.split_dates
     if dates is None:
         return
+    from limen.data import HistoricalData
     for source_name, source in (('data_source', manifest.data_source_config),
                                 ('test_data_source', manifest.test_data_source_config)):
         if source is None or getattr(source.method, '__func__', source.method) is not HistoricalData.get_spot_klines:
@@ -42,10 +42,7 @@ def admit_native_date_ends(manifest: Manifest) -> None:
             elapsed = stamp.astimezone(timezone.utc) - datetime(1970, 1, 1, tzinfo=timezone.utc)
             end_ns = ((elapsed.days * 86400 + elapsed.seconds) * 1_000_000 + elapsed.microseconds) * 1000
             if end_ns % (interval * 1_000_000_000):
-                raise ValueError(
-                    f'Manifest {source_name} {name}={end!r} must align to the UTC Unix-epoch grid '
-                    f'for get_spot_klines kline_size={interval} seconds'
-                )
+                raise ValueError(f'Manifest {source_name} {name}={end!r} must align to the UTC Unix-epoch grid for get_spot_klines kline_size={interval} seconds')
 
 
 class RulePreparation(Protocol):
