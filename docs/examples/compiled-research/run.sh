@@ -54,6 +54,12 @@ limen run --no-progress-bar \
   compiled-research/factorized.yaml \
   compiled-research/adaptive.yaml
 # endregion search
+# region recording
+limen run --no-progress-bar \
+  compiled-research/recording_lean.yaml \
+  compiled-research/recording_full.yaml \
+  compiled-research/recording_outputs.yaml
+# endregion recording
 # region recovery
 limen run --no-progress-bar compiled-research/recovery.yaml
 limen run --no-progress-bar --resume results/dev/compiled-recovery

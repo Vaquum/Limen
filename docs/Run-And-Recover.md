@@ -39,6 +39,16 @@ The script demonstrates a completed-run resume. The project's interruption test 
 
 `results.csv` identifies completed rounds; `metadata.json` preserves their declaration. `round_data.jsonl.gz` carries round parameters and opted-in evidence. Predictions, alignment, trade ledgers and fold details are separate recording choices. A missing payload is an unavailable analysis or reconstruction boundary, not something a later reader can infer from a score.
 
+The `recording_lean.yaml`, `recording_full.yaml` and `recording_outputs.yaml` variants run identical candidates with different payload choices. The proof compares their recorded scores exactly, checks which row arrays are present, and decodes stored probabilities and execution tracks. Lean output cannot answer a row-level question by inferring missing arrays from a summary score.
+
+<!-- example: retention-compiled-recording source=docs/examples/compiled-research/run.sh region=recording scenario=search interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar \
+  compiled-research/recording_lean.yaml \
+  compiled-research/recording_full.yaml \
+  compiled-research/recording_outputs.yaml
+```
+
 The [recording reference](Universal-Experiment-Loop.md#recording-policy) defines those switches and output schemas. [Log](Log.md) distinguishes captured aggregates from row-level evidence; parameter importance needs at least twenty distinct configurations, which the introductory selection runs do not supply. Use a larger declared analysis campaign for that question.
 
 ## Continue the same question

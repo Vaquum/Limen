@@ -13,7 +13,7 @@ from scenario_oracles import execution_clocks, verify_acceptance
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-analysis', *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-analysis', *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
@@ -184,6 +184,25 @@ def verify_project(project):
                 'artifacts': {name: hashlib.sha256((analysis_dir / name).read_bytes()).hexdigest() for name in ('trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
     verify_acceptance(analysis, analysis_dir, project / 'inputs')
     summaries['search']['analysis'] = analysis['report']
+    recording = {}
+    recording_metrics = []
+    from limen.experiment._round_storage import open_text
+    for mode in ('lean', 'full', 'outputs'):
+        location = base / ('compiled-recording-' + mode)
+        log = checked_log(location, 2)
+        recording_metrics.append(dict(zip(log['id'], log['val_backtest_total_return'], strict=True)))
+        with open_text(location / 'round_data.jsonl.gz') as stream:
+            decoded = [json.loads(line) for line in stream]
+        assert len(decoded) == 2
+        for row in decoded:
+            assert ('preds' in row) == (mode != 'lean')
+            assert ('missing_datetimes' in row['alignment']) == (mode != 'lean')
+            assert ('execution' in row) == ('market' in row) == (mode == 'outputs')
+            if mode == 'outputs':
+                assert row['probs'] and len(row['probs']) == len(row['preds'])
+        recording[mode] = {'rounds': log.height, 'payloads': sorted(decoded[0])}
+    assert recording_metrics[0] == recording_metrics[1] == recording_metrics[2]
+    summaries['search']['recording'] = recording
     helper_counts = {}
     for case in ('helper_indicators', 'helper_features', 'helper_regimes', 'helper_scalers', 'conditional_features'):
         from ruamel.yaml import YAML
