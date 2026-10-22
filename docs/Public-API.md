@@ -63,7 +63,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.Manifest.set_required_bar_columns`](Experiment-Manifest.md#set_required_bar_columnscolumns) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.Manifest.set_split_config`](Experiment-Manifest.md#set_split_configtrain-val-test) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.Manifest.set_split_dates`](Experiment-Manifest.md#set_split_datestrain_start-train_end-val_start-val_end-test_start-test_end--val_predict_guardtrue-test_predict_guardtrue) | `signature` | `limen/experiment/manifest_core.py` |
-| [`limen.Manifest.set_split_walk_forward`](Experiment-Manifest.md#endregion-declaration) | `signature` | `limen/experiment/manifest_core.py` |
+| [`limen.Manifest.set_split_walk_forward`](Experiment-Manifest.md#walk-forward-sweeps) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.Manifest.set_test_data_source`](Experiment-Manifest.md#set_test_data_sourcemethod-paramsnone) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.Manifest.with_allocation`](Public-API.md#limenmanifestwith_allocation) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.Manifest.with_params_override`](Perturbation-Strategies.md#manifest-override) | `signature` | `limen/experiment/manifest_core.py` |
@@ -244,7 +244,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.experiment.Manifest.set_required_bar_columns`](Experiment-Manifest.md#set_required_bar_columnscolumns) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.Manifest.set_split_config`](Experiment-Manifest.md#set_split_configtrain-val-test) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.Manifest.set_split_dates`](Experiment-Manifest.md#set_split_datestrain_start-train_end-val_start-val_end-test_start-test_end--val_predict_guardtrue-test_predict_guardtrue) | `signature` | `limen/experiment/manifest_core.py` |
-| [`limen.experiment.Manifest.set_split_walk_forward`](Experiment-Manifest.md#endregion-declaration) | `signature` | `limen/experiment/manifest_core.py` |
+| [`limen.experiment.Manifest.set_split_walk_forward`](Experiment-Manifest.md#walk-forward-sweeps) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.Manifest.set_test_data_source`](Experiment-Manifest.md#set_test_data_sourcemethod-paramsnone) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.Manifest.with_allocation`](Public-API.md#limenmanifestwith_allocation) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.Manifest.with_params_override`](Perturbation-Strategies.md#manifest-override) | `signature` | `limen/experiment/manifest_core.py` |

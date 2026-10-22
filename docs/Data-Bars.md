@@ -88,7 +88,7 @@ def bars(data_dir, output):
             threshold = int(threshold)
         formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})
         formed.write_parquet(output / (kind + '.parquet'))
-        results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1]})
+        results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1], 'first_start': formed['datetime'][0].isoformat(), 'last_start': formed['datetime'][-1].isoformat(), 'last_available': (raw['datetime'][int(formed['bar_count'].sum()) - 1] + timedelta(hours=1)).isoformat()})
     return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output)}
 ```
 
@@ -136,16 +136,12 @@ This keeps train-only fitting and test-only evaluation aligned with the actual p
 
 ## Inspect the completed bars
 
-The Python diagnostic reports each threshold and the number of source rows admitted into completed bars. Its incomplete tail remains excluded. The Compiled result identifies the three modes executed by the YAML campaign; its assessment population follows its own split declaration.
+The Python diagnostic reports each threshold and the number of source rows admitted into completed bars. Its incomplete tail remains excluded. The Compiled table counts completed bars inside each declared split, before ROC warm-up and the forward label remove one row at either end. The proof checks those model rows against the saved prediction alignment. `last_available` is the end of the final source interval consumed by a completed bar; `datetime` alone is its start, not its availability.
 
-<!-- result: bars-python-population interface=python scenario=bars fields=formed[].kind,formed[].threshold,formed[].rows,formed[].source_rows_in_complete_bars -->
+<!-- result: bars-python-population interface=python scenario=bars fields=formed[].kind,formed[].threshold,formed[].rows,formed[].source_rows_in_complete_bars,formed[].first_start,formed[].last_start,formed[].last_available -->
 
-<!-- result: bars-compiled-modes interface=compiled scenario=bars fields=modes -->
+<!-- result: bars-compiled-modes interface=compiled scenario=bars fields=populations[].kind,populations[].split,populations[].source_rows,populations[].completed_bars,populations[].omitted_tail_rows,populations[].first_start,populations[].last_start,populations[].last_available -->
 
 ## Read next
-
-- Continue to [Single-File Decoder](Single-File-Decoder.md) for experiment packaging.
-- Continue to [Experiment Manifest](Experiment-Manifest.md) for the full declarative pipeline that bar formation plugs into.
-- Continue to [Universal Experiment Loop](Universal-Experiment-Loop.md) to run the resulting experiment.
 
 Continue to [define the experiment](Compiled-Research.md); helper details remain in the [bar reference](../limen/data/bars/README.md).

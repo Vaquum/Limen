@@ -3,6 +3,7 @@ import hashlib
 import json
 import signal
 from dataclasses import replace
+from datetime import timedelta
 from types import SimpleNamespace
 from zipfile import ZipFile
 
@@ -383,7 +384,7 @@ def bars(data_dir, output):
             threshold = int(threshold)
         formed = compute_data_bars(raw, bar_type=kind, **{parameter: threshold})
         formed.write_parquet(output / (kind + '.parquet'))
-        results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1]})
+        results.append({'kind': kind, 'threshold': threshold, 'rows': formed.height, 'source_rows_in_complete_bars': int(formed['bar_count'].sum()), 'volume': float(formed['volume'].sum()), 'first_open': formed['open'][0], 'last_close': formed['close'][-1], 'first_start': formed['datetime'][0].isoformat(), 'last_start': formed['datetime'][-1].isoformat(), 'last_available': (raw['datetime'][int(formed['bar_count'].sum()) - 1] + timedelta(hours=1)).isoformat()})
     return {'source_rows': raw.height, 'formed': results, 'incomplete_tail': 'omitted; do not treat it as a completed bar', 'trade_profile': trade_profile(data_dir, output)}
 # endregion bars
 

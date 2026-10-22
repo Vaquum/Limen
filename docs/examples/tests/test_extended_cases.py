@@ -46,14 +46,14 @@ def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     from click.testing import CliRunner
     from limen.cli.main import cli
     from conftest import ROOT
-    from cli_proof import verify_extended_campaigns
+    from cli_proof import verify_bars, verify_extended_campaigns
     archive = tmp_path / 'inputs.tar.gz'
     build(ROOT, archive)
     project = tmp_path / 'project'
     with tarfile.open(archive) as bundle:
         bundle.extractall(project, filter='data')
     monkeypatch.chdir(project)
-    names = ['analysis', 'parallel', 'rule_contracts', 'calibration_isotonic', *['reducer_' + name for name in ('sanity', 'saturation', 'focus', 'correlation')],
+    names = ['bars', 'analysis', 'parallel', 'rule_contracts', 'calibration_isotonic', *['reducer_' + name for name in ('sanity', 'saturation', 'focus', 'correlation')],
              *['recording_' + name for name in ('lean', 'full', 'outputs')],
              *['source_' + name for name in ('csv', 'zip', 'arrow')]]
     result = CliRunner().invoke(cli, ['run', '--no-progress-bar', *['compiled-research/' + name + '.yaml' for name in names]])
@@ -65,5 +65,6 @@ def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     assessed = CliRunner().invoke(cli, ['assess', 'compiled-research/calibration_isotonic.yaml', '--results', 'results/dev/compiled-calibration-isotonic'])
     print(assessed.output)
     assert assessed.exit_code == 0, assessed.exception
+    assert len(verify_bars(project)['populations']) == 9
     summary = verify_extended_campaigns(project)
     assert summary['analysis']['n_trials'] == 20

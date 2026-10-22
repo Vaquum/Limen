@@ -203,7 +203,7 @@ test('reference lookup uses API names while the page keeps its narrative title',
   await trainer.click();
   await expect(page.getByRole('heading',{level:1})).toHaveText('Carry selected behavior into inference');
   const phone=test.info().project.name==='phone';
-  if(phone)await page.locator('.mobile-nav summary').click();
+  if(phone)await page.locator('.mobile-nav > summary').click();
   const navigation=page.locator(phone?'.mobile-nav':'.chapter-nav');
   await expect(navigation.getByRole('link',{name:'Log',exact:true})).toHaveAttribute('href','/limen/reference/log/');
   await expect(navigation.getByRole('link',{name:'Trainer and Sensor',exact:true})).toHaveAttribute('aria-current','page');
@@ -260,8 +260,8 @@ test('reading state is isolated by product identity',async({page})=>{
 test('without JavaScript both interfaces and proof links remain readable',async({browser})=>{
   const context=await browser.newContext({javaScriptEnabled:false,viewport:test.info().project.name==='phone'?{width:390,height:844}:{width:1440,height:1000}});
   const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
-  await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
-  if(test.info().project.name==='phone'){await page.locator('.mobile-nav summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
+  await expect(page.locator('figure.code')).toHaveCount(5);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
+  if(test.info().project.name==='phone'){await page.locator('.mobile-nav > summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
 });
 

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 import gzip
 import hashlib
@@ -95,6 +95,48 @@ def verify_execution(project, name):
                 assert payment['recognized_delta'] == pytest.approx(-quantity * rate * price, rel=1e-12, abs=1e-12)
             assert row['backtest_funding_pnl'] == pytest.approx(sum(payment['recognized_delta'] for payment in ledger['funding']))
     return {'rounds': log.height, 'risk_spans': log['risk_span'].to_list(), 'ledger_excerpt': records(directory)[0]['trade_ledger']['fills'][:8]}
+
+
+
+def verify_bars(project):
+    from limen.data.utils import compute_data_bars
+    directory = project / 'results/dev/compiled-bars'
+    log = checked_log(directory, 3)
+    assert set(log['bar_type']) == {'volume', 'trade', 'liquidity'}
+    raw = pl.read_parquet(project / 'inputs/spot_15m_20250101_20250531.parquet')
+    dates = json.loads((directory / 'metadata.json').read_text())['yaml_reference']['sfd']['manifest']['split_dates']
+    populations = []
+    for row, record in zip(log.iter_rows(named=True), records(directory), strict=True):
+        kind = row['bar_type']
+        column, parameter = {'volume': ('volume', 'volume_threshold'), 'trade': ('no_of_trades', 'trade_threshold'),
+                             'liquidity': ('liquidity_sum', 'liquidity_threshold')}[kind]
+        for split in ('train', 'val', 'test'):
+            start, stop = [datetime.fromisoformat(dates[split + suffix]).replace(tzinfo=raw['datetime'][0].tzinfo) for suffix in ('_start', '_end')]
+            source = raw.filter(pl.col('datetime').is_between(start, stop, closed='left'))
+            formed = compute_data_bars(source, bar_type=kind, **{parameter: row[parameter]})
+            bounds, first, accumulated = [], 0, 0.
+            for index, value in enumerate(source[column]):
+                accumulated += value
+                if accumulated >= row[parameter]:
+                    bounds.append((first, index + 1))
+                    first, accumulated = index + 1, 0.
+            assert formed.height == len(bounds) > 2
+            assert formed['bar_count'].to_list() == [end - begin for begin, end in bounds]
+            assert formed['datetime'].to_list() == [source['datetime'][begin] for begin, _ in bounds]
+            for bar, (begin, end) in zip(formed.iter_rows(named=True), bounds, strict=True):
+                part = source.slice(begin, end - begin)
+                assert bar['open'] == part['open'][0] and bar['close'] == part['close'][-1]
+                assert bar['high'] == part['high'].max() and bar['low'] == part['low'].min()
+                assert bar[column] == pytest.approx(part[column].sum(), rel=1e-12)
+            populations.append({'kind': kind, 'split': split, 'source_rows': source.height, 'completed_bars': formed.height,
+                                'omitted_tail_rows': source.height - bounds[-1][1], 'first_start': formed['datetime'][0].isoformat(),
+                                'last_start': formed['datetime'][-1].isoformat(),
+                                'last_available': (source['datetime'][bounds[-1][1] - 1] + timedelta(seconds=900)).isoformat()})
+            if split == 'test':
+                assert len(predictions(directory, record)) == formed.height - 2
+                assert datetime.fromisoformat(record['alignment']['first_test_datetime']) == formed['datetime'][1]
+                assert datetime.fromisoformat(record['alignment']['last_test_datetime']) == formed['datetime'][-2]
+    return {'modes': log['bar_type'].to_list(), 'populations': populations}
 
 
 def verify_allocation(project, name):
@@ -247,9 +289,7 @@ def verify_project(project):
         {'method': method, 'reconstructed_members': json.loads((base / directory / 'assessment.json').read_text())['members']}
         for method, directory in [('sigmoid', 'compiled-calibration-assessment'), ('isotonic', 'compiled-calibration-isotonic')]]
     summaries['execution'] = {name: verify_execution(project, name) for name in ('execution', 'funded')}
-    bars = checked_log(base / 'compiled-bars', 3)
-    assert set(bars['bar_type']) == {'volume', 'trade', 'liquidity'}
-    summaries['bars'] = {'modes': bars['bar_type'].to_list()}
+    summaries['bars'] = verify_bars(project)
     allocation = {name: verify_allocation(project, name) for name in ('allocation', 'allocation_ml', 'allocation_funded')}
     summaries['allocation'] = allocation
     original, restored = project / 'results/compiled-project', project / 'results/compiled-restored'
