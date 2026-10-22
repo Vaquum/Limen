@@ -236,6 +236,8 @@ sh compiled-research/run.sh
 | `final-event/holdout.yaml` | Reserve a separate project and assess one selected Sensor under its frozen event contract, with schema-2 ledger evidence. |
 | `project.sh` | Validate, profile, scaffold, commit, fork, index, execute, back up and restore a campaign using installed CLI commands and a local Git remote. |
 
+The full `run.sh` runs this independent project lifecycle alongside the research campaigns in its own `results/compiled-project/` directory. It waits for that process and fails if either path fails. Each research definition still runs through the same YAML and CLI commands.
+
 ## Source encodings
 
 The three `source_*.yaml` variants read the bundled CSV, ZIP and Arrow encodings of the first 1,440 recorded hourly observations. Their exact data and candidate results must agree; the source-format choice does not change the research population. [Historical data reference](../../Historical-Data-Reference.md#recorded-format-equivalence) gives their method/path declarations and output constraints.

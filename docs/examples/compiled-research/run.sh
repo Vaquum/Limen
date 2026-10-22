@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 # Run from the downloaded bundle root, with its matching Limen wheel installed.
+# The independent lifecycle owns results/compiled-project and its local backup.
+sh compiled-research/project.sh &
+lifecycle_pid=$!
+trap 'wait "$lifecycle_pid"' 0
 # region selection
 limen validate compiled-research/selection.yaml
 limen profile compiled-research/selection.yaml
@@ -114,5 +118,6 @@ sh compiled-research/final-event/run.sh
 # endregion holdout
 
 # region command_line
-sh compiled-research/project.sh
+wait "$lifecycle_pid"
+trap - 0
 # endregion command_line
