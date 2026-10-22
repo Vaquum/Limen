@@ -922,12 +922,9 @@ class UniversalExperimentLoop:
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
-        string_params = {key: pl.String for key, values in domain.params.items() if self._factorize and all(isinstance(value, str) for value in values)}
-        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean, **string_params})
+        experiment_log, expected = _serial.restore_log(csv_path, round_data_path, start_round, domain.params, context_params, factorize=self._factorize)
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
             raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
-        expected = _storage.csv_prefix(round_data_path, start_round)
-        experiment_log = _serial.restore_log(experiment_log, round_data_path, expected, domain.params, context_params, factorize=self._factorize)
         if self._walk_forward is not None:
             if experiment_log.height != start_round:
                 raise ValueError('Cannot resume split_walk_forward without every completed trial result')
