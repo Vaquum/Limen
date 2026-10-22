@@ -225,3 +225,12 @@ def test_every_cli_argument_option_default_and_type_matches_current_source():
             assert all('`' + spelling + '`' in text for spelling in entry['spellings'])
     workers = next(item for item in cli_contracts()['limen run'] if item['name'] == 'workers')
     assert workers['default'] is None and workers['type']['min'] == 1
+
+
+def test_yaml_inventory_includes_conditional_leaves_and_nested_contracts():
+    from schema_contracts import inventory, validate
+    validate(ROOT)
+    current = inventory(ROOT)
+    assert any(rule['path'] == 'sfd.manifest' and 'allocation' in rule.get('known', []) for rule in current['rules'])
+    assert {rule['when'] for rule in current['rules']} >= {'always', 'sfd.manifest.type = ml', 'sfd.manifest.type = rule_based'}
+    assert set(current['nested']['sfd.manifest.split_walk_forward']['fields']) == {'n_folds', 'test_bars', 'purge_bars', 'embargo_bars', 'anchored'}

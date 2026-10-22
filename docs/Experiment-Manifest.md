@@ -1362,3 +1362,76 @@ See [Reserve final observations](Final-Holdout.md) for project research exclusio
 ### Fold promotion evidence
 
 With `uel.recording.fold_details: true`, walk-forward campaigns retain versioned original-source, selected-source and raw/retained partition witnesses for validated native inference. Serial and parallel origins share the same trial/fold evidence. Default lean recording is unchanged. See [Trainer](Trainer.md#recorded-walk-forward-folds) for the reconstruction and clock contract, and [Cohort](Cohort.md#recorded-walk-forward-members) for explicit binary fold composition.
+
+## Admitted YAML paths
+
+The index follows the current validator, including its conditional rules. `Required` means presence and the listed type are checked when the condition holds. `NoUnknownKeys` lists admitted children and the actual warning/error severity; it does not imply that every child is mandatory. Open `params` mappings follow the referenced callable’s argument contract. The detailed sections above define units, defaults, timing, compatibility and returned artifacts.
+
+| Path | Rule | Condition | Contract |
+| --- | --- | --- | --- |
+| `schema_version` | Required | `always` | {"type": "str"} |
+| `metadata` | Required | `always` | {"type": "dict"} |
+| `sfd` | Required | `always` | {"type": "dict"} |
+| `uel` | Required | `always` | {"type": "dict"} |
+| `metadata.name` | Required | `always` | {"type": "str"} |
+| `metadata.mode` | Required | `always` | {"type": "str"} |
+| `metadata.mode` | OneOf | `always` | {"choices": ["development", "production"]} |
+| `metadata` | NoUnknownKeys | `always` | {"known": ["author", "created_at", "description", "limen_version", "mode", "name", "tags"], "severity": "warning"} |
+| `sfd.manifest` | Required | `always` | {"type": "dict"} |
+| `sfd.params` | Required | `always` | {"type": "dict"} |
+| `sfd.manifest.type` | Required | `always` | {"type": "str"} |
+| `sfd.manifest.type` | OneOf | `always` | {"choices": ["ml", "rule_based"]} |
+| `sfd.manifest.data_source` | NoUnknownKeys | `always` | {"known": ["method", "params"], "severity": "warning"} |
+| `sfd.manifest.split_dates` | NoUnknownKeys | `always` | {"known": ["test_end", "test_predict_guard", "test_start", "train_end", "train_start", "val_end", "val_predict_guard", "val_start"], "severity": "error"} |
+| `sfd.manifest.reference_architecture` | Required | `always` | {"type": "str"} |
+| `sfd.manifest.reference_architecture` | Resolvable | `always` | {} |
+| `sfd.manifest.backtest` | NoUnknownKeys | `always` | {"known": ["barrier_features", "execution_data_source", "execution_lag_seconds", "fee_bps", "flat_threshold", "funding", "initial_equity", "max_exposure", "max_holding_seconds", "max_price_gap_seconds", "notional_rate", "prediction_mode", "product", "signal_change_bps", "slip_bps", "source_interval_seconds", "source_timestamp_role", "stop_loss_bps", "stop_loss_bps_column", "take_profit_bps", "take_profit_bps_column", "timer_interval_seconds", "timer_phase_utc_seconds"], "severity": "error"} |
+| `sfd.manifest.target` | Required | `sfd.manifest.type = ml` | {"type": "dict"} |
+| `sfd.manifest.target.name` | Required | `sfd.manifest.type = ml` | {"type": "str"} |
+| `sfd.manifest.target.class` | Required | `sfd.manifest.type = ml` | {"type": "str"} |
+| `sfd.manifest.target.class` | Resolvable | `sfd.manifest.type = ml` | {} |
+| `sfd.manifest.target` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["class", "fit_params", "name", "transform_params"], "severity": "error"} |
+| `sfd.manifest.indicators` | FuncList | `sfd.manifest.type = ml` | {} |
+| `sfd.manifest.features` | FuncList | `sfd.manifest.type = ml` | {} |
+| `sfd.manifest.pre_split_data_selector` | SingleFuncBlock | `sfd.manifest.type = ml` | {} |
+| `sfd.manifest.bar_formation` | SingleFuncBlock | `sfd.manifest.type = ml` | {} |
+| `sfd.manifest.data_dict_extension` | SingleFuncBlock | `sfd.manifest.type = ml` | {} |
+| `sfd.manifest.data_dict_extension` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["func"], "severity": "error"} |
+| `sfd.manifest.scaler` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["class", "from_params"], "severity": "warning"} |
+| `sfd.manifest.feature_ablation` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["drop_count_key", "seed_key"], "severity": "warning"} |
+| `sfd.manifest.feature_ablation` | ParamKeyFields | `sfd.manifest.type = ml` | {"fields": ["drop_count_key", "seed_key"]} |
+| `sfd.manifest.pca_compression` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["component_prefix", "enabled_param", "n_components_param", "scaler_param_name"], "severity": "error"} |
+| `sfd.manifest.pca_compression` | ParamKeyFields | `sfd.manifest.type = ml` | {"fields": ["component_prefix", "enabled_param", "n_components_param", "scaler_param_name"]} |
+| `sfd.manifest.calibration` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["probability_calibration", "threshold_function"], "severity": "warning"} |
+| `sfd.manifest.calibration.probability_calibration` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["func", "params"], "severity": "warning"} |
+| `sfd.manifest.calibration.threshold_function` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["func", "params"], "severity": "warning"} |
+| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = ml` | {"known": ["acceptance", "allocation", "backtest", "bar_formation", "calibration", "data_dict_extension", "data_source", "decoder_lookback", "feature_ablation", "feature_shims", "features", "indicators", "metrics_params", "objective", "params_override", "pca_compression", "pre_split_data_selector", "reference_architecture", "required_columns", "scaler", "split_dates", "split_walk_forward", "strict_mode", "target", "type"], "severity": "warning"} |
+| `sfd.manifest.strategy` | Required | `sfd.manifest.type = rule_based` | {"type": "dict"} |
+| `sfd.manifest.strategy.conditions` | Required | `sfd.manifest.type = rule_based` | {"type": "list"} |
+| `sfd.manifest.strategy.entry` | Required | `sfd.manifest.type = rule_based` | {"type": "str"} |
+| `sfd.manifest.indicators` | FuncList | `sfd.manifest.type = rule_based` | {} |
+| `sfd.manifest.strategy` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["conditions", "entry"], "severity": "warning"} |
+| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
+| `uel.n_permutations` | Required | `always` | {"type": "int"} |
+| `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
+| `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |
+| `uel.output_format` | OneOf | `always` | {"choices": ["csv", "parquet"]} |
+| `uel` | NoUnknownKeys | `always` | {"known": ["checkpoint_interval", "factorize", "feedback_interval", "intra_callback", "n_permutations", "output_format", "output_path", "prep_each_round", "pruning_strategies", "record_execution", "record_model_outputs", "recording", "search_strategy", "workers"], "severity": "warning"} |
+
+### Nested contracts
+
+These parsers impose additional conditions beyond the field lists. Their source identities are retained in `yaml-contracts.json` and checked when the package changes. This index does not admit the unsupported `split_config` field.
+
+| Root | Fields or contract | Authority |
+| --- | --- | --- |
+| `sfd.manifest.split_walk_forward` | `n_folds`: `int`, required; `test_bars`: `int`, required; `purge_bars`: `int`, required; `embargo_bars`: `int`, required; `anchored`: `bool`, required | [WalkForwardConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_walk_forward_split.py) |
+| `sfd.manifest.backtest.product` | `kind`: `Literal['cash_spot', 'linear_perpetual']`, required; `instrument`: `str`, required; `base_currency`: `str`, required; `quote_currency`: `str`, required; `quantity_step`: `float \| str`, required; `min_notional`: `float \| str`, required; `initial_margin_fraction`: `float \| str`, default `1.0`; `maintenance_margin_fraction`: `float \| str`, default `0.0` | [ProductConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
+| `sfd.manifest.backtest.funding` | `adapter`: `FundingAdapter`, default `funding_adapter`; `adapter_version`: `str`, default `ADAPTER_VERSION`; `preset`: `str \| None`, default `None`; `params`: `dict[str, object]`, default `field(default_factory=dict[str, object])`; `data_source`: `SourceConfig \| None`, default `None` | [FundingConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
+| `sfd.manifest.allocation` | `method`: `Callable[..., dict[str, object]]`, required; `params`: `Mapping[str, object]`, required | [AllocationConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_allocation.py) |
+| `sfd.manifest.feature_shims[]` | `columns`, `d`, `method`, `reference`, `significance_level`, `threshold` | [_FIELDS](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_column_shims.py) |
+| `sfd.manifest.objective` | Conditional validation in `_read_objective`; see its subject section above. | [_read_objective](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_objective_spec.py) |
+| `sfd.manifest.acceptance` | Conditional validation in `read_acceptance`; see its subject section above. | [read_acceptance](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_acceptance_settings.py) |
+| `sfd.manifest.strategy.conditions[]` | Conditional validation in `ConditionsList`; see its subject section above. | [ConditionsList](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
+| `uel.recording` | Conditional validation in `parse_recording`; see its subject section above. | [parse_recording](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_recording.py) |
+| `assessment` | Conditional validation in `assessment_spec`; see its subject section above. | [assessment_spec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_assessment_spec.py) |
+| `holdout` | Conditional validation in `holdout_spec`; see its subject section above. | [holdout_spec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_assessment_spec.py) |

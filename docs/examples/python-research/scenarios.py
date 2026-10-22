@@ -30,6 +30,7 @@ from cost_research import run_cost_experiment
 from helper_cases import preparation_helpers
 from target_cases import label_diagnostics
 from analysis_cases import analyze_candidates
+from inference_cases import compose_selected
 from limen.backtest.observed_costs import CostCalibration
 
 INPUTS = {
@@ -295,7 +296,8 @@ def infer_classifier(history, state, params):
     prepared = project.prepare_live(history, params)
     valid = prepared['momentum'].is_not_null().to_numpy()
     probabilities = np.full(prepared.height, np.nan)
-    probabilities[valid] = state.model.predict_proba(prepared.filter(pl.col('momentum').is_not_null()).select('momentum'))[:, 1]
+    if valid.any():
+        probabilities[valid] = state.model.predict_proba(prepared.filter(pl.col('momentum').is_not_null()).select('momentum'))[:, 1]
     metadata = prepared.select('datetime', 'available_at_ns').with_columns(pl.when(pl.Series(valid)).then(None).otherwise(pl.lit('warm-up')).alias('reason'))
     return metadata, [(int(value >= state.threshold), float(value)) if np.isfinite(value) else (None, None) for value in probabilities]
 
@@ -306,7 +308,7 @@ def calibration(data_dir, output):
     params = {'window': 4, 'alpha': .1}
     train, validation = project.prep(bars, params).values()
     model = make_pipeline(StandardScaler(), LogisticRegression(C=1, random_state=42)).fit(train.select('momentum'), train['next_return'].to_numpy() > 0)
-    modes = []
+    modes, sensors = [], []
     for calibrate in (False, True):
         fitted = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method='sigmoid') if calibrate else model
         probabilities = fitted.predict_proba(validation.select('momentum'))[:, 1]
@@ -314,12 +316,13 @@ def calibration(data_dir, output):
             threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric) if tune else (.5, None)
             state = SimpleNamespace(model=fitted, threshold=threshold)
             sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows, state_id=f'sigmoid={calibrate};threshold={tune}', fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+            sensors.append(sensor)
             cohort = Cohort.from_python([sensor], aggregate='vote')
             tape = cohort.predict_all(bars[1428:1920])[12:]
             if any(point.prediction not in (0, 1) for point in tape):
                 raise ValueError('Classifier inference must provide a binary decision for every assessment row')
             modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
-    return {'modes': modes, 'decisions': [{key: mode[key] for key in ('calibrated', 'tuned', 'threshold', 'inference_rows', 'positive_predictions')} for mode in modes], 'validation_reused': True}
+    return {'modes': modes, 'decisions': [{key: mode[key] for key in ('calibrated', 'tuned', 'threshold', 'inference_rows', 'positive_predictions')} for mode in modes], 'validation_reused': True, 'composition': compose_selected(sensors, bars)}
 # endregion calibration
 
 

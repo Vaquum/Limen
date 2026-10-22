@@ -1,6 +1,6 @@
 # Carry selected behavior into inference
 
-A Sensor makes fitted behavior available for later decisions. The [Python project](examples/python-research/README.md) wraps its retained evaluated models directly. The [Compiled project](examples/compiled-research/README.md) reconstructs selected recorded rounds through Trainer. These paths preserve different kinds of identity and evidence; Compiled Research uses YAML declarations and CLI commands.
+A Sensor makes fitted behavior available for later decisions. The [Python project](examples/python-research/README.md) wraps its retained evaluated models directly. The [Compiled project](examples/compiled-research/README.md) uses `limen assess` to reconstruct selected recorded rounds. Trainer performs that reconstruction inside the command. These paths preserve different kinds of identity and evidence; Compiled Research uses YAML declarations and CLI commands.
 For [direction/sizing models](Reference-Architecture.md#direction-and-sizing), reconstruction checks frozen execution and learning identities before metric tolerance. Sensor retains signed size and actual decision availability. Altered source, factory, seed or execution assumptions require a new experiment.
 
 `Trainer` is Limen's reconstruction layer for finished experiment rounds. It takes a completed saved YAML experiment directory, reconstructs the manifest and round parameters, replays selected permutations, validates their metrics, and wraps the replayed models in reusable `Sensor` objects.
@@ -42,7 +42,7 @@ limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 In this workflow:
 
 - `Trainer` reconstructs the manifest and round metadata
-- `trainer.train(top_ids)` replays and validates the selected rounds
+- the command replays and validates the selected rounds
 - each returned `Sensor` wraps one trained `ReferenceModel`
 
 ## Selected rule rounds
@@ -58,6 +58,10 @@ Rule research preparation computes features and any optional programmatic evalua
 Optional targets belong to the native programmatic rule API; rule YAML does not install them. A predicate requiring a label created only by the target raises a missing-column error during direct preparation; Sensor returns `sensor-error`. Research remains label-filtered, so an interior label gap can change temporal predicate values at shared timestamps compared with feature-valid live history. Same-window value parity does not cover those gaps. Target-side column drops or mutations are not replayed live; use declared [target-source exclusions](Targets.md#writing-a-custom-target-class).
 
 Supply the same raw split or window when comparing research and inference. Rolling predicates, persistence, recency, feature warm-up and stateful common strategies depend on that window. No hidden history is fetched. Arbitrary SQL may use whole-window aggregates or future rows; replay and same-window agreement do not certify append-only causality. The caller owns causal feature and rule definitions. Historical guards and trade-policy availability/digests retain their existing meaning.
+
+## Optional reconstruction component API
+
+The following internal sequence and callable contracts support component integration and inspection. Compiled Research continues through YAML and `limen assess`; it does not require constructing a Trainer in Python.
 
 ## Why Trainer Exists
 

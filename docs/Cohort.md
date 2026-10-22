@@ -89,14 +89,22 @@ required history context when trimming completed prefixes.
 | Exceptions | Existing catch-and-degrade policy | Callback errors propagate; unalignable compiled failures raise |
 | Identity | Bound artifact lineage | Caller-owned live state, no compiled identity |
 
-## Compiled cohorts
+## Compiled Research through the CLI
 
-The remaining construction, selector, binding and aggregation sections describe
-the artifact-backed path. New runs use compressed round artifacts; existing
-JSONL runs remain readable. See the [round storage format](Universal-Experiment-Loop.md#round-storage-format).
-`Cohort` reconstructs no models itself: select rounds and bind Sensors returned
-by Trainer. Compiled `set_members` rejects Python-origin Sensors with advice to
-use `Cohort.from_python`.
+Declare validation ranking, selected count and prediction in YAML. `limen assess` reconstructs the selected Sensors, binds their Cohort and writes `assessment.json` and `predictions.parquet`. The complete Compiled project performs this handoff with the CLI:
+
+<!-- example: cohort-compiled-assessment source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
+```
+
+## Optional artifact-backed component API
+
+The construction, selectors and binding APIs below are for Python integration with native artifacts. They are outside the YAML/CLI authoring track. The current YAML `assessment` supports validation metric, direction, selected count, fold selection and prediction source; it does not expose arbitrary multi-source selectors or custom aggregation callbacks. New runs write compressed round records; existing JSONL remains readable. See [round storage](Universal-Experiment-Loop.md#round-storage-format).
 
 ## What this page covers
 
@@ -121,9 +129,9 @@ Read these pages first:
 - [Command-Line Interface](Command-Line-Interface.md)
 - [Trainer](Trainer.md)
 
-## Where Cohort fits in the pipeline
+## Native integration sequence
 
-Pipeline path:
+A component integrator can construct and inspect the native objects directly:
 
 1. run experiment search with `limen run`
 2. identify permutations to promote, manually or with a selector
@@ -478,3 +486,47 @@ source/bar compatibility and every member's guards still apply.
 See [Reserve and assess final observations](Final-Holdout.md) for project research exclusion, frozen fitted-selection assessment, retained scenario evidence and the limits of local exposure history.
 
 Fold-bearing compiled Sensors require [qualified fold selection](#recorded-walk-forward-members). Legacy `set_members`, ordinary round binding and `Cohort.from_python` reject them so a two-part trial identity cannot discard fold provenance or its campaign cutoff.
+
+## Exercise Python composition
+
+The calibration variant retains four evaluated classifier Sensors. Its composition case uses their real outputs for mean, binary vote and a caller-defined signed-direction median. The mapper changes numeric values and declares their new meaning. A shared preparation callback supplies each member’s history. Later selection masks an additional decision; it cannot restore an excluded member row. Empty history and incompatible membership/alignment have explicit outcomes. Inference must leave every fitted object unchanged.
+
+<!-- example: cohort-python-composition source=docs/examples/python-research/inference_cases.py region=composition scenario=calibration interface=python role=executed -->
+```python
+def compose_selected(sensors, bars):
+    def record(row):
+        value = asdict(row)
+        value['datetime'] = row.datetime.isoformat() if row.datetime is not None else None
+        return value
+
+    history = bars[1428:1920]
+    before = [pickle.dumps(sensor.fitted_state) for sensor in sensors]
+    members = [sensor.predict_all(history) for sensor in sensors]
+    mean = Cohort.from_python(sensors, aggregate='mean', state_id='calibrated-mean')
+    vote = Cohort.from_python(sensors, aggregate='vote', state_id='calibrated-vote')
+    signed = Cohort.from_python(sensors, prepare=lambda context, member: context['bars'],
+        map_output=lambda member, row: (2 * row.prediction - 1, None), mapped_output_id='next_bar_signed_direction',
+        aggregate=lambda rows: (float(np.median([row.prediction for row in rows])), None), state_id='signed-median')
+    later = Cohort.from_python(sensors, selection_cutoff=bars['datetime'][1441], state_id='later-selection')
+    result = {'members': [[record(row) for row in tape] for tape in members],
+              'mean': [record(row) for row in mean.predict_all(history)],
+              'vote': [record(row) for row in vote(history)],
+              'signed': [record(row) for row in signed.predict_all({'bars': history})],
+              'later': [record(row) for row in later.predict_all(history)],
+              'last': record(mean.predict(history)), 'empty': mean.predict_all(history.head(0))}
+    if before != [pickle.dumps(sensor.fitted_state) for sensor in sensors]:
+        raise ValueError('Inference changed the evaluated fitted state')
+    refusals = {}
+    for name, call in {'duplicate': lambda: Cohort.from_python([sensors[0], sensors[0]]),
+                       'missing_mapping_identity': lambda: Cohort.from_python(sensors, map_output=lambda member, row: (row.prediction, row.probability)),
+                       'unaligned_members': lambda: Cohort.from_python(sensors, prepare=lambda data, member: data if member is sensors[0] else data.tail(data.height-1)).predict_all(history),
+                       'reverse_decisions': lambda: mean.predict_all(history.reverse())}.items():
+        try:
+            call()
+        except ValueError as error:
+            refusals[name] = str(error)
+        else:
+            raise ValueError('An invalid composition was accepted: ' + name)
+    # Results retain real UTC timestamps and declared availability, serialized by the caller.
+    return {'results': result, 'refusals': refusals, 'retained_state_unchanged': True}
+```

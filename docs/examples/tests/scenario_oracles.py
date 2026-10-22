@@ -299,6 +299,7 @@ def verify(interface, name, result, output, inputs):
     elif name == 'calibration':
         assert len(result['modes']) == 4 and result['validation_reused'] is True
         if interface == 'python':
+            verify_composition(result['composition'])
             for row in result['modes']:
                 assert row['inference_rows'] == 480 and 0 <= row['positive_predictions'] <= 480
                 probabilities = np.asarray(row['validation_probabilities'])
@@ -723,3 +724,27 @@ def verify_analysis(result, inputs):
             assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
         if name == 'saturation':
             assert any(item['op'] == 'set_filter' for item in actions)
+
+
+def verify_composition(composition):
+    result = composition['results']
+    assert composition['retained_state_unchanged'] is True
+    assert set(composition['refusals']) == {'duplicate', 'missing_mapping_identity', 'unaligned_members', 'reverse_decisions'}
+    assert all(composition['refusals'].values())
+    assert result['empty'] == [] and result['last'] == result['mean'][-1]
+    assert len(result['members']) == 4
+    for index, (average, vote, signed, later) in enumerate(zip(result['mean'], result['vote'], result['signed'], result['later'], strict=True)):
+        members = [tape[index] for tape in result['members']]
+        assert len({row['datetime'] for row in members}) == 1
+        assert average['datetime'] == vote['datetime'] == signed['datetime'] == members[0]['datetime']
+        assert average['available_at_ns'] == max(row['available_at_ns'] for row in members)
+        if any(row['reason'] is not None for row in members):
+            assert all(row['prediction'] is None and row['probability'] is None for row in (average, vote, signed))
+        else:
+            predictions = np.asarray([row['prediction'] for row in members])
+            assert average['prediction'] == pytest.approx(float(predictions.mean()))
+            assert average['probability'] == pytest.approx(float(np.mean([row['probability'] for row in members])))
+            assert vote['prediction'] == int(predictions.sum() > 2) and vote['probability'] is None
+            assert signed['prediction'] == float(np.median(2*predictions-1)) and signed['probability'] is None
+        if index <= 12:
+            assert later['reason'] == 'inside-training-window' and later['prediction'] is None

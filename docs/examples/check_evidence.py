@@ -453,6 +453,8 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_scenarios(record['validation']['scenarios'], catalogue_data, root)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
+    from schema_contracts import validate as validate_yaml_contracts
+    validate_yaml_contracts(root)
     validate_surface_catalogue(root, catalogue_data)
     from catalogue_admission import validate_admission
     validate_admission(root, json.loads((root / 'docs/examples/api-contracts.json').read_text()))
