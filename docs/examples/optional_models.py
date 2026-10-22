@@ -34,7 +34,7 @@ def verify(root, record):
     assert record['model_sha256'] == MODEL_SHA256 and record['dependencies']['tabpfn'] == '6.4.1'
     raw = pl.read_parquet(root / 'tests/fixtures' / INPUT)
     train = raw.filter(pl.col('datetime') < datetime(2025, 1, 3, tzinfo=timezone.utc))['close'].to_numpy()
-    cutoff = np.median((train[1:] / train[:-1] - 1) * 100)
+    cutoff = float(np.median((train[1:] / train[:-1] - 1) * 100))
     labels = raw.with_columns((((pl.col('close').shift(-1) / pl.col('close') - 1) * 100) > cutoff).cast(pl.Int8).alias('label'))
     aligned = labels.filter(pl.col('datetime').is_between(datetime.fromisoformat(record['alignment']['first_test_datetime']), datetime.fromisoformat(record['alignment']['last_test_datetime'])))
     truth, predicted, probabilities = aligned['label'].to_numpy(), np.asarray(record['predictions']), np.asarray(record['probabilities'])
