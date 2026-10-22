@@ -40,7 +40,7 @@ def analyze_candidates(bars, output):
     loop, directory = campaign('population', [])
     # region analysis_results
     analysis = Log(uel_object=loop)
-    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in analysis.experiment_log if column not in {*space, 'validation_rmse'}],
+    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
         heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
     importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
     correlation.to_csv(directory / 'correlation.csv', index=False)
