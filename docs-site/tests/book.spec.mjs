@@ -19,9 +19,9 @@ test('reader command rejects substituted expected identities',()=>{
 test('complete research chapter',async({page})=>{
   await open(page);await expect(page.getByRole('heading',{level:1})).toHaveText('From a research question to a Sensor');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await expect(page.locator('figure.code')).toHaveCount(4);
-  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(4);
-  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
+  await expect(page.locator('figure.code')).toHaveCount(5);
+  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(5);
+  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
   const typography=await page.locator('h1').evaluate(el=>{const s=getComputedStyle(el);return {family:s.fontFamily,weight:s.fontWeight,stretch:s.fontStretch};});
   expect(typography.family).toContain('Archivo Variable');expect(typography.weight).toBe('200');expect(typography.stretch).toBe('125%');
   expect(await page.evaluate(()=>document.fonts.check('400 17px "Archivo Variable"'))).toBe(true);
@@ -252,7 +252,7 @@ test('reading state is isolated by product identity',async({page})=>{
 test('without JavaScript both interfaces and proof links remain readable',async({browser})=>{
   const context=await browser.newContext({javaScriptEnabled:false,viewport:test.info().project.name==='phone'?{width:390,height:844}:{width:1440,height:1000}});
   const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
-  await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
+  await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
   if(test.info().project.name==='phone'){await page.locator('.mobile-nav summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
 });

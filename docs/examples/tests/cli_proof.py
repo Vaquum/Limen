@@ -13,7 +13,7 @@ from scenario_oracles import execution_clocks, verify_acceptance
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
@@ -162,12 +162,12 @@ def verify_project(project):
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}
     helper_counts = {}
-    for case in ('helper_indicators', 'helper_features', 'helper_scalers', 'conditional_features'):
+    for case in ('helper_indicators', 'helper_features', 'helper_regimes', 'helper_scalers', 'conditional_features'):
         from ruamel.yaml import YAML
         document = YAML(typ='safe').load((project / 'compiled-research' / (case + '.yaml')).read_text())
         directory = base / document['uel']['output_path']
         log = checked_log(directory, document['uel']['n_permutations'])
-        key = 'scaler_type' if case == 'helper_scalers' else 'enable_lags' if case == 'conditional_features' else 'feature_groups'
+        key = 'regime_column' if case == 'helper_regimes' else 'scaler_type' if case == 'helper_scalers' else 'enable_lags' if case == 'conditional_features' else 'feature_groups'
         assert set(log[key].to_list()) == set(document['sfd']['params'][key])
         for record in records(directory):
             values = predictions(directory, record)

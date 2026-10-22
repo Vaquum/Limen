@@ -104,10 +104,9 @@ Cohort averages their next-bar return forecasts without refitting or unit conver
 The excerpt below is the project's selection function. Execute it through the project entry point above; the function uses helpers from its complete source file.
 
 <!-- python-sensor-example -->
-<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=trials scenario=selection interface=python role=executed -->
 ```python
-def run_research(bars, experiment_name):
-    research = bars[:1440]
+def run_trials(research, experiment_name):
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
     retained = {}
 
@@ -125,21 +124,7 @@ def run_research(bars, experiment_name):
     # An absolute filename stem writes only this CSV; no persisted round artifacts.
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
-            ["window", "validation_net_return", "alpha"],
-            descending=[False, True, False],
-        ).unique(subset="window", keep="first", maintain_order=True)
-        .select("window", "alpha").to_dicts()
-    )
-    sensors = [
-        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
-                          params=p, fitting_cutoff=bars["datetime"][960],
-                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
-        for p in selected
-    ]
-    cohort = Cohort.from_python(sensors)
-    return cohort, uel, selected, retained
+    return uel, retained
 ```
 
 Each partition loses twelve warm-up rows and its final forward-label row:

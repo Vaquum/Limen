@@ -1,0 +1,57 @@
+schema_version: '1.0'
+metadata:
+  name: categorical-regime-rules
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-07-01'
+      val_start: '2024-07-01'
+      val_end: '2024-10-01'
+      test_start: '2024-10-01'
+      test_end: '2025-01-01'
+    indicators:
+    - func: limen.features.breakout_percentile_regime
+    - func: limen.features.hh_hl_structure_regime
+    - func: limen.features.ma_slope_regime
+    - func: limen.features.price_vs_band_regime
+    - func: limen.features.window_return_regime
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    strategy:
+      conditions:
+      - id: regime_up
+        name: Regime requests long
+        type: threshold
+        column: '{regime_column}'
+        operator: ==
+        value: Up
+      entry: regime_up
+    required_columns:
+    - datetime
+    - open
+    - high
+    - low
+    - close
+  params:
+    regime_column:
+    - regime_breakout_pct
+    - regime_hh_hl
+    - regime_ma_slope
+    - regime_price_band
+    - regime_window_return
+uel:
+  output_path: compiled-helper-regimes
+  search_strategy:
+    type: grid
+  n_permutations: 5
+  prep_each_round: true
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true

@@ -182,42 +182,15 @@ def __call__(self, raw_klines: pl.DataFrame) -> list[BarPrediction]:
 
 The Python project retains every evaluated fitted pipeline, selects within each feature window and wraps those same objects. No reconstruction is needed:
 
-<!-- example: trainer-python-retained-state source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+<!-- example: trainer-python-retained-state source=docs/examples/python-research/research.py region=selected_sensors scenario=selection interface=python role=executed -->
 ```python
-def run_research(bars, experiment_name):
-    research = bars[:1440]
-    space = {"window": [4, 12], "alpha": [0.1, 1.0]}
-    retained = {}
-
-    def model(data, round_params):
-        fitted = fit(data["train"], round_params)
-        forecasts = fitted.predict(data["validation"].select("momentum"))
-        score = backtest(data["validation"], forecasts)
-        retained[(round_params["window"], round_params["alpha"])] = fitted
-        return {"validation_net_return": score}
-
-    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
-    uel = UniversalExperimentLoop(
-        data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
-    )
-    # An absolute filename stem writes only this CSV; no persisted round artifacts.
-    uel.run(experiment_name, n_permutations=4, workers=1,
-            post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
-            ["window", "validation_net_return", "alpha"],
-            descending=[False, True, False],
-        ).unique(subset="window", keep="first", maintain_order=True)
-        .select("window", "alpha").to_dicts()
-    )
-    sensors = [
+def selected_sensors(bars, selected, retained):
+    return [
         Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
                           params=p, fitting_cutoff=bars["datetime"][960],
                           selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
         for p in selected
     ]
-    cohort = Cohort.from_python(sensors)
-    return cohort, uel, selected, retained
 ```
 
 <!-- reference: trainer-from-model-api source=limen/inference/sensor.py region=signature:Sensor.from_model role=signature -->

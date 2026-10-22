@@ -54,9 +54,6 @@ sfd:
     - func: limen.features.body_to_range
       params:
         group: body_to_range
-    - func: limen.features.breakout_percentile_regime
-      params:
-        group: breakout_percentile_regime
     - func: limen.features.bulk_volume_classification
       params:
         group: bulk_volume_classification
@@ -118,9 +115,6 @@ sfd:
     - func: limen.features.garman_klass_volatility
       params:
         group: garman_klass_volatility
-    - func: limen.features.hh_hl_structure_regime
-      params:
-        group: hh_hl_structure_regime
     - func: limen.features.ichimoku_cloud
       params:
         group: ichimoku_cloud
@@ -177,9 +171,6 @@ sfd:
     - func: limen.features.log_returns
       params:
         group: log_returns
-    - func: limen.features.ma_slope_regime
-      params:
-        group: ma_slope_regime
     - func: limen.features.maker_liquidity_share
       params:
         group: maker_liquidity_share
@@ -231,9 +222,6 @@ sfd:
     - func: limen.features.price_range_position
       params:
         group: price_range_position
-    - func: limen.features.price_vs_band_regime
-      params:
-        group: price_vs_band_regime
     - func: limen.features.quantile_price_lines
       params:
         max_duration_hours: 48
@@ -377,9 +365,6 @@ sfd:
     - func: limen.features.wick_proportion
       params:
         group: wick_proportion
-    - func: limen.features.window_return_regime
-      params:
-        group: window_return_regime
     - func: limen.features.yang_zhang_volatility
       params:
         group: yang_zhang_volatility
@@ -396,7 +381,6 @@ sfd:
     - base|atr_percent_sma
     - base|atr_sma
     - base|body_to_range
-    - base|breakout_percentile_regime
     - base|bulk_volume_classification
     - base|calendar_time_features
     - base|close_ma_distance_atr
@@ -415,7 +399,6 @@ sfd:
     - base|fractional_diff
     - base|gap_high
     - base|garman_klass_volatility
-    - base|hh_hl_structure_regime
     - base|ichimoku_cloud
     - base|illiquidity_shock
     - base|is_funding_hour
@@ -430,7 +413,6 @@ sfd:
     - base|liquidity_drop
     - base|liquidity_range
     - base|log_returns
-    - base|ma_slope_regime
     - base|maker_liquidity_share
     - base|maker_volume_ratio
     - base|maker_volume_share
@@ -447,7 +429,6 @@ sfd:
     - base|position_in_range
     - base|price_lines
     - base|price_range_position
-    - base|price_vs_band_regime
     - base|quantile_price_lines
     - base|range_overlap
     - base|range_pct
@@ -494,13 +475,12 @@ sfd:
     - base|vwap
     - base|wick_imbalance
     - base|wick_proportion
-    - base|window_return_regime
     - base|yang_zhang_volatility
 uel:
   output_path: compiled-helper-features
   search_strategy:
     type: grid
-  n_permutations: 105
+  n_permutations: 100
   prep_each_round: true
   output_format: csv
   recording:

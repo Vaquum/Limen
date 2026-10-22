@@ -81,9 +81,8 @@ def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
 # endregion completed_log
 
 
-# region experiment
-def run_research(bars, experiment_name):
-    research = bars[:1440]
+# region trials
+def run_trials(research, experiment_name):
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
     retained = {}
 
@@ -101,23 +100,41 @@ def run_research(bars, experiment_name):
     # An absolute filename stem writes only this CSV; no persisted round artifacts.
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
+    return uel, retained
+# endregion trials
+
+
+# region selection
+def choose_parameters(loop):
+    return (
+        completed_log(loop).sort(
             ["window", "validation_net_return", "alpha"],
             descending=[False, True, False],
         ).unique(subset="window", keep="first", maintain_order=True)
         .select("window", "alpha").to_dicts()
     )
-    sensors = [
+# endregion selection
+
+
+# region selected_sensors
+def selected_sensors(bars, selected, retained):
+    return [
         Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
                           params=p, fitting_cutoff=bars["datetime"][960],
                           selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
         for p in selected
     ]
+# endregion selected_sensors
+
+
+# region experiment
+def run_research(bars, experiment_name):
+    research = bars[:1440]
+    uel, retained = run_trials(research, experiment_name)
+    selected = choose_parameters(uel)
+    sensors = selected_sensors(bars, selected, retained)
     cohort = Cohort.from_python(sensors)
     return cohort, uel, selected, retained
-
-
 # endregion experiment
 
 

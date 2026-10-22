@@ -12,12 +12,15 @@ limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 limen run --no-progress-bar compiled-research/preparation.yaml
 limen run --no-progress-bar compiled-research/research.yaml
 limen assess compiled-research/research.yaml --results results/dev/compiled-research
+# endregion preparation
+# region helpers
 limen run --no-progress-bar \
   compiled-research/helper_indicators.yaml \
   compiled-research/helper_features.yaml \
+  compiled-research/helper_regimes.yaml \
   compiled-research/helper_scalers.yaml \
   compiled-research/conditional_features.yaml
-# endregion preparation
+# endregion helpers
 # region search
 limen run --no-progress-bar \
   compiled-research/search.yaml \

@@ -127,6 +127,7 @@ Options:
 | `--dry-run` | validate and compile only; no permutations execute |
 | `--resume <results_dir>` | resume from a checkpoint directory; cannot be combined with a YAML file |
 | `--no-progress-bar` | disable the experiment progress bar |
+| `--workers <positive integer>` | override `uel.workers` for a run; on resume, override the saved worker count under the same parallel admission rules |
 
 The normal result directory contains:
 
