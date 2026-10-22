@@ -35,7 +35,7 @@ Integrity tests record native fitting and calibration inputs and forbid fitting 
 
 The maintained source inventory equals `catalogue.json`'s bound pages. Each page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. Source validation and production publication are separate outcomes. Every publication must pass the current released-wheel, preview and activation checks below.
 
-## Validating the candidate reader
+## Validate the reader and research
 
 Use Python 3.10–3.13 and Node.js 20 or later. CI uses the policy-pinned Python 3.10 runtime and installs the hash-pinned research environment and the tools in `docs/examples/requirements-quality.txt`. The supplemental documentation type configuration is selected explicitly; it does not shadow the package's strict configuration. Prepare runtime and build wheels before pytest. The proof creates a new environment, installs those wheels offline with hash checking, builds without isolated dependency resolution and installs the candidate wheel there. It imports no dependency from the invoking environment. Linux uses the research CI lock; macOS uses its separately resolved lock with the same version constraints. Both records identify the resolution target and actual interpreter.
 
