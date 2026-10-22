@@ -101,7 +101,7 @@ def test_market_regime_completes_compiled_preparation(bars):
         features = prepared[f'x_{split}']
         assert features.height > 0
         assert features.height == len(prepared[f'y_{split}'])
-        assert features.columns == prepared['_feature_names']
+        assert features.columns == [name for name in prepared['_feature_names'] if name not in ('datetime', 'next_return')]
         assert {'sma_20', 'sma_50', 'volume_sma'}.issubset(features.columns)
         assert np.isfinite(features.to_numpy()).all()
         assert np.isfinite(prepared[f'y_{split}'].to_numpy()).all()
