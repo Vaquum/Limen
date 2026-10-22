@@ -49,7 +49,7 @@ def package_reference(source: str, name: str) -> str:
                     isinstance(decorator, ast.Name) and decorator.id == 'property' or
                     isinstance(decorator, ast.Attribute) and decorator.attr == 'setter'
                     for decorator in node.decorator_list) for node in matches):
-            members = deepcopy(matches)
+            members = [deepcopy(node) for node in matches if isinstance(node, ast.FunctionDef)]
             for member in members:
                 member.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
             return ast.unparse(ast.fix_missing_locations(ast.Module(body=members, type_ignores=[]))) + '\n'

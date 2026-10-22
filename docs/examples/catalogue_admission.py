@@ -3,7 +3,7 @@ import ast
 from pathlib import Path
 
 
-def module_path(root, module):
+def module_path(root: Path, module: str) -> Path:
     path = root.joinpath(*module.split('.'))
     return path.with_suffix('.py') if path.with_suffix('.py').is_file() else path / '__init__.py'
 
@@ -42,7 +42,7 @@ def resolve(root, module, symbol, seen=()):
     raise ValueError('Unresolved public export: ' + module + '.' + symbol)
 
 
-def declared_contracts(root):
+def declared_contracts(root: Path):
     contracts = {}
     for source in sorted((root / 'limen').rglob('*.py')):
         if any(part.startswith('_') and part != '__init__.py' for part in source.relative_to(root).parts):
