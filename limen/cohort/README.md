@@ -28,7 +28,7 @@ It does **not** own:
 
 | Entry point                       | Use case | Notes                                                          |
 | --------------------------------- | --------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `Cohort`                        | Aggregate selected decoders from one completed experiment at inference time | Supports probability-weighted and majority-vote fallback modes |
+| `Cohort`                        | Aggregate retained Python fits or compatible reconstructed native members at inference time | Supports probability-weighted and majority-vote fallback modes |
 | `BUILTIN_SELECTORS`             | Map selector names to built-in selector modules | Exported at the package root |
 | `limen.cohort.sfc.all.select`             | Default "use every round" selector | Preserves existing omitted-`permutation_ids` behavior          |
 | `limen.cohort.sfc.top_n.select`           | Results-column ranker | Requires `results.csv`                                         |

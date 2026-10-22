@@ -19,6 +19,8 @@ Does **not** own the experiment shape or manifest (owned by the matching `limen.
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
+| `DirectionSizingModel` / `direction_sizing` | Direction and signed exposure model | Native allocation/execution contract |
+| `meta_allocation.py` | Fold-qualified allocation labels and policy fitting | Used by allocation manifests; distinct from entry classification |
 | `ReferenceModel` | Base class for reference models | Shared fit/predict contract |
 | `LogRegBinary` / `logreg_binary` | Logistic-regression binary model | Class and function forms |
 | `DLinearRegressor` / `dlinear_regressor` | Linear time-series regressor | Class and function forms |

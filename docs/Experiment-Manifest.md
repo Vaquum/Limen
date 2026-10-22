@@ -676,15 +676,10 @@ Manifest parameters are resolved at run time:
 - a formatted string like `'roc_{roc_period}'` is interpolated from `round_params`
 - strings starting with `_` are treated as fitted-parameter references when available
 
-That means this:
-
 A native parameter value such as `period="roc_period"` resolves through the current round's `roc_period` key.
-
-becomes:
 
 The resolved value is passed to the indicator's `period` argument before that transform runs.
 
-for each round.
 
 ### Group filtering
 
@@ -787,8 +782,6 @@ Examples:
 
 Round parameters handle search-time variation. `with_params_override(split_config=(1, 0, 0))` handles external structural control.
 
-Then in `params()`:
-
 Declare boolean candidates for the controlled feature; use a derived Manifest for build-time source/split changes.
 
 ## Target Configuration
@@ -840,8 +833,6 @@ Select a scaler dynamically from `SCALER_REGISTRY` using a round parameter.
 def set_scaler_from_params(self, param_name: str='scaler_type', extra_params: dict[str, Any] | None=None) -> 'MLManifest':
     ...
 ```
-
-Then in `params()`:
 
 Declare scaler registry names as candidates for the selected round key; use [Scalers](Scalers.md) for all supported names and fitting behavior.
 
@@ -1188,8 +1179,6 @@ Configure deterministic drop-N feature ablation after target construction.
 def set_feature_ablation(self, drop_count_key: str='feature_drop_count', seed_key: str='feature_drop_seed') -> 'MLManifest':
     ...
 ```
-
-Then in `params()`:
 
 Declare drop-count and seed candidate lists in the SFD parameter domain. The canonical native preparation case above compares zero and one drop at seed 7.
 

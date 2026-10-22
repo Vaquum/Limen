@@ -20,6 +20,8 @@ Does **not** own model training logic (owned by the matching `limen.sfd.referenc
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
+| `common_strategies` | Declared comparison of the eight named baseline strategies | Rule-based inputs and execution |
+| `dollar_bar_crash_reversal` | Crash-reversal strategy on dollar-bar features | Requires the declared dollar-bar input contract |
 | `logreg_binary` | Standard binary-classification SFD | Manifest-driven |
 | `dlinear_regressor` | Linear time-series regression SFD | Manifest-driven |
 | `lightgbm_binary` | Gradient-boosted binary classifier SFD | Manifest-driven |
