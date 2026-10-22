@@ -513,7 +513,7 @@ def test_native_date_detection_preserves_callable_source_contract(native_date_fr
     manifest = _native_date_manifest(bounds=bounds).set_data_source(method, {'kline_size': 25200})
     frame = manifest.fetch_data()
     if kind in ('unbound', 'bound', 'inherited'):
-        with pytest.raises(ValueError, match='data_source train_end=.*kline_size=25200 seconds'):
+        with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=25200 seconds'):
             manifest.prepare_data(frame, {})
     else:
         expected = split_by_dates(frame, *bounds)
@@ -525,13 +525,13 @@ def test_native_date_sources_use_separate_effective_intervals(native_date_frames
     bounds[1] = date(2025, 1, 15)
     manifest = _native_date_manifest(3600, bounds=bounds)
     manifest.set_test_data_source(HistoricalData().get_spot_klines, {'kline_size': 25200})
-    with pytest.raises(ValueError, match='test_data_source train_end=.*kline_size=25200 seconds'):
+    with pytest.raises(ValueError, match=r'test_data_source train_end=.*kline_size=25200 seconds'):
         manifest.prepare_data(native_date_frames[3600], {})
 
     manifest.set_test_data_source(HistoricalData.get_spot_klines, {'kline_size': 3600})
     changed = manifest.with_params_override(kline_size=25200)
     assert changed.test_data_source_config.params['kline_size'] == 3600
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=25200 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=25200 seconds'):
         changed.prepare_data(native_date_frames[3600], {})
     restored = changed.with_params_override(kline_size=3600)
     assert restored.compute_test_bars(native_date_frames[3600], {}).height > 0
@@ -546,7 +546,7 @@ def test_native_date_default_interval_uses_supplied_recorded_frame(native_date_f
     assert manifest.compute_test_bars(native_date_frames[900], {}).height > 0
     bounds[1] += timedelta(seconds=30)
     manifest.set_split_dates(*bounds)
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=60 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=60 seconds'):
         manifest.prepare_data(native_date_frames[900], {})
 
 
@@ -560,13 +560,13 @@ def test_native_date_nonaggregated_aware_cutoff_uses_utc_instant(native_date_fra
     )
     bounds[1] += offset
     manifest.set_split_dates(*bounds)
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=900 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=900 seconds'):
         manifest.prepare_data(native_date_frames[900], {})
 
 
 def test_native_date_naive_bounds_and_rule_preparation_refuse(native_date_frames):
     naive = [datetime.combine(value, datetime.min.time()) for value in _NATIVE_DATE_BOUNDS]
-    with pytest.raises(TypeError, match='data_source train_end=.*timezone-aware'):
+    with pytest.raises(TypeError, match=r'data_source train_end=.*timezone-aware'):
         _native_date_manifest(3600, bounds=naive).prepare_data(native_date_frames[3600], {})
 
     bounds = list(_NATIVE_DATE_BOUNDS)
@@ -576,7 +576,7 @@ def test_native_date_naive_bounds_and_rule_preparation_refuse(native_date_frames
         .set_split_dates(*bounds)
         .with_strategy(conditions=[{'id': 'up', 'type': 'relative', 'column': 'close', 'operator': '>', 'other_column': 'open'}], entry='up')
     )
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=25200 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=25200 seconds'):
         rule.prepare_data(native_date_frames[25200], {})
 
 
@@ -658,14 +658,14 @@ def test_native_date_recorded_replay_refuses_incompatible_retained_declaration(n
     bounds = list(_NATIVE_DATE_BOUNDS)
     bounds[1] = date(2025, 1, 15)
     loop.manifest.set_split_dates(*bounds)
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=25200 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=25200 seconds'):
         log.permutation_prediction_performance(0)
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=25200 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=25200 seconds'):
         log._get_test_data_with_all_cols(0)
 
     metadata_path = tmp_path / 'metadata.json'
     metadata = json.loads(metadata_path.read_text())
     metadata['yaml_reference']['sfd']['manifest']['split_dates']['train_end'] = '2025-01-15'
     metadata_path.write_text(json.dumps(metadata))
-    with pytest.raises(ValueError, match='data_source train_end=.*kline_size=25200 seconds'):
+    with pytest.raises(ValueError, match=r'data_source train_end=.*kline_size=25200 seconds'):
         Trainer(tmp_path).train(ids)
