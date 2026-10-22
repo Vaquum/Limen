@@ -1,5 +1,7 @@
 import json
+import hashlib
 import math
+from datetime import datetime
 from pathlib import Path
 import shutil
 
@@ -30,6 +32,115 @@ def recorded_cli(tmp_path_factory):
     finally:
         os.chdir(previous)
     return project
+
+
+@pytest.fixture(scope='module')
+def recorded_cli_admission(tmp_path_factory):
+    project = tmp_path_factory.mktemp('yaml-cli-admission')
+    (project / 'inputs').mkdir()
+    name = 'spot_1h_20240101_20241231.parquet'
+    shutil.copyfile(ROOT / 'tests/fixtures' / name, project / 'inputs' / name)
+    source = (ROOT / 'docs/examples/compiled-research/recovery.yaml').read_text().replace(
+        'output_format: csv', 'output_format: parquet',
+    )
+    submitted = project / 'recovery.yaml'
+    submitted.write_text(source)
+    (project / 'limen.toml').write_text('[project]\nname = "recorded-cli-admission"\n')
+    output = project / 'results/dev/compiled-recovery'
+    output.mkdir(parents=True)
+    saved = output / submitted.name
+    saved.write_text(source.replace('    - 0.1\n', '    - 0.25\n'))
+    assert saved.read_bytes() != submitted.read_bytes()
+    with pytest.MonkeyPatch.context() as patch:
+        patch.chdir(project)
+        result = CliRunner().invoke(cli, ['run', '--no-progress-bar', str(submitted)])
+    assert result.exit_code == 0, result.output
+    assert saved.read_bytes() == submitted.read_bytes()
+    assert all((output / name).is_file() for name in (
+        'checkpoint.json', 'metadata.json', 'results.csv', 'results.parquet',
+        'round_data.jsonl.gz', 'convergence_report.json',
+    ))
+    assert pl.read_csv(output / 'results.csv').height == 4
+    return project
+
+
+def _run_snapshot(directory):
+    return {
+        str(path.relative_to(directory)):
+        (hashlib.sha256(path.read_bytes()).hexdigest(), path.stat().st_mtime_ns) if path.is_file() else None
+        for path in sorted(directory.rglob('*'))
+    }
+
+
+@pytest.mark.parametrize('kind,partial,workers', (
+    ('same', False, 1),
+    ('same', True, 1),
+    ('different', False, 2),
+    ('self', False, 1),
+    ('committed', False, 1),
+))
+def test_refused_cli_run_preserves_saved_directory(
+    recorded_cli_admission, tmp_path, monkeypatch, kind, partial, workers,
+):
+    project = tmp_path / 'project'
+    shutil.copytree(recorded_cli_admission, project)
+    monkeypatch.chdir(project)
+    output = project / 'results/dev/compiled-recovery'
+    submitted = project / 'recovery.yaml'
+    if kind in ('same', 'different'):
+        attempted = project / 'attempt' / ('recovery.yaml' if kind == 'same' else 'different.yaml')
+        attempted.parent.mkdir()
+        attempted.write_text(submitted.read_text().replace('    - 0.1\n', '    - 0.25\n'))
+        target = str(attempted)
+    elif kind == 'self':
+        target = str(output / 'recovery.yaml')
+    else:
+        from limen.yaml.store import commit_manifest, resolve_manifest_uri
+        manifest_id, _ = commit_manifest(submitted, project)
+        target = 'manifest://' + manifest_id
+        committed, _ = resolve_manifest_uri(target, project)
+
+        class FixedDateTime:
+            @staticmethod
+            def now():
+                return datetime(2026, 1, 1)
+
+        monkeypatch.setattr('limen.cli.commands.run.datetime', FixedDateTime)
+        destination = project / 'results/dev' / committed.stem[:8] / '20260101_000000'
+        shutil.copytree(output, destination)
+        (destination / 'manifest.yaml').write_bytes(committed.read_bytes())
+        output = destination
+    if partial:
+        (output / 'checkpoint.json').unlink()
+    before = _run_snapshot(output)
+    copy_calls = []
+    if kind in ('self', 'committed'):
+        def forbidden_copy(*args, **kwargs):
+            copy_calls.append(args)
+            raise AssertionError('An occupied run reached YAML copying')
+        monkeypatch.setattr('limen.cli.commands.run.shutil.copy2', forbidden_copy)
+    result = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--workers', str(workers), target])
+    message = 'contains partial artifacts' if partial else 'already contains artifacts'
+    assert result.exit_code == 1 and message in result.output, result.output
+    assert _run_snapshot(output) == before
+    assert copy_calls == []
+
+
+def test_cli_resume_keeps_saved_yaml_and_recorded_definition(recorded_cli_admission, tmp_path, monkeypatch):
+    project = tmp_path / 'project'
+    shutil.copytree(recorded_cli_admission, project)
+    monkeypatch.chdir(project)
+    output = project / 'results/dev/compiled-recovery'
+    saved = output / 'recovery.yaml'
+    saved.write_text(saved.read_text().replace('    - 0.1\n', '    - 0.25\n'))
+    copied_yaml = saved.read_bytes()
+    definition = json.loads((output / 'metadata.json').read_text())['yaml_reference']
+    results = pl.read_csv(output / 'results.csv')
+    resumed = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', str(output)])
+    assert resumed.exit_code == 0, resumed.output
+    assert saved.read_bytes() == copied_yaml
+    assert json.loads((output / 'metadata.json').read_text())['yaml_reference'] == definition
+    assert pl.read_csv(output / 'results.csv').equals(results)
 
 
 @pytest.mark.parametrize('deterministic', (False, True))
