@@ -43,7 +43,7 @@ export function initInterfaces(){
     if(!location.hash&&saved){const place=JSON.parse(saved);if(choices.includes(place.interface))preferred=place.interface;}
   }catch(error){announce('The saved interface choice could not be read.');console.error(error);}
   if(!location.hash&&choices.includes(history.state?.readerPlace?.interface))preferred=history.state.readerPlace.interface;
-  const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1))):null;
+  const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1')):null;
   const linked=target?.closest('[data-research-interface]');
   choose(linked?.dataset.researchInterface||preferred,{save:false});
   control.hidden=false;

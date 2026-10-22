@@ -166,8 +166,9 @@ def verify_acceptance(result, output, inputs):
 def verify(interface, name, result, output, inputs):
     if name == 'search':
         if interface == 'python':
-            from helper_oracles import verify_helpers
+            from helper_oracles import verify_helpers, verify_targets
             verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
+            verify_targets(result['target_diagnostics'], output / 'targets', inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
         verify_common_baselines(interface, result['common_baselines'], output / 'common-baselines', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())

@@ -35,7 +35,7 @@ def resolve(root, module, symbol, seen=()):
             if symbol in exports:
                 if exports[symbol][1] is None:
                     return module_path(root, exports[symbol][0]), None
-                return resolve(root, *exports[symbol], (*seen, (module, symbol)))
+                return resolve(root, exports[symbol][0], exports[symbol][1], (*seen, (module, symbol)))
     child = module_path(root, module + '.' + symbol)
     if child.is_file():
         return child, None

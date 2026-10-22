@@ -8,7 +8,7 @@ The search scenario also compares baseline and compressed preparation on 1,440 r
 
 ## Acquire the matching project
 
-Download [acquire.sh](https://docs.vaquum.fi/limen/source/docs/examples/acquire.sh). It reads one public publication manifest, verifies the exact project-bundle and wheel digests, extracts the recorded inputs and installs the matching wheel with `data`, `stats` and `boosting` extras into a new environment. It requires Python 3.10–3.13, `curl`, `jq`, `tar` and OpenSSL. Package installation is setup; Compiled research itself uses YAML and the Limen CLI.
+Download [acquire.sh](https://docs.vaquum.fi/limen/source/docs/examples/acquire.sh). It reads one public publication manifest, verifies the exact project-bundle and wheel digests, extracts the recorded inputs and installs the matching wheel with `data`, `stats` and `boosting` extras into a new environment. It requires Python 3.10–3.13, `curl`, `jq`, `tar` and OpenSSL. Run the Python entry point below from the acquired bundle.
 
 <!-- example: acquire-python-project source=docs/examples/commands.json region=acquire-project scenario=selection interface=python role=executed -->
 ```bash
@@ -19,7 +19,7 @@ Enter `limen-research/` and activate its environment with `. .venv/bin/activate`
 
 ## Preparation diagnostics
 
-`helper_cases.py` applies every exported indicator and feature to recorded bars or trades, retains each output, fits every registered scaler on the training rows and transforms later rows without changing its state. The transforms are separate training-sample diagnostics. Line geometry, regime and microstructure helpers receive their declared context; forward breakout labels remain diagnostic labels and do not enter model inputs. The tests independently verify time identity, ROC, moving average, robust scaling and transform arithmetic. These diagnostics accompany the research model; they are not hundreds of simultaneous model inputs.
+`helper_cases.py` applies every exported indicator and feature to recorded bars or trades, retains each output, fits every registered scaler on the training rows and transforms later rows without changing its state. The transforms are separate training-sample diagnostics. `target_cases.py` exercises every ordinary target constructor/transform on bounded recorded populations; it retains the volatility sanity gate and raw-bar refusals for targets requiring supplied outcome columns. Separate supplied-column cases demonstrate those contracts on the bundle’s derived labels. Line geometry, regime and microstructure helpers receive their declared context; forward breakout labels remain diagnostic labels and do not enter model inputs. The tests independently verify time identity, ROC, moving average, robust scaling and transform arithmetic. These diagnostics accompany the research model; they are not hundreds of simultaneous model inputs.
 
 ## Prerequisites
 

@@ -66,3 +66,46 @@ def verify_helpers(result, output, inputs):
         low, high = np.quantile(values, [.005, .995], method='nearest')
         mask &= (values >= low) & (values <= high)
     assert trimmed['datetime'].to_list() == training.filter(pl.Series(mask))['datetime'].to_list()
+
+
+def verify_targets(result, output, inputs):
+    from limen import targets
+    expected = {name for name in targets.__all__ if name.endswith('Target')} - {'TradeOutcomeTarget'}
+    assert set(result) == expected
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    partitions = [raw[:864], raw[864:1152], raw[1152:1440]]
+    for name, entry in result.items():
+        if entry['status'] == 'refused':
+            assert name in ('ExitQualityTarget', 'RiskRewardRatioTarget', 'VolNormalizedReturnTarget', 'ForwardVolNormalizedReturnTarget')
+            assert entry['reason']
+            if name in ('ExitQualityTarget', 'RiskRewardRatioTarget'):
+                artifact = entry['supplied_context']
+                path = output / artifact['path']
+                assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact['sha256']
+                frame = pl.read_parquet(path)
+                if name == 'ExitQualityTarget':
+                    source = pl.read_parquet(inputs / 'recorded-exit-labels.parquet')
+                    oracle = np.where(source['exit_net_return'].to_numpy() < 0, .2, .5)
+                else:
+                    source = pl.read_parquet(inputs / 'recorded-risk-labels.parquet')
+                    oracle = source['capturable_breakout'].to_numpy() / (abs(source['max_drawdown'].to_numpy()) + .001)
+                np.testing.assert_allclose(frame['label'], oracle, rtol=1e-10, atol=1e-10, equal_nan=True)
+            continue
+        assert entry['fitted_only_on_training'] is True
+        for part, artifact in zip(partitions, entry['partitions'], strict=True):
+            path = output / artifact['path']
+            assert hashlib.sha256(path.read_bytes()).hexdigest() == artifact['sha256']
+            frame = pl.read_parquet(path)
+            assert frame['datetime'].to_list() == part['datetime'].to_list()
+            assert frame['label'].null_count() == artifact['null_rows']
+            if name == 'NextReturnTarget':
+                close = part['close'].to_numpy()
+                np.testing.assert_allclose(frame['label'].to_numpy()[:-3], (close[3:] / close[:-3] - 1) * 100, rtol=1e-10, atol=1e-10)
+            if name == 'IdentityTarget':
+                np.testing.assert_array_equal(frame['label'], part['close'])
+            if name in ('NextBarUpTarget', 'NextBarDownTarget'):
+                close = part['close'].to_numpy()
+                oracle = close[1:] > close[:-1] if name == 'NextBarUpTarget' else close[1:] < close[:-1]
+                np.testing.assert_array_equal(frame['label'].to_numpy()[:-1], oracle)
+            if name == 'TripleBarrierTarget':
+                assert set(frame['label'].drop_nulls()) <= {-1, 0, 1}

@@ -21,11 +21,19 @@ The preparation campaign includes `helper_indicators.yaml`, `helper_features.yam
 
 The remaining feature functions require line arrays, forward labels, a fitted scalar diagnostic, recorded trade fields or previously derived regime/microstructure columns. They are not interchangeable declarations in this bar-source campaign. The [feature reference](../../Features.md) gives those input contracts; the [CFR reference](../../Conserved-Flux-Renormalization.md) distinguishes its recorded-trade diagnostic from this project's threshold bars. Do not substitute a Python driver for those inputs.
 
+## Target variants
+
+The `target_*.yaml` files run each ordinary target class with its compatible binary or continuous model. `target_contracts.sh` retains a successful volatility-normalized run or the exact training-volatility sanity refusal; any other failure stops the campaign. Trade-outcome target/context behavior is exercised by the separate allocation manifests.
+
+Three label files are derived from recorded hourly closes independently within the declared training, validation and test intervals. Exit labels describe a one-hour close-to-close software trade with 2 bp cost and a timeout exit; they are not observed venue exits. Risk labels describe nonnegative maximum upward and nonpositive minimum downward close excursions over two following bars. Identity labels record the next-close direction. No label crosses a split boundary. These are labeling demonstrations, not a claim that those targets are suitable inference inputs. Their source columns are removed from the model inputs by the target contract.
+
+The bundle includes these ready-to-read files; no preprocessing command is part of Compiled Research. The tests compare every derivation with the recorded source.
+
 ## Prerequisites
 
 Use the recorded example bundle and its matching Limen wheel, Python 3.10–3.13, Git, and `vaquum-limen[data,stats,boosting]`. Run every command from the bundle root. The project uses local recorded inputs and performs no live data download.
 
-The bundle pins raw observations and two derived files by SHA-256. `spot_1h_20240101_20240116.parquet` is exactly the first 384 recorded hourly rows. `recorded-funding.parquet` normalizes the pinned funding records, including realized rates and mark prices. Tests compare both derivations with their recorded sources. No Python preprocessing step is required to run the project.
+The bundle pins raw observations and five derived files by SHA-256. `spot_1h_20240101_20240116.parquet` is exactly the first 384 recorded hourly rows. `recorded-funding.parquet` normalizes the pinned funding records, including realized rates and mark prices. Tests compare both derivations with their recorded sources. No Python preprocessing step is required to run the project.
 
 Use a fresh working directory for a fresh campaign. The YAML's `uel.output_path` determines its results directory under `results/dev/`; recovery uses that saved directory explicitly.
 

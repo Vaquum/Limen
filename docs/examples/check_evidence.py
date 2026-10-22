@@ -20,7 +20,7 @@ OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interf
 REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
 RESULT_MARKER = r'<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.,]+) -->'
 COMPILED_DRIVERS = {
-    'selection': ('selection',), 'search': ('preparation', 'helpers', 'search', 'models'),
+    'selection': ('selection',), 'search': ('preparation', 'helpers', 'targets', 'search', 'models'),
     'recovery': ('recovery',), 'walk_forward': ('walk_forward',), 'calibration': ('calibration',),
     'execution': ('execution',), 'bars': ('bars',), 'allocation': ('allocation',),
     'holdout': ('holdout',), 'command_line': ('command_line',),

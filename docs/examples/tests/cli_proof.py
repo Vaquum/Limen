@@ -174,6 +174,27 @@ def verify_project(project):
             assert values.size > 0 and set(values) <= {0, 1}
         helper_counts[case] = log.height
     summaries['search']['helper_diagnostics'] = helper_counts
+    from ruamel.yaml import YAML
+    target_cases = {}
+    for declaration in sorted((project / 'compiled-research').glob('target_*.yaml')):
+        document = YAML(typ='safe').load(declaration.read_text())
+        name = document['sfd']['manifest']['target']['class'].split('.')[-1]
+        directory = base / document['uel']['output_path']
+        if name in ('VolNormalizedReturnTarget', 'ForwardVolNormalizedReturnTarget'):
+            transcript = project / 'results/target-contracts' / (declaration.name + '.log')
+            text = transcript.read_text()
+            if 'Parkinson-to-close volatility ratio' in text:
+                assert 'outside [0.9, 1.1]' in text
+                target_cases[name] = {'status': 'refused', 'reason': 'training volatility sanity gate'}
+                continue
+        log = checked_log(directory, 1)
+        values = predictions(directory, records(directory)[0])
+        assert values.size > 0
+        target_cases[name] = {'status': 'executed', 'rows': len(values)}
+        if 'rmse' in log.columns:
+            assert np.isfinite(log['rmse'][0])
+    assert len(target_cases) == 15
+    summaries['search']['target_diagnostics'] = target_cases
     recovery = checked_log(base / 'compiled-recovery', 4)
     assert [row['_round_index'] for row in records(base / 'compiled-recovery')] == list(range(4))
     summaries['recovery'] = {'rounds': recovery.height, 'unique_ids': recovery['id'].n_unique()}
@@ -240,6 +261,7 @@ def verify_project(project):
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=original, text=True).split('\0')
     assert all((original / path).read_bytes() == (restored / path).read_bytes() for path in tracked if path and not (original / path).is_symlink())
     summaries['command_line'] = {'restored_files': len([name for name in tracked if name])}
+    DIRECTORIES['search'].extend(path.name for path in base.glob('compiled-target-*'))
     inventory = {}
     for scenario, directories in DIRECTORIES.items():
         inventory[scenario] = {str(path.relative_to(project)): hashlib.sha256(path.read_bytes()).hexdigest() for name in directories for path in (base / name).rglob('*') if path.is_file()}

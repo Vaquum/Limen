@@ -477,6 +477,12 @@ Columns already removed by a research target are accepted.
 
 Meta allocation retains the primary target. Forward QuantileBinaryTarget fitting is rebuilt inside each chronological prefix; prediction-block membership is feature-valid and includes the tail without completed forward targets. Allocator supervision is separate: signed net PnL divided by the first actual entry fill notional, available only after real closure inside the opening training block. Open, unfilled and crossing opportunities remain unavailable; they are not zero-return training examples. See [Backtest](Backtest.md#learned-allocation-around-a-primary).
 
+## Recorded target variants
+
+The [Python project](examples/python-research/README.md) retains separate train/validation/test label frames in `search/targets/`. Its raw-bar cases also preserve a data-dependent volatility sanity refusal and the required-column errors for trade-context labels. Supplied outcome columns are exercised separately rather than invented inside a target.
+
+The [Compiled project](examples/compiled-research/README.md#target-variants) runs `target_*.yaml` through the installed CLI. Each class uses a compatible classifier or regressor. Volatility gate outcomes remain explicit. The derived label files contain declared software outcomes from recorded closes, with no future window crossing a chronological partition; they are not venue execution observations. Allocation manifests exercise the native trade-outcome target and bound event context.
+
 ## Callable contracts
 
 These entries give the exact public signatures and the source-owned argument, return and failure contracts. Use the project examples above for the research context; a signature is reference evidence, not a claim that every option ran in the base experiment.

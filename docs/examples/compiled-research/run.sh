@@ -21,6 +21,23 @@ limen run --no-progress-bar \
   compiled-research/helper_scalers.yaml \
   compiled-research/conditional_features.yaml
 # endregion helpers
+# region targets
+limen run --no-progress-bar \
+  compiled-research/target_emabreakout.yaml \
+  compiled-research/target_forwardbreakout.yaml \
+  compiled-research/target_identity.yaml \
+  compiled-research/target_nextbardown.yaml \
+  compiled-research/target_nextbarup.yaml \
+  compiled-research/target_nextreturn.yaml \
+  compiled-research/target_quantilebinary.yaml \
+  compiled-research/target_randombinary.yaml \
+  compiled-research/target_thresholdbinary.yaml \
+  compiled-research/target_tradelinelongbinary.yaml \
+  compiled-research/target_triplebarrier.yaml \
+  compiled-research/target_exitquality.yaml \
+  compiled-research/target_riskrewardratio.yaml
+sh compiled-research/target_contracts.sh
+# endregion targets
 # region search
 limen run --no-progress-bar \
   compiled-research/search.yaml \

@@ -33,7 +33,7 @@ export function initCode(root=document) {
         event.preventDefault();const next=Math.max(0,Math.min(numbers.length-1,index+(event.key==='ArrowDown'?1:-1)));selectLine(next,event.shiftKey);numbers[next].focus();
       }});
     });
-    const range=location.hash.match(new RegExp('^#'+figure.id+'-L(\\d+)(?:-L(\\d+))?$'));
+    const range=location.hash.match(new RegExp('^#'+figure.id.replace(/^reference-/,'')+'-L(\\d+)(?:-L(\\d+))?$'));
     if(range){const low=Number(range[1])-1,high=Number(range[2]||range[1])-1;
       if(low>=0&&high>=low&&high<numbers.length){start=low;selectLine(high,true);numbers[low].parentElement.scrollIntoView({block:'center'});}
     }
