@@ -17,6 +17,10 @@ sh acquire.sh limen-research
 
 Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
 
+## Source encodings
+
+`source_cases.py` reads the same 1,440 recorded hourly observations from the bundled CSV, ZIP and Arrow files, compares latest-row semantics and retains their schemas/timestamps/values for independent checks. Their original Parquet source remains pinned. [Historical data reference](../../Historical-Data-Reference.md#recorded-format-equivalence) gives both interfaces and the format constraints.
+
 ## Preparation diagnostics
 
 `helper_cases.py` applies every exported indicator and feature to recorded bars or trades, retains each output, fits every registered scaler on the training rows and transforms later rows without changing its state. The transforms are separate training-sample diagnostics. `target_cases.py` exercises every ordinary target constructor/transform on bounded recorded populations; it retains the volatility sanity gate and raw-bar refusals for targets requiring supplied outcome columns. Separate supplied-column cases demonstrate those contracts on the bundle’s derived labels. Line geometry, regime and microstructure helpers receive their declared context; forward breakout labels remain diagnostic labels and do not enter model inputs. The tests independently verify time identity, ROC, moving average, robust scaling and transform arithmetic. These diagnostics accompany the research model; they are not hundreds of simultaneous model inputs.

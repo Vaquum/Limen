@@ -13,6 +13,12 @@ limen run --no-progress-bar compiled-research/preparation.yaml
 limen run --no-progress-bar compiled-research/research.yaml
 limen assess compiled-research/research.yaml --results results/dev/compiled-research
 # endregion preparation
+# region source_formats
+limen run --no-progress-bar \
+  compiled-research/source_csv.yaml \
+  compiled-research/source_zip.yaml \
+  compiled-research/source_arrow.yaml
+# endregion source_formats
 # region helpers
 limen run --no-progress-bar \
   compiled-research/helper_indicators.yaml \

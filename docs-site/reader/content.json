@@ -427,6 +427,16 @@
       "part": "Reference",
       "navigationTitle": "Public API index",
       "navigationGroup": "Lookup"
+    },
+    "docs/Search-Reference.md": {
+      "route": "/reference/search/",
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
+    },
+    "docs/Historical-Data-Reference.md": {
+      "route": "/reference/historical-data/",
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     }
   }
 }

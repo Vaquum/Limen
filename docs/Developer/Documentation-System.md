@@ -33,7 +33,7 @@ The maintained corpus binds exact source regions and retained observations to bo
 
 Integrity tests record native fitting and calibration inputs and forbid fitting after final selection is frozen. The archived CLI commands run in a separate process with the installed wheel. Native result files, checkpoints, round records, audits, final assessment rows and the installed dependency inventory remain available in the evidence archive.
 
-The maintained source inventory equals `catalogue.json`'s bound pages. Each page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. Complete source migration does not establish production publication. Preserve the source checks while replacing the renderer. The first-release sequence below retains the deployed predecessor until released-book acceptance.
+The maintained source inventory equals `catalogue.json`'s bound pages. Each page must pass its source/reference roles and applicable visible project connections; a repeated link alone cannot establish semantic coverage. Their source footers identify reference excerpts without claiming execution. Source validation and production publication are separate outcomes. Every publication must pass the current released-wheel, preview and activation checks below.
 
 ## Validating the candidate reader
 
@@ -59,14 +59,14 @@ Then, from `docs-site/`:
 |---|---|
 | 1 | `npm run check` |
 | 2 | `npm run security:audit` |
-| 3 | `npx --no-install playwright install chromium` |
+| 3 | `npx --no-install playwright install chromium webkit` |
 | 4 | `npm run check:reader` |
 
 The reader build requires a clean source tree, matching package and current execution evidence. Browser verification checks that evidence and every built file before opening the pages. Use the repository's managed validation runner when it owns the PR; record the necessary commands there and run them in the required order. A background start is not a passing result.
 
 Change canonical project code first, synchronize its marked chapter regions and run the affected proof. Keep displayed observations under their recorded run identity unless their meaning or comparison bounds require a new capture. Never hand-edit a successful current-validation record. Extend the model and scenario catalogue when the public surface changes; a newly exported family cannot silently disappear from the documentation's coverage inventory.
 
-The owned reader emits the canonical robots resource and self-hosts Archivo/Plex under the Worker CSP. Both are checked before publication and over anonymous HTTP before activation. The predecessor remains deployed until the first released-book proof passes; removing its build sources does not replace its live Worker version.
+The owned reader emits the canonical robots resource and self-hosts Archivo/Plex under the Worker CSP. Both are checked before publication and over anonymous HTTP before activation. A source merge does not activate a new Worker version; publication verifies preview and production independently.
 
 ## Ownership
 
@@ -170,7 +170,7 @@ Classify every Python, YAML, JSON and Bash fence. Its role determines the proof 
 | Command | Current arguments and dependency/working-directory context; execute commands used to establish a workflow claim. |
 | Observed output | Retained bytes from an identified successful execution and its declared comparison rules. |
 
-Keep standalone Python parseable; identify non-standalone fragments explicitly. Preserve plain language info strings when adding role markers: `python`, `python-fragment`, `yaml`, `json`, `bash`, `sh`, `text` and unlabelled display fences must be accounted for. Put binding metadata outside the fence, or update its parser and migration in the same change. `python-fragment` remains a partial fragment; `bash` and `sh` carry commands; `text` may carry observed output or non-executable reference text. Language alone does not distinguish signatures from executable Python. Existing fences remain under the current checks until the book migration classifies the complete corpus. Informational fences do not escape source checking or establish execution. Manifest-based examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
+Keep standalone Python parseable; identify non-standalone fragments explicitly. Preserve plain language info strings when adding role markers: `python`, `python-fragment`, `yaml`, `json`, `bash`, `sh`, `text` and unlabelled display fences must be accounted for. Put binding metadata outside the fence, or update its parser and migration in the same change. `python-fragment` remains a partial fragment; `bash` and `sh` carry commands; `text` may carry observed output or non-executable reference text. Language alone does not distinguish signatures from executable Python. Every maintained fence remains classified and source-bound under the current checks. Informational fences do not escape source checking or establish execution. Manifest-based examples instantiate `MLManifest` or `RuleBasedManifest`; base `Manifest` is an abstract interface.
 
 Package signatures and constant definitions are derived from the current Python syntax tree. Signature bindings retain the declared parameters, defaults, annotations and decorators while replacing executable bodies with an ellipsis. Definition bindings retain the actual module assignment. Their source hashes and merged-PR identities are checked separately from the projects; the current wheel proof also compares every shipped Python source file with the tested tree. These blocks describe package interfaces and do not claim to execute a research workflow.
 

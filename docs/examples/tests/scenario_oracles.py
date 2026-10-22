@@ -170,6 +170,7 @@ def verify(interface, name, result, output, inputs):
             verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
             verify_targets(result['target_diagnostics'], output / 'targets', inputs)
             verify_analysis(result['analysis'], inputs)
+            verify_source_formats(result['input_formats'], inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
         verify_common_baselines(interface, result['common_baselines'], output / 'common-baselines', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
@@ -748,3 +749,12 @@ def verify_composition(composition):
             assert signed['prediction'] == float(np.median(2*predictions-1)) and signed['probability'] is None
         if index <= 12:
             assert later['reason'] == 'inside-training-window' and later['prediction'] is None
+
+
+def verify_source_formats(result, inputs):
+    assert set(result) == {'csv', 'zip', 'arrow'}
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    for suffix, record in result.items():
+        assert record['source_sha256'] == hashlib.sha256((inputs / ('recorded-hourly.'+suffix)).read_bytes()).hexdigest()
+        assert record['rows'] == raw.height and record['timestamps_ns'] == raw['datetime'].dt.epoch('ns').to_list()
+        assert record['values'] == raw.select('open', 'high', 'low', 'close', 'volume').to_dicts()

@@ -8,6 +8,9 @@ import tarfile
 
 
 INPUTS = {
+    'recorded-hourly.csv': 'c763aa3bfd07c6e67754c14786f636e12085ba201fe2e91bf5d860133fbd7c7f',
+    'recorded-hourly.zip': '4bd430b7e839128cf688ee824ea02cfffcf637351493563d745050b189adb24c',
+    'recorded-hourly.arrow': 'b30dc10270712f5b12525d2991c4f401f65a9ce81890189f209eb681b4c350f5',
     'recorded-exit-labels.parquet': 'f84c76293219100dd04ef27439ffeec360c4dd6364e15902a10a3fa2e9e73e87',
     'recorded-risk-labels.parquet': 'ba8576a905ef322566bba95dacc709df0be4638eadcdd67b33f92f2281166eef',
     'recorded-identity-labels.parquet': '1eac0d0021e89ce510ac1d59d1564228c68c82ab8e945cda5b4df6313b688e1b',

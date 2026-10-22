@@ -44,12 +44,20 @@ The selection declaration applies chronological splits before preparation, fits 
 
 Its `project.sh` validates, profiles, compiles, commits and executes the recorded production declaration in `project.yaml` through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
 
+## Follow the retained state
+
+The Python `holdout` variant contains a complete caller-owned handoff in one process. It reads the pinned quarter-hour file, calls `run_research` on the first 1,440 observations, retains the evaluated fits, selects one per window and builds their Cohort. That returned Cohort predicts the following 480 observations with preceding feature context. Its first 479 decisions receive a following realized bar; the final decision has no next bar in the declared population. The assessment Parquet retains those decisions, positions and net returns. This variant performs its own selection; it does not restore weights from an earlier command's CSV.
+
+The native final branch begins in its own project, with the reservation chosen before research. Its `holdout.yaml` records the source, research partitions, selection and excluded final dates. The run writes the selected-round evidence, and the reservation-bound assessment consumes that same result directory. `final-report.json` retains the frozen candidate identity, final observations and local exposure record. The separate event branch freezes its declared economics and writes a schema-2 ledger report. Neither branch is a continuation of the introductory example's different calendar population.
+
+The small selection, comprehensive preparation and later variants therefore share the project family and explicit question, while each named variant carries its own dates and policy. Carry an object or artifact forward only within the variant that created it; changing the population or selection creates a new research case.
+
 ## Review the evidence by decision
 
 | Decision | Python project | Compiled project | Contract |
 |---|---|---|---|
 | Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison, model families and YAML reducers | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
-| Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Resume the declared queue and results through the CLI; reject changed pinned source bytes and compare complete artifacts | [Recovery](Advanced-Search.md#resume-flow) |
+| Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Resume the declared queue and results through the CLI; reject changed pinned source bytes and compare complete artifacts | [Recovery](Search-Reference.md#resume-flow) |
 | Evaluate across time | Own fold fitting, validation selection and later Sensor decisions | Declared folds, purge/embargo and qualified fold reconstruction | [Walk-forward](Walk-Forward.md) |
 | Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four YAML-configured modes; calibrated selection through CLI assessment | [Calibration](Calibration.md) |
 | Assess a selected result | Exclude the final partition from fitting and selection in code | Reserve, freeze and assess with native project records; earlier exposure remains unknown for local files | [Final holdout](Final-Holdout.md) |

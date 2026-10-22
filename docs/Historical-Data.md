@@ -1,16 +1,6 @@
 # Historical Data
 
-Begin with a fixed set of observations. The two projects use recorded files with declared digests; a hosted dataset is an acquisition source whose current snapshot may differ. `HistoricalData` provides five file-backed retrieval methods:
-
-- `get_spot_klines()`
-- `get_spot_dollar_klines()`
-- `get_binance_file()`
-- `get_any_file()`
-- `get_arrow_file()`
-
-All five return `polars.DataFrame`, and each call also updates `historical.data` and `historical.data_columns`.
-
-Install `vaquum-limen[data]` when using Hugging Face parquet datasets or Arrow IPC paths. The base package does not install PyArrow.
+Begin with a fixed set of observations. The two projects use recorded files with declared digests; a hosted dataset is an acquisition source whose current snapshot may differ. The [complete source API](Historical-Data-Reference.md) remains available when your own observations require a different acquisition path.
 
 ## Decide which observations remain final
 
@@ -51,127 +41,12 @@ The bundle pins the source by SHA-256. The YAML reads its literal `inputs/` path
 
 `HistoricalData` remains stateful for Manifest compatibility. Each retrieval method returns the loaded frame and stores it on the instance as `data`, with column names in `data_columns`.
 
-## Current Surface
+## Carry the declared population forward
 
-| Method | Backend | Returns | Use case |
-|---|---|---|---|
-| `get_spot_klines()` | Hugging Face BTCUSDT parquet datasets | BTCUSDT spot klines as `pl.DataFrame` | standard experiment input |
-| `get_spot_dollar_klines()` | Hugging Face BTCUSDT dollar-bar parquet datasets | BTCUSDT spot dollar bars as `pl.DataFrame` | event-time experiments |
-| `get_binance_file()` | direct Binance ZIP/CSV archive | normalized Binance file contents as `pl.DataFrame` | source-native Binance trade files |
-| `get_any_file()` | local path or URL (`.parquet`, `.csv`, `.zip`) | loaded file contents as `pl.DataFrame` | test fixtures, local research files, remote datasets |
-| `get_arrow_file()` | local Arrow IPC file | memory-mapped Arrow contents as `pl.DataFrame` | zero-copy local Arrow reads when buffer layout permits |
+The selection examples use quarter-hour BTCUSDT observations. Their `datetime` is the start of the interval in UTC; prices are USDT per BTC and volume is BTC. A close can be used only after the interval completes. The Python inference adapter records that 900-second availability delay explicitly. Native execution declares its source interval with the trading policy.
 
-## `get_spot_klines()`
+Python selects 1,920 recorded rows: the first 960 may fit state, the next 480 may select it and the final 480 supply later decisions. Feature warm-up and forward labels remove rows within each partition. Compiled selection instead uses its literal half-open calendar dates; it is a different population. Later variants name their changed windows explicitly.
 
-`get_spot_klines()` reads from the BTCUSDT datasets published on Hugging Face.
+Keep the acquired `inputs.json`, raw files and publication identity together. Funding and retrospective observed-cost inputs carry separate source clocks and provenance; their reported availability must not be inferred from a bar timestamp. The three supplied target-label files are deterministic software labels derived within chronological partitions, rather than observed venue trades.
 
-By default it reads native [1m](https://huggingface.co/datasets/vaquum/binance_btcusdt_1m_klines), [15m](https://huggingface.co/datasets/vaquum/binance_btcusdt_15m_klines), [30m](https://huggingface.co/datasets/vaquum/binance_btcusdt_30m_klines), [1h](https://huggingface.co/datasets/vaquum/binance_btcusdt_1h_klines), [2h](https://huggingface.co/datasets/vaquum/binance_btcusdt_2h_klines), or [4h](https://huggingface.co/datasets/vaquum/binance_btcusdt_4h_klines) datasets for matching `kline_size` values, and otherwise the 1m dataset before aggregating upward.
-
-Dataset snapshot file names are treated as the cache identity. Limen does not package upstream dataset bytes, licenses, or hash manifests inside the wheel/sdist; release packaging proves code and metadata integrity, while dataset publishers remain authoritative for dataset size, license, and content integrity. Cached snapshots live under `~/.cache/limen/datasets` and can be large; delete that directory to reclaim local disk or force a refetch.
-
-<!-- reference: data-api-get-spot-klines source=limen/data/historical_data.py region=signature:HistoricalData.get_spot_klines role=signature -->
-```python
-def get_spot_klines(self, row_count_limit: int | None=None, kline_size: int=60, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
-    ...
-```
-
-Important rules:
-
-- sub-1-minute klines are not supported
-- `kline_size` must be a multiple of the source file interval
-- `row_count_limit` returns the latest rows after date filtering and aggregation
-- date-only `end_date_limit` values include the full named day
-- `start_date_limit` and `end_date_limit` may define a closed window only when `row_count_limit` is unset
-
-Aggregated bars use UTC buckets anchored at the Unix epoch, with `datetime` labelling the bucket start. Date filtering happens before aggregation, so fetch edges can contain partial buckets. [Manifest date windows](Experiment-Manifest.md) require aligned ends for directly declared native spot sources; use a day-dividing interval for ordinary YAML date bounds, or choose window ends on the interval's epoch grid.
-
-Returned columns:
-
-- `datetime`, `open`, `high`, `low`, `close`
-- `mean`, `std`
-- `volume`, `maker_ratio`, `no_of_trades`
-- `open_liquidity`, `high_liquidity`, `low_liquidity`, `close_liquidity`
-- `liquidity_sum`, `maker_volume`, `maker_liquidity`
-
-## `get_spot_dollar_klines()`
-
-`get_spot_dollar_klines()` reads BTCUSDT dollar bars from Vaquum Hugging Face datasets.
-
-It reads native [1M](https://huggingface.co/datasets/vaquum/binance_btcusdt_1M_dollar_klines), [15M](https://huggingface.co/datasets/vaquum/binance_btcusdt_15M_dollar_klines), [30M](https://huggingface.co/datasets/vaquum/binance_btcusdt_30M_dollar_klines), [60M](https://huggingface.co/datasets/vaquum/binance_btcusdt_60M_dollar_klines), [120M](https://huggingface.co/datasets/vaquum/binance_btcusdt_120M_dollar_klines), or [240M](https://huggingface.co/datasets/vaquum/binance_btcusdt_240M_dollar_klines) datasets for matching `dollar_bar_size` values. Other multiples use the largest available lower dollar-bar source and aggregate upward.
-
-<!-- reference: data-api-get-spot-dollar-klines source=limen/data/historical_data.py region=signature:HistoricalData.get_spot_dollar_klines role=signature -->
-```python
-def get_spot_dollar_klines(self, row_count_limit: int | None=None, dollar_bar_size: int=1000000, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
-    ...
-```
-
-Important rules:
-
-- `dollar_bar_size` must be a positive integer
-- supported native sizes are resolved directly instead of deriving from the 1-minute kline file
-- non-native sizes must be multiples of the selected source dollar-bar size
-- returned `datetime` is the dollar bar start time
-- returned columns match `get_spot_klines()` for manifest compatibility
-
-## `get_binance_file()`
-
-`get_binance_file()` keeps the same role as before: load a Binance archive directly and normalize its `timestamp` / `datetime` columns.
-
-<!-- reference: data-api-get-binance-file source=limen/data/historical_data.py region=signature:HistoricalData.get_binance_file role=signature -->
-```python
-def get_binance_file(self, file_url: str, has_header: bool=False, columns: list[str] | None=None) -> pl.DataFrame:
-    ...
-```
-
-Use this for Binance source files rather than the curated kline dataset.
-
-## `get_any_file()`
-
-`get_any_file()` is the generic file ingestion path. It accepts a local path or URL and currently supports:
-
-- `.parquet`
-- `.csv`
-- `.zip`
-
-<!-- reference: data-api-get-any-file source=limen/data/historical_data.py region=signature:HistoricalData.get_any_file role=signature -->
-```python
-def get_any_file(self, file_path_or_url: str, has_header: bool=True, columns: list[str] | None=None, row_count_limit: int | None=None, *, n_rows: int | None=None, expected_sha256: str | None=None) -> pl.DataFrame:
-    ...
-```
-
-`expected_sha256` pins a local Parquet file. Limen verifies its bytes before decoding those same bytes, on both initial loading and CLI resume. The recovery YAML declares this digest; a changed source fails before another candidate can fit.
-
-It is the right choice for:
-
-- local fixtures in tests
-- repo-hosted CSV files
-- remote parquet snapshots
-- manifest test data sources
-
-## `get_arrow_file()`
-
-<!-- reference: data-api-get-arrow-file source=limen/data/historical_data.py region=signature:HistoricalData.get_arrow_file role=signature -->
-```python
-def get_arrow_file(self, file_path: str, row_count_limit: int | None=None, start_date_limit: str | None=None, end_date_limit: str | None=None, *, n_rows: int | None=None) -> pl.DataFrame:
-    ...
-```
-
-The local Arrow IPC file must contain one uncompressed record batch. A strictly increasing Int64 nanosecond `ts` index permits date filtering and latest-row limits through contiguous slices; `datetime` is added from `ts` when absent. A datetime-only date filter materializes. Multi-batch and compressed files are refused instead of claiming zero-copy access. Keep the returned frame referenced while retaining views into its mapped buffers.
-
-## Manifest Integration
-
-Use `HistoricalData.get_any_file` when the experiment names a specific recorded local file or URL, as the Compiled project does above. Hosted `get_spot_klines` and `get_spot_dollar_klines` resolve the provider's available snapshots. Preserve the actual input identity when reproducing a run; a dataset name alone cannot identify its bytes. A bounded, coarser test source can shorten preparation diagnostics, but it changes the population and cannot stand in for proof of the full experiment.
-
-## Choosing The Right Surface
-
-- Use `get_spot_klines()` for standard Limen experiments and manifest test sources that should stay on the public BTCUSDT path.
-- Use `get_spot_dollar_klines()` when market activity, not wall-clock time, should define each row.
-- Use `get_binance_file()` for direct Binance archives.
-- Use `get_any_file()` for local fixtures, URLs, and generic file-backed ingestion.
-- Use `get_arrow_file()` for local Arrow IPC files when memory mapping and zero-copy validation matter.
-
-## Read Next
-
-- [Data Bars](Data-Bars.md)
-- [Single-File Decoder](Single-File-Decoder.md)
-- [Experiment Manifest](Experiment-Manifest.md)
+[Historical data API](Historical-Data-Reference.md) describes local Parquet/CSV/ZIP, hosted sources, Binance archives and Arrow IPC, including filtering and cache behavior. Those acquisition methods do not make a changing hosted snapshot equivalent to the pinned project input. Continue to [observation and label preparation](Data-Bars.md) with the unchanged file or frame.

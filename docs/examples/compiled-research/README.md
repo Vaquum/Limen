@@ -15,6 +15,10 @@ sh acquire.sh limen-research
 
 Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
 
+## Source encodings
+
+The three `source_*.yaml` variants read the bundled CSV, ZIP and Arrow encodings of the first 1,440 recorded hourly observations. Their exact data and candidate results must agree; the source-format choice does not change the research population. [Historical data reference](../../Historical-Data-Reference.md#recorded-format-equivalence) gives their method/path declarations and output constraints.
+
 ## Preparation diagnostics
 
 The preparation campaign includes `helper_indicators.yaml`, `helper_features.yaml`, `helper_regimes.yaml`, `helper_scalers.yaml` and `conditional_features.yaml`. Each round activates one helper group with the common causal baseline. They exercise 117 indicators, 100 numeric bar-feature helpers and five categorical regime rules, all five registered scalers and the `include_if` branch through `limen run`. They fit on January 1–February 15, validate on February 15–March 15 and assess March 15–April 15, 2024, all half-open UTC intervals. Their native result logs and predictions remain in the results archive.

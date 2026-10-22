@@ -130,7 +130,9 @@
     "docs/Run-And-Recover.md",
     "docs/Trading-Behavior.md",
     "docs/Selected-Behavior.md",
-    "docs/Public-API.md"
+    "docs/Public-API.md",
+    "docs/Search-Reference.md",
+    "docs/Historical-Data-Reference.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -2865,6 +2867,16 @@
     ],
     "docs/Public-API.md": [
       "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Search-Reference.md": [
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Historical-Data-Reference.md": [
+      "python/bars",
       "compiled/selection"
     ]
   }
