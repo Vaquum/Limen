@@ -56,14 +56,14 @@ uel:
   feedback_interval: 1
 ```
 
-The separate metric-driven campaigns exercise all four alternatives. Python compares 30 real fitted candidates before inspecting correlations and parameter importance. Each feedback run starts a fresh queue. The sanity case deliberately selects an unavailable probability metric from a continuous Ridge model: its removals show why choosing the wrong metric can destroy a search. Saturation uses a declared variance threshold; focus narrows around an observed winner; correlation distinguishes applied removals from advisory suggestions. These small populations demonstrate control behavior, not statistical reliability.
+The separate metric-driven campaigns exercise all four alternatives. Python compares 30 real fitted candidates before inspecting correlations and parameter importance. Each feedback run starts a fresh queue. The Python sanity case marks measured execution times above its deliberately strict zero-second allowance as suggestions. The Compiled case removes a calibration mode whose chosen score is unavailable; its missing-rate threshold distinguishes that mode from the mixed population. Saturation uses a declared variance threshold; focus narrows around an observed winner; correlation distinguishes applied removals from advisory suggestions. These small populations demonstrate control behavior, not statistical reliability.
 
 ### Python metric-driven controls
 
 <!-- example: reducers-python-metric-controls source=docs/examples/python-research/analysis_cases.py region=reducer_config scenario=search interface=python role=executed -->
 ```python
     configurations = {
-        'sanity': SanityReducer(metric='validation_probability_auc', min_observations=2),
+        'sanity': SanityReducer(metric='validation_rmse', min_observations=2, execution_time_threshold=0., timeout_rate_threshold=0.),
         'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
         'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
         'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,

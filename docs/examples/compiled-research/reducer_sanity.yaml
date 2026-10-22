@@ -72,5 +72,6 @@ uel:
     params:
       metric: val_score
       min_observations: 2
+      nan_threshold: 0.75
   feedback_interval: 2
 # endregion declaration

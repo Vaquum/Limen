@@ -11,6 +11,13 @@ from limen.experiment.reducer import CorrelationReducer, FocusReducer, SanityRed
 import research as project
 
 
+def recordable_prep(raw, round_params):
+    data = project.prep(raw, round_params)
+    validation = data['validation']
+    data['_alignment'] = {'missing_datetimes': [], 'first_test_datetime': validation['datetime'][0], 'last_test_datetime': validation['datetime'][-1]}
+    return data
+
+
 # region analysis_campaign
 def analyze_candidates(bars, output):
     space = {'window': list(range(4, 14)), 'alpha': [.01, .1, 1.]}
@@ -19,13 +26,12 @@ def analyze_candidates(bars, output):
         fitted = project.fit(data['train'], params)
         forecasts = fitted.predict(data['validation'].select('momentum'))
         return {'validation_rmse': float(np.sqrt(np.mean((forecasts - data['validation']['next_return'].to_numpy())**2))),
-                'validation_net_return': project.backtest(data['validation'], forecasts),
-                'validation_probability_auc': None}  # Ridge has no class probabilities.
+                'validation_net_return': project.backtest(data['validation'], forecasts)}
 
     def campaign(name, reducers):
         directory = output / name
         domain = ParamDomain(space)
-        loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(params=lambda: space, prep=project.prep, model=model),
+        loop = UniversalExperimentLoop(data=bars, sfd=SimpleNamespace(__name__=__name__, params=lambda: space, prep=recordable_prep, model=model),
             search_strategy=GridStrategy(domain), experiment_dir=directory, checkpoint_interval=1,
             feedback_interval=5, pruning_strategies=reducers)
         loop.run('python-analysis-' + name, n_permutations=30, workers=1, progress_bar=False)
@@ -34,7 +40,7 @@ def analyze_candidates(bars, output):
     loop, directory = campaign('population', [])
     # region analysis_results
     analysis = Log(uel_object=loop)
-    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=['validation_probability_auc', 'validation_net_return'],
+    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=['validation_net_return'],
         heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
     importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
     correlation.to_csv(directory / 'correlation.csv', index=False)
@@ -43,7 +49,7 @@ def analyze_candidates(bars, output):
     controls = {}
     # region reducer_config
     configurations = {
-        'sanity': SanityReducer(metric='validation_probability_auc', min_observations=2),
+        'sanity': SanityReducer(metric='validation_rmse', min_observations=2, execution_time_threshold=0., timeout_rate_threshold=0.),
         'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
         'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
         'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,

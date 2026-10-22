@@ -719,7 +719,7 @@ def verify_analysis(result, inputs):
         actions = [item for cycle in control['audit'] for item in [*cycle['interventions'], *cycle['suggestions']]]
         assert actions and all(item['source'] == name.title()+'Reducer' for item in actions)
         if name == 'sanity':
-            assert any(item['op'] == 'remove_is' for item in actions)
+            assert all(item.get('action') == 'suggest' and 'execution_timeout' in item['reason'] for item in actions)
         if name == 'focus':
             assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
         if name == 'saturation':
