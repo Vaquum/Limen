@@ -280,3 +280,38 @@ test('compiled project is authored and operated through YAML and CLI',async({pag
   expect(source).not.toMatch(/python .*compiled-research|from limen import|UniversalExperimentLoop\(/);
   await expect(page.locator('figure.code').filter({hasText:'assessment:'}).getByRole('link',{name:'complete source',exact:true})).toBeVisible();
 });
+
+test('nested reference lookup keeps the original chapter return',async({page})=>{
+  await open(page);const opener=page.getByRole('link',{name:'Python Sensor construction',exact:true});await opener.click();
+  const panel=page.locator('[data-reference-dialog]');await expect(panel).toBeVisible();
+  await panel.getByRole('link',{name:'Cohort.from_python',exact:true}).click();
+  await expect(page).toHaveURL(/reference\/cohort\/#python-cohorts$/);await expect(panel).toBeVisible();
+  await page.getByRole('button',{name:'Return to chapter',exact:true}).click();
+  await expect(page).toHaveURL(/\/limen\/$/);await expect(panel).not.toBeVisible();await expect(opener).toBeFocused();
+});
+
+test('search indexes literal CLI flags and lands on their section',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('searchbox').fill('--reservation');
+  const results=page.locator('[data-search-dialog] ol a');await expect(results.first()).toBeVisible();
+  expect(await results.first().getAttribute('href')).toContain('#');
+  expect(await page.locator('[data-search-dialog] ol').innerText()).not.toMatch(/\]\([^)]*\.md/);
+  await results.first().click();await expect(page.locator(':target')).toBeInViewport();
+});
+
+test('interface choice hides only the other authoring examples and survives navigation',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
+  await expect(page.locator('figure[data-research-interface=python]').first()).toBeHidden();
+  await expect(page.locator('figure[data-research-interface=compiled]').first()).toBeVisible();
+  await page.reload();await expect(page.getByRole('button',{name:'Compiled Research',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Both interfaces',exact:true}).click();await expect(page.locator('figure[data-research-interface=python]').first()).toBeVisible();
+});
+
+test('long API headings and code fit at reading breakpoints',async({page})=>{
+  for(const width of [1440,1280,1024,640,390,320]){
+    await page.setViewportSize({width,height:900});
+    for(const route of ['parameter-search','foundational-sfds','reference-architectures']){
+      await page.goto('/limen/reference/packages/internals/'+route+'/');await page.evaluate(()=>document.fonts.ready);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+' '+route).toBe(true);
+    }
+  }
+});

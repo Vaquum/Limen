@@ -5,7 +5,7 @@ const status=document.querySelector('[data-status]');
 let storageAvailable=true;
 export function announce(message){if(status)status.textContent=message;}
 export function position(){
-  const passages=[...document.querySelectorAll('main article [data-passage]')];
+  const passages=[...document.querySelectorAll('main article [data-passage]')].filter(node=>node.getClientRects().length);
   const line=Math.min(130,innerHeight*.2);
   const active=passages.filter(p=>p.getBoundingClientRect().top<=line).at(-1);
   if(!active)return {passage:'opening',ratio:0,interface:document.body.dataset.interface||'both'};

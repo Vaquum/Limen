@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {execFileSync} from 'node:child_process';
 import {content,renderPage,hash,pageLabel} from '../reader/render.mjs';
+import {searchEntries} from '../reader/search-index.mjs';
 const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),root=path.dirname(site);
 const {values}=parseArgs({options:{evidence:{type:'string',default:'../.docs-evidence/current.json'},output:{type:'string',default:'reader-build'}}});
 const dirty=execFileSync('git',['status','--porcelain','--untracked-files=normal'],{cwd:root,encoding:'utf8'});
@@ -26,7 +27,7 @@ const output=path.resolve(site,values.output);if(output===site||!output.startsWi
 await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'assets/fonts'),{recursive:true});
 for(const page of pages){const target=path.join(output,page.route,'index.html');await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,renderPage(page,pages,evidence));}
 await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'},pages,evidence));
-for(const name of ['main','motion','code','place','navigation','search'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
+for(const name of ['main','motion','code','place','navigation','search','interfaces'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
 await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/book.css'));
 await fs.copyFile(path.join(site,'src/security-headers.json'),path.join(output,'security-headers.json'));
 await fs.copyFile(path.join(site,'reader/route-decisions.json'),path.join(output,'route-decisions.json'));
@@ -39,7 +40,7 @@ const wheelNames=(await fs.readdir(path.join(root,'.docs-evidence'))).filter(nam
 if(wheelNames.length!==1)throw Error('Expected exactly the validated wheel');
 await fs.copyFile(path.join(root,'.docs-evidence',wheelNames[0]),path.join(output,'evidence',wheelNames[0]));
 for(const source of [...evidence.sources,...evidence.displays]){const target=path.join(output,'source',source.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.copyFile(path.join(root,source.path),target);}
-await fs.writeFile(path.join(output,'search.json'),JSON.stringify(pages.map(p=>({title:pageLabel(p),route:p.url,text:p.markdown.replace(/```[\s\S]*?```/g,'').replace(/<!--[^]*?-->/g,'').replace(/[#*`|]/g,'').replace(/\s+/g,' ').trim()}))));
+await fs.writeFile(path.join(output,'search.json'),JSON.stringify(pages.flatMap(searchEntries)));
 await fs.writeFile(path.join(output,'routes.json'),JSON.stringify(pages.map(p=>({source:p.source,url:p.url,part:p.part}))));
 await fs.writeFile(path.join(output,'sitemap.xml'),'<?xml version="1.0" encoding="utf-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+pages.map(p=>`<url><loc>${content.product.origin}${p.url}</loc></url>`).join('')+'</urlset>');
 await fs.writeFile(path.join(output,'robots.txt'),'User-agent: *\nAllow: '+content.product.basePath+'/\nSitemap: '+content.product.origin+content.product.basePath+'/sitemap.xml\n');
