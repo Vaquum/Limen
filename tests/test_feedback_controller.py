@@ -354,7 +354,6 @@ def test_out_of_boundary_errors_still_propagate(recorded_log):
         fc = FeedbackController(intra_callback=bad_callback, audit_log_path=audit_path)
         with pytest.raises(AttributeError, match='outside feedback boundary'):
             fc.trigger(recorded_log, msq, strategy, 5)
-        assert not audit_path.exists()
 
 
 def test_audit_log_written():

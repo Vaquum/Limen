@@ -217,7 +217,7 @@ Two mechanisms exist; neither is a reducer class.
 
 ### In-process callback
 
-`intra_callback(log, msq)` receives direct `MSQ` access and mutates it itself. The controller records new `msq.intervention_log` entries after the callback returns. Callback failures are isolated, warned about, and recorded in the audit `errors` list; partial intervention-log entries are retained. The Python project keeps one parameter value, then writes the intervention file during that same feedback cycle:
+`intra_callback(log, msq)` receives direct `MSQ` access and mutates it itself. The controller records new `msq.intervention_log` entries after the callback returns. Handled callback failures are isolated, warned about, and recorded in the audit `errors` list; partial intervention-log entries are retained. The Python project keeps one parameter value, then writes the intervention file during that same feedback cycle:
 
 <!-- example: pruning-python-callback source=docs/examples/python-research/scenarios.py region=mixed_feedback scenario=search interface=python role=executed -->
 ```python

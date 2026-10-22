@@ -148,7 +148,7 @@ class FeedbackController:
         '''
 
         all_interventions: list[dict[str, Any]] = []
-        errors: list[dict[str, Any]] = []
+        errors: list[dict[str, str]] = []
 
         sources = [
             ('pruning_strategies', lambda: self._collect_from_pruning(log, msq, errors), True),
@@ -181,7 +181,7 @@ class FeedbackController:
                     needs_dispatch: bool,
                     msq: MSQ,
                     all_interventions: list[dict[str, Any]],
-                    errors: list[dict[str, Any]]) -> None:
+                    errors: list[dict[str, str]]) -> None:
 
         '''
         Execute a single feedback source with error isolation.
@@ -212,7 +212,7 @@ class FeedbackController:
     def _collect_from_pruning(self,
                               log: Any,
                               msq: MSQ,
-                              errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+                              errors: list[dict[str, str]]) -> list[dict[str, Any]]:
 
         '''
         Collect interventions from all active pruning strategies.
@@ -246,7 +246,7 @@ class FeedbackController:
     def _collect_from_intra(self,
                             log: Any,
                             msq: MSQ,
-                            errors: list[dict[str, Any]]) -> list[dict[str, Any]]:
+                            errors: list[dict[str, str]]) -> list[dict[str, Any]]:
 
         '''
         Collect interventions from the intra-experiment callback.
@@ -343,7 +343,7 @@ class FeedbackController:
     def _write_audit_entry(self,
                            current_round: int,
                            interventions: list[dict[str, Any]],
-                           errors: list[dict[str, Any]],
+                           errors: list[dict[str, str]],
                            msq: MSQ,
                            *,
                            suggestions: list[dict[str, Any]] | None = None) -> None:
