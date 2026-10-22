@@ -35,7 +35,7 @@ sfd:
       slip_bps: 3.0
       notional_rate: 0.5
     scaler:
-      from_params: scaler_type
+      class: limen.scalers.LogRegScaler
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
     calibration:
       probability_calibration:
@@ -47,13 +47,11 @@ sfd:
         params:
           metric: limen.metrics.balanced_metric.balanced_metric
   params:
-    scaler_type: [logreg]
     C:
     - 0.1
     - 0.5
     - 1.0
     - 2.0
-    random_state: [42]
     use_calibration:
     - false
     - true
