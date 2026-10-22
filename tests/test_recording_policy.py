@@ -754,6 +754,8 @@ def test_consumer_contracts(case, campaigns, tmp_path):
         before = _snapshot(path)
         rejected = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(path)])
         assert rejected.exit_code != 0
+        assert 'Experiment complete' not in rejected.output
+        assert 'Parquet →' not in rejected.output
         assert 'recording' in rejected.output
         assert _snapshot(path) == before
     elif case == 'pbo_report':

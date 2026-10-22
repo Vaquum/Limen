@@ -37,6 +37,7 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | Module or family | Responsibility |
 |---|---|
 | `_constants.py` | Shared command constants |
+| `_export_results.py` | Shared successful-run Parquet export |
 | `_load_yaml.py` | Shared YAML loading helper |
 | `run.py` | limen run |
 | `resume.py` | limen run --resume |
@@ -58,6 +59,7 @@ commands/
 ├── README.md
 ├── __init__.py
 ├── _constants.py
+├── _export_results.py
 ├── _load_yaml.py
 ├── backup.py
 ├── commit.py
@@ -78,7 +80,7 @@ commands/
 
 - Handlers should stay thin. YAML semantics belong in `limen.yaml` and execution semantics belong in `limen.experiment`.
 - Each handler returns a `bool` (or `None`) and prints its own operator-facing output; `main.py` maps that to the process exit code.
-- Modules prefixed with `_` (`_constants.py`, `_load_yaml.py`) are shared internals, not commands.
+- Modules prefixed with `_` are shared internals, not commands.
 
 ## Read next
 

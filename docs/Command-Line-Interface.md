@@ -210,7 +210,9 @@ Committed manifest URIs may use a full `manifest://sha256:<64-hex>` ID or an una
 | `production` | `./results/{name}_{datetime}/results.csv` |
 | committed manifest URI | `./results/[dev/]<short-hash>/<timestamp>/results.csv` |
 
-Set `uel.output_format: parquet` to also write `results.parquet`. Set `uel.output_path` to override the default output directory for direct YAML runs. Committed manifest URI runs ignore `uel.output_path` and always use the hash/timestamp path under the project `results` directory.
+Set `uel.output_format: parquet` to also write `results.parquet` after successful execution. A successful `--resume` uses this setting from the saved YAML and writes or refreshes the file in the supplied results directory, including when no new rounds run. Rejected or interrupted resumes leave any existing Parquet file unchanged.
+
+Set `uel.output_path` to override the default output directory for direct YAML runs. Committed manifest URI runs ignore `uel.output_path` and always use the hash/timestamp path under the project `results` directory.
 
 ## Validation Boundaries
 
