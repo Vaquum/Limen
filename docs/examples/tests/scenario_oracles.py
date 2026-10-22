@@ -410,8 +410,8 @@ def verify(interface, name, result, output, inputs):
                         assert bar[field] == pytest.approx(part[field].sum(), rel=1e-12)
                     cursor += bar['bar_count']
                 assert cursor == row['source_rows_in_complete_bars'] and sum(raw.slice(cursor)[column]) < row['threshold']
-                assert row['first_start'] == formed['datetime'][0].isoformat()
-                assert row['last_start'] == formed['datetime'][-1].isoformat()
+                assert row['first_start'] == actual['datetime'][0].isoformat()
+                assert row['last_start'] == actual['datetime'][-1].isoformat()
                 assert row['last_available'] == (raw['datetime'][cursor - 1] + timedelta(hours=1)).isoformat()
         else:
             assert result['rounds'] == 3 and {row['bar_type'] for row in result['modes']} == {'volume', 'trade', 'liquidity'}
