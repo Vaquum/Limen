@@ -102,6 +102,9 @@ def test_fixture_provenance():
     ('ht_sine', '_ht_sine_from_values', ('ht_sine', 'ht_sine_lead')),
     ('ht_phasor', '_ht_phasor_from_values', ('ht_phasor_inphase', 'ht_phasor_quadrature')),
     ('mama', 'mama_from_values', ('mama', 'fama')),
+    ('stoch', '_stoch_from_arrays', ('stoch_slowk', 'stoch_slowd')),
+    ('stochf', 'stochf_from_arrays', ('stochf_fastk', 'stochf_fastd')),
+    ('stochrsi', '_stochrsi_from_values', ('stochrsi_fastk', 'stochrsi_fastd')),
 ])
 def test_paired_kernel_runs_once(monkeypatch, name, kernel, columns):
     module = importlib.import_module(f'limen.indicators.{name}')
@@ -121,7 +124,9 @@ def test_paired_kernel_runs_once(monkeypatch, name, kernel, columns):
     calls.clear()
     for source in (frame, pl.concat([frame.head(100), frame.slice(100)], rechunk=False).lazy()):
         result = getattr(indicators, name)(source)
+        assert isinstance(result, type(source))
         if isinstance(result, pl.LazyFrame):
+            assert calls == []
             result = result.collect()
         assert len(calls) == 1
         calls.clear()
