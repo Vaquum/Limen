@@ -366,13 +366,14 @@ Python Research fits ten momentum windows against three Ridge penalties on the s
 
 <!-- example: log-python-analysis source=docs/examples/python-research/analysis_cases.py region=analysis_results scenario=search interface=python role=executed -->
 ```python
+def analyze_log(loop, directory, space):
     analysis = Log(uel_object=loop)
     correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
         heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
     importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
     correlation.to_csv(directory / 'correlation.csv', index=False)
     importance.to_csv(directory / 'importance.csv', index=False)
-    
+    return correlation, importance
 ```
 
 <!-- result: log-python-importance interface=python scenario=search fields=analysis.importance[].parameter,analysis.importance[].importance_mean,analysis.importance[].baseline_score,analysis.importance[].n_configurations -->

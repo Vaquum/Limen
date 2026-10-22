@@ -62,14 +62,14 @@ The separate metric-driven campaigns exercise all four alternatives. Python comp
 
 <!-- example: reducers-python-metric-controls source=docs/examples/python-research/analysis_cases.py region=reducer_config scenario=search interface=python role=executed -->
 ```python
-    configurations = {
+def metric_reducers():
+    return {
         'sanity': SanityReducer(metric='validation_rmse', min_observations=2, execution_time_threshold=0., timeout_rate_threshold=0.),
         'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
         'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
         'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,
             prune_threshold=1., sign_stability_threshold=0., random_state=42),
     }
-    
 ```
 
 ### Compiled metric-driven controls

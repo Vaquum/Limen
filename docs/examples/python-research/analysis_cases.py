@@ -18,6 +18,30 @@ def recordable_prep(raw, round_params):
     return data
 
 
+# region analysis_results
+def analyze_log(loop, directory, space):
+    analysis = Log(uel_object=loop)
+    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
+        heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
+    importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
+    correlation.to_csv(directory / 'correlation.csv', index=False)
+    importance.to_csv(directory / 'importance.csv', index=False)
+    return correlation, importance
+# endregion analysis_results
+
+
+# region reducer_config
+def metric_reducers():
+    return {
+        'sanity': SanityReducer(metric='validation_rmse', min_observations=2, execution_time_threshold=0., timeout_rate_threshold=0.),
+        'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
+        'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
+        'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,
+            prune_threshold=1., sign_stability_threshold=0., random_state=42),
+    }
+# endregion reducer_config
+
+
 # region analysis_campaign
 def analyze_candidates(bars, output):
     space = {'window': list(range(4, 14)), 'alpha': [.01, .1, 1.]}
@@ -38,25 +62,9 @@ def analyze_candidates(bars, output):
         return loop, directory
 
     loop, directory = campaign('population', [])
-    # region analysis_results
-    analysis = Log(uel_object=loop)
-    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
-        heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
-    importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
-    correlation.to_csv(directory / 'correlation.csv', index=False)
-    importance.to_csv(directory / 'importance.csv', index=False)
-    # endregion analysis_results
+    correlation, importance = analyze_log(loop, directory, space)
     controls = {}
-    # region reducer_config
-    configurations = {
-        'sanity': SanityReducer(metric='validation_rmse', min_observations=2, execution_time_threshold=0., timeout_rate_threshold=0.),
-        'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
-        'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
-        'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,
-            prune_threshold=1., sign_stability_threshold=0., random_state=42),
-    }
-    # endregion reducer_config
-    for name, reducer in configurations.items():
+    for name, reducer in metric_reducers().items():
         reduced, location = campaign(name, [reducer])
         controls[name] = {'rows': project.completed_log(reduced).to_dicts(),
             'audit': [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()],
