@@ -71,4 +71,4 @@ Walk-forward selection and final assessment remain caller-owned. They do not cre
 
 The search variant also fits a caller-owned three-class nearest-neighbor model. Training-only next-return quantiles define its labels; a later partition supplies macro precision, recall, AUC and accuracy. The [metric reference](../../Standard-Metrics-Library.md#recorded-three-class-evaluation) shows the exact function and current results.
 
-Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
+The [optional model-template campaign](../compiled-research/README.md#optional-model-campaign) records a real TabPFN CPU run separately. Python Research keeps the choice and fitting of an ordinary Python model caller-owned.

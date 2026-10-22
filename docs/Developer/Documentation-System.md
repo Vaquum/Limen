@@ -145,7 +145,7 @@ Use named scenarios for choices that cannot coexist in one run. The main path re
 
 The Python project must show caller-owned preparation, fitting, backtesting, search and selection, followed by reuse of evaluated fitted state. The Compiled project must show YAML declaration, CLI validation and execution, recorded results, CLI reconstruction and compatible cohort binding. Its complete canonical manifest covers composable features; separate YAML variants cover incompatible choices such as target families, fixed and walk-forward splits, bar formation and guarded final assessment.
 
-Use recorded data only. Declare each input's origin, SHA-256 digest, relevant time range, row selection and availability clocks. A missing recorded input or optional environment is an unproved boundary, not permission to invent data or output. Real TabPFN model validation remains unproved while the execution tracked in [#628](https://github.com/Vaquum/Limen/issues/628) is absent; a skipped test cannot support a successful-run claim.
+Use recorded data only. Declare each input's origin, SHA-256 digest, relevant time range, row selection and availability clocks. A missing recorded input or optional environment is an unproved boundary, not permission to invent data or output. The optional TabPFN campaign retains a separately provisioned real-model observation with strict current-source and numerical checks; a skipped test cannot support a successful-run claim.
 
 ### Acquisition and execution
 
@@ -352,3 +352,11 @@ Record the first complete chapter's commit, preview URL and evidence bundle. It 
 - [Packaging](Packaging.md)
 - [Release policy](Release-Policy.md)
 - [Security assurance case](Security-Assurance-Case.md)
+
+## Optional model evidence
+
+The [TabPFN project command](../examples/compiled-research/README.md#optional-model-campaign) uses a real checkpoint pinned by upstream revision and SHA-256. Its ordinary test verifies the retained observation against every current package Python file, the package version, exact YAML/shell source and recorded input, then independently reconstructs the labels, accuracy and pairwise AUC. A changed file or version fails admission; editing the JSON is not a replacement for model execution.
+
+To regenerate, provision a separate supported environment with the matching non-editable Limen wheel and its `data,tabpfn` extras. Use TabPFN 6.4.1 and the recorded environment as the reproduction baseline. Unpack the exact canonical bundle in a fresh directory, then invoke `docs/examples/optional_models.py` with `--root` pointing to the clean tested checkout, `--project` to that bundle root and `--output docs/examples/retained/tabpfn.json`. Put the matching environment's `limen` first on `PATH`. The capture command verifies that the installed package is outside the checkout and byte-identical to its Python source, runs the unchanged shell/YAML command, validates the genuine outputs and writes a new timestamped observation. Commit that observation with the affected sources and rerun the ordinary documentation proof.
+
+The recorded run is CPU, one ensemble, Python 3.12 and macOS ARM64. Its source/version equality check is current validation of that observation; ordinary CI does not download and run the optional model again. Other devices, dependency environments and stochastic replay require their own execution evidence. Keep that distinction visible wherever this result is cited.

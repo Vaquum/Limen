@@ -262,11 +262,19 @@ Three label files are derived from recorded hourly closes independently within t
 
 The bundle includes these ready-to-read files; no preprocessing command is part of Compiled Research. The tests compare every derivation with the recorded source.
 
+## Optional model campaign
+
+Run `sh compiled-research/tabpfn.sh` separately from the ordinary campaign, from the same bundle root. It requires the matching `vaquum-limen[data,tabpfn]` installation, TabPFN `6.4.1`, and the environment recorded in the [real-model observation](../retained/tabpfn.json). The recorded run used Python 3.12 on macOS ARM64; its dependency versions are observations, not a claim of proof on every supported host.
+
+The [YAML declaration](tabpfn.yaml) fits one CPU ensemble on January 1–2, 2025, uses January 3 for validation and evaluates January 4. The [shell command](tabpfn.sh) downloads the actual checkpoint from an immutable upstream revision and verifies its SHA-256 before execution. It retains 95 predictions and probabilities. Independent assertions reconstruct training-only label thresholds, later labels, accuracy and pairwise AUC.
+
+Ordinary documentation CI checks the retained run against the current package's complete Python-file inventory, package version, these exact YAML/shell files and recorded input. A change invalidates that observation and requires a real rerun. CI does not silently replace the optional model with a smaller model or present an unexecuted import as success. This CPU case supplies no CUDA or deterministic-reconstruction claim. The [developer procedure](../../Developer/Documentation-System.md#optional-model-evidence) owns observation regeneration.
+
 ## Read the evidence
 
 Native `results.csv` and compressed round records are the research outputs. `assessment.json` records selection and membership; it does not serialize arbitrary fitted model weights. Continuous-family YAML uses the CLI's ordinary execution path; optional legacy binary summaries are outside those declarations.
 
-Search seeds govern candidate order. The random-binary diagnostic is stochastic and makes no deterministic replay claim. Real TabPFN execution remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).
+Search seeds govern candidate order. The random-binary diagnostic is stochastic and makes no deterministic replay claim. The separate real-model campaign above records its exact execution boundary.
 
 The guarded project reserves January 5–6, 2024, before research. Earlier exposure remains unknown for local recorded files. Reservation and freezing protect this local workflow; they cannot prove that another person or process never read those observations.
 
