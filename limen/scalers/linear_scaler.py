@@ -61,20 +61,18 @@ def build_rules(
     """
     Build scaling rules by combining base rules and user overrides.
 
+    Override entries become unescaped ``^entry$`` regex patterns before base
+    rules. The first matching pattern wins.
+
     Args:
         overrides: User-specified rules in sklearn style, e.g.
             {'standard': ['open', 'close'], 'log_standard': ['volume']}.
         base_rules: Regex-based rules to start with.
     """
 
-    rules = dict(base_rules or DEFAULT_SCALING_RULES)
-
-    if overrides:
-        for rule, cols in overrides.items():
-            for col in cols:
-                rules[fr'^{col}$'] = rule
-
-    return rules
+    explicit = {fr'^{col}$': rule for rule, cols in (overrides or {}).items() for col in cols}
+    base = base_rules or DEFAULT_SCALING_RULES
+    return explicit | {pattern: rule for pattern, rule in base.items() if pattern not in explicit}
 
 
 def get_scaling_rule(col: str, rules: dict[str, str], default: str = 'none') -> str:
