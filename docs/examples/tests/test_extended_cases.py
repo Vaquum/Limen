@@ -52,5 +52,8 @@ def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     result = CliRunner().invoke(cli, ['run', '--no-progress-bar', *['compiled-research/' + name + '.yaml' for name in names]])
     print(result.output)
     assert result.exit_code == 0, result.exception
+    resumed = CliRunner().invoke(cli, ['run', '--no-progress-bar', '--resume', 'results/dev/compiled-parallel', '--workers', '2'])
+    print(resumed.output)
+    assert resumed.exit_code == 0, resumed.exception
     summary = verify_extended_campaigns(project)
     assert summary['analysis']['n_trials'] == 20

@@ -55,4 +55,9 @@ uel:
     type: grid
   output_format: csv
   checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 # endregion declaration
