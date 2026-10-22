@@ -347,7 +347,7 @@ def execution(data_dir, output):
         getattr(funded, name).write_parquet(output / ('funded-' + name + '.parquet'))
     context = {'observations': observations.to_dicts(), 'partition': [start, end], 'contract': export_trade_contract(policy, inputs)}
     funded_context = context | {'contract': export_trade_contract(funded_policy, funded_inputs)}
-    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'context': context, 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'contract_digest': funded.contract_digest, 'payments': funded.funding.to_dicts(), 'fills': funded.fills.to_dicts(), 'context': funded_context, 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
+    return {'metrics': dict(ledger.metrics), 'contract_digest': ledger.contract_digest, 'fills': ledger.fills.to_dicts(), 'ledger_excerpt': ledger.fills.head(8).to_dicts(), 'episodes': ledger.episodes.to_dicts(), 'context': context, 'initial_equity': 10000, 'fee_bps': 7, 'slip_bps': 3, 'source_interval_seconds': 3600, 'funded': {'metrics': dict(funded.metrics), 'contract_digest': funded.contract_digest, 'payments': funded.funding.to_dicts(), 'fills': funded.fills.to_dicts(), 'context': funded_context, 'recorded_events': history.height, 'input_sha256': HASHES[FUNDING]}}
 # endregion execution
 
 

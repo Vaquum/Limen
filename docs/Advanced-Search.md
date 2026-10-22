@@ -256,6 +256,14 @@ Implement a strategy only when the built-ins do not meet the experiment's search
 
 Use the shipped [GridStrategy implementation](https://github.com/Vaquum/Limen/blob/main/limen/experiment/param_search/grid_strategy.py) as the exhaustive-search reference. It checks the inherited seen set before yielding candidates, rebuilds its cursor after domain changes, and saves/restores its enumeration state. Custom strategies must preserve this deduplication behavior across feedback and resume; resetting a cursor alone can repeat completed combinations.
 
+## Read the completed campaign
+
+The Python campaign reports its explicit seed and the helper families actually exercised. The Compiled campaign records traversal, the reduced budget and its individual YAML helper campaigns. Full per-candidate rows remain in the native records; these are population and execution counts, not a significance test.
+
+<!-- result: search-python-coverage interface=python scenario=search fields=seed,helper_diagnostics.counts -->
+
+<!-- result: search-compiled-coverage interface=compiled scenario=search fields=traversals,budget_rounds,helper_diagnostics -->
+
 ## Read next
 
 - Continue to [Reducers And Feedback](Reducers-And-Feedback.md) for the intervention system that acts on the mutable search queue.

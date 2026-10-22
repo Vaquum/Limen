@@ -60,6 +60,14 @@ limen run --no-progress-bar compiled-research/acceptance.yaml
 
 The resulting Cohort binds the recorded fold identities. Its common selection cutoff covers the campaign's available source and selection decisions, including competitors. It must not be read as each fold's final fitting timestamp. The [Trainer reference](Trainer.md#recorded-walk-forward-folds) describes the required witnesses and refusal conditions; [Cohort](Cohort.md#recorded-walk-forward-members) describes compatible composition.
 
+## Read the actual windows
+
+The Python rows show the four assessed folds and their selected alpha. The Compiled result names its two reconstructed fold members. These counts follow the respective definitions above; they are not a comparison of forecast quality.
+
+<!-- result: windows-python-geometry interface=python scenario=walk_forward fields=folds[].anchored,folds[].fold,folds[].train_rows,folds[].test_rows,folds[].alpha -->
+
+<!-- result: windows-compiled-geometry interface=compiled scenario=walk_forward fields=folds,members -->
+
 ## Keep the assessment separate from selection
 
 Repeated windows provide several later assessment populations. Using their outcomes to choose the research definition makes those outcomes part of selection. A collection of folds therefore does not create an untouched final sample.

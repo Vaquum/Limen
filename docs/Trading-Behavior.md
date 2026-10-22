@@ -2,7 +2,7 @@
 
 A forecast does not determine a return until entry, exit, exposure, prices and costs are declared. Start from the policy used to evaluate the candidate; changing that policy changes the question.
 
-The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) use the same recorded input bundle. Their methodology, units and evaluation populations remain explicit; their scores are not a controlled comparison.
+The execution variants of the [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) use recorded hourly observations and a separately pinned funding history. Their ledgers state the actual policy and evaluated window.
 
 ## Python Research
 
@@ -49,6 +49,18 @@ limen run --no-progress-bar \
 ```
 
 A snapshot, a cash account and a perpetual account are different interpretations. Compare returns only after the observation population, availability, policy and capital conventions agree. The [execution reference](Backtest.md) preserves every supported product, clock, barrier, funding, allocation and observed-cost contract. The [benchmark reference](Benchmark.md) defines when retained tracks are comparable.
+
+## Read the fills
+
+These excerpts show the first eight native fills, with Unix nanosecond timestamps, signed quantity changes, reference prices and fees. The full ledgers remain in the native records. The two campaigns use different declared assessment populations; compare their policy and clocks before comparing a return.
+
+### Python Research ledger
+
+<!-- result: trading-python-ledger interface=python scenario=execution fields=ledger_excerpt[].time_ns,ledger_excerpt[].quantity_delta,ledger_excerpt[].reference_price,ledger_excerpt[].fee -->
+
+### Compiled Research ledger
+
+<!-- result: trading-compiled-ledger interface=compiled scenario=execution fields=execution.ledger_excerpt[].time_ns,execution.ledger_excerpt[].quantity_delta,execution.ledger_excerpt[].reference_price,execution.ledger_excerpt[].fee -->
 
 ## Carry the policy with the result
 

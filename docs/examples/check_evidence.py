@@ -18,7 +18,7 @@ from catalogue_tests import validate_test_reference
 EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
 REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
-RESULT_MARKER = r'<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.,]+) -->'
+RESULT_MARKER = r'<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.\[\],]+) -->'
 COMPILED_DRIVERS = {
     'selection': ('selection',), 'search': ('preparation', 'helpers', 'targets', 'search', 'models'),
     'recovery': ('recovery',), 'walk_forward': ('walk_forward',), 'calibration': ('calibration',),
@@ -162,7 +162,7 @@ def result_bindings(root: Path, document: Path, records=None):
     for match in re.finditer(RESULT_MARKER, text):
         identity, interface, scenario, fields = match.groups()
         key = interface + '/' + scenario
-        if key not in catalogue['scenario_details'] or any(not field or not all(part.isidentifier() for part in field.split('.')) for field in fields.split(',')):
+        if key not in catalogue['scenario_details'] or any(not field or not all((part[:-2] if part.endswith('[]') else part).isidentifier() for part in field.split('.')) for field in fields.split(',')):
             raise ValueError('Unknown current result or field: ' + identity)
         if records is not None:
             record = next(item for item in records if item['interface'] == interface and item['id'] == scenario)
@@ -170,12 +170,21 @@ def result_bindings(root: Path, document: Path, records=None):
             if not path.is_relative_to((root / '.docs-evidence').resolve()) or digest(path.read_bytes()) != record['output_sha256']:
                 raise ValueError('Current result identity differs: ' + identity)
             value = json.loads(path.read_text())
+            def select(selected, parts, field):
+                if not parts:
+                    return selected
+                part = parts[0]
+                name = part[:-2] if part.endswith('[]') else part
+                if not isinstance(selected, dict) or name not in selected:
+                    raise ValueError('Missing current result field: ' + field)
+                selected = selected[name]
+                if part.endswith('[]'):
+                    if not isinstance(selected, list):
+                        raise ValueError('Current result field is not a row collection: ' + field)
+                    return [select(item, parts[1:], field) for item in selected]
+                return select(selected, parts[1:], field)
             for field in fields.split(','):
-                selected = value
-                for part in field.split('.'):
-                    if not isinstance(selected, dict) or part not in selected:
-                        raise ValueError('Missing current result field: ' + field)
-                    selected = selected[part]
+                select(value, field.split('.'), field)
         found.append({'id': identity, 'interface': interface, 'scenario': scenario, 'fields': fields.split(',')})
     if len(found) != text.count('<!-- result:') or len({item['id'] for item in found}) != len(found):
         raise ValueError('Malformed or duplicate current result')
@@ -414,6 +423,8 @@ def validate_model_catalogue(root, catalogue) -> None:
 
 
 def validate_cli_catalogue(root, catalogue) -> None:
+    from catalogue_admission import validate_cli_contracts
+    validate_cli_contracts(root)
     from limen.cli.main import cli
     commands = set(cli.commands)
     if set(catalogue['cli_commands']) != commands:

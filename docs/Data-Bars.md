@@ -134,6 +134,14 @@ Inside a manifest-driven experiment, the order is:
 
 This keeps train-only fitting and test-only evaluation aligned with the actual post-bar data seen by each fold.
 
+## Inspect the completed bars
+
+The Python diagnostic reports each threshold and the number of source rows admitted into completed bars. Its incomplete tail remains excluded. The Compiled result identifies the three modes executed by the YAML campaign; its assessment population follows its own split declaration.
+
+<!-- result: bars-python-population interface=python scenario=bars fields=formed[].kind,formed[].threshold,formed[].rows,formed[].source_rows_in_complete_bars -->
+
+<!-- result: bars-compiled-modes interface=compiled scenario=bars fields=modes -->
+
 ## Read next
 
 - Continue to [Single-File Decoder](Single-File-Decoder.md) for experiment packaging.

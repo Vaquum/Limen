@@ -94,7 +94,7 @@ def verify_execution(project, name):
                 assert (payment['rate_decimal'], payment['valuation_price']) == (rate, price)
                 assert payment['recognized_delta'] == pytest.approx(-quantity * rate * price, rel=1e-12, abs=1e-12)
             assert row['backtest_funding_pnl'] == pytest.approx(sum(payment['recognized_delta'] for payment in ledger['funding']))
-    return {'rounds': log.height, 'risk_spans': log['risk_span'].to_list()}
+    return {'rounds': log.height, 'risk_spans': log['risk_span'].to_list(), 'ledger_excerpt': records(directory)[0]['trade_ledger']['fills'][:8]}
 
 
 def verify_allocation(project, name):

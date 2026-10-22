@@ -3343,11 +3343,11 @@ Args:
 
 data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
 
-inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+inline_metrics (bool): Whether to include `confusion_*` and `backtest_*` keys
 
 Returns:
 
-dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+dict: Metrics dict, optionally with flattened `confusion_*` and `backtest_*` keys
 
 ### `limen.sfd.reference_architecture.DLinearRegressor.predict`
 
@@ -3552,11 +3552,11 @@ Args:
 
 data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
 
-inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+inline_metrics (bool): Whether to include `confusion_*` and `backtest_*` keys
 
 Returns:
 
-dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+dict: Metrics dict, optionally with flattened `confusion_*` and `backtest_*` keys
 
 ### `limen.sfd.reference_architecture.LogRegBinary.predict`
 
@@ -3637,11 +3637,11 @@ Args:
 
 data (dict): Data dictionary with x_test, y_test, and optionally price_data_for_backtest
 
-inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+inline_metrics (bool): Whether to include `confusion_*` and `backtest_*` keys
 
 Returns:
 
-dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+dict: Metrics dict, optionally with flattened `confusion_*` and `backtest_*` keys
 
 ### `limen.sfd.reference_architecture.RandomBinary.predict`
 
@@ -3865,11 +3865,11 @@ data (dict): Data dictionary with x_val, y_val, x_test, y_test,
 
 and optionally price_data_for_backtest
 
-inline_metrics (bool): Whether to include confusion_* and backtest_* keys
+inline_metrics (bool): Whether to include `confusion_*` and `backtest_*` keys
 
 Returns:
 
-dict: Metrics dict, optionally with flattened confusion_* and backtest_* keys
+dict: Metrics dict, optionally with flattened `confusion_*` and `backtest_*` keys
 
 ### `limen.sfd.reference_architecture.TabPFNBinary.predict`
 
@@ -4700,4 +4700,3 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 ```
 
 Collect YAML errors and warnings; validity requires no errors.
-

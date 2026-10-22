@@ -86,3 +86,28 @@ def validate_admission(root, recorded):
     for public, entry in recorded.items():
         if entry['role'] not in ('module', 'metadata') and (entry['source'], entry['role'] + ':' + entry['symbol']) not in references:
             raise ValueError('Public entry has no exact reference contract: ' + public)
+
+
+def cli_contracts():
+    from limen.cli.main import cli
+    import click
+    result = {}
+    for name, command in [('limen', cli), *[('limen ' + key, value) for key, value in sorted(cli.commands.items())]]:
+        context = click.Context(command)
+        help_option = command.get_help_option(context)
+        params = [*command.params, *([help_option] if help_option is not None else [])]
+        entries = []
+        for parameter in params:
+            entries.append({'name': parameter.name, 'kind': parameter.param_type_name,
+                            'spellings': parameter.opts, 'type': parameter.type.to_info_dict(),
+                            'default': None if parameter.required or parameter.param_type_name == 'argument' else parameter.get_default(context), 'required': parameter.required,
+                            'nargs': parameter.nargs, 'multiple': getattr(parameter, 'multiple', False),
+                            'help': getattr(parameter, 'help', None)})
+        result[name] = entries
+    return result
+
+
+def validate_cli_contracts(root):
+    import json
+    if json.loads((root / 'docs/examples/cli-contracts.json').read_text()) != cli_contracts():
+        raise ValueError('CLI argument, flag, default or type contract differs from current Click declarations')

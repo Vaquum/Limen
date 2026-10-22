@@ -330,6 +330,7 @@ def verify(interface, name, result, output, inputs):
             assert metrics['net_pnl'] == pytest.approx(metrics['gross_pnl']-metrics['fees']-metrics['slippage']+metrics['funding_pnl'])
             fills = pl.read_parquet(output / 'fills.parquet')
             assert fills.to_dicts() == result['fills'], 'Native fill records differ from the checked output'
+            assert fills.head(8).to_dicts() == result['ledger_excerpt']
             assert metrics['fees'] > 0
             assert result['context']['contract']['policy']['execution_lag_seconds'] == 3600
             assert hashlib.sha256(json.dumps(result['context']['contract'], sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest() == result['contract_digest']

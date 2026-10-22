@@ -680,7 +680,6 @@ A native parameter value such as `period="roc_period"` resolves through the curr
 
 The resolved value is passed to the indicator's `period` argument before that transform runs.
 
-
 ### Group filtering
 
 Use `group=` to tag transforms into families, then filter by `feature_groups` in `round_params`.

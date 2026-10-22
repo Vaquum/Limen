@@ -190,3 +190,38 @@ def test_every_declared_export_and_public_member_has_an_exact_reference():
     assert 'limen.Log.experiment_parameter_importance' in contracts
     property_source = region(ROOT / 'limen/experiment/reducer/pruning_strategy.py', 'signature:PruningStrategy.active')
     assert '@property' in property_source and '@active.setter' in property_source
+
+
+def test_current_result_row_projections_require_exact_artifacts_and_columns():
+    from check_evidence import result_bindings
+    document = ROOT / '.docs-evidence/result-projection-test.md'
+    artifact = ROOT / '.docs-evidence/result-projection-test.json'
+    document.parent.mkdir(exist_ok=True)
+    marker = '<!-- result: projection-test interface=compiled scenario=selection fields=rows[].score -->'
+    document.write_text(marker)
+    try:
+        for value, expected_error in (({'rows': [{'score': 1}, {'score': 2}]}, None),
+                                      ({'rows': [{'score': 1}, {}]}, 'Missing current result field'),
+                                      ({'rows': {'score': 1}}, 'not a row collection')):
+            artifact.write_text(json.dumps(value))
+            record = {'interface': 'compiled', 'id': 'selection', 'output_path': str(artifact.relative_to(ROOT)),
+                      'output_sha256': hashlib.sha256(artifact.read_bytes()).hexdigest()}
+            if expected_error is None:
+                assert result_bindings(ROOT, document, [record])[0]['fields'] == ['rows[].score']
+            else:
+                with pytest.raises(ValueError, match=expected_error):
+                    result_bindings(ROOT, document, [record])
+    finally:
+        document.unlink()
+        artifact.unlink()
+
+
+def test_every_cli_argument_option_default_and_type_matches_current_source():
+    from catalogue_admission import cli_contracts, validate_cli_contracts
+    validate_cli_contracts(ROOT)
+    text = (ROOT / 'docs/Command-Line-Interface.md').read_text()
+    for entries in cli_contracts().values():
+        for entry in entries:
+            assert all('`' + spelling + '`' in text for spelling in entry['spellings'])
+    workers = next(item for item in cli_contracts()['limen run'] if item['name'] == 'workers')
+    assert workers['default'] is None and workers['type']['min'] == 1

@@ -2,7 +2,7 @@
 
 Selection freezes a research decision. Inference should use the behavior that decision evaluated, with its preparation, units, cutoff and unavailable rows preserved.
 
-The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) use the same recorded input bundle. Their methodology, units and evaluation populations remain explicit; their scores are not a controlled comparison.
+Continue with the evaluated objects returned by the [Python project](examples/python-research/README.md), or the completed result directory of the [Compiled project](examples/compiled-research/README.md). The handoff preserves different kinds of state.
 
 ## Python Research
 

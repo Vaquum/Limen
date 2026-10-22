@@ -316,7 +316,7 @@ def deflated_sharpe_ratio(returns: npt.NDArray[np.float64], *, n_trials: int, tr
 
 Return the per-bar DSR probability from Bailey and López de Prado (2014).
 
-https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf, equation 2.
+[Bailey and López de Prado](https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf), equation 2.
 
 Sharpe uses sample standard deviation; skew and Pearson kurtosis use
 
@@ -353,7 +353,7 @@ def probability_of_backtest_overfitting(returns_matrix: npt.NDArray[np.float64],
 
 Return CSCV logit mass at or below zero using per-bar Sharpe ranks.
 
-https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf, algorithm 2.3.
+[Bailey and López de Prado](https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf), algorithm 2.3.
 
 Rows are trials, columns synchronous bars. Equal contiguous blocks need
 

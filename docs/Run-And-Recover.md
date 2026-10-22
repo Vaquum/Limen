@@ -2,7 +2,7 @@
 
 A completed score is useful only while its parameters, observations and research definition remain identifiable. Recording decides which later questions can be answered; a checkpoint decides which unfinished work can continue.
 
-The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) use the same recorded input bundle. Their methodology, units and evaluation populations remain explicit; their scores are not a controlled comparison.
+Keep the saved definition and completed candidate identities from the [Python project](examples/python-research/README.md) or [Compiled project](examples/compiled-research/README.md). Decide which evidence later analysis will need before launching a larger search.
 
 ## Python Research
 
