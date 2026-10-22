@@ -89,9 +89,9 @@ class _DummyPerfWithInverseScaler:
         self.inverse_scaler = self._inverse_scaler
         self.prep_called_with_params = False
 
-    def prep(self, data: pl.DataFrame, params: dict) -> dict:
+    def prep(self, data: pl.DataFrame, round_params: dict) -> dict:
         assert data.equals(self.data)
-        assert params == {'alpha': 7}
+        assert round_params == {'alpha': 7}
         self.prep_called_with_params = True
         return {
             'x_test': pl.DataFrame({'scaled_feature': [0.1, 0.2]}),
@@ -179,8 +179,8 @@ class _DummyCompletedBarSignal:
         # Signal uses the completed current bar and would look perfect if same-row priced.
         self.preds = [np.array([1, 0, 1, 0])]
 
-    def prep(self, data: object, params: dict) -> dict:
-        _ = data, params
+    def prep(self, data: object, round_params: dict) -> dict:
+        _ = data, round_params
         return {
             'x_test': np.array([[1.0], [0.0], [1.0], [0.0]]),
             # Next-bar direction is the opposite of the current-bar direction.
@@ -229,16 +229,12 @@ def test_permutation_prediction_performance_preserves_inverse_scaled_features() 
     assert perf['price_change'].tolist() == [10.0, -5.0]
 
 
-def test_permutation_prediction_performance_falls_back_to_single_argument_prep() -> None:
+def test_permutation_prediction_performance_rejects_single_argument_prep() -> None:
     dummy = _DummyPerfWithoutInverseScaler()
 
-    perf = permutation_prediction_performance(dummy, round_id=0)
-
-    assert dummy.prep_called_without_params is True
-    assert perf.columns.tolist() == ['predictions', 'actuals', 'hit', 'miss', 'open', 'close', 'price_change']
-    assert perf['predictions'].tolist() == [0, 1]
-    assert perf['actuals'].tolist() == [0, 1]
-    assert perf['price_change'].tolist() == [0.5, -0.5]
+    with pytest.raises(TypeError, match='round_params'):
+        permutation_prediction_performance(dummy, round_id=0)
+    assert dummy.prep_called_without_params is False
 
 
 def test_permutation_confusion_metrics_adds_mean_return_pct_columns() -> None:

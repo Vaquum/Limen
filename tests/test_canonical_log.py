@@ -1,3 +1,5 @@
+from copy import deepcopy
+from functools import partial
 from importlib import import_module
 from pathlib import Path
 from types import SimpleNamespace
@@ -264,3 +266,107 @@ def test_capture_errors_and_occurrences(tmp_path):
     assert empty.experiment_backtest_results().empty
     with pytest.raises(ValueError, match='No objects to concatenate'):
         empty.experiment_confusion_metrics()
+
+
+@pytest.fixture(scope='module')
+def retained_keyword_run(tmp_path_factory):
+    bars = pl.read_parquet(FIXTURE, n_rows=192).with_columns(pl.lit(3600).alias('base_interval'))
+    loop = _loop(_config(), bars, tmp_path_factory.mktemp('keyword_replay'), search=False)
+    original = loop.prep
+
+    def prep(data, *, round_params):
+        return original(data, round_params=round_params)
+
+    loop.prep = prep
+    _run(loop, retained=True, count=1)
+    assert loop.experiment_log.height == len(loop.round_params) == len(loop.preds) == 1
+    return loop
+
+
+@pytest.mark.parametrize('shape', ('optional', 'kwargs', 'keyword_only', 'partial'))
+def test_prediction_replay_uses_retained_keyword_parameters(retained_keyword_run, shape):
+    log = Log(uel_object=retained_keyword_run)
+    original = log.prep
+    parameters = log.round_params[0]
+    saved_parameters = deepcopy(log.round_params)
+    saved_predictions = np.array(log.preds[0], copy=True)
+    expected = original(log.data, round_params=parameters)
+    prices = log._get_test_data_with_all_cols(0)
+    calls = []
+
+    def optional(data, round_params=None):
+        calls.append(round_params)
+        return original(data, round_params=round_params)
+
+    def keywords(data, **kwargs):
+        return optional(data, **kwargs)
+
+    def keyword_only(data, *, round_params):
+        return optional(data, round_params=round_params)
+
+    log.prep = {'optional': optional, 'kwargs': keywords, 'keyword_only': keyword_only,
+                'partial': partial(optional, round_params={'C': 99.0})}[shape]
+    performance = log.permutation_prediction_performance(0)
+    assert len(calls) == 1 and calls[0] is parameters
+    assert log.round_params == saved_parameters
+    np.testing.assert_array_equal(log.preds[0], saved_predictions)
+    np.testing.assert_array_equal(performance['predictions'], saved_predictions)
+    np.testing.assert_array_equal(performance['actuals'], expected['y_test'])
+    assert len(performance) == prices.height == len(saved_predictions)
+    for column in ('datetime', 'open', 'close'):
+        np.testing.assert_array_equal(performance[column].to_numpy(), prices[column].to_numpy())
+    np.testing.assert_array_equal(performance['price_change'], prices['close'] - prices['open'])
+
+
+def test_prediction_replay_propagates_body_typeerror_once(retained_keyword_run):
+    log = Log(uel_object=retained_keyword_run)
+    original = log.prep
+    saved_parameters = deepcopy(log.round_params)
+    saved_predictions = np.array(log.preds[0], copy=True)
+    failure = TypeError('Recorded preparation body failure')
+    calls = []
+
+    def prep(data, round_params=None):
+        calls.append('explicit_params' if round_params is not None else 'default_params')
+        if round_params is not None:
+            raise failure
+        return original(data, round_params={})
+
+    log.prep = prep
+    with pytest.raises(TypeError) as raised:
+        log.permutation_prediction_performance(0)
+    assert raised.value is failure and raised.value.__context__ is None
+    assert calls == ['explicit_params']
+    assert log.round_params == saved_parameters
+    np.testing.assert_array_equal(log.preds[0], saved_predictions)
+
+
+def test_post_processing_propagates_replay_typeerror_after_recording(tmp_path):
+    bars = pl.read_parquet(FIXTURE, n_rows=192).with_columns(pl.lit(3600).alias('base_interval'))
+    loop = _loop(_config(), bars, tmp_path, search=False)
+    original_prep, original_model = loop.prep, loop.model
+    completed = False
+    calls = []
+    failure = TypeError('Recorded finalization preparation failure')
+
+    def prep(data, round_params=None):
+        calls.append('explicit_params' if round_params is not None else 'default_params')
+        if completed and round_params is not None:
+            raise failure
+        return original_prep(data, round_params=round_params or {})
+
+    def model(data, round_params):
+        nonlocal completed
+        result = original_model(data=data, round_params=round_params)
+        completed = True
+        return result
+
+    loop.prep, loop.model = prep, model
+    with pytest.raises(TypeError) as raised:
+        _run(loop, retained=True, count=1)
+    assert raised.value is failure and raised.value.__context__ is None
+    assert completed and calls == ['explicit_params', 'explicit_params']
+    assert loop.experiment_log.height == len(loop.round_params) == len(loop.preds) == 1
+    assert loop.experiment_log['strict_mode_error'].is_null().all()
+    assert pl.read_csv(tmp_path / 'captured.csv').height == 1
+    assert loop.experiment_confusion_metrics is None

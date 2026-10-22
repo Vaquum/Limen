@@ -8,6 +8,8 @@ def permutation_prediction_performance(self: Any,
     '''
     Create prediction performance table based on round id.
 
+    Preparation failures propagate; retained round parameters are never replaced with defaults.
+
     Args:
         round_id (int): Round ID (i.e. nth permutation in an experiment)
 
@@ -15,10 +17,7 @@ def permutation_prediction_performance(self: Any,
         pd.DataFrame: Table with predictions, actuals, hit/miss, datetime, open, close, and price_change
     '''
 
-    try:
-        round_data = self.prep(self.data, self.round_params[round_id])
-    except TypeError:
-        round_data = self.prep(self.data)
+    round_data = self.prep(self.data, round_params=self.round_params[round_id])
 
     if self.inverse_scaler is not None:
         perf_df = self.inverse_scaler(round_data['x_test'], self.scalers[round_id]).to_pandas()
