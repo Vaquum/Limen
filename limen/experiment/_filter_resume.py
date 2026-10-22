@@ -12,6 +12,7 @@ from limen.experiment.reducer.filter_types import FILTER_BUILDERS, FILTER_SAMPLE
 
 Filter = Callable[[dict[str, object]], bool]
 Descriptor = tuple[str, dict[str, object]]
+_DESCRIPTOR_FIELDS = 2
 
 
 def _mapping(value: object, name: str) -> dict[str, object]:
@@ -33,7 +34,7 @@ def restore_filters(state: Mapping[str, object]) -> tuple[dict[str, Filter], dic
     definitions: dict[str, Descriptor] = {}
     lost = dict.fromkeys(cast(list[str], keys), 'no descriptor')
     for key, descriptor in descriptors.items():
-        if not isinstance(key, str) or not isinstance(descriptor, (list, tuple)) or len(cast(list[object], descriptor)) != 2:
+        if not isinstance(descriptor, (list, tuple)) or len(cast(list[object], descriptor)) != _DESCRIPTOR_FIELDS:
             raise ValueError('Cannot resume with invalid named filter descriptor')
         kind, parameters = cast(tuple[object, object], descriptor)
         if not isinstance(kind, str):
@@ -80,7 +81,7 @@ def validate_filter_resume(checkpoint: Mapping[str, object], strategy: SearchStr
                 active.discard(key)
     custom = max(custom, historical_custom)
     for key in active - restored.keys():
-        lost.setdefault(key, 'missing checkpoint descriptor')
+        _ = lost.setdefault(key, 'missing checkpoint descriptor')
     if not custom and not lost:
         return
 
@@ -109,5 +110,5 @@ def validate_filter_resume(checkpoint: Mapping[str, object], strategy: SearchStr
         details += '; ' + '; '.join(f'{key}: {lost[key]}' for key in sorted(lost))
     raise ValueError(
         f'Cannot resume: Checkpoint had non-restorable filters ({details}). '
-        'Start a new experiment directory; use supported declarative set_filter descriptors for resumable constraints.'
+        + 'Start a new experiment directory; use supported declarative set_filter descriptors for resumable constraints.'
     )
