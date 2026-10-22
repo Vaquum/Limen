@@ -43,9 +43,7 @@
       "python"
     ]
   },
-  "unproved": {
-    "tabpfn": "https://github.com/Vaquum/Limen/issues/628"
-  },
+  "unproved": {},
   "candidate_pages": [
     "docs/Research-Book.md",
     "docs/examples/python-research/README.md",
@@ -175,7 +173,11 @@
       "configuration": "docs/examples/compiled-research/family_direction_sizing.yaml"
     },
     "tabpfn_binary": {
-      "unproved": "https://github.com/Vaquum/Limen/issues/628"
+      "retained_execution": "docs/examples/retained/tabpfn.json",
+      "test": "docs/examples/tests/test_optional_model.py::test_retained_tabpfn_matches_current_contract",
+      "configuration": "docs/examples/compiled-research/tabpfn.yaml",
+      "interface": "compiled",
+      "scope": "Real separately provisioned model; current package/source/version equality and numerical observation checked in ordinary CI."
     }
   },
   "recorded_inputs": {
@@ -2218,7 +2220,8 @@
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
         "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics",
-        "docs/examples/tests/test_extended_cases.py::test_native_reducer_recording_and_source_campaigns"
+        "docs/examples/tests/test_extended_cases.py::test_native_reducer_recording_and_source_campaigns",
+        "docs/examples/tests/test_optional_model.py::test_retained_tabpfn_matches_current_contract"
       ]
     },
     "python/recovery": {

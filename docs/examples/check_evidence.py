@@ -409,6 +409,11 @@ def validate_model_catalogue(root, catalogue) -> None:
     if set(catalogue['model_families']) != {name for name in exports if name[0].islower()}:
         raise ValueError('Public model catalogue is incomplete')
     for family, entry in catalogue['model_families'].items():
+        if 'retained_execution' in entry:
+            from optional_models import verify
+            verify(root, json.loads((root / entry['retained_execution']).read_text()))
+            validate_test_reference(root, entry['test'])
+            continue
         if 'unproved' in entry:
             if entry['unproved'] not in catalogue['unproved'].values():
                 raise ValueError('Unproved model has no tracked execution boundary')
