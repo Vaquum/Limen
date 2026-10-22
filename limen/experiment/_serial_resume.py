@@ -7,15 +7,17 @@ from typing import cast
 
 import polars as pl
 
-from limen.experiment import _round_storage as _storage
+import limen.experiment._round_storage as _storage
 
 __all__: list[str] = []
 
 
-def restore_parameters(log: pl.DataFrame, path: Path, expected: Sequence[tuple[int, str]],
+def restore_log(log: pl.DataFrame, path: Path, expected: Sequence[tuple[int, str]],
                        domain: Mapping[str, Sequence[object]], context: Mapping[str, object] | None,
                        *, factorize: bool) -> pl.DataFrame:
     """Restore successful occurrences from records and failed cells from scalar type hints."""
+    if '_convergence_warning' not in log.columns or log['_convergence_warning'].null_count() == log.height:
+        log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
     _storage.validate_prefix(path, expected)
     if factorize:
         return log
