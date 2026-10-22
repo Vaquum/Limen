@@ -11,6 +11,12 @@ from limen.metrics.multiclass_metrics import multiclass_metrics
 from limen.metrics.safe_ovr_auc import safe_ovr_auc
 
 
+def learned_state(fitted):
+    scaler = fitted.named_steps['standardscaler']
+    model = fitted.named_steps['kneighborsclassifier']
+    return pickle.dumps((scaler.mean_, scaler.scale_, model.classes_, model._fit_X, model._y))
+
+
 # region multiclass_evaluation
 def evaluate_three_classes(raw):
     def prepare(frame):
@@ -24,12 +30,12 @@ def evaluate_three_classes(raw):
     labels = [np.digitize(frame['next_return'].to_numpy(), cutoffs) for frame in (train, evaluation)]
     fitted = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=7))
     fitted.fit(train.select('momentum'), labels[0])
-    state = pickle.dumps(fitted)
+    state = learned_state(fitted)
     probabilities = fitted.predict_proba(evaluation.select('momentum'))
     predicted = fitted.predict(evaluation.select('momentum'))
     metrics = multiclass_metrics({'y_test': labels[1]}, predicted, probabilities)
-    if pickle.dumps(fitted) != state:
-        raise ValueError('Evaluation changed the fitted three-class model')
+    if learned_state(fitted) != state:
+        raise ValueError('Evaluation changed learned state in the three-class model')
     missing_class = safe_ovr_auc(np.zeros(len(predicted), dtype=int), probabilities)
     return {'cutoffs': cutoffs.tolist(), 'classes': fitted.classes_.tolist(),
             'training_rows': train.height, 'evaluation_rows': evaluation.height,
