@@ -118,6 +118,7 @@ jobs:
         working-directory: docs-site
         run: |
           npm run check
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
           npx --no-install playwright install --with-deps chromium webkit
           npm run check:reader
 

@@ -87,7 +87,9 @@ jobs:
 
       - name: Provision the locked browser
         working-directory: docs-site
-        run: npx --no-install playwright install --with-deps chromium webkit
+        run: |
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          npx --no-install playwright install --with-deps chromium webkit
 
       - name: Prove the reading experience
         working-directory: docs-site
