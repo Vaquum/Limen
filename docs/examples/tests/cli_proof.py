@@ -161,52 +161,7 @@ def verify_project(project):
     signed = checked_log(base / 'compiled-family_direction_sizing', 2)
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}
-    reducer_results = {}
-    for name in ('sanity', 'saturation', 'focus', 'correlation'):
-        location = base / ('compiled-reducer-' + name)
-        log = pl.read_csv(location / 'results.csv')
-        cycles = [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()]
-        assert log.height > 0 and all(cycle['errors'] == [] for cycle in cycles)
-        actions = [item for cycle in cycles for item in [*cycle['interventions'], *cycle['suggestions']]]
-        assert actions and all(item['source'] == name.title() + 'Reducer' for item in actions)
-        assert (location / 'checkpoint.json').is_file()
-        if name == 'sanity':
-            assert any(item['op'] == 'remove_is' for item in actions)
-        if name == 'focus':
-            assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
-        if name == 'saturation':
-            assert any(item['op'] == 'set_filter' for item in actions)
-        reducer_results[name] = {'rounds': log.height, 'actions': actions}
-    summaries['search']['reducers'] = reducer_results
-    analysis_dir = base / 'compiled-analysis'
-    checked_log(analysis_dir, 20)
-    analysis = {'rounds': 20, 'report': json.loads((analysis_dir / 'acceptance_report.json').read_text()),
-                'artifacts': {name: hashlib.sha256((analysis_dir / name).read_bytes()).hexdigest() for name in ('trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
-    verify_acceptance(analysis, analysis_dir, project / 'inputs')
-    summaries['search']['analysis'] = analysis['report']
-    recording = {}
-    recording_metrics = []
-    from limen.experiment._round_storage import open_text
-    for mode in ('lean', 'full', 'outputs'):
-        location = base / ('compiled-recording-' + mode)
-        log = checked_log(location, 2)
-        recording_metrics.append(dict(zip(log['id'], log['val_backtest_total_return'], strict=True)))
-        with open_text(location / 'round_data.jsonl.gz') as stream:
-            decoded = [json.loads(line) for line in stream]
-        assert len(decoded) == 2
-        for row in decoded:
-            assert ('preds' in row) == (mode != 'lean')
-            assert ('missing_datetimes' in row['alignment']) == (mode != 'lean')
-            assert ('execution' in row) == ('market' in row) == (mode == 'outputs')
-            if mode == 'outputs':
-                assert row['probs'] and len(row['probs']) == len(row['preds'])
-        recording[mode] = {'rounds': log.height, 'payloads': sorted(decoded[0])}
-    assert recording_metrics[0] == recording_metrics[1] == recording_metrics[2]
-    summaries['search']['recording'] = recording
-    sources = {kind: checked_log(base / ('compiled-source-' + kind), 2) for kind in ('csv', 'zip', 'arrow')}
-    assert sources['csv'].select('id', 'accuracy').equals(sources['zip'].select('id', 'accuracy'))
-    assert sources['csv'].select('id', 'accuracy').equals(sources['arrow'].select('id', 'accuracy'))
-    summaries['search']['input_formats'] = {kind: log.height for kind, log in sources.items()}
+    summaries['search'].update(verify_extended_campaigns(project))
     helper_counts = {}
     for case in ('helper_indicators', 'helper_features', 'helper_regimes', 'helper_scalers', 'conditional_features'):
         from ruamel.yaml import YAML
@@ -362,3 +317,55 @@ def prove_interrupted_recovery(project, environment):
     assert changed.returncode != 0 and 'Recorded source SHA-256 differs' in changed.stdout
     assert (output / 'results.csv').read_bytes() == saved
     return {'interrupted_rounds': first.height, 'resumed_rounds': complete.height, 'uninterrupted_equivalence': True, 'changed_source_rejected': True}
+
+
+def verify_extended_campaigns(project):
+    base = project / 'results/dev'
+    summary = {}
+    reducer_results = {}
+    for name in ('sanity', 'saturation', 'focus', 'correlation'):
+        location = base / ('compiled-reducer-' + name)
+        log = pl.read_csv(location / 'results.csv')
+        cycles = [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()]
+        assert log.height > 0 and all(cycle['errors'] == [] for cycle in cycles)
+        actions = [item for cycle in cycles for item in [*cycle['interventions'], *cycle['suggestions']]]
+        assert actions and all(item['source'] == name.title() + 'Reducer' for item in actions)
+        assert (location / 'checkpoint.json').is_file()
+        if name == 'sanity':
+            assert any(item['op'] == 'remove_is' for item in actions)
+        if name == 'focus':
+            assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
+        if name == 'saturation':
+            assert any(item['op'] == 'set_filter' for item in actions)
+        reducer_results[name] = {'rounds': log.height, 'actions': actions}
+    summary['reducers'] = reducer_results
+    analysis_dir = base / 'compiled-analysis'
+    checked_log(analysis_dir, 20)
+    analysis = {'rounds': 20, 'report': json.loads((analysis_dir / 'acceptance_report.json').read_text()),
+                'artifacts': {name: hashlib.sha256((analysis_dir / name).read_bytes()).hexdigest() for name in ('trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+    verify_acceptance(analysis, analysis_dir, project / 'inputs')
+    summary['analysis'] = analysis['report']
+    recording = {}
+    recording_metrics = []
+    from limen.experiment._round_storage import open_text
+    for mode in ('lean', 'full', 'outputs'):
+        location = base / ('compiled-recording-' + mode)
+        log = checked_log(location, 2)
+        recording_metrics.append(dict(zip(log['id'], log['val_backtest_total_return'], strict=True)))
+        with open_text(location / 'round_data.jsonl.gz') as stream:
+            decoded = [json.loads(line) for line in stream]
+        assert len(decoded) == 2
+        for row in decoded:
+            assert ('preds' in row) == (mode != 'lean')
+            assert ('missing_datetimes' in row['alignment']) == (mode != 'lean')
+            assert ('execution' in row) == ('market' in row) == (mode == 'outputs')
+            if mode == 'outputs':
+                assert row['probs'] and len(row['probs']) == len(row['preds'])
+        recording[mode] = {'rounds': log.height, 'payloads': sorted(decoded[0])}
+    assert recording_metrics[0] == recording_metrics[1] == recording_metrics[2]
+    summary['recording'] = recording
+    sources = {kind: checked_log(base / ('compiled-source-' + kind), 2) for kind in ('csv', 'zip', 'arrow')}
+    assert sources['csv'].select('id', 'accuracy').equals(sources['zip'].select('id', 'accuracy'))
+    assert sources['csv'].select('id', 'accuracy').equals(sources['arrow'].select('id', 'accuracy'))
+    summary['input_formats'] = {kind: log.height for kind, log in sources.items()}
+    return summary
