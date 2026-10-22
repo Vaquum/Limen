@@ -361,6 +361,10 @@ Behavior rules:
 
 Use this when the train / val / test boundaries must land on specific datetimes (e.g. honoring a deployment date), and `set_split_config` when proportions of the row count are the natural way to express the split.
 
+Direct `HistoricalData.get_spot_klines` declarations add a native-bar admission rule: `train_end`, `val_end` and `test_end` must each lie on the UTC Unix-epoch grid of the effective `kline_size` (60 seconds when absent or `None`). Preparation and `compute_test_bars` check both learning and test-source declarations, including an unused declaration. Bound methods and unchanged inherited methods count. Dates mean midnight UTC; datetimes must be timezone-aware and are checked by their UTC instant. An off-grid end raises `ValueError` even when a truncated fetch or gap contains no crossing bar; replay of an incompatible saved declaration also refuses.
+
+For YAML date bounds, use an interval that divides a day or choose epoch-grid-aligned window ends. Starts and excluded gap rows retain their row-label behavior, and standalone fetching can still return partial edge buckets. This check trusts the declared native interval; it does not certify supplied frames or constituent completeness. File sources, dollar bars, opaque wrappers and custom preparation retain their existing row-label semantics.
+
 In a YAML manifest the same windows and flags live in the `split_dates` block. `val_predict_guard` and `test_predict_guard` are optional and default to `true`; a `train_predict_guard` key (or a non-boolean value for either flag) fails `limen validate`:
 
 | Guard field | Behavior |

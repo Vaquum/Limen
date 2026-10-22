@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import datetime
-from typing import Protocol, TypeVar, cast
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Protocol, TypeVar, cast
 import polars as pl
 
+from limen.data import HistoricalData
 from limen.backtest.trade_contract import TradePolicy
 from limen.experiment._prepare_trade_context import FrozenTradeSources, PreparedTradeContext, prepare_trade_context, source_interval, validate_cached_context
 from limen.experiment._prepare_backtest_data import prepare_backtest_data
@@ -14,7 +15,37 @@ from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig
 from limen.sfd.rule_based.config import RuleBasedConfig
 from limen.experiment._walk_forward_split import WalkForwardConfig
 
+if TYPE_CHECKING:
+    from limen.experiment.manifest_core import Manifest
+
 _M = TypeVar('_M')
+
+
+def admit_native_date_ends(manifest: Manifest) -> None:
+    '''Refuse declared native bars whose nominal support crosses a date-window end.'''
+    dates = manifest.split_dates
+    if dates is None:
+        return
+    for source_name, source in (('data_source', manifest.data_source_config),
+                                ('test_data_source', manifest.test_data_source_config)):
+        if source is None or getattr(source.method, '__func__', source.method) is not HistoricalData.get_spot_klines:
+            continue
+        interval = source.params.get('kline_size')
+        if interval is None:
+            interval = 60
+        if type(interval) is not int or interval < 1:
+            raise ValueError(f'Manifest {source_name} get_spot_klines kline_size must be a positive integer')
+        for name, end in zip(('train_end', 'val_end', 'test_end'), dates[1::2], strict=True):
+            stamp = end if isinstance(end, datetime) else datetime.combine(end, datetime.min.time(), timezone.utc)
+            if stamp.utcoffset() is None:
+                raise TypeError(f'Manifest {source_name} {name}={end!r} must be timezone-aware for native spot klines')
+            elapsed = stamp.astimezone(timezone.utc) - datetime(1970, 1, 1, tzinfo=timezone.utc)
+            end_ns = ((elapsed.days * 86400 + elapsed.seconds) * 1_000_000 + elapsed.microseconds) * 1000
+            if end_ns % (interval * 1_000_000_000):
+                raise ValueError(
+                    f'Manifest {source_name} {name}={end!r} must align to the UTC Unix-epoch grid '
+                    f'for get_spot_klines kline_size={interval} seconds'
+                )
 
 
 class RulePreparation(Protocol):

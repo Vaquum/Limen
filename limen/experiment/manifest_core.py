@@ -643,6 +643,8 @@ class Manifest:
             pl.DataFrame: Bar-formed test split data
         '''
 
+        from limen.experiment._manifest_preparation import admit_native_date_ends
+        admit_native_date_ends(self)
         raw_data = _holdout.admit(self, raw_data)
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
@@ -1915,6 +1917,8 @@ def _run_prepare_setup(
         round_params: dict[str, Any],
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
+    from limen.experiment._manifest_preparation import admit_native_date_ends, finish_prepare_setup
+    admit_native_date_ends(manifest)
     _allocation_stage.admit(manifest, round_params)
     raw_data = _holdout.admit(manifest, raw_data)
     resolved = None
@@ -1929,7 +1933,6 @@ def _run_prepare_setup(
 
     datetime_bar_pairs = [_process_bars(manifest, split, round_params) for split in raw_splits]
 
-    from limen.experiment._manifest_preparation import finish_prepare_setup
     return finish_prepare_setup(manifest, raw_splits, datetime_bar_pairs, round_params, raw_history=raw_data)
 
 
