@@ -73,6 +73,7 @@ def run_experiment(yaml_path: Path,
             reject_modes(uel.manifest, workers=effective_workers, factorize=uel_cfg.get('factorize', False))
             uel.check_parallel_admission(effective_workers, prep_each_round,
                                          factorize=uel_cfg.get('factorize', False))
+            uel.check_fresh_directory()
         except Exception as exc:  # noqa: BLE001
             click.secho(f'  ✗ Failed to construct experiment: {exc}', fg='red')
             return False
@@ -80,8 +81,7 @@ def run_experiment(yaml_path: Path,
         results_dir.mkdir(parents=True, exist_ok=True)
         _ = shutil.copy2(yaml_path, results_dir / ('manifest.yaml' if manifest_id is not None else yaml_path.name))
 
-        _params = compiled.params()
-        total_space = math.prod(len(v) for v in _params.values())
+        total_space = math.prod(len(v) for v in compiled.params().values())
         strategy_type: str = uel_cfg.get('search_strategy', {}).get('type', 'random')
         click.echo(
             f"Running '{experiment_name}' — {n_permutations:,} of {format_space(total_space)} permutations ({strategy_type})"

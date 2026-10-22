@@ -148,10 +148,10 @@ def test_incomplete_github_response_retries_and_retains_exact_association(monkey
     assert merged_pull(commit, pull_associations(commit)) == 'https://github.com/Vaquum/Limen/pull/1055'
     assert calls == [['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls']] * 2
     assert delays == [1]
-    assert 'retry 1/2: unexpected end of JSON input' in capsys.readouterr().err
+    assert 'retry 1/5: unexpected end of JSON input' in capsys.readouterr().err
 
 
-@pytest.mark.parametrize('error,attempts,delays', [('unexpected end of JSON input\n', 3, [1, 2]), ('HTTP 401: Bad credentials\n', 1, [])])
+@pytest.mark.parametrize('error,attempts,delays', [('unexpected end of JSON input\n', 6, [1, 2, 3, 4, 5]), ('HTTP 401: Bad credentials\n', 1, [])])
 def test_source_association_errors_remain_fatal(monkeypatch, error, attempts, delays):
     calls, sleeps = [], []
 
