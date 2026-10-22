@@ -411,6 +411,8 @@ def validate_model_catalogue(root, catalogue) -> None:
     for family, entry in catalogue['model_families'].items():
         if 'retained_execution' in entry:
             from optional_models import verify
+            if 'limen.sfd.reference_architecture.' + family not in (root / entry['configuration']).read_text():
+                raise ValueError('Model definition differs from the public catalogue')
             verify(root, json.loads((root / entry['retained_execution']).read_text()))
             validate_test_reference(root, entry['test'])
             continue

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import hashlib
 from importlib import metadata
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -50,9 +51,14 @@ def capture(root, project, output):
     import limen
     from limen.experiment._round_storage import open_text
     assert {name: digest(project / name) for name in SOURCES} == {name: digest(root / 'docs/examples' / name) for name in SOURCES}
-    installed = Path(limen.__file__).parent
+    installed = Path(limen.__file__).resolve().parent
+    assert not installed.is_relative_to(root.resolve())
     assert package_sources(installed) == package_sources(root / 'limen')
-    subprocess.run(['sh', 'compiled-research/tabpfn.sh'], cwd=project, check=True, timeout=180)
+    environment = dict(os.environ)
+    for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
+        environment.pop(name, None)
+    environment['PYTHONNOUSERSITE'] = '1'
+    subprocess.run(['sh', 'compiled-research/tabpfn.sh'], cwd=project, env=environment, check=True, timeout=180)
     location = project / 'results/dev/compiled-family-tabpfn'
     log = pl.read_csv(location / 'results.csv')
     assert log.height == 1 and log['strict_mode_error'].drop_nulls().len() == 0
