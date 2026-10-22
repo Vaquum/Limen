@@ -13,7 +13,7 @@ from scenario_oracles import execution_clocks, verify_acceptance
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-analysis', *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
     'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
@@ -161,6 +161,29 @@ def verify_project(project):
     signed = checked_log(base / 'compiled-family_direction_sizing', 2)
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}
+    reducer_results = {}
+    for name in ('sanity', 'saturation', 'focus', 'correlation'):
+        location = base / ('compiled-reducer-' + name)
+        log = pl.read_csv(location / 'results.csv')
+        cycles = [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()]
+        assert log.height > 0 and all(cycle['errors'] == [] for cycle in cycles)
+        actions = [item for cycle in cycles for item in [*cycle['interventions'], *cycle['suggestions']]]
+        assert actions and all(item['source'] == name.title() + 'Reducer' for item in actions)
+        assert (location / 'checkpoint.json').is_file()
+        if name == 'sanity':
+            assert any(item['op'] == 'remove_is' for item in actions)
+        if name == 'focus':
+            assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
+        if name == 'saturation':
+            assert any(item['op'] == 'set_filter' for item in actions)
+        reducer_results[name] = {'rounds': log.height, 'actions': actions}
+    summaries['search']['reducers'] = reducer_results
+    analysis_dir = base / 'compiled-analysis'
+    checked_log(analysis_dir, 20)
+    analysis = {'rounds': 20, 'report': json.loads((analysis_dir / 'acceptance_report.json').read_text()),
+                'artifacts': {name: hashlib.sha256((analysis_dir / name).read_bytes()).hexdigest() for name in ('trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+    verify_acceptance(analysis, analysis_dir, project / 'inputs')
+    summaries['search']['analysis'] = analysis['report']
     helper_counts = {}
     for case in ('helper_indicators', 'helper_features', 'helper_regimes', 'helper_scalers', 'conditional_features'):
         from ruamel.yaml import YAML

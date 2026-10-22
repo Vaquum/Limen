@@ -38,6 +38,14 @@ limen run --no-progress-bar \
   compiled-research/target_riskrewardratio.yaml
 sh compiled-research/target_contracts.sh
 # endregion targets
+# region reducers
+limen run --no-progress-bar \
+  compiled-research/reducer_sanity.yaml \
+  compiled-research/reducer_saturation.yaml \
+  compiled-research/reducer_focus.yaml \
+  compiled-research/reducer_correlation.yaml \
+  compiled-research/analysis.yaml
+# endregion reducers
 # region search
 limen run --no-progress-bar \
   compiled-research/search.yaml \

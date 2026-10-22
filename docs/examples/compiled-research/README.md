@@ -21,6 +21,10 @@ The preparation campaign includes `helper_indicators.yaml`, `helper_features.yam
 
 The remaining feature functions require line arrays, forward labels, a fitted scalar diagnostic, recorded trade fields or previously derived regime/microstructure columns. They are not interchangeable declarations in this bar-source campaign. The [feature reference](../../Features.md) gives those input contracts; the [CFR reference](../../Conserved-Flux-Renormalization.md) distinguishes its recorded-trade diagnostic from this project's threshold bars. Do not substitute a Python driver for those inputs.
 
+## Analysis and metric-driven controls
+
+`analysis.yaml` compares 20 rule thresholds across the recorded walk-forward folds and writes DSR/PBO acceptance results. The four `reducer_*.yaml` variants exercise sanity, saturation, focus and correlation separately. They retain the actual interventions and suggestions in `audit.jsonl`, plus the queue checkpoint. The sanity case removes candidates whose chosen calibration statistic is unavailable; the others react to observed native metrics. They demonstrate control effects, not that pruning improves selection. The [analysis reference](../../Log.md#a-population-for-parameter-analysis) explains the returned statistics.
+
 ## Target variants
 
 The `target_*.yaml` files run each ordinary target class with its compatible binary or continuous model. `target_contracts.sh` retains a successful volatility-normalized run or the exact training-volatility sanity refusal; any other failure stops the campaign. Trade-outcome target/context behavior is exercised by the separate allocation manifests.

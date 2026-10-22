@@ -56,7 +56,36 @@ uel:
   feedback_interval: 1
 ```
 
-These small runs exercise `BudgetReducer`. The four metric-driven alternatives below need enough observations for their respective analyses; a three-round example does not demonstrate their statistical reliability.
+The separate metric-driven campaigns exercise all four alternatives. Python compares 30 real fitted candidates before inspecting correlations and parameter importance. Each feedback run starts a fresh queue. The sanity case deliberately selects an unavailable probability metric from a continuous Ridge model: its removals show why choosing the wrong metric can destroy a search. Saturation uses a declared variance threshold; focus narrows around an observed winner; correlation distinguishes applied removals from advisory suggestions. These small populations demonstrate control behavior, not statistical reliability.
+
+### Python metric-driven controls
+
+<!-- example: reducers-python-metric-controls source=docs/examples/python-research/analysis_cases.py region=reducer_config scenario=search interface=python role=executed -->
+```python
+    configurations = {
+        'sanity': SanityReducer(metric='validation_probability_auc', min_observations=2),
+        'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
+        'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
+        'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,
+            prune_threshold=1., sign_stability_threshold=0., random_state=42),
+    }
+    
+```
+
+### Compiled metric-driven controls
+
+The four manifests declare those controls independently. Their native `audit.jsonl` files retain every applied intervention, suggestion and source error; the checkpoint retains the resulting queue. Run them with the CLI:
+
+<!-- example: reducers-compiled-metric-controls source=docs/examples/compiled-research/run.sh region=reducers scenario=search interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar \
+  compiled-research/reducer_sanity.yaml \
+  compiled-research/reducer_saturation.yaml \
+  compiled-research/reducer_focus.yaml \
+  compiled-research/reducer_correlation.yaml \
+  compiled-research/analysis.yaml
+```
+
 
 The [reducer reference](Developer/Pruning-Strategies.md#constructor-reference) lists each constructor and its validation rules. In YAML, its arguments belong under the reducer's `params` mapping.
 

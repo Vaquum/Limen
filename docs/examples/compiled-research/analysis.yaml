@@ -1,0 +1,73 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: recorded_analysis_population
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_walk_forward:
+      n_folds: 2
+      test_bars: 49
+      purge_bars: 4
+      embargo_bars: 3
+      anchored: true
+    acceptance:
+      min_deflated_sharpe_probability: 0.95
+      max_pbo: 0.20
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    strategy:
+      conditions:
+      - id: entry
+        name: positive_return
+        type: threshold
+        column: ret_1
+        operator: '>'
+        value: '{entry_return}'
+      entry: entry
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+  params:
+    entry_return:
+    - -0.003
+    - -0.0027
+    - -0.0024
+    - -0.0021
+    - -0.0018
+    - -0.0015
+    - -0.0012
+    - -0.0009
+    - -0.0006
+    - -0.0003
+    - -0.0
+    - 0.0003
+    - 0.0006
+    - 0.0009
+    - 0.0012
+    - 0.0015
+    - 0.0018
+    - 0.0021
+    - 0.0024
+    - 0.0027
+uel:
+  record_execution: true
+  output_path: compiled-analysis
+  recording:
+    alignment: true
+    fold_details: true
+  n_permutations: 20
+  search_strategy:
+    type: grid
+  prep_each_round: true
+  output_format: parquet
+# endregion declaration

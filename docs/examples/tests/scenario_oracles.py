@@ -99,7 +99,7 @@ def verify_feedback(interface, feedback, inputs):
 
 def verify_acceptance(result, output, inputs):
     report = result['report']
-    assert result['rounds'] == report['n_trials'] == 2
+    assert result['rounds'] == report['n_trials'] >= 2
     for name, digest in result['artifacts'].items():
         assert hashlib.sha256((output / name).read_bytes()).hexdigest() == digest
     assert json.loads((output / 'acceptance_report.json').read_text()) == report
@@ -169,6 +169,7 @@ def verify(interface, name, result, output, inputs):
             from helper_oracles import verify_helpers, verify_targets
             verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
             verify_targets(result['target_diagnostics'], output / 'targets', inputs)
+            verify_analysis(result['analysis'], inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
         verify_common_baselines(interface, result['common_baselines'], output / 'common-baselines', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
@@ -690,3 +691,35 @@ def verify_common_baselines(interface, result, output, inputs):
             np.testing.assert_allclose(track['net'], expected_net, rtol=1e-11, atol=1e-12)
             assert row['num_executed_trades_test'] == trades
             assert row['pnl_per_bar_bps_test'] == pytest.approx(float(expected_net.mean()*10000), abs=1e-9)
+
+
+def verify_analysis(result, inputs):
+    rows = result['rows']
+    assert len(rows) == len({(row['window'], row['alpha']) for row in rows}) == 30
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    close, opening = raw['close'].to_numpy(), raw['open'].to_numpy()
+    for row in rows:
+        w, alpha = row['window'], row['alpha']
+        begin = max(12, w)
+        x = close[begin:959]/close[begin-w:959-w]-1
+        y = close[begin+1:960]/opening[begin+1:960]-1
+        z = (x-x.mean())/x.std()
+        coefficient = np.dot(z, y-y.mean())/(np.dot(z,z)+alpha)
+        val = close[960+begin:1439]/close[960+begin-w:1439-w]-1
+        predicted = (val-x.mean())/x.std()*coefficient+y.mean()
+        truth = close[961+begin:1440]/opening[961+begin:1440]-1
+        assert row['validation_rmse'] == pytest.approx(float(np.sqrt(np.mean((predicted-truth)**2))), rel=1e-10, abs=1e-12)
+    assert {row['feature'] for row in result['correlation']} == {'window', 'alpha'}
+    assert {row['parameter'] for row in result['importance']} == {'window', 'alpha'}
+    assert all(row['n_configurations'] == 30 and row['n_train']+row['n_evaluation'] == 30 for row in result['importance'])
+    for name, control in result['controls'].items():
+        assert control['rows'] and control['checkpoint']['yielded_count'] == len(control['rows'])
+        assert all(cycle['errors'] == [] for cycle in control['audit'])
+        actions = [item for cycle in control['audit'] for item in [*cycle['interventions'], *cycle['suggestions']]]
+        assert actions and all(item['source'] == name.title()+'Reducer' for item in actions)
+        if name == 'sanity':
+            assert any(item['op'] == 'remove_is' for item in actions)
+        if name == 'focus':
+            assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
+        if name == 'saturation':
+            assert any(item['op'] == 'set_filter' for item in actions)
