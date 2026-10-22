@@ -218,6 +218,8 @@ For resume to work cleanly, keep these stable:
 - the same configured reducer stack
 - the initial recording policy, with predictions/alignment and any applicable event ledger or walk-forward folds retained; see the [recording policy](Universal-Experiment-Loop.md#recording-policy)
 
+Ordinary serial recovery restores successful parameter values from their recorded round occurrences, preserving string categories such as `"001"` and recorded empty strings or nulls. Failed rounds have no typed parameter record: their CSV cells use the same supplied scalar `context_params` first, then the restored checkpoint domain, as type hints. Supply the historical context unchanged when resuming a failed prefix. Omitted or changed context, ambiguous failed empty-string/null cells, and unrecorded heterogeneous parameter history cannot be reconstructed exactly. Committed CSV fields retain their original text during recovery.
+
 ## Capabilities shared with CLI
 
 The CLI compiles YAML and constructs the search around MSQ. Python Research supplies its own functions and strategy objects. Both use the queue's candidate identities, feedback and checkpoint semantics.
