@@ -101,7 +101,7 @@ sees only the first 1,440 bars. It selects the best validation return per window
 breaking ties by alpha, then reuses those exact evaluated models. The native
 Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
-The excerpt below is the project's selection function. Execute it through the project entry point above; the function uses helpers from its complete source file.
+The trial function below evaluates the four candidates and retains their fitted models. `run_research` then selects parameters and constructs Sensors from those same objects. Execute the project entry point above; the excerpt uses helpers from its complete source file.
 
 <!-- python-sensor-example -->
 <!-- example: uel-python-selection source=docs/examples/python-research/research.py region=trials scenario=selection interface=python role=executed -->
