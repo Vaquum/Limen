@@ -46,7 +46,10 @@ def inventory(root: Path):
         tree = ast.parse(text)
         node = next(item for item in tree.body if getattr(item, 'name', None) == symbol or
                     isinstance(item, ast.Assign) and any(isinstance(target, ast.Name) and target.id == symbol for target in item.targets))
-        entry = {'source': source, 'symbol': symbol, 'sha256': hashlib.sha256(ast.get_source_segment(text, node).encode()).hexdigest()}
+        segment = ast.get_source_segment(text, node)
+        if segment is None:
+            raise ValueError('Nested YAML contract has no source: ' + source + ':' + symbol)
+        entry: dict[str, object] = {'source': source, 'symbol': symbol, 'sha256': hashlib.sha256(segment.encode()).hexdigest()}
         if isinstance(node, ast.ClassDef) and any(isinstance(child, ast.AnnAssign) for child in node.body):
             entry['fields'] = {child.target.id: {'type': ast.unparse(child.annotation),
                 'default': ast.unparse(child.value) if child.value is not None else 'required'}
