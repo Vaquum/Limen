@@ -15,7 +15,7 @@ from typing import cast
 import polars as pl
 
 from limen.backtest.trade_contract import JsonValue, contract_digest, json_value
-from limen.experiment._objective_run import finalize_objective_result, run_objective, validate_objective_resume
+from limen.experiment._objective_run import finalize_objective_result, restored_log, run_objective, validate_objective_resume
 from limen.experiment._parallel_commit import context_parameter_keys, failed_parameters
 from limen.experiment._walk_forward_run import WalkForwardRun, validate_walk_forward_resume
 from limen.experiment.checkpoint_manager import CheckpointManager
@@ -228,7 +228,7 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean}
     overrides.update(dict.fromkeys((key for parameters in recorded_parameters.values() for key in parameters if not key.startswith('_')), pl.String))
     overrides.update({objective.column: pl.Float64} if (objective := run_objective(manifest)) is not None else {})
-    log = pl.read_csv(csv_path, n_rows=start, schema_overrides=overrides).head(start)
+    log = restored_log(csv_path, start, overrides, parameter_keys)
     log = log.with_columns(pl.DataFrame([{key: value for key, value in recorded_parameters[index].items() if not key.startswith('_')} for index in range(start)], infer_schema_length=None, strict=False).get_columns())
     if '_convergence_warning' not in log.columns:
         log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))

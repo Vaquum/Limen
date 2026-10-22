@@ -27,7 +27,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
 from limen.experiment._grid_resume import add_grid_metadata, complete_failed_header, validate_factorized_grid, validate_grid_resume
 from limen.experiment._recording import prepare_recording, project_record
-from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
+from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, restored_log, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment.param_domain import ParamDomain
@@ -560,7 +560,7 @@ class UniversalExperimentLoop:
                 msq, domain, feedback_controller, checkpoint_manager,
                 content_hash=content_hash, strategy_type=strategy_type,
                 csv_path=csv_path, round_data_path=round_data_path,
-                retain_round_artifacts=post_processing,
+                retain_round_artifacts=post_processing, context_params=context_params,
             )
         elif self._experiment_dir:
             self._guard_stale_artifacts()
@@ -874,7 +874,7 @@ class UniversalExperimentLoop:
                                    feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                                    *, content_hash: str, strategy_type: str,
                                    csv_path: Path, round_data_path: Path | None,
-                                   retain_round_artifacts: bool) -> int:
+                                   retain_round_artifacts: bool, context_params: dict[str, object] | None) -> int:
 
 
         if self._experiment_dir is None or self._search_strategy is None:
@@ -922,7 +922,7 @@ class UniversalExperimentLoop:
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
         string_params = {key: pl.String for key, values in domain.params.items() if self._factorize and all(isinstance(value, str) for value in values)}
-        experiment_log = pl.read_csv(csv_path, n_rows=start_round, schema_overrides={'_convergence_warning': pl.Boolean, **string_params})
+        experiment_log = restored_log(csv_path, start_round, {'_convergence_warning': pl.Boolean, **string_params}, {*domain.params, *(context_params or {})})
         if '_convergence_warning' not in experiment_log.columns or experiment_log['_convergence_warning'].null_count() == experiment_log.height:
             experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
@@ -952,7 +952,7 @@ class UniversalExperimentLoop:
 
         if round_data_path.exists():
             self._truncate_round_data(round_data_path, start_round)
-        (pl.read_csv(csv_path, n_rows=start_round, infer_schema=False) if self._factorize else experiment_log).write_csv(csv_path)
+        pl.read_csv(csv_path, n_rows=start_round, infer_schema=False).write_csv(csv_path)
 
         return start_round
 
