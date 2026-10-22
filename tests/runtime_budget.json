@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "max_total_seconds": 260,
+  "max_total_seconds": 280,
   "slowest_tests_limit": 10,
   "threshold_bands_seconds": [
     1,
@@ -19,6 +19,6 @@
     "observed_min_seconds": 85.0,
     "observed_max_seconds": 119.0,
     "headroom_seconds": 16.0,
-    "note": "Historical main CI baseline retained; 260-second ceiling reflects measured suite growth (main observed up to 238s; holdout execution proofs in PR #1136 add sustained read coverage)."
+    "note": "Historical main CI baseline retained; 280-second ceiling reflects measured suite growth (suite observed at 262.9s with zero failures after the 2026-10-22 merge wave added recorded-data proofs; previous 260s ceiling set at 238s observed)."
   }
 }
