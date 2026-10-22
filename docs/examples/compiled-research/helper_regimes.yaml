@@ -11,11 +11,11 @@ sfd:
         file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
     split_dates:
       train_start: '2024-01-01'
-      train_end: '2024-07-01'
-      val_start: '2024-07-01'
-      val_end: '2024-10-01'
-      test_start: '2024-10-01'
-      test_end: '2025-01-01'
+      train_end: '2024-02-15'
+      val_start: '2024-02-15'
+      val_end: '2024-03-15'
+      test_start: '2024-03-15'
+      test_end: '2024-04-15'
     indicators:
     - func: limen.features.breakout_percentile_regime
     - func: limen.features.hh_hl_structure_regime

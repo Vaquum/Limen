@@ -178,17 +178,13 @@ fallback used for rows whose trailing window holds fewer than
 
 plain median and IQR scaling.
 
-#### Args
-
-x_train (pl.DataFrame): Training data
-
-window (int): Trailing window length, in rows, for rolling statistics
-
-quantile_range (tuple[float, float]): Lower and upper quantiles for IQR
-
-clip (float): Symmetric bound applied to the scaled output
-
-min_samples (int): Minimum trailing observations before a rolling statistic is used
+| Argument | Contract |
+| --- | --- |
+| x_train (`pl.DataFrame`) | Training data |
+| window (`int`) | Trailing window length, in rows, for rolling statistics |
+| quantile_range (`tuple[float, float]`) | Lower and upper quantiles for IQR |
+| clip (`float`) | Symmetric bound applied to the scaled output |
+| min_samples (`int`) | Minimum trailing observations before a rolling statistic is used |
 
 ### `limen.scalers.CausalRollingRobustScaler.context_rows`
 
@@ -221,13 +217,11 @@ trailing observations fall back to the train-fitted median and IQR.
 
 The scaled output is clipped to +/- `clip`.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Data to transform |
 
-df (pl.DataFrame): Data to transform
-
-#### Returns
-
-pl.DataFrame: Transformed data
+**Returns:** pl.DataFrame: Transformed data
 
 ### `limen.scalers.LinearScaler`
 
@@ -247,13 +241,11 @@ def __init__(self, x_train: pl.DataFrame, rules: dict[str, str] | None=None, def
 
 Linear transformation utility for scaling features.
 
-#### Args
-
-x_train: Training DataFrame.
-
-rules: Regex-to-rule mapping.
-
-default: Fallback scaling rule.
+| Argument | Contract |
+| --- | --- |
+| x_train | Training DataFrame. |
+| rules | Regex-to-rule mapping. |
+| default | Fallback scaling rule. |
 
 ### `limen.scalers.LinearScaler.transform`
 
@@ -265,13 +257,11 @@ def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
 Apply linear scaling transformation.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df | DataFrame to transform. |
 
-df: DataFrame to transform.
-
-#### Returns
-
-Transformed DataFrame.
+**Returns:** Transformed DataFrame.
 
 ### `limen.scalers.LogRegScaler`
 
@@ -293,9 +283,9 @@ def __init__(self, x_train: pl.DataFrame) -> None:
 
 Initialize the LogRegScaler object.
 
-#### Args
-
-x_train (pl.DataFrame): The training data
+| Argument | Contract |
+| --- | --- |
+| x_train (`pl.DataFrame`) | The training data |
 
 ### `limen.scalers.LogRegScaler.transform`
 
@@ -307,13 +297,11 @@ def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
 Transform the data using the scaling rules.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | The input DataFrame |
 
-df (pl.DataFrame): The input DataFrame
-
-#### Returns
-
-pl.DataFrame: The transformed DataFrame
+**Returns:** pl.DataFrame: The transformed DataFrame
 
 ### `limen.scalers.RankGaussScaler`
 
@@ -335,11 +323,10 @@ def __init__(self, x_train: pl.DataFrame, n_quantiles: int=1000) -> None:
 
 Fit scaler by storing training quantile boundaries per column.
 
-#### Args
-
-x_train (pl.DataFrame): Training data
-
-n_quantiles (int): Number of quantile bins for rank interpolation
+| Argument | Contract |
+| --- | --- |
+| x_train (`pl.DataFrame`) | Training data |
+| n_quantiles (`int`) | Number of quantile bins for rank interpolation |
 
 ### `limen.scalers.RankGaussScaler.transform`
 
@@ -357,13 +344,11 @@ convert to uniform [eps, 1-eps], apply inverse normal CDF.
 
 NaN values are preserved as NaN in the output.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Data to transform |
 
-df (pl.DataFrame): Data to transform
-
-#### Returns
-
-pl.DataFrame: Transformed data with approximately normal distributions
+**Returns:** pl.DataFrame: Transformed data with approximately normal distributions
 
 ### `limen.scalers.RobustScaler`
 
@@ -385,11 +370,10 @@ def __init__(self, x_train: pl.DataFrame, quantile_range: tuple[float, float]=(0
 
 Fit scaler on training data using median and interquartile range.
 
-#### Args
-
-x_train (pl.DataFrame): Training data
-
-quantile_range (tuple[float, float]): Lower and upper quantiles for IQR
+| Argument | Contract |
+| --- | --- |
+| x_train (`pl.DataFrame`) | Training data |
+| quantile_range (`tuple[float, float]`) | Lower and upper quantiles for IQR |
 
 ### `limen.scalers.RobustScaler.transform`
 
@@ -401,11 +385,8 @@ def transform(self, df: pl.DataFrame) -> pl.DataFrame:
 
 Apply robust scaling: (x - median) / IQR.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Data to transform |
 
-df (pl.DataFrame): Data to transform
-
-#### Returns
-
-pl.DataFrame: Transformed data
-
+**Returns:** pl.DataFrame: Transformed data

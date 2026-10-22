@@ -192,13 +192,11 @@ def generate(self, random_search: bool=True) -> dict[str, Any] | None:
 
 Compute next parameter combination from the parameter space.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| random_search (`bool`) | Whether to select parameters randomly or sequentially |
 
-random_search (bool): Whether to select parameters randomly or sequentially
-
-#### Returns
-
-dict: Dictionary of parameter names and selected values, or None if space is exhausted
+**Returns:** dict: Dictionary of parameter names and selected values, or None if space is exhausted
 
 ### `limen.utils.adf_test`
 
@@ -210,15 +208,12 @@ def adf_test(series: pl.Series, significance_level: float=0.05) -> AdfResult:
 
 Run Augmented Dickey-Fuller test for stationarity.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| series (`pl.Series`) | Time series to test |
+| significance_level (`float`) | Threshold for rejecting non-stationarity |
 
-series (pl.Series): Time series to test
-
-significance_level (float): Threshold for rejecting non-stationarity
-
-#### Returns
-
-AdfResult: Structured test result with stationary flag, p-value,
+**Returns:** AdfResult: Structured test result with stationary flag, p-value,
 
 test statistic, and critical values
 
@@ -238,17 +233,13 @@ negatives, and auc is NaN when y_test contains a single class, mirroring
 
 the safe_ovr_auc convention.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true binary labels |
+| preds (`list`) | Predicted binary class labels |
+| probs (`list`) | Predicted class probabilities |
 
-data (dict): Data dictionary with 'y_test' key containing true binary labels
-
-preds (list): Predicted binary class labels
-
-probs (list): Predicted class probabilities
-
-#### Returns
-
-dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
+**Returns:** dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
 
 ### `limen.utils.confidence_filtering_system`
 
@@ -260,17 +251,13 @@ def confidence_filtering_system(models: list[Any], data: dict[str, Any], target_
 
 Compute complete confidence filtering system with validation-based calibration.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| models (`list`) | List of trained models for confidence estimation |
+| data (`dict`) | Dictionary with validation and test data splits containing 'x_val', 'y_val', 'x_test', 'y_test', 'dt_test' keys |
+| target_confidence (`float`) | Target percentage of predictions to classify as confident |
 
-models (list): List of trained models for confidence estimation
-
-data (dict): Dictionary with validation and test data splits containing 'x_val', 'y_val', 'x_test', 'y_test', 'dt_test' keys
-
-target_confidence (float): Target percentage of predictions to classify as confident
-
-#### Returns
-
-tuple: Filtered test results, per-row results DataFrame sorted by
+**Returns:** tuple: Filtered test results, per-row results DataFrame sorted by
 
 confidence score, and calibration statistics
 
@@ -286,15 +273,12 @@ Compute regression metrics from continuous predictions.
 
 NOTE: This function is experimental and may change in future versions.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true continuous values |
+| preds (`list`) | Predicted continuous values |
 
-data (dict): Data dictionary with 'y_test' key containing true continuous values
-
-preds (list): Predicted continuous values
-
-#### Returns
-
-dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
+**Returns:** dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
 
 ### `limen.utils.data_dict_to_numpy`
 
@@ -306,15 +290,12 @@ def data_dict_to_numpy(data: dict[str, Any], keys: list[str] | None=None) -> dic
 
 Convert data dictionary entries from polars/pandas to numpy arrays.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Dictionary with data entries (e.g., x_train, y_train, etc.) |
+| keys (`list`) | Keys to convert. Defaults to x_train, y_train, x_val, y_val, x_test, y_test |
 
-data (dict): Dictionary with data entries (e.g., x_train, y_train, etc.)
-
-keys (list): Keys to convert. Defaults to x_train, y_train, x_val, y_val, x_test, y_test
-
-#### Returns
-
-dict: Dictionary with values converted to numpy arrays where applicable
+**Returns:** dict: Dictionary with values converted to numpy arrays where applicable
 
 ### `limen.utils.filter_lines_by_quantile`
 
@@ -326,21 +307,14 @@ def filter_lines_by_quantile(lines: list[dict[str, float]], quantile: float) -> 
 
 Compute the subset of lines at or above a height quantile.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| lines (`list[dict]`) | Line dicts with a 'height_pct' key, as produced by find_price_lines |
+| quantile (`float`) | Quantile of absolute heights below which lines are dropped |
 
-lines (list[dict]): Line dicts with a 'height_pct' key, as produced
+**Returns:** list[dict]: Lines whose absolute height is at or above the quantile cutoff
 
-by find_price_lines
-
-quantile (float): Quantile of absolute heights below which lines are dropped
-
-#### Returns
-
-list[dict]: Lines whose absolute height is at or above the quantile cutoff
-
-#### Raises
-
-ValueError: If quantile is outside [0, 1]
+**Raises:** ValueError: If quantile is outside [0, 1]
 
 ### `limen.utils.find_price_lines`
 
@@ -360,23 +334,17 @@ least min_height_pct in absolute terms. Lines with a positive change
 
 are long lines, negative are short lines.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| close (`np.ndarray`) | One-dimensional array of close prices |
+| max_duration_hours (`int`) | Exclusive upper bound on line duration in bars |
+| min_height_pct (`float`) | Minimum absolute height as a fraction of the start price |
 
-close (np.ndarray): One-dimensional array of close prices
-
-max_duration_hours (int): Exclusive upper bound on line duration in bars
-
-min_height_pct (float): Minimum absolute height as a fraction of the start price
-
-#### Returns
-
-tuple[list[dict], list[dict]]: (long_lines, short_lines), each a list of
+**Returns:** tuple[list[dict], list[dict]]: (long_lines, short_lines), each a list of
 
 dicts with keys 'start_idx', 'end_idx', 'height_pct', 'duration_hours'
 
-#### Raises
-
-ValueError: If max_duration_hours is below 2 or min_height_pct is not positive
+**Raises:** ValueError: If max_duration_hours is below 2 or min_height_pct is not positive
 
 NOTE: Lines are detected only within the array passed in, so per-split
 
@@ -392,13 +360,11 @@ def format_report_footer(width: int=50) -> str:
 
 Create standardized report footer with consistent styling.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| width (`int`) | Width of the separator line |
 
-width (int): Width of the separator line
-
-#### Returns
-
-str: Formatted footer string
+**Returns:** str: Formatted footer string
 
 ### `limen.utils.format_report_header`
 
@@ -410,15 +376,12 @@ def format_report_header(title: str, width: int=50) -> str:
 
 Create standardized report header with consistent styling.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| title (`str`) | Title of the report section |
+| width (`int`) | Width of the separator line |
 
-title (str): Title of the report section
-
-width (int): Width of the separator line
-
-#### Returns
-
-str: Formatted header string with separators
+**Returns:** str: Formatted header string with separators
 
 ### `limen.utils.format_report_section`
 
@@ -430,15 +393,12 @@ def format_report_section(title: str, width: int=50) -> str:
 
 Create standardized report section with consistent styling.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| title (`str`) | Title of the report section |
+| width (`int`) | Width of the separator line |
 
-title (str): Title of the report section
-
-width (int): Width of the separator line
-
-#### Returns
-
-str: Formatted section string with separators
+**Returns:** str: Formatted section string with separators
 
 ### `limen.utils.safe_ovr_auc`
 
@@ -450,13 +410,9 @@ def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str], probs: npt.ND
 
 Compute one-vs-rest AUC safely handling missing classes.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| y_true (`np.ndarray \| list[int] \| list[str]`) | True class labels, shape (n_samples,) |
+| probs (`np.ndarray \| list[list[float]]`) | Predicted probabilities, shape (n_samples, n_classes) |
 
-y_true (np.ndarray \| list[int] \| list[str]): True class labels, shape (n_samples,)
-
-probs (np.ndarray \| list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
-
-#### Returns
-
-float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
-
+**Returns:** float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made

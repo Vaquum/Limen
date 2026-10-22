@@ -118,7 +118,7 @@ jobs:
         working-directory: docs-site
         run: |
           npm run check
-          npx --no-install playwright install --with-deps chromium
+          npx --no-install playwright install --with-deps chromium webkit
           npm run check:reader
 
       - name: Seal and retain the public release evidence

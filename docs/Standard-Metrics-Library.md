@@ -188,7 +188,7 @@ def probability_of_backtest_overfitting(returns_matrix: npt.NDArray[np.float64],
 
 Both interfaces can use these helpers without adopting the other interface's methodology:
 
-The Python calibration scenario calls the shared threshold optimizer with `balanced_metric`; its custom scorer remains caller-owned. The Compiled calibration scenario declares the same metric and trains all four fitted modes. Reconstruction is a separate obligation. These are the same project sources used in the [calibration chapter](Calibration.md):
+The Python calibration scenario calls the shared threshold optimizer with `balanced_metric`; its custom scorer remains caller-owned. The Compiled calibration scenario declares the same metric and trains all four fitted modes. The separate `calibration_assessment.yaml` uses the native event-return objective and reconstructs all four modes through `limen assess`. The metric-comparison campaign and the event-return campaign answer different selection questions. These are the same project sources used in the [calibration chapter](Calibration.md):
 
 <!-- example: metrics-python-calibration source=docs/examples/python-research/scenarios.py region=calibration scenario=calibration interface=python role=executed -->
 ```python
@@ -256,15 +256,12 @@ with trade frequency. Higher scores indicate better balance between
 
 accurate predictions and sufficient trading activity.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| y_true | Ground truth binary labels |
+| y_pred | Predicted binary labels |
 
-y_true: Ground truth binary labels
-
-y_pred: Predicted binary labels
-
-#### Returns
-
-float: Balanced metric score (0.0 if no positive predictions)
+**Returns:** float: Balanced metric score (0.0 if no positive predictions)
 
 ### `limen.metrics.binary_metrics`
 
@@ -282,17 +279,13 @@ negatives, and auc is NaN when y_test contains a single class, mirroring
 
 the safe_ovr_auc convention.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true binary labels |
+| preds (`list`) | Predicted binary class labels |
+| probs (`list`) | Predicted class probabilities |
 
-data (dict): Data dictionary with 'y_test' key containing true binary labels
-
-preds (list): Predicted binary class labels
-
-probs (list): Predicted class probabilities
-
-#### Returns
-
-dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
+**Returns:** dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
 
 ### `limen.metrics.continuous_metrics`
 
@@ -306,15 +299,12 @@ Compute regression metrics from continuous predictions.
 
 NOTE: This function is experimental and may change in future versions.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true continuous values |
+| preds (`list`) | Predicted continuous values |
 
-data (dict): Data dictionary with 'y_test' key containing true continuous values
-
-preds (list): Predicted continuous values
-
-#### Returns
-
-dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
+**Returns:** dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
 
 ### `limen.metrics.deflated_sharpe_ratio`
 
@@ -344,19 +334,14 @@ def multiclass_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.i
 
 Compute multiclass classification metrics from predictions and probabilities.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true class labels |
+| preds (`list`) | Predicted class labels |
+| probs (`list`) | Predicted class probabilities |
+| average (`str`) | Averaging strategy for precision and recall |
 
-data (dict): Data dictionary with 'y_test' key containing true class labels
-
-preds (list): Predicted class labels
-
-probs (list): Predicted class probabilities
-
-average (str): Averaging strategy for precision and recall
-
-#### Returns
-
-dict: Dictionary containing precision, recall, auc, and accuracy metrics
+**Returns:** dict: Dictionary containing precision, recall, auc, and accuracy metrics
 
 ### `limen.metrics.probability_of_backtest_overfitting`
 
@@ -386,19 +371,14 @@ def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]], backt
 
 Compute rule-based strategy metrics across train, val, and test splits.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| positions (`dict`) | Per-split position arrays (0/1) keyed by 'train', 'val', 'test' |
+| backtest_results (`dict`) | Per-split backtest metric dicts keyed by 'train', 'val', 'test' |
+| sharpe_std_threshold (`float`) | Legacy parameter retained for call compatibility |
+| sharpe_degradation_threshold (`float`) | Legacy parameter retained for call compatibility |
 
-positions (dict): Per-split position arrays (0/1) keyed by 'train', 'val', 'test'
-
-backtest_results (dict): Per-split backtest metric dicts keyed by 'train', 'val', 'test'
-
-sharpe_std_threshold (float): Legacy parameter retained for call compatibility
-
-sharpe_degradation_threshold (float): Legacy parameter retained for call compatibility
-
-#### Returns
-
-dict: Tier 1 position stats, Tier 2 backtest metrics per split, Tier 3 stability metrics
+**Returns:** dict: Tier 1 position stats, Tier 2 backtest metrics per split, Tier 3 stability metrics
 
 ### `limen.metrics.safe_ovr_auc`
 
@@ -410,13 +390,9 @@ def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str], probs: npt.ND
 
 Compute one-vs-rest AUC safely handling missing classes.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| y_true (`np.ndarray \| list[int] \| list[str]`) | True class labels, shape (n_samples,) |
+| probs (`np.ndarray \| list[list[float]]`) | Predicted probabilities, shape (n_samples, n_classes) |
 
-y_true (np.ndarray \| list[int] \| list[str]): True class labels, shape (n_samples,)
-
-probs (np.ndarray \| list[list[float]]): Predicted probabilities, shape (n_samples, n_classes)
-
-#### Returns
-
-float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
-
+**Returns:** float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made

@@ -19,6 +19,12 @@ EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) 
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
 REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
 RESULT_MARKER = r'<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.,]+) -->'
+COMPILED_DRIVERS = {
+    'selection': ('selection',), 'search': ('preparation', 'helpers', 'search', 'models'),
+    'recovery': ('recovery',), 'walk_forward': ('walk_forward',), 'calibration': ('calibration',),
+    'execution': ('execution',), 'bars': ('bars',), 'allocation': ('allocation',),
+    'holdout': ('holdout',), 'command_line': ('command_line',),
+}
 
 
 def digest(value: bytes) -> str:
@@ -105,6 +111,24 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
             raise ValueError('Example source escapes the repository')
         if interface == 'compiled' and path.suffix not in ('.yaml', '.sh', '.json'):
             raise ValueError(f'Wrong research interface: Compiled Research requires YAML and CLI source: {identity}')
+        if interface == 'compiled' and '/compiled-research/' in source:
+            driver = root / 'docs/examples/compiled-research/run.sh'
+            regions = COMPILED_DRIVERS.get(scenario, ())
+            if not regions:
+                raise ValueError('Unknown Compiled consuming scenario: ' + scenario)
+            commands = '\n'.join(region(driver, part) for part in regions)
+            relative = str(path.relative_to(root / 'docs/examples'))
+            if path == driver:
+                consumed = name in regions or name == '__file__'
+            elif scenario == 'holdout' and '/final' in relative:
+                consumed = relative.rsplit('/', 1)[0] + '/run.sh' in commands
+            elif scenario == 'command_line':
+                project_commands = (root / 'docs/examples/compiled-research/project.sh').read_text()
+                consumed = relative == 'compiled-research/project.sh' or relative in project_commands
+            else:
+                consumed = relative in commands
+            if not consumed:
+                raise ValueError('Example is not consumed by its Compiled scenario: ' + identity)
         canonical = region(path, name)
         if canonical != excerpt + '\n':
             raise ValueError(f'Documentation differs from executable source: {identity}')

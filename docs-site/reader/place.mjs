@@ -19,7 +19,7 @@ export function restore(place){
   if(place.passage==='opening'){scrollTo(0,0);return true;}
   const el=document.getElementById(place.passage);
   if(!el?.matches('[data-passage]')){announce('The saved passage is no longer in this revision.');return false;}
-  const passages=[...document.querySelectorAll('main article [data-passage]')],next=passages[passages.indexOf(el)+1];
+  const passages=[...document.querySelectorAll('main article [data-passage]')].filter(node=>node.getClientRects().length),next=passages[passages.indexOf(el)+1];
   const rect=el.getBoundingClientRect(),span=next?next.getBoundingClientRect().top-rect.top:rect.height;
   scrollTo({top:scrollY+rect.top+span*place.ratio-Math.min(130,innerHeight*.2),behavior:'instant'});
   document.body.dataset.interface=place.interface||'both';return true;

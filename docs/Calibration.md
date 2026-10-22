@@ -6,7 +6,7 @@ The [Python project](examples/python-research/README.md) owns these steps as ord
 
 ## Prerequisites
 
-Use the complete project entry points and matching recorded input bundle. Python fits its classifier and calibrator in caller-owned state. Compiled Research runs the four calibration/threshold combinations declared in `calibration.yaml`; its CSV retains each mode and selected threshold. The assessment partition supplies no calibration or threshold fitting data.
+Use the complete project entry points and matching recorded input bundle. Python fits its classifier and calibrator in caller-owned state. Compiled Research runs the four calibration/threshold combinations declared in `calibration.yaml`; its CSV retains each mode and selected threshold. `calibration_assessment.yaml` adds an event-return objective, product and source clock, then assesses all four recorded modes. The assessment partition supplies no calibration or threshold fitting data.
 
 ## What Calibration Does
 
@@ -295,3 +295,9 @@ These are validation selection scores. Calibration/search reuse validation data,
 ## Read Next
 
 Continue to [search and recovery](Advanced-Search.md) to compare candidates, [the Manifest reference](Experiment-Manifest.md) for builder declarations, and [Sensor construction](Trainer.md) for fitted model reuse.
+
+## Read the current decisions
+
+<!-- result: calibration-python-decisions interface=python scenario=calibration fields=decisions,validation_reused -->
+
+<!-- result: calibration-compiled-decisions interface=compiled scenario=calibration fields=modes,reconstructed_modes -->

@@ -5,7 +5,7 @@ import re
 import polars as pl
 import pytest
 
-from check_evidence import bindings
+from check_evidence import bindings, region
 from recorded_inputs import funding_history
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -28,6 +28,15 @@ def test_compiled_python_substitution_fails_even_when_excerpt_matches(tmp_path):
     path = tmp_path / 'substituted.md'
     path.write_text('<!-- example: substituted source=docs/examples/recorded_inputs.py region=trade_profile scenario=bars interface=compiled role=executed -->\n```python\nignored\n```\n')
     with pytest.raises(ValueError, match='requires YAML and CLI'):
+        bindings(ROOT, path)
+
+
+@pytest.mark.parametrize('name', ['features', 'run'])
+def test_research_yaml_cannot_claim_the_selection_command(name, tmp_path):
+    path = tmp_path / 'wrong-scenario.md'
+    source = 'docs/examples/compiled-research/research.yaml'
+    path.write_text(f'<!-- example: wrong-scenario source={source} region={name} scenario=selection interface=compiled role=executed -->\n```yaml\n' + region(ROOT / source, name) + '```\n')
+    with pytest.raises(ValueError, match='not consumed by its Compiled scenario'):
         bindings(ROOT, path)
 
 

@@ -341,25 +341,17 @@ def absorption_intensity(data: pl.DataFrame, window: int=20, open_col: str='open
 
 Compute high-effort low-result absorption intensity from volume and candle body share.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, close, and volume columns |
+| window (`int`) | Number of periods used for the trailing volume baseline |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with open, high, low, close, and volume columns
-
-window (int): Number of periods used for the trailing volume baseline
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'absorption_intensity'
+**Returns:** pl.DataFrame: The input data with a new column 'absorption_intensity'
 
 ### `limen.features.active_lines`
 
@@ -371,17 +363,13 @@ def active_lines(data: pl.DataFrame, long_lines: list[dict[str, float]], short_l
 
 Compute active line count per row from provided long and short line spans.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'datetime' and 'close' columns |
+| long_lines (`list[dict]`) | Long line definitions with 'start_idx' and 'end_idx' |
+| short_lines (`list[dict]`) | Short line definitions with 'start_idx' and 'end_idx' |
 
-data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
-
-long_lines (list[dict]): Long line definitions with 'start_idx' and 'end_idx'
-
-short_lines (list[dict]): Short line definitions with 'start_idx' and 'end_idx'
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'active_lines'
+**Returns:** pl.DataFrame: The input data with a new column 'active_lines'
 
 ### `limen.features.active_quantile_count`
 
@@ -393,17 +381,13 @@ def active_quantile_count(data: pl.DataFrame, long_lines_q: list[dict[str, float
 
 Compute count of active quantile-filtered lines per row.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'datetime' and 'close' columns |
+| long_lines_q (`list[dict]`) | Quantile-filtered long lines with 'start_idx' and 'end_idx' |
+| short_lines_q (`list[dict]`) | Quantile-filtered short lines with 'start_idx' and 'end_idx' |
 
-data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
-
-long_lines_q (list[dict]): Quantile-filtered long lines with 'start_idx' and 'end_idx'
-
-short_lines_q (list[dict]): Quantile-filtered short lines with 'start_idx' and 'end_idx'
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'active_quantile_count'
+**Returns:** pl.DataFrame: The input data with a new column 'active_quantile_count'
 
 ### `limen.features.amihud_illiquidity`
 
@@ -415,17 +399,13 @@ def amihud_illiquidity(data: pl.DataFrame, price_col: str='close', volume_col: s
 
 Compute the Amihud illiquidity proxy from price changes and dollar volume.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with price and volume columns |
+| price_col (`str`) | Column name used for close-to-close returns |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with price and volume columns
-
-price_col (str): Column name used for close-to-close returns
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'amihud_illiquidity'
+**Returns:** pl.DataFrame: The input data with a new column 'amihud_illiquidity'
 
 ### `limen.features.atr_percent_sma`
 
@@ -437,15 +417,12 @@ def atr_percent_sma(data: pl.DataFrame, period: int=14) -> pl.DataFrame:
 
 Compute ATR as percentage of close price using Simple Moving Average.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
+| period (`int`) | Number of periods for ATR calculation |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-period (int): Number of periods for ATR calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'atr_percent_sma'
+**Returns:** pl.DataFrame: The input data with a new column 'atr_percent_sma'
 
 ### `limen.features.atr_sma`
 
@@ -459,15 +436,12 @@ Compute Average True Range using Simple Moving Average.
 
 NOTE: Different from standard ATR which uses Wilder's smoothing.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
+| period (`int`) | Number of periods for ATR calculation |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-period (int): Number of periods for ATR calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'atr_sma'
+**Returns:** pl.DataFrame: The input data with a new column 'atr_sma'
 
 ### `limen.features.body_to_range`
 
@@ -479,21 +453,15 @@ def body_to_range(data: pl.DataFrame, open_col: str='open', high_col: str='high'
 
 Compute candle body size relative to the full bar range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close columns |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close columns
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'body_to_range'
+**Returns:** pl.DataFrame: The input data with a new column 'body_to_range'
 
 ### `limen.features.breakout_features`
 
@@ -505,23 +473,16 @@ def breakout_features(data: pl.DataFrame, long_col: str='breakout_long', short_c
 
 Compute comprehensive breakout-related features including lags, stats, and ROC.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with breakout signal columns |
+| long_col (`str`) | Column name for long breakout signals |
+| short_col (`str`) | Column name for short breakout signals |
+| lookback (`int`) | Number of periods for feature calculation |
+| horizon (`int`) | Number of periods to shift for avoiding lookahead bias |
+| target (`str`) | Target column name for filtering null values |
 
-data (pl.DataFrame): Klines dataset with breakout signal columns
-
-long_col (str): Column name for long breakout signals
-
-short_col (str): Column name for short breakout signals
-
-lookback (int): Number of periods for feature calculation
-
-horizon (int): Number of periods to shift for avoiding lookahead bias
-
-target (str): Target column name for filtering null values
-
-#### Returns
-
-pl.DataFrame: The input data with multiple breakout feature columns added
+**Returns:** pl.DataFrame: The input data with multiple breakout feature columns added
 
 ### `limen.features.breakout_percentile_regime`
 
@@ -533,19 +494,14 @@ def breakout_percentile_regime(df: pl.DataFrame, period: int=24, p_hi: float=0.8
 
 Compute regime classification by percentile position of 'close' within rolling [low, high].
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
+| period (`int`) | Rolling window for high/low range |
+| p_hi (`float`) | Upper percentile threshold in [0, 1] |
+| p_lo (`float`) | Lower percentile threshold in [0, 1] |
 
-df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-period (int): Rolling window for high/low range
-
-p_hi (float): Upper percentile threshold in [0, 1]
-
-p_lo (float): Lower percentile threshold in [0, 1]
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'regime_breakout_pct'
+**Returns:** pl.DataFrame: The input data with a new column 'regime_breakout_pct'
 
 ### `limen.features.bulk_volume_classification`
 
@@ -567,19 +523,14 @@ times total volume; sell volume is the remainder. Direction is inferred
 
 from price action alone, so no trade-side data is required.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with close and volume columns |
+| window (`int`) | Rolling window for the return-volatility standardization |
+| close_col (`str`) | Column name used for close-to-close log returns |
+| volume_col (`str`) | Column name for total traded volume |
 
-data (pl.DataFrame): Klines dataset with close and volume columns
-
-window (int): Rolling window for the return-volatility standardization
-
-close_col (str): Column name used for close-to-close log returns
-
-volume_col (str): Column name for total traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'bvc_buy_volume' and 'bvc_sell_volume'
+**Returns:** pl.DataFrame: The input data with new columns 'bvc_buy_volume' and 'bvc_sell_volume'
 
 ### `limen.features.calendar_time_features`
 
@@ -591,13 +542,11 @@ def calendar_time_features(df: pl.DataFrame) -> pl.DataFrame:
 
 Add discrete calendar time features from the datetime column.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Input frame with a datetime column named `datetime` |
 
-df (pl.DataFrame): Input frame with a datetime column named `datetime`
-
-#### Returns
-
-pl.DataFrame: The input frame with `hour`, `minute`, `weekday`,
+**Returns:** pl.DataFrame: The input frame with `hour`, `minute`, `weekday`,
 
 `day_of_month`, `day_of_year`, `week_of_year`, `month`,
 
@@ -617,25 +566,17 @@ def close_ma_distance_atr(data: pl.DataFrame, ma_window: int=20, atr_window: int
 
 Compute close-to-SMA distance normalized by SMA-smoothed true range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high, low, and close columns |
+| ma_window (`int`) | Number of periods in the simple moving average |
+| atr_window (`int`) | Number of periods in the true-range moving average |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high, low, and close columns
-
-ma_window (int): Number of periods in the simple moving average
-
-atr_window (int): Number of periods in the true-range moving average
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the ATR-normalized distance column appended
+**Returns:** pl.DataFrame: The input data with the ATR-normalized distance column appended
 
 ### `limen.features.close_position`
 
@@ -647,23 +588,16 @@ def close_position(data: pl.DataFrame, window: int=1, high_col: str='high', low_
 
 Compute close position within the high-low range as a unit interval fraction.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high, low, and close columns |
+| window (`int`) | Rolling mean window; `1` preserves the single-bar behavior |
+| high_col (`str`) | High price column |
+| low_col (`str`) | Low price column |
+| close_col (`str`) | Close price column |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high, low, and close columns
-
-window (int): Rolling mean window; `1` preserves the single-bar behavior
-
-high_col (str): High price column
-
-low_col (str): Low price column
-
-close_col (str): Close price column
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with a new close-position column
+**Returns:** pl.DataFrame: The input data with a new close-position column
 
 ### `limen.features.close_position_rolling`
 
@@ -675,23 +609,16 @@ def close_position_rolling(data: pl.DataFrame, window: int=20, high_col: str='hi
 
 Compute rolling mean close position inside the high-low range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high, low, and close columns |
+| window (`int`) | Number of periods in the rolling mean |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high, low, and close columns
-
-window (int): Number of periods in the rolling mean
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the rolling close-position column appended
+**Returns:** pl.DataFrame: The input data with the rolling close-position column appended
 
 ### `limen.features.close_to_extremes`
 
@@ -703,13 +630,11 @@ def close_to_extremes(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute close position relative to high and low extremes.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'close', 'high', 'low' columns |
 
-data (pl.DataFrame): Klines dataset with 'close', 'high', 'low' columns
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'close_to_high' and 'close_to_low'
+**Returns:** pl.DataFrame: The input data with new columns 'close_to_high' and 'close_to_low'
 
 ### `limen.features.conserved_flux_renormalization`
 
@@ -727,19 +652,14 @@ flags hours where the dollar flow or trade-size entropy breaks
 
 scale-invariant behaviour.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| trades_df (`pl.DataFrame`) | The trades DataFrame. |
+| kline_interval (`str`) | The kline interval. |
+| base_window_s (`int`) | The base window size. |
+| levels (`int`) | The number of levels to compute. |
 
-trades_df (pl.DataFrame): The trades DataFrame.
-
-kline_interval (str): The kline interval.
-
-base_window_s (int): The base window size.
-
-levels (int): The number of levels to compute.
-
-#### Returns
-
-pl.DataFrame: A klines DataFrame with the CFR features
+**Returns:** pl.DataFrame: A klines DataFrame with the CFR features
 
 ### `limen.features.cusum_filter`
 
@@ -759,19 +679,14 @@ symmetric CUSUM filter). The filter samples only moves whose cumulative
 
 magnitude is meaningful, gating out micro-noise ahead of downstream sampling.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame \| pl.LazyFrame`) | Klines dataset with a close price column |
+| threshold (`float`) | Cumulative log-return magnitude that triggers an event |
+| close_col (`str`) | Column name used for close-to-close log returns |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame \| pl.LazyFrame): Klines dataset with a close price column
-
-threshold (float): Cumulative log-return magnitude that triggers an event
-
-close_col (str): Column name used for close-to-close log returns
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame \| pl.LazyFrame: The input data, matching the input frame
+**Returns:** pl.DataFrame \| pl.LazyFrame: The input data, matching the input frame
 
 type, with an Int8 column: 1 for an up event, -1 for a down event,
 
@@ -791,13 +706,11 @@ def cyclical_time_features(df: pl.DataFrame) -> pl.DataFrame:
 
 Add sine and cosine encodings for cyclical datetime fields.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Input frame with a datetime column named `datetime` |
 
-df (pl.DataFrame): Input frame with a datetime column named `datetime`
-
-#### Returns
-
-pl.DataFrame: The input frame with cyclical encodings for hour,
+**Returns:** pl.DataFrame: The input frame with cyclical encodings for hour,
 
 minute, weekday, day_of_month, day_of_year, week_of_year, month,
 
@@ -817,15 +730,12 @@ def distance_from_high(data: pl.DataFrame, period: int=24) -> pl.DataFrame:
 
 Compute distance from rolling high as percentage.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'close' columns |
+| period (`int`) | Number of periods for rolling high calculation |
 
-data (pl.DataFrame): Klines dataset with 'high', 'close' columns
-
-period (int): Number of periods for rolling high calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'distance_from_high'
+**Returns:** pl.DataFrame: The input data with a new column 'distance_from_high'
 
 ### `limen.features.distance_from_low`
 
@@ -837,15 +747,12 @@ def distance_from_low(data: pl.DataFrame, period: int=24) -> pl.DataFrame:
 
 Compute distance from rolling low as percentage.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'low', 'close' columns |
+| period (`int`) | Number of periods for rolling low calculation |
 
-data (pl.DataFrame): Klines dataset with 'low', 'close' columns
-
-period (int): Number of periods for rolling low calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'distance_from_low'
+**Returns:** pl.DataFrame: The input data with a new column 'distance_from_low'
 
 ### `limen.features.distance_from_ma`
 
@@ -857,19 +764,14 @@ def distance_from_ma(data: pl.DataFrame, window: int=20, close_col: str='close',
 
 Compute close distance from its rolling moving average.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods in the moving average |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods in the moving average
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the moving-average distance column appended
+**Returns:** pl.DataFrame: The input data with the moving-average distance column appended
 
 ### `limen.features.dollar_bar_crash_reversal`
 
@@ -893,17 +795,13 @@ def dollar_volume(data: pl.DataFrame, price_col: str='close', volume_col: str='v
 
 Compute traded dollar volume from price and volume columns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with price and volume columns |
+| price_col (`str`) | Column name used as the price proxy for traded value |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with price and volume columns
-
-price_col (str): Column name used as the price proxy for traded value
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'dollar_volume'
+**Returns:** pl.DataFrame: The input data with a new column 'dollar_volume'
 
 ### `limen.features.downside_volatility_ratio`
 
@@ -915,19 +813,14 @@ def downside_volatility_ratio(data: pl.DataFrame, window: int=20, close_col: str
 
 Compute rolling downside squared-return share of total squared returns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods in the rolling sums |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods in the rolling sums
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the downside-volatility ratio appended
+**Returns:** pl.DataFrame: The input data with the downside-volatility ratio appended
 
 ### `limen.features.dynamic_stop_loss`
 
@@ -939,21 +832,15 @@ def dynamic_stop_loss(data: pl.DataFrame, base_stop_loss: float, stop_volatility
 
 Compute dynamic stop loss levels based on volatility conditions and regime.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volatility_measure', 'regime_multiplier' columns |
+| base_stop_loss (`float`) | Base stop loss threshold |
+| stop_volatility_multiplier (`float`) | Multiplier for volatility-adjusted stops |
+| clip_lower_mult (`float`) | Lower bound multiplier for clipping |
+| clip_upper_mult (`float`) | Upper bound multiplier for clipping |
 
-data (pl.DataFrame): Klines dataset with 'volatility_measure', 'regime_multiplier' columns
-
-base_stop_loss (float): Base stop loss threshold
-
-stop_volatility_multiplier (float): Multiplier for volatility-adjusted stops
-
-clip_lower_mult (float): Lower bound multiplier for clipping
-
-clip_upper_mult (float): Upper bound multiplier for clipping
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'dynamic_stop_loss'
+**Returns:** pl.DataFrame: The input data with a new column 'dynamic_stop_loss'
 
 ### `limen.features.dynamic_target`
 
@@ -965,21 +852,15 @@ def dynamic_target(data: pl.DataFrame, base_min_breakout: float, target_volatili
 
 Compute dynamic target levels based on volatility conditions and regime.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volatility_measure', 'regime_multiplier' columns |
+| base_min_breakout (`float`) | Base minimum breakout threshold |
+| target_volatility_multiplier (`float`) | Multiplier for volatility-adjusted targets |
+| clip_lower_mult (`float`) | Lower bound multiplier for clipping |
+| clip_upper_mult (`float`) | Upper bound multiplier for clipping |
 
-data (pl.DataFrame): Klines dataset with 'volatility_measure', 'regime_multiplier' columns
-
-base_min_breakout (float): Base minimum breakout threshold
-
-target_volatility_multiplier (float): Multiplier for volatility-adjusted targets
-
-clip_lower_mult (float): Lower bound multiplier for clipping
-
-clip_upper_mult (float): Upper bound multiplier for clipping
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'dynamic_target'
+**Returns:** pl.DataFrame: The input data with a new column 'dynamic_target'
 
 ### `limen.features.ema_alignment`
 
@@ -991,17 +872,13 @@ def ema_alignment(data: pl.DataFrame, ema_span: int=21, power: float=2.0) -> pl.
 
 Compute EMA alignment score with power transformation.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'close' column |
+| ema_span (`int`) | Span for EMA calculation |
+| power (`float`) | Power for alignment transformation |
 
-data (pl.DataFrame): Klines dataset with 'close' column
-
-ema_span (int): Span for EMA calculation
-
-power (float): Power for alignment transformation
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'ema', 'ema_alignment'
+**Returns:** pl.DataFrame: The input data with new columns 'ema', 'ema_alignment'
 
 ### `limen.features.entry_score_microstructure`
 
@@ -1013,53 +890,31 @@ def entry_score_microstructure(data: pl.DataFrame, micro_momentum_period: int=3,
 
 Compute sophisticated entry score based on microstructure timing signals.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close', 'volume', 'volatility_regime' columns |
+| micro_momentum_period (`int`) | Period for micro momentum calculation |
+| volume_spike_period (`int`) | Period for volume spike calculation |
+| spread_mean_period (`int`) | Period for spread normalization |
+| entry_position_weight_base (`float`) | Base weight for position-in-candle factor |
+| entry_momentum_weight_base (`float`) | Base weight for momentum factor |
+| entry_volume_weight_base (`float`) | Base weight for volume factor |
+| entry_spread_weight_base (`float`) | Base weight for spread factor |
+| entry_position_weight_low_vol (`float`) | Position weight in low volatility regime |
+| entry_momentum_weight_low_vol (`float`) | Momentum weight in low volatility regime |
+| entry_volume_weight_low_vol (`float`) | Volume weight in low volatility regime |
+| entry_spread_weight_low_vol (`float`) | Spread weight in low volatility regime |
+| entry_position_weight_high_vol (`float`) | Position weight in high volatility regime |
+| entry_momentum_weight_high_vol (`float`) | Momentum weight in high volatility regime |
+| entry_volume_weight_high_vol (`float`) | Volume weight in high volatility regime |
+| entry_spread_weight_high_vol (`float`) | Spread weight in high volatility regime |
+| entry_volume_spike_min (`float`) | Minimum volume spike value for clipping |
+| entry_volume_spike_max (`float`) | Maximum volume spike value for clipping |
+| entry_volume_spike_normalizer (`float`) | Normalizer for volume spike scaling |
+| entry_spread_ratio_min (`float`) | Minimum spread ratio for clipping |
+| entry_spread_ratio_max (`float`) | Maximum spread ratio for clipping |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close', 'volume', 'volatility_regime' columns
-
-micro_momentum_period (int): Period for micro momentum calculation
-
-volume_spike_period (int): Period for volume spike calculation
-
-spread_mean_period (int): Period for spread normalization
-
-entry_position_weight_base (float): Base weight for position-in-candle factor
-
-entry_momentum_weight_base (float): Base weight for momentum factor
-
-entry_volume_weight_base (float): Base weight for volume factor
-
-entry_spread_weight_base (float): Base weight for spread factor
-
-entry_position_weight_low_vol (float): Position weight in low volatility regime
-
-entry_momentum_weight_low_vol (float): Momentum weight in low volatility regime
-
-entry_volume_weight_low_vol (float): Volume weight in low volatility regime
-
-entry_spread_weight_low_vol (float): Spread weight in low volatility regime
-
-entry_position_weight_high_vol (float): Position weight in high volatility regime
-
-entry_momentum_weight_high_vol (float): Momentum weight in high volatility regime
-
-entry_volume_weight_high_vol (float): Volume weight in high volatility regime
-
-entry_spread_weight_high_vol (float): Spread weight in high volatility regime
-
-entry_volume_spike_min (float): Minimum volume spike value for clipping
-
-entry_volume_spike_max (float): Maximum volume spike value for clipping
-
-entry_volume_spike_normalizer (float): Normalizer for volume spike scaling
-
-entry_spread_ratio_min (float): Minimum spread ratio for clipping
-
-entry_spread_ratio_max (float): Maximum spread ratio for clipping
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'entry_score'
+**Returns:** pl.DataFrame: The input data with a new column 'entry_score'
 
 ### `limen.features.feature_aliases`
 
@@ -1071,17 +926,13 @@ def feature_aliases(df: pl.DataFrame, base_min_breakout: float=0.005, volatility
 
 Compute feature aliases with null filling for dynamic and regime features.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with dynamic features |
+| base_min_breakout (`float`) | Default value for dynamic_target |
+| volatility_regime_enabled (`bool`) | Whether to create regime feature aliases |
 
-df (pl.DataFrame): Klines dataset with dynamic features
-
-base_min_breakout (float): Default value for dynamic_target
-
-volatility_regime_enabled (bool): Whether to create regime feature aliases
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'dynamic_target_feature', 'entry_score_feature', 'momentum_score_feature' and optional regime columns
+**Returns:** pl.DataFrame: The input data with new columns 'dynamic_target_feature', 'entry_score_feature', 'momentum_score_feature' and optional regime columns
 
 ### `limen.features.find_min_d`
 
@@ -1099,25 +950,17 @@ differentiation at each d and testing with ADF. Returns the
 
 smallest d where the series is stationary.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Input data containing the column to test |
+| col (`str`) | Column name to differentiate and test |
+| d_start (`float`) | Starting differentiation order |
+| d_end (`float`) | Maximum differentiation order |
+| step (`float`) | Increment between tested d values |
+| significance_level (`float`) | ADF test significance threshold |
+| threshold (`float`) | Weight truncation threshold for fractional diff |
 
-data (pl.DataFrame): Input data containing the column to test
-
-col (str): Column name to differentiate and test
-
-d_start (float): Starting differentiation order
-
-d_end (float): Maximum differentiation order
-
-step (float): Increment between tested d values
-
-significance_level (float): ADF test significance threshold
-
-threshold (float): Weight truncation threshold for fractional diff
-
-#### Returns
-
-float: Smallest d achieving stationarity, or d_end if none found
+**Returns:** float: Smallest d achieving stationarity, or d_end if none found
 
 ### `limen.features.fractional_diff`
 
@@ -1139,25 +982,18 @@ indicators that depend on raw values.
 
 NOTE: AFML recommends applying to log-transformed prices for best results.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Input data |
+| d (`float`) | Finite, non-negative order (0 = identity copy, 1 = standard diff) |
+| cols (`list[str] \| None`) | Columns to differentiate (required) |
+| threshold (`float`) | Finite, positive weight truncation threshold per AFML standard |
 
-data (pl.DataFrame): Input data
-
-d (float): Finite, non-negative order (0 = identity copy, 1 = standard diff)
-
-cols (list[str] \| None): Columns to differentiate (required)
-
-threshold (float): Finite, positive weight truncation threshold per AFML standard
-
-#### Returns
-
-pl.DataFrame: Data with new '{col}_fracdiff' columns added.
+**Returns:** pl.DataFrame: Data with new '{col}_fracdiff' columns added.
 
 When d=0, the new columns are copies of the originals.
 
-#### Raises
-
-ValueError: If cols is None, empty, a string, or names missing columns,
+**Raises:** ValueError: If cols is None, empty, a string, or names missing columns,
 
 d is non-finite or negative, threshold is non-finite or nonpositive,
 
@@ -1173,13 +1009,11 @@ def gap_high(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute gap between current high and previous close as percentage.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high' and 'close' columns |
 
-data (pl.DataFrame): Klines dataset with 'high' and 'close' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'gap_high'
+**Returns:** pl.DataFrame: The input data with a new column 'gap_high'
 
 ### `limen.features.garman_klass_volatility`
 
@@ -1191,23 +1025,16 @@ def garman_klass_volatility(data: pl.DataFrame, window: int=20, open_col: str='o
 
 Compute Garman-Klass range-based volatility over a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close price columns |
+| window (`int`) | Number of periods used for the rolling estimator |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close price columns
-
-window (int): Number of periods used for the rolling estimator
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'garman_klass_volatility'
+**Returns:** pl.DataFrame: The input data with a new column 'garman_klass_volatility'
 
 ### `limen.features.hh_hl_structure_regime`
 
@@ -1219,17 +1046,13 @@ def hh_hl_structure_regime(df: pl.DataFrame, window: int=24, score_threshold: in
 
 Compute regime by higher-high / higher-low market structure within a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'high', 'low' columns |
+| window (`int`) | Rolling window size for structure count |
+| score_threshold (`int`) | Absolute score threshold for Up/Down classification |
 
-df (pl.DataFrame): Klines dataset with 'high', 'low' columns
-
-window (int): Rolling window size for structure count
-
-score_threshold (int): Absolute score threshold for Up/Down classification
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'regime_hh_hl'
+**Returns:** pl.DataFrame: The input data with a new column 'regime_hh_hl'
 
 ### `limen.features.hours_since_big_move`
 
@@ -1241,19 +1064,14 @@ def hours_since_big_move(data: pl.DataFrame, long_lines: list[dict[str, float]],
 
 Compute hours since the most recent line end capped by lookback_hours.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'datetime' and 'close' columns |
+| long_lines (`list[dict]`) | Long line definitions with 'start_idx' and 'end_idx' |
+| short_lines (`list[dict]`) | Short line definitions with 'start_idx' and 'end_idx' |
+| lookback_hours (`int`) | Maximum number of hours to track recency |
 
-data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
-
-long_lines (list[dict]): Long line definitions with 'start_idx' and 'end_idx'
-
-short_lines (list[dict]): Short line definitions with 'start_idx' and 'end_idx'
-
-lookback_hours (int): Maximum number of hours to track recency
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'hours_since_big_move'
+**Returns:** pl.DataFrame: The input data with a new column 'hours_since_big_move'
 
 ### `limen.features.hours_since_quantile_line`
 
@@ -1265,19 +1083,14 @@ def hours_since_quantile_line(data: pl.DataFrame, long_lines_q: list[dict[str, f
 
 Compute hours since the most recent quantile-filtered line end capped by lookback_hours.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'datetime' and 'close' columns |
+| long_lines_q (`list[dict]`) | Quantile-filtered long lines with 'end_idx' |
+| short_lines_q (`list[dict]`) | Quantile-filtered short lines with 'end_idx' |
+| lookback_hours (`int`) | Maximum number of hours to track recency |
 
-data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
-
-long_lines_q (list[dict]): Quantile-filtered long lines with 'end_idx'
-
-short_lines_q (list[dict]): Quantile-filtered short lines with 'end_idx'
-
-lookback_hours (int): Maximum number of hours to track recency
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'hours_since_quantile_line'
+**Returns:** pl.DataFrame: The input data with a new column 'hours_since_quantile_line'
 
 ### `limen.features.ichimoku_cloud`
 
@@ -1289,21 +1102,15 @@ def ichimoku_cloud(data: pl.DataFrame, tenkan_period: int=9, kijun_period: int=2
 
 Compute Ichimoku Cloud components for trend and momentum analysis.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
+| tenkan_period (`int`) | Lookback period for Tenkan-sen |
+| kijun_period (`int`) | Lookback period for Kijun-sen |
+| senkou_b_period (`int`) | Lookback period for Senkou Span B |
+| displacement (`int`) | Non-negative shift for Senkou spans and Chikou span |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-tenkan_period (int): Lookback period for Tenkan-sen
-
-kijun_period (int): Lookback period for Kijun-sen
-
-senkou_b_period (int): Lookback period for Senkou Span B
-
-displacement (int): Non-negative shift for Senkou spans and Chikou span
-
-#### Returns
-
-pl.DataFrame: The input data with new columns:
+**Returns:** pl.DataFrame: The input data with new columns:
 
 'tenkan', 'kijun', 'senkou_a', 'senkou_b', 'chikou'
 
@@ -1317,19 +1124,14 @@ def illiquidity_shock(data: pl.DataFrame, window: int=20, price_col: str='close'
 
 Compute the current Amihud illiquidity level relative to its trailing baseline.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with price and volume columns |
+| window (`int`) | Number of periods used for the trailing Amihud baseline |
+| price_col (`str`) | Column name used for close-to-close returns |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with price and volume columns
-
-window (int): Number of periods used for the trailing Amihud baseline
-
-price_col (str): Column name used for close-to-close returns
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'illiquidity_shock'
+**Returns:** pl.DataFrame: The input data with a new column 'illiquidity_shock'
 
 ### `limen.features.is_funding_hour`
 
@@ -1341,19 +1143,14 @@ def is_funding_hour(data: pl.DataFrame, hours: Sequence[int]=(0, 8, 16), datetim
 
 Mark rows whose hour matches a configured funding cadence.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Dataset with a datetime-like column |
+| hours (`Sequence[int]`) | Funding hours to mark |
+| datetime_col (`str`) | Column name for timestamps |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Dataset with a datetime-like column
-
-hours (Sequence[int]): Funding hours to mark
-
-datetime_col (str): Column name for timestamps
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with an Int8 funding-hour flag appended
+**Returns:** pl.DataFrame: The input data with an Int8 funding-hour flag appended
 
 ### `limen.features.is_us_open_hour`
 
@@ -1365,19 +1162,14 @@ def is_us_open_hour(data: pl.DataFrame, hour: int=14, datetime_col: str='datetim
 
 Mark rows whose hour matches the configured US open hour.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Dataset with a datetime-like column |
+| hour (`int`) | Hour to mark |
+| datetime_col (`str`) | Column name for timestamps |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Dataset with a datetime-like column
-
-hour (int): Hour to mark
-
-datetime_col (str): Column name for timestamps
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with an Int8 US-open-hour flag appended
+**Returns:** pl.DataFrame: The input data with an Int8 US-open-hour flag appended
 
 ### `limen.features.jump_variation_proxy`
 
@@ -1389,17 +1181,13 @@ def jump_variation_proxy(data: pl.DataFrame, window: int=20, close_col: str='clo
 
 Compute a rolling jump-variation proxy from realized variance and aligned bipower variation.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of returns used for the rolling jump proxy |
+| close_col (`str`) | Column name used for log returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of returns used for the rolling jump proxy
-
-close_col (str): Column name used for log returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'jump_variation_proxy'
+**Returns:** pl.DataFrame: The input data with a new column 'jump_variation_proxy'
 
 ### `limen.features.kaufman_efficiency_ratio`
 
@@ -1411,19 +1199,14 @@ def kaufman_efficiency_ratio(data: pl.DataFrame, window: int=10, close_col: str=
 
 Compute Kaufman's efficiency ratio over a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods used for displacement and path length |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods used for displacement and path length
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the efficiency-ratio column appended
+**Returns:** pl.DataFrame: The input data with the efficiency-ratio column appended
 
 ### `limen.features.kline_imbalance`
 
@@ -1435,15 +1218,12 @@ def kline_imbalance(data: pl.DataFrame, window: int=14) -> pl.DataFrame:
 
 Compute rolling buyer/seller imbalance over klines instead of raw trades.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'maker_ratio' and 'no_of_trades' columns |
+| window (`int`) | Number of periods for rolling window calculation |
 
-data (pl.DataFrame): Klines dataset with 'maker_ratio' and 'no_of_trades' columns
-
-window (int): Number of periods for rolling window calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'imbalance'
+**Returns:** pl.DataFrame: The input data with a new column 'imbalance'
 
 ### `limen.features.lag_column`
 
@@ -1455,19 +1235,14 @@ def lag_column(data: pl.DataFrame, col: str, lag: int, alias: object=None) -> pl
 
 Compute a lagged version of a column.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with specified column |
+| col (`str`) | The column name to lag |
+| lag (`int`) | The number of periods to lag |
+| alias (`str, optional`) | New column name. If None, uses alias f"lag_{lag}" |
 
-data (pl.DataFrame): Klines dataset with specified column
-
-col (str): The column name to lag
-
-lag (int): The number of periods to lag
-
-alias (str, optional): New column name. If None, uses alias f"lag_{lag}"
-
-#### Returns
-
-pl.DataFrame: The input data with the lagged column appended
+**Returns:** pl.DataFrame: The input data with the lagged column appended
 
 ### `limen.features.lag_columns`
 
@@ -1479,17 +1254,13 @@ def lag_columns(data: pl.DataFrame, cols: list[str], lag: int) -> pl.DataFrame:
 
 Compute lagged versions of multiple columns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with specified columns |
+| cols (`list[str]`) | The list of column names to lag |
+| lag (`int`) | The number of periods to lag |
 
-data (pl.DataFrame): Klines dataset with specified columns
-
-cols (list[str]): The list of column names to lag
-
-lag (int): The number of periods to lag
-
-#### Returns
-
-pl.DataFrame: The input data with the lagged columns appended
+**Returns:** pl.DataFrame: The input data with the lagged columns appended
 
 ### `limen.features.lag_range`
 
@@ -1501,19 +1272,14 @@ def lag_range(data: pl.DataFrame, col: str, start: int, end: int) -> pl.DataFram
 
 Compute multiple lagged versions of a column over a range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with specified column |
+| col (`str`) | The column name to lag |
+| start (`int`) | The start of lag range (inclusive) |
+| end (`int`) | The end of lag range (inclusive) |
 
-data (pl.DataFrame): Klines dataset with specified column
-
-col (str): The column name to lag
-
-start (int): The start of lag range (inclusive)
-
-end (int): The end of lag range (inclusive)
-
-#### Returns
-
-pl.DataFrame: The input data with the lagged columns appended
+**Returns:** pl.DataFrame: The input data with the lagged columns appended
 
 ### `limen.features.lag_range_cols`
 
@@ -1525,19 +1291,14 @@ def lag_range_cols(data: pl.DataFrame, cols: list[str], start: object, end: obje
 
 Compute multiple lagged versions of multiple columns over a range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with specified columns |
+| cols (`list[str]`) | The list of column names to lag |
+| start (`int`) | The start of lag range (inclusive) |
+| end (`int`) | The end of lag range (inclusive) |
 
-data (pl.DataFrame): Klines dataset with specified columns
-
-cols (list[str]): The list of column names to lag
-
-start (int): The start of lag range (inclusive)
-
-end (int): The end of lag range (inclusive)
-
-#### Returns
-
-pl.DataFrame: The input data with the lagged columns appended
+**Returns:** pl.DataFrame: The input data with the lagged columns appended
 
 ### `limen.features.liquidity_drop`
 
@@ -1549,19 +1310,14 @@ def liquidity_drop(data: pl.DataFrame, window: int=20, liquidity_col: str='liqui
 
 Compute current liquidity relative to liquidity from a fixed lag.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a total-liquidity column |
+| window (`int`) | Lag used as the denominator |
+| liquidity_col (`str`) | Column name for total liquidity |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with a total-liquidity column
-
-window (int): Lag used as the denominator
-
-liquidity_col (str): Column name for total liquidity
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the liquidity-drop column appended
+**Returns:** pl.DataFrame: The input data with the liquidity-drop column appended
 
 ### `limen.features.liquidity_range`
 
@@ -1573,21 +1329,15 @@ def liquidity_range(data: pl.DataFrame, window: int=20, high_liquidity_col: str=
 
 Compute rolling mean high-liquidity to low-liquidity ratio.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high- and low-liquidity columns |
+| window (`int`) | Number of periods in the rolling mean |
+| high_liquidity_col (`str`) | Column name for high-side liquidity |
+| low_liquidity_col (`str`) | Column name for low-side liquidity |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high- and low-liquidity columns
-
-window (int): Number of periods in the rolling mean
-
-high_liquidity_col (str): Column name for high-side liquidity
-
-low_liquidity_col (str): Column name for low-side liquidity
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the liquidity-range column appended
+**Returns:** pl.DataFrame: The input data with the liquidity-range column appended
 
 ### `limen.features.log_returns`
 
@@ -1599,15 +1349,12 @@ def log_returns(data: pl.DataFrame, price_col: str='close') -> pl.DataFrame:
 
 Compute logarithmic returns for price series.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Dataset with price column |
+| price_col (`str`) | Name of the price column (default: 'close') |
 
-data (pl.DataFrame): Dataset with price column
-
-price_col (str): Name of the price column (default: 'close')
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'log_returns'
+**Returns:** pl.DataFrame: The input data with a new column 'log_returns'
 
 ### `limen.features.ma_slope_regime`
 
@@ -1619,19 +1366,14 @@ def ma_slope_regime(df: pl.DataFrame, period: int=24, threshold: float=0.0, norm
 
 Compute regime using the slope of SMA(close, period) with optional normalization.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'close' column |
+| period (`int`) | SMA period for the slope |
+| threshold (`float`) | Slope threshold; applied after normalization when enabled |
+| normalize_by_std (`bool`) | Whether to divide slope by rolling std(period) |
 
-df (pl.DataFrame): Klines dataset with 'close' column
-
-period (int): SMA period for the slope
-
-threshold (float): Slope threshold; applied after normalization when enabled
-
-normalize_by_std (bool): Whether to divide slope by rolling std(period)
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'regime_ma_slope'
+**Returns:** pl.DataFrame: The input data with a new column 'regime_ma_slope'
 
 ### `limen.features.maker_liquidity_share`
 
@@ -1643,19 +1385,14 @@ def maker_liquidity_share(data: pl.DataFrame, maker_liquidity_col: str='maker_li
 
 Compute maker liquidity as a share of total liquidity.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with maker and total liquidity columns |
+| maker_liquidity_col (`str`) | Column name for maker-side liquidity |
+| liquidity_col (`str`) | Column name for total liquidity |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with maker and total liquidity columns
-
-maker_liquidity_col (str): Column name for maker-side liquidity
-
-liquidity_col (str): Column name for total liquidity
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the maker-liquidity share column appended
+**Returns:** pl.DataFrame: The input data with the maker-liquidity share column appended
 
 ### `limen.features.maker_volume_ratio`
 
@@ -1667,21 +1404,15 @@ def maker_volume_ratio(data: pl.DataFrame, window: int=20, maker_volume_col: str
 
 Compute the rolling mean maker-volume share.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with maker volume and total volume columns |
+| window (`int`) | Number of periods in the rolling mean |
+| maker_volume_col (`str`) | Column name for maker-side traded volume |
+| volume_col (`str`) | Column name for total traded volume |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with maker volume and total volume columns
-
-window (int): Number of periods in the rolling mean
-
-maker_volume_col (str): Column name for maker-side traded volume
-
-volume_col (str): Column name for total traded volume
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the rolling maker-volume ratio appended
+**Returns:** pl.DataFrame: The input data with the rolling maker-volume ratio appended
 
 ### `limen.features.maker_volume_share`
 
@@ -1693,19 +1424,14 @@ def maker_volume_share(data: pl.DataFrame, maker_volume_col: str='maker_volume',
 
 Compute maker volume as a share of total volume.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with maker volume and total volume columns |
+| maker_volume_col (`str`) | Column name for maker-side traded volume |
+| volume_col (`str`) | Column name for total traded volume |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with maker volume and total volume columns
-
-maker_volume_col (str): Column name for maker-side traded volume
-
-volume_col (str): Column name for total traded volume
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the maker-volume share column appended
+**Returns:** pl.DataFrame: The input data with the maker-volume share column appended
 
 ### `limen.features.market_regime`
 
@@ -1739,15 +1465,12 @@ def micro_momentum(data: pl.DataFrame, period: int=3) -> pl.DataFrame:
 
 Compute short-term price momentum over specified periods.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'close' column |
+| period (`int`) | Number of periods for momentum calculation |
 
-data (pl.DataFrame): Klines dataset with 'close' column
-
-period (int): Number of periods for momentum calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'micro_momentum'
+**Returns:** pl.DataFrame: The input data with a new column 'micro_momentum'
 
 ### `limen.features.momentum_confirmation`
 
@@ -1759,19 +1482,14 @@ def momentum_confirmation(df: pl.DataFrame, short_period: int=1, long_period: in
 
 Compute simple momentum confirmation scores based on recent price changes.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'close' column |
+| short_period (`int`) | Number of periods for short-term momentum |
+| long_period (`int`) | Number of periods for long-term momentum |
+| short_weight (`float`) | Weight for short-term momentum in final score |
 
-df (pl.DataFrame): Klines dataset with 'close' column
-
-short_period (int): Number of periods for short-term momentum
-
-long_period (int): Number of periods for long-term momentum
-
-short_weight (float): Weight for short-term momentum in final score
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
+**Returns:** pl.DataFrame: The input data with new columns 'momentum_1', 'momentum_3', 'momentum_score'
 
 ### `limen.features.momentum_periods`
 
@@ -1783,17 +1501,13 @@ def momentum_periods(data: pl.DataFrame, periods: list[int] | None=None, price_c
 
 Compute momentum over multiple time periods.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Dataset with price column |
+| periods (`list`) | Non-negative periods for momentum calculation |
+| price_col (`str`) | Name of the price column (default: 'close') |
 
-data (pl.DataFrame): Dataset with price column
-
-periods (list): Non-negative periods for momentum calculation
-
-price_col (str): Name of the price column (default: 'close')
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'momentum_{period}' for each period
+**Returns:** pl.DataFrame: The input data with new columns 'momentum_{period}' for each period
 
 ### `limen.features.momentum_weight`
 
@@ -1805,19 +1519,14 @@ def momentum_weight(data: pl.DataFrame, period: int=12, weight_multiplier: float
 
 Compute momentum-based weighting factor from price change direction.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'close' column |
+| period (`int`) | Period for momentum calculation |
+| weight_multiplier (`float`) | Multiplier for positive momentum |
+| base_weight (`float`) | Base weight added to all observations |
 
-data (pl.DataFrame): Klines dataset with 'close' column
-
-period (int): Period for momentum calculation
-
-weight_multiplier (float): Multiplier for positive momentum
-
-base_weight (float): Base weight added to all observations
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'momentum_weight'
+**Returns:** pl.DataFrame: The input data with a new column 'momentum_weight'
 
 ### `limen.features.narrow_range`
 
@@ -1829,21 +1538,15 @@ def narrow_range(data: pl.DataFrame, window: int=20, high_col: str='high', low_c
 
 Compute current range relative to the trailing maximum range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high and low price columns |
+| window (`int`) | Number of periods in the trailing maximum |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high and low price columns
-
-window (int): Number of periods in the trailing maximum
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the narrow-range column appended
+**Returns:** pl.DataFrame: The input data with the narrow-range column appended
 
 ### `limen.features.order_flow_imbalance`
 
@@ -1865,21 +1568,15 @@ for order-flow imbalance inferred from price; it is not the level-2 order-book
 
 OFI of Cont, Kukanov, and Stoikov.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with close and volume columns |
+| window (`int`) | Rolling window over which signed flow is accumulated |
+| classification_window (`int`) | Rolling window for the bulk-volume classification standardization |
+| close_col (`str`) | Column name used for close-to-close log returns |
+| volume_col (`str`) | Column name for total traded volume |
 
-data (pl.DataFrame): Klines dataset with close and volume columns
-
-window (int): Rolling window over which signed flow is accumulated
-
-classification_window (int): Rolling window for the bulk-volume classification standardization
-
-close_col (str): Column name used for close-to-close log returns
-
-volume_col (str): Column name for total traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with classified buy/sell volume columns and a
+**Returns:** pl.DataFrame: The input data with classified buy/sell volume columns and a
 
 new 'order_flow_imbalance' column
 
@@ -1893,21 +1590,15 @@ def parkinson_vol_of_vol(data: pl.DataFrame, window: int=20, high_col: str='high
 
 Compute rolling standard deviation of Parkinson variance.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high and low price columns |
+| window (`int`) | Number of periods in the rolling standard deviation |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high and low price columns
-
-window (int): Number of periods in the rolling standard deviation
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the Parkinson vol-of-vol column appended
+**Returns:** pl.DataFrame: The input data with the Parkinson vol-of-vol column appended
 
 ### `limen.features.parkinson_volatility`
 
@@ -1919,19 +1610,14 @@ def parkinson_volatility(data: pl.DataFrame, window: int=20, high_col: str='high
 
 Compute Parkinson range-based volatility over a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high and low price columns |
+| window (`int`) | Number of periods used for the rolling estimator |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
 
-data (pl.DataFrame): Klines dataset with high and low price columns
-
-window (int): Number of periods used for the rolling estimator
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'parkinson_volatility'
+**Returns:** pl.DataFrame: The input data with a new column 'parkinson_volatility'
 
 ### `limen.features.position_in_candle`
 
@@ -1943,13 +1629,11 @@ def position_in_candle(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute position of close within candle high-low range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'position_in_candle'
+**Returns:** pl.DataFrame: The input data with a new column 'position_in_candle'
 
 ### `limen.features.position_in_range`
 
@@ -1965,13 +1649,11 @@ Uses the following calculation:
 
 (close - low) / (high - low + 1e-10)
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
 
-df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'position_in_range'
+**Returns:** pl.DataFrame: The input data with a new column 'position_in_range'
 
 ### `limen.features.price_lines`
 
@@ -1997,31 +1679,20 @@ short line ends in the trailing window [t-m, t)), 'trending_score'
 
 (min/max end-count ratio in [0, 1]).
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame \| pl.LazyFrame`) | Klines dataset with a 'close' column |
+| max_duration_hours (`int`) | Exclusive upper bound on line duration in bars |
+| min_height_pct (`float`) | Minimum absolute line height as a fraction of start price |
+| big_move_lookback_hours (`int`) | Recency cap for 'hours_since_big_move' |
+| momentum_lookback_hours (`int`) | Trailing window for the end-count columns |
+| include_research_only (`bool`) | Include the non-live-computable 'active_lines' span-count column. Set False for live-safe feature surfaces. |
 
-data (pl.DataFrame \| pl.LazyFrame): Klines dataset with a 'close' column
-
-max_duration_hours (int): Exclusive upper bound on line duration in bars
-
-min_height_pct (float): Minimum absolute line height as a fraction of start price
-
-big_move_lookback_hours (int): Recency cap for 'hours_since_big_move'
-
-momentum_lookback_hours (int): Trailing window for the end-count columns
-
-include_research_only (bool): Include the non-live-computable 'active_lines'
-
-span-count column. Set False for live-safe feature surfaces.
-
-#### Returns
-
-pl.DataFrame \| pl.LazyFrame: The input data, matching the input frame
+**Returns:** pl.DataFrame \| pl.LazyFrame: The input data, matching the input frame
 
 type, with five new line-based columns
 
-#### Raises
-
-ValueError: If a lookback is below 1
+**Raises:** ValueError: If a lookback is below 1
 
 NOTE: Column access is expression-based so the feature runs on both eager
 
@@ -2043,15 +1714,12 @@ def price_range_position(data: pl.DataFrame, period: int=24) -> pl.DataFrame:
 
 Compute price position within rolling high-low range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
+| period (`int`) | Number of periods for rolling range calculation |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-period (int): Number of periods for rolling range calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'price_range_position'
+**Returns:** pl.DataFrame: The input data with a new column 'price_range_position'
 
 ### `limen.features.price_vs_band_regime`
 
@@ -2063,19 +1731,14 @@ def price_vs_band_regime(df: pl.DataFrame, period: int=24, band: Literal['std', 
 
 Compute regime by comparing 'close' to center ± k × band width over a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'close' column |
+| period (`int`) | Rolling period for center and band width |
+| band (`Literal['std', 'dev_std']`) | Band width type to use |
+| k (`float`) | Band multiplier applied to the width |
 
-df (pl.DataFrame): Klines dataset with 'close' column
-
-period (int): Rolling period for center and band width
-
-band (Literal['std', 'dev_std']): Band width type to use
-
-k (float): Band multiplier applied to the width
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'regime_price_band'
+**Returns:** pl.DataFrame: The input data with a new column 'regime_price_band'
 
 ### `limen.features.quantile_line_density`
 
@@ -2087,19 +1750,14 @@ def quantile_line_density(data: pl.DataFrame, long_lines_q: list[dict[str, float
 
 Compute count of quantile-filtered line ends within lookback_hours window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'datetime' and 'close' columns |
+| long_lines_q (`list[dict]`) | Quantile-filtered long lines with 'end_idx' |
+| short_lines_q (`list[dict]`) | Quantile-filtered short lines with 'end_idx' |
+| lookback_hours (`int`) | Window size in hours for density calculation |
 
-data (pl.DataFrame): Klines dataset with 'datetime' and 'close' columns
-
-long_lines_q (list[dict]): Quantile-filtered long lines with 'end_idx'
-
-short_lines_q (list[dict]): Quantile-filtered short lines with 'end_idx'
-
-lookback_hours (int): Window size in hours for density calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'quantile_line_density_{lookback_hours}h'
+**Returns:** pl.DataFrame: The input data with a new column 'quantile_line_density_{lookback_hours}h'
 
 ### `limen.features.quantile_price_lines`
 
@@ -2117,31 +1775,20 @@ End windows include both boundaries [t-window, t]; recency caps at density_lookb
 
 Other empty windows return zero; active_quantile_count retains retrospective whole-frame spans.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame \| pl.LazyFrame`) | Klines with a close column |
+| max_duration_hours (`int`) | Exclusive upper bound on line duration in bars |
+| min_height_pct (`float`) | Minimum absolute height as a fraction of start price |
+| quantile_threshold (`float`) | Per-direction height quantile |
+| density_lookback_hours (`int`) | Density window and recency cap |
+| momentum_lookback_hours (`int`) | Signed-height window |
+| height_lookback_hours (`int`) | Mean-height and direction-bias window |
+| include_research_only (`bool`) | Add the retrospective active_quantile_count |
 
-data (pl.DataFrame \| pl.LazyFrame): Klines with a close column
+**Returns:** pl.DataFrame \| pl.LazyFrame: Input type with five end columns and optional span count
 
-max_duration_hours (int): Exclusive upper bound on line duration in bars
-
-min_height_pct (float): Minimum absolute height as a fraction of start price
-
-quantile_threshold (float): Per-direction height quantile
-
-density_lookback_hours (int): Density window and recency cap
-
-momentum_lookback_hours (int): Signed-height window
-
-height_lookback_hours (int): Mean-height and direction-bias window
-
-include_research_only (bool): Add the retrospective active_quantile_count
-
-#### Returns
-
-pl.DataFrame \| pl.LazyFrame: Input type with five end columns and optional span count
-
-#### Raises
-
-ValueError: If a lookback is below 1 or include_research_only is not bool
+**Raises:** ValueError: If a lookback is below 1 or include_research_only is not bool
 
 ### `limen.features.range_overlap`
 
@@ -2153,17 +1800,13 @@ def range_overlap(data: pl.DataFrame, high_col: str='high', low_col: str='low') 
 
 Compute how much the current bar overlaps the previous bar's range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high and low price columns |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
 
-data (pl.DataFrame): Klines dataset with high and low price columns
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'range_overlap'
+**Returns:** pl.DataFrame: The input data with a new column 'range_overlap'
 
 ### `limen.features.range_pct`
 
@@ -2175,13 +1818,11 @@ def range_pct(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute range as percentage of close price (high-low)/close.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', and 'close' columns |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', and 'close' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'range_pct'
+**Returns:** pl.DataFrame: The input data with a new column 'range_pct'
 
 ### `limen.features.range_per_dollar_volume`
 
@@ -2193,21 +1834,15 @@ def range_per_dollar_volume(data: pl.DataFrame, high_col: str='high', low_col: s
 
 Compute normalized bar range per traded dollar.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high, low, close, and volume columns |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with high, low, close, and volume columns
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'range_per_dollar_volume'
+**Returns:** pl.DataFrame: The input data with a new column 'range_per_dollar_volume'
 
 ### `limen.features.realized_kurtosis`
 
@@ -2219,17 +1854,13 @@ def realized_kurtosis(data: pl.DataFrame, window: int=20, close_col: str='close'
 
 Compute rolling standardized kurtosis of close-to-close returns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods used for the rolling kurtosis estimate |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods used for the rolling kurtosis estimate
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'realized_kurtosis'
+**Returns:** pl.DataFrame: The input data with a new column 'realized_kurtosis'
 
 ### `limen.features.realized_semivariance`
 
@@ -2241,17 +1872,13 @@ def realized_semivariance(data: pl.DataFrame, window: int=20, close_col: str='cl
 
 Compute rolling upside and downside semivariance from close-to-close returns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods used for the rolling semivariance estimates |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods used for the rolling semivariance estimates
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'upside_semivariance' and 'downside_semivariance'
+**Returns:** pl.DataFrame: The input data with new columns 'upside_semivariance' and 'downside_semivariance'
 
 ### `limen.features.realized_skewness`
 
@@ -2263,17 +1890,13 @@ def realized_skewness(data: pl.DataFrame, window: int=20, close_col: str='close'
 
 Compute rolling standardized skewness of close-to-close returns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods used for the rolling skewness estimate |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods used for the rolling skewness estimate
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'realized_skewness'
+**Returns:** pl.DataFrame: The input data with a new column 'realized_skewness'
 
 ### `limen.features.regime_multiplier`
 
@@ -2285,19 +1908,14 @@ def regime_multiplier(data: pl.DataFrame, regime_low_volatility_multiplier: floa
 
 Compute volatility regime-based multiplier for dynamic parameter adjustment.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volatility_regime' column |
+| regime_low_volatility_multiplier (`float`) | Multiplier for low volatility regime |
+| regime_normal_volatility_multiplier (`float`) | Multiplier for normal volatility regime |
+| regime_high_volatility_multiplier (`float`) | Multiplier for high volatility regime |
 
-data (pl.DataFrame): Klines dataset with 'volatility_regime' column
-
-regime_low_volatility_multiplier (float): Multiplier for low volatility regime
-
-regime_normal_volatility_multiplier (float): Multiplier for normal volatility regime
-
-regime_high_volatility_multiplier (float): Multiplier for high volatility regime
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'regime_multiplier'
+**Returns:** pl.DataFrame: The input data with a new column 'regime_multiplier'
 
 ### `limen.features.rejection_intensity`
 
@@ -2309,21 +1927,15 @@ def rejection_intensity(data: pl.DataFrame, open_col: str='open', high_col: str=
 
 Compute the wick fraction that rejects movement against the candle close direction.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close columns |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close columns
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'rejection_intensity'
+**Returns:** pl.DataFrame: The input data with a new column 'rejection_intensity'
 
 ### `limen.features.relative_range_seasonality`
 
@@ -2335,21 +1947,15 @@ def relative_range_seasonality(data: pl.DataFrame, datetime_col: str='datetime',
 
 Compute normalized bar range relative to the trailing mean for the same hour of the week.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with datetime, high, low, and close columns |
+| datetime_col (`str`) | Column name for datetimes used to derive hour-of-week buckets |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with datetime, high, low, and close columns
-
-datetime_col (str): Column name for datetimes used to derive hour-of-week buckets
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'relative_range_seasonality'
+**Returns:** pl.DataFrame: The input data with a new column 'relative_range_seasonality'
 
 ### `limen.features.relative_volatility_seasonality`
 
@@ -2361,17 +1967,13 @@ def relative_volatility_seasonality(data: pl.DataFrame, datetime_col: str='datet
 
 Compute absolute return magnitude relative to the trailing mean for the same hour of the week.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with datetime and close columns |
+| datetime_col (`str`) | Column name for datetimes used to derive hour-of-week buckets |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with datetime and close columns
-
-datetime_col (str): Column name for datetimes used to derive hour-of-week buckets
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'relative_volatility_seasonality'
+**Returns:** pl.DataFrame: The input data with a new column 'relative_volatility_seasonality'
 
 ### `limen.features.relative_volume_seasonality`
 
@@ -2383,17 +1985,13 @@ def relative_volume_seasonality(data: pl.DataFrame, datetime_col: str='datetime'
 
 Compute current volume relative to the trailing mean for the same hour of the week.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with datetime and volume columns |
+| datetime_col (`str`) | Column name for datetimes used to derive hour-of-week buckets |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with datetime and volume columns
-
-datetime_col (str): Column name for datetimes used to derive hour-of-week buckets
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'relative_volume_seasonality'
+**Returns:** pl.DataFrame: The input data with a new column 'relative_volume_seasonality'
 
 ### `limen.features.return_autocorrelation`
 
@@ -2405,19 +2003,14 @@ def return_autocorrelation(data: pl.DataFrame, window: int=20, close_col: str='c
 
 Compute rolling autocorrelation between returns and one-bar lagged returns.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods in the rolling correlation |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods in the rolling correlation
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the return-autocorrelation column appended
+**Returns:** pl.DataFrame: The input data with the return-autocorrelation column appended
 
 ### `limen.features.return_per_dollar_volume`
 
@@ -2429,17 +2022,13 @@ def return_per_dollar_volume(data: pl.DataFrame, price_col: str='close', volume_
 
 Compute signed return per traded dollar as a simple impact-efficiency proxy.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with price and volume columns |
+| price_col (`str`) | Column name used for close-to-close returns |
+| volume_col (`str`) | Column name for traded volume |
 
-data (pl.DataFrame): Klines dataset with price and volume columns
-
-price_col (str): Column name used for close-to-close returns
-
-volume_col (str): Column name for traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'return_per_dollar_volume'
+**Returns:** pl.DataFrame: The input data with a new column 'return_per_dollar_volume'
 
 ### `limen.features.return_volatility_correlation`
 
@@ -2451,23 +2040,16 @@ def return_volatility_correlation(data: pl.DataFrame, window: int=20, close_col:
 
 Compute rolling correlation between returns and Parkinson variance.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with close, high, and low columns |
+| window (`int`) | Number of periods in the rolling correlation |
+| close_col (`str`) | Column name for close prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with close, high, and low columns
-
-window (int): Number of periods in the rolling correlation
-
-close_col (str): Column name for close prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the return-volatility correlation appended
+**Returns:** pl.DataFrame: The input data with the return-volatility correlation appended
 
 ### `limen.features.returns_lags`
 
@@ -2479,17 +2061,13 @@ def returns_lags(data: pl.DataFrame, max_lag: int=24, returns_col: str='returns'
 
 Compute multiple lagged returns features for time series analysis.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with returns column |
+| max_lag (`int`) | Maximum number of lag periods to compute |
+| returns_col (`str`) | Name of the returns column |
 
-data (pl.DataFrame): Klines dataset with returns column
-
-max_lag (int): Maximum number of lag periods to compute
-
-returns_col (str): Name of the returns column
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'returns_lag_1', 'returns_lag_2', etc.
+**Returns:** pl.DataFrame: The input data with new columns 'returns_lag_1', 'returns_lag_2', etc.
 
 ### `limen.features.rogers_satchell_volatility`
 
@@ -2501,23 +2079,16 @@ def rogers_satchell_volatility(data: pl.DataFrame, window: int=20, open_col: str
 
 Compute Rogers-Satchell range-based volatility over a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close price columns |
+| window (`int`) | Number of periods used for the rolling estimator |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close price columns
-
-window (int): Number of periods used for the rolling estimator
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'rogers_satchell_volatility'
+**Returns:** pl.DataFrame: The input data with a new column 'rogers_satchell_volatility'
 
 ### `limen.features.rolling_zscore`
 
@@ -2529,21 +2100,15 @@ def rolling_zscore(data: pl.DataFrame, column: str, window: int, *, transform: Z
 
 Compute a rolling z-score for a transformed input column.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Dataset containing the source column |
+| column (`str`) | Source column name |
+| window (`int`) | Number of periods for the rolling mean and standard deviation |
+| transform (`ZscoreTransform`) | Optional source transform before standardization |
+| output_col (`str \| None`) | Output column name; defaults to `{column}_zscore_{window}` |
 
-data (pl.DataFrame): Dataset containing the source column
-
-column (str): Source column name
-
-window (int): Number of periods for the rolling mean and standard deviation
-
-transform (ZscoreTransform): Optional source transform before standardization
-
-output_col (str \| None): Output column name; defaults to `{column}_zscore_{window}`
-
-#### Returns
-
-pl.DataFrame: The input data with the rolling z-score column appended
+**Returns:** pl.DataFrame: The input data with the rolling z-score column appended
 
 ### `limen.features.sma_crossover`
 
@@ -2555,21 +2120,15 @@ def sma_crossover(df: pl.DataFrame, short_window: int=10, long_window: int=30, c
 
 Compute Simple Moving Average (SMA) crossover signals.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'close' column |
+| short_window (`int`) | Number of periods for short-term SMA |
+| long_window (`int`) | Number of periods for long-term SMA |
+| crossover_bull (`int`) | Value indicating bullish crossover |
+| crossover_bear (`int`) | Value indicating bearish crossover |
 
-df (pl.DataFrame): Klines dataset with 'close' column
-
-short_window (int): Number of periods for short-term SMA
-
-long_window (int): Number of periods for long-term SMA
-
-crossover_bull (int): Value indicating bullish crossover
-
-crossover_bear (int): Value indicating bearish crossover
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'crossover', and 'signal'
+**Returns:** pl.DataFrame: The input data with new columns 'crossover', and 'signal'
 
 ### `limen.features.sma_ratios`
 
@@ -2581,17 +2140,13 @@ def sma_ratios(data: pl.DataFrame, periods: list[int] | None=None, price_col: st
 
 Compute price to SMA ratios for multiple time periods.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with price column |
+| periods (`list`) | List of SMA periods to calculate ratios for |
+| price_col (`str`) | Name of the price column (default: 'close') |
 
-data (pl.DataFrame): Klines dataset with price column
-
-periods (list): List of SMA periods to calculate ratios for
-
-price_col (str): Name of the price column (default: 'close')
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'sma_{period}_ratio'
+**Returns:** pl.DataFrame: The input data with new columns 'sma_{period}_ratio'
 
 ### `limen.features.spread`
 
@@ -2603,13 +2158,11 @@ def spread(df: pl.DataFrame) -> pl.DataFrame:
 
 Compute price spread as percentage of close price.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
 
-df (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'spread'
+**Returns:** pl.DataFrame: The input data with a new column 'spread'
 
 ### `limen.features.spread_percent`
 
@@ -2621,13 +2174,11 @@ def spread_percent(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute high-low spread as percentage of close price.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'high', 'low', 'close' columns |
 
-data (pl.DataFrame): Klines dataset with 'high', 'low', 'close' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'spread_percent'
+**Returns:** pl.DataFrame: The input data with a new column 'spread_percent'
 
 ### `limen.features.stochastic_k_abs`
 
@@ -2639,23 +2190,16 @@ def stochastic_k_abs(data: pl.DataFrame, window: int=14, high_col: str='high', l
 
 Compute absolute distance of stochastic percent K from the center line.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high, low, and close columns |
+| window (`int`) | Number of periods in the high-low channel |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high, low, and close columns
-
-window (int): Number of periods in the high-low channel
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the stochastic distance column appended
+**Returns:** pl.DataFrame: The input data with the stochastic distance column appended
 
 ### `limen.features.tail_event_intensity`
 
@@ -2667,19 +2211,14 @@ def tail_event_intensity(data: pl.DataFrame, window: int=20, z_threshold: float=
 
 Compute the trailing share of return shocks that exceed a volatility-scaled threshold.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| window (`int`) | Number of periods used for both the volatility baseline and event share |
+| z_threshold (`float`) | Multiple of trailing return volatility required to count as a tail event |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-window (int): Number of periods used for both the volatility baseline and event share
-
-z_threshold (float): Multiple of trailing return volatility required to count as a tail event
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'tail_event_intensity'
+**Returns:** pl.DataFrame: The input data with a new column 'tail_event_intensity'
 
 ### `limen.features.taker_imbalance_ratio`
 
@@ -2691,21 +2230,15 @@ def taker_imbalance_ratio(data: pl.DataFrame, window: int=20, volume_col: str='v
 
 Compute rolling absolute taker imbalance as a share of volume.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with volume and maker-ratio columns |
+| window (`int`) | Number of periods in the rolling mean |
+| volume_col (`str`) | Column name for total traded volume |
+| maker_ratio_col (`str`) | Column name for maker-side volume ratio |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with volume and maker-ratio columns
-
-window (int): Number of periods in the rolling mean
-
-volume_col (str): Column name for total traded volume
-
-maker_ratio_col (str): Column name for maker-side volume ratio
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the taker-imbalance ratio column appended
+**Returns:** pl.DataFrame: The input data with the taker-imbalance ratio column appended
 
 ### `limen.features.time_to_funding`
 
@@ -2729,21 +2262,15 @@ Timezone-aware timestamps are converted to UTC; naive timestamps are assumed
 
 to already be in UTC.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Dataset with a datetime column |
+| interval_hours (`int`) | Spacing between funding settlements in hours; must divide 24 |
+| offset_hour (`int`) | Hour of the first daily settlement in UTC |
+| datetime_col (`str`) | Column name for timestamps |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Dataset with a datetime column
-
-interval_hours (int): Spacing between funding settlements in hours; must divide 24
-
-offset_hour (int): Hour of the first daily settlement in UTC
-
-datetime_col (str): Column name for timestamps
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with a new 'hours_to_funding' column
+**Returns:** pl.DataFrame: The input data with a new 'hours_to_funding' column
 
 ### `limen.features.trade_density`
 
@@ -2755,21 +2282,15 @@ def trade_density(data: pl.DataFrame, window: int=20, trades_col: str='no_of_tra
 
 Compute rolling mean trade count per unit of volume.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with trade-count and volume columns |
+| window (`int`) | Number of periods in the rolling mean |
+| trades_col (`str`) | Column name for number of trades |
+| volume_col (`str`) | Column name for total traded volume |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with trade-count and volume columns
-
-window (int): Number of periods in the rolling mean
-
-trades_col (str): Column name for number of trades
-
-volume_col (str): Column name for total traded volume
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the trade-density column appended
+**Returns:** pl.DataFrame: The input data with the trade-density column appended
 
 ### `limen.features.trade_imbalance`
 
@@ -2781,21 +2302,15 @@ def trade_imbalance(data: pl.DataFrame, window: int=20, maker_volume_col: str='m
 
 Compute rolling maker volume divided by rolling total volume.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with maker volume and total volume columns |
+| window (`int`) | Number of periods used for rolling sums |
+| maker_volume_col (`str`) | Column name for maker-side traded volume |
+| volume_col (`str`) | Column name for total traded volume |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with maker volume and total volume columns
-
-window (int): Number of periods used for rolling sums
-
-maker_volume_col (str): Column name for maker-side traded volume
-
-volume_col (str): Column name for total traded volume
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the rolling trade-imbalance column appended
+**Returns:** pl.DataFrame: The input data with the rolling trade-imbalance column appended
 
 ### `limen.features.trade_size_ratio`
 
@@ -2807,23 +2322,16 @@ def trade_size_ratio(data: pl.DataFrame, short_window: int=5, long_window: int=2
 
 Compare short and long rolling average trade sizes.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with volume and trade-count columns |
+| short_window (`int`) | Number of periods in the short average |
+| long_window (`int`) | Number of periods in the long average |
+| volume_col (`str`) | Column name for total traded volume |
+| trades_col (`str`) | Column name for number of trades |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with volume and trade-count columns
-
-short_window (int): Number of periods in the short average
-
-long_window (int): Number of periods in the long average
-
-volume_col (str): Column name for total traded volume
-
-trades_col (str): Column name for number of trades
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the trade-size ratio column appended
+**Returns:** pl.DataFrame: The input data with the trade-size ratio column appended
 
 ### `limen.features.trend_coherence`
 
@@ -2835,21 +2343,15 @@ def trend_coherence(data: pl.DataFrame, short_window: int=12, medium_window: int
 
 Compute directional agreement across short, medium, and long return horizons.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| short_window (`int`) | Short return horizon |
+| medium_window (`int`) | Medium return horizon |
+| long_window (`int`) | Long return horizon |
+| close_col (`str`) | Column name used for return calculations |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-short_window (int): Short return horizon
-
-medium_window (int): Medium return horizon
-
-long_window (int): Long return horizon
-
-close_col (str): Column name used for return calculations
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'trend_coherence'
+**Returns:** pl.DataFrame: The input data with a new column 'trend_coherence'
 
 ### `limen.features.trend_strength`
 
@@ -2861,17 +2363,13 @@ def trend_strength(data: pl.DataFrame, fast_period: int=20, slow_period: int=50)
 
 Compute trend strength based on moving average divergence.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'close' column |
+| fast_period (`int`) | Number of periods for fast SMA calculation |
+| slow_period (`int`) | Number of periods for slow SMA calculation |
 
-data (pl.DataFrame): Klines dataset with 'close' column
-
-fast_period (int): Number of periods for fast SMA calculation
-
-slow_period (int): Number of periods for slow SMA calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'trend_strength'
+**Returns:** pl.DataFrame: The input data with a new column 'trend_strength'
 
 ### `limen.features.volatility_1h`
 
@@ -2883,15 +2381,12 @@ def volatility_1h(df: pl.DataFrame, volatility_column: str='returns_volatility_1
 
 Compute volatility_1h alias from existing volatility column.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with volatility column |
+| volatility_column (`str`) | Name of the source volatility column |
 
-df (pl.DataFrame): Klines dataset with volatility column
-
-volatility_column (str): Name of the source volatility column
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volatility_1h'
+**Returns:** pl.DataFrame: The input data with a new column 'volatility_1h'
 
 ### `limen.features.volatility_measure`
 
@@ -2903,13 +2398,11 @@ def volatility_measure(data: pl.DataFrame) -> pl.DataFrame:
 
 Compute combined volatility measure from rolling volatility and ATR percentage.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'rolling_volatility', 'atr_percent_sma' columns |
 
-data (pl.DataFrame): Klines dataset with 'rolling_volatility', 'atr_percent_sma' columns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volatility_measure'
+**Returns:** pl.DataFrame: The input data with a new column 'volatility_measure'
 
 ### `limen.features.volatility_of_volatility`
 
@@ -2921,19 +2414,14 @@ def volatility_of_volatility(data: pl.DataFrame, volatility_window: int=12, wind
 
 Compute how unstable recent return volatility is over a second rolling horizon.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| volatility_window (`int`) | Number of periods used for the first-stage return volatility |
+| window (`int`) | Number of periods used for the second-stage volatility-of-volatility estimate |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-volatility_window (int): Number of periods used for the first-stage return volatility
-
-window (int): Number of periods used for the second-stage volatility-of-volatility estimate
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volatility_of_volatility'
+**Returns:** pl.DataFrame: The input data with a new column 'volatility_of_volatility'
 
 ### `limen.features.volatility_ratio`
 
@@ -2945,23 +2433,16 @@ def volatility_ratio(data: pl.DataFrame, short_window: int=5, long_window: int=2
 
 Compare short and long rolling means of Parkinson variance.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high and low price columns |
+| short_window (`int`) | Number of periods in the short variance mean |
+| long_window (`int`) | Number of periods in the long variance mean |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high and low price columns
-
-short_window (int): Number of periods in the short variance mean
-
-long_window (int): Number of periods in the long variance mean
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the volatility-ratio column appended
+**Returns:** pl.DataFrame: The input data with the volatility-ratio column appended
 
 ### `limen.features.volatility_spike`
 
@@ -2973,21 +2454,15 @@ def volatility_spike(data: pl.DataFrame, window: int=20, high_col: str='high', l
 
 Compute current Parkinson variance relative to its fixed-lag value.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with high and low price columns |
+| window (`int`) | Lag used as the denominator |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with high and low price columns
-
-window (int): Lag used as the denominator
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the volatility-spike column appended
+**Returns:** pl.DataFrame: The input data with the volatility-spike column appended
 
 ### `limen.features.volatility_term_structure`
 
@@ -2999,21 +2474,15 @@ def volatility_term_structure(data: pl.DataFrame, short_window: int=12, medium_w
 
 Compute a front-versus-back volatility term-structure ratio across three horizons.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with a close price column |
+| short_window (`int`) | Short volatility horizon |
+| medium_window (`int`) | Medium volatility horizon |
+| long_window (`int`) | Long volatility horizon |
+| close_col (`str`) | Column name used for close-to-close returns |
 
-data (pl.DataFrame): Klines dataset with a close price column
-
-short_window (int): Short volatility horizon
-
-medium_window (int): Medium volatility horizon
-
-long_window (int): Long volatility horizon
-
-close_col (str): Column name used for close-to-close returns
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volatility_term_structure'
+**Returns:** pl.DataFrame: The input data with a new column 'volatility_term_structure'
 
 ### `limen.features.volatility_weight`
 
@@ -3025,21 +2494,15 @@ def volatility_weight(data: pl.DataFrame, period: int=20, volatility_scaling_fac
 
 Compute volatility-based weighting factor with inverse scaling.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'close' column |
+| period (`int`) | Period for volatility calculation |
+| volatility_scaling_factor (`float`) | Scaling factor for volatility normalization |
+| volatility_weight_min (`float`) | Minimum volatility weight value |
+| volatility_weight_max (`float`) | Maximum volatility weight value |
 
-data (pl.DataFrame): Klines dataset with 'close' column
-
-period (int): Period for volatility calculation
-
-volatility_scaling_factor (float): Scaling factor for volatility normalization
-
-volatility_weight_min (float): Minimum volatility weight value
-
-volatility_weight_max (float): Maximum volatility weight value
-
-#### Returns
-
-pl.DataFrame: The input data with new columns 'volatility', 'volatility_weight'
+**Returns:** pl.DataFrame: The input data with new columns 'volatility', 'volatility_weight'
 
 ### `limen.features.volume_ratio`
 
@@ -3051,15 +2514,12 @@ def volume_ratio(data: pl.DataFrame, period: int=20) -> pl.DataFrame:
 
 Compute volume ratio relative to simple moving average baseline.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volume' column |
+| period (`int`) | Number of periods for SMA calculation |
 
-data (pl.DataFrame): Klines dataset with 'volume' column
-
-period (int): Number of periods for SMA calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volume_ratio'
+**Returns:** pl.DataFrame: The input data with a new column 'volume_ratio'
 
 ### `limen.features.volume_regime`
 
@@ -3071,15 +2531,12 @@ def volume_regime(data: pl.DataFrame, lookback: int=48) -> pl.DataFrame:
 
 Compute volume regime (current vs average volume).
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volume' column |
+| lookback (`int`) | Number of periods for volume average calculation |
 
-data (pl.DataFrame): Klines dataset with 'volume' column
-
-lookback (int): Number of periods for volume average calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volume_regime'
+**Returns:** pl.DataFrame: The input data with a new column 'volume_regime'
 
 ### `limen.features.volume_spike`
 
@@ -3091,17 +2548,13 @@ def volume_spike(data: pl.DataFrame, period: int=20, use_zscore: bool=False) -> 
 
 Compute volume spike relative to rolling statistics baseline.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volume' column |
+| period (`int`) | Number of periods for rolling statistics calculation |
+| use_zscore (`bool`) | If True, use z-score (incorporating std dev), otherwise use ratio to mean |
 
-data (pl.DataFrame): Klines dataset with 'volume' column
-
-period (int): Number of periods for rolling statistics calculation
-
-use_zscore (bool): If True, use z-score (incorporating std dev), otherwise use ratio to mean
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volume_spike'
+**Returns:** pl.DataFrame: The input data with a new column 'volume_spike'
 
 ### `limen.features.volume_to_range`
 
@@ -3113,23 +2566,16 @@ def volume_to_range(data: pl.DataFrame, window: int=20, volume_col: str='volume'
 
 Compute rolling mean volume per unit of high-low range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with volume, high, and low columns |
+| window (`int`) | Number of periods in the rolling mean |
+| volume_col (`str`) | Column name for traded volume |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with volume, high, and low columns
-
-window (int): Number of periods in the rolling mean
-
-volume_col (str): Column name for traded volume
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the volume-to-range column appended
+**Returns:** pl.DataFrame: The input data with the volume-to-range column appended
 
 ### `limen.features.volume_trend`
 
@@ -3141,17 +2587,13 @@ def volume_trend(data: pl.DataFrame, short_period: int=12, long_period: int=48) 
 
 Compute volume trend by comparing short-term to long-term volume averages.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with 'volume' column |
+| short_period (`int`) | Number of periods for short-term SMA calculation |
+| long_period (`int`) | Number of periods for long-term SMA calculation |
 
-data (pl.DataFrame): Klines dataset with 'volume' column
-
-short_period (int): Number of periods for short-term SMA calculation
-
-long_period (int): Number of periods for long-term SMA calculation
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'volume_trend'
+**Returns:** pl.DataFrame: The input data with a new column 'volume_trend'
 
 ### `limen.features.volume_volatility_correlation`
 
@@ -3163,23 +2605,16 @@ def volume_volatility_correlation(data: pl.DataFrame, window: int=20, volume_col
 
 Compute rolling correlation between volume and Parkinson variance.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with volume, high, and low columns |
+| window (`int`) | Number of periods in the rolling correlation |
+| volume_col (`str`) | Column name for traded volume |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with volume, high, and low columns
-
-window (int): Number of periods in the rolling correlation
-
-volume_col (str): Column name for traded volume
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the volume-volatility correlation appended
+**Returns:** pl.DataFrame: The input data with the volume-volatility correlation appended
 
 ### `limen.features.vpin`
 
@@ -3201,21 +2636,15 @@ values flag one-sided, toxic-looking flow. For canonical equal-volume buckets,
 
 supply volume bars; on time bars this is the standard bar-level approximation.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with close and volume columns |
+| window (`int`) | Number of buckets over which the imbalance is accumulated |
+| classification_window (`int`) | Rolling window for the bulk-volume classification standardization |
+| close_col (`str`) | Column name used for close-to-close log returns |
+| volume_col (`str`) | Column name for total traded volume |
 
-data (pl.DataFrame): Klines dataset with close and volume columns
-
-window (int): Number of buckets over which the imbalance is accumulated
-
-classification_window (int): Rolling window for the bulk-volume classification standardization
-
-close_col (str): Column name used for close-to-close log returns
-
-volume_col (str): Column name for total traded volume
-
-#### Returns
-
-pl.DataFrame: The input data with classified buy/sell volume columns and a new 'vpin' column
+**Returns:** pl.DataFrame: The input data with classified buy/sell volume columns and a new 'vpin' column
 
 ### `limen.features.vwap`
 
@@ -3227,17 +2656,13 @@ def vwap(data: pl.DataFrame, price_col: str='close', volume_col: str='volume') -
 
 Compute Volume Weighted Average Price (VWAP) for each kline over its trading day.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with price and volume columns |
+| price_col (`str`) | Name of the price column |
+| volume_col (`str`) | Name of the volume column |
 
-data (pl.DataFrame): Klines dataset with price and volume columns
-
-price_col (str): Name of the price column
-
-volume_col (str): Name of the volume column
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'vwap'
+**Returns:** pl.DataFrame: The input data with a new column 'vwap'
 
 ### `limen.features.wick_imbalance`
 
@@ -3249,21 +2674,15 @@ def wick_imbalance(data: pl.DataFrame, open_col: str='open', high_col: str='high
 
 Compute upper-versus-lower wick imbalance as a fraction of total bar range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close columns |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close columns
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'wick_imbalance'
+**Returns:** pl.DataFrame: The input data with a new column 'wick_imbalance'
 
 ### `limen.features.wick_proportion`
 
@@ -3275,25 +2694,17 @@ def wick_proportion(data: pl.DataFrame, window: int=20, high_col: str='high', lo
 
 Compute rolling mean wick share of the full candle range.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close columns |
+| window (`int`) | Number of periods in the rolling mean |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| open_col (`str`) | Column name for open prices |
+| close_col (`str`) | Column name for close prices |
+| output_col (`str`) | Output column name |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close columns
-
-window (int): Number of periods in the rolling mean
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-open_col (str): Column name for open prices
-
-close_col (str): Column name for close prices
-
-output_col (str): Output column name
-
-#### Returns
-
-pl.DataFrame: The input data with the wick-proportion column appended
+**Returns:** pl.DataFrame: The input data with the wick-proportion column appended
 
 ### `limen.features.window_return_regime`
 
@@ -3305,19 +2716,14 @@ def window_return_regime(df: pl.DataFrame, period: int=24, r_hi: float=0.0, r_lo
 
 Compute regime using windowed return close/close.shift(period) - 1.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| df (`pl.DataFrame`) | Klines dataset with 'close' column |
+| period (`int`) | Window length for return calculation |
+| r_hi (`float`) | Upper threshold for Up regime |
+| r_lo (`float`) | Lower threshold for Down regime |
 
-df (pl.DataFrame): Klines dataset with 'close' column
-
-period (int): Window length for return calculation
-
-r_hi (float): Upper threshold for Up regime
-
-r_lo (float): Lower threshold for Down regime
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'regime_window_return'
+**Returns:** pl.DataFrame: The input data with a new column 'regime_window_return'
 
 ### `limen.features.yang_zhang_volatility`
 
@@ -3329,21 +2735,13 @@ def yang_zhang_volatility(data: pl.DataFrame, window: int=20, open_col: str='ope
 
 Compute Yang-Zhang volatility over a rolling window.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Klines dataset with open, high, low, and close price columns |
+| window (`int`) | Number of periods used for the rolling estimator; must be greater than 1 |
+| open_col (`str`) | Column name for open prices |
+| high_col (`str`) | Column name for high prices |
+| low_col (`str`) | Column name for low prices |
+| close_col (`str`) | Column name for close prices |
 
-data (pl.DataFrame): Klines dataset with open, high, low, and close price columns
-
-window (int): Number of periods used for the rolling estimator; must be greater than 1
-
-open_col (str): Column name for open prices
-
-high_col (str): Column name for high prices
-
-low_col (str): Column name for low prices
-
-close_col (str): Column name for close prices
-
-#### Returns
-
-pl.DataFrame: The input data with a new column 'yang_zhang_volatility'
-
+**Returns:** pl.DataFrame: The input data with a new column 'yang_zhang_volatility'

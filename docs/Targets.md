@@ -501,11 +501,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.EmaBreakoutTarget.transform`
 
@@ -519,21 +518,15 @@ Label 1 when the price `breakout_horizon` bars ahead exceeds the EMA
 
 of `target_col` by at least `breakout_delta` of the EMA value.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have `target_col` column) |
+| target_col (`str`) | Column name to analyze for breakouts |
+| ema_span (`int`) | Period for EMA calculation |
+| breakout_delta (`float`) | Threshold for breakout detection |
+| breakout_horizon (`int`) | Forward window in bars |
 
-data (pl.DataFrame): Split to transform (must have `target_col` column)
-
-target_col (str): Column name to analyze for breakouts
-
-ema_span (int): Period for EMA calculation
-
-breakout_delta (float): Threshold for breakout detection
-
-breakout_horizon (int): Forward window in bars
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.ExitQualityTarget`
 
@@ -555,11 +548,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.ExitQualityTarget.transform`
 
@@ -573,23 +565,16 @@ Score each closed trade as high, low, or medium quality based on its
 
 `exit_reason` and `exit_net_return`.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have `exit_reason`, `exit_net_return` columns) |
+| exit_quality_high (`float`) | Score for profitable target hits or trailing-stop exits |
+| exit_quality_low (`float`) | Score for stop-loss or unprofitable timeout exits |
+| exit_quality_medium (`float`) | Score for neutral exits |
 
-data (pl.DataFrame): Split to transform (must have `exit_reason`, `exit_net_return` columns)
+**Returns:** pl.DataFrame: Data with target column added
 
-exit_quality_high (float): Score for profitable target hits or trailing-stop exits
-
-exit_quality_low (float): Score for stop-loss or unprofitable timeout exits
-
-exit_quality_medium (float): Score for neutral exits
-
-#### Returns
-
-pl.DataFrame: Data with target column added
-
-#### Raises
-
-ValueError: If the required user-supplied columns are absent
+**Raises:** ValueError: If the required user-supplied columns are absent
 
 ### `limen.targets.ForwardBreakoutTarget`
 
@@ -611,11 +596,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.ForwardBreakoutTarget.transform`
 
@@ -627,19 +611,14 @@ def transform(self, data: pl.DataFrame, forward_periods: int=24, threshold: floa
 
 Label 1 if price rises >= threshold over next forward_periods bars.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have 'close' column) |
+| forward_periods (`int`) | Look-ahead window in bars |
+| threshold (`float`) | Minimum return for positive label (0.02 = 2%) |
+| shift (`int`) | Additional shift applied after labeling |
 
-data (pl.DataFrame): Split to transform (must have 'close' column)
-
-forward_periods (int): Look-ahead window in bars
-
-threshold (float): Minimum return for positive label (0.02 = 2%)
-
-shift (int): Additional shift applied after labeling
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.ForwardVolNormalizedReturnTarget`
 
@@ -661,27 +640,18 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, periods: int=1, a
 
 Store target settings and validate Parkinson volatility on train.
 
-#### Args
-
-train_data (pl.DataFrame): Training split used for the volatility sanity gate
-
-target_name (str): Name of the target column to create
-
-periods (int): Forward return horizon in bars
-
-absolute (bool): If True, use absolute forward log return
-
-halflife (int): EWMA half-life in bars
-
-min_periods (int): Warmup before volatility values are emitted
-
-high_col (str): High price column
-
-low_col (str): Low price column
-
-open_col (str): Open price column used for dirty-bar filtering
-
-close_col (str): Close price column
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split used for the volatility sanity gate |
+| target_name (`str`) | Name of the target column to create |
+| periods (`int`) | Forward return horizon in bars |
+| absolute (`bool`) | If True, use absolute forward log return |
+| halflife (`int`) | EWMA half-life in bars |
+| min_periods (`int`) | Warmup before volatility values are emitted |
+| high_col (`str`) | High price column |
+| low_col (`str`) | Low price column |
+| open_col (`str`) | Open price column used for dirty-bar filtering |
+| close_col (`str`) | Close price column |
 
 ### `limen.targets.ForwardVolNormalizedReturnTarget.transform`
 
@@ -694,13 +664,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Compute `log(close.shift(-periods) / close) / parkinson_sigma`.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform; must have open/high/low/close columns |
 
-data (pl.DataFrame): Split to transform; must have open/high/low/close columns
-
-#### Returns
-
-pl.DataFrame: Cleaned data with target column added
+**Returns:** pl.DataFrame: Cleaned data with target column added
 
 ### `limen.targets.IdentityTarget`
 
@@ -722,11 +690,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Validate the target column exists; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split; used to validate the target column exists
-
-target_name (str): Name of an existing target column
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split; used to validate the target column exists |
+| target_name (`str`) | Name of an existing target column |
 
 ### `limen.targets.IdentityTarget.transform`
 
@@ -738,13 +705,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Return data unchanged after validating the target column is present.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform |
 
-data (pl.DataFrame): Split to transform
-
-#### Returns
-
-pl.DataFrame: Data unchanged
+**Returns:** pl.DataFrame: Data unchanged
 
 ### `limen.targets.NextBarDownTarget`
 
@@ -766,11 +731,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.NextBarDownTarget.transform`
 
@@ -782,13 +746,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Label 1 if the next close is lower than the current close.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have 'close' column) |
 
-data (pl.DataFrame): Split to transform (must have 'close' column)
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.NextBarUpTarget`
 
@@ -810,11 +772,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.NextBarUpTarget.transform`
 
@@ -826,13 +787,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Label 1 if the next close is higher than the current close.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have 'close' column) |
 
-data (pl.DataFrame): Split to transform (must have 'close' column)
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.NextReturnTarget`
 
@@ -854,11 +813,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.NextReturnTarget.transform`
 
@@ -870,17 +828,13 @@ def transform(self, data: pl.DataFrame, periods: int=1, scale: float=100.0) -> p
 
 Compute percentage return over the next N periods.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have 'close' column) |
+| periods (`int`) | Look-ahead window in bars |
+| scale (`float`) | Multiplier applied to the raw return (100 = percentage points) |
 
-data (pl.DataFrame): Split to transform (must have 'close' column)
-
-periods (int): Look-ahead window in bars
-
-scale (float): Multiplier applied to the raw return (100 = percentage points)
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.OutcomeLabels`
 
@@ -912,15 +866,12 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: st
 
 Fit quantile cutoff on training data.
 
-#### Args
-
-train_data (pl.DataFrame): Training split to compute cutoff from
-
-target_name (str): Name of the target column to create
-
-source_column (str): Column used to compute the quantile threshold
-
-quantile (float): Top-N fraction for positive label (0.3 = top 30%)
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split to compute cutoff from |
+| target_name (`str`) | Name of the target column to create |
+| source_column (`str`) | Column used to compute the quantile threshold |
+| quantile (`float`) | Top-N fraction for positive label (0.3 = top 30%) |
 
 ### `limen.targets.QuantileBinaryTarget.transform`
 
@@ -932,15 +883,12 @@ def transform(self, data: pl.DataFrame, shift: int=0) -> pl.DataFrame:
 
 Apply binary flag and optional temporal shift.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform |
+| shift (`int`) | Periods to shift the label (negative = forward-looking) |
 
-data (pl.DataFrame): Split to transform
-
-shift (int): Periods to shift the label (negative = forward-looking)
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.RandomBinaryTarget`
 
@@ -962,15 +910,11 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, random_state: int
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
-
-random_state (int \| None): Seed for the random number generator. When set,
-
-labels are reproducible across runs given the same data sizes and call order
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
+| random_state (`int \| None`) | Seed for the random number generator. When set, labels are reproducible across runs given the same data sizes and call order |
 
 ### `limen.targets.RandomBinaryTarget.transform`
 
@@ -982,13 +926,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Apply random binary labels.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform |
 
-data (pl.DataFrame): Split to transform
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.RiskRewardRatioTarget`
 
@@ -1010,11 +952,10 @@ def __init__(self, train_data: pl.DataFrame, target_name: str) -> None:
 
 Store the target column name; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
 
 ### `limen.targets.RiskRewardRatioTarget.transform`
 
@@ -1026,17 +967,13 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Compute `capturable_breakout / (\|max_drawdown\| + EPSILON)` per row.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have `capturable_breakout`, `max_drawdown` columns) |
 
-data (pl.DataFrame): Split to transform (must have `capturable_breakout`, `max_drawdown` columns)
+**Returns:** pl.DataFrame: Data with target column added
 
-#### Returns
-
-pl.DataFrame: Data with target column added
-
-#### Raises
-
-ValueError: If the required user-supplied columns are absent
+**Raises:** ValueError: If the required user-supplied columns are absent
 
 ### `limen.targets.ThresholdBinaryTarget`
 
@@ -1058,15 +995,12 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, source_column: st
 
 Store the fixed threshold; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
-
-source_column (str): Column to compare against threshold
-
-threshold (float): Fixed comparison value; rows above this are labeled 1
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
+| source_column (`str`) | Column to compare against threshold |
+| threshold (`float`) | Fixed comparison value; rows above this are labeled 1 |
 
 ### `limen.targets.ThresholdBinaryTarget.transform`
 
@@ -1078,15 +1012,12 @@ def transform(self, data: pl.DataFrame, shift: int=-1) -> pl.DataFrame:
 
 Apply binary flag and optional temporal shift.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform |
+| shift (`int`) | Periods to shift the label (negative = forward-looking) |
 
-data (pl.DataFrame): Split to transform
-
-shift (int): Periods to shift the label (negative = forward-looking)
-
-#### Returns
-
-pl.DataFrame: Data with target column added
+**Returns:** pl.DataFrame: Data with target column added
 
 ### `limen.targets.TradeOutcomeTarget`
 
@@ -1154,23 +1085,15 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, max_duration_hour
 
 Fit the breakout threshold from long lines detected on the training split.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split with a 'close' column |
+| target_name (`str`) | Name of the target column to create |
+| max_duration_hours (`int`) | Exclusive upper bound on line duration in bars |
+| min_height_pct (`float`) | Minimum absolute line height as a fraction of start price |
+| long_threshold_percentile (`float`) | Percentile of long-line heights used as the breakout threshold, in [0, 100] |
 
-train_data (pl.DataFrame): Training split with a 'close' column
-
-target_name (str): Name of the target column to create
-
-max_duration_hours (int): Exclusive upper bound on line duration in bars
-
-min_height_pct (float): Minimum absolute line height as a fraction of start price
-
-long_threshold_percentile (float): Percentile of long-line heights used
-
-as the breakout threshold, in [0, 100]
-
-#### Raises
-
-ValueError: If 'close' is missing, the percentile is outside [0, 100],
+**Raises:** ValueError: If 'close' is missing, the percentile is outside [0, 100],
 
 or no long lines exist in the training split
 
@@ -1192,21 +1115,15 @@ the threshold AND the point return at +confirmation_hours or at
 
 forward window become null.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform (must have 'close' column) |
+| lookahead_hours (`int`) | Forward window for the breakout check |
+| confirmation_hours (`int`) | Forward offset for the point-confirmation check |
 
-data (pl.DataFrame): Split to transform (must have 'close' column)
+**Returns:** pl.DataFrame: Data with the target column added
 
-lookahead_hours (int): Forward window for the breakout check
-
-confirmation_hours (int): Forward offset for the point-confirmation check
-
-#### Returns
-
-pl.DataFrame: Data with the target column added
-
-#### Raises
-
-ValueError: If 'close' is missing, a window is below 1, or
+**Raises:** ValueError: If 'close' is missing, a window is below 1, or
 
 confirmation_hours exceeds lookahead_hours
 
@@ -1230,23 +1147,16 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, upper_multiple: f
 
 Store barrier settings and validate them; no fitting is performed.
 
-#### Args
-
-train_data (pl.DataFrame): Training split (not used; kept for interface consistency)
-
-target_name (str): Name of the target column to create
-
-upper_multiple (float): Profit-taking barrier width in volatility units
-
-lower_multiple (float): Stop-loss barrier width in volatility units
-
-max_horizon (int): Vertical barrier as a forward window in bars
-
-span (int): EWMA span for the close-to-close return volatility estimate
-
-min_periods (int): Warmup before a volatility value is emitted
-
-close_col (str): Close price column used for the barrier path
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split (not used; kept for interface consistency) |
+| target_name (`str`) | Name of the target column to create |
+| upper_multiple (`float`) | Profit-taking barrier width in volatility units |
+| lower_multiple (`float`) | Stop-loss barrier width in volatility units |
+| max_horizon (`int`) | Vertical barrier as a forward window in bars |
+| span (`int`) | EWMA span for the close-to-close return volatility estimate |
+| min_periods (`int`) | Warmup before a volatility value is emitted |
+| close_col (`str`) | Close price column used for the barrier path |
 
 ### `limen.targets.TripleBarrierTarget.transform`
 
@@ -1258,13 +1168,11 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Label each bar by the first barrier its forward close path touches.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform; must have the close column |
 
-data (pl.DataFrame): Split to transform; must have the close column
-
-#### Returns
-
-pl.DataFrame: Data with a ternary target column added (1 upper, -1 lower,
+**Returns:** pl.DataFrame: Data with a ternary target column added (1 upper, -1 lower,
 
 0 vertical; null during volatility warmup and when the vertical barrier
 
@@ -1290,23 +1198,16 @@ def __init__(self, train_data: pl.DataFrame, target_name: str, high_col: str='hi
 
 Store target settings and validate Parkinson against close-to-close volatility on train.
 
-#### Args
-
-train_data (pl.DataFrame): Training split used for the volatility sanity gate
-
-target_name (str): Name of the target column to create
-
-high_col (str): High price column
-
-low_col (str): Low price column
-
-open_col (str): Open price column used for dirty-bar filtering
-
-close_col (str): Close price column
-
-halflife (int): EWMA half-life in bars
-
-min_periods (int): Warmup before volatility values are emitted
+| Argument | Contract |
+| --- | --- |
+| train_data (`pl.DataFrame`) | Training split used for the volatility sanity gate |
+| target_name (`str`) | Name of the target column to create |
+| high_col (`str`) | High price column |
+| low_col (`str`) | Low price column |
+| open_col (`str`) | Open price column used for dirty-bar filtering |
+| close_col (`str`) | Close price column |
+| halflife (`int`) | EWMA half-life in bars |
+| min_periods (`int`) | Warmup before volatility values are emitted |
 
 ### `limen.targets.VolNormalizedReturnTarget.transform`
 
@@ -1318,11 +1219,8 @@ def transform(self, data: pl.DataFrame) -> pl.DataFrame:
 
 Compute `log(close / close.shift(1)) / parkinson_sigma.shift(1)`.
 
-#### Args
+| Argument | Contract |
+| --- | --- |
+| data (`pl.DataFrame`) | Split to transform; must have open/high/low/close columns |
 
-data (pl.DataFrame): Split to transform; must have open/high/low/close columns
-
-#### Returns
-
-pl.DataFrame: Cleaned data with target column added
-
+**Returns:** pl.DataFrame: Cleaned data with target column added

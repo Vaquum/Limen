@@ -87,7 +87,7 @@ jobs:
 
       - name: Provision the locked browser
         working-directory: docs-site
-        run: npx --no-install playwright install --with-deps chromium
+        run: npx --no-install playwright install --with-deps chromium webkit
 
       - name: Prove the reading experience
         working-directory: docs-site

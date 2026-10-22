@@ -25,7 +25,16 @@ export function initInterfaces(){
     document.body.dataset.interface=value;
     for(const node of article.querySelectorAll('[data-research-interface]'))node.hidden=value!=='both'&&node.dataset.researchInterface!==value;
     for(const button of control.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.interfaceChoice===value));
-    if(move&&anchor){if(anchor.getClientRects().length)scrollBy({top:anchor.getBoundingClientRect().top-top,behavior:'instant'});else article.querySelector(`[data-research-interface="${value}"]`)?.scrollIntoView({block:'start'});}
+    if(move&&anchor){
+      if(anchor.getClientRects().length)scrollBy({top:anchor.getBoundingClientRect().top-top,behavior:'instant'});
+      else {
+        const section=anchor.closest('section[data-research-interface]');
+        const previous=section?[...article.querySelectorAll(`section[data-research-interface="${section.dataset.researchInterface}"]`)]:[];
+        const counterparts=[...article.querySelectorAll(`section[data-research-interface="${value}"]`)];
+        const corresponding=counterparts[previous.indexOf(section)]||counterparts[0];
+        corresponding?.scrollIntoView({block:'start'});
+      }
+    }
     if(save){try{localStorage.setItem(key,value);}catch(error){announce('The interface choice could not be saved.');console.error(error);}dispatchEvent(new Event('reader-interface-change'));}
   }
   let preferred=document.body.dataset.interface;
@@ -33,6 +42,7 @@ export function initInterfaces(){
     const saved=localStorage.getItem(`reader:${document.body.dataset.product}:${document.body.dataset.content}`);
     if(!location.hash&&saved){const place=JSON.parse(saved);if(choices.includes(place.interface))preferred=place.interface;}
   }catch(error){announce('The saved interface choice could not be read.');console.error(error);}
+  if(!location.hash&&choices.includes(history.state?.readerPlace?.interface))preferred=history.state.readerPlace.interface;
   const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1))):null;
   const linked=target?.closest('[data-research-interface]');
   choose(linked?.dataset.researchInterface||preferred,{save:false});
