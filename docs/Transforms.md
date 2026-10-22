@@ -110,6 +110,12 @@ The [Compiled project](examples/compiled-research/README.md) asks `QuantileBinar
 
 A stateless shift and a fitted target have different responsibilities. The shift moves observations; it does not decide which data may fit the cutoff. The Manifest's split-first preparation owns that boundary. The [target reference](Targets.md) describes each fitted target and its input requirements.
 
+## Recorded diagnostics
+
+The Python project's `helper_cases.py` runs all five functions on the same 864 recorded training rows and writes one Parquet result per function. Independent checks reconstruct Z-scores, median absolute deviation, percentile clipping, the joint trimming mask and the one-row shift. These are diagnostics of the supplied frame; they do not retain training statistics for later observations.
+
+The YAML target example above exercises the target class's own shift contract. There is no YAML declaration that turns these stateless functions into train-fitted transforms. Use the registered [scalers](Scalers.md) for that requirement. Resolving a frame-wide statistic as a feature does not make it causal or suitable for served inference.
+
 ## Boundaries
 
 - Use a transform when the operation is stateless and local to the frame or prediction arrays.

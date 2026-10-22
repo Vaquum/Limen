@@ -8,7 +8,7 @@
 
 ## In the research projects
 
-The [Compiled project](../../../docs/examples/compiled-research/README.md) `walk_forward` scenario establishes the recorded fold identities that compatible Cohort members retain. The selectors here operate on recorded experiment results; their reference describes alternatives to that scenario’s explicit member selection.
+The [Compiled project](../../../docs/examples/compiled-research/README.md) `walk_forward` scenario establishes the recorded fold identities that compatible Cohort members retain. These selectors are optional Python component APIs. The YAML assessment path exposes `metric`, `direction`, `top_k` and `folds`; it does not load this selector registry. The [Cohort component boundary](../../../docs/Cohort.md#optional-artifact-backed-component-api) distinguishes those controls.
 
 ## What this package owns
 
