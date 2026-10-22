@@ -31,6 +31,7 @@ from limen.experiment._recording import prepare_recording, project_record
 from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
+from limen.experiment._filter_resume import validate_filter_resume
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.param_search.search_strategy import SearchStrategy
@@ -515,6 +516,7 @@ class UniversalExperimentLoop:
 
         if resume and self._experiment_dir is not None and round_data_path is not None and csv_path.exists():
             checkpoint = checkpoint_manager.validate(self._experiment_dir, content_hash=content_hash, strategy_type=strategy_type)
+            validate_filter_resume(checkpoint, cast(SearchStrategy, self._search_strategy), csv_path, parallel=self._workers > 1)
             metadata_path = self._experiment_dir / 'metadata.json'
             validate_walk_forward_resume(self.manifest, json.loads(metadata_path.read_text()) if metadata_path.exists() else {})
             expected = _storage.csv_prefix(round_data_path, checkpoint['metadata']['experiment_round'] + 1)
@@ -594,9 +596,8 @@ class UniversalExperimentLoop:
                     current_round,
                 )
                 if self._experiment_dir and last_completed_round is not None:
-                    msq.set_state(last_msq_state)
                     self._checkpoint(
-                        msq, domain, self._experiment_dir, checkpoint_manager,
+                        last_msq_state, domain, self._experiment_dir, checkpoint_manager,
                         last_completed_round, n_permutations,
                         strategy_type=strategy_type, content_hash=content_hash,
                         feedback_controller=feedback_controller,
@@ -644,9 +645,8 @@ class UniversalExperimentLoop:
                         last_completed_round if last_completed_round is not None else -1,
                     )
                     if self._experiment_dir and last_completed_round is not None:
-                        msq.set_state(last_msq_state)
                         self._checkpoint(
-                            msq, domain, self._experiment_dir, checkpoint_manager,
+                            last_msq_state, domain, self._experiment_dir, checkpoint_manager,
                             last_completed_round, n_permutations,
                             strategy_type=strategy_type, content_hash=content_hash,
                             feedback_controller=feedback_controller,
@@ -875,7 +875,7 @@ class UniversalExperimentLoop:
                                    feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                                    *, content_hash: str, strategy_type: str,
                                    csv_path: Path, round_data_path: Path | None,
-                                   retain_round_artifacts: bool, context_params: Mapping[str, object] | None) -> int:
+                                   retain_round_artifacts: bool, context_params: dict[str, object] | None) -> int:
 
 
         if self._experiment_dir is None or self._search_strategy is None:
@@ -1061,7 +1061,7 @@ class UniversalExperimentLoop:
 
 
     def _checkpoint(self,
-                    msq: MSQ,
+                    msq: MSQ | dict[str, object],
                     domain: ParamDomain,
                     checkpoint_dir: Path,
                     checkpoint_manager: CheckpointManager,

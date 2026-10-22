@@ -93,7 +93,7 @@ class CheckpointManager:
 
     def save(self,
              checkpoint_dir: Path,
-             msq: MSQ,
+             msq: MSQ | dict[str, object],
              domain: ParamDomain,
              current_round: int,
              target_permutations: int,
@@ -111,7 +111,7 @@ class CheckpointManager:
 
         Args:
             checkpoint_dir (Path): Directory to write checkpoint file
-            msq (MSQ): MSQ instance to checkpoint
+            msq (MSQ | dict): Live queue or its saved same-run rewind state
             domain (ParamDomain): ParamDomain instance to checkpoint
             current_round (int): Round number at checkpoint time
             target_permutations (int): Total rounds planned for the run
@@ -131,7 +131,7 @@ class CheckpointManager:
                 'content_hash': content_hash,
                 'saved_at': datetime.now(tz=timezone.utc).isoformat(),
             },
-            'msq_state': msq.get_state(),
+            'msq_state': msq.get_state() if isinstance(msq, MSQ) else msq,
             'domain_state': domain.get_state(),
         }
 

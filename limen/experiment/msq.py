@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Any, cast
 
 from limen.experiment.param_domain import ParamDomain
+from limen.experiment._filter_resume import restore_filters
 from limen.experiment.reducer.filter_types import FILTER_SAMPLE, SAMPLE_HASH_RULE
 from limen.experiment.param_search.search_strategy import SearchStrategy
 
@@ -440,35 +441,18 @@ class MSQ:
             if key not in state:
                 raise ValueError(f"Invalid MSQ state: missing required key '{key}'.")
 
-        from limen.experiment.reducer.filter_types import FILTER_BUILDERS
-
-        descriptors = state.get('named_filter_descriptors', {})
-        if any(kind == FILTER_SAMPLE and params.get('hash_rule') != SAMPLE_HASH_RULE for kind, params in descriptors.values()):
-            raise ValueError('Cannot resume an unversioned or unsupported sampling hash rule; use the original package version or start a new experiment')
+        restored_filters, descriptors, custom_count, lost_named = restore_filters(state)
 
         self._yielded_count = state['yielded_count']
         self._n_permutations = state.get('n_permutations')
         self._trim_budget = state['trim_budget']
         self._priority_queue = deque(state['priority_queue'])
         self._custom_filters = []
-        self._named_filters = {}
-        self._named_filter_descriptors = {}
+        self._named_filters = restored_filters
+        self._named_filter_descriptors = descriptors
         self._intervention_log = list(state['intervention_log'])
         self._strategy.set_state(state['strategy_state'])
 
-        restored_keys: set[str] = set()
-        for key, (filter_type, filter_params) in descriptors.items():
-            builder = FILTER_BUILDERS.get(filter_type)
-            if builder is not None:
-                try:
-                    self._named_filters[key] = builder(filter_params)
-                except (KeyError, TypeError, ValueError):
-                    continue
-                self._named_filter_descriptors[key] = (filter_type, dict(filter_params))
-                restored_keys.add(key)
-        all_named_keys = set(state.get('named_filter_keys', []))
-        lost_named = all_named_keys - restored_keys
-        custom_count = state.get('custom_filters_count', 0)
         non_restorable = custom_count + len(lost_named)
         if non_restorable > 0:
             parts: list[str] = []

@@ -220,6 +220,25 @@ For resume to work cleanly, keep these stable:
 
 Ordinary serial recovery restores successful parameter values from their recorded round occurrences, preserving string categories such as `"001"` and recorded empty strings or nulls. Failed rounds have no typed parameter record: their CSV cells use the same supplied scalar `context_params` first, then the restored checkpoint domain, as type hints. Supply the historical context unchanged when resuming a failed prefix. Omitted or changed context, ambiguous failed empty-string/null cells, and unrecorded heterogeneous parameter history cannot be reconstructed exactly. Committed CSV fields retain their original text during recovery.
 
+An unfinished UEL recovery refuses custom filters and named filters without a
+supported, valid declarative descriptor, before executing a round or changing run
+artifacts. Use supported `set_filter(..., filter_type=..., filter_params=...)`
+descriptors for constraints that must survive recovery; otherwise start a new
+experiment directory. Sampling descriptors must retain their saved hash rule.
+
+Recovery can still load a checkpoint that cannot draw another candidate: its saved
+cap or trim budget is exhausted, or its grid and injection queue are exhausted.
+The saved cap applies even if the resume call supplies a larger one. A completed
+serial run can still require continuation when its last checkpoint precedes its
+final results. Standalone MSQ restoration keeps its warning and gives the caller
+the opportunity to re-register filters before iterating.
+
+Shutdown checkpoints preserve filter metadata at the committed frontier. Recovery
+also checks existing intervention history for filters erased by older rewind
+behavior. Checkpoints with neither filter metadata nor intervention evidence cannot
+reveal lost constraints. This does not repair earlier draws made without filters
+or reconstruct non-deterministic callbacks after the checkpoint.
+
 ## Capabilities shared with CLI
 
 The CLI compiles YAML and constructs the search around MSQ. Python Research supplies its own functions and strategy objects. Both use the queue's candidate identities, feedback and checkpoint semantics.

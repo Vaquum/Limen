@@ -7,6 +7,7 @@ from typing import cast
 
 import polars as pl
 
+import limen.experiment._objective_run as _objective
 import limen.experiment._round_storage as _storage
 
 __all__: list[str] = []
@@ -30,15 +31,15 @@ def restore_log(csv_path: Path, path: Path, count: int,
     hints_by_key = dict(domain) if factorize else dict(domain) | {key: [value] for key, value in context.items()}
     string_keys = {key for key, hints in hints_by_key.items() if (factorize or not key.startswith('_')) and (hints or factorize) and all(isinstance(value, str) for value in hints)}
     string_keys.update(key for parameters in recorded.values() for key, value in parameters.items() if isinstance(value, str) and not key.startswith('_'))
+    keys = set(domain) | set(context) | {key for parameters in recorded.values() for key in parameters}
     overrides: dict[str, type[pl.DataType]] = {'_convergence_warning': pl.Boolean, **dict.fromkeys(string_keys, pl.String)}
-    log = pl.read_csv(csv_path, n_rows=count, schema_overrides=overrides)
+    log = _objective.restored_log(csv_path, count, overrides, keys)
     if '_convergence_warning' not in log.columns or log['_convergence_warning'].null_count() == log.height:
         log = log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
     if factorize:
         return log, expected
     with csv_path.open(newline='') as stream:
         rows = list(islice(csv.DictReader(stream), log.height))
-    keys = set(domain) | set(context) | {key for parameters in recorded.values() for key in parameters}
     restored: list[pl.Series] = []
     for key in sorted(keys & set(log.columns)):
         if key.startswith('_'):
