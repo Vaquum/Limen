@@ -1,7 +1,17 @@
-import polars as pl
+from pathlib import Path
+
 import numpy as np
+import polars as pl
+import pytest
 
 from limen.experiment import MLManifest
+from limen.indicators.avgprice import avgprice
+from limen.indicators.roc import roc
+from limen.scalers.linear_scaler import DEFAULT_SCALING_RULES
+from limen.scalers.linear_scaler import LinearScaler
+from limen.scalers.linear_scaler import build_rules
+from limen.scalers.linear_scaler import get_scaling_rule
+from limen.scalers.linear_scaler import inverse_transform as inverse_linear_scaler
 from limen.scalers.causal_rolling_robust_scaler import CausalRollingRobustScaler
 from limen.scalers.rank_gauss_scaler import RankGaussScaler
 from limen.scalers.registry import SCALER_REGISTRY
@@ -357,3 +367,90 @@ def test_scaler_factory_registry_has_all():
     assert 'robust' in SCALER_REGISTRY
     assert 'rank_gauss' in SCALER_REGISTRY
     assert 'causal_rolling_robust' in SCALER_REGISTRY
+
+
+@pytest.fixture(scope='module')
+def recorded_linear_scaler_data():
+    path = Path(__file__).parent / 'fixtures' / 'spot_15m_20250101_20250531.parquet'
+    bars = pl.read_parquet(path, n_rows=512)
+    return avgprice(roc(roc(bars, period=1), period=2)).with_columns(pl.col('roc_1').alias('roc'))
+
+
+def test_linear_scaler_generic_override_keeps_recorded_values(recorded_linear_scaler_data):
+    train = recorded_linear_scaler_data.select('roc_1', 'roc_2')
+    rules = build_rules(overrides={'none': ['roc_1']})
+    assert list(rules)[0] == '^roc_1$'
+    assert get_scaling_rule('roc_1', rules) == 'none'
+    assert get_scaling_rule('roc_2', rules) == 'standard'
+
+    scaler = LinearScaler(train, rules=rules)
+    result = scaler.transform(train)
+    assert train['roc_1'][1] == pytest.approx(0.11288096524970648)
+    assert result['roc_1'].equals(train['roc_1'])
+    assert 'roc_1' not in scaler.means and 'roc_1' not in scaler.stds
+    assert 'roc_2' in scaler.means and 'roc_2' in scaler.stds
+
+    values = train['roc_2'].to_numpy()
+    expected = (values - np.nanmean(values)) / np.nanstd(values)
+    np.testing.assert_allclose(result['roc_2'].to_numpy(), expected, rtol=0, atol=1e-12, equal_nan=True)
+    restored = inverse_linear_scaler(result, scaler)
+    assert restored['roc_1'].equals(train['roc_1'])
+    np.testing.assert_allclose(restored['roc_2'].to_numpy(), values, atol=1e-10, equal_nan=True)
+
+
+@pytest.mark.parametrize(('rule', 'column'), [
+    ('standard', 'avgprice'),
+    ('none', 'volume'),
+    ('divide_100', 'open'),
+    ('none', 'roc'),
+])
+def test_linear_scaler_override_transform_and_inverse(recorded_linear_scaler_data, rule, column):
+    rules = build_rules(overrides={rule: [column]})
+    pattern = f'^{column}$'
+    assert list(rules)[0] == pattern
+    assert list(rules)[1:] == [name for name in DEFAULT_SCALING_RULES if name != pattern]
+    assert get_scaling_rule(column, rules) == rule
+
+    train = recorded_linear_scaler_data.select(column)
+    scaler = LinearScaler(train, rules=rules)
+    transformed = scaler.transform(train)
+    values = train[column].to_numpy()
+    actual = transformed[column].to_numpy()
+
+    if rule == 'standard':
+        expected = (values - np.nanmean(values)) / np.nanstd(values)
+        np.testing.assert_allclose(actual, expected, rtol=0, atol=1e-12, equal_nan=True)
+        assert column in scaler.means and column in scaler.stds
+    elif rule == 'divide_100':
+        np.testing.assert_allclose(actual, values / 100, rtol=0, atol=1e-12, equal_nan=True)
+        assert column not in scaler.means and column not in scaler.stds
+    else:
+        assert transformed[column].equals(train[column])
+        assert column not in scaler.means and column not in scaler.stds
+
+    restored = inverse_linear_scaler(transformed, scaler)
+    np.testing.assert_allclose(restored[column].to_numpy(), values, rtol=0, atol=1e-9, equal_nan=True)
+
+
+def test_linear_scaler_override_order_and_input_ownership():
+    base = {'.*': 'none', '^roc_1$': 'standard', '^roc_2$': 'standard'}
+    overrides = {'none': ['roc_1'], 'divide_100': ['open']}
+    rules = build_rules(overrides=overrides, base_rules=base)
+    assert list(rules) == ['^roc_1$', '^open$', '.*', '^roc_2$']
+    assert get_scaling_rule('roc_1', rules) == 'none'
+    assert get_scaling_rule('open', rules) == 'divide_100'
+    assert get_scaling_rule('unmatched', rules) == 'none'
+    assert list(base) == ['.*', '^roc_1$', '^roc_2$']
+    assert base['^roc_1$'] == 'standard' and overrides == {'none': ['roc_1'], 'divide_100': ['open']}
+    assert rules is not base and DEFAULT_SCALING_RULES['.*'] == 'none'
+    assert list(build_rules(base_rules={})) == list(DEFAULT_SCALING_RULES)
+
+
+def test_linear_scaler_existing_regex_key_replacement():
+    rules = build_rules(overrides={'none': [r'roc(_\d+)?']})
+    assert len(rules) == len(DEFAULT_SCALING_RULES)
+    assert list(rules)[0] == r'^roc(_\d+)?$'
+    assert get_scaling_rule('roc', rules) == 'none'
+    assert get_scaling_rule('roc_2', rules) == 'none'
+    assert get_scaling_rule('atr_14', rules) == 'standard'
+    assert get_scaling_rule('roc_1', build_rules({'standard': ['roc_1'], 'none': ['roc_1']})) == 'none'
