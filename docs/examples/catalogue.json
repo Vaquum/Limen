@@ -2192,10 +2192,12 @@
       ],
       "recorded_window": "hourly: first 1,440 rows; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic.",
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic. All helper/target outputs are retained, five scaler states remain training-fitted, 30 distinct configurations support parameter analysis, and every reducer has a recorded intervention or advisory action. CSV/ZIP/Arrow carry the same recorded timestamps and prices.",
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
-        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_analysis_population_and_every_reducer",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_local_source_encodings"
       ]
     },
     "compiled/search": {
@@ -2211,10 +2213,11 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Unchanged CLI declarations cover finite traversal, factorization, audited resource reduction, eight composable candidates, ablation/PCA, recorded model-family predictions with independent return labels/RMSE, and eight baseline strategies. Callback ordering remains a separate component API regression.",
+      "assertions": "Unchanged CLI declarations cover finite traversal, factorization, audited resource reduction, eight composable candidates, ablation/PCA, recorded model-family predictions with independent return labels/RMSE, and eight baseline strategies. Callback ordering remains a separate component API regression. YAML-only campaigns execute every registered reducer and compare lean/full/output recording and CSV/ZIP/Arrow source encodings; native audits, scores, payloads and acceptance arithmetic are checked.",
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
-        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics",
+        "docs/examples/tests/test_extended_cases.py::test_native_reducer_recording_and_source_campaigns"
       ]
     },
     "python/recovery": {
@@ -2334,7 +2337,10 @@
       ],
       "recorded_window": "quarter-hour: first 1,920 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "All four calibration/threshold choices; independent threshold objective; compatible Python vote cohort; validation reuse disclosed."
+      "assertions": "All four calibration/threshold choices; independent threshold objective; compatible Python vote cohort; validation reuse disclosed.",
+      "extra_tests": [
+        "docs/examples/tests/test_extended_cases.py::test_evaluated_classifier_composition_and_empty_history"
+      ]
     },
     "compiled/calibration": {
       "interface": "compiled",

@@ -6,27 +6,22 @@ metadata:
 sfd:
   manifest:
     type: ml
-# region recorded_source
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
-        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
-# endregion recorded_source
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
     split_dates:
-      train_start: '2025-01-01'
-      train_end: '2025-01-15'
-      val_start: '2025-01-15'
-      val_end: '2025-01-18'
-      test_start: '2025-01-18'
-      test_end: '2025-01-22'
-# region momentum_indicator
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
     indicators:
     - func: limen.indicators.roc
       params:
         period: 1
         group: momentum
-# endregion momentum_indicator
-# region fitted_target
     target:
       name: quantile_flag
       class: limen.targets.QuantileBinaryTarget
@@ -35,32 +30,22 @@ sfd:
         quantile: 0.5
       transform_params:
         shift: -1
-# endregion fitted_target
-# region validation_objective
-    objective:
-      metric: backtest_total_return
-      direction: maximize
-# endregion validation_objective
     backtest:
-      source_interval_seconds: 900
-      fee_bps: 1.0
-      slip_bps: 0.0
-      product:
-        kind: cash_spot
-        instrument: BTCUSDT
-        base_currency: BTC
-        quote_currency: USDT
-        quantity_step: 1.0e-9
-        min_notional: 0.0
-# region fitted_scaler
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
     scaler:
       from_params: scaler_type
-# endregion fitted_scaler
     reference_architecture: limen.sfd.reference_architecture.logreg_binary
   params:
-    scaler_type: [logreg]
-    C: [1.0, 0.5]
-    random_state: [42]
+    scaler_type:
+    - logreg
+    C:
+    - 1.0
+    - 0.5
+    random_state:
+    - 42
+# region budget_config
 uel:
   output_path: compiled-recording-full
   n_permutations: 2

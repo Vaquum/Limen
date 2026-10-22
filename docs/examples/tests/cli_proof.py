@@ -351,7 +351,7 @@ def verify_extended_campaigns(project):
     for mode in ('lean', 'full', 'outputs'):
         location = base / ('compiled-recording-' + mode)
         log = checked_log(location, 2)
-        recording_metrics.append(dict(zip(log['id'], log['val_backtest_total_return'], strict=True)))
+        recording_metrics.append(dict(zip(log['id'], log['backtest_total_return'], strict=True)))
         with open_text(location / 'round_data.jsonl.gz') as stream:
             decoded = [json.loads(line) for line in stream]
         assert len(decoded) == 2
@@ -361,6 +361,8 @@ def verify_extended_campaigns(project):
             assert ('execution' in row) == ('market' in row) == (mode == 'outputs')
             if mode == 'outputs':
                 assert row['probs'] and len(row['probs']) == len(row['preds'])
+                assert row['execution'] and row['market']
+                assert len(row['execution']['net']) == len(row['market']['ret']) == len(row['preds'])
         recording[mode] = {'rounds': log.height, 'payloads': sorted(decoded[0])}
     assert recording_metrics[0] == recording_metrics[1] == recording_metrics[2]
     summary['recording'] = recording
