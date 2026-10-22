@@ -132,6 +132,8 @@ The row count follows the reconstructed test window; it is not a fixed contract.
 
 Row inspection requires the live serial preparation/data, predictions, round parameters and alignment retained through `post_processing=True`; inverse-scaled features also require the fitted scaler. Missing evidence raises explicitly. Parallel runs do not retain these inputs, and walk-forward row replay requires a fold-specific test set and is unsupported by this method.
 
+Replay calls `prep(data, round_params=retained_round_params)` once, matching UEL execution. One-argument-only preparations are unsupported. Preparation errors propagate unchanged, including during UEL post-processing finalization; already recorded rounds remain available.
+
 Use this table for round-level inspection before summary statistics. It is also a direct input to disabled-barrier snapshots. Configured TP/SL replay reconstructs private high/low columns from verified source identities; this public table remains unchanged.
 
 ## Benchmark surfaces
