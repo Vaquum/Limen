@@ -2,9 +2,12 @@ import signal
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+import pytest
+
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.experiment.param_domain import ParamDomain
+from limen.indicators.roc import roc
 from tests.stubs.stubs import make_msq
 
 
@@ -42,7 +45,12 @@ def test_compute_content_hash_dict():
     h2 = CheckpointManager.compute_content_hash({'a': 1, 'b': 2})
 
     assert h1 == h2
-    assert len(h1) == 64
+    assert h1 == 'd8497d9d82770a70729261095aa98f7ef5154d7af499f8037b6ca250296785a6'
+
+
+def test_compute_content_hash_rejects_callable_values():
+    with pytest.raises(TypeError, match='not JSON serializable'):
+        CheckpointManager.compute_content_hash({'feature': [roc]})
 
 
 def test_initialize_fresh_creates_directory():

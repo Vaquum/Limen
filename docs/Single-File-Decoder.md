@@ -36,6 +36,8 @@ The Python project's `run_research` function below supplies a four-candidate `sp
 - individual values are scalars such as ints, floats, strings, booleans, or callables
 - structured values are possible when a manifest step explicitly expects them; keep them deterministic and inspectable
 
+Ordinary single-process searches can use callable values without an `experiment_dir`. Search identities and CSV cells use the callable's `str()` representation, so distinct candidates need distinct representations within the process; these are not portable checkpoint identities. The live `experiment_log` retains callables in an `Object` column, which is not a numeric parameter-correlation input. Setting `experiment_dir` still requires JSON-serializable SFD `params()`.
+
 ## Optional Manifest component API
 
 Manifest-driven SFDs expose `manifest()` instead of custom `prep()` and `model()` functions.
