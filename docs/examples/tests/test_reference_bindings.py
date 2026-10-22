@@ -147,3 +147,33 @@ def test_new_or_removed_pages_cannot_escape_the_complete_catalogue(monkeypatch):
     monkeypatch.setattr(check_evidence, 'maintained_documents', lambda root: [*original, root / 'docs/new-chapter.md'])
     with pytest.raises(ValueError, match='every maintained document exactly once'):
         validate_page_catalogue(ROOT, catalogue)
+
+
+def test_current_results_reject_wrong_scenarios_fields_and_changed_artifacts(tmp_path):
+    from check_evidence import result_bindings
+    document = tmp_path / 'result.md'
+    marker = '<!-- result: actual-selection interface=compiled scenario=selection fields=rounds -->'
+    document.write_text(marker)
+    assert result_bindings(ROOT, document)[0]['fields'] == ['rounds']
+    for invalid in (marker.replace('scenario=selection', 'scenario=unknown'), marker + '\n' + marker,
+                    marker.replace('fields=rounds', 'fields=rounds,,missing')):
+        document.write_text(invalid)
+        with pytest.raises(ValueError):
+            result_bindings(ROOT, document)
+    document.write_text(marker)
+    artifact = ROOT / '.docs-evidence/result-mutation-test.json'
+    artifact.parent.mkdir(exist_ok=True)
+    artifact.write_text('{"rounds": 2}')
+    record = {'interface': 'compiled', 'id': 'selection', 'output_path': str(artifact.relative_to(ROOT)),
+              'output_sha256': hashlib.sha256(artifact.read_bytes()).hexdigest()}
+    try:
+        assert result_bindings(ROOT, document, [record])
+        document.write_text(marker.replace('fields=rounds', 'fields=missing'))
+        with pytest.raises(ValueError, match='Missing current result field'):
+            result_bindings(ROOT, document, [record])
+        document.write_text(marker)
+        artifact.write_text('{"rounds": 3}')
+        with pytest.raises(ValueError, match='identity differs'):
+            result_bindings(ROOT, document, [record])
+    finally:
+        artifact.unlink()

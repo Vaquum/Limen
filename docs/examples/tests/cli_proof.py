@@ -13,9 +13,9 @@ from scenario_oracles import execution_clocks, verify_acceptance
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
-    'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration'],
+    'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
     'allocation': ['compiled-allocation', 'compiled-allocation_ml', 'compiled-allocation_funded'],
 }
@@ -161,6 +161,19 @@ def verify_project(project):
     signed = checked_log(base / 'compiled-family_direction_sizing', 2)
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}
+    helper_counts = {}
+    for case in ('helper_indicators', 'helper_features', 'helper_scalers', 'conditional_features'):
+        from ruamel.yaml import YAML
+        document = YAML(typ='safe').load((project / 'compiled-research' / (case + '.yaml')).read_text())
+        directory = base / document['uel']['output_path']
+        log = checked_log(directory, document['uel']['n_permutations'])
+        key = 'scaler_type' if case == 'helper_scalers' else 'enable_lags' if case == 'conditional_features' else 'feature_groups'
+        assert set(log[key].to_list()) == set(document['sfd']['params'][key])
+        for record in records(directory):
+            values = predictions(directory, record)
+            assert values.size > 0 and set(values) <= {0, 1}
+        helper_counts[case] = log.height
+    summaries['search']['helper_diagnostics'] = helper_counts
     recovery = checked_log(base / 'compiled-recovery', 4)
     assert [row['_round_index'] for row in records(base / 'compiled-recovery')] == list(range(4))
     summaries['recovery'] = {'rounds': recovery.height, 'unique_ids': recovery['id'].n_unique()}
@@ -194,6 +207,12 @@ def verify_project(project):
     calibration = checked_log(base / 'compiled-calibration', 4)
     assert set(zip(calibration['use_calibration'], calibration['use_threshold'])) == {(a, b) for a in (False, True) for b in (False, True)}
     summaries['calibration'] = {'modes': calibration.select('use_calibration', 'use_threshold', 'optimal_threshold').to_dicts()}
+    economic = checked_log(base / 'compiled-calibration-assessment', 4)
+    assessment = json.loads((base / 'compiled-calibration-assessment/assessment.json').read_text())
+    assert assessment['members'] == 4
+    assert assessment['selected_ids'] == economic.sort(['val_backtest_total_return', 'id'], descending=[True, False])['id'].to_list()
+    assert pl.read_parquet(base / 'compiled-calibration-assessment/predictions.parquet').filter(pl.col('reason').is_null()).height > 0
+    summaries['calibration']['reconstructed_modes'] = assessment['members']
     summaries['execution'] = {name: verify_execution(project, name) for name in ('execution', 'funded')}
     bars = checked_log(base / 'compiled-bars', 3)
     assert set(bars['bar_type']) == {'volume', 'trade', 'liquidity'}

@@ -15,6 +15,12 @@ sh acquire.sh limen-research
 
 Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
 
+## Preparation diagnostics
+
+The preparation campaign includes `helper_indicators.yaml`, `helper_features.yaml`, `helper_scalers.yaml` and `conditional_features.yaml`. Each round activates one helper group with the common causal baseline. They exercise 117 indicators, 105 bar-feature helpers, all five registered scalers and the `include_if` branch through `limen run`. Their native result logs and predictions remain in the results archive.
+
+The remaining feature functions require line arrays, forward labels, a fitted scalar diagnostic, recorded trade fields or previously derived regime/microstructure columns. They are not interchangeable declarations in this bar-source campaign. The [feature reference](../../Features.md) gives those input contracts; the [CFR reference](../../Conserved-Flux-Renormalization.md) distinguishes its recorded-trade diagnostic from this project's threshold bars. Do not substitute a Python driver for those inputs.
+
 ## Prerequisites
 
 Use the recorded example bundle and its matching Limen wheel, Python 3.10–3.13, Git, and `vaquum-limen[data,stats,boosting]`. Run every command from the bundle root. The project uses local recorded inputs and performs no live data download.

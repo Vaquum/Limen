@@ -86,6 +86,13 @@ def test_compiled_research(research_proof):
     assert research_proof['compiled']['rounds'] == 2
 
 
+def test_acquisition_uses_one_publication_and_rejects_changed_artifacts(research_proof):
+    receipt = research_proof['acquisition']
+    assert receipt['installed_outside_checkout'] is True
+    assert receipt['changed_artifact_rejected'] is True
+    assert len(receipt['wheel_sha256']) == len(receipt['bundle_sha256']) == 64
+
+
 def test_observed_costs_preserve_caller_fits(cost_model, tmp_path, monkeypatch):
     import json
     from zipfile import ZipFile

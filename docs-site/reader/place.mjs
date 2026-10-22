@@ -29,7 +29,7 @@ export function initPlace(){
   if(resumed&&!location.hash)restore(resumed);
   else if(!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
   let frame=0, ready=false;
-  requestAnimationFrame(()=>requestAnimationFrame(()=>{ready=true;}));
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{ready=true;save();}));
   const progress=document.querySelector('.reading-progress');
   function save(){frame=0;if(document.querySelector('dialog[open]'))return;
     const value=position();const maximum=document.documentElement.scrollHeight-innerHeight;
@@ -39,4 +39,5 @@ export function initPlace(){
   }
   addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(save);},{passive:true});
   addEventListener('pagehide',save);save();
+  addEventListener('reader-interface-change',save);
 }

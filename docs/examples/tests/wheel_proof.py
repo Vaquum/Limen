@@ -156,6 +156,8 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert Path(info['distribution_location']).is_relative_to(isolated)
     assert not any(Path(entry or project).resolve() == root.resolve() for entry in info['sys_path'])
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
+    from acquisition_proof import prove_acquisition
+    acquisition = prove_acquisition(root, temporary, wheel, bundle, runtime_environment, inspect, run)
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
     # Complete the first scientific import before starting the disjoint campaigns.
@@ -215,7 +217,7 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             attempt = json.loads((project / 'results/dev' / directory / 'final-report.json').read_text())['attempt_id']
             report = project / prefix / 'holdout' / attempt / 'report.json'
             assert archive_bytes(retained, str(report.relative_to(project))) == report.read_bytes()
-    return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info, 'offline': offline,
+    return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info, 'offline': offline, 'acquisition': acquisition,
             'native_outputs': {'path': str(native.relative_to(root)), 'sha256': native_sha},
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},
             'wheel_sha256': hashlib.sha256(wheel.read_bytes()).hexdigest()}

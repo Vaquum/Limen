@@ -18,6 +18,7 @@ from catalogue_tests import validate_test_reference
 EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
 REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
+RESULT_MARKER = r'<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.,]+) -->'
 
 
 def digest(value: bytes) -> str:
@@ -121,6 +122,33 @@ def maintained_documents(root: Path) -> list[Path]:
     return sorted({root / 'README.md', *(root / 'docs').rglob('*.md'), *(root / 'limen').rglob('README.md')})
 
 
+def result_bindings(root: Path, document: Path, records=None):
+    text = document.read_text()
+    catalogue = json.loads((root / 'docs/examples/catalogue.json').read_text())
+    found = []
+    for match in re.finditer(RESULT_MARKER, text):
+        identity, interface, scenario, fields = match.groups()
+        key = interface + '/' + scenario
+        if key not in catalogue['scenario_details'] or any(not field or not all(part.isidentifier() for part in field.split('.')) for field in fields.split(',')):
+            raise ValueError('Unknown current result or field: ' + identity)
+        if records is not None:
+            record = next(item for item in records if item['interface'] == interface and item['id'] == scenario)
+            path = (root / record['output_path']).resolve()
+            if not path.is_relative_to((root / '.docs-evidence').resolve()) or digest(path.read_bytes()) != record['output_sha256']:
+                raise ValueError('Current result identity differs: ' + identity)
+            value = json.loads(path.read_text())
+            for field in fields.split(','):
+                selected = value
+                for part in field.split('.'):
+                    if not isinstance(selected, dict) or part not in selected:
+                        raise ValueError('Missing current result field: ' + field)
+                    selected = selected[part]
+        found.append({'id': identity, 'interface': interface, 'scenario': scenario, 'fields': fields.split(',')})
+    if len(found) != text.count('<!-- result:') or len({item['id'] for item in found}) != len(found):
+        raise ValueError('Malformed or duplicate current result')
+    return found
+
+
 def validate_page_catalogue(root: Path, catalogue):
     pages = catalogue['candidate_pages']
     expected = {str(path.relative_to(root)) for path in maintained_documents(root)}
@@ -212,6 +240,7 @@ def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] =
     bindings(root, document)
     output_bindings(root, document)
     reference_bindings(root, document)
+    result_bindings(root, document)
     fence_lines, links = markdown_structure(root / 'docs-site', text)
     expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE, REFERENCE_FENCE)
                       for match in re.finditer(pattern, text, re.S))
@@ -385,6 +414,9 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     for page, scenarios in contexts.items():
         interfaces = tuple(sorted({catalogue_data['scenario_details'][name]['interface'] for name in scenarios}))
         validate_fences(root, root / page, interfaces=interfaces)
+    results = [item for document in maintained_documents(root) for item in result_bindings(root, document, record['validation']['scenarios'])]
+    if len({item['id'] for item in results}) != len(results):
+        raise ValueError('Duplicate current result across maintained documents')
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:

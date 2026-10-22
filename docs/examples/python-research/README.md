@@ -17,6 +17,10 @@ sh acquire.sh limen-research
 
 Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
 
+## Preparation diagnostics
+
+`helper_cases.py` applies every exported indicator and feature to recorded bars or trades, retains each output, fits every registered scaler on the training rows and transforms later rows without changing its state. The transforms are separate training-sample diagnostics. Line geometry, regime and microstructure helpers receive their declared context; forward breakout labels remain diagnostic labels and do not enter model inputs. The tests independently verify time identity, ROC, moving average, robust scaling and transform arithmetic. These diagnostics accompany the research model; they are not hundreds of simultaneous model inputs.
+
 ## Prerequisites
 
 Use the project and input bundle identified by the example evidence, Python 3.10–3.13, and its matching Limen wheel. Selection needs the data extra. The full project needs `vaquum-limen[data,stats]`; Sobol uses statistics.

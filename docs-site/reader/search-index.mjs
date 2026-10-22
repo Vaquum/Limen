@@ -9,8 +9,9 @@ export function searchEntries(page){
   for(let index=0;index<tokens.length;index++){
     const token=tokens[index];
     if(token.type==='heading_open'){
-      const heading=plain(tokens[index+1]),stem=slug(heading),count=seen.get(stem)||0;seen.set(stem,count+1);
+      const heading=plain(tokens[index+1]),stem=slug(heading),count=seen.get(stem)||0;
       if(token.tag!=='h1'){
+        seen.set(stem,count+1);
         entries.push(entry);
         entry={title:pageLabel(page),heading,part:page.part,route:page.url+'#'+stem+(count?'-'+count:''),text:''};
       }

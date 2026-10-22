@@ -21,6 +21,11 @@ The research declaration fixes selection before `assess` reads the finished run.
 limen run --no-progress-bar compiled-research/preparation.yaml
 limen run --no-progress-bar compiled-research/research.yaml
 limen assess compiled-research/research.yaml --results results/dev/compiled-research
+limen run --no-progress-bar \
+  compiled-research/helper_indicators.yaml \
+  compiled-research/helper_features.yaml \
+  compiled-research/helper_scalers.yaml \
+  compiled-research/conditional_features.yaml
 ```
 
 `assessment.json` names the selected recorded rounds and bound members. `predictions.parquet` retains their Cohort decisions, probabilities where available, timestamps, reasons and actual availability. Reconstruction refits the recorded training definition and checks replayed metrics; it does not restore arbitrary saved weights.

@@ -26,10 +26,13 @@ export function initInterfaces(){
     for(const node of article.querySelectorAll('[data-research-interface]'))node.hidden=value!=='both'&&node.dataset.researchInterface!==value;
     for(const button of control.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.interfaceChoice===value));
     if(move&&anchor){if(anchor.getClientRects().length)scrollBy({top:anchor.getBoundingClientRect().top-top,behavior:'instant'});else article.querySelector(`[data-research-interface="${value}"]`)?.scrollIntoView({block:'start'});}
-    if(save)try{localStorage.setItem(key,value);}catch(error){announce('The interface choice could not be saved.');console.error(error);}
+    if(save){try{localStorage.setItem(key,value);}catch(error){announce('The interface choice could not be saved.');console.error(error);}dispatchEvent(new Event('reader-interface-change'));}
   }
   let preferred=document.body.dataset.interface;
-  try{preferred=localStorage.getItem(key)||preferred;}catch(error){announce('The saved interface choice could not be read.');console.error(error);}
+  try{preferred=localStorage.getItem(key)||preferred;
+    const saved=localStorage.getItem(`reader:${document.body.dataset.product}:${document.body.dataset.content}`);
+    if(!location.hash&&saved){const place=JSON.parse(saved);if(choices.includes(place.interface))preferred=place.interface;}
+  }catch(error){announce('The saved interface choice could not be read.');console.error(error);}
   const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1))):null;
   const linked=target?.closest('[data-research-interface]');
   choose(linked?.dataset.researchInterface||preferred,{save:false});

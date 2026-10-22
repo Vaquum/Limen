@@ -12,6 +12,11 @@ limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 limen run --no-progress-bar compiled-research/preparation.yaml
 limen run --no-progress-bar compiled-research/research.yaml
 limen assess compiled-research/research.yaml --results results/dev/compiled-research
+limen run --no-progress-bar \
+  compiled-research/helper_indicators.yaml \
+  compiled-research/helper_features.yaml \
+  compiled-research/helper_scalers.yaml \
+  compiled-research/conditional_features.yaml
 # endregion preparation
 # region search
 limen run --no-progress-bar \
@@ -31,7 +36,8 @@ limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-
 limen run --no-progress-bar compiled-research/acceptance.yaml
 # endregion walk_forward
 # region calibration
-limen run --no-progress-bar compiled-research/calibration.yaml
+limen run --no-progress-bar compiled-research/calibration.yaml compiled-research/calibration_assessment.yaml
+limen assess compiled-research/calibration_assessment.yaml --results results/dev/compiled-calibration-assessment
 # endregion calibration
 # region execution
 limen run --no-progress-bar \
