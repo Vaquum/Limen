@@ -874,7 +874,7 @@ class UniversalExperimentLoop:
                                    feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
                                    *, content_hash: str, strategy_type: str,
                                    csv_path: Path, round_data_path: Path | None,
-                                   retain_round_artifacts: bool, context_params: dict[str, Any] | None) -> int:
+                                   retain_round_artifacts: bool, context_params: dict[str, object] | None) -> int:
 
 
         if self._experiment_dir is None or self._search_strategy is None:
