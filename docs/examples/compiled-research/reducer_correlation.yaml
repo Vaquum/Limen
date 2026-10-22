@@ -80,6 +80,7 @@ uel:
   - type: correlation
     params:
       metric: rmse
+      method: pearson
       maximize: false
       min_observations: 10
       n_boot: 30

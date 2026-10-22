@@ -329,7 +329,7 @@ def verify_extended_campaigns(project):
         cycles = [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()]
         assert log.height > 0 and all(cycle['errors'] == [] for cycle in cycles), (name, cycles, log.to_dicts())
         actions = [item for cycle in cycles for item in [*cycle['interventions'], *cycle['suggestions']]]
-        assert actions and all(item['source'] == name.title() + 'Reducer' for item in actions)
+        assert actions and all(item['source'] == name.title() + 'Reducer' for item in actions), (name, cycles, log.to_dicts())
         assert (location / 'checkpoint.json').is_file()
         if name == 'sanity':
             assert any(item['op'] == 'remove_is' for item in actions)
