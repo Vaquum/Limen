@@ -10,6 +10,7 @@ from threadpoolctl import threadpool_limits
 
 from limen.data.utils import split_sequential
 from limen.experiment import MLManifest, RuleBasedManifest
+from limen.experiment._resolve_trade_policy import ProductConfig
 from limen.inference import Sensor
 from limen.scalers.robust_scaler import RobustScaler
 from limen.sfd.reference_architecture import LogRegBinary
@@ -317,13 +318,11 @@ def test_rule_sensor_omits_forward_labels_from_feature_availability(
         )
 
     baseline = _rule_manifest().add_feature(features).set_backtest_config(
-        product={'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
-                 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0},
+        product=ProductConfig('cash_spot', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0),
         source_interval_seconds=3600,
     )
     manifest = _rule_manifest().add_feature(features).set_backtest_config(
-        product={'kind': 'cash_spot', 'instrument': 'BTCUSDT', 'base_currency': 'BTC',
-                 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0},
+        product=ProductConfig('cash_spot', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0),
         source_interval_seconds=3600,
     ).with_target_label('next_return', NextReturnTarget, transform_params={'periods': periods})
     expected_research = baseline.prepare_data(recorded_source_bars, {})
