@@ -3,8 +3,8 @@ from typing import Any
 
 from ruamel.yaml.constructor import DuplicateKeyError
 
+from limen.yaml._parser_yaml import parser_yaml
 from limen.yaml.config import is_mapping
-from limen.yaml.config import round_trip_yaml
 from limen.yaml.errors import YAMLError
 
 
@@ -12,6 +12,7 @@ def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
 
     '''
     Parse a YAML experiment file or string into a dict.
+    Mapping-valued keys produce a located parse error before construction.
 
     Args:
         source (str | Path): Path instance to read from disk, or raw YAML string
@@ -22,7 +23,7 @@ def parse(source: str | Path) -> tuple[dict[str, Any], list[YAMLError]]:
     '''
 
     errors: list[YAMLError] = []
-    yaml = round_trip_yaml(preserve_quotes=True)
+    yaml = parser_yaml()
 
     try:
         if isinstance(source, Path):

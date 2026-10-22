@@ -21,6 +21,10 @@ The run writes a result directory containing the copied YAML manifest, `metadata
 
 ## YAML Shape
 
+Mappings used as YAML keys are rejected during parsing, with the key's line and
+column in the parse error. Manifest fields use named keys; nested mappings remain
+available as values.
+
 This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 
 <!-- example: manifest-selection source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->

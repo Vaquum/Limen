@@ -1941,3 +1941,19 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 - Assess frozen event execution contracts in final holdout: admit pinned single-Sensor binary cash_spot/linear_perpetual economics from protected research through classified freeze, single event execution and versioned read-back; scenario reports stay schema-1 byte-identical.
 - Raise the suite runtime ceiling to 260s for measured suite growth (main observed up to 238s).
+
+## [5.46.1] - 2026-10-22
+
+- Reject mapping-valued YAML keys before constructing them; return located parse errors for both retained fuzz timeout units while preserving ordinary manifest parsing.
+- Preserve malformed-tag diagnostics and report mapping-key locations through tagged outer mappings.
+- Keep Compiled Research entirely in YAML and CLI across the research book and reference corpus.
+- Cut releases by manual dispatch instead of per push, and leave version surfaces to release time.
+- Require only applicable resume evidence when recording and recovering experiments.
+- Admit compatible CPU architectures to parallel experiment rounds.
+- Reject missing fractional-difference columns explicitly.
+- Prioritize explicit scaler rule overrides over base rules in `build_rules`.
+- Propagate log preparation failures instead of retrying with default parameters.
+- Allow callable SFD parameter values when no checkpoint persistence is configured.
+- Preserve `market_regime` SMA alias bindings across equal, swapped, and overlapping periods.
+- Reject nonfinite replay metric changes before Sensor construction in Trainer.
+- Preserve lazy stochastic indicator execution during preparation.
