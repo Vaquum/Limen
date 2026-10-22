@@ -69,4 +69,6 @@ Python recovery restores search/results, not arbitrary model weights. Continue i
 
 Walk-forward selection and final assessment remain caller-owned. They do not create guarded project reservations, compiled fold identities or an exposure-history guarantee. Calibration shows an arbitrary fitted classifier through `Sensor.from_python`; its output mapping owns the meaning of the binary decision.
 
+The search variant also fits a caller-owned three-class nearest-neighbor model. Training-only next-return quantiles define its labels; a later partition supplies macro precision, recall, AUC and accuracy. The [metric reference](../../Standard-Metrics-Library.md#recorded-three-class-evaluation) shows the exact function and current results.
+
 Real TabPFN model validation remains unproved under [#628](https://github.com/Vaquum/Limen/issues/628).

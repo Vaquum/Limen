@@ -28,6 +28,13 @@ def test_recorded_local_source_encodings(python_scenarios):
     verify_source_formats(python_scenarios.read_source_formats(inputs), inputs)
 
 
+def test_recorded_multiclass_metrics(python_scenarios):
+    from conftest import ROOT
+    from helper_oracles import verify_multiclass
+    inputs = ROOT / 'tests/fixtures'
+    verify_multiclass(python_scenarios.evaluate_three_classes(python_scenarios.hourly(inputs, 1440)), inputs)
+
+
 def test_native_reducer_recording_and_source_campaigns(tmp_path, monkeypatch):
     from click.testing import CliRunner
     from limen.cli.main import cli

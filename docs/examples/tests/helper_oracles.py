@@ -109,3 +109,30 @@ def verify_targets(result, output, inputs):
                 np.testing.assert_array_equal(frame['label'].to_numpy()[:-1], oracle)
             if name == 'TripleBarrierTarget':
                 assert set(frame['label'].drop_nulls()) <= {-1, 0, 1}
+
+
+def verify_multiclass(result, inputs):
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    train, evaluation = raw['close'].to_numpy()[:864], raw['close'].to_numpy()[864:1152]
+    cutoffs = np.quantile(train[7:]/train[6:-1]-1, [.25, .75])
+    np.testing.assert_allclose(result['cutoffs'], cutoffs, rtol=1e-12)
+    truth = np.digitize(evaluation[7:]/evaluation[6:-1]-1, cutoffs)
+    np.testing.assert_array_equal(result['truth'], truth)
+    probabilities, predicted = np.asarray(result['probabilities']), np.asarray(result['predictions'])
+    assert result['training_rows'] == 857 and result['evaluation_rows'] == len(truth) == 281
+    assert result['classes'] == [0, 1, 2] and result['fitted_state_unchanged'] is True
+    assert probabilities.shape == (281, 3) and np.isfinite(probabilities).all()
+    np.testing.assert_allclose(probabilities.sum(axis=1), 1, atol=1e-12)
+    np.testing.assert_array_equal(predicted, probabilities.argmax(axis=1))
+    precisions, recalls, aucs = [], [], []
+    for label in result['classes']:
+        positive, called = truth == label, predicted == label
+        hits = np.count_nonzero(positive & called)
+        precisions.append(hits / called.sum() if called.any() else 0.)
+        recalls.append(hits / positive.sum())
+        differences = probabilities[positive, label, None] - probabilities[~positive, label]
+        aucs.append(float(np.mean((differences > 0) + .5*(differences == 0))))
+    assert result['metrics']['accuracy'] == float(np.mean(truth == predicted))
+    np.testing.assert_allclose([result['metrics'][key] for key in ('precision', 'recall', 'auc')],
+                               [np.mean(precisions), np.mean(recalls), np.mean(aucs)], atol=1e-12)
+    assert result['missing_class_auc'] is None

@@ -8,7 +8,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from scenario_oracles import execution_clocks, verify_acceptance
+from scenario_oracles import execution_clocks, verify_acceptance, verify_common_baselines
 
 
 DIRECTORIES = {
@@ -156,11 +156,19 @@ def verify_project(project):
     audit = [json.loads(line) for line in (base / 'compiled-adaptive/audit.jsonl').read_text().splitlines()]
     assert any(item.get('source') == 'BudgetReducer' for cycle in audit for item in cycle['interventions'])
     checked_log(base / 'compiled-preparation', 4)
-    checked_log(base / 'compiled-common_strategies', 8)
+    baselines = checked_log(base / 'compiled-common_strategies', 8)
+    from limen.experiment._round_storage import open_text
+    with open_text(base / 'compiled-common_strategies/round_data.jsonl.gz') as stream:
+        baseline_tracks = {row['round_params']['strategy']: row['execution'] for row in map(json.loads, stream)}
+    common = {'rows': baselines.select('strategy', 'num_executed_trades_test', 'pnl_per_bar_bps_test').to_dicts(),
+              'tracks': baseline_tracks, 'source_rows': 8784, 'fee_bps': 10., 'slip_bps': 5.,
+              'test_start': '2024-11-01T00:00:00+00:00', 'test_end': '2025-01-01T00:00:00+00:00', 'test_rows': 1464}
+    verify_common_baselines('compiled', common, base / 'compiled-common_strategies', project / 'inputs')
     checked_log(base / 'compiled-family_random_binary', 1)
     signed = checked_log(base / 'compiled-family_direction_sizing', 2)
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}
+    summaries['search']['common_baselines'] = common
     summaries['search'].update(verify_extended_campaigns(project))
     helper_counts = {}
     for case in ('helper_indicators', 'helper_features', 'helper_regimes', 'helper_scalers', 'conditional_features'):

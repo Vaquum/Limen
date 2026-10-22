@@ -29,6 +29,10 @@ Limen-local version surfaces:
 - Keep `pyproject.toml`, `CITATION.cff`, template `metadata.limen_version`, changelog entry, release tag, and release notes aligned to the same version.
 - Ordinary PRs do not touch version surfaces. The release cuts the package version and changelog entry under [repository law 5](../CLAUDE.md#the-laws). Update affected public docs in the PR that changes the behavior they describe.
 
+## Documentation compatibility
+
+A reader or content revision identifies its source tree separately from the package version it validates. Example and evidence schema changes require their own compatibility decision: update consumers, exact bindings and publication checks together. A source hash identifies bytes; current execution against the matching wheel establishes compatibility.
+
 ## Review notes
 
 Version review records the local-policy category, the files requiring version or changelog updates, and whether the release script reads the intended version from `pyproject.toml`.

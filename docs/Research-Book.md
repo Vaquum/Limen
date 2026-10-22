@@ -118,4 +118,4 @@ These are retained outputs of the identified successful run. The Python project 
 
 A result needs more than a score. Inspect its selected parameters, fitting and selection cutoffs, traded observations, costs and inference population. Python proves those choices through caller-owned assertions. Compiled Research supplies the evidence admitted by its declared pipeline and recording policy.
 
-Continue to [search](Advanced-Search.md), [backtesting](Backtest.md) and [inference](Trainer.md) when a decision needs more detail. The book develops those decisions; the references retain the exact names, defaults and failure conditions.
+Continue to [recorded observations](Historical-Data.md) to establish the data and clocks the experiment will consume. The Reference appendix retains the exact names, defaults and failure conditions.

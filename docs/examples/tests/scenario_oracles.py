@@ -166,9 +166,10 @@ def verify_acceptance(result, output, inputs):
 def verify(interface, name, result, output, inputs):
     if name == 'search':
         if interface == 'python':
-            from helper_oracles import verify_helpers, verify_targets
+            from helper_oracles import verify_helpers, verify_targets, verify_multiclass
             verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
             verify_targets(result['target_diagnostics'], output / 'targets', inputs)
+            verify_multiclass(result['multiclass'], inputs)
             verify_analysis(result['analysis'], inputs)
             verify_source_formats(result['input_formats'], inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
@@ -642,7 +643,12 @@ def verify_common_baselines(interface, result, output, inputs):
              'bollinger_mean_reversion', 'donchian_breakout', 'time_series_momentum'}
     raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
     bars = raw[raw.height*8//11 + raw.height//11:]
-    assert bars.height == 1598 and len(result['rows']) == len(names) == 8
+    if 'test_start' in result:
+        bars = raw.filter(pl.col('datetime').is_between(datetime.fromisoformat(result['test_start']), datetime.fromisoformat(result['test_end']), closed='left'))
+        assert bars.height == result['test_rows']
+    else:
+        assert bars.height == 1598
+    assert len(result['rows']) == len(names) == 8
     assert {row['strategy'] for row in result['rows']} == names
     close, opening = bars['close'].to_numpy(), bars['open'].to_numpy()
     for row in result['rows']:

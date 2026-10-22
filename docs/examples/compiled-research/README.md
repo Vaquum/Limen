@@ -15,32 +15,6 @@ sh acquire.sh limen-research
 
 Enter `limen-research/` and activate its environment with `. .venv/bin/activate`. Run every following command from that bundle root. Keep `publication.json`; it pins the selected release and artifact digests even after the public site advances. The examples and inputs are separate from the installed wheel. To repeat a past run, retain that manifest, bundle, wheel and environment record.
 
-## Source encodings
-
-The three `source_*.yaml` variants read the bundled CSV, ZIP and Arrow encodings of the first 1,440 recorded hourly observations. Their exact data and candidate results must agree; the source-format choice does not change the research population. [Historical data reference](../../Historical-Data-Reference.md#recorded-format-equivalence) gives their method/path declarations and output constraints.
-
-## Preparation diagnostics
-
-The preparation campaign includes `helper_indicators.yaml`, `helper_features.yaml`, `helper_regimes.yaml`, `helper_scalers.yaml` and `conditional_features.yaml`. Each round activates one helper group with the common causal baseline. They exercise 117 indicators, 100 numeric bar-feature helpers and five categorical regime rules, all five registered scalers and the `include_if` branch through `limen run`. They fit on January 1–February 15, validate on February 15–March 15 and assess March 15–April 15, 2024, all half-open UTC intervals. Their native result logs and predictions remain in the results archive.
-
-The remaining feature functions require line arrays, forward labels, a fitted scalar diagnostic, recorded trade fields or previously derived regime/microstructure columns. They are not interchangeable declarations in this bar-source campaign. The [feature reference](../../Features.md) gives those input contracts; the [CFR reference](../../Conserved-Flux-Renormalization.md) distinguishes its recorded-trade diagnostic from this project's threshold bars. Do not substitute a Python driver for those inputs.
-
-## Recording variants
-
-The three `recording_*.yaml` files compare lean, full and additional execution/model-output recording on identical candidates. Their aggregate scores must agree; their retained row payloads differ deliberately. Decide which downstream analysis needs those arrays before execution. The [retention chapter](../../Run-And-Recover.md) shows the commands and resulting boundaries.
-
-## Analysis and metric-driven controls
-
-`analysis.yaml` compares 20 rule thresholds across the recorded walk-forward folds and writes DSR/PBO acceptance results. The four `reducer_*.yaml` variants exercise sanity, saturation, focus and correlation separately. They retain the actual interventions and suggestions in `audit.jsonl`, plus the queue checkpoint. The sanity case removes candidates whose chosen calibration statistic is unavailable; the others react to observed native metrics. They demonstrate control effects, not that pruning improves selection. The [analysis reference](../../Log.md#a-population-for-parameter-analysis) explains the returned statistics.
-
-## Target variants
-
-The `target_*.yaml` files run each ordinary target class with its compatible binary or continuous model. `target_contracts.sh` retains a successful volatility-normalized run or the exact training-volatility sanity refusal; any other failure stops the campaign. Trade-outcome target/context behavior is exercised by the separate allocation manifests.
-
-Three label files are derived from recorded hourly closes independently within the declared training, validation and test intervals. Exit labels describe a one-hour close-to-close software trade with 2 bp cost and a timeout exit; they are not observed venue exits. Risk labels describe nonnegative maximum upward and nonpositive minimum downward close excursions over two following bars. Identity labels record the next-close direction. No label crosses a split boundary. These are labeling demonstrations, not a claim that those targets are suitable inference inputs. Their source columns are removed from the model inputs by the target contract.
-
-The bundle includes these ready-to-read files; no preprocessing command is part of Compiled Research. The tests compare every derivation with the recorded source.
-
 ## Prerequisites
 
 Use the recorded example bundle and its matching Limen wheel, Python 3.10–3.13, Git, and `vaquum-limen[data,stats,boosting]`. Run every command from the bundle root. The project uses local recorded inputs and performs no live data download.
@@ -259,6 +233,32 @@ sh compiled-research/run.sh
 | `final/holdout.yaml` | Reserve the final window before research; reconstruct, freeze and assess the selected Cohort through the CLI. Preserve its project history and final report together. |
 | `final-event/holdout.yaml` | Reserve a separate project and assess one selected Sensor under its frozen event contract, with schema-2 ledger evidence. |
 | `project.sh` | Validate, profile, scaffold, commit, fork, index, execute, back up and restore a campaign using installed CLI commands and a local Git remote. |
+
+## Source encodings
+
+The three `source_*.yaml` variants read the bundled CSV, ZIP and Arrow encodings of the first 1,440 recorded hourly observations. Their exact data and candidate results must agree; the source-format choice does not change the research population. [Historical data reference](../../Historical-Data-Reference.md#recorded-format-equivalence) gives their method/path declarations and output constraints.
+
+## Preparation diagnostics
+
+The preparation campaign includes `helper_indicators.yaml`, `helper_features.yaml`, `helper_regimes.yaml`, `helper_scalers.yaml` and `conditional_features.yaml`. Each round activates one helper group with the common causal baseline. They exercise 117 indicators, 100 numeric bar-feature helpers and five categorical regime rules, all five registered scalers and the `include_if` branch through `limen run`. They fit on January 1–February 15, validate on February 15–March 15 and assess March 15–April 15, 2024, all half-open UTC intervals. Their native result logs and predictions remain in the results archive.
+
+The remaining feature functions require line arrays, forward labels, a fitted scalar diagnostic, recorded trade fields or previously derived regime/microstructure columns. They are not interchangeable declarations in this bar-source campaign. The [feature reference](../../Features.md) gives those input contracts; the [CFR reference](../../Conserved-Flux-Renormalization.md) distinguishes its recorded-trade diagnostic from this project's threshold bars. Do not substitute a Python driver for those inputs.
+
+## Recording variants
+
+The three `recording_*.yaml` files compare lean, full and additional execution/model-output recording on identical candidates. Their aggregate scores must agree; their retained row payloads differ deliberately. Decide which downstream analysis needs those arrays before execution. The [retention chapter](../../Run-And-Recover.md) shows the commands and resulting boundaries.
+
+## Analysis and metric-driven controls
+
+`analysis.yaml` compares 20 rule thresholds across the recorded walk-forward folds and writes DSR/PBO acceptance results. The four `reducer_*.yaml` variants exercise sanity, saturation, focus and correlation separately. They retain the actual interventions and suggestions in `audit.jsonl`, plus the queue checkpoint. The sanity case removes candidates whose chosen calibration statistic is unavailable; the others react to observed native metrics. They demonstrate control effects, not that pruning improves selection. The [analysis reference](../../Log.md#a-population-for-parameter-analysis) explains the returned statistics.
+
+## Target variants
+
+The `target_*.yaml` files run each ordinary target class with its compatible binary or continuous model. `target_contracts.sh` retains a successful volatility-normalized run or the exact training-volatility sanity refusal; any other failure stops the campaign. Trade-outcome target/context behavior is exercised by the separate allocation manifests.
+
+Three label files are derived from recorded hourly closes independently within the declared training, validation and test intervals. Exit labels describe a one-hour close-to-close software trade with 2 bp cost and a timeout exit; they are not observed venue exits. Risk labels describe nonnegative maximum upward and nonpositive minimum downward close excursions over two following bars. Identity labels record the next-close direction. No label crosses a split boundary. These are labeling demonstrations, not a claim that those targets are suitable inference inputs. Their source columns are removed from the model inputs by the target contract.
+
+The bundle includes these ready-to-read files; no preprocessing command is part of Compiled Research. The tests compare every derivation with the recorded source.
 
 ## Read the evidence
 

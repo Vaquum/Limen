@@ -91,6 +91,43 @@ Returns:
 
 This helper uses `safe_ovr_auc()` instead of calling raw multiclass AUC directly.
 
+### Recorded three-class evaluation
+
+The Python project's metric case fits a seven-neighbor classifier on recorded hourly returns. Its two class cutoffs and scaler fit on training only. Evaluation uses a later partition, preserving the fitted object. The proof independently computes precision/recall from counts and macro AUC from positive/negative score pairs, including ties. A population with no valid class comparison retains an unavailable AUC.
+
+<!-- example: metrics-python-three-classes source=docs/examples/python-research/metric_cases.py region=multiclass_evaluation scenario=search interface=python role=executed -->
+```python
+def evaluate_three_classes(raw):
+    def prepare(frame):
+        return frame.with_columns(
+            (pl.col('close') / pl.col('close').shift(6) - 1).alias('momentum'),
+            (pl.col('close').shift(-1) / pl.col('close') - 1).alias('next_return'),
+        ).drop_nulls(['momentum', 'next_return'])
+
+    train, evaluation = prepare(raw[:864]), prepare(raw[864:1152])
+    cutoffs = np.quantile(train['next_return'].to_numpy(), [.25, .75])
+    labels = [np.digitize(frame['next_return'].to_numpy(), cutoffs) for frame in (train, evaluation)]
+    fitted = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=7))
+    fitted.fit(train.select('momentum'), labels[0])
+    state = pickle.dumps(fitted)
+    probabilities = fitted.predict_proba(evaluation.select('momentum'))
+    predicted = fitted.predict(evaluation.select('momentum'))
+    metrics = multiclass_metrics({'y_test': labels[1]}, predicted, probabilities)
+    if pickle.dumps(fitted) != state:
+        raise ValueError('Evaluation changed the fitted three-class model')
+    missing_class = safe_ovr_auc(np.zeros(len(predicted), dtype=int), probabilities)
+    return {'cutoffs': cutoffs.tolist(), 'classes': fitted.classes_.tolist(),
+            'training_rows': train.height, 'evaluation_rows': evaluation.height,
+            'truth': labels[1].tolist(), 'predictions': predicted.tolist(),
+            'probabilities': probabilities.tolist(), 'metrics': metrics,
+            'missing_class_auc': None if np.isnan(missing_class) else float(missing_class),
+            'fitted_state_unchanged': True}
+```
+
+<!-- result: metrics-python-three-class-results interface=python scenario=search fields=multiclass.training_rows,multiclass.evaluation_rows,multiclass.metrics,multiclass.missing_class_auc -->
+
+Compiled Research has no built-in three-class architecture declaration. Its binary and continuous YAML families retain their actual task metrics; a callable metric helper does not add a CLI model family. The three-class case is ordinary Python Research.
+
 ## `continuous_metrics(data, preds)`
 
 <!-- reference: metrics-continuous_metrics source=limen/metrics/continuous_metrics.py region=signature:continuous_metrics role=signature -->

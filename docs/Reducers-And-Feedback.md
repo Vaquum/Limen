@@ -86,7 +86,6 @@ limen run --no-progress-bar \
   compiled-research/analysis.yaml
 ```
 
-
 The [reducer reference](Developer/Pruning-Strategies.md#constructor-reference) lists each constructor and its validation rules. In YAML, its arguments belong under the reducer's `params` mapping.
 
 ## When to use which reducer
@@ -120,7 +119,5 @@ With an experiment directory, every feedback trigger writes one JSONL entry to `
 The [developer appendix](Developer/Pruning-Strategies.md) covers the reducer registry, constructor signatures, callbacks, file controls and controller verification.
 
 ## Read next
-
-Continue to [search and recovery](Advanced-Search.md) for candidate generation and checkpointing, [the experiment loop](Universal-Experiment-Loop.md) for feedback scheduling, and [Trainer](Trainer.md) for reconstructible Compiled experiments.
 
 Continue to [retention and recovery](Run-And-Recover.md) to keep the result and unfinished queue together.

@@ -237,14 +237,14 @@ Runtime boundaries:
 
 These tables come from the current Click declarations. Required values and positional arguments have no declared default. Omitted optional flags use the listed value; automatic help and version options are included. Path constraints are checked before command execution. The command descriptions above explain state changes and exit conditions.
 
-### `limen`
+### `limen` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `--version` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show the version and exit. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen assess`
+### `limen assess` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -253,13 +253,13 @@ These tables come from the current Click declarations. Required values and posit
 | `--reservation` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Reservation identity returned by limen reserve. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen backup`
+### `limen backup` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen commit`
+### `limen commit` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -268,7 +268,7 @@ These tables come from the current Click declarations. Required values and posit
 | `--message`, `-m` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Git commit message. Auto-generated if omitted. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen fork`
+### `limen fork` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -276,7 +276,7 @@ These tables come from the current Click declarations. Required values and posit
 | `name` | `{"name": "text", "param_type": "String"}` | — | false | 1 | Positional name. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen init`
+### `limen init` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -284,26 +284,26 @@ These tables come from the current Click declarations. Required values and posit
 | `--template` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Template name to scaffold from (e.g. logreg_binary). |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen lineage`
+### `limen lineage` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `manifest_ref` | `{"name": "text", "param_type": "String"}` | — | true | 1 | Positional manifest_ref. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen list-templates`
+### `limen list-templates` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen ls`
+### `limen ls` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen new`
+### `limen new` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -312,27 +312,27 @@ These tables come from the current Click declarations. Required values and posit
 | `--from` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Restore a project from a backup remote instead of the template. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen profile`
+### `limen profile` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen reindex`
+### `limen reindex` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen reserve`
+### `limen reserve` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
 | `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen run`
+### `limen run` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
@@ -343,7 +343,7 @@ These tables come from the current Click declarations. Required values and posit
 | `--workers` | `{"clamp": false, "max": null, "max_open": false, "min": 1, "min_open": false, "name": "integer range", "param_type": "IntRange"}` | `null` | false | 1 | Concurrent rounds; overrides YAML, or uses saved settings with --resume. |
 | `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
 
-### `limen validate`
+### `limen validate` options
 
 | Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
 | --- | --- | --- | --- | --- | --- |
