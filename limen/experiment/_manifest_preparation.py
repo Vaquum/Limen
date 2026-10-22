@@ -18,12 +18,12 @@ _M = TypeVar('_M')
 
 
 def admit_native_date_ends(dates: tuple[date, ...] | None,
-                           source: SourceConfig | None, test_source: SourceConfig | None) -> None:
+                           data_source: SourceConfig | None, test_source: SourceConfig | None) -> None:
     '''Refuse declared native bars whose nominal support crosses a date-window end.'''
     if dates is None:
         return
     from limen.data import HistoricalData
-    for source_name, source in (('data_source', source), ('test_data_source', test_source)):
+    for source_name, source in (('data_source', data_source), ('test_data_source', test_source)):
         if source is None or getattr(source.method, '__func__', source.method) is not HistoricalData.get_spot_klines:
             continue
         interval = source.params.get('kline_size')
