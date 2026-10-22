@@ -1,4 +1,4 @@
-from collections.abc import Mapping, MutableMapping, Sequence
+from collections.abc import Collection, Mapping, MutableMapping, Sequence
 import csv
 import math
 from numbers import Real
@@ -55,6 +55,14 @@ def objective_frame(manifest: object, rows: Sequence[Mapping[str, object]]) -> p
     return pl.DataFrame([dict(row) for row in rows], schema_overrides=overrides)
 
 
+def restored_log(csv_path: Path, rows: int, overrides: Mapping[str, type[pl.DataType]], parameters: Collection[str]) -> pl.DataFrame:
+    log = pl.read_csv(csv_path, n_rows=rows, schema_overrides=dict(overrides)).head(rows)
+    text = [name for name, dtype in log.schema.items() if dtype == pl.String and name not in overrides and name not in parameters]
+    empty = [name for name in text if log[name].null_count() == log.height]
+    numeric = [name for name in text if name not in empty and log[name].eq('nan').any() and log[name].cast(pl.Float64, strict=False).null_count() == log[name].null_count()]
+    return log.with_columns(*(pl.lit(None).alias(name) for name in empty), *(pl.col(name).cast(pl.Float64) for name in numeric))
+
+
 def validate_objective_header(manifest: object, header: Sequence[str] | None) -> None:
     objective = run_objective(manifest)
     if objective is not None and objective.column not in (header or ()):
@@ -79,5 +87,5 @@ def validate_objective_resume(manifest: object, metadata: Mapping[str, object], 
             validate_objective_header(manifest, next(csv.reader(stream), None))
 
 
-__all__ = ['add_objective_metadata', 'finalize_objective_result', 'objective_frame', 'run_objective',
+__all__ = ['add_objective_metadata', 'finalize_objective_result', 'objective_frame', 'restored_log', 'run_objective',
            'validate_objective_header', 'validate_objective_reducers', 'validate_objective_resume']
