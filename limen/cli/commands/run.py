@@ -7,6 +7,7 @@ from typing import Any
 
 import click
 
+from limen.cli.commands._export_results import export_results
 from limen.cli.commands._load_yaml import load_and_validate
 from limen.cli.commands.profile import format_space
 from limen.experiment.experiment_core import UniversalExperimentLoop
@@ -106,10 +107,7 @@ def run_experiment(yaml_path: Path,
             click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
             return False
 
-        if uel_cfg.get('output_format', 'csv') == 'parquet' and uel.experiment_log is not None:
-            parquet_path = results_dir / 'results.parquet'
-            uel.experiment_log.write_parquet(str(parquet_path))
-            click.echo(f"  Parquet → {parquet_path}")
+        export_results(uel_cfg, uel.experiment_log, results_dir)
 
         click.secho('  ✓ Experiment complete', fg='green')
 

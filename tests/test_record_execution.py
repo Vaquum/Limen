@@ -2,6 +2,7 @@ import gzip
 from limen.experiment import _round_storage as _storage
 import json
 import math
+import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -9,6 +10,8 @@ import numpy as np
 import polars as pl
 import pytest
 from click.testing import CliRunner
+from polars.testing import assert_frame_equal
+from threadpoolctl import threadpool_limits
 from ruamel.yaml import YAML
 
 from limen.backtest._snapshot_ledger import snapshot_ledger
@@ -255,41 +258,154 @@ def test_python_resume_preserves_setting_and_rounds(record_execution, legacy_mar
                 _assert_aligned_market(record, recorded_bars)
 
 
-def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypatch):
-    config = _config()
+def _assert_export_matches(path, expected):
+    parquet = pl.read_parquet(path / 'results.parquet')
+    assert set(parquet.columns) == set(expected.columns)
+    assert parquet.height == expected.height
+    csv = pl.read_csv(path / 'results.csv', schema_overrides={
+        name: dtype for name, dtype in expected.schema.items() if dtype != pl.Null
+    })
+    assert set(csv.columns) == set(expected.columns)
+    assert csv.height == expected.height
+    columns = [name for name in expected.columns
+               if name != 'execution_time' and expected[name].null_count() != expected.height]
+    assert_frame_equal(parquet.select(columns), expected.select(columns), check_exact=True)
+    assert_frame_equal(csv.select(columns), expected.select(columns), check_exact=True)
+    for name in expected.columns:
+        if name != 'execution_time' and expected[name].null_count() == expected.height:
+            assert parquet[name].null_count() == expected.height
+            assert csv[name].null_count() == expected.height
+
+
+@pytest.mark.parametrize('workers, output_format, kind', (
+    (1, 'parquet', 'binary'), (2, 'parquet', 'binary'),
+    (1, 'parquet', 'ridge'), (1, 'csv', 'ridge'), (1, None, 'ridge'),
+))
+def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypatch,
+                                             workers, output_format, kind):
+    if kind == 'binary':
+        from tests.test_resume_metric_types import _config as metric_config
+        config = metric_config()
+    else:
+        config = _config()
+        config['sfd']['params']['max_iter'] = [None, 1000]
     path = tmp_path / 'experiment'
-    config['uel'].update(output_path=str(path), record_execution=True, recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True))
+    config['uel'].update(
+        output_path=str(path), n_permutations=4, workers=workers,
+        feedback_interval=1, checkpoint_interval=1,
+        record_execution=True, record_model_outputs=True,
+        recording=dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True),
+    )
+    if output_format is None:
+        config['uel'].pop('output_format', None)
+    else:
+        config['uel']['output_format'] = output_format
     yaml_path = tmp_path / 'experiment.yaml'
-    with yaml_path.open('w') as handle:
-        YAML().dump(config, handle)
+    YAML().dump(config, yaml_path)
     monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_spot_klines))
     original_run = UniversalExperimentLoop.run
+    stop_at = 2
 
     def interrupted_run(loop, *args, **kwargs):
-        _stop_after_first(loop)
+        def stop(log, _msq):
+            if log.height == stop_at:
+                loop._shutdown_requested = True
+        loop._intra_callback = stop
         return original_run(loop, *args, **kwargs)
 
     runner = CliRunner()
+
+    def invoke(*args):
+        with threadpool_limits(limits=1):
+            return runner.invoke(cli, ['run', '--no-progress-bar', *args])
+
     with monkeypatch.context() as context:
         context.setattr(UniversalExperimentLoop, 'run', interrupted_run)
-        result = runner.invoke(cli, ['run', '--no-progress-bar', str(yaml_path)])
+        result = invoke(str(yaml_path))
     assert result.exit_code == 1, result.output
     assert 'Interrupted; checkpoint retained' in result.output
+    assert 'Experiment complete' not in result.output
+    assert 'Parquet →' not in result.output
+    assert not (path / 'results.parquet').exists()
     before = _records(path)
-    assert len(before) == 1
-    result = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(path)])
+    assert len(before) == 2
+    checkpoint = json.loads((path / 'checkpoint.json').read_text())
+    assert checkpoint['metadata']['experiment_round'] == 1
+    paused = tmp_path / 'paused'
+    if kind == 'binary':
+        shutil.copytree(path, paused)
+    result = invoke('--resume', str(path))
     assert result.exit_code == 0, result.output
+    assert 'Experiment complete' in result.output
     records = _records(path)
-    assert len(records) == 2
-    assert records[0] == before[0]
+    assert len(records) == 4
+    assert records[:2] == before
     for record in records:
         assert record['execution'] is not None
         _assert_aligned_market(record, recorded_bars)
-    sensors = Trainer(path, data=recorded_bars).train([records[0]['round_id']])
-    assert len(sensors) == 1
-    assert sensors[0].predict(recorded_bars).reason is None
-    cohort = Cohort(experiment_log_path=str(path), permutation_ids=[records[0]['round_id']])
-    assert cohort.permutation_ids == [records[0]['round_id']]
+    if output_format == 'csv':
+        sensors = Trainer(path, data=recorded_bars).train([records[0]['round_id']])
+        assert len(sensors) == 1
+        assert sensors[0].predict(recorded_bars).reason is None
+        cohort = Cohort(experiment_log_path=str(path), permutation_ids=[records[0]['round_id']])
+        assert cohort.permutation_ids == [records[0]['round_id']]
+    if output_format != 'parquet':
+        assert not (path / 'results.parquet').exists()
+        assert 'Parquet →' not in result.output
+        return
+
+    assert f'Parquet → {path / "results.parquet"}' in result.output
+    assert result.output.index('Parquet →') < result.output.index('Experiment complete')
+    control = tmp_path / 'control'
+    config['uel']['output_path'] = str(control)
+    control_yaml = tmp_path / 'control.yaml'
+    YAML().dump(config, control_yaml)
+    result = invoke(str(control_yaml))
+    assert result.exit_code == 0, result.output
+    expected = pl.read_parquet(control / 'results.parquet')
+    assert expected['_round_index'].to_list() == [0, 1, 2, 3]
+    if kind == 'binary':
+        from tests.test_resume_metric_types import METRICS
+        assert any(expected.head(2)[name].is_nan().any() for name in METRICS)
+    else:
+        assert expected['max_iter'].to_list() == [None, None, 1000, 1000]
+        assert expected.schema['max_iter'] == pl.Int64
+    _assert_export_matches(path, expected)
+    assert [record['round_id'] for record in records] == expected['id'].to_list()
+
+    checkpoint = json.loads((path / 'checkpoint.json').read_text())
+    assert checkpoint['msq_state']['yielded_count'] == 4
+    writes = []
+    write_parquet = pl.DataFrame.write_parquet
+
+    def observe_export(frame, file, *args, **kwargs):
+        if str(file) == str(path / 'results.parquet'):
+            writes.append(frame.height)
+        return write_parquet(frame, file, *args, **kwargs)
+
+    with monkeypatch.context() as context:
+        context.setattr(pl.DataFrame, 'write_parquet', observe_export)
+        result = invoke('--resume', str(path))
+    assert result.exit_code == 0, result.output
+    assert writes == [4]
+    assert 'Parquet →' in result.output
+    assert _records(path) == records
+    _assert_export_matches(path, expected)
+
+    if kind == 'binary':
+        parquet = paused / 'results.parquet'
+        shutil.copy2(path / 'results.parquet', parquet)
+        untouched = (parquet.read_bytes(), parquet.stat().st_mtime_ns)
+        stop_at = 3
+        with monkeypatch.context() as context:
+            context.setattr(UniversalExperimentLoop, 'run', interrupted_run)
+            result = invoke('--resume', str(paused))
+        assert result.exit_code == 1, result.output
+        assert 'Interrupted; checkpoint retained' in result.output
+        assert 'Experiment complete' not in result.output
+        assert 'Parquet →' not in result.output
+        assert len(_records(paused)) == 3
+        assert (parquet.read_bytes(), parquet.stat().st_mtime_ns) == untouched
 
 
 @pytest.mark.parametrize('unavailable', ('prices', 'inline', 'custom'))

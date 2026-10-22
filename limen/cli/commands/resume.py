@@ -4,6 +4,7 @@ from typing import Any
 
 import click
 
+from limen.cli.commands._export_results import export_results
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
 from limen.yaml.compiler import CompiledSFD
@@ -81,6 +82,7 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
         click.secho(f'  ✗ Experiment failed: {exc}', fg='red')
         return False
 
+    export_results(uel_cfg, uel.experiment_log, results_dir)
     click.secho('  ✓ Experiment complete', fg='green')
     return True
 

@@ -266,6 +266,38 @@ def test_cli_run_resume_exits_0_on_success() -> None:
         assert result.exit_code == 0
 
 
+def test_cli_resume_parquet_preserves_none_log_guard() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['output_format'] = 'parquet'
+    with _make_results_dir(yaml_reference=dict(yaml_dict)) as directory:
+        with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
+            mock_uel.return_value.interrupted = False
+            mock_uel.return_value.experiment_log = None
+            result = CliRunner().invoke(cli, ['run', '--resume', directory])
+        assert result.exit_code == 0, result.output
+        assert 'Experiment complete' in result.output
+        assert 'Parquet →' not in result.output
+        assert not (Path(directory) / 'results.parquet').exists()
+
+
+def test_cli_resume_parquet_write_error_propagates() -> None:
+    yaml_dict, _ = parse(_MINIMAL_ML_YAML)
+    yaml_dict['uel']['output_format'] = 'parquet'
+    error = OSError('Parquet write failed')
+    with _make_results_dir(yaml_reference=dict(yaml_dict)) as directory:
+        with patch('limen.cli.commands.resume.UniversalExperimentLoop') as mock_uel:
+            mock_uel.return_value.interrupted = False
+            write = mock_uel.return_value.experiment_log.write_parquet
+            write.side_effect = error
+            result = CliRunner().invoke(cli, ['run', '--resume', directory])
+            write.assert_called_once_with(str(Path(directory) / 'results.parquet'))
+        assert result.exit_code != 0
+        assert result.exception is error
+        assert 'Experiment complete' not in result.output
+        assert 'Parquet →' not in result.output
+        assert 'Experiment failed:' not in result.output
+
+
 def test_cli_run_resume_calls_uel_run_with_resume_true() -> None:
     yaml_dict, _ = parse(_MINIMAL_ML_YAML)
     with _make_results_dir(yaml_reference=dict(yaml_dict), target_permutations=20) as _tmpdir:
