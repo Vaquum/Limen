@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import datetime
+from datetime import date, datetime, timezone
 from typing import Protocol, TypeVar, cast
 import polars as pl
 
@@ -15,6 +15,30 @@ from limen.sfd.rule_based.config import RuleBasedConfig
 from limen.experiment._walk_forward_split import WalkForwardConfig
 
 _M = TypeVar('_M')
+
+
+def admit_native_date_ends(dates: tuple[date, ...] | None,
+                           data_source: SourceConfig | None, test_source: SourceConfig | None) -> None:
+    '''Refuse declared native bars whose nominal support crosses a date-window end.'''
+    if dates is None:
+        return
+    from limen.data import HistoricalData
+    for source_name, source in (('data_source', data_source), ('test_data_source', test_source)):
+        if source is None or getattr(source.method, '__func__', source.method) is not HistoricalData.get_spot_klines:
+            continue
+        interval = source.params.get('kline_size')
+        if interval is None:
+            interval = 60
+        if type(interval) is not int or interval < 1:
+            raise ValueError(f'Manifest {source_name} get_spot_klines kline_size must be a positive integer')
+        for name, end in zip(('train_end', 'val_end', 'test_end'), dates[1::2], strict=True):
+            stamp = end if isinstance(end, datetime) else datetime.combine(end, datetime.min.time(), timezone.utc)
+            if stamp.utcoffset() is None:
+                raise TypeError(f'Manifest {source_name} {name}={end!r} must be timezone-aware for native spot klines')
+            elapsed = stamp.astimezone(timezone.utc) - datetime(1970, 1, 1, tzinfo=timezone.utc)
+            end_ns = ((elapsed.days * 86400 + elapsed.seconds) * 1_000_000 + elapsed.microseconds) * 1000
+            if end_ns % (interval * 1_000_000_000):
+                raise ValueError(f'Manifest {source_name} {name}={end!r} must align to the UTC Unix-epoch grid for get_spot_klines kline_size={interval} seconds')
 
 
 class RulePreparation(Protocol):

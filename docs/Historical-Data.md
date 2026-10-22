@@ -77,6 +77,8 @@ Important rules:
 - date-only `end_date_limit` values include the full named day
 - `start_date_limit` and `end_date_limit` may define a closed window only when `row_count_limit` is unset
 
+Aggregated bars use UTC buckets anchored at the Unix epoch, with `datetime` labelling the bucket start. Date filtering happens before aggregation, so fetch edges can contain partial buckets. [Manifest date windows](Experiment-Manifest.md) require aligned ends for directly declared native spot sources; use a day-dividing interval for ordinary YAML date bounds, or choose window ends on the interval's epoch grid.
+
 Returned columns:
 
 - `datetime`, `open`, `high`, `low`, `close`
