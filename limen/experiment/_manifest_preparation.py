@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Protocol, TypeVar, cast
+from datetime import date, datetime, timezone
+from typing import Protocol, TypeVar, cast
 import polars as pl
 
 from limen.backtest.trade_contract import TradePolicy
@@ -14,20 +14,16 @@ from limen.experiment._resolve_trade_policy import BacktestConfig, SourceConfig
 from limen.sfd.rule_based.config import RuleBasedConfig
 from limen.experiment._walk_forward_split import WalkForwardConfig
 
-if TYPE_CHECKING:
-    from limen.experiment.manifest_core import Manifest
-
 _M = TypeVar('_M')
 
 
-def admit_native_date_ends(manifest: Manifest) -> None:
+def admit_native_date_ends(dates: tuple[date, ...] | None,
+                           source: SourceConfig | None, test_source: SourceConfig | None) -> None:
     '''Refuse declared native bars whose nominal support crosses a date-window end.'''
-    dates = manifest.split_dates
     if dates is None:
         return
     from limen.data import HistoricalData
-    for source_name, source in (('data_source', manifest.data_source_config),
-                                ('test_data_source', manifest.test_data_source_config)):
+    for source_name, source in (('data_source', source), ('test_data_source', test_source)):
         if source is None or getattr(source.method, '__func__', source.method) is not HistoricalData.get_spot_klines:
             continue
         interval = source.params.get('kline_size')

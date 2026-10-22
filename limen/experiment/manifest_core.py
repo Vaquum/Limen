@@ -644,7 +644,7 @@ class Manifest:
         '''
 
         from limen.experiment._manifest_preparation import admit_native_date_ends
-        admit_native_date_ends(self)
+        admit_native_date_ends(self.split_dates, self.data_source_config, self.test_data_source_config)
         raw_data = _holdout.admit(self, raw_data)
         if self.pre_split_data_selector:
             func, base_params = self.pre_split_data_selector
@@ -1918,7 +1918,7 @@ def _run_prepare_setup(
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
     from limen.experiment._manifest_preparation import admit_native_date_ends, finish_prepare_setup
-    admit_native_date_ends(manifest)
+    admit_native_date_ends(manifest.split_dates, manifest.data_source_config, manifest.test_data_source_config)
     _allocation_stage.admit(manifest, round_params)
     raw_data = _holdout.admit(manifest, raw_data)
     resolved = None
