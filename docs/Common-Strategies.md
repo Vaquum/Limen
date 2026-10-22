@@ -175,7 +175,7 @@ The Compiled comparison evaluates the 1,464 hourly observations in November–De
 
 <!-- result: common-current-compiled interface=compiled scenario=search fields=common_baselines.rows[].strategy,common_baselines.rows[].num_executed_trades_test,common_baselines.rows[].pnl_per_bar_bps_test -->
 
-## Historical costed results: 2026-10-18
+## Recorded costed results: 2026-10-18
 
 The historical offline UEL campaign completed all eight candidates on the recorded 2024
 hourly BTCUSDT fixture. Its `8:1:2` row split allocated 6,388 bars to training,
