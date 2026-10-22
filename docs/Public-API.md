@@ -166,8 +166,8 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.calibration.ThresholdOptimizerProtocol.__call__`](Calibration.md#custom-calibrators-and-optimizers) | `signature` | `limen/calibration/pipeline.py` |
 | [`limen.calibration.apply_calibrated_predict`](Public-API.md#limencalibrationapply_calibrated_predict) | `signature` | `limen/calibration/pipeline.py` |
 | [`limen.calibration.fit_calibrator`](Public-API.md#limencalibrationfit_calibrator) | `signature` | `limen/calibration/pipeline.py` |
-| [`limen.calibration.grid_threshold_optimizer`](Calibration.md#endregion-calibration_modes) | `signature` | `limen/calibration/threshold.py` |
-| [`limen.calibration.sklearn_probability_calibrator`](Calibration.md#endregion-calibration_modes) | `signature` | `limen/calibration/probability.py` |
+| [`limen.calibration.grid_threshold_optimizer`](Calibration.md#grid_threshold_optimizer-parameters) | `signature` | `limen/calibration/threshold.py` |
+| [`limen.calibration.sklearn_probability_calibrator`](Calibration.md#custom-calibrators-and-optimizers) | `signature` | `limen/calibration/probability.py` |
 | [`limen.cli.cli`](Public-API.md#limenclicli) | `signature` | `limen/cli/main.py` |
 | [`limen.cohort.BUILTIN_SELECTORS`](Cohort.md#single-file-cohort-selectors) | `definition` | `limen/cohort/sfc/__init__.py` |
 | [`limen.cohort.Cohort`](Public-API.md#limencohort) | `signature` | `limen/cohort/cohort.py` |

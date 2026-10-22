@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "node scripts/lint-docs.mjs",
+    "lint": "node scripts/lint-docs.mjs && node scripts/check-links.mjs",
     "security:audit": "node ./scripts/audit-security.mjs",
     "start": "node scripts/serve-reader.mjs",
     "build": "node scripts/build-reader.mjs",
