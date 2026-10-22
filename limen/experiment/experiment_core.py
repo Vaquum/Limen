@@ -1,5 +1,6 @@
 import limen.experiment._holdout_research as _holdout
 import limen.experiment._round_storage as _storage
+import limen.experiment._serial_resume as _serial
 import csv
 import importlib.metadata
 import json
@@ -27,7 +28,7 @@ from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.errors import StrictModeError
 from limen.experiment._grid_resume import add_grid_metadata, complete_failed_header, validate_factorized_grid, validate_grid_resume
 from limen.experiment._recording import prepare_recording, project_record
-from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, restored_log, validate_objective_header, validate_objective_reducers, validate_objective_resume
+from limen.experiment._objective_run import add_objective_metadata, finalize_objective_result, objective_frame, validate_objective_header, validate_objective_reducers, validate_objective_resume
 from limen.experiment.feedback_controller import FeedbackController
 from limen.experiment.msq import MSQ
 from limen.experiment._filter_resume import validate_filter_resume
@@ -921,14 +922,9 @@ class UniversalExperimentLoop:
             raise ValueError(
                 f"UniversalExperimentLoop Cannot resume: results.csv not found in {self._experiment_dir}. Checkpoint indicates {start_round} rounds completed but no results log exists."
             )
-        string_params = {key: pl.String for key, values in domain.params.items() if self._factorize and all(isinstance(value, str) for value in values)}
-        experiment_log = restored_log(csv_path, start_round, {'_convergence_warning': pl.Boolean, **string_params}, {*domain.params, *(context_params or {})})
-        if '_convergence_warning' not in experiment_log.columns or experiment_log['_convergence_warning'].null_count() == experiment_log.height:
-            experiment_log = experiment_log.with_columns(pl.lit(None, dtype=pl.Boolean).alias('_convergence_warning'))
+        experiment_log, expected = _serial.restore_log(csv_path, round_data_path, start_round, domain.params, context_params, factorize=self._factorize)
         if getattr(self.manifest, 'ablation_config', None) is not None and '_dropped_features' not in experiment_log.columns:
             raise ValueError('UniversalExperimentLoop Cannot resume ablation results without _dropped_features; start a new experiment directory.')
-        expected = _storage.csv_prefix(round_data_path, start_round)
-        _storage.validate_prefix(round_data_path, expected)
         if self._walk_forward is not None:
             if experiment_log.height != start_round:
                 raise ValueError('Cannot resume split_walk_forward without every completed trial result')
