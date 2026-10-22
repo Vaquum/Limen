@@ -1,3 +1,4 @@
+# region declaration
 schema_version: "1.0"
 metadata:
   name: book_compiled_selection
@@ -66,3 +67,12 @@ uel:
   search_strategy:
     type: grid
   output_format: csv
+
+# region assessment
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  predict: true
+# endregion assessment
+# endregion declaration

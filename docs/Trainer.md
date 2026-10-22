@@ -1,6 +1,6 @@
 # Carry selected behavior into inference
 
-A Sensor makes fitted behavior available for later decisions. The [Python project](examples/python-research/README.md) wraps its retained evaluated models directly. The [Compiled project](examples/compiled-research/README.md) reconstructs selected recorded rounds through Trainer. These paths preserve different kinds of identity and evidence; calling a Manifest from Python remains Compiled Research.
+A Sensor makes fitted behavior available for later decisions. The [Python project](examples/python-research/README.md) wraps its retained evaluated models directly. The [Compiled project](examples/compiled-research/README.md) reconstructs selected recorded rounds through Trainer. These paths preserve different kinds of identity and evidence; Compiled Research uses YAML declarations and CLI commands.
 For [direction/sizing models](Reference-Architecture.md#direction-and-sizing), reconstruction checks frozen execution and learning identities before metric tolerance. Sensor retains signed size and actual decision availability. Altered source, factory, seed or execution assumptions require a new experiment.
 
 `Trainer` is Limen's reconstruction layer for finished experiment rounds. It takes a completed saved YAML experiment directory, reconstructs the manifest and round parameters, replays selected permutations, validates their metrics, and wraps the replayed models in reusable `Sensor` objects.
@@ -22,34 +22,21 @@ Metric validation is intersection-based: Trainer compares numeric, non-private m
 
 ## Prerequisites
 
-- a saved Compiled experiment directory, created by the CLI or a Python invocation preserving the same YAML definition
+- a saved Compiled experiment directory created by `limen run`
 - the experiment must be YAML-based and include `metadata.json["yaml_reference"]`
 - the SFD must use a reconstructable Manifest architecture that returns its native model; ML and rule-based architectures are supported
 
 ## Workflow
 
-The Compiled project creates a recorded selection run, ranks its validation returns and reconstructs the selected round. Use the complete project for the imports, declaration and recorded input checks:
+The Compiled project runs the selection YAML and calls `limen assess` with its result directory. The command applies the YAML's explicit validation ranking, reconstructs and validates the selected Sensors, then binds their Cohort. The Python signatures below are the reconstruction API reference.
 
-<!-- example: trainer-compiled-selection source=docs/examples/compiled-research/research.py region=experiment scenario=selection interface=compiled role=executed -->
-```python
-def run_research(data_dir, output_dir):
-    config = YAML(typ="safe").load(Path(__file__).with_name("selection.yaml"))
-    source = data_dir / "spot_15m_20250101_20250531.parquet"
-    expected = "eb3392d7b4ccbd17a45ad9996e1c51d0f1b004c908a4a0264ff7efa959f1999a"
-    if hashlib.sha256(source.read_bytes()).hexdigest() != expected:
-        raise ValueError("Recorded quarter-hour input digest differs")
-    # Resolve the driver's public --data-dir argument into the recorded run definition.
-    config["sfd"]["manifest"]["data_source"]["params"]["file_path_or_url"] = str(source.resolve())
-    compiled = CompiledSFD(config)
-    loop = UniversalExperimentLoop(
-        sfd=compiled, search_strategy=build_search_strategy(config),
-        experiment_dir=output_dir, yaml_reference=config,
-    )
-    loop.run("compiled-selection", n_permutations=2, workers=1,
-             post_processing=True, progress_bar=False)
-    selected = completed_log(loop).sort("val_backtest_total_return", descending=True)["id"].to_list()[:1]
-    sensors = Trainer(output_dir).train(selected)
-    return loop, sensors, selected
+<!-- example: trainer-compiled-selection source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
 ```
 
 In this workflow:
@@ -62,7 +49,7 @@ In this workflow:
 
 A reconstructed `RuleBasedStrategy` owns a copy of the selected strategy and its ordered leaf-predicate inputs. It emits binary positions without probabilities. Reconstruction replays the original metrics; live prediction evaluates the stored rule without fitting it again. Ordinary recorded rounds and currently qualified walk-forward folds use the same Trainer routes and evidence requirements as other native models.
 
-Use the same [recorded selection workflow](#workflow): construct Trainer from the completed rule experiment, pass the selected round ID to `train`, then pass raw history to the returned Sensor. The source-bound [Trainer](#training-and-validation) and [Sensor API](#sensor-inference-api) below give the exact calls.
+Use the same [recorded selection workflow](#workflow) for rule-based YAML. Component authors can use the Trainer and Sensor API signatures below directly; these optional API calls are outside the Compiled authoring workflow.
 
 Pass the completed rule experiment directory, its selected round ID, and recorded or fresh raw bars with the original source schema. Default artifacts suffice for ordinary reconstruction; a fold still requires its original opt-in promotion evidence. `train([id], fold=k)` never manufactures missing evidence.
 
@@ -92,6 +79,8 @@ Trainer reruns:
 with the original round parameters and wraps the resulting model in a `Sensor`. If `results.csv` is present, it also compares the resulting metrics against matching numeric columns in the original experiment log.
 
 Deterministic models require near-exact metric matches. Stochastic models use a scaled tolerance.
+
+Among compared numeric values, NaN matches only NaN and infinities match only with the same sign. Other finite/non-finite transitions fail before Sensor construction. This applies only to operands that pass the existing numeric guards; a metric column inferred as text while loading CSV remains skipped.
 
 If validation fails, Trainer raises `ReconstructionError`.
 
@@ -389,24 +378,11 @@ Use `Trainer(directory, data=recorded_source).train([permutation_id], fold=3)` t
 
 This is a validated refit, not restoration of saved weights. Optional recorded prediction vectors are observations, not a promise of identical historical stochastic weights. Repeated full-batch predictions must match exactly; row/batch scalar comparisons allow 1e-6 absolute and relative floating-point roundoff. Model output meaning comes from the optional immutable class declaration `inference_output = ('binary', True)`, `('continuous', False)` or `('target_exposure', False)`; unknown meaning still permits stable scalar Sensor inference. Necessary missing model, clock or row-membership evidence fails visibly.
 
-<!-- example: trainer-compiled-folds source=docs/examples/compiled-research/scenarios.py region=walk_forward scenario=walk_forward interface=compiled role=executed -->
-```python
-def walk_forward(data_dir, output):
-    config = configuration('walk_forward', data_dir)
-    bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
-    loop = execute(config, output / 'experiment', bars=bars)
-    round_id = research_project.completed_log(loop)['id'][0]
-    trainer = Trainer(output / 'experiment', data=bars)
-    sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
-    cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
-    cohort.set_members(sensors)
-    metadata = [fold_metadata(sensor) for sensor in sensors]
-    round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
-            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
-            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
-            'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
-            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+<!-- example: trainer-compiled-folds source=docs/examples/compiled-research/run.sh region=walk_forward scenario=walk_forward interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/walk_forward.yaml
+limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward
+limen run --no-progress-bar compiled-research/acceptance.yaml
 ```
 
 The returned Sensor exposes read-only `fold`, `n_folds`, `provenance_digest`, `fitting_cutoff`, `selection_cutoff` and a deep-copied `fold_provenance`. The selection cutoff is the maximum timestamp in the original campaign source plus its native interval, covering competitors and selector information. Every earlier timestamp is guarded, including gaps and warm-up rows. Native input requires ordered unique nonnull UTC timestamps on the recorded grid; whole missing bars are allowed. Invalid clocks fail before inference recovery. Formed-bar failures preserve the actual formed decision clock once established. Ordinary and Python inference retain their contracts. Use [qualified compiled Cohort selection](Cohort.md#recorded-walk-forward-members) to compose compatible binary folds and ordinary members. Legacy Cohort binding and Cohort.from_python still reject fold-bearing Sensors.

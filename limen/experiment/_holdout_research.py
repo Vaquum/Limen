@@ -16,6 +16,7 @@ import polars as pl
 
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
 from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec
+from limen.experiment._resolve_trade_policy import holdout_structural
 
 class ResearchManifest(SourceManifest, Protocol):
     @property
@@ -65,6 +66,7 @@ def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding
         raise ValueError('Holdout manifest binding/revision changed; construct a new manifest')
     if binding is not None:
         vars(manifest)['_holdout_binding'] = binding
+        vars(manifest)['_holdout_interval_seconds'] = binding.interval_seconds
     return binding
 
 
@@ -85,9 +87,7 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
         raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
     if any(name in vars(model) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model', 'compute_test_bars', 'fetch_data')):
         raise ValueError('Holdout research refuses replaced manifest methods')
-    config = model.backtest_config
-    if config is not None and (getattr(config, 'product', None) is not None or getattr(config, 'prediction_mode', 'binary') != 'binary' or getattr(config, 'execution_data_source', None) is not None or getattr(config, 'funding', None) is not None):
-        raise ValueError('Holdout research does not support event/funding/alternate execution sources')
+    holdout_structural(model)
     if model.split_dates is not None:
         for value in model.split_dates:
             if not isinstance(value, (date, datetime)):

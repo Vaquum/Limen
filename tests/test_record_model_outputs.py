@@ -317,7 +317,8 @@ def test_cli_records_and_resumes_independently_of_execution(record_execution, re
     with monkeypatch.context() as context:
         context.setattr(UniversalExperimentLoop, 'run', interrupted_run)
         result = runner.invoke(cli, ['run', '--no-progress-bar', str(yaml_path)])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
+    assert 'Interrupted; checkpoint retained' in result.output
     before = _records(path)
     assert len(before) == 1
     result = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(path)])

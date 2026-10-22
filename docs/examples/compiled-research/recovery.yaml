@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_recovery
@@ -9,6 +10,7 @@ sfd:
       method: limen.data.HistoricalData.get_any_file
       params:
         file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+        expected_sha256: a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72
     split_dates:
       train_start: '2024-01-01'
       train_end: '2024-01-15'
@@ -45,8 +47,16 @@ sfd:
     - 2.0
     random_state: [42]
 uel:
+  output_path: compiled-recovery
   n_permutations: 4
   search_strategy:
     type: grid
   output_format: csv
   checkpoint_interval: 1
+
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+# endregion declaration

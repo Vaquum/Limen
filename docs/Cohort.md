@@ -277,29 +277,16 @@ remain `None`. Ordinary persisted rounds and [qualified binary folds](#recorded-
 
 ## Recorded walk-forward members
 
-Choose explicit zero-based folds with three-element selections; ordinary selections keep two elements. Reconstruct each selected fold through its own Trainer, then bind the returned Sensors:
+Compiled Research declares zero-based fold indices in `assessment.folds`. `limen assess` reconstructs the selected fold Sensors and binds their Cohort:
 
-<!-- example: cohort-compiled-recorded-folds source=docs/examples/compiled-research/scenarios.py region=walk_forward scenario=walk_forward interface=compiled role=executed -->
-```python
-def walk_forward(data_dir, output):
-    config = configuration('walk_forward', data_dir)
-    bars = pl.read_parquet(config['sfd']['manifest']['data_source']['params']['file_path_or_url'], n_rows=384)
-    loop = execute(config, output / 'experiment', bars=bars)
-    round_id = research_project.completed_log(loop)['id'][0]
-    trainer = Trainer(output / 'experiment', data=bars)
-    sensors = [trainer.train([round_id], fold=index)[0] for index in range(2)]
-    cohort = Cohort(rounds=[(output / 'experiment', round_id, index) for index in range(2)])
-    cohort.set_members(sensors)
-    metadata = [fold_metadata(sensor) for sensor in sensors]
-    round_records = output / 'experiment/round_data.jsonl.gz'
-    return {'acceptance': acceptance(data_dir, output / 'acceptance'),
-            'rounds': research_project.completed_log(loop).height, 'folds': loop.fold_results.select('fold', 'id', 'backtest_total_return', 'val_backtest_total_return', 'val_score', 'optimal_threshold').to_dicts(),
-            'objective': research_project.completed_log(loop)['val_backtest_total_return'][0],
-            'round_records': {'path': 'experiment/round_data.jsonl.gz', 'sha256': hashlib.sha256(round_records.read_bytes()).hexdigest()},
-            'member_folds': [row['fold'] for row in metadata], 'fitting_cutoffs': [row['fitting'] for row in metadata], 'selection_cutoffs': [row['selection'] for row in metadata], 'member_ids': cohort.member_ids, 'origin': 'qualified recorded folds'}
+<!-- example: cohort-compiled-recorded-folds source=docs/examples/compiled-research/run.sh region=walk_forward scenario=walk_forward interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar compiled-research/walk_forward.yaml
+limen assess compiled-research/walk_forward.yaml --results results/dev/compiled-walk_forward
+limen run --no-progress-bar compiled-research/acceptance.yaml
 ```
 
-Selection and binding perform no fitting or source fetching. Missing files raise `FileNotFoundError`; malformed JSON, versioned witnesses or disagreeing metadata/YAML declarations raise `ReconstructionError` naming the source. Invalid selections and incompatible/bound members raise `ValueError`. Folds require nonnegative literal integers: booleans, floats, nulls and out-of-range indices reject. An unqualified walk-forward round rejects with `supply fold`; an ordinary source cannot take a fold index.
+For native API integration, three-element selections identify folds; ordinary selections keep two elements. Selection and binding themselves perform no fitting or source fetching; Trainer performs the checked refit used by the CLI. Missing files raise `FileNotFoundError`; malformed JSON, versioned witnesses or disagreeing metadata/YAML declarations raise `ReconstructionError` naming the source. Invalid selections and incompatible/bound members raise `ValueError`. Folds require nonnegative literal integers: booleans, floats, nulls and out-of-range indices reject. An unqualified walk-forward round rejects with `supply fold`; an ordinary source cannot take a fold index.
 
 Fold-containing `member_ids` retain caller order and mix `(manifest_id, permutation_id, fold, provenance_digest)` with ordinary `(manifest_id, permutation_id)` pairs. The digest is the Sensor's raw 64-character hexadecimal selected-artifact digest. Same trial, distinct folds are distinct members. Duplicate keys reject across copies and aliases; different evidence for the same trial/fold raises `Cohort evidence conflict`. Binding checks every member key, architecture and native binary declaration before matching fold count and exact selected-artifact digest. A wrong digest cannot bind by matching the trial/fold key alone. Transparent attribute-forwarding wrappers may bind; hiding fold identity cannot convert a fold Sensor into an ordinary member.
 
@@ -493,7 +480,7 @@ Alias of `predict_all(raw_klines)`. Returns `list[BarPrediction]`, one entry per
 
 Use each project's entry point, matching wheel and recorded input bundle. Their model source, preparation helpers and inputs travel together. A chapter excerpt is not a standalone replacement for that project.
 
-The two complete project functions above are the executable examples. The Python selection proof checks retained object identity, mean aggregation and every causal inference prefix without refitting. The Compiled walk-forward proof checks both reconstructed fold identities, fitting/selection cutoffs, recorded fold membership and objective metrics. It does not claim a multi-directory selection or future fold-Cohort inference run. Those extension contracts are described by the source-bound API and identity rules above.
+The Python function and Compiled CLI commands above are the executable examples. The Python selection proof checks retained object identity, mean aggregation and every causal inference prefix without refitting. The Compiled walk-forward proof checks both reconstructed fold identities, fitting/selection cutoffs, recorded fold membership and objective metrics. The CLI also writes batch fold-Cohort predictions from the declared inference source. This does not establish future performance or a multi-directory selection. Those extension contracts are described by the source-bound API and identity rules above.
 
 An explicit cross-directory selected list remains caller-owned; changing a search seed does not establish distinct fitted models or non-overlapping parameter rounds. Selectors may still choose IDs independently
 within each directory before assembling that list. For a parent/narrowed

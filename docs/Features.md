@@ -26,13 +26,21 @@ def features(bars, window):
 
 The [Compiled project](examples/compiled-research/README.md) declares `roc` in its Manifest. It produces percent-valued momentum as `roc_1`, then the Manifest carries that feature through fitting and reconstruction. These two projects use different units and models; their scores are not a controlled comparison.
 
-<!-- example: features-compiled-momentum source=docs/examples/compiled-research/selection.yaml region=momentum_indicator scenario=selection interface=compiled role=executed -->
+<!-- example: features-compiled-momentum source=docs/examples/compiled-research/research.yaml region=features scenario=selection interface=compiled role=executed -->
 ```yaml
-    indicators:
-      - func: limen.indicators.roc
+    features:
+      - func: limen.features.lag_range
         params:
-          period: 1
+          col: roc_1
+          start: 1
+          end: 3
           group: momentum
+      - func: limen.features.fractional_diff
+        params:
+          d: 0.4
+          cols: [close]
+          threshold: 0.05
+          group: price
 ```
 
 The excerpts belong to the complete selection runs, with the dependencies and recorded inputs described in each project. The helper tables below describe alternatives; a listed helper is not a claim that the selection run invokes it. Trade-derived helpers require the columns named in their notes.
@@ -279,7 +287,7 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 | `entry_score_microstructure` | `entry_score`, `entry_score_base` | Microstructure timing score from momentum, spread, candle position, and volume spikes. |
 | `feature_aliases` | `dynamic_target_feature`, `entry_score_feature`, `momentum_score_feature`, `regime_high_feature`, `regime_low_feature`, `regime_normal_feature`, `vol_60h_feature`, `vol_percentile_feature` | Null-filled aliases snapshotting the family for model consumption. |
 | `log_returns` | `log_returns` | Logarithmic returns of the close series. |
-| `market_regime` | `sma_20`, `sma_50`, `trend_strength`, `volatility_ratio`, `volume_sma`, `volume_regime`, `market_favorable` | Trend-strength and volume-regime favorability score. |
+| `market_regime` | `sma_20`, `sma_50`, `trend_strength`, `volatility_ratio`, `sma_48`, `volume_sma`, `volume_regime`, `market_favorable` | Trend-strength and volume-regime favorability score. |
 | `micro_momentum` | `micro_momentum` | Short-horizon price momentum. |
 | `momentum_confirmation` | `momentum_score` | Momentum confirmation score from recent price changes. |
 | `momentum_periods` | `momentum_<period>` per configured period | Momentum over multiple horizons. |
@@ -295,6 +303,8 @@ This family builds volatility-conditioned targets, stops, and regime weights, pl
 | `volatility_weight` | `volatility`, `volatility_weight` | Inverse-volatility weighting factor. |
 | `volume_spike` | `volume_spike` | Volume relative to a rolling-statistics baseline. |
 | `volume_trend` | `volume_trend` | Short-term versus long-term volume average trend. |
+
+`market_regime` binds `sma_20` and `sma_50` to the selected short and long close averages, even for equal or swapped periods. `volume_sma` is the selected volume average. Fixed aliases take precedence over conflicting close `sma_<period>` names; close outputs take precedence over the volume `sma_<lookback>` output. Nonconflicting parameterized outputs remain in their existing order. Incoming `sma_20`, `sma_50` or `volume_sma` columns are rejected, including repeated application. These bindings apply to this call; later transforms retain their own output behavior. SMA warmup uses NaN, while the derived regime features use null.
 
 ## Choosing between indicators and features
 

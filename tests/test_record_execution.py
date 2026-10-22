@@ -273,7 +273,8 @@ def test_cli_recording_continues_after_resume(recorded_bars, tmp_path, monkeypat
     with monkeypatch.context() as context:
         context.setattr(UniversalExperimentLoop, 'run', interrupted_run)
         result = runner.invoke(cli, ['run', '--no-progress-bar', str(yaml_path)])
-    assert result.exit_code == 0, result.output
+    assert result.exit_code == 1, result.output
+    assert 'Interrupted; checkpoint retained' in result.output
     before = _records(path)
     assert len(before) == 1
     result = runner.invoke(cli, ['run', '--no-progress-bar', '--resume', str(path)])

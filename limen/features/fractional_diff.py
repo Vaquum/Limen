@@ -1,11 +1,8 @@
-import logging
 from decimal import Decimal
 
 import numpy as np
 import numpy.typing as npt
 import polars as pl
-
-logger = logging.getLogger(__name__)
 
 FRACDIFF_SUFFIX = '_fracdiff'
 
@@ -77,11 +74,12 @@ def fractional_diff(data: pl.DataFrame,
             When d=0, the new columns are copies of the originals.
 
     Raises:
-        ValueError: If cols is None or empty, d is non-finite or negative,
-            threshold is non-finite or nonpositive, or a recurrence weight is non-finite.
+        ValueError: If cols is None, empty, a string, or names missing columns,
+            d is non-finite or negative, threshold is non-finite or nonpositive,
+            or a recurrence weight is non-finite.
     '''
 
-    if not cols:
+    if isinstance(cols, str) or not cols:
         raise ValueError('fractional_diff cols must be a non-empty list of column names')
 
     if not (isinstance(d, int) or np.isfinite(d)) or d < 0:
@@ -91,27 +89,21 @@ def fractional_diff(data: pl.DataFrame,
         raise ValueError(f"fractional_diff threshold must be finite and positive, got {threshold}")
 
     schema_names = data.collect_schema().names()
+    missing = [col for col in cols if col not in schema_names]
+    if missing:
+        raise ValueError(f"fractional_diff columns not found in input schema: {missing}")
 
     if d == 0.0:
-        for col in cols:
-            if col not in schema_names:
-                logger.warning('Column %s not found, skipping fractional diff', col)
         new_cols = [
             pl.col(col).cast(pl.Float64).alias(f"{col}{FRACDIFF_SUFFIX}")
-            for col in cols if col in schema_names
+            for col in cols
         ]
-        if new_cols:
-            data = data.with_columns(new_cols)
-        return data
+        return data.with_columns(new_cols)
 
     weights = _get_weights_ffd(d, threshold)
 
     new_cols: list[pl.Expr] = []
     for col in cols:
-        if col not in schema_names:
-            logger.warning('Column %s not found, skipping fractional diff', col)
-            continue
-
         w = weights
         new_cols.append(
             pl.col(col).cast(pl.Float64).map_batches(
@@ -120,10 +112,7 @@ def fractional_diff(data: pl.DataFrame,
             ).alias(f"{col}{FRACDIFF_SUFFIX}")
         )
 
-    if new_cols:
-        data = data.with_columns(new_cols)
-
-    return data
+    return data.with_columns(new_cols)
 
 
 def _ffd_convolve(series: pl.Series, weights: npt.NDArray[np.float64]) -> pl.Series:
@@ -190,9 +179,6 @@ def find_min_d(data: pl.DataFrame,
     for index in range(count):
         d = float(start + index * increment)
         diffed = fractional_diff(data, d=d, cols=[col], threshold=threshold)
-
-        if fracdiff_col not in diffed.collect_schema().names():
-            continue
 
         series = diffed[fracdiff_col]
         if series.drop_nulls().len() > 0:

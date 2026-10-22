@@ -10,7 +10,7 @@
 
 ## In the research projects
 
-The [Compiled project](../../docs/examples/compiled-research/README.md) `command_line` scenario validates, commits, forks, runs and restores its declared experiment. Its source keeps the installed CLI and the compiler on the same definition; a YAML declaration invoked through Python remains Compiled Research.
+The [Compiled project](../../docs/examples/compiled-research/README.md) `command_line` scenario validates, commits, forks, runs and restores its declared experiment. Its source keeps the installed CLI and the compiler on the same definition; Compiled Research authors YAML and runs the CLI. Direct compiler APIs remain optional component integration.
 
 ## What this package owns
 
@@ -58,6 +58,7 @@ The package also owns `parser.py`, `schema.py`, `validator.py`, `resolver.py`, `
 yaml/
 ├── README.md
 ├── __init__.py
+├── _assessment_spec.py
 ├── _backtest_spec.py
 ├── _feature_shim_spec.py
 ├── _objective_spec.py

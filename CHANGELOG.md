@@ -1921,5 +1921,23 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 
 ## [5.45.25] - 2026-10-21
 
-- Reject mapping-valued YAML keys before constructing them; return located parse errors for both retained fuzz timeout units while preserving ordinary manifest parsing.
-- Preserve malformed-tag diagnostics and report mapping-key locations through tagged outer mappings.
+- Retire the slice delivery regime: remove the slice template, slice gate and workflows, and the interface-contract system; add the `pr_checks_prd` gate so every PR closes one open issue and `feat` PRs close a PRD.
+
+## [5.45.26] - 2026-10-21
+
+- Repair and collect the supply-chain contract test, add a Task issue template for non-feature work, and document the legacy branch-protection mirror.
+
+## [5.45.27] - 2026-10-21
+
+- Allow merging without rebasing onto latest main; retain conflict blocking, review dismissal, and all required checks.
+- Sync the ruleset snapshot and pinned live fixtures with the relaxed status check policy.
+
+## [5.45.29] - 2026-10-21
+
+- Preserve native LightGBM `best_iteration` across owned holdout copies instead of refusing it.
+- Bind `LogRegScaler` to the scaling rules it was fitted with, so frozen holdout state covers them and later rule changes cannot alter a frozen assessment.
+
+## [5.46.0] - 2026-10-21
+
+- Assess frozen event execution contracts in final holdout: admit pinned single-Sensor binary cash_spot/linear_perpetual economics from protected research through classified freeze, single event execution and versioned read-back; scenario reports stay schema-1 byte-identical.
+- Raise the suite runtime ceiling to 260s for measured suite growth (main observed up to 238s).

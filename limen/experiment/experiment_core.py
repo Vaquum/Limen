@@ -124,6 +124,10 @@ class UniversalExperimentLoop:
 
     check_parallel_admission = _parallel.admit_parallel
 
+    @property
+    def interrupted(self) -> bool:
+        return self._shutdown_requested
+
     @_holdout.run_guard
     def run(self, experiment_name: str, n_permutations: int = 10000,
             prep_each_round: bool = False, random_search: bool = True, maintain_details_in_params: bool = False,
@@ -133,10 +137,18 @@ class UniversalExperimentLoop:
             progress_bar: bool = True, record_execution: bool = False,
             record_model_outputs: bool = False, factorize: bool = False, workers: int | None = None,
             recording: Mapping[str, bool] | None = None) -> None:
+        applicable = ('predictions', 'alignment')
+        if resume and self.manifest is not None:
+            domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params
+            point = {key: values[0] for key, values in domains.items()} | (context_params or {})
+            if self.manifest.resolve_trade_policy(point) is not None:
+                applicable += ('trade_ledger',)
+            if self.manifest.split_walk_forward is not None:
+                applicable += ('fold_details',)
         self._recording = prepare_recording(recording, reference=self._yaml_reference,
                                             compiled_reference=self._compiled_yaml,
                                             directory=self._experiment_dir, has_search=self._search_strategy is not None,
-                                            resume=resume, acceptance=getattr(self.manifest, 'acceptance', None))
+                                            resume=resume, acceptance=getattr(self.manifest, 'acceptance', None), applicable=applicable)
         if self._recording is not None and self._yaml_reference is None:
             self._yaml_reference = self._compiled_yaml
         original_prep, original_model = _parallel.begin_run(self, workers, prep_each_round, resume, post_processing, factorize, context_params, (params, prep, model))
@@ -500,6 +512,16 @@ class UniversalExperimentLoop:
         csv_path = components['csv_path']
         round_data_path = components['round_data_path']
 
+        if resume and self._experiment_dir is not None and round_data_path is not None and csv_path.exists():
+            checkpoint = checkpoint_manager.validate(self._experiment_dir, content_hash=content_hash, strategy_type=strategy_type)
+            metadata_path = self._experiment_dir / 'metadata.json'
+            validate_walk_forward_resume(self.manifest, json.loads(metadata_path.read_text()) if metadata_path.exists() else {})
+            expected = _storage.csv_prefix(round_data_path, checkpoint['metadata']['experiment_round'] + 1)
+            _storage.validate_prefix(round_data_path, expected)
+            if expected:
+                with _storage.open_text(round_data_path, limit=len(expected)) as stream:
+                    for line in stream:
+                        self._validate_resume_payloads(json.loads(line))
         if _parallel.dispatch(self, components, n_permutations, context_params, resume, progress_bar):
             return
 
@@ -823,33 +845,43 @@ class UniversalExperimentLoop:
             'msq': msq,
             'feedback_controller': feedback_controller,
             'checkpoint_manager': checkpoint_manager,
-            'content_hash': CheckpointManager.compute_content_hash(self.params),
+            'content_hash': CheckpointManager.compute_content_hash(self.params) if self._experiment_dir is not None else None,
             'strategy_type': type(self._search_strategy).__name__,
             'csv_path': csv_path,
             'round_data_path': round_data_path,
         }
 
 
-    def _restore_checkpoint_state(self,
-                                   msq: MSQ,
-                                   domain: ParamDomain,
-                                   feedback_controller: FeedbackController,
-                                   checkpoint_manager: CheckpointManager,
-                                   *,
-                                   content_hash: str,
-                                   strategy_type: str,
-                                   csv_path: Path,
-                                   round_data_path: Path | None,
+    def _validate_resume_payloads(self, entry: Mapping[str, object]) -> None:
+        forward = None if self.manifest is None else self.manifest.split_walk_forward
+        message = 'Cannot resume a lighter recording policy: required recorded recovery evidence is missing' + (' for split_walk_forward' if forward is not None else '')
+        leaves = entry.get('folds') if forward is not None else [entry]
+        if not isinstance(leaves, list) or (forward is not None and len(cast(list[object], leaves)) != forward.n_folds):
+            raise ValueError(message)
+        parameters = cast(Mapping[str, object], entry.get('round_params', {}))
+        event = self.manifest is not None and self.manifest.resolve_trade_policy(parameters) is not None
+        for leaf in cast(list[object], leaves):
+            if not isinstance(leaf, Mapping):
+                raise ValueError(message)
+            record = cast(Mapping[str, object], leaf)
+            alignment, ledger = record.get('alignment'), record.get('trade_ledger')
+            if not isinstance(record.get('preds'), list) or not isinstance(alignment, Mapping) or not isinstance(cast(Mapping[str, object], alignment).get('missing_datetimes'), list):
+                raise ValueError(message)
+            if (event or 'trade_contract' in record) and (not self._recording or not self._recording['trade_ledger'] or not isinstance(ledger, Mapping) or not all(isinstance(cast(Mapping[str, object], ledger).get(key), list) for key in ('states', 'intents', 'fills', 'episodes', 'funding'))):
+                raise ValueError(message)
+
+    def _restore_checkpoint_state(self, msq: MSQ, domain: ParamDomain,
+                                   feedback_controller: FeedbackController, checkpoint_manager: CheckpointManager,
+                                   *, content_hash: str, strategy_type: str,
+                                   csv_path: Path, round_data_path: Path | None,
                                    retain_round_artifacts: bool) -> int:
 
 
         if self._experiment_dir is None or self._search_strategy is None:
             raise ValueError('UniversalExperimentLoop checkpoint restore requires experiment_dir and search_strategy')
 
-        checkpoint_data = self._resume_from_checkpoint(
-            self._experiment_dir, checkpoint_manager,
-            content_hash=content_hash, strategy_type=strategy_type,
-        )
+        checkpoint_data = self._resume_from_checkpoint(self._experiment_dir, checkpoint_manager,
+                                                      content_hash=content_hash, strategy_type=strategy_type)
         metadata_path = self._experiment_dir / 'metadata.json'
         metadata: dict[str, object] = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
         if metadata.get('record_execution', False) != self._record_execution:
@@ -867,9 +899,7 @@ class UniversalExperimentLoop:
             validate_factorized_grid(self._search_strategy)
 
         if 'feedback_controller_state' in checkpoint_data:
-            feedback_controller.set_state(
-                checkpoint_data['feedback_controller_state'],
-            )
+            feedback_controller.set_state(checkpoint_data['feedback_controller_state'])
 
         if 'pruning_strategy_states' in checkpoint_data:
             states = checkpoint_data['pruning_strategy_states']
@@ -880,9 +910,7 @@ class UniversalExperimentLoop:
             for ps, state in zip(self._pruning_strategies, states, strict=True):
                 ps.set_state(state)
 
-        start_round = (
-            checkpoint_data['metadata']['experiment_round'] + 1
-        )
+        start_round = checkpoint_data['metadata']['experiment_round'] + 1
         logger.info('Resuming from round %d', start_round)
 
         if not round_data_path or (not round_data_path.exists() and not csv_path.exists()):
@@ -910,11 +938,7 @@ class UniversalExperimentLoop:
             if not expected:
                 self._walk_forward.writer.clear()
         else:
-            loaded_rounds = self._load_round_data(
-                round_data_path,
-                up_to_round=start_round,
-                retain_round_artifacts=retain_round_artifacts,
-            )
+            loaded_rounds = self._load_round_data(round_data_path, up_to_round=start_round, retain_round_artifacts=retain_round_artifacts)
             if loaded_rounds < len(expected):
                 raise ValueError(
                     f"UniversalExperimentLoop Cannot resume: round_data.jsonl has {loaded_rounds} entries but checkpoint indicates {start_round} rounds completed."
@@ -924,9 +948,7 @@ class UniversalExperimentLoop:
 
         col = next((c for c in ('_param_hash', '_id') if c in experiment_log.columns), None)
         if col is not None:
-            self._search_strategy.rebuild_seen_from_log(
-                experiment_log[col].drop_nulls().to_list()
-            )
+            self._search_strategy.rebuild_seen_from_log(experiment_log[col].drop_nulls().to_list())
 
         if round_data_path.exists():
             self._truncate_round_data(round_data_path, start_round)
@@ -1054,15 +1076,9 @@ class UniversalExperimentLoop:
                     failed_round_params: list[dict[str, object]] | None = None) -> None:
 
         checkpoint_manager.save(
-            checkpoint_dir,
-            msq,
-            domain,
-            current_round,
-            target_permutations,
-            strategy_type=strategy_type,
-            content_hash=content_hash,
-            feedback_controller=feedback_controller,
-            pruning_strategies=pruning_strategies,
+            checkpoint_dir, msq, domain, current_round, target_permutations,
+            strategy_type=strategy_type, content_hash=content_hash,
+            feedback_controller=feedback_controller, pruning_strategies=pruning_strategies,
             failed_round_params=failed_round_params,
         )
 

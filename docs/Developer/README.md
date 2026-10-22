@@ -17,13 +17,13 @@ Before opening or updating a Limen PR:
 
 - read the relevant Limen page for the task
 - check the repo PR template and satisfy every applicable item
-- update the affected project source, docs and tests together; bump the version and changelog on every PR
+- update the affected project source, docs and tests together; version and changelog are cut at release time, not per PR
 
 ## Route by task
 
 | Task | Read this next | Why |
 |---|---|---|
-| planning or delivering research, maintenance or private prerequisites | [Research interface contract](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md#research-interface-contract) | Defines complete interface delivery, declarations, proof and parent progression. |
+| planning or delivering research, maintenance or private prerequisites | [Constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) | Defines the delivery laws: every PR closes one issue, `feat` work goes through a PRD. |
 | changing docs structure, navigation, or page roles | [Documentation System Contract](Documentation-System.md) | Defines the docs architecture, page types, site model, and rewrite rules. |
 | updating reducer behavior | [Pruning Strategies](Pruning-Strategies.md) | Defines reducer semantics, YAML shape, testing, and failure modes. |
 | updating or adding public functions, classes, or modules | [Writing Docstrings](Writing-Docstrings.md) | Defines Limen's docstring expectations and the repo's current house style. |
@@ -32,33 +32,27 @@ Before opening or updating a Limen PR:
 | changing release or publish-path controls | [Release Policy](Release-Policy.md) | Defines the publish-path gates, model authority boundary, release deliverables, and version-reuse rules. |
 | changing package metadata, artifacts, extras, or packaging gates | [Packaging](Packaging.md) | Defines the wheel/sdist, dependency, reproducibility, and provenance contract. |
 | measuring or optimizing indicator calculations | [Indicator Performance](Indicator-Performance.md#performance-measurements) | Records real-data timings, memory, exact equivalence and regression checks. |
-| deciding how to bump the version | [Semantic Versioning](../Semantic-Versioning.md) | Defines the Limen-local version surfaces and bump rules. |
+| cutting a release version | [Semantic Versioning](../Semantic-Versioning.md) | Defines the Limen-local version surfaces and release-time rules. |
 | assessing recorded known risk | [Technical Debt](../TechnicalDebt.md) | Tracks accepted debt, trigger conditions, and candidate remedies. |
 
 ## Contributor workflow
 
-The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canonical. Every implementation PR declares its Interface Contract, including maintenance and prerequisites. Issue forms require it; a PR can supply its own slice's missing section, while a parent's contract must persist in the parent issue. Neutral work may declare no research interfaces; it still satisfies ordinary slice proof and required checks.
+The [constitution](https://github.com/Vaquum/Limen/blob/main/CLAUDE.md) is canonical. Every PR closes exactly one issue — a PRD for `feat` work, any issue otherwise. All PRs satisfy the required checks.
 
 For research behavior changes:
 
-1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. A Manifest called from Python still follows the latter contract. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
+1. Identify the interface outcomes: caller-owned Python SFDs through UEL, or the Manifest/CLI contract for Compiled Research. Verify the Compiled claim through unchanged YAML and actual CLI execution; Python component APIs are optional integration surfaces. Confirm the source: bundled templates, direct `HistoricalData`, or caller-owned data.
 2. Confirm the signal layer: read the relevant [Indicators](../Indicators.md), [Features](../Features.md), [Transforms](../Transforms.md), and [Scalers](../Scalers.md) pages before changing prep.
 3. For Compiled Research prep, preserve split-first preparation, CCO behavior, strict-mode null handling, and train-fitted transformations. Python Research keeps methodology caller-owned.
 4. For target changes, read [Targets](../Targets.md); preserve training-only threshold fitting in the governed pipeline.
 5. Declare Compiled Research search spaces through Manifest/YAML params; preserve caller-owned parameter and search choices in Python Research.
-6. Run compiled experiments through CLI/Manifest, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
+6. Run Compiled experiments through unchanged YAML and CLI, or caller-owned Python SFDs through UEL with a search strategy. Both routes share MSQ execution machinery.
 7. Benchmark outcomes with [Log](../Log.md), [Benchmark](../Benchmark.md), and [Backtest](../Backtest.md) before claiming the change improves research behavior.
-8. Make affected code, canonical examples, docs and tests change together. Every PR also updates changelog and version metadata.
+8. Make affected code, canonical examples, docs and tests change together. Leave version surfaces alone; they move only at release time.
 9. Review the full GitHub diff before requesting review.
 10. Confirm the PR template items are true, not just checked.
 
-Complete single-interface delivery may ship while another interface remains unavailable. Private groundwork must not expose an unfinished public capability. A last child can leave its parent open by naming the remaining outcome or next slice; a later completion slice can close both with complete parent evidence. See the canonical contract for grammar, role compatibility and proof-reference rules.
-
-Material contract edits require renewed semantic review of the current head and declaration. Static proof references do not establish passing execution or methodological completeness. Manual parent closure has no automatic evidence guard and must not bypass review. If a corrected PR remains blocked by a stale API-posted sweep verdict, run the existing sweep from the trusted default branch:
-
-| Step | Command |
-|---|---|
-| 1 | `gh workflow run pr_checks_slice_sweep.yml --ref main` |
+Complete single-interface delivery may ship while another interface remains unavailable. Private groundwork must not expose an unfinished public capability.
 
 Canonical bootstrap:
 

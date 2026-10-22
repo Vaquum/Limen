@@ -369,13 +369,11 @@ def test_parallel_workers_native_rejects_before_artifacts(tmp_path, workers):
     assert not (tmp_path / 'invalid').exists()
 
 
-@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'architecture', 'context', 'prepare_once', 'params_override', 'prep_override', 'model_override'))
+@pytest.mark.parametrize('case', ('n_jobs', 'null_jobs', 'negative_jobs', 'factorize', 'post_processing', 'standard', 'custom', 'context', 'prepare_once', 'params_override', 'prep_override', 'model_override'))
 def test_parallel_unsupported_admission_is_non_destructive(tmp_path, case):
     config = parallel_config()
     if case in ('n_jobs', 'null_jobs', 'negative_jobs'):
         config['sfd']['params']['n_jobs'] = [{'n_jobs': 2, 'null_jobs': None, 'negative_jobs': -1}[case]]
-    if case == 'architecture':
-        config['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.random_binary'
     path = tmp_path / 'admission'
     loop = make_loop(config, path)
     if case == 'standard':
@@ -424,12 +422,14 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
     yaml_path = tmp_path / 'campaign.yaml'
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value.interrupted = False
         assert run_experiment(yaml_path, progress_bar=False, workers=2)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 2
         assert loop_factory.return_value.check_parallel_admission.call_args.args == (2, True)
     config['uel']['output_path'] = str(tmp_path / 'yaml')
     _write_yaml(config, yaml_path)
     with patch('limen.cli.commands.run.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value.interrupted = False
         assert run_experiment(yaml_path, progress_bar=False)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 4
     without_workers = dict(config)
@@ -437,6 +437,7 @@ def test_parallel_yaml_cli_precedence_and_resume_provenance(tmp_path, parallel_c
     assert canonical_manifest_id(config) != canonical_manifest_id(without_workers)
     source = parallel_campaigns['grid'][2]
     with patch('limen.cli.commands.resume.UniversalExperimentLoop') as loop_factory:
+        loop_factory.return_value.interrupted = False
         assert run_resume(source, progress_bar=False)
         assert loop_factory.return_value.run.call_args.kwargs['workers'] == 4
 

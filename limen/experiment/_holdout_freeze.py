@@ -24,12 +24,13 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.utils import validation as _validation
 
 from limen.cohort import Cohort
+from limen.experiment import _holdout_events as events
 from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
 from limen.experiment.manifest_core import CalibrationConfig, MLManifest
-from limen.inference.sensor import Sensor
+from limen.inference.sensor import Sensor, contract_digest
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
 from limen.targets.next_bar_down import NextBarDownTarget
@@ -62,9 +63,9 @@ def unchanged(value: object) -> None:
             raise ValueError(f'Holdout refuses replaced {type(value).__name__}.{name}')
 
 
-def scenario_declarations(values: list[Mapping[str, object]]) -> list[dict[str, object]]:
+def scenario_declarations(values: list[Mapping[str, object]], *, allow_empty: bool = False) -> list[dict[str, object]]:
     keys = {'fee_bps', 'slip_bps', 'notional_rate', 'execution_lag_bars', 'take_profit_bps', 'stop_loss_bps'}
-    if not isinstance(cast(object, values), list) or not values:
+    if not isinstance(cast(object, values), list) or (not values and not allow_empty):
         raise ValueError('Holdout requires a nonempty scenario list')
     result: list[dict[str, object]] = []
     for value in values:
@@ -157,8 +158,8 @@ def _fitted_value(value: object) -> None:
         _ = normalized(value)
 
 
-def validate_member(sensor: Sensor) -> dict[str, object]:
-    if type(sensor) is not Sensor or sensor.trade_contract is not None:
+def validate_member(sensor: Sensor, locator: Mapping[str, object] | None) -> dict[str, object]:
+    if type(sensor) is not Sensor:
         raise ValueError('Holdout accepts ordinary exact binary Sensors only')
     unchanged(sensor)
     wrapper = cast(LogRegBinary | LightGBMBinary, vars(sensor)['_model'])
@@ -178,8 +179,6 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
             raise ValueError('Holdout requires exact LGBMClassifier')
         if any(getattr(LGBMClassifier, name).__module__ != 'lightgbm.sklearn' or getattr(LGBMClassifier, name).__qualname__ != f'LGBMClassifier.{name}' for name in ('predict', 'predict_proba')):
             raise ValueError('Holdout refuses replaced LightGBM prediction methods')
-        if model.booster_.best_iteration > 0:
-            raise ValueError('Holdout refuses positive native LightGBM best_iteration')
     check_is_fitted(model)
     if list(cast(Iterable[int], getattr(model, 'classes_', []))) != [0, 1]:
         raise ValueError('Holdout estimator classes must be [0,1]')
@@ -221,11 +220,9 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
         raise ValueError('Holdout refuses replaced manifest methods')
     if effective.decoder_lookback != 1 or effective.bar_formation is not None or effective.split_walk_forward is not None or effective.test_data_source_config is not None or effective.data_dict_extension is not None or effective.split_dates is None or any(type(item) is not date for item in effective.split_dates):
         raise ValueError('Holdout requires ordinary dated native binary inference')
-    backtest = effective.backtest_config
-    if backtest is not None and (backtest.product is not None or backtest.execution_data_source is not None or backtest.funding is not None or backtest.prediction_mode != 'binary'):
-        raise ValueError('Unsupported holdout execution mode')
-    resolved = effective.prediction_calibration_config
     params = cast(dict[str, object], vars(sensor)['_round_params'])
+    events.check_frozen_backtest(effective.backtest_config, params)
+    resolved = effective.prediction_calibration_config
     expected = None
     if resolved is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
         declared = resolved.resolve(params)
@@ -240,7 +237,7 @@ def validate_member(sensor: Sensor) -> dict[str, object]:
     source = source_spec(effective, history.ProjectBinding(Path.cwd(), None, 0, None, interval))
     return {'yaml': normalized(cast(dict[str, object], vars(sensor)['_yaml_reference'])), 'params': normalized(cast(dict[str, object], vars(sensor)['_round_params'])), 'pipeline': manifest_projection(effective),
             'source': normalized(source), 'manifest_id': sensor.manifest_id, 'permutation_id': sensor.permutation_id,
-            'provenance': normalized(proof), 'test_end': effective.split_dates[-1].isoformat()}
+            'provenance': normalized(proof), 'test_end': effective.split_dates[-1].isoformat(), **events.execution_key(sensor, locator)}
 
 
 class FrozenHoldoutSelection:
@@ -276,7 +273,7 @@ def _model_witness(value: object) -> object:
 
 
 def _copy_witness(selection: Sensor | Cohort) -> bytes:
-    return pickle.dumps(tuple((*_member_state(item)[:3], _model_witness(vars(item)['_model']), vars(item)['_trade_contract']) for item in members(selection)), protocol=5)
+    return pickle.dumps(tuple((*_member_state(item)[:3], _model_witness(vars(item)['_model']), vars(item)['_trade_contract'], vars(item).get('_trade_digest')) for item in members(selection)), protocol=5)
 
 
 def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
@@ -286,8 +283,10 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
         member = copy.copy(original)
         vars(member).clear()
         vars(member).update(zip(('_yaml_reference', '_round_params', '_fitted_params', '_model', '_trade_contract'), copy.deepcopy(_member_state(original)), strict=True))
+        if type(vars(member)['_model']) is LightGBMBinary:
+            vars(member)['_model'].model.booster_.best_iteration = vars(original)['_model'].model.booster_.best_iteration
         member.permutation_id, member.manifest_id = original.permutation_id, original.manifest_id
-        vars(member)['_trade_digest'] = None
+        vars(member)['_trade_digest'] = contract_digest(vars(member)['_trade_contract']) if vars(member)['_trade_contract'] is not None else None
         cached = cast(MLManifest | None, vars(original)['_manifest'])
         if cached is None:
             manifest = CompiledSFD(cast(dict[str, object], vars(member)['_yaml_reference'])).manifest()
@@ -303,7 +302,7 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
             if '_holdout_binding' in vars(cached):
                 vars(manifest)['_holdout_binding'] = vars(cached)['_holdout_binding']
         vars(member)['_manifest'] = manifest
-        _ = validate_member(member)
+        _ = validate_member(member, None)
         copied.append(member)
     result: Sensor | Cohort = copied[0]
     if type(selection) is Cohort:
@@ -317,11 +316,11 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
 
 def freeze_holdout_selection(selection: Sensor | Cohort, *, context_start: str,
                              scenarios: list[Mapping[str, object]],
-                             evaluation_target: NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None = None) -> FrozenHoldoutSelection:
+                             evaluation_target: NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None = None, round_locator: Mapping[str, object] | None = None) -> FrozenHoldoutSelection:
     """Own the fitted selection and preregister its final-assessment specification."""
     _ = history.utc_day(context_start)
-    declarations = scenario_declarations(scenarios)
-    specs = [validate_member(member) for member in members(selection)]
+    declarations = scenario_declarations(scenarios, allow_empty=events.freeze_kind(selection, round_locator) == 'contract')
+    specs = [validate_member(member, round_locator) for member in members(selection)]
     if evaluation_target is not None:
         if type(evaluation_target) in (NextBarUpTarget, NextBarDownTarget):
             if set(vars(evaluation_target)) != {'target_name'} or not isinstance(cast(object, evaluation_target.target_name), str):

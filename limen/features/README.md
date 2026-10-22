@@ -10,7 +10,7 @@
 
 ## In the research projects
 
-The `bars` scenarios in the [Python project](../../docs/examples/python-research/README.md) and the [Compiled project](../../docs/examples/compiled-research/README.md) share the same recorded-trade CFR preparation. Their selection paths illustrate caller-owned feature expressions and Manifest-declared preparation. The feature reference retains each helper’s required columns and output meaning.
+The [Python project](../../docs/examples/python-research/README.md) prepares CFR features from recorded trades. The [Compiled project](../../docs/examples/compiled-research/README.md) declares volume, trade and liquidity bars over recorded quarter-hour input in YAML. Their selection paths illustrate caller-owned feature expressions and YAML-declared preparation. The feature reference retains each helper’s required columns and output meaning.
 
 ## What this package owns
 

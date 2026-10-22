@@ -30,28 +30,28 @@ The base selection's CSV and summary do not serialize arbitrary fitted models. T
 
 <!-- example: workflow-compiled-selection source=docs/examples/commands.json region=compiled-selection scenario=selection interface=compiled role=executed -->
 ```bash
-python compiled-research/research.py --scenario selection --data-dir inputs --output-dir results/compiled
+limen run --no-progress-bar compiled-research/selection.yaml
 ```
 
 <!-- example: workflow-compiled-all source=docs/examples/commands.json region=compiled-all scenario=selection interface=compiled role=executed -->
 ```bash
-python compiled-research/research.py --scenario all --data-dir inputs --output-dir results/compiled-all
+sh compiled-research/run.sh
 ```
 
-The first command runs selection; the second executes search, recovery, walk-forward, final holdout, calibration, event execution, bar formation, batch allocation and command-line project operations. It validates declarations, preserves native artifacts and reconstructs selected recorded rounds through `Trainer`.
+The first command executes the small selection YAML. The shell script runs the complete collection of unchanged YAML declarations, CLI assessment and project operations. `limen assess` reconstructs validation-selected Sensors and their Cohort; the guarded declaration reserves, freezes and assesses its final window through the CLI.
 
 The selection declaration applies chronological splits before preparation, fits target/scaler state on training and ranks two logistic candidates by validation event-ledger return. Trainer reconstructs the selected recorded round using the original splits and checks replayed metrics. Reconstruction is a refit under the recorded contract, rather than restoration of arbitrary model weights.
 
-Its `command_line` scenario validates, profiles, compiles, commits and executes the same recorded configuration through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
+Its `project.sh` validates, profiles, compiles, commits and executes the recorded production declaration in `project.yaml` through installed `limen` commands. It also verifies project lineage, completed-run resume and a local Git backup/restore round trip. See the [command reference](Command-Line-Interface.md) for the exact lifecycle.
 
 ## Review the evidence by decision
 
 | Decision | Python project | Compiled project | Contract |
 |---|---|---|---|
-| Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison and model families; shared feedback | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
-| Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Reconstruct declaration, queue/results and a selected Sensor; compare complete artifacts | [Recovery](Advanced-Search.md#resume-flow) |
+| Choose trials | Caller-owned SFD and seeded strategies; budget-only and mixed feedback runs | Declared strategies, admitted factorized comparison, model families and YAML reducers | [Search](Advanced-Search.md), [feedback](Reducers-And-Feedback.md) |
+| Continue after interruption | Reconstruct queue/results; compare to uninterrupted research | Resume the declared queue and results through the CLI; reject changed pinned source bytes and compare complete artifacts | [Recovery](Advanced-Search.md#resume-flow) |
 | Evaluate across time | Own fold fitting, validation selection and later Sensor decisions | Declared folds, purge/embargo and qualified fold reconstruction | [Walk-forward](Walk-Forward.md) |
-| Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four configured modes and recorded Sensor reconstruction | [Calibration](Calibration.md) |
+| Calibrate decisions | Store fitted probability model and threshold in caller-owned state | Four YAML-configured modes; calibrated selection through CLI assessment | [Calibration](Calibration.md) |
 | Assess a selected result | Exclude the final partition from fitting and selection in code | Reserve, freeze and assess with native project records; earlier exposure remains unknown for local files | [Final holdout](Final-Holdout.md) |
 | Measure execution | Direct event inputs, policy, source clocks, costs and recorded funding | Declared event policy, ledgers, source bindings and funded comparison | [Backtest](Backtest.md) |
 | Form alternate bars | Call the shared bar helper over recorded observations | Form bars separately after each chronological split | [Data bars](Data-Bars.md) |
@@ -61,7 +61,9 @@ Its `command_line` scenario validates, profiles, compiles, commits and executes 
 
 | Artifact | Meaning |
 |---|---|
-| `summary.json` | Project report of the scenarios requested by the entry point. |
+| Python `summary.json` | Caller-owned project report of the requested scenarios. |
+| Compiled `assessment.json` and `predictions.parquet` | Validation selection, recorded membership, decisions and native unavailable/availability values. |
+| Compiled `final-report.json` | Guarded final assessment, retained rows and local exposure evidence. |
 | Python selection CSV | Candidate validation scores; fitted models remain in memory. |
 | Compiled `metadata.json` and copied definition | Declared configuration and provenance used for reconstruction. |
 | `results.csv` | Completed parameter rounds for a persisted experiment. |
@@ -76,7 +78,7 @@ Keep the definition, recorded input identities, package/environment identity and
 
 For parallel CPU classification rounds, set every model `n_jobs` value to `1`
 and supply `--workers 4` to `limen run` for a compatible declaration. YAML `uel.workers` supplies the
-default; the CLI overrides it. Runs created with full
+default; the CLI overrides it. Runs created with the applicable
 [recording evidence](Universal-Experiment-Loop.md#recording-policy) can resume with
 `limen run --resume RESULTS_DIR`, reusing the saved worker policy. See [parallel rounds](Experiment-Manifest.md#parallel-rounds)
 for admission, feedback ordering and stop/recovery limits. The canonical projects use one worker to keep their proof population explicit; a larger search is needed to occupy several workers.

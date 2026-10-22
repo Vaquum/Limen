@@ -64,8 +64,8 @@ def _values(value: object, name: str, length: int | None = None, *, nullable: bo
 
 def _evidence(record: Mapping[str, object], *, event: bool, snapshot: bool, execution: bool, outputs: bool) -> None:
     predictions = _values(record.get('preds'), 'predictions')
-    if not predictions or any(value not in (0, 1) for value in predictions):
-        raise ValueError('Cannot resume parallel run without binary predictions')
+    if not predictions:
+        raise ValueError('Cannot resume parallel run without predictions')
     alignment = _mapping(record.get('alignment'), 'alignment')
     for name in ('first_test_datetime', 'last_test_datetime'):
         value = alignment.get(name)
@@ -103,8 +103,10 @@ def _evidence(record: Mapping[str, object], *, event: bool, snapshot: bool, exec
                 _ = _values(ledger.get(key), f'execution {key}', len(predictions))
             market = _mapping(record['market'], 'market')
             _ = _values(market.get('ret'), 'market returns', len(predictions), nullable=True)
-    if outputs:
-        probabilities = _values(record.get('probs'), 'probabilities', len(predictions))
+    if outputs and 'probs' not in record:
+        raise ValueError('Cannot resume parallel run without recorded model outputs')
+    if outputs and record['probs'] is not None:
+        probabilities = _values(record['probs'], 'probabilities', len(predictions))
         threshold, rule = record.get('optimal_threshold'), record.get('threshold_rule')
         if any(float(cast(float, value)) < 0 or float(cast(float, value)) > 1 for value in probabilities) or type(threshold) not in (int, float) or not math.isfinite(float(cast(float, threshold))) or rule not in ('>', '>='):
             raise ValueError('Cannot resume parallel run with invalid threshold/probability evidence')

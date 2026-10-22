@@ -32,7 +32,7 @@ def assert_installable_download(wheel: Path, temporary: Path):
         isolated = temporary / 'installed'
         venv.EnvBuilder(with_pip=True).create(isolated)
         python = isolated / 'bin/python'
-        subprocess.run([str(python), '-m', 'pip', 'install', '--no-index', '--no-deps', str(downloaded)],
+        subprocess.run([str(python), '-I', '-m', 'pip', 'install', '--no-index', '--no-deps', str(downloaded)],
                        cwd=temporary, check=True, timeout=30)
         inspect = subprocess.check_output([str(python), '-I', '-c',
             'from importlib.metadata import distribution; import json; d=distribution("vaquum-limen"); print(json.dumps({"version":d.version,"location":str(d.locate_file(""))}))'],
@@ -47,7 +47,8 @@ def assert_installable_download(wheel: Path, temporary: Path):
         worker.join(timeout=3)
 
 
-def test_published_wheel_keeps_installable_distribution_filename(research_proof, tmp_path):
+def test_published_wheel_keeps_installable_distribution_filename(research_proof, tmp_path, monkeypatch):
+    monkeypatch.setenv('PYTHONPATH', str(ROOT))
     wheels = list((ROOT / '.docs-evidence').glob('vaquum_limen-' + version('vaquum-limen') + '-*.whl'))
     assert len(wheels) == 1
     assert assert_installable_download(wheels[0], tmp_path)['version'] == version('vaquum-limen')

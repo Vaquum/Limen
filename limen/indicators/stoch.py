@@ -182,23 +182,27 @@ def stoch(
     if slowd_ma_type < 0 or slowd_ma_type > CMP_N_8:
         raise ValueError('stoch slowd_ma_type must be between 0 and 8')
 
-    high_values = data[high_col].to_numpy().astype(float, copy=False)
-    low_values = data[low_col].to_numpy().astype(float, copy=False)
-    close_values = data[close_col].to_numpy().astype(float, copy=False)
-    slowk_values, slowd_values = _stoch_from_arrays(
-        high_values,
-        low_values,
-        close_values,
-        fastk_period,
-        slowk_period,
-        slowk_ma_type,
-        slowd_period,
-        slowd_ma_type,
-    )
+    def calculate(s: pl.Series) -> pl.Series:
+        slowk_values, slowd_values = _stoch_from_arrays(
+            s.struct.field('high').to_numpy().astype(float, copy=False),
+            s.struct.field('low').to_numpy().astype(float, copy=False),
+            s.struct.field('close').to_numpy().astype(float, copy=False),
+            fastk_period,
+            slowk_period,
+            slowk_ma_type,
+            slowd_period,
+            slowd_ma_type,
+        )
+        return pl.DataFrame({'stoch_slowk': slowk_values, 'stoch_slowd': slowd_values}).to_struct()
 
+    inputs = pl.struct(
+        pl.col(high_col).alias('high'),
+        pl.col(low_col).alias('low'),
+        pl.col(close_col).alias('close'),
+    )
     return data.with_columns(
-        [
-            pl.Series(name='stoch_slowk', values=slowk_values),
-            pl.Series(name='stoch_slowd', values=slowd_values),
-        ]
+        inputs.map_batches(
+            calculate,
+            return_dtype=pl.Struct({'stoch_slowk': pl.Float64, 'stoch_slowd': pl.Float64}),
+        ).struct.field('*')
     )

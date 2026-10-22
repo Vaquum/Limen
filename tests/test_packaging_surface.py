@@ -75,42 +75,53 @@ for name in {MODEL_BACKEND_MODULES!r}:
     subprocess.run([sys.executable, '-c', code], cwd=ROOT, check=True)
 
 
-def test_slice_closeout_guard_and_ratchet_surfaces() -> None:
-    guard = (ROOT / '.github' / 'workflows' / 'slice_closeout_guard.yml').read_text(encoding='utf-8')
-    assert 'issues:' in guard
-    assert 'gh issue reopen' in guard
+def test_typing_ratchet_surfaces() -> None:
     # pyright moved into pr_checks_typing, which additionally ratchets the
     # escape-hatch budget and the files-analysed count.
     typing_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_typing.yml').read_text(encoding='utf-8')
     assert '--outputjson' in typing_workflow
     assert 'governance/typing_gate.py' in typing_workflow
-    slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
-    assert 'slice_closeout_guard' in slice_template
-    assert 'is reverted' in slice_template
 
 
-def test_slice_gate_and_closeout_surfaces() -> None:
-    for name in ('__init__.py', '_common.py', 'slice_gate.py'):
+def test_prd_gate_surfaces() -> None:
+    for name in ('__init__.py', '_common.py', 'prd_gate.py'):
         assert (ROOT / 'governance' / name).is_file(), name
-    gate = (ROOT / 'governance' / 'slice_gate.py').read_text(encoding='utf-8')
-    assert 'rule 9' in gate
-    assert 'rule 10' in gate
-    assert 'OVERRULED' in gate
-    assert 'sub_issues' in gate
-    slice_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice.yml').read_text(encoding='utf-8')
-    assert 'name: pr_checks_slice' in slice_workflow
-    assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in slice_workflow
-    assert 'governance/slice_gate.py' in slice_workflow
-    on_issue_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_on_issue.yml').read_text(encoding='utf-8')
+    gate = (ROOT / 'governance' / 'prd_gate.py').read_text(encoding='utf-8')
+    assert 'rule 4' in gate
+    assert "'prd'" in gate
+    assert 'PRD GATE -- PASS' in gate
+    assert 'PRD GATE -- FAIL' in gate
+    prd_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_prd.yml').read_text(encoding='utf-8')
+    assert 'name: pr_checks_prd' in prd_workflow
+    assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in prd_workflow
+    assert 'governance/prd_gate.py' in prd_workflow
+    on_issue_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_prd_on_issue.yml').read_text(encoding='utf-8')
+    assert 'name: pr_checks_prd_on_issue' in on_issue_workflow
     assert 'types: [edited, labeled, unlabeled, closed, reopened, deleted]' in on_issue_workflow
-    assert 'name=pr_checks_slice' in on_issue_workflow
-    guard_workflow = (ROOT / '.github' / 'workflows' / 'slice_closeout_guard.yml').read_text(encoding='utf-8')
-    assert 'closing PR' in guard_workflow
-    assert 'gh issue edit' in guard_workflow
-    assert 'gh issue reopen' in guard_workflow
-    slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
-    assert 'OVERRULED: <reason>' in slice_template
-    assert 'rule 10' in slice_template
+    assert 'governance/prd_gate.py' in on_issue_workflow
+    assert 'actions/runs/$RUN_ID/rerun' in on_issue_workflow
+    assert 'checks: write' not in on_issue_workflow
+    # The slice regime is gone without a trace: no template, no gate,
+    # no interface-contract machinery, no workflows, no contract tests.
+    for gone in (
+        ROOT / '.github/ISSUE_TEMPLATE/slice.yml',
+        ROOT / 'governance/slice_gate.py',
+        ROOT / 'governance/interface_contract.py',
+        ROOT / 'governance/tests/test_slice_gate.py',
+        ROOT / 'governance/tests/test_interface_contract.py',
+        ROOT / '.github/workflows/pr_checks_slice.yml',
+        ROOT / '.github/workflows/pr_checks_slice_on_issue.yml',
+        ROOT / '.github/workflows/pr_checks_slice_sweep.yml',
+        ROOT / '.github/workflows/slice_closeout_guard.yml',
+    ):
+        assert not gone.exists(), gone
+    # The PRD template carries no slice coupling: no Work Slices section,
+    # no interface-contract section, no mention of slices at all -- and
+    # it files the `prd` label the gate matches on.
+    prd_template = (ROOT / '.github/ISSUE_TEMPLATE/prd.yml').read_text(encoding='utf-8')
+    assert 'slice' not in prd_template.lower()
+    assert 'interface contract' not in prd_template.lower()
+    assert '- prd' in prd_template
     pyproject = tomllib.loads((ROOT / 'pyproject.toml').read_text(encoding='utf-8'))
     assert 'governance' in pyproject['tool']['pyright']['exclude']
     assert 'governance/*' in pyproject['tool']['check-manifest']['ignore']
@@ -308,40 +319,15 @@ def test_supply_chain_surfaces() -> None:
 
 def test_governance_hardening_surfaces() -> None:
     codeowners_lines = (ROOT / '.github' / 'CODEOWNERS').read_text(encoding='utf-8').splitlines()
-    assert '/governance/ @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
-    assert '/.github/ @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
-    assert '/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis @zero-bang' in codeowners_lines
-    on_issue = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_on_issue.yml').read_text(encoding='utf-8')
-    assert 'actions/runs' in on_issue
-    assert on_issue.count('actions: write') == 1
-    # A stale API-posted check-run outlives a green canonical rerun
-    # (PR #757); delivery must classify check-runs by check suite and
-    # supersede a disagreeing API-posted verdict with a fresh POST.
-    assert 'check_suite_id' in on_issue
-    assert 'LATEST_POSTED' in on_issue
-    assert '"$GATE_OUT" | head -c' not in on_issue
+    assert '/governance/ @mikkokotila @pdey @bit-mis' in codeowners_lines
+    assert '/.github/ @mikkokotila @pdey @bit-mis' in codeowners_lines
+    assert '/tests/test_packaging_surface.py @mikkokotila @pdey @bit-mis' in codeowners_lines
     readiness = (ROOT / '.github' / 'workflows' / 'pr_merge_readiness.yml').read_text(encoding='utf-8')
     assert 'pull_request_review:' in readiness
     assert 'pull_request_review_comment:' in readiness
     assert 'check_suite:' in readiness
     assert 'pull-requests: write' in readiness
 
-    sweep_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_slice_sweep.yml').read_text(encoding='utf-8')
-    assert sweep_workflow.count('schedule:') == 1
-    assert 'workflow_dispatch:' in sweep_workflow
-    assert 'name=pr_checks_slice' in sweep_workflow
-    assert 'file enumeration incomplete' in sweep_workflow
-    assert 'governance/slice_gate.py' in sweep_workflow
-    assert 'actions/runs' in sweep_workflow
-    # The sweep no longer reruns the pull_request workflow -- a rerun
-    # re-executes the gate from the judged PR's merge ref, which is
-    # self-attestation. It computes the verdict on main and POSTs a
-    # check-run instead, so it needs `actions: read` to classify runs by
-    # check suite, not `actions: write`.
-    assert sweep_workflow.count('actions: read') == 1
-    assert 'actions: write' not in sweep_workflow
-    assert 'check_suite_id' in sweep_workflow
-    assert 'LATEST_POSTED' in sweep_workflow
     common_path = ROOT / 'governance' / '_common.py'
     spec = importlib.util.spec_from_file_location('governance_common', common_path)
     assert spec is not None
@@ -366,8 +352,10 @@ def test_cc_gate_surfaces() -> None:
     gate_path = ROOT / 'governance' / 'cc_gate.py'
     assert gate_path.is_file()
     gate = gate_path.read_text(encoding='utf-8')
-    assert 'from _common import CC_RE, CLOSING_KEYWORD_RE' in gate
-    assert "'planning'" in gate
+    assert 'from _common import CC_RE, CLOSING_KEYWORD_RE, QUALIFIED_CLOSING_RE' in gate
+    assert 'fetch_issue' not in gate
+    assert 'planning' not in gate
+    assert 'linked issue title' not in gate
     cc_workflow = (ROOT / '.github' / 'workflows' / 'pr_checks_cc.yml').read_text(encoding='utf-8')
     assert 'name: pr_checks_cc' in cc_workflow
     assert 'types: [opened, edited, synchronize, reopened, ready_for_review]' in cc_workflow
@@ -378,10 +366,8 @@ def test_cc_gate_surfaces() -> None:
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    for name in ('CC_RE', 'CLOSING_KEYWORD_RE', 'REPO_ROOT', 'fail_setup'):
+    for name in ('CC_RE', 'CLOSING_KEYWORD_RE', 'QUALIFIED_CLOSING_RE', 'REPO_ROOT', 'fail_setup'):
         assert hasattr(module, name), name
-    slice_template = (ROOT / '.github' / 'ISSUE_TEMPLATE' / 'slice.yml').read_text(encoding='utf-8')
-    assert 'Conventional Commits' in slice_template
     result = subprocess.run(
         [
             sys.executable, 'governance/cc_gate.py',

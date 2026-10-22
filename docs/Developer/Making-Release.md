@@ -1,6 +1,6 @@
 # Making a release
 
-Limen release publication is automated and destructive: a qualifying push to `main` can create and push a tag, publish a GitHub release, build distributions, attach provenance, and publish to PyPI. Review the release candidate before merge; the release script has no approval prompt or dry-run mode.
+Limen release publication is manual and destructive: dispatching release creation can create and push a tag, publish a GitHub release, build distributions, attach provenance, and publish to PyPI. Review the release candidate and dispatch promptly after its merge; the release script has no approval prompt or dry-run mode.
 
 Release validation must run the [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md) against the actual published wheel. A successful upload alone does not establish that the displayed research still runs.
 
@@ -18,7 +18,7 @@ Release validation must run the [Python project](../examples/python-research/REA
 | `CHANGELOG.md` | human-readable release history |
 | `CITATION.cff` | citation version and release date |
 | `limen/yaml/templates/*.yaml` | embedded `metadata.limen_version` values |
-| `.github/workflows/pr_post_release.yml` | runs release creation after every push to `main` |
+| `.github/workflows/pr_post_release.yml` | runs release creation when manually dispatched |
 | `scripts/create_release.py` | computes and validates the tag, generates notes with mechanical traceability, and publishes the GitHub release |
 | `.github/workflows/pr_publish_pypi.yml` | guards filename availability, builds, attests, publishes, and attaches release assets |
 
@@ -35,11 +35,11 @@ Confirm that one candidate commit contains:
 - green tests, docs-site, packaging, lint, type, and security checks
 - reviewed dependency licenses, including the separate optional TabPFN surface when relevant
 
-Required merge checks verify version coherence, changelog presence, tests and package contracts. Release creation separately checks the version/tag and matching changelog entry. Semantic review of the release scope and dependency licenses remains a pre-merge obligation; automation does not establish that judgment.
+Required merge checks verify version coherence, tests and package contracts. Release creation checks the version/tag and matching changelog entry. Semantic review of the release scope and dependency licenses remains a pre-merge obligation; automation does not establish that judgment.
 
 ## Automated sequence
 
-After a push to `main`, `pr_post_release.yml` installs the `release` extra and runs:
+When dispatched, `pr_post_release.yml` installs the `release` extra and runs:
 
 | Step | Command |
 |---|---|
@@ -59,7 +59,7 @@ The script:
 
 There is no pause between the preview and publication. Do not run the script merely to preview notes.
 
-After the automated-release run completes, `pr_publish_pypi.yml` resolves and re-validates the released tag, checks out the tag, guards that PyPI has never served the version's filenames, builds the wheel and sdist with fixed `SOURCE_DATE_EPOCH`, creates GitHub build-provenance attestations, and publishes to PyPI through trusted publishing from the `pypi` GitHub environment. After a successful publish it attaches the distributions, a CycloneDX `sbom.json`, and the `provenance.intoto.jsonl` attestation bundle to the GitHub release and appends their SHA-256 digests to the release body. Its `workflow_run` trigger resolves a tag only when the successful automated-release run's head commit is tagged; the `v*` tag ruleset ensures only that automation can create release tags. [Release Policy](Release-Policy.md) defines these controls.
+After the automated-release run completes, `pr_publish_pypi.yml` resolves and re-validates the released tag, waits until every validation check-run on the tagged commit is green, checks out the tag, guards that PyPI has never served the version's filenames, builds the wheel and sdist with fixed `SOURCE_DATE_EPOCH`, creates GitHub build-provenance attestations, and publishes to PyPI through trusted publishing from the `pypi` GitHub environment. After a successful publish it attaches the distributions, a CycloneDX `sbom.json`, and the `provenance.intoto.jsonl` attestation bundle to the GitHub release and appends their SHA-256 digests to the release body. Its `workflow_run` trigger resolves a tag only when the successful automated-release run's head commit is tagged; the `v*` tag ruleset ensures only that automation can create release tags. [Release Policy](Release-Policy.md) defines these controls.
 
 ## Inputs
 

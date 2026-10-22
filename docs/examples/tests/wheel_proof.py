@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import csv
@@ -6,8 +7,10 @@ import os
 from pathlib import Path
 import subprocess
 import shlex
+import signal
 import tarfile
 import venv
+import time
 import zipfile
 
 from build_bundle import INPUTS, build, build_results
@@ -16,12 +19,22 @@ from released_wheel import verify_download
 from scenario_oracles import verify
 
 
-def run(argv, *, cwd, env=None):
+def run(argv, *, cwd, env=None, timeout: float | None = 90):
     environment = dict(os.environ if env is None else env)
     for name in ('PYTHONPATH', 'PYTHONHOME', 'PYTHONUSERBASE'):
         environment.pop(name, None)
     environment['PYTHONNOUSERSITE'] = '1'
-    subprocess.run([str(arg) for arg in argv], cwd=cwd, env=environment, check=True, timeout=90)
+    started = time.monotonic()
+    command = [str(arg) for arg in argv]
+    with subprocess.Popen(command, cwd=cwd, env=environment, start_new_session=True) as process:
+        try:
+            status = process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            os.killpg(process.pid, signal.SIGKILL)
+            raise
+        if status:
+            raise subprocess.CalledProcessError(status, command)
+    print(f'Wheel proof stage {time.monotonic() - started:.2f}s: ' + ' '.join(map(str, argv)), flush=True)
 
 
 def archive_bytes(archive: tarfile.TarFile, name: str) -> bytes:
@@ -35,10 +48,10 @@ def archive_bytes(archive: tarfile.TarFile, name: str) -> bytes:
 def unpack(bundle: Path, target: Path, root: Path):
     with tarfile.open(bundle) as archive:
         names = set(archive.getnames())
-        required = {'python-research/research.py', 'compiled-research/research.py',
+        required = {'python-research/research.py', 'compiled-research/research.yaml', 'compiled-research/run.sh',
                     'compiled-research/selection.yaml', 'evidence.schema.json', 'catalogue.json'}
         required |= {'inputs/' + name for name in INPUTS}
-        required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/scenarios.py'}
+        required |= {'requirements/research-env.txt', 'requirements/research-macos.txt', 'requirements/build.txt', 'inputs.json', 'recorded_inputs.py', 'commands.json', 'python-research/scenarios.py', 'compiled-research/final/holdout.yaml', 'compiled-research/final/run.sh'}
         required |= {'retained/selection.json', 'retained/python-selection.json', 'retained/compiled-selection.json'}
         if not required <= names:
             raise ValueError('Candidate archive is incomplete')
@@ -66,7 +79,7 @@ def unpack(bundle: Path, target: Path, root: Path):
             raise ValueError('Candidate recorded input differs')
     for interface in ('python', 'compiled'):
         for source in (root / f'docs/examples/{interface}-research').rglob('*'):
-            if source.is_file() and source.suffix in ('.py', '.yaml', '.md'):
+            if source.is_file() and source.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
                 relative = source.relative_to(root / 'docs/examples')
                 if not (target / relative).is_file() or (target / relative).read_bytes() != source.read_bytes():
                     raise ValueError('Candidate project source differs: ' + str(relative))
@@ -99,7 +112,7 @@ def prove_wheel(root: Path, temporary: Path, *, released_wheel: Path | None = No
     isolated = temporary / 'isolated'
     venv.EnvBuilder(with_pip=True).create(isolated)
     python = isolated / 'bin/python'
-    run([python, '-m', 'pip', 'install', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
+    run([python, '-m', 'pip', 'install', '--no-compile', '--no-index', '--find-links', root / '.docs-evidence/wheelhouse',
          '--require-hashes', '-r', root / offline['runtime_lock'], '-r', root / 'docs/examples/requirements-build.txt'], cwd=temporary)
     if released_wheel is None:
         wheel_dir = temporary / 'wheels'
@@ -145,26 +158,27 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     assert all(Path(location).is_relative_to(isolated) for location in info['distribution_locations'])
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
-    for interface in ('python', 'compiled'):
+    # Complete the first scientific import before starting the disjoint campaigns.
+    run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        # The CI suite's 120-second gate bounds these complete campaigns.
+        executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
+                                           cwd=project, env=runtime_environment, timeout=None)
+                      for name in ('python-all', 'compiled-all')}
+        for execution in executions.values():
+            execution.result()
+    for interface in ('python',):
         command = shlex.split(canonical_commands[interface + '-selection'])
-        run(command, cwd=project, env=runtime_environment)
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
         assert summary['interface'] == interface and summary['scenario'] == 'selection'
-        assert summary['rounds'] == (4 if interface == 'python' else 2)
-        if interface == 'python':
-            assert summary['retained_models'] == 4 and summary['inference_rows'] == 480
-        else:
-            assert summary['reconstructed_sensors'] == summary['selected_rounds'] == 1
+        assert summary['rounds'] == 4
+        assert summary['retained_models'] == 4 and summary['inference_rows'] == 480
         destination = output / f'{interface}-selection.json'
         destination.write_text(json.dumps(summary, indent=2) + '\n')
         summaries[interface] = {'summary': summary, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
         commands[interface] = [str(arg) for arg in command]
         scenario_reports[(interface, 'selection')] = summaries[interface] | {'command': commands[interface]}
-        if interface == 'compiled':
-            run(shlex.split(canonical_commands['compiled-yaml']), cwd=project, env=runtime_environment)
-            compare_selection_logs(project / 'results/compiled', project / 'results/dev/compiled-cli')
         command = shlex.split(canonical_commands[interface + '-all'])
-        run(command, cwd=project, env=runtime_environment)
         report = json.loads((project / f'results/{interface}-all/summary.json').read_text())
         catalogue = json.loads((project / 'catalogue.json').read_text())
         expected = {name for name, interfaces in catalogue['required_scenarios'].items() if interface in interfaces} - {'selection'}
@@ -174,10 +188,33 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             destination = output / f'{interface}-{name}.json'
             destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
             scenario_reports[(interface, name)] = {'summary': result, 'command': [str(arg) for arg in command], 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
+    from cli_proof import verify_project, prove_interrupted_recovery
+    command = shlex.split(canonical_commands['compiled-all'])
+    compiled = verify_project(project)
+    compiled["recovery"].update(prove_interrupted_recovery(project, runtime_environment))
+    catalogue = json.loads((project / 'catalogue.json').read_text())
+    assert set(compiled) == {name for name, interfaces in catalogue['required_scenarios'].items() if 'compiled' in interfaces}
+    for directory, report in [('compiled', compiled['selection']), ('compiled-all', {'scenarios': {key: value for key, value in compiled.items() if key != 'selection'}})]:
+        (project / 'results' / directory).mkdir(exist_ok=True)
+        (project / 'results' / directory / 'summary.json').write_text(json.dumps(report, indent=2, allow_nan=False) + '\n')
+    for name, result in compiled.items():
+        destination = output / ('compiled-' + name + '.json')
+        destination.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+        scenario_reports[('compiled', name)] = {'summary': result, 'command': command, 'output_path': str(destination.relative_to(root)), 'output_sha256': hashlib.sha256(destination.read_bytes()).hexdigest()}
+    summaries['compiled'] = scenario_reports[('compiled', 'selection')]
+    commands['compiled'] = command
     wheel_destination = output / wheel.name
     wheel_destination.write_bytes(wheel.read_bytes())
     native = output / 'native-results.tar.gz'
     native_sha = build_results(project, info_file, native)
+    with tarfile.open(native) as retained:
+        for name, directory in (('final', 'compiled-holdout'), ('final-event', 'compiled-holdout_event')):
+            prefix = f'compiled-research/{name}/manifests/'
+            assert prefix + 'holdout-project.json' in retained.getnames()
+            assert prefix + 'holdout.sqlite3' in retained.getnames()
+            attempt = json.loads((project / 'results/dev' / directory / 'final-report.json').read_text())['attempt_id']
+            report = project / prefix / 'holdout' / attempt / 'report.json'
+            assert archive_bytes(retained, str(report.relative_to(project))) == report.read_bytes()
     return {'summaries': summaries, 'commands': commands, 'scenario_reports': scenario_reports, 'installed': info, 'offline': offline,
             'native_outputs': {'path': str(native.relative_to(root)), 'sha256': native_sha},
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},

@@ -7,16 +7,15 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_issue_fetch_is_non_nullable_and_gate_has_no_none_guard() -> None:
+def test_gate_has_no_issue_fetching_machinery() -> None:
     source = (REPO_ROOT / 'governance/cc_gate.py').read_text(encoding='utf-8')
-    start = source.index('def fetch_issue(repo: str, number: int) -> dict[str, object]:')
-    end = source.index('def find_closing_references(body: str) -> list[int]:')
-    block = source[start:end]
 
-    assert '| None' not in block
-    assert 'return None' not in block
-    assert 'raise SystemExit(2)' in block
-    assert 'if issue_title is not None' not in source
+    assert 'fetch_issue' not in source
+    assert 'planning' not in source
+    assert 'linked issue title' not in source
+    # Closing-reference parsing stays: commit closures must be declared
+    # in the PR body.
+    assert 'def find_closing_references(body: str) -> list[int]:' in source
 
 
 def _load_cc_gate():
@@ -82,28 +81,16 @@ def test_list_commits_fails_closed_on_unparseable_log_line(monkeypatch) -> None:
     assert excinfo.value.code == 2
 
 
-def test_gate_checks_every_reference_and_exempts_only_prds(monkeypatch) -> None:
+def test_gate_checks_title_commits_closures_and_attribution_only(monkeypatch) -> None:
     cc = _load_cc_gate()
-    issues = {
-        9: {'title': 'bad slice title without cc form', 'labels': ['slice']},
-        12: {'title': 'PRD: also not cc form, and exempt', 'labels': ['planning']},
-        15: {'title': 'ordinary issue, also not cc form', 'labels': ['bug']},
-    }
-    monkeypatch.setattr(cc, 'fetch_issue', lambda _repo, number: issues[number])
     monkeypatch.setattr(cc, 'list_commits', lambda _base, _head: [])
     monkeypatch.setattr(cc, 'list_commit_messages', lambda _base, _head: [])
 
-    failures = cc.gate(
-        'feat: valid title',
-        'Closes #9\nCloses #12\nCloses #15',
-        'base',
-        'head',
-        'Vaquum/new-repository-template',
-    )
+    assert cc.gate('feat: valid title', 'Closes #9', 'base', 'head', 'Vaquum/Limen') == []
 
-    assert any('#9' in failure for failure in failures)
-    assert any('#15' in failure for failure in failures)
-    assert not any('#12' in failure for failure in failures)
+    failures = cc.gate('not a conventional title', 'Closes #9', 'base', 'head', 'Vaquum/Limen')
+    assert len(failures) == 1
+    assert 'PR title' in failures[0]
 
 
 @pytest.mark.parametrize('closing', [
@@ -113,7 +100,6 @@ def test_gate_checks_every_reference_and_exempts_only_prds(monkeypatch) -> None:
 ])
 def test_commit_closures_are_declared_in_pr(monkeypatch, closing):
     cc = _load_cc_gate()
-    monkeypatch.setattr(cc, 'fetch_issue', lambda *_: {'title': 'fix: example', 'labels': []})
     monkeypatch.setattr(cc, 'list_commits', lambda *_: [])
     monkeypatch.setattr(cc, 'list_commit_messages', lambda *_: [('a' * 40, 'fix: example\n\n' + closing)])
     failures = cc.gate('fix: example', 'Closes #9', 'base', 'head', 'Vaquum/Limen')
@@ -129,7 +115,6 @@ def test_commit_closures_are_declared_in_pr(monkeypatch, closing):
 ])
 def test_cross_repository_commit_closures_fail_even_when_number_matches(monkeypatch, closing):
     cc = _load_cc_gate()
-    monkeypatch.setattr(cc, 'fetch_issue', lambda *_: {'title': 'fix: example', 'labels': []})
     monkeypatch.setattr(cc, 'list_commits', lambda *_: [])
     monkeypatch.setattr(cc, 'list_commit_messages', lambda *_: [('a' * 40, 'fix: example\n\n' + closing)])
     failures = cc.gate('fix: example', 'Closes #12', 'base', 'head', 'Vaquum/Limen')
@@ -139,7 +124,6 @@ def test_cross_repository_commit_closures_fail_even_when_number_matches(monkeypa
 
 def test_merge_commit_closures_are_checked_without_attribution_regression(monkeypatch):
     cc = _load_cc_gate()
-    monkeypatch.setattr(cc, 'fetch_issue', lambda *_: {'title': 'fix: example', 'labels': []})
     monkeypatch.setattr(cc, 'list_commits', lambda *_: [
         {'sha': 'merge', 'subject': "Merge branch 'codex/example'", 'is_merge': True}])
     monkeypatch.setattr(cc, 'list_commit_messages', lambda *_: [

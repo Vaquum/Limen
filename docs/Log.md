@@ -27,13 +27,25 @@ def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
 
 ### Compiled Research
 
-<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.py region=completed_log scenario=selection interface=compiled role=executed -->
-```python
-def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
-    log = loop.experiment_log
-    if log is None:
-        raise ValueError("The experiment has no completed result log")
-    return log
+<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.yaml region=run scenario=selection interface=compiled role=executed -->
+```yaml
+uel:
+  output_path: compiled-research
+  n_permutations: 8
+  workers: 1
+  search_strategy:
+    type: grid
+    shuffle: true
+    seed: 17
+  prep_each_round: true
+  checkpoint_interval: 1
+  feedback_interval: 1
+  output_format: parquet
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
 ```
 
 `Log` adds captured-group and row-analysis APIs to those results. The constructor
@@ -119,6 +131,8 @@ The resulting table has these columns:
 The row count follows the reconstructed test window; it is not a fixed contract. `round_id` is the ordinal in retained successful-round lists, not a CSV hash or `_round_index`.
 
 Row inspection requires the live serial preparation/data, predictions, round parameters and alignment retained through `post_processing=True`; inverse-scaled features also require the fitted scaler. Missing evidence raises explicitly. Parallel runs do not retain these inputs, and walk-forward row replay requires a fold-specific test set and is unsupported by this method.
+
+Replay calls `prep(data, round_params=retained_round_params)` once, matching UEL execution. One-argument-only preparations are unsupported. Preparation errors propagate unchanged, including during UEL post-processing finalization; already recorded rounds remain available.
 
 Use this table for round-level inspection before summary statistics. It is also a direct input to disabled-barrier snapshots. Configured TP/SL replay reconstructs private high/low columns from verified source identities; this public table remains unchanged.
 

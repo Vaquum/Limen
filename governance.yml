@@ -16,9 +16,9 @@ toolchain:
 review:
   approving_authority: zero-bang
 
-slice:
-  label: slice
-  issue_template: .github/ISSUE_TEMPLATE/slice.yml
+prd:
+  label: prd
+  issue_template: .github/ISSUE_TEMPLATE/prd.yml
 
 ruleset:
   name: Protect-Main
@@ -35,10 +35,9 @@ ruleset:
     - pr_checks_cc
     - pr_checks_lint
     - pr_checks_ruleset
-    - pr_checks_slice
+    - pr_checks_prd
     - pr_checks_fail_loud
     - pr_checks_typing
-    - pr_checks_version
     - pr_checks_honesty
     - PR Checks Tests
     - PR Checks Coverage

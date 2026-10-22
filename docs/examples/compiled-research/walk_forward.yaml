@@ -1,3 +1,4 @@
+# region declaration
 schema_version: '1.0'
 metadata:
   name: book_compiled_walk_forward
@@ -8,7 +9,7 @@ sfd:
     data_source:
       method: limen.data.HistoricalData.get_any_file
       params:
-        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+        file_path_or_url: inputs/spot_1h_20240101_20240116.parquet
     indicators:
     - func: limen.indicators.roc
       params:
@@ -60,6 +61,8 @@ sfd:
     - 1.0
     random_state: [42]
 uel:
+  record_execution: true
+  output_path: compiled-walk_forward
   n_permutations: 1
   search_strategy:
     type: grid
@@ -70,3 +73,12 @@ uel:
     alignment: true
     trade_ledger: true
     fold_details: true
+
+assessment:
+  metric: val_backtest_total_return
+  direction: maximize
+  top_k: 1
+  folds: [0, 1]
+  predict: true
+  inference_source: inputs/spot_1h_20240101_20241231.parquet
+# endregion declaration

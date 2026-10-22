@@ -4,8 +4,13 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches: [main]
+  # Releases are cut manually: dispatch after merging the release prep,
+  # never per push, so no two release runs can overlap or queue-drop.
+  workflow_dispatch:
+
+concurrency:
+  group: automated-release
+  cancel-in-progress: false
 
 jobs:
   create_release:
