@@ -375,6 +375,7 @@ def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
     with pytest.raises(subprocess.CalledProcessError):
         trigger.verify_release_trigger(tmp_path, dict(run, head_sha=unmerged, head_branch=unmerged_tag))
     # New main commits do not prevent admission of the frozen merged release.
+    git('update-ref', 'refs/remotes/origin/main', unmerged)
     trigger.verify_release_trigger(tmp_path, run)
     workflow = (ROOT / '.github/workflows/pr_publish_pypi.yml').read_text()
     assert workflow.index('Verify the exact manual release trigger') < workflow.index('Checkout the admitted release commit')
