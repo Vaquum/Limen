@@ -9,9 +9,11 @@ const cert=path.join(temporary,'certificate.pem'),key=path.join(temporary,'key.p
 execFileSync('openssl',['req','-x509','-newkey','ec','-pkeyopt','ec_paramgen_curve:P-256','-nodes','-keyout',key,'-out',cert,'-days','1','-subj','/CN=localhost','-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:'inherit'});
 const nativeFetch=globalThis.fetch,publicRoot='https://docs.vaquum.fi/limen/',options={headers:{'User-Agent':'Limen-documentation-editor/1.0'},signal:AbortSignal.timeout(15000)};
 const manifestReply=await nativeFetch(publicRoot+'publication.json',options);if(!manifestReply.ok)throw Error('Public publication unavailable: '+manifestReply.status);const manifestBytes=await manifestReply.text(),manifest=JSON.parse(manifestBytes),evidenceReply=await nativeFetch(publicRoot+manifest.artifacts.evidence.path,options);if(!evidenceReply.ok)throw Error('Public evidence unavailable: '+evidenceReply.status);const evidenceBytes=await evidenceReply.text();
-let remote=await protocol(),objects=new Map(),origin;
-globalThis.fetch=async(url,init)=>{
-  if(String(url)===publicRoot+'publication.json')return new Response(manifestBytes);
+let remote=await protocol(),objects=new Map(),origin,evidenceFailure=null;
+globalThis.fetch=async function(url,init){
+  if(this!==undefined&&this!==globalThis)throw Error('Worker fetch requires its global receiver');
+  if(String(url).startsWith(publicRoot)&&init.redirect!=='manual')throw Error('Worker evidence fetch requires explicit manual redirect rejection');
+  if(String(url)===publicRoot+'publication.json'){if(evidenceFailure)return new Response('Unavailable',{status:evidenceFailure==='redirect'?302:503,headers:{Location:'https://untrusted.invalid/evidence'}});return new Response(manifestBytes);}
   if(String(url)===publicRoot+manifest.artifacts.evidence.path)return new Response(evidenceBytes);
   if(String(url)==='https://github.com/login/oauth/access_token')return new Response(JSON.stringify({access_token:'browser-protocol-token'}));
   if(String(url).endsWith('/applications/browser-client/token'))return new Response(null,{status:204});
@@ -24,7 +26,8 @@ const server=https.createServer({cert:await fs.readFile(cert),key:await fs.readF
     const chunks=[];for await(const chunk of incoming)chunks.push(chunk);const body=Buffer.concat(chunks);
     if(incoming.url==='/__test/control'){
       const control=body.length?JSON.parse(body.toString()):{};
-      if(control.action==='reset'){remote=await protocol();objects=new Map();}
+      if(control.action==='reset'){remote=await protocol();objects=new Map();evidenceFailure=null;}
+      if(control.action==='evidence-failure')evidenceFailure=control.kind;
       if(control.action==='lose')remote.setLose(control.kind);if(control.action==='revoke')remote.revoke();
       const changed=[];for(const [branch,head] of remote.refs)if(branch!=='main'){const baseline=remote.commits.get(remote.refs.get('main')).files;for(const [source,text] of remote.commits.get(head).files)if(text!==baseline.get(source))changed.push(source);}
       outgoing.writeHead(200,{'Content-Type':'application/json'});outgoing.end(JSON.stringify({counts:remote.counts,pulls:remote.pulls,issues:remote.issues,changed}));return;

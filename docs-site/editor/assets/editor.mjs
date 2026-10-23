@@ -7,6 +7,12 @@ function acknowledge(){for(const receipt of Object.values(auth.workspace.receipt
 const say=text=>status.textContent=text;
 async function api(path,body){const reply=await fetch('/limen/edit/api/'+path+suffix,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}),data=await reply.json();if(!reply.ok)throw Error(data.error);return data;}
 const send=(type,extra={})=>frame.contentWindow?.postMessage({type,...extra},location.origin);
+frame.addEventListener('load',()=>{
+  const doc=frame.contentDocument;if(!auth||frame.hidden||doc?.querySelector('#editor-source'))return;
+  ready=false;let message='The authoring page could not be loaded';
+  if(doc?.contentType==='application/json'){try{message=JSON.parse(doc.querySelector('pre')?.textContent||doc.body.textContent).error||message;}catch(error){message+=': '+error.message;}}
+  say(message);update();
+});
 let lastEditState;
 function update(){if(!store||!auth)return;const editing=$('[data-edit]').checked&&!busy&&ready;frame.inert=busy||!ready;if(editing!==lastEditState){lastEditState=editing;send('edit',{enabled:editing});}const items=store.heads();$('[data-count]').textContent=items.length;$('[data-commit]').disabled=busy||(!items.length&&auth.workspace.operation?.kind!=='commit')||store.conflicts();$('[data-pr]').disabled=busy||!auth.workspace.created||items.length>0;$('[data-review]').disabled=busy;$('[data-refresh]').disabled=busy;$('[data-logout]').disabled=busy;$('[data-edit]').disabled=busy||!ready;if(store.conflicts())say('Competing tabs edited the same passage. Review and Undo the unwanted version before committing.');}
 function review(){const list=$('[data-drafts]');list.replaceChildren();for(const delivery of writerStores(auth.user.id))for(const item of delivery.store.heads()){const li=document.createElement('li'),name=document.createElement('p'),before=document.createElement('pre'),after=document.createElement('pre'),undo=document.createElement('button');name.textContent=item.patch.path+(delivery.workspace===auth.workspace.id?'':' · previous delivery '+delivery.workspace);before.textContent=item.patch.originalText;after.textContent=item.patch.newMarkdown;undo.textContent='Undo this draft';undo.onclick=()=>{delivery.store.undo(item.id);review();update();frame.contentWindow.location.reload();};li.append(name,before,after,undo);list.append(li);}if(!$('[data-review-dialog]').open)$('[data-review-dialog]').showModal();}

@@ -9,6 +9,10 @@ async function signIn(page){
 }
 async function change(page,selector,words){const target=page.frameLocator('[data-frame]').locator(selector).first();await target.click();await target.press('End');await target.pressSequentially(words);await target.press('Enter');await expect(page.locator('[data-count]')).not.toHaveText('0');return target;}
 test.beforeEach(async({request})=>{await control(request,{action:'reset'});});
+for(const kind of ['unavailable','redirect'])test('a '+kind+' evidence response disables editing and exposes its failure',async({page,request})=>{
+  await signIn(page);await control(request,{action:'evidence-failure',kind});await page.reload();await expect(page.locator('[data-status]')).toContainText('Published evidence is unavailable');await expect(page.locator('[data-edit]')).toBeDisabled();await expect(page.getByRole('button',{name:'Commit',exact:true})).toBeDisabled();
+  expect((await (await control(request,{})).json()).counts.commit).toBe(0);
+});
 test('two pages, two commits and one PR preserve the cumulative writer journey',async({page,request})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));await signIn(page);await page.locator('[data-edit]').check();await change(page,'p[data-edit-id]',' Reviewed.');await page.getByRole('button',{name:'Commit',exact:true}).click();await expect(page.locator('[data-status]')).toContainText('Committed');
   await page.locator('[data-edit]').uncheck();await page.frameLocator('[data-frame]').getByRole('link',{name:'Documentation System Contract',exact:true}).first().click();await expect(page.frameLocator('[data-frame]').locator('h1')).toHaveText('Documentation system contract');await page.locator('[data-edit]').check();await change(page,'p[data-edit-id]',' Maintained.');await page.getByRole('button',{name:'Commit',exact:true}).click();await expect(page.locator('[data-count]')).toHaveText('0');await page.getByRole('button',{name:'Open PR',exact:true}).click();await expect(page.getByRole('link',{name:'Open PR #200'})).toBeVisible();

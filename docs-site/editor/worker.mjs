@@ -86,9 +86,9 @@ export default{
         pages.push(referenceIndex(pages));
         const route='/'+path.slice((root+'view/').length),page=pages.find(page=>page.route===route);
         if(!page)throw new EditError('This route is not an editable maintained page',404);
-        const manifestResult=await fetch('https://docs.vaquum.fi/limen/publication.json',{headers:{'User-Agent':'Limen-documentation-editor/1.0'},redirect:'error'});if(!manifestResult.ok)throw new EditError('Published evidence is unavailable',502);
+        const manifestResult=await fetch('https://docs.vaquum.fi/limen/publication.json',{headers:{'User-Agent':'Limen-documentation-editor/1.0'},redirect:'manual'});if(!manifestResult.ok)throw new EditError('Published evidence is unavailable',502);
         const publication=await manifestResult.json(),binding=publication.artifacts?.evidence;if(!binding||!/^evidence\/evidence-[a-f0-9]{64}\.json$/.test(binding.path))throw new EditError('Published evidence identity is invalid',502);
-        const evidenceResult=await fetch('https://docs.vaquum.fi/limen/'+binding.path,{headers:{'User-Agent':'Limen-documentation-editor/1.0'},redirect:'error'});if(!evidenceResult.ok)throw new EditError('Published evidence is unavailable',502);
+        const evidenceResult=await fetch('https://docs.vaquum.fi/limen/'+binding.path,{headers:{'User-Agent':'Limen-documentation-editor/1.0'},redirect:'manual'});if(!evidenceResult.ok)throw new EditError('Published evidence is unavailable',502);
         const evidenceBytes=Buffer.from(await evidenceResult.arrayBuffer());if(hash(evidenceBytes)!==binding.sha256)throw new EditError('Published evidence digest differs',502);const evidence=JSON.parse(evidenceBytes.toString());if(evidence.revision.head!==publication.merged_commit||'v'+evidence.package.version!==publication.release)throw new EditError('Published evidence revision differs',502);
         return response(preview(page,pages,evidence,{publication,state:auth.state,user:auth.user,pr:continuing(url),passages:page.source?passages(page.markdown,page.source,page.blob):[]}));
       }
