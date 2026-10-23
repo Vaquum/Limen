@@ -64,6 +64,9 @@ test('fragment history retains the reading position and a repeated link reveals 
   await expect(page.locator('#adopt-the-compiled-pipeline')).toBeHidden();
   await compiled.click();await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
   await page.goto('/limen/#own-the-python-methodology');await expect(page.locator('#own-the-python-methodology')).toBeInViewport();
+  await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
+  await page.goto('/limen/#code-1-L2-L3');await expect(page.locator('#code-1-L2')).toBeInViewport();
+  await expect(page.locator('#code-1 .selected-line')).toHaveCount(2);
 });
 
 test('long callable reference remains searchable and renders within the reading budget',async({page})=>{

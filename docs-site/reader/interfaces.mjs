@@ -1,4 +1,5 @@
 import {announce,navigationType,resuming} from './place.mjs';
+import {revealCodeRange} from './code.mjs';
 
 const choices=['both','python','compiled'];
 export function initInterfaces(){
@@ -62,10 +63,11 @@ export function initInterfaces(){
   addEventListener('hashchange',()=>{
     if(history.state?.readerReference||document.querySelector('dialog[open]'))return;
     if(!choices.includes(history.state?.readerInterface)){
-      const target=document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      const target=document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
       const linked=target?.closest('[data-research-interface]');
       if(linked)choose(linked.dataset.researchInterface,{save:false});
-      if(target){target.scrollIntoView({block:'start'});target.focus({preventScroll:true});}
+      revealCodeRange();
+      if(target){target.scrollIntoView({block:target.classList.contains('code-line')?'center':'start'});target.focus({preventScroll:true});}
     }
     history.replaceState({...history.state,readerInterface:document.body.dataset.interface},'',location.href);
   });
