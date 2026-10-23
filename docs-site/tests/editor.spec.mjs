@@ -29,3 +29,8 @@ test('IME, keyboard cancellation, phone Undo and permission revocation retain th
 test('reloading while typing saves the active passage before its parent unloads',async({page})=>{
   await signIn(page);await page.locator('[data-edit]').check();const target=page.frameLocator('[data-frame]').locator('p[data-edit-id]').first();await target.click();await target.press('End');await target.pressSequentially(' Retained across reload.');await page.reload();await expect(page.locator('[data-edit]')).toBeEnabled();await expect(page.locator('[data-count]')).toHaveText('1');await expect(page.frameLocator('[data-frame]').locator('p[data-edit-id]').first()).toContainText('Retained across reload.');
 });
+test('inline conversion retains literal entities, nested formatting, code delimiters and titled links',async({page})=>{
+  await signIn(page);
+  const converted=await page.evaluate(async()=>{const {inlineMarkdown}=await import('/limen/edit/assets/inline.mjs'),cases=[['Literal &amp;copy; and &amp;',[], 'Literal &amp;copy; and &amp;'],['<strong>Outer <em>inner</em></strong>',[],'**Outer *inner***'],['<code>a`b</code>',[],'``a`b``'],['<code>`edge`</code>',[],'`` `edge` ``'],['one<br>two',[],'one  \ntwo'],['<a href="/rendered/">Label</a>',[{href:'../Research-Book.md',title:'Book "title"'}],'[Label](<../Research-Book.md> "Book &quot;title&quot;")']];return cases.map(([html,links,expected])=>{const element=document.createElement('p');element.innerHTML=html;return {actual:inlineMarkdown(element,{links}),expected};});});
+  for(const item of converted)expect(item.actual).toBe(item.expected);
+});

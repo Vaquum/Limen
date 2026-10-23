@@ -1,4 +1,4 @@
-const escapeText=value=>value.replace(/[\\`*_{}\[\]<>#+.!|>~\-]/g,'\\$&');
+const escapeText=value=>value.replaceAll('&','&amp;').replace(/[\\`*_{}\[\]<>#+.!|>~\-]/g,'\\$&');
 export function inlineMarkdown(element,original){
   let link=0;
   function walk(node){
