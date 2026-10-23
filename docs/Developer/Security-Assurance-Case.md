@@ -40,9 +40,9 @@ Argument: merge checks reject known dependency findings unless they have a recor
 
 Evidence: `.github/workflows/pr_checks_lint.yml` runs `governance/check_dependency_vulnerabilities.py` (pip-audit over the declared dependencies) as a required check; exceptions live in `.github/vuln_exceptions.json` with mandatory `id`, `reason`, and `expiry`, and expired exceptions fail again; Dependabot proposes weekly updates for the pip and github-actions ecosystems.
 
-## Requirement 4: CI credentials follow least privilege and stay out of PR reach
+## Requirement 4: CI job permissions are explicit
 
-Argument: pinned actions, job-level permissions and non-persisted checkout credentials limit the CI credential surfaces. Privileged manual-release admission uses trusted `main` code before loading the triggering source; these controls do not establish that arbitrary PR code is harmless.
+Argument: each job receives declared permissions, actions are pinned, and checkouts discard credentials. Privileged manual-release admission uses trusted `main` code before loading the triggering source; these controls do not establish that arbitrary PR code is harmless.
 
 Evidence: every workflow declares least-privilege top-level `permissions:` with write scopes only at job level; every action reference is pinned to a full commit SHA; every checkout sets `persist-credentials: false` except the release tag push; CI tool installs use hash-checked locks under `requirements/ci/`, within the supported envelope in `requirements/constraints.txt`; tag names reach shell through `env:` indirection. All five invariants are pinned by `tests/test_packaging_surface.py::test_supply_chain_surfaces`.
 
