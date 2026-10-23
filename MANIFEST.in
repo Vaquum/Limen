@@ -58,3 +58,8 @@ prune docs-site/publisher/node_modules
 prune docs-site/publisher/.wrangler
 
 recursive-exclude docs-site/reader/reference *.jpg
+
+recursive-include docs-site/editor *.mjs *.css *.json *.html
+include docs-site/playwright.editor.config.mjs
+prune docs-site/editor-build
+prune docs-site/editor/.wrangler

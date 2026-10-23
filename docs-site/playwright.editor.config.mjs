@@ -1,0 +1,3 @@
+import {defineConfig} from '@playwright/test';
+const origin=process.env.EDITOR_TEST_ORIGIN||'https://127.0.0.1:4335';
+export default defineConfig({testDir:'./tests',testMatch:'editor.spec.mjs',timeout:30000,expect:{timeout:7000},workers:1,retries:0,reporter:'list',outputDir:'../.docs-evidence/editor-browser/results',use:{baseURL:origin,ignoreHTTPSErrors:true,headless:true,screenshot:'only-on-failure',trace:'retain-on-failure'},projects:[{name:'editor-desktop',use:{viewport:{width:1440,height:1000}}},{name:'editor-phone',use:{viewport:{width:390,height:844},reducedMotion:'reduce'}}],webServer:process.env.EDITOR_SERVER_MANAGED==='1'?undefined:{command:'node editor/tests/serve.mjs',url:origin+'/limen/edit/',ignoreHTTPSErrors:true,reuseExistingServer:false,timeout:30000}});

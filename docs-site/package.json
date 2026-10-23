@@ -10,9 +10,12 @@
     "security:audit": "node ./scripts/audit-security.mjs",
     "start": "node scripts/serve-reader.mjs",
     "build": "node scripts/build-reader.mjs",
-    "check": "npm run lint && npm run build",
+    "check": "npm run lint && npm run check:editor && npm run build:editor && npm run build && node scripts/check-render-compat.mjs",
     "serve": "node scripts/serve-reader.mjs",
-    "check:reader": "node scripts/check-reader.mjs"
+    "check:reader": "node scripts/check-reader.mjs",
+    "build:editor": "node scripts/build-editor.mjs",
+    "check:editor": "node --test editor/tests/*.test.mjs",
+    "check:editor-browser": "node scripts/check-editor.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "5.3.0",

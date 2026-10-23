@@ -1,19 +1,20 @@
 import MarkdownIt from 'markdown-it';
-import {slug,pageLabel} from './render.mjs';
+import {pageLabel} from './render.mjs';
+
+import {headingIdentities} from './headings.mjs';
 
 // Index the same parsed headings and literal code that readers can look up.
 export function searchEntries(page){
-  const tokens=new MarkdownIt({html:true}).parse(page.markdown,{}),seen=new Map(),entries=[];
+  const tokens=new MarkdownIt({html:true}).parse(page.markdown,{}),identities=headingIdentities(new MarkdownIt({html:true}).parse(page.markdown,{})),entries=[];
   let entry={title:pageLabel(page),heading:'',part:page.part,route:page.url,text:''};
   const plain=token=>(token.children||[]).map(child=>['text','code_inline','image'].includes(child.type)?child.content:['softbreak','hardbreak'].includes(child.type)?' ':'').join('');
   for(let index=0;index<tokens.length;index++){
     const token=tokens[index];
     if(token.type==='heading_open'){
-      const heading=plain(tokens[index+1]),stem=slug(heading),count=seen.get(stem)||0;
+      const heading=plain(tokens[index+1]),id=identities.get(index).id;
       if(token.tag!=='h1'){
-        seen.set(stem,count+1);
         entries.push(entry);
-        entry={title:pageLabel(page),heading,part:page.part,route:page.url+'#'+stem+(count?'-'+count:''),text:''};
+        entry={title:pageLabel(page),heading,part:page.part,route:page.url+'#'+id,text:''};
       }
     }
     if(token.type==='inline')entry.text+=plain(token)+' ';

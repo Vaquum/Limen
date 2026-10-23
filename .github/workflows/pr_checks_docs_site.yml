@@ -111,6 +111,7 @@ jobs:
           npm run security:audit
           npm run check:assets
           npm run check:config
+          node node_modules/wrangler/bin/wrangler.js deploy --config ../editor/wrangler.json --dry-run --outdir ../.wrangler/editor-check
 
       - name: Retain research and browser evidence
         if: ${{ always() && hashFiles('.docs-evidence/**') != '' }}

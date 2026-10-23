@@ -6,7 +6,7 @@ const root=path.resolve(process.cwd(),'..');
 const failures=new WeakMap();
 test.beforeEach(async({page})=>{const errors=[];failures.set(page,errors);page.on('pageerror',error=>errors.push(error.message));page.on('console',message=>{if(message.type()==='error')errors.push(message.text());});page.on('requestfailed',request=>errors.push(request.url()+': '+request.failure()?.errorText));});
 test.afterEach(async({page})=>{expect(failures.get(page)).toEqual([]);});
-async function open(page){await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);await expect(page.getByRole('button',{name:'Search',exact:true})).toBeVisible();}
+async function open(page){await page.goto('/limen/');await page.waitForFunction(()=>document.fonts.status==='loaded');await expect(page.getByRole('button',{name:'Search',exact:true})).toBeVisible();}
 
 test('reader command rejects substituted expected identities',()=>{
   const wrong='0'.repeat(40);
@@ -104,7 +104,7 @@ test('reference returns to the same passage and focus',async({page})=>{
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBe(beforeWheel+120);
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
-  const continued=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
+  const continued=await page.evaluate(()=>scrollY);await page.reload();await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
 });
 
@@ -128,7 +128,7 @@ test('failed reference fetch does not override later reading on reload',async({p
   expect(await page.evaluate(()=>history.state?.readerPlace)).toBeNull();
   await page.locator('#inspect-the-result-before-continuing').scrollIntoViewIfNeeded();
   await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
-  const continued=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
+  const continued=await page.evaluate(()=>scrollY);await page.reload();await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
 });
 
@@ -250,7 +250,7 @@ test('reduced motion and interruption retain readable content',async({page})=>{
 test('saved passages survive reload without overriding deep links',async({page})=>{
   await open(page);await page.locator('#adopt-the-compiled-pipeline').scrollIntoViewIfNeeded();await page.mouse.wheel(0,120);
   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
-  await page.reload();await page.evaluate(()=>document.fonts.ready);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(300);
+  await page.reload();await page.waitForFunction(()=>document.fonts.status==='loaded');await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(300);
   await page.goto('/limen/#choose-who-owns-the-experiment');await expect(page.locator('#choose-who-owns-the-experiment')).toBeInViewport();
   await page.addInitScript(()=>{localStorage.setItem('reader:limen:docs/Research-Book.md',JSON.stringify({passage:'p-removed-passage',ratio:.5,interface:'python'}));history.replaceState(null,'');});
   await page.goto('/limen/?revision=current');await page.reload();await expect(page.locator('[data-status]')).toContainText('no longer in this revision');
@@ -258,21 +258,21 @@ test('saved passages survive reload without overriding deep links',async({page})
 });
 
 test('page links start at the named chapter while reload and history retain their own passage',async({page})=>{
-  await page.goto('/limen/book/historical-data/');await page.evaluate(()=>document.fonts.ready);
+  await page.goto('/limen/book/historical-data/');await page.waitForFunction(()=>document.fonts.status==='loaded');
   await page.locator('main article p').last().scrollIntoViewIfNeeded();
   const old=await page.evaluate(()=>scrollY);expect(old).toBeGreaterThan(300);
-  await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);
+  await page.goto('/limen/');await page.waitForFunction(()=>document.fonts.status==='loaded');
   const link=page.getByRole('link',{name:'recorded observations',exact:true});
   await link.scrollIntoViewIfNeeded();const origin=await page.evaluate(()=>scrollY);
-  await link.click();await expect(page).toHaveURL(/book\/historical-data\/$/);await page.evaluate(()=>document.fonts.ready);
+  await link.click();await expect(page).toHaveURL(/book\/historical-data\/$/);await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(100);
   await expect(page.locator('h1')).toBeInViewport();
-  await page.goBack();await page.evaluate(()=>document.fonts.ready);
+  await page.goBack();await expect(page).toHaveURL(/\/limen\/$/);await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-origin)).toBeLessThan(3);
-  await page.goForward();await page.evaluate(()=>document.fonts.ready);
+  await page.goForward();await expect(page).toHaveURL(/book\/historical-data\/$/);await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(100);
   await page.locator('main article p').last().scrollIntoViewIfNeeded();const continued=await page.evaluate(()=>scrollY);
-  await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await page.reload();await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
 });
 
@@ -330,7 +330,7 @@ test('single-interface project links cannot inherit an empty authoring choice',a
 test('reading state is isolated by product identity',async({page})=>{
   await open(page);await page.evaluate(()=>localStorage.setItem('reader:limen:docs/Research-Book.md',JSON.stringify({passage:'p-other-product-sentinel',ratio:.5,interface:'python'})));
   await page.goto('/limen/__test/other-product/');await expect(page.locator('body')).toHaveAttribute('data-product','fixture-product');
-  await page.evaluate(()=>document.fonts.ready);expect(await page.locator('[data-status]').textContent()).toBe('');expect(await page.evaluate(()=>scrollY)).toBeLessThan(100);
+  await page.waitForFunction(()=>document.fonts.status==='loaded');expect(await page.locator('[data-status]').textContent()).toBe('');expect(await page.evaluate(()=>scrollY)).toBeLessThan(100);
 });
 
 test('without JavaScript both interfaces and proof links remain readable',async({browser})=>{
@@ -348,7 +348,7 @@ test('a place within code survives reload and non-wheel scrolling',async({page})
   // without any wheel/touch/key intent event that could mask the old defect.
   await page.evaluate(()=>scrollTo(0,scrollY+160));
   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
-  const before=await page.evaluate(()=>scrollY);await page.reload();await page.evaluate(()=>document.fonts.ready);
+  const before=await page.evaluate(()=>scrollY);await page.reload();await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-before)).toBeLessThan(3);
 });
 
@@ -394,7 +394,7 @@ test('long API headings and code fit at reading breakpoints',async({page})=>{
   for(const width of [1440,1280,1024,640,390,320]){
     await page.setViewportSize({width,height:900});
     for(const route of ['parameter-search','foundational-sfds','reference-architectures']){
-      await page.goto('/limen/reference/packages/internals/'+route+'/');await page.evaluate(()=>document.fonts.ready);
+      await page.goto('/limen/reference/packages/internals/'+route+'/');await page.waitForFunction(()=>document.fonts.status==='loaded');
       expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+' '+route).toBe(true);
     }
   }
