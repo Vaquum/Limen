@@ -178,7 +178,7 @@ def append_record(path: Path, record: Mapping[str, object]) -> None:
         _ = stream.write(gzip.compress(encoded, compresslevel=1, mtime=0))
 
 
-def _frames(stream: BinaryIO, path: Path, *, tail: bool = False) -> Iterator[tuple[bytes, int]]:
+def frames(stream: BinaryIO, path: Path, *, tail: bool = False) -> Iterator[tuple[bytes, int]]:
     if path.suffix == '.gz':
         yield from _members(stream, path, tail=tail)
     else:
@@ -197,7 +197,7 @@ def open_text(path: Path, *, limit: int | None = None, tail: bool = False) -> It
     with path.open('rb') as stream:
         def lines() -> Iterator[str]:
             previous = -1
-            for raw, end in islice(_frames(stream, path, tail=tail), limit):
+            for raw, end in islice(frames(stream, path, tail=tail), limit):
                 decoded = _json(raw, path, end)
                 if path.suffix != '.gz':
                     if isinstance(decoded, dict):
@@ -247,7 +247,7 @@ def truncate_rounds(path: Path, start_round: int) -> None:
     with path.open('rb') as stream:
         count = len(csv_prefix(path, start_round)) if (path.parent / 'results.csv').exists() else None
         limit = count if path.suffix != '.gz' else None
-        for position, (raw, offset) in enumerate(islice(_frames(stream, path, tail=True), limit)):
+        for position, (raw, offset) in enumerate(islice(frames(stream, path, tail=True), limit)):
             record = cast(dict[str, object], json.loads(raw))
             committed = position < count if count is not None else cast(int, record.get('_round_index', 0)) < start_round
             if committed:
