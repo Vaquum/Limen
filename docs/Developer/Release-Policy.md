@@ -20,10 +20,13 @@ The publish path is gated as strongly as the merge path. Every control is mechan
 | Control | Mechanism |
 | --- | --- |
 | merge to `main` | required status checks on the `Protect-Main` ruleset, including dependency vulnerability checking inside `pr_checks_lint` |
-| tag creation | a `v*` tag ruleset restricts creating, updating, and deleting release tags to the GitHub Actions integration; no user account can tag a release |
+| tag immutability | `Protect-Release-Tags` blocks updates and deletion of `v*` tags without bypass; creation follows repository write permissions |
+| manual release source | before loading the triggering source, the publisher uses trusted `main` code to require the successful canonical manual workflow, the same repository, and a commit reachable from `origin/main`; a dispatch tag must bind that commit and its package version |
 | tag shape | `scripts/create_release.py` computes the tag from `pyproject.toml` and validates it against `TAG_RE`; `pr_publish_pypi.yml` re-validates the resolved tag and cross-checks it against the built version |
 | PyPI upload | trusted publishing (OIDC) only, from the `publish_to_pypi` job running in the `pypi` GitHub environment; the PyPI trusted-publisher configuration names that environment |
 | filename availability | a pre-build guard queries PyPI and fails loud, with the burned filenames named, before anything is built or uploaded |
+
+Cut stable `v<version>` tags through `Automated Release`. A source-binding tag has the separate form `v<version>-dispatch-<full merged commit>`: it fixes the workflow revision before dispatch and is excluded from previous-release selection. Verify the live tag ruleset before using it. Tag creation alone establishes neither an admitted release source nor permission to publish a package.
 
 ## Model authority boundary
 
