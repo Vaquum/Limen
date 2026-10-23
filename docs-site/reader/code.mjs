@@ -28,7 +28,7 @@ export function initCode(root=document) {
       history.replaceState(history.state,'',numbers[low].getAttribute('href')+(low===high?'':'-L'+(high+1)));
     }
     numbers.forEach((number,index)=>{number.removeAttribute('aria-hidden');number.setAttribute('aria-label','Line '+(index+1));
-      number.addEventListener('click',event=>{event.preventDefault();selectLine(index,event.shiftKey);});
+      number.addEventListener('click',event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.altKey)return;event.preventDefault();selectLine(index,event.shiftKey);});
       number.addEventListener('keydown',event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){
         event.preventDefault();const next=Math.max(0,Math.min(numbers.length-1,index+(event.key==='ArrowDown'?1:-1)));selectLine(next,event.shiftKey);numbers[next].focus();
       }});

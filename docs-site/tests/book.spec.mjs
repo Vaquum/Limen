@@ -286,6 +286,27 @@ test('same-page text links reveal a target hidden by the interface choice',async
   await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
 });
 
+test('search closes and reveals a passage in the current chapter, including the current fragment',async({page})=>{
+  await open(page);
+  for(let attempt=0;attempt<2;attempt++){
+    await page.getByRole('button',{name:'Python Research',exact:true}).click();
+    await page.getByRole('button',{name:'Search',exact:true}).click();
+    await page.getByRole('searchbox').fill('adopt the compiled pipeline');
+    await page.locator('[data-search-dialog] ol a').filter({hasText:'Adopt the Compiled pipeline'}).first().click();
+    await expect(page.locator('[data-search-dialog]')).not.toBeVisible();
+    await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
+    await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  }
+});
+
+test('modified source-line links open the actual permalink in another tab',async({page,context})=>{
+  await open(page);const figure=page.locator('figure.code').first();
+  const line=figure.locator('.line-number').first();
+  const opened=context.waitForEvent('page');await line.click({modifiers:['ControlOrMeta']});const linked=await opened;
+  await expect(linked).toHaveURL(/#code-1-L1$/);await expect(linked.locator('#code-1-L1')).toBeInViewport();
+  expect(new URL(page.url()).hash).toBe('');await linked.close();
+});
+
 test('single-interface project links cannot inherit an empty authoring choice',async({page})=>{
   await open(page);await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
   await page.locator('main article').getByRole('link',{name:'Python project',exact:true}).last().click();
