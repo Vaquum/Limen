@@ -130,7 +130,8 @@ def test_missing_route_wrapped_503_is_not_a_propagation_retry(monkeypatch, activ
         assert len(requests) == 3
 
 
-def test_rollback_home_digest_converges_with_the_other_proof(monkeypatch, active_publication):
+@pytest.mark.parametrize('released', [True, False])
+def test_rollback_home_digest_converges_with_the_other_proof(monkeypatch, active_publication, released):
     output, calls, digest = active_publication
     homes = iter([b'pre-propagation-home', b'retained-home'])
     proofs = []
@@ -144,7 +145,8 @@ def test_rollback_home_digest_converges_with_the_other_proof(monkeypatch, active
 
     monkeypatch.setattr(deployment, 'fetch', fetch)
     monkeypatch.setattr(deployment, 'verify', verify)
-    assert deployment.verify_active(Path('wrangler'), Path('config'), 'selected-version', 'v5.46.1', digest,
-                                    output, 'rollback', home_sha256=sha256(b'retained-home')) == {'artifacts': 8}
-    assert len(proofs) == 2
+    assert deployment.verify_active(Path('wrangler'), Path('config'), 'selected-version', 'v5.46.1' if released else None,
+                                    digest if released else None, output, 'rollback', home_sha256=sha256(b'retained-home')) == (
+                                        {'artifacts': 8} if released else {'mode': 'legacy'})
+    assert len(proofs) == (2 if released else 0)
     assert calls == [('wait', 10)]

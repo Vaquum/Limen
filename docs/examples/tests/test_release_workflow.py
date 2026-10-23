@@ -210,10 +210,11 @@ def test_a_release_superseded_during_verification_or_activation_is_not_accepted(
 
 
 @pytest.mark.parametrize('production_failure', [False, True])
-def test_public_verification_waits_for_activation_and_rollback_propagation(monkeypatch, tmp_path, production_failure):
+@pytest.mark.parametrize('propagation_seconds', [2, 40])
+def test_public_verification_waits_for_activation_and_rollback_propagation(monkeypatch, tmp_path, production_failure, propagation_seconds):
     from email.message import Message
     from urllib.error import HTTPError
-    from verify_publication import sha256
+    from verify_publication import PublicationHTTPError, sha256
     output = tmp_path / '.docs-evidence/deployment'
     output.mkdir(parents=True)
     current = (ROOT / 'docs/examples/retained/python-selection.json').read_bytes()
@@ -237,7 +238,7 @@ def test_public_verification_waits_for_activation_and_rollback_propagation(monke
         version = command[3].removesuffix('@100%')
         deployments.append(version)
         state['version'] = version
-        state['pending'] = (version, state['clock'] + 2)
+        state['pending'] = (version, state['clock'] + propagation_seconds)
         Path(env['WRANGLER_OUTPUT_FILE_PATH']).write_text(json.dumps({'type': 'version-deploy', 'version': 1, 'worker_name': 'limen'}) + '\n')
 
     def sleep(seconds):
@@ -249,7 +250,7 @@ def test_public_verification_waits_for_activation_and_rollback_propagation(monke
             return current
         propagate()
         if url.endswith('publication.json') and state['public'] != staged['version_id']:
-            raise HTTPError(url, 404, 'Not Found', Message(), None)
+            raise PublicationHTTPError(url, HTTPError(url, 404, 'Not Found', Message(), None))
         return current if state['public'] == staged['version_id'] else previous
 
     def verify(url, release):
@@ -264,6 +265,7 @@ def test_public_verification_waits_for_activation_and_rollback_propagation(monke
     monkeypatch.setattr('deploy_publication.current_version', lambda *args: state['version'])
     monkeypatch.setattr('deploy_publication.subprocess.run', run)
     monkeypatch.setattr('deploy_publication.time.sleep', sleep)
+    monkeypatch.setattr('deploy_publication.time.monotonic', lambda: state['clock'])
     monkeypatch.setattr('deploy_publication.fetch', fetch)
     monkeypatch.setattr('deploy_publication.verify', verify)
     if production_failure:

@@ -139,8 +139,10 @@ def deploy_version(wrangler: Path, config: Path, version: str, output: Path) -> 
         raise ValueError('The active Worker version changed during deployment propagation')
 
 
-def verify_active(wrangler: Path, config: Path, version: str, release: str,
-                  manifest_sha256: str, output: Path, phase: str, *, home_sha256: str | None = None):
+def verify_active(wrangler: Path, config: Path, version: str, release: str | None,
+                  manifest_sha256: str | None, output: Path, phase: str, *, home_sha256: str | None = None):
+    if (release is None) != (manifest_sha256 is None) or (release is None and home_sha256 is None):
+        raise ValueError('Incomplete publication or legacy rollback identity')
     deadline = time.monotonic() + DEPLOYMENT_VERIFY_SECONDS
     attempt = 0
     while True:
@@ -148,8 +150,8 @@ def verify_active(wrangler: Path, config: Path, version: str, release: str,
             raise ValueError('Another deployment changed the active Worker during verification')
         attempt += 1
         try:
-            verified = verify(ORIGIN, release)
-            if sha256(fetch(ORIGIN + 'publication.json')) != manifest_sha256:
+            verified = {'mode': 'legacy'} if release is None else verify(ORIGIN, release)
+            if manifest_sha256 is not None and sha256(fetch(ORIGIN + 'publication.json')) != manifest_sha256:
                 raise ValueError('Production serves another publication manifest')
             if home_sha256 is not None and sha256(fetch(ORIGIN)) != home_sha256:
                 raise ValueError('Rollback did not restore the retained home page')
@@ -212,8 +214,11 @@ def activate(root: Path, wrangler: Path):
                 if previous['mode'] == 'released':
                     verify_active(wrangler, config, previous['version_id'], previous['release'],
                                   previous['manifest_sha256'], output, 'rollback', home_sha256=previous['home_sha256'])
-                elif sha256(fetch(ORIGIN)) != previous['home_sha256']:
-                    raise ValueError('Rollback did not restore the retained home page')
+                elif previous['mode'] == 'legacy':
+                    verify_active(wrangler, config, previous['version_id'], None, None,
+                                  output, 'rollback', home_sha256=previous['home_sha256'])
+                else:
+                    raise ValueError('Unknown rollback publication mode')
                 (output / 'rollback.json').write_text(json.dumps(previous, indent=2) + '\n')
             except Exception as rollback_error:
                 record_http_failure(output, 'rollback', previous.get('release'), previous['version_id'], rollback_error)
