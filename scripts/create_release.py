@@ -91,14 +91,12 @@ def verify_release_trigger(root: Path, run: dict[str, object]) -> None:
     def git(*arguments: str) -> str:
         return subprocess.check_output(['git', *arguments], cwd=root, text=True).strip()
 
-    if git('rev-parse', 'HEAD') != head:
-        raise ValueError('Package publication requires the exact successful manual release source')
     git('merge-base', '--is-ancestor', head, 'origin/main')
     branch = run.get('head_branch')
     if branch == 'main':
         return
     version = re.search(r'^version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"',
-                        (root / 'pyproject.toml').read_text(), re.M)
+                        git('show', f'{head}:pyproject.toml'), re.M)
     if version is None or branch != f'v{version.group(1)}-dispatch-{head}':
         raise ValueError('Manual release tag must bind the package version and full merged commit')
     if git('rev-parse', f'refs/tags/{branch}^{{commit}}') != head:

@@ -365,5 +365,18 @@ def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
     git('update-ref', 'refs/remotes/origin/main', predecessor)
     with pytest.raises(subprocess.CalledProcessError):
         trigger.verify_release_trigger(tmp_path, run)
+    git('update-ref', 'refs/remotes/origin/main', head)
+    (tmp_path / 'release.txt').write_text('Unmerged source cannot replace trusted publication admission\n')
+    git('add', '.')
+    git('commit', '-qm', 'Unmerged release change')
+    unmerged = git('rev-parse', 'HEAD')
+    unmerged_tag = f'v5.46.2-dispatch-{unmerged}'
+    git('tag', unmerged_tag)
+    with pytest.raises(subprocess.CalledProcessError):
+        trigger.verify_release_trigger(tmp_path, dict(run, head_sha=unmerged, head_branch=unmerged_tag))
+    # New main commits do not prevent admission of the frozen merged release.
+    trigger.verify_release_trigger(tmp_path, run)
+    workflow = (ROOT / '.github/workflows/pr_publish_pypi.yml').read_text()
+    assert workflow.index('Verify the exact manual release trigger') < workflow.index('Checkout the admitted release commit')
     monkeypatch.chdir(tmp_path)
     assert _load_create_release().get_previous_tag() == 'v5.46.1'

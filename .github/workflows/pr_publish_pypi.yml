@@ -34,12 +34,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Checkout release commit from workflow run
-        if: github.event_name == 'workflow_run'
-        env:
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
-        run: git checkout --force "$HEAD_SHA"
-
       - name: Fetch all tags
         run: git fetch --force --tags origin
 
@@ -51,6 +45,12 @@ jobs:
         run: |
           gh api "repos/Vaquum/Limen/actions/runs/$RELEASE_RUN_ID" > /tmp/manual-release-run.json
           python scripts/create_release.py --verify-trigger /tmp/manual-release-run.json
+
+      - name: Checkout the admitted release commit
+        if: github.event_name == 'workflow_run'
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: git checkout --force "$HEAD_SHA"
 
       - name: Resolve released tag
         id: resolve
