@@ -1,4 +1,5 @@
 import {test,expect} from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 import CONTENT from '../reader/content.json' with {type:'json'};
 const developerRoute=CONTENT.pages['docs/Developer/README.md'].route;
 const origin=process.env.EDITOR_TEST_ORIGIN||'https://127.0.0.1:4335';
@@ -9,6 +10,19 @@ async function signIn(page,route=developerRoute){
 }
 async function change(page,selector,words){const target=page.frameLocator('[data-frame]').locator(selector).first();await target.click();await target.press('End');await target.pressSequentially(words);await target.press('Enter');await expect(page.locator('[data-count]')).not.toHaveText('0');return target;}
 test.beforeEach(async({request})=>{await control(request,{action:'reset'});});
+test('hero and paper prose retain readable contrast while hovered and edited',async({page})=>{
+  await signIn(page,'/');await page.locator('[data-edit]').check();const book=page.frameLocator('[data-frame]');
+  for(const selector of ['h1[data-edit-id]','.hero-lead[data-edit-id]','article p[data-edit-id]']){
+    const target=book.locator(selector).first(),identity=await target.getAttribute('data-edit-id');
+    for(const active of [false,true]){
+      if(active){await target.click();await expect(target).toHaveAttribute('contenteditable','true');}else await target.hover();
+      const result=await new AxeBuilder({page}).withRules(['color-contrast']).analyze();
+      expect(result.violations).toEqual([]);expect(result.passes.flatMap(rule=>rule.nodes).some(node=>node.html.includes('data-edit-id="'+identity+'"'))).toBe(true);
+    }
+    await target.press('Escape');
+  }
+  await expect(page.locator('[data-count]')).toHaveText('0');
+});
 test('the research book retains code tools, interface selection and search while its examples stay read-only',async({page})=>{
   const errors=[];page.on('pageerror',error=>errors.push(error.message));await signIn(page,'/');const book=page.frameLocator('[data-frame]');
   await book.getByRole('button',{name:'Compiled Research',exact:true}).click();await expect(book.getByRole('heading',{name:'Own the Python methodology',exact:true})).toBeHidden();const code=book.locator('.code:visible').first();await expect(code.getByRole('button',{name:'Copy',exact:true})).toBeVisible();const wrap=code.getByRole('button',{name:'Wrap',exact:true});await wrap.click();await expect(wrap).toHaveAttribute('aria-pressed','false');
