@@ -6,7 +6,7 @@ import path from 'node:path';
 import {createHash} from 'node:crypto';
 import {prepareAssets,MAX_ASSET_BYTES} from './prepare-assets.mjs';
 
-const bytes=await readFile(new URL('../../docs/examples/retained/compiled-selection.json',import.meta.url));
+const bytes=await readFile(new URL('../../docs/examples/python-research/research.py',import.meta.url));
 const sha256=createHash('sha256').update(bytes).digest('hex');
 const relative=`evidence/rollback-${sha256}.tar.gz`;
 async function fixture(t){
@@ -15,6 +15,7 @@ async function fixture(t){
   await mkdir(path.join(directory,'evidence'));
   await writeFile(path.join(directory,relative),bytes);
   await writeFile(path.join(directory,'publication.json'),JSON.stringify({schema_version:1,release:'v5.46.2',artifacts:{rollback:{path:relative,sha256}}}));
+  assert.ok((await readFile(path.join(directory,'publication.json'))).length<bytes.length-1);
   return directory;
 }
 test('normal assets remain byte-identical and require no network',async t=>{
@@ -43,6 +44,7 @@ for(const failure of ['changed','unavailable','local-change','other-member','exi
   if(failure==='other-member')await writeFile(path.join(directory,'oversized.html'),bytes);
   if(failure==='existing-metadata')await writeFile(path.join(directory,'_redirects'),'existing\n');
   const fetchPublic=async()=>failure==='unavailable'?new Response(null,{status:404}):new Response(failure==='changed'?Buffer.concat([bytes,bytes]):bytes);
-  await assert.rejects(prepareAssets(directory,{limit:bytes.length-1,fetchPublic}));
+  const expected={changed:/Anonymous Release rollback differs/,unavailable:/Anonymous Release rollback differs/,'local-change':/Sealed rollback bytes changed/,'other-member':/oversized reader member/,'existing-metadata':/Provider metadata already exists/};
+  await assert.rejects(prepareAssets(directory,{limit:bytes.length-1,fetchPublic}),expected[failure]);
   await assert.rejects(readFile(path.join(directory,'.assetsignore')),/ENOENT/);
 });
