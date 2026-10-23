@@ -165,7 +165,8 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
     with ThreadPoolExecutor(max_workers=1 if sys.platform == 'darwin' else 2) as executor:
         executions = [executor.submit(run, shlex.split(canonical_commands[name]),
-                                     cwd=project, env=runtime_environment, timeout=120)
+                                     cwd=project, env=runtime_environment,
+                                     timeout=240 if sys.platform == 'darwin' and name == 'compiled-all' else 120)
                       for name in ('python-all', 'compiled-all')]
         for execution in executions:
             execution.result()
