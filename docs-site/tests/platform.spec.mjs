@@ -7,7 +7,7 @@ const evidence=path.resolve('../.docs-evidence/browser');
 test('book, reference, developer and result surfaces meet automated WCAG checks',async({page})=>{
   const results=[];
   for(const route of ['/limen/','/limen/book/selected-behavior/','/limen/reference/trainer/','/limen/developer/documentation-system/']){
-    await page.goto(route);await page.evaluate(()=>document.fonts.ready);
+    await page.goto(route);await page.waitForFunction(()=>document.fonts.status==='loaded');
     const analysis=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     results.push({route,violations:analysis.violations});
     expect(analysis.violations,route).toEqual([]);
@@ -21,7 +21,7 @@ test('contents, tables and headings reflow through both layout transitions',asyn
   for(const width of [320,390,639,640,1023,1024,1440]){
     await page.setViewportSize({width,height:1000});
     await page.goto('/limen/reference/packages/internals/reference-architectures/');
-    await page.evaluate(()=>document.fonts.ready);
+    await page.waitForFunction(()=>document.fonts.status==='loaded');
     const measure=await page.evaluate(()=>({width:innerWidth,document:document.documentElement.scrollWidth,heading:document.querySelector('h1').getBoundingClientRect().right}));
     observations.push(measure);expect(measure.document).toBeLessThanOrEqual(width);expect(measure.heading).toBeLessThanOrEqual(width);
   }
@@ -32,24 +32,24 @@ test('contents, tables and headings reflow through both layout transitions',asyn
 });
 
 test('code ranges and interface choice survive direct navigation',async({page})=>{
-  await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);
+  await page.goto('/limen/');await page.waitForFunction(()=>document.fonts.status==='loaded');
   await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
   await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
   const figure=page.locator('figure.code[data-research-interface="compiled"]').first();
   await figure.locator('.line-number').first().focus();await page.keyboard.press('Shift+ArrowDown');
   await expect(figure.locator('.selected-line')).toHaveCount(2);
   expect(new URL(page.url()).hash).toMatch(/-L1-L2$/);
-  await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await page.reload();await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
   await expect(page.locator('.selected-line')).toHaveCount(2);
 });
 
 test('fragment history retains the reading position and a repeated link reveals its interface',async({page})=>{
   for(const [route,anchor]of [['/limen/developer/making-release/','documentation-publication-acceptance'],['/limen/reference/trainer/','python-construction']]){
-    await page.goto(route+'#'+anchor);await page.evaluate(()=>document.fonts.ready);
+    await page.goto(route+'#'+anchor);await page.waitForFunction(()=>document.fonts.status==='loaded');
     await expect(page.locator('#'+anchor)).toBeInViewport();
   }
-  await page.goto('/limen/#adopt-the-compiled-pipeline');await page.evaluate(()=>document.fonts.ready);
+  await page.goto('/limen/#adopt-the-compiled-pipeline');await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
   const contents=page.locator('.mobile-nav');if(await contents.isVisible())await contents.locator('summary').click();
   const python=page.locator('a[href="#own-the-python-methodology"]').filter({visible:true}).first();
@@ -75,7 +75,7 @@ test('fragment history retains the reading position and a repeated link reveals 
 });
 
 test('long callable reference remains searchable and renders within the reading budget',async({page})=>{
-  await page.goto('/limen/reference/features/');await page.evaluate(()=>document.fonts.ready);
+  await page.goto('/limen/reference/features/');await page.waitForFunction(()=>document.fonts.status==='loaded');
   await expect(page.getByRole('heading',{name:'limen.features.fractional_diff',exact:true})).toBeVisible();
   const timing=await page.evaluate(()=>{const navigation=performance.getEntriesByType('navigation')[0];return {dom_ready_ms:navigation.domContentLoadedEventEnd,nodes:document.querySelectorAll('*').length};});
   expect(timing.dom_ready_ms).toBeLessThan(5000);

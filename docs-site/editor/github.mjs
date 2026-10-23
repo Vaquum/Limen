@@ -79,7 +79,7 @@ export async function commit(storage,github,user,payload,state){
   if(head!==operation.expectedHead){if(!await commitMatches(github,state,operation,head)){state.head=head;state.remoteHead=head;delete state.operation;await storage.put('workspace',state);throw new EditError('The origin branch advanced; Refresh to reconcile the retained drafts',409);}}
   else{
     const response=await github.request('graphql',{method:'POST',body:{query:'mutation($input:CreateCommitOnBranchInput!){createCommitOnBranch(input:$input){commit{oid url}}}',variables:{input:{branch:{repositoryNameWithOwner:repository,branchName:state.branch},expectedHeadOid:operation.expectedHead,message:{headline:'docs: revise documentation prose',body:'Limen-Edit-Operation: '+operation.id},fileChanges:{additions:operation.files.map(file=>({path:file.path,contents:Buffer.from(file.text).toString('base64')}))}}}}});
-    if(response.errors)throw new EditError('Commit refused: '+response.errors.map(item=>item.message).join('; '),409);
+    if(response.errors){delete state.operation;await storage.put('workspace',state);throw new EditError('Commit refused; Refresh to reconcile retained drafts: '+response.errors.map(item=>item.message).join('; '),409);}
     head=response.data.createCommitOnBranch.commit.oid;
     assert(await commitMatches(github,state,operation,head),'GitHub commit read-back differs from the submitted prose');
   }
