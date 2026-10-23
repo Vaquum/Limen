@@ -35,3 +35,13 @@ test('a concurrent origin advance releases the pending operation for refresh and
   await assert.rejects(()=>commit(context.storage,context.github,user,payload,state),/origin branch advanced/);state=await workspace(context.storage,context.github,user);assert.equal(state.operation,undefined);assert.equal(state.head,advanced);
   state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/Documentation-System.md'),state);assert.equal(context.counts.commit,2);assert.notEqual(state.head,advanced);
 });
+for(const applied of [false,true])test('a merged delivery reconciles a pending '+(applied?'committed':'unapplied')+' operation before rotating',async()=>{
+  const context=await protocol();let state=await workspace(context.storage,context.github,user);state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/README.md'),state);await openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID()},state);
+  const payload=await edit(context,state,'docs/Developer/Documentation-System.md'),transport=context.github.transport;
+  if(applied)context.setLose('commit');else context.github.transport=async(url,options)=>{if(url.endsWith('/graphql')&&JSON.parse(options.body).variables.input)throw Error('Response lost before commit');return transport(url,options);};
+  await assert.rejects(()=>commit(context.storage,context.github,user,payload,state),/Response lost/);context.github.transport=transport;
+  const head=context.refs.get(state.branch);context.pulls[0].state='closed';context.pulls[0].merged=true;context.pulls[0].head.sha=head;context.refs.set('main',head);context.refs.delete(state.branch);
+  state=await workspace(context.storage,context.github,user);assert.equal(state.operation.kind,'commit');
+  if(applied){state=await commit(context.storage,context.github,user,payload,state);assert.equal(state.receipt.head,head);}else await assert.rejects(()=>commit(context.storage,context.github,user,payload,state),/delivery closed/);
+  const fresh=await workspace(context.storage,context.github,user);assert.notEqual(fresh.id,state.id);assert.equal(fresh.base,head);assert.equal(context.counts.commit,applied?2:1);
+});

@@ -72,3 +72,7 @@ test('capitalization-only heading edits retain their research interface',async()
   const source='docs/Research-Book.md',text=await fs.readFile(path.join(root,source),'utf8'),mapped=passages(text,source,blob),md=new MarkdownIt({html:true});
   for(const word of ['Compiled','Python']){const item=mapped.find(item=>item.type==='heading'&&item.markdown.includes(word)),changed=applyPatches(text,source,blob,[patch(item,item.markdown.replace(word,word.toLowerCase()))]);assert.deepEqual([...headingIdentities(md.parse(changed,{})).values()].map(item=>[item.id,item.kind]),[...headingIdentities(md.parse(text,{})).values()].map(item=>[item.id,item.kind]));}
 });
+test('canonical authoring links never replace their preserved source targets',async()=>{
+  const source='docs/Developer/README.md',markdown=(await fs.readFile(path.join(root,source),'utf8'))+'\n[Book](/limen/)\n',page={source,markdown,title:'Developer',part:'Developer',route:'/developer/home/',url:'/limen/developer/home/'},book={source:'docs/Research-Book.md',title:'Book',part:'Book',bookOrder:0,route:'/',url:'/limen/'};
+  const html=preview(page,[page,book,{source:null,route:'/reference/',title:'Reference',url:'/limen/reference/'}],{package:{version:'5.46.2'},revision:{head:blob},sources:[],displays:[],validation:{scenarios:[]}},{passages:passages(markdown,source,blob),state:{id:'delivery',head:blob,branch:'prose'},pr:41});assert.match(html,/data-source-href="\/limen\/"/);assert.ok(!html.includes('data-source-href="/limen/edit/view'));
+});

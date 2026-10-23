@@ -34,3 +34,8 @@ test('inline conversion retains literal entities, nested formatting, code delimi
   const converted=await page.evaluate(async()=>{const {inlineMarkdown}=await import('/limen/edit/assets/inline.mjs'),cases=[['Literal &amp;copy; and &amp;',[], 'Literal &amp;copy; and &amp;'],['<strong>Outer <em>inner</em></strong>',[],'**Outer *inner***'],['<code>a`b</code>',[],'``a`b``'],['<code>`edge`</code>',[],'`` `edge` ``'],['one<br>two',[],'one  \ntwo'],['<a href="/rendered/">Label</a>',[{href:'../Research-Book.md',title:'Book "title"'}],'[Label](<../Research-Book.md> "Book &quot;title&quot;")']];return cases.map(([html,links,expected])=>{const element=document.createElement('p');element.innerHTML=html;return {actual:inlineMarkdown(element,{links}),expected};});});
   for(const item of converted)expect(item.actual).toBe(item.expected);
 });
+test('a failed active conversion blocks Refresh and Commit without losing the passage',async({page,request})=>{
+  await signIn(page);await page.locator('[data-edit]').check();await change(page,'p[data-edit-id]',' Retained draft.');const active=page.frameLocator('[data-frame]').locator('p[data-edit-id]').nth(1);await active.click();await active.evaluate(element=>{const span=document.createElement('span');span.textContent=' Active unsupported formatting.';element.append(span);});
+  for(const name of ['Refresh','Commit']){await page.getByRole('button',{name,exact:true}).click();await expect(page.locator('[data-status]')).toContainText('could not be saved');await expect(active).toContainText('Active unsupported formatting.');await expect(active).toHaveAttribute('contenteditable','true');}
+  expect((await (await control(request,{})).json()).counts.commit).toBe(0);
+});

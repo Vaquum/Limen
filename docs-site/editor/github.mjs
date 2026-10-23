@@ -43,10 +43,10 @@ export async function workspace(storage,github,user,continuing){
   }
   if(state?.pr){
     const pull=await github.pull(state.pr);ownPull(pull,user,state.branch);
-    if(pull.state!=='open'){assert(!state.operation,'Recover the pending operation before starting another delivery');state=null;}
+    if(pull.state!=='open'){if(state.operation)state.closedHead=pull.head.sha;else state=null;}
   }
   if(!state){const head=await github.head('main'),id=crypto.randomUUID();state={id,branch:`codex/docs-edit-${user.id}-${id}`,base:head,head,created:false,files:[]};}
-  if(state.created){const head=await github.head(state.branch,true);assert(head,'The unmerged branch is missing; recover it in GitHub before continuing');state.remoteHead=head;if(!state.operation)state.head=head;}
+  if(state.created&&!state.closedHead){const head=await github.head(state.branch,true);assert(head,'The unmerged branch is missing; recover it in GitHub before continuing');state.remoteHead=head;if(!state.operation)state.head=head;}
   await storage.put('workspace',state);return state;
 }
 async function commitMatches(github,state,operation,head){
@@ -73,7 +73,9 @@ export async function commit(storage,github,user,payload,state){
     await storage.put('workspace',state);
   }
   const operation=state.operation;assert(operation.kind==='commit'&&operation.id===payload.operation,'Resume the existing operation before another commit');
-  let head=await github.head(state.branch,true);
+  let head=state.closedHead||await github.head(state.branch,true);
+  if(state.closedHead){if(!await commitMatches(github,state,operation,head)){delete state.operation;await storage.put('workspace',state);throw new EditError('The delivery closed before this commit; Refresh to recover retained drafts in another delivery',409);}}
+  else{
   if(!head){assert(!state.created,'The delivery branch was removed');await github.request('repos/'+repository+'/git/refs',{method:'POST',body:{ref:'refs/heads/'+state.branch,sha:state.base}});head=state.base;}
   state.created=true;await storage.put('workspace',state);
   if(head!==operation.expectedHead){if(!await commitMatches(github,state,operation,head)){state.head=head;state.remoteHead=head;delete state.operation;await storage.put('workspace',state);throw new EditError('The origin branch advanced; Refresh to reconcile the retained drafts',409);}}
@@ -82,6 +84,7 @@ export async function commit(storage,github,user,payload,state){
     if(response.errors){delete state.operation;await storage.put('workspace',state);throw new EditError('Commit refused; Refresh to reconcile retained drafts: '+response.errors.map(item=>item.message).join('; '),409);}
     head=response.data.createCommitOnBranch.commit.oid;
     assert(await commitMatches(github,state,operation,head),'GitHub commit read-back differs from the submitted prose');
+  }
   }
   const receipt={operation:operation.id,head,drafts:operation.drafts,files:operation.files.map(file=>file.path)};
   state.head=head;state.files=[...new Set([...state.files,...receipt.files])];state.receipt=receipt;state.receipts={...state.receipts,[operation.id]:receipt};delete state.operation;delete state.remoteHead;await storage.put('workspace',state);return {...state,receipt};

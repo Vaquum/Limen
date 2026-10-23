@@ -2,7 +2,7 @@ import {draftStore,writerStores,clearWriter} from './drafts.mjs';
 const $=selector=>document.querySelector(selector),frame=$('[data-frame]'),status=$('[data-status]'),params=new URLSearchParams(location.search),pr=params.get('pr'),suffix=pr?'?pr='+pr:'';
 let auth,store,busy=false,page,ready=false,restoreRequest;
 function restoreDrafts(){restoreRequest=crypto.randomUUID();send('drafts',{items:store.heads(),request:restoreRequest});}const finishing=new Map();
-function flush(){const request=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{finishing.delete(request);reject(Error('The active passage could not be saved'));},5000);finishing.set(request,()=>{clearTimeout(timer);resolve();});send('finish',{request});});}
+function flush(){const request=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{finishing.delete(request);reject(Error('The active passage could not be saved'));},5000);finishing.set(request,error=>{clearTimeout(timer);if(error)reject(Error(error));else resolve();});send('finish',{request});});}
 function acknowledge(){for(const receipt of Object.values(auth.workspace.receipts||{}))store.confirmed(receipt.drafts);}
 const say=text=>status.textContent=text;
 async function api(path,body){const reply=await fetch('/limen/edit/api/'+path+suffix,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}),data=await reply.json();if(!reply.ok)throw Error(data.error);return data;}
@@ -24,7 +24,7 @@ addEventListener('message',event=>{
   try{
     if(event.data.type==='page'){page=event.data.page;if(page.workspace!==auth.workspace.id)throw Error('The frame belongs to another delivery');const url=new URL(location.href);url.searchParams.set('route',page.route);history.replaceState(null,'',url);ready=false;restoreDrafts();update();}
     if(event.data.type==='drafts-applied'&&event.data.request===restoreRequest){ready=true;frame.dataset.restored=page.head;update();}
-    if(event.data.type==='finished'){finishing.get(event.data.request)?.();finishing.delete(event.data.request);}
+    if(event.data.type==='finished'){finishing.get(event.data.request)?.(event.data.error);finishing.delete(event.data.request);}
     if(event.data.type==='draft'){const item=store.save(event.data.patch,event.data.previous);send('draft-saved',{passageId:event.data.passageId,id:item.id});say('Draft saved in this browser.');update();}
     if(event.data.type==='error'||event.data.type==='conflict')say(event.data.message);
     if(event.data.type==='active')$('[data-undo]').disabled=!event.data.active;

@@ -42,7 +42,7 @@ export function preview(page,pages,evidence,context){
   const introduction=mapped.find(item=>item.type==='paragraph'&&(!title||item.tokenIndex>title.tokenIndex));
   if(introduction)html=html.replace('class="hero-lead"',`class="hero-lead" data-edit-id="${introduction.id}" data-edit-type="paragraph"`);
   const byUrl=new Map(pages.map(item=>[item.url,item]));
-  html=html.replace(/href="([^"<>]+)"/g,(original,href)=>{const [path,fragment]=href.split('#'),target=byUrl.get(path);return target?`href="${viewUrl(target,context.pr)}${fragment?'#'+fragment:''}"`:original;});
+  html=html.replace(/(\s)href="([^"<>]+)"/g,(original,spacing,href)=>{const [path,fragment]=href.split('#'),target=byUrl.get(path);return target?`${spacing}href="${viewUrl(target,context.pr)}${fragment?'#'+fragment:''}"`:original;});
   html=html.replaceAll(' data-reference=""','').replaceAll('data-search="/limen/search.json"',`data-search="/limen/search.json${context.pr?'?pr='+context.pr:''}"`);
   if(page.source)html=html.replace(content.product.repository+'/edit/main/'+page.source,content.product.repository+'/blob/'+context.state.head+'/'+page.source).replace('Edit this source</a>','View this source revision</a>');
   html=html.replaceAll('href="/limen/evidence/','href="https://docs.vaquum.fi/limen/evidence/').replaceAll('href="/limen/source/','href="https://docs.vaquum.fi/limen/source/');
