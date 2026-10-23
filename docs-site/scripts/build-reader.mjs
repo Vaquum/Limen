@@ -4,6 +4,7 @@ import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
 import {execFileSync} from 'node:child_process';
 import {content,renderPage,hash,pageLabel} from '../reader/render.mjs';
+import {documentTitle} from '../reader/headings.mjs';
 import {searchEntries} from '../reader/search-index.mjs';
 const site=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),root=path.dirname(site);
 const {values}=parseArgs({options:{evidence:{type:'string',default:'../.docs-evidence/current.json'},output:{type:'string',default:'reader-build'}}});
@@ -20,7 +21,7 @@ const overrides=content.pages;
 const routes=Object.values(overrides).map(page=>page.route);
 if(new Set(routes).size!==routes.length||routes.some(route=>!route.startsWith('/')||!route.endsWith('/')||route.includes('..')))throw Error('Canonical reader routes must be unique absolute directory paths');
 if(Object.values(overrides).some(page=>page.navigationTitle!==undefined&&(typeof page.navigationTitle!=='string'||!page.navigationTitle.trim()||page.navigationTitle!==page.navigationTitle.trim())))throw Error('Navigation titles must be nonempty plain labels');
-const pages=await Promise.all(Object.entries(overrides).map(async([source,chosen])=>{const markdown=await fs.readFile(path.join(root,source),'utf8');return {source,...chosen,markdown,url:content.product.basePath+chosen.route,title:markdown.match(/^# (.+)$/m)?.[1]?.replaceAll('`','')||content.product.name};}));
+const pages=await Promise.all(Object.entries(overrides).map(async([source,chosen])=>{const markdown=await fs.readFile(path.join(root,source),'utf8');return {source,...chosen,markdown,url:content.product.basePath+chosen.route,title:documentTitle(markdown)||content.product.name};}));
 const referenceGroups=new Map();for(const page of pages.filter(p=>p.part==='Reference').sort((a,b)=>pageLabel(a).localeCompare(pageLabel(b)))){const group=page.navigationGroup||'Lookup';if(!referenceGroups.has(group))referenceGroups.set(group,[]);referenceGroups.get(group).push(page);}
 const referenceLinks=[...referenceGroups].map(([group,entries])=>'## '+group+'\n\n'+entries.map(p=>`- [${pageLabel(p)}](${p.url})`).join('\n')).join('\n\n');
 pages.push({source:null,route:'/reference/',url:content.product.basePath+'/reference/',part:'Reference',title:'Reference',markdown:'# Reference\n\nNames, parameters, return values and the boundaries of the two research interfaces.\n\n'+referenceLinks+'\n'});

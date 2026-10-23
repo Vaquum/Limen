@@ -1,4 +1,5 @@
 import {EditError,applyPatches} from './passages.mjs';
+import {documentTitle} from '../reader/headings.mjs';
 import CONTENT from '../reader/content.json' with {type:'json'};
 
 export const repository='Vaquum/Limen';
@@ -16,7 +17,7 @@ export class GitHub{
     const paths=Object.keys(CONTENT.pages),variables={};const fields=paths.map((path,index)=>{variables['p'+index]=head+':'+path;return `p${index}:object(expression:$p${index}){... on Blob{oid text}}`;});
     const data=await this.request('graphql',{method:'POST',body:{query:`query(${paths.map((_,i)=>'$p'+i+':String!').join(',')}){repository(owner:"Vaquum",name:"Limen"){${fields.join(' ')}}}`,variables}});
     if(data.errors)throw new EditError('GitHub source read failed: '+data.errors.map(item=>item.message).join('; '),502);
-    return paths.map((source,index)=>{const blob=data.data.repository['p'+index];if(!blob?.text)throw new EditError('Source unavailable: '+source,409);return {source,...CONTENT.pages[source],markdown:blob.text,blob:blob.oid,title:blob.text.match(/^# (.+)$/m)?.[1]?.replaceAll('`','')||CONTENT.product.name,url:CONTENT.product.basePath+CONTENT.pages[source].route};});
+    return paths.map((source,index)=>{const blob=data.data.repository['p'+index];if(!blob?.text)throw new EditError('Source unavailable: '+source,409);return {source,...CONTENT.pages[source],markdown:blob.text,blob:blob.oid,title:documentTitle(blob.text)||CONTENT.product.name,url:CONTENT.product.basePath+CONTENT.pages[source].route};});
   }
   async pull(number){return this.request('repos/'+repository+'/pulls/'+number);}
   async pulls(branch){return this.request('repos/'+repository+'/pulls?state=all&base=main&head='+encodeURIComponent('Vaquum:'+branch)+'&per_page=100');}

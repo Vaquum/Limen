@@ -1,3 +1,4 @@
+import MarkdownIt from 'markdown-it';
 export function slug(text){return text.replace(/[^\p{L}\p{N}_\- ]/gu,'').trim().toLowerCase().replaceAll(' ','-');}
 export const anchorPattern=/^<a id="([\p{L}\p{N}_-]+)" data-reader-heading="(python|compiled|plain)"><\/a>\s*$/u;
 export function headingIdentities(tokens){
@@ -11,3 +12,6 @@ export function headingIdentities(tokens){
   }
   return identities;
 }
+
+export const plainHeading=inline=>(inline.children||[]).map(child=>['text','code_inline','image'].includes(child.type)?child.content:['softbreak','hardbreak'].includes(child.type)?' ':'').join('');
+export function documentTitle(markdown){const tokens=new MarkdownIt({html:true}).parse(markdown,{}),at=tokens.findIndex(token=>token.type==='heading_open'&&token.tag==='h1');return at<0?null:plainHeading(tokens[at+1]);}

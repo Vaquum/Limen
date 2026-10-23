@@ -6,6 +6,9 @@ import subprocess
 from collections.abc import Callable, Iterator
 from datetime import date
 from pathlib import Path
+import unicodedata
+
+from markdown_it import MarkdownIt
 from urllib.parse import unquote
 
 try:
@@ -59,16 +62,17 @@ def _assert_fences_parse(language: str, parser: Callable[[str], object]) -> None
 def _heading_ids(path: Path) -> set[str]:
     ids: set[str] = set()
     seen: dict[str, int] = {}
-    for line in path.read_text(encoding='utf-8').splitlines():
-        match = re.match(r'^#{1,6}\s+(.+?)\s*#*$', line)
-        if match is None:
+    tokens = MarkdownIt().parse(path.read_text(encoding='utf-8'))
+    for index, token in enumerate(tokens):
+        if token.type != 'heading_open':
             continue
-        heading = re.sub(r'\[([^]]+)]\([^)]+\)', r'\1', match.group(1))
-        heading = heading.replace('`', '')
-        slug = re.sub(r'[^\w\- ]', '', heading.lower()).strip().replace(' ', '-')
-        duplicate = seen.get(slug, 0)
-        seen[slug] = duplicate + 1
-        ids.add(slug if duplicate == 0 else f'{slug}-{duplicate}')
+        heading = tokens[index + 1].content.replace('`', '')
+        stem = ''.join(char for char in heading if unicodedata.category(char)[0] in 'LN' or char in '_- ').strip().lower().replace(' ', '-')
+        duplicate = seen.get(stem, 0)
+        if token.tag != 'h1':
+            seen[stem] = duplicate + 1
+        explicit = re.fullmatch(r'<a id="([^"<>]+)" data-reader-heading="(?:python|compiled|plain)"></a>\s*', tokens[index - 1].content.strip()) if index and tokens[index - 1].type == 'html_block' else None
+        ids.add(explicit.group(1) if explicit else stem if duplicate == 0 else f'{stem}-{duplicate}')
     return ids
 
 
