@@ -11,6 +11,7 @@ by ``pr_publish_pypi.yml`` once the distributions exist.
 """
 # ruff: noqa: T201, S607, S603, BLE001
 
+import argparse
 import json
 import os
 import re
@@ -432,7 +433,10 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 3 and sys.argv[1] == '--verify-trigger':
-        verify_release_trigger(Path.cwd(), json.loads(Path(sys.argv[2]).read_text()))
+    parser = argparse.ArgumentParser(description='Create a release or verify its publication trigger.')
+    parser.add_argument('--verify-trigger', type=Path)
+    arguments = parser.parse_args()
+    if arguments.verify_trigger is not None:
+        verify_release_trigger(Path.cwd(), json.loads(arguments.verify_trigger.read_text()))
     else:
         main()
