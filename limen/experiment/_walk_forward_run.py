@@ -152,7 +152,7 @@ class WalkForwardRun:
         if not isinstance(raw, pl.DataFrame):
             raise ValueError('split_walk_forward requires current prepared source rows')
         records: list[dict[str, object]] = []
-        collisions: set[str] = set()
+        data['_alignment'] = {'folds': records, **({'fold_promotion': data['_fold_trial']} if '_fold_trial' in data else {})}
         for fold in range(self.config.n_folds):
             manifest = copy.deepcopy(self.manifest)
             vars(manifest)['_walk_forward_fold'] = fold
@@ -161,12 +161,12 @@ class WalkForwardRun:
             prepared = manifest.prepare_data(raw, dict(round_params))
             prepared.update(_record_execution=True, _record_model_outputs=bool(data.get('_record_model_outputs')))
             result = manifest.run_model(prepared, dict(round_params))
-            collisions.update(bookkeeping_names(result))
-            records.append(_promotion.record(_fold_record, fold, prepared, {key: value for key, value in result.items() if key not in collisions},
+            if collisions := bookkeeping_names(result):
+                return dict.fromkeys(collisions, cast(object, None))
+            records.append(_promotion.record(_fold_record, fold, prepared, result,
                                        record_execution=bool(data.get('_record_execution')),
                                        record_outputs=bool(data.get('_record_model_outputs'))))
-        data['_alignment'] = {'folds': records, **({'fold_promotion': data['_fold_trial']} if '_fold_trial' in data else {})}
-        return {key: None for key in collisions} if collisions else _average(records)
+        return _average(records)
 
     def accept(self, trial: object, data: Mapping[str, object]) -> None:
         alignment = cast(Mapping[str, object], data['_alignment'])
