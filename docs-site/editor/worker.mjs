@@ -26,12 +26,13 @@ async function editing(request,env,url){
 }
 export class EditorState{
   constructor(state){this.storage=state.storage;this.queue=Promise.resolve();}
+  async alarm(){let next;for(const [id,value] of await this.storage.list()){if(!value.expires)continue;if(value.expires<=Date.now())await this.storage.delete(id);else next=next===undefined?value.expires:Math.min(next,value.expires);}if(next!==undefined)await this.storage.setAlarm(next);}
   async fetch(request){
     const operation=this.queue.then(async()=>{
       try{
         const data=await request.json(),action=new URL(request.url).pathname.slice(1);
         if(action==='get')return response({value:await this.storage.get(data.id)||null});
-        if(action==='put'){await this.storage.put(data.id,data.value);return response({ok:true});}
+        if(action==='put'){await this.storage.put(data.id,data.value);if(data.value.expires){const alarm=await this.storage.getAlarm();if(!alarm||data.value.expires<alarm)await this.storage.setAlarm(data.value.expires);}return response({ok:true});}
         if(action==='consume'){const value=await this.storage.get(data.id);await this.storage.delete(data.id);return response({value:value||null});}
         if(action==='delete'){await this.storage.delete(data.id);return response({ok:true});}
         const github=new GitHub(data.token),current=await workspace(this.storage,github,data.user,data.continuing);
@@ -67,7 +68,7 @@ export default{
       }
       if(path===root+'api/logout'&&request.method==='POST'){
         await jsonBody(request,env.EDITOR_ORIGIN);const auth=await session(request,env,{permission:false});await rpc(env,'auth','delete',{id:'session:'+auth.id});
-        const revoked=await fetch('https://api.github.com/applications/'+env.GITHUB_CLIENT_ID+'/token',{method:'DELETE',headers:{Authorization:'Basic '+Buffer.from(env.GITHUB_CLIENT_ID+':'+env.GITHUB_CLIENT_SECRET).toString('base64'),'Content-Type':'application/json','User-Agent':'Limen-docs-editor'},body:JSON.stringify({access_token:auth.token})});
+        let revoked;try{revoked=await fetch('https://api.github.com/applications/'+env.GITHUB_CLIENT_ID+'/token',{method:'DELETE',headers:{Authorization:'Basic '+Buffer.from(env.GITHUB_CLIENT_ID+':'+env.GITHUB_CLIENT_SECRET).toString('base64'),'Content-Type':'application/json','User-Agent':'Limen-docs-editor'},body:JSON.stringify({access_token:auth.token})});}catch(error){return response({ok:true,revoked:false,error:'Session invalidated; provider revocation failed'},200,{'Set-Cookie':cookie('session','',0)});}
         return response({ok:true,revoked:revoked.ok},200,{'Set-Cookie':cookie('session','',0)});
       }
       if(path===root+'api/session'){

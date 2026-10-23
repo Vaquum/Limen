@@ -4,7 +4,7 @@ import {createHash} from 'node:crypto';
 import CONTENT from '../../reader/content.json' with {type:'json'};
 import {GitHub,repository} from '../github.mjs';
 export const user={id:1,login:'writer'},hash=value=>createHash('sha1').update(value).digest('hex');
-export class Storage{constructor(){this.values=new Map();}async get(key){return structuredClone(this.values.get(key));}async put(key,value){this.values.set(key,structuredClone(value));}async delete(key){return this.values.delete(key);}async setAlarm(){}}
+export class Storage{constructor(){this.values=new Map();}async get(key){return structuredClone(this.values.get(key));}async put(key,value){this.values.set(key,structuredClone(value));}async delete(key){return this.values.delete(key);}async setAlarm(value){this.alarm=value;}async getAlarm(){return this.alarm;}async list(){return structuredClone(this.values);}}
 export async function protocol(){
   const sources=new Map(await Promise.all(Object.keys(CONTENT.pages).map(async source=>[source,await fs.readFile(path.resolve(import.meta.dirname,'../../..',source),'utf8')]))),initial=hash('initial protocol revision');
   const commits=new Map([[initial,{files:sources,parents:[],message:'Initial protocol revision'}]]),refs=new Map([['main',initial]]),issues=[],pulls=[],counts={ref:0,commit:0,issue:0,pr:0};let lose=null,push=true;
