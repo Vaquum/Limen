@@ -345,9 +345,9 @@ def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
     git('update-ref', 'refs/remotes/origin/main', head)
     tag = f'v5.46.2-dispatch-{head}'
     git('tag', tag)
-    run = dict(path='.github/workflows/pr_post_release.yml', event='workflow_dispatch',
-               conclusion='success', head_repository=dict(full_name='Vaquum/Limen'),
-               head_sha=head, head_branch=tag)
+    run = {'path': '.github/workflows/pr_post_release.yml', 'event': 'workflow_dispatch',
+           'conclusion': 'success', 'head_repository': {'full_name': 'Vaquum/Limen'},
+           'head_sha': head, 'head_branch': tag}
     trigger.verify_trigger(tmp_path, run)
     trigger.verify_trigger(tmp_path, dict(run, head_branch='main'))
     record = tmp_path / 'run.json'
@@ -355,7 +355,7 @@ def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
     # Exercise the same file-input entry path used by the publisher.
     trigger.verify_trigger(tmp_path, json.loads(record.read_text()))
     for field, bad in [('path', '.github/workflows/other.yml'), ('event', 'push'),
-                       ('conclusion', 'failure'), ('head_repository', dict(full_name='other/Limen')),
+                       ('conclusion', 'failure'), ('head_repository', {'full_name': 'other/Limen'}),
                        ('head_sha', predecessor), ('head_branch', 'codex/other'),
                        ('head_branch', f'v5.46.3-dispatch-{head}'),
                        ('head_branch', f'v5.46.2-dispatch-{predecessor}')]:
