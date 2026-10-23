@@ -1,4 +1,5 @@
 from pathlib import Path
+import ast
 import os
 import json
 import hashlib
@@ -234,3 +235,20 @@ def test_yaml_inventory_includes_conditional_leaves_and_nested_contracts():
     assert any(rule['path'] == 'sfd.manifest' and 'allocation' in rule.get('known', []) for rule in current['rules'])
     assert {rule['when'] for rule in current['rules']} >= {'always', 'sfd.manifest.type = ml', 'sfd.manifest.type = rule_based'}
     assert set(current['nested']['sfd.manifest.split_walk_forward']['fields']) == {'n_folds', 'test_bars', 'purge_bars', 'embargo_bars', 'anchored'}
+
+
+def test_export_resolution_rereads_changed_source_at_the_same_path(tmp_path):
+    from catalogue_admission import resolve
+    directory = tmp_path / 'limen'
+    directory.mkdir()
+    source = directory / 'roc.py'
+    original = (ROOT / 'limen/indicators/roc.py').read_text()
+    changed = original.replace('period: int = 10', 'period: int = 20')
+    assert changed != original
+    for text, expected in ((original, 10), (changed, 20), (original, 10)):
+        source.write_text(text)
+        _, node = resolve(tmp_path, 'limen.roc', 'roc')
+        assert isinstance(node, ast.FunctionDef)
+        default = node.args.defaults[-1]
+        assert isinstance(default, ast.Constant)
+        assert default.value == expected

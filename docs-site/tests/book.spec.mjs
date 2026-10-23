@@ -57,16 +57,19 @@ test('published routes agree with robots and sitemap while other products remain
   const htmlByUrl=new Map();
   const built=JSON.parse(await fs.readFile(path.join(root,'docs-site/reader-build/build.json'),'utf8'));
   for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
+  const anchors=new Map([...htmlByUrl].map(([url,html])=>[url,new Set([...html.matchAll(/\sid="([^"]+)"/g)].map(match=>match[1]))]));
+  const broken=[];
   for(const [url,html] of htmlByUrl){
     for(const match of html.matchAll(/href="([^"]+)"/g)){
       const target=new URL(match[1].replaceAll('&amp;','&'),new URL(url,'https://docs.vaquum.fi'));
       if(target.origin!=='https://docs.vaquum.fi')continue;
-      expect(htmlByUrl.has(target.pathname)||Object.hasOwn(built.files,decodeURIComponent(target.pathname.replace(/^\/limen\//,''))),url+' → '+target.pathname).toBe(true);
+      if(!htmlByUrl.has(target.pathname)&&!Object.hasOwn(built.files,decodeURIComponent(target.pathname.replace(/^\/limen\//,''))))broken.push(url+' → '+target.pathname);
       if(!target.hash||!htmlByUrl.has(target.pathname))continue;
       const anchor=decodeURIComponent(target.hash.slice(1));
-      expect(htmlByUrl.get(target.pathname),url+' → '+target.pathname+target.hash).toContain('id="'+anchor+'"');
+      if(!anchors.get(target.pathname).has(anchor))broken.push(url+' → '+target.pathname+target.hash);
     }
   }
+  expect(broken).toEqual([]);
   const decisions=await (await request.get('/limen/route-decisions.json')).json();
   expect(decisions).toEqual(JSON.parse(await fs.readFile(path.join(root,'docs-site/reader/route-decisions.json'),'utf8')));
   for(const item of decisions.legacy_routes){
@@ -78,7 +81,7 @@ test('published routes agree with robots and sitemap while other products remain
   for(const item of decisions.published_links){
     const replacement=new URL(item.replacement),html=htmlByUrl.get(replacement.pathname);
     expect(html,item.replacement).toBeDefined();
-    if(replacement.hash)expect(html,item.replacement).toContain('id="'+replacement.hash.slice(1)+'"');
+    if(replacement.hash)expect(anchors.get(replacement.pathname).has(replacement.hash.slice(1)),item.replacement).toBe(true);
   }
   const missing=await request.get('/limen/absent-chapter/');expect(missing.status()).toBe(404);expect(await missing.text()).toContain('Page unavailable');
   expect((await request.get('/another-product/')).status()).toBe(404);
@@ -332,7 +335,7 @@ test('reading state is isolated by product identity',async({page})=>{
 
 test('without JavaScript both interfaces and proof links remain readable',async({browser})=>{
   const context=await browser.newContext({javaScriptEnabled:false,viewport:test.info().project.name==='phone'?{width:390,height:844}:{width:1440,height:1000}});
-  const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
+  const page=await context.newPage();await page.goto(test.info().project.use.baseURL+'/limen/');
   await expect(page.locator('figure.code')).toHaveCount(5);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
   if(test.info().project.name==='phone'){await page.locator('.mobile-nav > summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
