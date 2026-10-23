@@ -52,6 +52,8 @@ include docs-site/publisher/package.json
 include docs-site/publisher/package-lock.json
 include docs-site/publisher/wrangler.json
 include docs-site/publisher/audit.mjs
+include docs-site/publisher/prepare-assets.mjs
+include docs-site/publisher/prepare-assets.test.mjs
 prune docs-site/publisher/node_modules
 prune docs-site/publisher/.wrangler
 
