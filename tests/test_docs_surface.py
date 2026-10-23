@@ -73,6 +73,8 @@ def _heading_ids_for_text(text: str) -> frozenset[str]:
         if token.type != 'heading_open':
             continue
         heading = tokens[index + 1].content.replace('`', '')
+        if token.tag == 'h1':
+            heading = ''.join(child.content if child.type in ('text', 'code_inline', 'image') else ' ' if child.type in ('softbreak', 'hardbreak') else '' for child in tokens[index + 1].children or [])
         stem = ''.join(char for char in heading if unicodedata.category(char)[0] in 'LN' or char in '_- ').strip().lower().replace(' ', '-')
         duplicate = seen.get(stem, 0)
         if token.tag != 'h1':

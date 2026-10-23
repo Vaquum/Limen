@@ -5,7 +5,7 @@ export function headingIdentities(tokens){
   const seen=new Map(),identities=new Map();
   for(let index=0;index<tokens.length;index++){
     const token=tokens[index];if(token.type!=='heading_open')continue;
-    const text=tokens[index+1].content.replaceAll('`',''),stem=slug(text),count=seen.get(stem)||0;
+    const text=tokens[index+1].content.replaceAll('`',''),stem=slug(token.tag==='h1'?plainHeading(tokens[index+1]):text),count=seen.get(stem)||0;
     if(token.tag!=='h1')seen.set(stem,count+1);
     const before=tokens[index-1]?.type==='html_block'?tokens[index-1]:tokens[index-1]?.type==='paragraph_close'&&tokens[index-2]?.type==='inline'?tokens[index-2]:null;
     const explicit=before?.content.trim().match(anchorPattern);

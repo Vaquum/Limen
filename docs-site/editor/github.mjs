@@ -48,6 +48,7 @@ export async function workspace(storage,github,user,continuing){
   if(state?.pr){
     const pull=await github.pull(state.pr);ownPull(pull,user,state.branch);
     if(pull.state!=='open'){if(state.operation)state.closedHead=pull.head.sha;else state=null;}
+    else delete state.closedHead;
   }
   if(!state){const head=await github.head('main'),id=crypto.randomUUID();state={id,branch:`codex/docs-edit-${user.id}-${id}`,base:head,head,created:false,files:[]};}
   if(state.created&&!state.closedHead){const head=await github.head(state.branch,true);assert(head,'The unmerged branch is missing; recover it in GitHub before continuing');state.remoteHead=head;if(!state.operation)state.head=head;}

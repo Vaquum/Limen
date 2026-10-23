@@ -1,4 +1,6 @@
 [
+  {"markdown":"# A &amp; B\n\n## Compiled Research\n", "ids":["a--b","compiled-research"],"kinds":["plain","compiled"]},
+  {"markdown":"# A &#38; B **title** `code`\n\n## Python Research\n", "ids":["a--b-title-code","python-research"],"kinds":["plain","python"]},
   {"markdown":"# Research\n\n## Compiled Research\n\n## Compiled Research\n\n## Åä 漢字 `api`\n", "ids":["research","compiled-research","compiled-research-1","åä-漢字-api"],"kinds":["plain","compiled","compiled","plain"]},
   {"markdown":"# Research\n\n<a id=\"compiled-research\" data-reader-heading=\"compiled\"></a>\n\n## New label\n\n<a id=\"compiled-research-1\" data-reader-heading=\"compiled\"></a>\n\n## Compiled Research\n", "ids":["research","compiled-research","compiled-research-1"],"kinds":["plain","compiled","compiled"]},
   {"markdown":"<a id=\"research\" data-reader-heading=\"plain\"></a>\n\n# Revised title\n\n## Python Research\n\n```markdown\n## Not a heading\n```\n", "ids":["research","python-research"],"kinds":["plain","python"]}

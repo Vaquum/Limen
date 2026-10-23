@@ -65,3 +65,12 @@ for(const applied of [false,true])test('a merged delivery reconciles a pending '
   if(applied){state=await commit(context.storage,context.github,user,payload,state);assert.equal(state.receipt.head,head);}else await assert.rejects(()=>commit(context.storage,context.github,user,payload,state),/delivery closed/);
   const fresh=await workspace(context.storage,context.github,user);assert.notEqual(fresh.id,state.id);assert.equal(fresh.base,head);assert.equal(context.counts.commit,applied?2:1);
 });
+for(const applied of [false,true])test('reopening a delivery clears a pending closed-head snapshot and permits cumulative commits, applied='+applied,async()=>{
+  const context=await protocol();let state=await workspace(context.storage,context.github,user);state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/README.md'),state);await openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID()},state);
+  const payload=await edit(context,state,'docs/Developer/Documentation-System.md'),transport=context.github.transport;
+  if(applied)context.setLose('commit');else context.github.transport=async(url,options)=>{if(url.endsWith('/graphql')&&JSON.parse(options.body).variables.input)throw Error('Response lost before commit');return transport(url,options);};
+  await assert.rejects(()=>commit(context.storage,context.github,user,payload,state),/Response lost/);context.github.transport=transport;
+  context.pulls[0].state='closed';context.pulls[0].head.sha=context.refs.get(state.branch);state=await workspace(context.storage,context.github,user);assert.equal(state.closedHead,context.refs.get(state.branch));
+  context.pulls[0].state='open';state=await workspace(context.storage,context.github,user);assert.equal(state.closedHead,undefined);state=await commit(context.storage,context.github,user,payload,state);assert.equal(state.operation,undefined);
+  state=await workspace(context.storage,context.github,user);state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/README.md'),state);assert.equal(context.counts.commit,3);assert.equal(context.counts.pr,1);
+});
