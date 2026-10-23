@@ -1,0 +1,694 @@
+{
+  "limen": [
+    {
+      "default": false,
+      "help": "Show the version and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "version",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--version"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen assess": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "yaml_file",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "yaml_file"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": true,
+        "name": "path",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": null,
+      "help": null,
+      "kind": "option",
+      "multiple": false,
+      "name": "results",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "--results"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": false,
+        "name": "directory",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": null,
+      "help": "Reservation identity returned by limen reserve.",
+      "kind": "option",
+      "multiple": false,
+      "name": "reservation",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--reservation"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen backup": [
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen commit": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "yaml_file",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "yaml_file"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": true,
+        "name": "path",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": null,
+      "help": "Parent manifest ID for lineage tracking (e.g. sha256:abc123...).",
+      "kind": "option",
+      "multiple": false,
+      "name": "parent",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--parent"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": null,
+      "help": "Git commit message. Auto-generated if omitted.",
+      "kind": "option",
+      "multiple": false,
+      "name": "message",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--message",
+        "-m"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen fork": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "manifest_ref",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "manifest_ref"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "name",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "name"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen init": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "output",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "output"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": false,
+        "file_okay": true,
+        "name": "path",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": null,
+      "help": "Template name to scaffold from (e.g. logreg_binary).",
+      "kind": "option",
+      "multiple": false,
+      "name": "template",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--template"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen lineage": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "manifest_ref",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "manifest_ref"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen list-templates": [
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen ls": [
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen new": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "project_name",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "project_name"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": null,
+      "help": "Git remote URL for manifest store backup (can also be set interactively).",
+      "kind": "option",
+      "multiple": false,
+      "name": "backup_remote",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--backup-remote"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": null,
+      "help": "Restore a project from a backup remote instead of the template.",
+      "kind": "option",
+      "multiple": false,
+      "name": "from_remote",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--from"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen profile": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "yaml_file",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "yaml_file"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": true,
+        "name": "path",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen reindex": [
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen reserve": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "yaml_file",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "yaml_file"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": true,
+        "name": "path",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen run": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "target",
+      "nargs": -1,
+      "required": false,
+      "spellings": [
+        "target"
+      ],
+      "type": {
+        "name": "text",
+        "param_type": "String"
+      }
+    },
+    {
+      "default": false,
+      "help": "Validate and compile only \u2014 do not execute the experiment.",
+      "kind": "option",
+      "multiple": false,
+      "name": "dry_run",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--dry-run"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    },
+    {
+      "default": null,
+      "help": "Resume from a checkpoint directory instead of starting fresh.",
+      "kind": "option",
+      "multiple": false,
+      "name": "resume",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--resume"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": false,
+        "name": "directory",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": false,
+      "help": "Disable the experiment progress bar.",
+      "kind": "option",
+      "multiple": false,
+      "name": "no_progress_bar",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--no-progress-bar"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    },
+    {
+      "default": null,
+      "help": "Concurrent rounds; overrides YAML, or uses saved settings with --resume.",
+      "kind": "option",
+      "multiple": false,
+      "name": "workers",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--workers"
+      ],
+      "type": {
+        "clamp": false,
+        "max": null,
+        "max_open": false,
+        "min": 1,
+        "min_open": false,
+        "name": "integer range",
+        "param_type": "IntRange"
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ],
+  "limen validate": [
+    {
+      "default": null,
+      "help": null,
+      "kind": "argument",
+      "multiple": false,
+      "name": "yaml_file",
+      "nargs": 1,
+      "required": true,
+      "spellings": [
+        "yaml_file"
+      ],
+      "type": {
+        "allow_dash": false,
+        "dir_okay": true,
+        "exists": true,
+        "file_okay": true,
+        "name": "path",
+        "param_type": "Path",
+        "readable": true,
+        "writable": false
+      }
+    },
+    {
+      "default": false,
+      "help": "Show this message and exit.",
+      "kind": "option",
+      "multiple": false,
+      "name": "help",
+      "nargs": 1,
+      "required": false,
+      "spellings": [
+        "--help"
+      ],
+      "type": {
+        "name": "boolean",
+        "param_type": "Bool"
+      }
+    }
+  ]
+}

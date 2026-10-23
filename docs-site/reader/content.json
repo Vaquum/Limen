@@ -17,18 +17,16 @@
     },
     "docs/examples/python-research/README.md": {
       "route": "/book/python-research/",
-      "part": "Book",
-      "bookOrder": 10
+      "part": "Book"
     },
     "docs/examples/compiled-research/README.md": {
       "route": "/book/compiled-research/",
-      "part": "Book",
-      "bookOrder": 11
+      "part": "Book"
     },
     "docs/Final-Holdout.md": {
       "route": "/book/final-holdout/",
       "part": "Book",
-      "bookOrder": 8
+      "bookOrder": 10
     },
     "README.md": {
       "route": "/about/",
@@ -51,7 +49,7 @@
     "docs/End-to-End-Workflow.md": {
       "route": "/book/end-to-end-workflow/",
       "part": "Book",
-      "bookOrder": 9
+      "bookOrder": 11
     },
     "docs/Data-Bars.md": {
       "route": "/book/data-bars/",
@@ -60,24 +58,29 @@
     },
     "docs/Single-File-Decoder.md": {
       "route": "/book/single-file-decoder/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Built-In-SFDs.md": {
       "route": "/reference/built-in-sfds/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Common-Strategies.md": {
       "route": "/reference/common-strategies/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Experiment-Manifest.md": {
       "route": "/book/experiment-manifest/",
       "part": "Reference",
-      "navigationTitle": "Manifest API and YAML fields"
+      "navigationTitle": "Manifest API and YAML fields",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Universal-Experiment-Loop.md": {
       "route": "/book/universal-experiment-loop/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Advanced-Search.md": {
       "route": "/book/advanced-search/",
@@ -92,249 +95,307 @@
     "docs/Log.md": {
       "route": "/reference/log/",
       "part": "Reference",
-      "navigationTitle": "Log"
+      "navigationTitle": "Log",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Benchmark.md": {
       "route": "/reference/benchmark/",
       "part": "Reference",
-      "navigationTitle": "Benchmark"
+      "navigationTitle": "Benchmark",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Backtest.md": {
       "route": "/book/backtest/",
-      "part": "Book",
-      "bookOrder": 7
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Backtest-Benchmarks.md": {
       "route": "/developer/backtest-benchmarks/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Measured performance"
     },
     "docs/Trainer.md": {
       "route": "/reference/trainer/",
       "part": "Reference",
-      "navigationTitle": "Trainer and Sensor"
+      "navigationTitle": "Trainer and Sensor",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Cohort.md": {
       "route": "/reference/cohort/",
       "part": "Reference",
-      "navigationTitle": "Cohort"
+      "navigationTitle": "Cohort",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Conserved-Flux-Renormalization.md": {
       "route": "/reference/conserved-flux-renormalization/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Perturbation-Strategies.md": {
       "route": "/reference/perturbation-strategies/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Fractional-Differentiation.md": {
       "route": "/reference/fractional-differentiation/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Triple-Barrier-Method.md": {
       "route": "/reference/triple-barrier-method/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Glossary.md": {
       "route": "/reference/glossary/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Lookup"
     },
     "docs/Indicators.md": {
       "route": "/reference/indicators/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Features.md": {
       "route": "/reference/features/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Targets.md": {
       "route": "/reference/targets/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Transforms.md": {
       "route": "/reference/transforms/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Scalers.md": {
       "route": "/reference/scalers/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     },
     "docs/Calibration.md": {
       "route": "/reference/calibration/",
       "part": "Reference",
-      "navigationTitle": "Calibration"
+      "navigationTitle": "Calibration",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Standard-Metrics-Library.md": {
       "route": "/reference/standard-metrics-library/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Reference-Architecture.md": {
       "route": "/reference/reference-architecture/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Results and reusable behavior"
     },
     "docs/Utilities.md": {
       "route": "/reference/utilities/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Lookup"
     },
     "docs/Command-Line-Interface.md": {
       "route": "/reference/command-line-interface/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
     },
     "docs/Developer/README.md": {
       "route": "/developer/home/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/Developer/Documentation-System.md": {
       "route": "/developer/documentation-system/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/Developer/Pruning-Strategies.md": {
       "route": "/developer/pruning-strategies/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Extension"
     },
     "docs/Developer/Writing-Docstrings.md": {
       "route": "/developer/writing-docstrings/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Extension"
     },
     "docs/Developer/Contributing-Foundational-SFDs.md": {
       "route": "/developer/contributing-foundational-sfds/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Extension"
     },
     "docs/Developer/Making-Release.md": {
       "route": "/developer/making-release/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/Developer/Packaging.md": {
       "route": "/developer/packaging/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/Semantic-Versioning.md": {
       "route": "/developer/semantic-versioning/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/TechnicalDebt.md": {
       "route": "/developer/technical-debt/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/Developer/Release-Policy.md": {
       "route": "/developer/release-policy/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "docs/Developer/Security-Assurance-Case.md": {
       "route": "/developer/security-assurance-case/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Maintenance"
     },
     "limen/data/README.md": {
       "route": "/reference/packages/data/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/experiment/README.md": {
       "route": "/reference/packages/experiment/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/inference/README.md": {
       "route": "/reference/packages/inference/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/sfd/README.md": {
       "route": "/reference/packages/sfd/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/indicators/README.md": {
       "route": "/reference/packages/indicators/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/features/README.md": {
       "route": "/reference/packages/features/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/transforms/README.md": {
       "route": "/reference/packages/transforms/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/scalers/README.md": {
       "route": "/reference/packages/scalers/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/metrics/README.md": {
       "route": "/reference/packages/metrics/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/log/README.md": {
       "route": "/reference/packages/log/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/cohort/README.md": {
       "route": "/reference/packages/cohort/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/backtest/README.md": {
       "route": "/reference/packages/backtest/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/utils/README.md": {
       "route": "/reference/packages/utils/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/calibration/README.md": {
       "route": "/reference/packages/calibration/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/cli/README.md": {
       "route": "/reference/packages/cli/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/targets/README.md": {
       "route": "/reference/packages/targets/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/yaml/README.md": {
       "route": "/reference/packages/yaml/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/cli/commands/README.md": {
       "route": "/reference/packages/internals/cli-commands/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/cohort/sfc/README.md": {
       "route": "/reference/packages/internals/cohort-selectors/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/data/bars/README.md": {
       "route": "/reference/packages/internals/data-bars/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/data/utils/README.md": {
       "route": "/reference/packages/internals/data-utils/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/experiment/param_search/README.md": {
       "route": "/reference/packages/internals/parameter-search/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/experiment/reducer/README.md": {
       "route": "/reference/packages/internals/reducers/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/sfd/foundational_sfd/README.md": {
       "route": "/reference/packages/internals/foundational-sfds/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/sfd/reference_architecture/README.md": {
       "route": "/reference/packages/internals/reference-architectures/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "limen/sfd/rule_based/README.md": {
       "route": "/reference/packages/internals/rule-based/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Package API"
     },
     "docs/Walk-Forward.md": {
       "route": "/book/walk-forward/",
       "part": "Book",
-      "bookOrder": 6
+      "bookOrder": 7
     },
     "docs/Developer/Indicator-Performance.md": {
       "route": "/developer/indicator-performance/",
-      "part": "Developer"
+      "part": "Developer",
+      "navigationGroup": "Measured performance"
     },
     "docs/Compiled-Research.md": {
       "route": "/book/compiled-definition/",
@@ -343,7 +404,39 @@
     },
     "docs/Guarded-Holdout-Reference.md": {
       "route": "/reference/guarded-holdout/",
-      "part": "Reference"
+      "part": "Reference",
+      "navigationGroup": "Results and reusable behavior"
+    },
+    "docs/Run-And-Recover.md": {
+      "route": "/book/run-and-recover/",
+      "part": "Book",
+      "bookOrder": 6
+    },
+    "docs/Trading-Behavior.md": {
+      "route": "/book/trading-behavior/",
+      "part": "Book",
+      "bookOrder": 8
+    },
+    "docs/Selected-Behavior.md": {
+      "route": "/book/selected-behavior/",
+      "part": "Book",
+      "bookOrder": 9
+    },
+    "docs/Public-API.md": {
+      "route": "/reference/public-api/",
+      "part": "Reference",
+      "navigationTitle": "Public API index",
+      "navigationGroup": "Lookup"
+    },
+    "docs/Search-Reference.md": {
+      "route": "/reference/search/",
+      "part": "Reference",
+      "navigationGroup": "Definitions and execution"
+    },
+    "docs/Historical-Data-Reference.md": {
+      "route": "/reference/historical-data/",
+      "part": "Reference",
+      "navigationGroup": "Data and preparation"
     }
   }
 }

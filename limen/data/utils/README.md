@@ -22,6 +22,7 @@ Does **not** own raw data access (owned by `limen.data.HistoricalData`) or the l
 |-------------|-------------|-------|
 | `compute_data_bars` | Public bar-formation entry point | Dispatches to `limen.data.bars`; used by `set_bar_formation()` |
 | `split_sequential` | Ordered train/validation/test windows | The standard manifest split |
+| `split_walk_forward` | Expanding or rolling chronological folds | Returns bounded folds; fitting remains a per-fold responsibility |
 | `split_random` | Randomised split | Non-sequential alternative |
 | `split_by_dates` | Explicit date-boundary split | For fixed calendar windows |
 | `split_data_to_prep_output` | Build the `data_dict` (`x_train`, `y_test`, …) | Does not mutate the passed split list or column list |
@@ -40,6 +41,7 @@ Does **not** own raw data access (owned by `limen.data.HistoricalData`) or the l
 |---|---|
 | `compute_data_bars.py` | Public bar-formation entry point |
 | `splits.py` | Train/validation/test split helpers |
+| `split_walk_forward.py` | Walk-forward fold geometry |
 | `random_slice.py` | Random window slicing helper |
 
 <!-- reference: package-data-utils-layout source=limen/data/utils/README.md region=layout:package role=layout -->

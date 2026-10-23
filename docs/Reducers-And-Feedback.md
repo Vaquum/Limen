@@ -56,7 +56,36 @@ uel:
   feedback_interval: 1
 ```
 
-These small runs exercise `BudgetReducer`. The four metric-driven alternatives below need enough observations for their respective analyses; a three-round example does not demonstrate their statistical reliability.
+The separate metric-driven campaigns exercise all four alternatives. Python compares 30 real fitted candidates before inspecting correlations and parameter importance. Each feedback run starts a fresh queue. The Python sanity case marks measured execution times above its deliberately strict zero-second allowance as suggestions. The Compiled case removes a calibration mode whose chosen score is unavailable; its missing-rate threshold distinguishes that mode from the mixed population. Saturation uses a declared variance threshold; focus narrows around an observed winner; correlation distinguishes applied removals from advisory suggestions. These small populations demonstrate control behavior, not statistical reliability.
+
+### Python metric-driven controls
+
+<!-- example: reducers-python-metric-controls source=docs/examples/python-research/analysis_cases.py region=reducer_config scenario=search interface=python role=executed -->
+```python
+def metric_reducers():
+    return {
+        'sanity': SanityReducer(metric='validation_rmse', min_observations=2, execution_time_threshold=0., timeout_rate_threshold=0.),
+        'saturation': SaturationReducer(metric='validation_rmse', cv_threshold=.1, min_samples_per_value=2, retain_fraction=.5),
+        'focus': FocusReducer(metric='validation_rmse', maximize=False, breakthrough_threshold=1., min_observations=5, focus_timeout=2, variation_count=3),
+        'correlation': CorrelationReducer(metric='validation_rmse', maximize=False, min_observations=10, n_boot=30,
+            prune_threshold=1., sign_stability_threshold=0., random_state=42),
+    }
+```
+
+### Compiled metric-driven controls
+
+The four manifests declare those controls independently. Their native `audit.jsonl` files retain every applied intervention, suggestion and source error; the checkpoint retains the resulting queue. Run them with the CLI:
+
+<!-- example: reducers-compiled-metric-controls source=docs/examples/compiled-research/run.sh region=reducers scenario=search interface=compiled role=executed -->
+```bash
+limen run --no-progress-bar \
+  compiled-research/reducer_sanity.yaml \
+  compiled-research/reducer_saturation.yaml \
+  compiled-research/reducer_focus.yaml \
+  compiled-research/reducer_correlation.yaml \
+  compiled-research/analysis.yaml \
+  compiled-research/rule_contracts.yaml
+```
 
 The [reducer reference](Developer/Pruning-Strategies.md#constructor-reference) lists each constructor and its validation rules. In YAML, its arguments belong under the reducer's `params` mapping.
 
@@ -76,53 +105,9 @@ The five reducers answer different questions. Pick by the problem you have, not 
 
 Reducers combine, but with no conflict resolution. Within a feedback trigger they run in the order of the list they were constructed in, each analyzing the same pre-trigger `MSQ`; their interventions are dispatched afterwards with last-write-wins at the queue. `FocusReducer` and `SaturationReducer` use namespaced filter keys, so they do not clobber each other, but two exploitation reducers can still fight (e.g. a `BudgetReducer` trim shrinking the queue that a `FocusReducer` is injecting into). See [Feedback cycle order](#feedback-cycle-order) and the [controller reference](Developer/Pruning-Strategies.md#feedback-cycle-order).
 
-## Tuning guidelines
+## Tune against a declared metric
 
-Metric-driven reducers take `metric`, the column they reason over. Every reducer takes `active` (default `True`). The knobs below are the ones that change behavior most; each reducer validates its ranges and raises `ValueError` on bad input.
-
-`BudgetReducer` — a resource cap, not a quality judge:
-
-| Parameter | Default | Effect |
-|---|---|---|
-| `max_walltime_hours` | `None` | wall-clock ceiling; the trim target is the smaller of the walltime and permutation projections |
-| `max_permutations` | `None` | hard cap on completed rounds |
-| `check_after_pct` | `0.1` | fraction of budget consumed before a trim is allowed; larger waits for a steadier throughput estimate, smaller reacts earlier on noisier estimates |
-| `trim_strategy` | `'random'` | `'random'` downsamples blindly; `'worst_first'` removes the worst-scoring values first and requires `metric` |
-
-`SanityReducer` — only the null-rate path removes; the rest suggest:
-
-| Parameter | Default | Effect |
-|---|---|---|
-| `nan_threshold` | `0.1` | null/NaN rate above which a value is hard-removed; smaller is stricter |
-| `min_observations` | `1` | trials required before a value can be removed, guarding against tiny samples |
-| `zero_metric_threshold` / `execution_time_threshold` / `warning_threshold` | `None` | opt-in suggestion detectors; each stays off until set |
-
-`CorrelationReducer` — needs enough rounds to be meaningful:
-
-| Parameter | Default | Effect |
-|---|---|---|
-| `min_observations` | `50` | rounds required before it acts; larger is more conservative |
-| `negative_correlation_threshold` | `-0.3` | wrong-direction trigger; nearer `0` prunes more readily, more negative prunes only strong offenders |
-| `prune_threshold` | `0.05` | absolute correlation below this marks a value low-impact (a `keep_is` suggestion) |
-| `sign_stability_threshold` | `0.8` | bootstrap sign agreement required before acting; larger demands higher confidence |
-
-`FocusReducer` — exploitation around a breakthrough:
-
-| Parameter | Default | Effect |
-|---|---|---|
-| `breakthrough_threshold` | required | metric level that activates focus; set near the top of the expected range so it only fires on a real breakthrough |
-| `focus_range_pct` | `0.2` | half-width of the numeric window kept around the winner; larger explores wider, smaller searches tighter |
-| `focus_timeout` | `5` | rounds without improvement before it snaps back to the full domain |
-| `variation_count` | `5` | number of nearby values injected per numeric parameter |
-
-`SaturationReducer` — variance-collapse detection:
-
-| Parameter | Default | Effect |
-|---|---|---|
-| `cv_threshold` | `0.01` | coefficient of variation below which a value is saturated; larger declares saturation sooner |
-| `window_size` | `100` | rolling tail length per value; larger is smoother and slower to react |
-| `min_samples_per_value` | `20` | observations required before the CV is trusted |
-| `retain_fraction` | `0.1` | share of a saturated value's combinations kept for monitoring; nearer `0` prunes harder |
+Choose the metric and its direction before interpreting an intervention. Missingness, time budgets, variance and a breakthrough score answer different questions. The [constructor reference](Developer/Pruning-Strategies.md#constructor-reference) owns the complete defaults, domains and refusal rules for each reducer. The project cases set their thresholds explicitly and retain the actual actions.
 
 ## Audit trail
 
@@ -136,4 +121,4 @@ The [developer appendix](Developer/Pruning-Strategies.md) covers the reducer reg
 
 ## Read next
 
-Continue to [search and recovery](Advanced-Search.md) for candidate generation and checkpointing, [the experiment loop](Universal-Experiment-Loop.md) for feedback scheduling, and [Trainer](Trainer.md) for reconstructible Compiled experiments.
+Continue to [retention and recovery](Run-And-Recover.md) to keep the result and unfinished queue together.

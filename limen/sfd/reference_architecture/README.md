@@ -8,7 +8,7 @@
 
 ## In the research projects
 
-The [Python project](../../../docs/examples/python-research/README.md) fits its ordinary caller-owned Ridge pipeline. The [Compiled project](../../../docs/examples/compiled-research/README.md) `search` scenario runs the declared CPU model comparisons, retains their metrics and reconstructs eligible selected rounds. The architecture reference describes the prepared-data and output contracts.
+The [Python project](../../../docs/examples/python-research/README.md) fits its ordinary caller-owned Ridge pipeline. The [Compiled project](../../../docs/examples/compiled-research/README.md) `search` scenario runs the declared CPU model comparisons, retains their metrics and prediction payloads; the selection scenario separately proves CLI reconstruction. The architecture reference describes the prepared-data and output contracts.
 
 ## What this package owns
 
@@ -19,6 +19,8 @@ Does **not** own the experiment shape or manifest (owned by the matching `limen.
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
+| `DirectionSizingModel` / `direction_sizing` | Direction and signed exposure model | Native allocation/execution contract |
+| `meta_allocation.py` | Fold-qualified allocation labels and policy fitting | Used by allocation manifests; distinct from entry classification |
 | `ReferenceModel` | Base class for reference models | Shared fit/predict contract |
 | `LogRegBinary` / `logreg_binary` | Logistic-regression binary model | Class and function forms |
 | `DLinearRegressor` / `dlinear_regressor` | Linear time-series regressor | Class and function forms |

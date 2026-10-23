@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import subprocess
 import gzip
 import hashlib
@@ -8,14 +8,14 @@ import numpy as np
 import polars as pl
 import pytest
 
-from scenario_oracles import execution_clocks, verify_acceptance
+from scenario_oracles import execution_clocks, verify_acceptance, verify_common_baselines
 
 
 DIRECTORIES = {
     'selection': ['compiled-cli'],
-    'search': ['compiled-research', 'compiled-preparation', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
+    'search': ['compiled-research', 'compiled-preparation', 'compiled-helper-indicators', 'compiled-helper-features', 'compiled-helper-regimes', 'compiled-helper-scalers', 'compiled-conditional-features', 'compiled-search', 'compiled-search_random', 'compiled-search_sobol', 'compiled-factorized', 'compiled-adaptive', 'compiled-parallel', 'compiled-rule-contracts', 'compiled-analysis', *['compiled-source-' + name for name in ('csv', 'zip', 'arrow')], *['compiled-recording-' + name for name in ('lean', 'full', 'outputs')], *['compiled-reducer-' + name for name in ('sanity', 'saturation', 'focus', 'correlation')], 'compiled-common_strategies', *['compiled-family_' + name for name in ('ridge_regressor', 'dlinear_regressor', 'xgboost_regressor', 'random_binary', 'direction_sizing')]],
     'recovery': ['compiled-recovery'], 'walk_forward': ['compiled-walk_forward', 'compiled-acceptance'],
-    'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration'],
+    'holdout': ['compiled-holdout', 'compiled-holdout_event'], 'calibration': ['compiled-calibration', 'compiled-calibration-assessment', 'compiled-calibration-isotonic'],
     'execution': ['compiled-execution', 'compiled-funded'], 'bars': ['compiled-bars'],
     'allocation': ['compiled-allocation', 'compiled-allocation_ml', 'compiled-allocation_funded'],
 }
@@ -94,7 +94,49 @@ def verify_execution(project, name):
                 assert (payment['rate_decimal'], payment['valuation_price']) == (rate, price)
                 assert payment['recognized_delta'] == pytest.approx(-quantity * rate * price, rel=1e-12, abs=1e-12)
             assert row['backtest_funding_pnl'] == pytest.approx(sum(payment['recognized_delta'] for payment in ledger['funding']))
-    return {'rounds': log.height, 'risk_spans': log['risk_span'].to_list()}
+    return {'rounds': log.height, 'risk_spans': log['risk_span'].to_list(), 'ledger_excerpt': records(directory)[0]['trade_ledger']['fills'][:8]}
+
+
+
+def verify_bars(project):
+    from limen.data.utils import compute_data_bars
+    directory = project / 'results/dev/compiled-bars'
+    log = checked_log(directory, 3)
+    assert set(log['bar_type']) == {'volume', 'trade', 'liquidity'}
+    raw = pl.read_parquet(project / 'inputs/spot_15m_20250101_20250531.parquet')
+    dates = json.loads((directory / 'metadata.json').read_text())['yaml_reference']['sfd']['manifest']['split_dates']
+    populations = []
+    for row, record in zip(log.iter_rows(named=True), records(directory), strict=True):
+        kind = row['bar_type']
+        column, parameter = {'volume': ('volume', 'volume_threshold'), 'trade': ('no_of_trades', 'trade_threshold'),
+                             'liquidity': ('liquidity_sum', 'liquidity_threshold')}[kind]
+        for split in ('train', 'val', 'test'):
+            start, stop = [datetime.fromisoformat(dates[split + suffix]).replace(tzinfo=raw['datetime'][0].tzinfo) for suffix in ('_start', '_end')]
+            source = raw.filter(pl.col('datetime').is_between(start, stop, closed='left'))
+            formed = compute_data_bars(source, bar_type=kind, **{parameter: row[parameter]})
+            bounds, first, accumulated = [], 0, 0.
+            for index, value in enumerate(source[column]):
+                accumulated += value
+                if accumulated >= row[parameter]:
+                    bounds.append((first, index + 1))
+                    first, accumulated = index + 1, 0.
+            assert formed.height == len(bounds) > 2
+            assert formed['bar_count'].to_list() == [end - begin for begin, end in bounds]
+            assert formed['datetime'].to_list() == [source['datetime'][begin] for begin, _ in bounds]
+            for bar, (begin, end) in zip(formed.iter_rows(named=True), bounds, strict=True):
+                part = source.slice(begin, end - begin)
+                assert bar['open'] == part['open'][0] and bar['close'] == part['close'][-1]
+                assert bar['high'] == part['high'].max() and bar['low'] == part['low'].min()
+                assert bar[column] == pytest.approx(part[column].sum(), rel=1e-12)
+            populations.append({'kind': kind, 'split': split, 'source_rows': source.height, 'completed_bars': formed.height,
+                                'omitted_tail_rows': source.height - bounds[-1][1], 'first_start': formed['datetime'][0].isoformat(),
+                                'last_start': formed['datetime'][-1].isoformat(),
+                                'last_available': (source['datetime'][bounds[-1][1] - 1] + timedelta(seconds=900)).isoformat()})
+            if split == 'test':
+                assert len(predictions(directory, record)) == formed.height - 1
+                assert datetime.fromisoformat(record['alignment']['first_test_datetime']) == formed['datetime'][0]
+                assert datetime.fromisoformat(record['alignment']['last_test_datetime']) == formed['datetime'][-2]
+    return {'modes': log['bar_type'].to_list(), 'populations': populations}
 
 
 def verify_allocation(project, name):
@@ -156,11 +198,54 @@ def verify_project(project):
     audit = [json.loads(line) for line in (base / 'compiled-adaptive/audit.jsonl').read_text().splitlines()]
     assert any(item.get('source') == 'BudgetReducer' for cycle in audit for item in cycle['interventions'])
     checked_log(base / 'compiled-preparation', 4)
-    checked_log(base / 'compiled-common_strategies', 8)
+    baselines = checked_log(base / 'compiled-common_strategies', 8)
+    from limen.experiment._round_storage import open_text
+    with open_text(base / 'compiled-common_strategies/round_data.jsonl.gz') as stream:
+        baseline_tracks = {row['round_params']['strategy']: row['execution'] for row in map(json.loads, stream)}
+    common = {'rows': baselines.select('strategy', 'num_executed_trades_test', 'pnl_per_bar_bps_test').to_dicts(),
+              'tracks': baseline_tracks, 'source_rows': 8784, 'fee_bps': 10., 'slip_bps': 5.,
+              'test_start': '2024-11-01T00:00:00+00:00', 'test_end': '2025-01-01T00:00:00+00:00', 'test_rows': 1464}
+    verify_common_baselines('compiled', common, base / 'compiled-common_strategies', project / 'inputs')
     checked_log(base / 'compiled-family_random_binary', 1)
     signed = checked_log(base / 'compiled-family_direction_sizing', 2)
     assert signed.height == 2
     summaries['search'] = {'rounds': main.height, 'selected_members': selected['members'], 'traversals': len(domains), 'budget_rounds': adaptive.height, 'families': verify_regressors(project)}
+    summaries['search']['common_baselines'] = common
+    summaries['search'].update(verify_extended_campaigns(project))
+    helper_counts = {}
+    for case in ('helper_indicators', 'helper_features', 'helper_regimes', 'helper_scalers', 'conditional_features'):
+        from ruamel.yaml import YAML
+        document = YAML(typ='safe').load((project / 'compiled-research' / (case + '.yaml')).read_text())
+        directory = base / document['uel']['output_path']
+        log = checked_log(directory, document['uel']['n_permutations'])
+        key = 'regime_column' if case == 'helper_regimes' else 'scaler_type' if case == 'helper_scalers' else 'enable_lags' if case == 'conditional_features' else 'feature_groups'
+        assert set(log[key].to_list()) == set(document['sfd']['params'][key])
+        for record in records(directory):
+            values = predictions(directory, record)
+            assert values.size > 0 and set(values) <= {0, 1}
+        helper_counts[case] = log.height
+    summaries['search']['helper_diagnostics'] = helper_counts
+    from ruamel.yaml import YAML
+    target_cases = {}
+    for declaration in sorted((project / 'compiled-research').glob('target_*.yaml')):
+        document = YAML(typ='safe').load(declaration.read_text())
+        name = document['sfd']['manifest']['target']['class'].split('.')[-1]
+        directory = base / document['uel']['output_path']
+        if name in ('VolNormalizedReturnTarget', 'ForwardVolNormalizedReturnTarget'):
+            transcript = project / 'results/target-contracts' / (declaration.name + '.log')
+            text = transcript.read_text()
+            if 'Parkinson-to-close volatility ratio' in text:
+                assert 'outside [0.9, 1.1]' in text
+                target_cases[name] = {'status': 'refused', 'reason': 'training volatility sanity gate'}
+                continue
+        log = checked_log(directory, 1)
+        values = predictions(directory, records(directory)[0])
+        assert values.size > 0
+        target_cases[name] = {'status': 'executed', 'rows': len(values)}
+        if 'rmse' in log.columns:
+            assert np.isfinite(log['rmse'][0])
+    assert len(target_cases) == 15
+    summaries['search']['target_diagnostics'] = target_cases
     recovery = checked_log(base / 'compiled-recovery', 4)
     assert [row['_round_index'] for row in records(base / 'compiled-recovery')] == list(range(4))
     summaries['recovery'] = {'rounds': recovery.height, 'unique_ids': recovery['id'].n_unique()}
@@ -194,10 +279,17 @@ def verify_project(project):
     calibration = checked_log(base / 'compiled-calibration', 4)
     assert set(zip(calibration['use_calibration'], calibration['use_threshold'])) == {(a, b) for a in (False, True) for b in (False, True)}
     summaries['calibration'] = {'modes': calibration.select('use_calibration', 'use_threshold', 'optimal_threshold').to_dicts()}
+    economic = checked_log(base / 'compiled-calibration-assessment', 4)
+    assessment = json.loads((base / 'compiled-calibration-assessment/assessment.json').read_text())
+    assert assessment['members'] == 4
+    assert assessment['selected_ids'] == economic.sort(['val_backtest_total_return', 'id'], descending=[True, False])['id'].to_list()
+    assert pl.read_parquet(base / 'compiled-calibration-assessment/predictions.parquet').filter(pl.col('reason').is_null()).height > 0
+    summaries['calibration']['reconstructed_modes'] = assessment['members']
+    summaries['calibration']['probability_methods'] = [
+        {'method': method, 'reconstructed_members': json.loads((base / directory / 'assessment.json').read_text())['members']}
+        for method, directory in [('sigmoid', 'compiled-calibration-assessment'), ('isotonic', 'compiled-calibration-isotonic')]]
     summaries['execution'] = {name: verify_execution(project, name) for name in ('execution', 'funded')}
-    bars = checked_log(base / 'compiled-bars', 3)
-    assert set(bars['bar_type']) == {'volume', 'trade', 'liquidity'}
-    summaries['bars'] = {'modes': bars['bar_type'].to_list()}
+    summaries['bars'] = verify_bars(project)
     allocation = {name: verify_allocation(project, name) for name in ('allocation', 'allocation_ml', 'allocation_funded')}
     summaries['allocation'] = allocation
     original, restored = project / 'results/compiled-project', project / 'results/compiled-restored'
@@ -221,6 +313,7 @@ def verify_project(project):
     tracked = subprocess.check_output(['git', 'ls-files', '-z'], cwd=original, text=True).split('\0')
     assert all((original / path).read_bytes() == (restored / path).read_bytes() for path in tracked if path and not (original / path).is_symlink())
     summaries['command_line'] = {'restored_files': len([name for name in tracked if name])}
+    DIRECTORIES['search'].extend(path.name for path in base.glob('compiled-target-*'))
     inventory = {}
     for scenario, directories in DIRECTORIES.items():
         inventory[scenario] = {str(path.relative_to(project)): hashlib.sha256(path.read_bytes()).hexdigest() for name in directories for path in (base / name).rglob('*') if path.is_file()}
@@ -275,3 +368,80 @@ def prove_interrupted_recovery(project, environment):
     assert changed.returncode != 0 and 'Recorded source SHA-256 differs' in changed.stdout
     assert (output / 'results.csv').read_bytes() == saved
     return {'interrupted_rounds': first.height, 'resumed_rounds': complete.height, 'uninterrupted_equivalence': True, 'changed_source_rejected': True}
+
+
+def verify_extended_campaigns(project):
+    base = project / 'results/dev'
+    summary = {}
+    reducer_results = {}
+    for name in ('sanity', 'saturation', 'focus', 'correlation'):
+        location = base / ('compiled-reducer-' + name)
+        log = pl.read_csv(location / 'results.csv')
+        cycles = [json.loads(line) for line in (location / 'audit.jsonl').read_text().splitlines()]
+        assert log.height > 0 and all(cycle['errors'] == [] for cycle in cycles), (name, cycles, log.to_dicts())
+        actions = [item for cycle in cycles for item in [*cycle['interventions'], *cycle['suggestions']]]
+        assert actions and all(item['source'] == name.title() + 'Reducer' for item in actions), (name, cycles, log.to_dicts())
+        assert (location / 'checkpoint.json').is_file()
+        if name == 'sanity':
+            assert any(item['op'] == 'remove_is' for item in actions)
+        if name == 'focus':
+            assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
+        if name == 'saturation':
+            assert any(item['op'] == 'set_filter' for item in actions)
+        reducer_results[name] = {'rounds': log.height, 'actions': actions}
+    summary['reducers'] = reducer_results
+    analysis_dir = base / 'compiled-analysis'
+    checked_log(analysis_dir, 20)
+    analysis = {'rounds': 20, 'report': json.loads((analysis_dir / 'acceptance_report.json').read_text()),
+                'artifacts': {name: hashlib.sha256((analysis_dir / name).read_bytes()).hexdigest() for name in ('trial_returns.parquet', 'acceptance_report.json', 'acceptance_report.md', 'round_data.jsonl.gz')}}
+    verify_acceptance(analysis, analysis_dir, project / 'inputs')
+    summary['analysis'] = analysis['report']
+    recording = {}
+    recording_metrics = []
+    from limen.experiment._round_storage import open_text
+    for mode in ('lean', 'full', 'outputs'):
+        location = base / ('compiled-recording-' + mode)
+        log = checked_log(location, 2)
+        recording_metrics.append(dict(zip(log['id'], log['backtest_pnl_per_bar_bps'], strict=True)))
+        with open_text(location / 'round_data.jsonl.gz') as stream:
+            decoded = [json.loads(line) for line in stream]
+        assert len(decoded) == 2
+        for row in decoded:
+            assert ('preds' in row) == (mode != 'lean')
+            assert ('missing_datetimes' in row['alignment']) == (mode != 'lean')
+            assert ('execution' in row) == ('market' in row) == (mode == 'outputs')
+            if mode == 'outputs':
+                assert row['probs'] and len(row['probs']) == len(row['preds'])
+                assert row['execution'] and row['market']
+                assert len(row['execution']['net']) == len(row['market']['ret']) == len(row['preds'])
+                measured = float(np.mean(row['execution']['net'])) * 10_000
+                assert log.filter(pl.col('id') == row['round_id'])['backtest_pnl_per_bar_bps'][0] == pytest.approx(measured)
+        recording[mode] = {'rounds': log.height, 'payloads': sorted(decoded[0])}
+    assert recording_metrics[0] == recording_metrics[1] == recording_metrics[2]
+    summary['recording'] = recording
+    sources = {kind: checked_log(base / ('compiled-source-' + kind), 2) for kind in ('csv', 'zip', 'arrow')}
+    assert sources['csv'].select('id', 'accuracy').equals(sources['zip'].select('id', 'accuracy'))
+    assert sources['csv'].select('id', 'accuracy').equals(sources['arrow'].select('id', 'accuracy'))
+    parallel = checked_log(base / 'compiled-parallel', 4)
+    serial = sources['csv']
+    assert dict(zip(parallel['C'], parallel['accuracy'], strict=True)).items() >= dict(zip(serial['C'], serial['accuracy'], strict=True)).items()
+    metadata = json.loads((base / 'compiled-parallel/metadata.json').read_text())
+    assert metadata['workers'] == 2 and metadata['worker_native_threads'] == 1
+    assert [row['_round_index'] for row in records(base / 'compiled-parallel')] == list(range(4))
+    summary['parallel'] = {'workers': 2, 'rounds': parallel.height, 'ordered_commit_indices': list(range(4))}
+    from helper_oracles import verify_rules
+    rule_log = checked_log(base / 'compiled-rule-contracts', 2)
+    rule_rows = []
+    for record in records(base / 'compiled-rule-contracts'):
+        signals = predictions(base / 'compiled-rule-contracts', record)
+        rule_rows.append({'price_floor': record['round_params']['price_floor'], 'signals': signals.tolist(), 'positive_decisions': int(signals.sum())})
+    rules = {'rows': rule_rows, 'assessment_rows': len(rule_rows[0]['signals']), 'history_resets_at_split': True}
+    assert rule_log.height == len(rule_rows)
+    verify_rules(rules, project / 'inputs')
+    summary['rules'] = rules
+    calibrated = checked_log(base / 'compiled-calibration-isotonic', 4)
+    members = json.loads((base / 'compiled-calibration-isotonic/assessment.json').read_text())
+    assert members['members'] == 4 and members['selected_ids'] == calibrated.sort(['val_backtest_total_return', 'id'], descending=[True, False])['id'].to_list()
+    assert pl.read_parquet(base / 'compiled-calibration-isotonic/predictions.parquet').filter(pl.col('reason').is_null()).height > 0
+    summary['input_formats'] = {kind: log.height for kind, log in sources.items()}
+    return summary

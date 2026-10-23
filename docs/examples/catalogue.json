@@ -43,10 +43,7 @@
       "python"
     ]
   },
-  "unproved": {
-    "tabpfn": "https://github.com/Vaquum/Limen/issues/628",
-    "continuous_post_processing": "https://github.com/Vaquum/Limen/issues/1079"
-  },
+  "unproved": {},
   "candidate_pages": [
     "docs/Research-Book.md",
     "docs/examples/python-research/README.md",
@@ -126,7 +123,13 @@
     "docs/Reference-Architecture.md",
     "docs/Common-Strategies.md",
     "docs/Compiled-Research.md",
-    "docs/Guarded-Holdout-Reference.md"
+    "docs/Guarded-Holdout-Reference.md",
+    "docs/Run-And-Recover.md",
+    "docs/Trading-Behavior.md",
+    "docs/Selected-Behavior.md",
+    "docs/Public-API.md",
+    "docs/Search-Reference.md",
+    "docs/Historical-Data-Reference.md"
   ],
   "model_families": {
     "logreg_binary": {
@@ -170,7 +173,11 @@
       "configuration": "docs/examples/compiled-research/family_direction_sizing.yaml"
     },
     "tabpfn_binary": {
-      "unproved": "https://github.com/Vaquum/Limen/issues/628"
+      "retained_execution": "docs/examples/retained/tabpfn.json",
+      "test": "docs/examples/tests/test_optional_model.py::test_retained_tabpfn_matches_current_contract",
+      "configuration": "docs/examples/compiled-research/tabpfn.yaml",
+      "interface": "compiled",
+      "scope": "Real separately provisioned model; current package/source/version equality and numerical observation checked in ordinary CI."
     }
   },
   "recorded_inputs": {
@@ -2108,6 +2115,14 @@
         ],
         "HOLDOUT_OPTIONAL": [
           "evaluation_target"
+        ],
+        "MANIFEST_OPTIONAL_SHARED": [
+          "allocation",
+          "backtest",
+          "indicators",
+          "required_columns",
+          "split_dates",
+          "split_walk_forward"
         ]
       }
     }
@@ -2139,7 +2154,10 @@
       ],
       "recorded_window": "quarter-hour: first 1,920 rows; 960 fitting, 480 validation, 480 inference",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Retained evaluated state; independent next-bar costs and selection; all causal prefixes; no inference fitting."
+      "assertions": "Retained evaluated state; independent next-bar costs and selection; all causal prefixes; no inference fitting.",
+      "extra_tests": [
+        "docs/examples/tests/test_research_examples.py::test_acquisition_uses_one_publication_and_rejects_changed_artifacts"
+      ]
     },
     "compiled/selection": {
       "interface": "compiled",
@@ -2158,7 +2176,8 @@
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_cli_selection_matches_reconstruction_api",
         "docs/examples/tests/test_compiled_contract.py::test_compiled_project_is_yaml_and_cli",
-        "docs/examples/tests/test_compiled_contract.py::test_bundled_derivations_equal_the_recorded_sources"
+        "docs/examples/tests/test_compiled_contract.py::test_bundled_derivations_equal_the_recorded_sources",
+        "docs/examples/tests/test_research_examples.py::test_acquisition_uses_one_publication_and_rejects_changed_artifacts"
       ]
     },
     "python/search": {
@@ -2174,10 +2193,14 @@
       ],
       "recorded_window": "hourly: first 1,440 rows; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic.",
+      "assertions": "Full-budget strategies visit the bounded domain; closed-form Ridge reproduces scores; the budget reducer limits a separate four-candidate search to three completed rounds. A separate mixed-feedback run proves reducer/callback/file order, one-time file polling, injected-candidate execution, resulting domain and exhausted budget. Preparation reconstructs forward-close ternary labels, fixed-width fractional values, training-only robust statistics, ablation, PCA subspace and Ridge forecasts. All eight common baselines retain causal signals; separate one-bar Python and held-position native cost/lag accounts match independent arithmetic. All helper/target outputs are retained, five scaler states remain training-fitted, 30 distinct configurations support parameter analysis, and every reducer has a recorded intervention or advisory action. CSV/ZIP/Arrow carry the same recorded timestamps and prices.",
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
-        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_analysis_population_and_every_reducer",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_local_source_encodings",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_multiclass_metrics",
+        "docs/examples/tests/test_extended_cases.py::test_recorded_causal_rules"
       ]
     },
     "compiled/search": {
@@ -2193,10 +2216,12 @@
       ],
       "recorded_window": "hourly: January 1\u201322 2024 traversal; quarter-hour January 1\u201322 2025 family diagnostics; preparation: first 1,440 hourly bars; common rules: all 8,784 recorded 2024 hourly bars, 1,598 assessment bars",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "Unchanged CLI declarations cover finite traversal, factorization, audited resource reduction, eight composable candidates, ablation/PCA, recorded model-family predictions with independent return labels/RMSE, and eight baseline strategies. Callback ordering remains a separate component API regression.",
+      "assertions": "Unchanged CLI declarations cover finite traversal, factorization, audited resource reduction, eight composable candidates, ablation/PCA, recorded model-family predictions with independent return labels/RMSE, and eight baseline strategies. Callback ordering remains a separate component API regression. YAML-only campaigns execute every registered reducer and compare lean/full/output recording and CSV/ZIP/Arrow source encodings; native audits, scores, payloads and acceptance arithmetic are checked.",
       "extra_tests": [
         "docs/examples/tests/test_research_examples.py::test_preparation_preserves_training_fits_and_target_geometry",
-        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics"
+        "docs/examples/tests/test_research_examples.py::test_common_baselines_preserve_signals_and_declared_economics",
+        "docs/examples/tests/test_extended_cases.py::test_native_reducer_recording_and_source_campaigns",
+        "docs/examples/tests/test_optional_model.py::test_retained_tabpfn_matches_current_contract"
       ]
     },
     "python/recovery": {
@@ -2316,7 +2341,10 @@
       ],
       "recorded_window": "quarter-hour: first 1,920 rows",
       "test": "docs/examples/tests/test_research_examples.py::test_complete_research_scenario",
-      "assertions": "All four calibration/threshold choices; independent threshold objective; compatible Python vote cohort; validation reuse disclosed."
+      "assertions": "All four calibration/threshold choices; independent threshold objective; compatible Python vote cohort; validation reuse disclosed.",
+      "extra_tests": [
+        "docs/examples/tests/test_extended_cases.py::test_evaluated_classifier_composition_and_empty_history"
+      ]
     },
     "compiled/calibration": {
       "interface": "compiled",
@@ -2447,6 +2475,10 @@
       "python"
     ],
     "docs/examples/commands.json": [
+      "python",
+      "compiled"
+    ],
+    "docs/examples/acquire.sh": [
       "python",
       "compiled"
     ]
@@ -2787,7 +2819,8 @@
       "compiled/selection",
       "compiled/search",
       "compiled/walk_forward",
-      "compiled/execution"
+      "compiled/execution",
+      "python/search"
     ],
     "docs/Reference-Architecture.md": [
       "python/selection",
@@ -2806,6 +2839,56 @@
     "docs/Guarded-Holdout-Reference.md": [
       "python/holdout",
       "compiled/holdout"
+    ],
+    "docs/Run-And-Recover.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/recovery",
+      "compiled/recovery",
+      "python/search",
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Trading-Behavior.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/recovery",
+      "compiled/recovery",
+      "python/search",
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Selected-Behavior.md": [
+      "python/selection",
+      "compiled/selection",
+      "python/recovery",
+      "compiled/recovery",
+      "python/search",
+      "compiled/search",
+      "python/calibration",
+      "compiled/calibration",
+      "python/execution",
+      "compiled/execution"
+    ],
+    "docs/Public-API.md": [
+      "python/selection",
+      "compiled/selection"
+    ],
+    "docs/Search-Reference.md": [
+      "python/search",
+      "compiled/search",
+      "python/recovery",
+      "compiled/recovery"
+    ],
+    "docs/Historical-Data-Reference.md": [
+      "python/bars",
+      "compiled/selection"
     ]
   }
 }

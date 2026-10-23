@@ -6,7 +6,7 @@ The [Python project](examples/python-research/README.md) owns these steps as ord
 
 ## Prerequisites
 
-Use the complete project entry points and matching recorded input bundle. Python fits its classifier and calibrator in caller-owned state. Compiled Research runs the four calibration/threshold combinations declared in `calibration.yaml`; its CSV retains each mode and selected threshold. The assessment partition supplies no calibration or threshold fitting data.
+Use the complete project entry points and matching recorded input bundle. Python fits its classifier and calibrator in caller-owned state. Compiled Research runs the four calibration/threshold combinations declared in `calibration.yaml`; its CSV retains each mode and selected threshold. `calibration_assessment.yaml` adds an event-return objective, product and source clock, then assesses all four recorded modes. The assessment partition supplies no calibration or threshold fitting data.
 
 ## What Calibration Does
 
@@ -40,7 +40,7 @@ def calibration(data_dir, output):
     params = {'window': 4, 'alpha': .1}
     train, validation = project.prep(bars, params).values()
     model = make_pipeline(StandardScaler(), LogisticRegression(C=1, random_state=42)).fit(train.select('momentum'), train['next_return'].to_numpy() > 0)
-    modes = []
+    modes, sensors = [], []
     for calibrate in (False, True):
         fitted = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method='sigmoid') if calibrate else model
         probabilities = fitted.predict_proba(validation.select('momentum'))[:, 1]
@@ -48,12 +48,25 @@ def calibration(data_dir, output):
             threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric) if tune else (.5, None)
             state = SimpleNamespace(model=fitted, threshold=threshold)
             sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows, state_id=f'sigmoid={calibrate};threshold={tune}', fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+            sensors.append(sensor)
             cohort = Cohort.from_python([sensor], aggregate='vote')
             tape = cohort.predict_all(bars[1428:1920])[12:]
             if any(point.prediction not in (0, 1) for point in tape):
                 raise ValueError('Classifier inference must provide a binary decision for every assessment row')
             modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
-    return {'modes': modes, 'validation_reused': True}
+    methods = []
+    for method in ('sigmoid', 'isotonic'):
+        calibrated = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method=method)
+        probabilities = calibrated.predict_proba(validation.select('momentum'))[:, 1]
+        threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric)
+        state = SimpleNamespace(model=calibrated, threshold=threshold)
+        sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows,
+            state_id=method, fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+        tape = sensor.predict_all(bars[1428:1920])[12:]
+        methods.append({'method': method, 'calibrated': True, 'tuned': True, 'threshold': threshold, 'validation_score': score,
+            'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(),
+            'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
+    return {'probability_methods': methods, 'modes': modes, 'decisions': [{key: mode[key] for key in ('calibrated', 'tuned', 'threshold', 'inference_rows', 'positive_predictions')} for mode in modes], 'validation_reused': True, 'composition': compose_selected(sensors, bars)}
 ```
 
 <!-- example: calibration-compiled-modes source=docs/examples/compiled-research/calibration.yaml region=declaration scenario=calibration interface=compiled role=executed -->
@@ -295,3 +308,21 @@ These are validation selection scores. Calibration/search reuse validation data,
 ## Read Next
 
 Continue to [search and recovery](Advanced-Search.md) to compare candidates, [the Manifest reference](Experiment-Manifest.md) for builder declarations, and [Sensor construction](Trainer.md) for fitted model reuse.
+
+## Read the current decisions
+
+<!-- result: calibration-python-decisions interface=python scenario=calibration fields=decisions,validation_reused -->
+
+<!-- result: calibration-compiled-decisions interface=compiled scenario=calibration fields=modes,reconstructed_modes -->
+
+## Both probability-calibration methods
+
+The Python calibration variant fits both `sigmoid` and `isotonic` on the same declared validation population, then carries the fitted calibrator and chosen threshold into 480 later decisions. The Compiled `calibration_isotonic.yaml` variant uses the same four calibration/threshold switches as the sigmoid declaration and reconstructs all four selected Sensors through `limen assess`. The method changes the probability mapping; it does not provide new independent validation evidence.
+
+### Python Research methods
+
+<!-- result: calibration-python-methods interface=python scenario=calibration fields=probability_methods[].method,probability_methods[].threshold,probability_methods[].inference_rows,probability_methods[].positive_predictions -->
+
+### Compiled Research methods
+
+<!-- result: calibration-compiled-methods interface=compiled scenario=calibration fields=probability_methods[].method,probability_methods[].reconstructed_members -->

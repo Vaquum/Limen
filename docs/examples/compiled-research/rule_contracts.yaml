@@ -1,0 +1,47 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: book_rule_contracts
+  mode: development
+sfd:
+  manifest:
+    type: rule_based
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    strategy:
+      conditions:
+      - {id: floor, name: Close above the declared floor, type: threshold, column: close, operator: '>=', value: '{price_floor}'}
+      - {id: persistent_up, name: Two up bars, type: relative, column: close, operator: '>', other_column: open, persistence_n: 2}
+      - {id: recent_cross, name: Recent close-open cross, type: crossover, column: close, other_column: open, direction: above, recency_n: 3}
+      - {id: rising, name: Close above three bars ago, type: slope, column: close, direction: rising, lookback: 3}
+      - {id: down, name: Current down bar, type: sql_expr, expr: 'close < open'}
+      - {id: not_down, name: Exclude down bars, operator: not, operands: [down]}
+      - {id: activity, name: Persistent or recent activity, operator: or, operands: [persistent_up, recent_cross]}
+      - {id: entry, name: Combine the entry conditions, operator: and, operands: [floor, activity, rising, not_down]}
+      entry: entry
+    reference_architecture: limen.sfd.reference_architecture.rule_based
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+  params:
+    price_floor: [40000.0, 41000.0]
+uel:
+  output_path: compiled-rule-contracts
+  n_permutations: 2
+  search_strategy: {type: grid}
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+# endregion declaration

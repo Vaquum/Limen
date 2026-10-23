@@ -138,7 +138,11 @@ A foundational SFD contribution includes:
 - the foundational SFD file
 - any new shared helpers the design genuinely requires
 - updated docs for any new public surfaces
-- tests or validation appropriate to the added behavior
+- a template and registry/reference entry with declared task, units and optional extras
+- a real recorded-data case through every admitted user interface
+- independent assertions for training-only preparation and returned predictions
+- an explicit reconstruction disposition: validated replay, stochastic tolerance or a named unsupported boundary
+- updated source provenance, exact excerpts and publication evidence
 
 ## Read next
 

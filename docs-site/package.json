@@ -6,7 +6,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "node scripts/lint-docs.mjs",
+    "lint": "node scripts/lint-docs.mjs && node scripts/check-links.mjs",
     "security:audit": "node ./scripts/audit-security.mjs",
     "start": "node scripts/serve-reader.mjs",
     "build": "node scripts/build-reader.mjs",
@@ -15,10 +15,10 @@
     "check:reader": "node scripts/check-reader.mjs"
   },
   "dependencies": {
-    "markdown-it": "14.3.3",
-    "prismjs": "1.30.0",
     "@fontsource-variable/archivo": "5.3.0",
-    "@fontsource/ibm-plex-mono": "5.3.0"
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "markdown-it": "14.3.3",
+    "prismjs": "1.30.0"
   },
   "overrides": {
     "markdown-it": "$markdown-it",
@@ -26,6 +26,7 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.63.0",
     "markdownlint": "0.38.0"
   }

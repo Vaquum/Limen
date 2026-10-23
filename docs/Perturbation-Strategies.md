@@ -238,7 +238,7 @@ The primitives are not equally useful for every model. A rough decision guide:
 
 - **Linear models** (`logreg_binary`, `dlinear_regressor`) are scale-sensitive and collinearity-sensitive. Scaler-from-params matters most here — sweep `logreg`, `robust`, and `rank_gauss`. Feature-group selection and ablation help find and prune redundant or noisy inputs. Treat fractional differentiation as a separately evaluated feature choice (see [Fractional Differentiation](Fractional-Differentiation.md)).
 - **Tree models** (`lightgbm_binary`, `xgboost_regressor`) often retain split order under monotone rescaling, but numerical methods and model settings still matter. Test the declared configuration rather than assuming every preprocessing choice is irrelevant. Feature-group selection and ablation are the primary robustness levers; `include_if` is useful for gating expensive optional features.
-- **TabPFN** (`tabpfn_binary`) is sensitive to feature count and expects scaled inputs. The canonical projects do not claim TabPFN execution; model validation remains tracked in [#628](https://github.com/Vaquum/Limen/issues/628). Input/preprocessing guidance cannot substitute for that missing run.
+- **TabPFN** (`tabpfn_binary`) is sensitive to feature count and expects scaled inputs. The [optional CPU campaign](examples/compiled-research/README.md#optional-model-campaign) uses recorded observations, a pinned real checkpoint and an identified environment. Its one-feature example does not establish a general feature-count or compression advantage.
 
 ## Expected Artifacts
 

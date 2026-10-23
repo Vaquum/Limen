@@ -56,7 +56,7 @@ Evidence: [SECURITY.md](https://github.com/Vaquum/Limen/blob/main/SECURITY.md) r
 
 Argument: required CodeQL, lint and typing checks catch their supported defect classes before merge. They complement review and execution tests; they do not establish the absence of vulnerabilities.
 
-Evidence: CodeQL (`.github/workflows/pr_checks_codeql.yml`) and Ruff in the static lint plane (`.github/workflows/pr_checks_lint.yml`) are required checks; Pyright runs through `.github/workflows/pr_checks_typing.yml` under the non-increasing budget in `.github/typing_budget.json`; the package baseline is not zero; OpenSSF Scorecard re-analyzes every push to `main` (`.github/workflows/scorecard-analysis.yml`) and publishes the result.
+Evidence: CodeQL (`.github/workflows/pr_checks_codeql.yml`) and Ruff in the static lint plane (`.github/workflows/pr_checks_lint.yml`) are required checks; Pyright runs through `.github/workflows/pr_checks_typing.yml` under the non-increasing budget in `.github/typing_budget.json`; the recorded Pyright error count is zero while tracked Any and suppression counts remain nonzero; OpenSSF Scorecard re-analyzes every push to `main` (`.github/workflows/scorecard-analysis.yml`) and publishes the result.
 
 ## Residual risks
 

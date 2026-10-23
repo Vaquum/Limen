@@ -12,7 +12,7 @@ The [Compiled project](../../../docs/examples/compiled-research/README.md) `comm
 
 ## What this package owns
 
-Owns the implementation body behind each `limen` subcommand: argument handling, calls into `limen.yaml` and `limen.experiment`, and console output.
+Owns the implementation body behind the project and run subcommands: argument handling, calls into `limen.yaml` and `limen.experiment`, and console output.
 Does **not** own the Click command declarations (those live in `limen/cli/main.py`), manifest semantics, or experiment execution internals.
 
 ## Key entry points
@@ -25,6 +25,8 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | `profile.py:run_profile()` | Parameter-space and runtime profiling | Backs `limen profile`; samples the configured data source with a covering array |
 | `init.py` / `new.py` / `list_templates.py` | Scaffold projects and discover bundled templates | Reads `limen/yaml/templates` |
 | `commit.py` / `ls.py` / `fork.py` / `lineage.py` / `backup.py` / `reindex.py` | Committed manifest storage and lineage | Operate on project-local `manifests/committed` state |
+
+`limen assess` and `limen reserve` are registered and implemented in the sibling `limen.cli.assessment` module. They are part of the public CLI; they are not handlers in this directory.
 
 ## Adjacent modules
 

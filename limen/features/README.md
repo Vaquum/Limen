@@ -10,7 +10,7 @@
 
 ## In the research projects
 
-The [Python project](../../docs/examples/python-research/README.md) prepares CFR features from recorded trades. The [Compiled project](../../docs/examples/compiled-research/README.md) declares volume, trade and liquidity bars over recorded quarter-hour input in YAML. Their selection paths illustrate caller-owned feature expressions and YAML-declared preparation. The feature reference retains each helper’s required columns and output meaning.
+The [Python project](../../docs/examples/python-research/README.md) owns its feature preparation and retains diagnostics for every exported helper. The [Compiled project](../../docs/examples/compiled-research/README.md) declares lagged and fractional features, conditional transforms and individual helper groups in YAML. CFR separately uses recorded trade-level observations. The feature reference gives the required columns, timing and output meaning.
 
 ## What this package owns
 

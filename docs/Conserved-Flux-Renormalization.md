@@ -7,7 +7,7 @@ In practical Limen terms, CFR turns raw trades into:
 - a kline-like frame
 - plus six additional columns that describe multi-scale flow stability and entropy behavior
 
-The [Python project](examples/python-research/README.md) and [Compiled project](examples/compiled-research/README.md) each run the same CFR diagnostic in their `bars` scenario. They use 90 recorded seconds of BTCUSDT trades, aggregate three 30-second bars and retain the resulting profile. This diagnostic is separate from the Compiled model-fitting population; three bars do not establish a trained CFR strategy.
+The [Python project](examples/python-research/README.md) runs this CFR diagnostic in its `bars` scenario: 90 recorded seconds of BTCUSDT trades produce three 30-second bars and their profile. The [Compiled project](examples/compiled-research/README.md) separately exercises threshold bars on hourly observations; it does not run this trade-data diagnostic. Three diagnostic bars do not establish a trained CFR strategy.
 
 ## Prerequisites
 

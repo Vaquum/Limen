@@ -1,6 +1,6 @@
 # `limen.backtest`
 
-> Evaluate aligned predictions as trading outcomes through a vectorized snapshot.
+> Evaluate aligned predictions through snapshot or event execution, with explicit product, costs and funding.
 
 ## Canonical docs
 
@@ -23,6 +23,8 @@ Signal generation and operational account management belong to their respective 
 |-------------|-------------|-------|
 | `backtest_snapshot` | Vectorized evaluation across rounds | `from limen.backtest import backtest_snapshot` |
 | `long_flat_strategy` | Default execution model, or a template for a new strategy | Returns an `ExecutionResult`; `from limen.backtest import long_flat_strategy` |
+| `limen.backtest.funding` | Validated funding observations and event cash flows | Uses the declared funding clocks and product |
+| `limen.backtest.observed_costs` | Recorded retrospective cost calibration and stress comparisons | Python Research; requires the pinned calibration and benchmark |
 | `trade_execution` | Signed exposure with actual fill costs and persistent episodes | Accepts `TradeInputs` and `TradePolicy` with a `ProductSpec` |
 
 The package root exports `backtest_snapshot`, `long_flat_strategy`, `ExecutionResult`, `trade_execution`, `TradeInputs`, `TradePolicy` and `ProductSpec`.
@@ -38,6 +40,9 @@ The package root exports `backtest_snapshot`, `long_flat_strategy`, `ExecutionRe
 |---|---|
 | `backtest_snapshot.py` | Vectorized snapshot evaluator (price validation + ledger) |
 | `long_flat_strategy.py` | Default long-only execution model |
+| `trade_contract.py` / `trade_execution.py` | Product, policy, event fills and inventory ledger |
+| `funding.py` / `funding_presets.py` | Funding records and declared venue conventions |
+| `observed_costs.py` | Cost calibration, dispositions and stress reports |
 
 <!-- reference: package-backtest-layout source=limen/backtest/README.md region=layout:package role=layout -->
 ```text

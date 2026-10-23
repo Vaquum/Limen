@@ -1,0 +1,63 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: book_recording_lean
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-01-15'
+      val_start: '2024-01-15'
+      val_end: '2024-01-18'
+      test_start: '2024-01-18'
+      test_end: '2024-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type:
+    - logreg
+    C:
+    - 1.0
+    - 0.5
+    random_state:
+    - 42
+# region budget_config
+uel:
+  output_path: compiled-recording-lean
+  n_permutations: 2
+  search_strategy:
+    type: grid
+  output_format: csv
+
+# region assessment
+  recording:
+    predictions: false
+    alignment: false
+    trade_ledger: false
+    fold_details: false
+  record_execution: false
+  record_model_outputs: false

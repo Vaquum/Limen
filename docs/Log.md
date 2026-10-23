@@ -8,11 +8,7 @@ In [walk-forward sweeps](Experiment-Manifest.md#walk-forward-sweeps), `results.c
 
 ## Follow the two projects
 
-Both projects use the same small reader: require completed rows and return the
-loop's Polars frame. The Python project sorts its caller-defined validation
-return; the Compiled project sorts the recorded native validation objective.
-The helper does not manufacture a native metric group for arbitrary Python
-results.
+Python Research reads the completed loop's Polars frame and sorts its caller-defined validation return. Compiled Research retains the configured native results on disk; `limen assess` ranks their declared validation objective. The Python helper below is not a Compiled prerequisite and does not manufacture native metric groups for arbitrary results.
 
 ### Python Research
 
@@ -27,7 +23,7 @@ def completed_log(loop: UniversalExperimentLoop) -> pl.DataFrame:
 
 ### Compiled Research
 
-<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.yaml region=run scenario=selection interface=compiled role=executed -->
+<!-- example: log-compiled-completed source=docs/examples/compiled-research/research.yaml region=run scenario=search interface=compiled role=executed -->
 ```yaml
 uel:
   output_path: compiled-research
@@ -50,7 +46,7 @@ uel:
 
 `Log` adds captured-group and row-analysis APIs to those results. The constructor
 and method signatures below are source-bound reference; the project proof does
-not claim every diagnostic is meaningful for its small candidate population.
+not make a four-candidate population sufficient for every diagnostic. The separate analysis campaign below supplies 30 distinct configurations.
 
 ## Prerequisites
 
@@ -363,3 +359,25 @@ Use `read_from_file()` to recover or inspect an experiment log outside a live UE
 - Continue to [Trainer](Trainer.md) for promotion of selected experiment rounds into reusable sensors.
 
 For signed sizing, elapsed exits, recorded execution clocks and funding configuration, see [Backtest](Backtest.md#signed-exposure-elapsed-exits-and-funding).
+
+## A population for parameter analysis
+
+Python Research fits ten momentum windows against three Ridge penalties on the same recorded chronological population. Correlation resamples the recorded validation RMSE. Importance holds out complete parameter configurations, fits a surrogate and measures its loss of R² when a parameter is shuffled; it is not a causal feature-importance measure of the research model.
+
+<!-- example: log-python-analysis source=docs/examples/python-research/analysis_cases.py region=analysis_results scenario=search interface=python role=executed -->
+```python
+def analyze_log(loop, directory, space):
+    analysis = Log(uel_object=loop)
+    correlation = analysis.experiment_parameter_correlation('validation_rmse', cols_to_drop=[column for column in project.completed_log(loop).columns if column not in {*space, 'validation_rmse'}],
+        heads=(1.,), n_boot=50, min_n=10, random_state=42).reset_index()
+    importance = analysis.experiment_parameter_importance('validation_rmse', parameters=['window', 'alpha'], n_repeats=2, random_state=42)
+    correlation.to_csv(directory / 'correlation.csv', index=False)
+    importance.to_csv(directory / 'importance.csv', index=False)
+    return correlation, importance
+```
+
+<!-- result: log-python-importance interface=python scenario=search fields=analysis.importance[].parameter,analysis.importance[].importance_mean,analysis.importance[].baseline_score,analysis.importance[].n_configurations -->
+
+Compiled Research's `analysis.yaml` runs 20 threshold candidates across the recorded walk-forward windows. The CLI writes return tracks and an acceptance report; it does not expose the Python Log methods as CLI subcommands. The report compares trial returns using their recorded timestamps and reports DSR and PBO. Twenty candidates do not create additional independent time windows. With two PBO blocks the probability resolution remains 0.5.
+
+<!-- result: log-compiled-analysis interface=compiled scenario=search fields=analysis.n_trials,analysis.n_bars,analysis.deflated_sharpe_probability,analysis.pbo,analysis.pbo_resolution -->

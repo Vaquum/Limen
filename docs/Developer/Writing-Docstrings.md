@@ -49,6 +49,9 @@ A Limen docstring should answer:
 - what inputs it expects
 - what it returns or mutates
 - what columns it adds or requires when the surface is DataFrame-based
+- units and domains, warm-up/null behavior and observation availability
+- which state fits on training and how later calls reuse it
+- meaningful refusals, optional dependencies and supported combinations
 - caveats that affect caller behavior
 
 ## What to avoid
@@ -67,6 +70,8 @@ Much of Limen's public surface is Polars-based. For those functions, docstrings 
 - output column names or naming patterns
 - whether rows are filtered, appended, or only transformed
 - whether the helper is stateless or fitted on train data
+
+A public contract change also updates its canonical reference and every applicable project case. A matching signature alone does not establish input semantics, causality or execution. Keep those meanings authored at their source; use the exact bindings and independent result assertions described in the documentation contract.
 
 ## Review standard
 

@@ -82,6 +82,10 @@ The implemented workflows provide the tag, GitHub release, built distributions, 
 
 If tag creation succeeds but GitHub release creation fails, rerunning with the unchanged version exits because the tag already exists. Repair that partial release deliberately rather than expecting the script to resume it.
 
+## Documentation publication acceptance
+
+Package publication and documentation activation are separate outcomes. The [documentation publisher](Documentation-System.md#publication-and-rollback) must execute both unchanged projects against the actual public wheel, retain matching source/input/environment identities, verify an inactive preview, then verify the anonymous production site and downloads. Keep the predecessor’s immutable publication and Worker version until acceptance finishes; failed activation restores and verifies it. Use the [deployment procedure](../../docs-site/CLOUDFLARE.md) for the current commands and receipts. A merged correction or successful upload does not establish a corrected public manual.
+
 ## Read next
 
 - [Release Policy](Release-Policy.md)

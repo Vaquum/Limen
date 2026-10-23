@@ -1,0 +1,526 @@
+schema_version: '1.0'
+metadata:
+  name: book_helper-indicators
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-02-15'
+      val_start: '2024-02-15'
+      val_end: '2024-03-15'
+      test_start: '2024-03-15'
+      test_end: '2024-04-15'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: base
+    - func: limen.indicators.returns
+      params:
+        group: base
+    - func: limen.indicators.rolling_volatility
+      params:
+        column: returns
+        window: 12
+        group: base
+    - func: limen.indicators.bollinger_bands
+      params:
+        group: base
+    - func: limen.indicators.ad
+      params:
+        group: ad
+    - func: limen.indicators.adosc
+      params:
+        group: adosc
+    - func: limen.indicators.apo
+      params:
+        group: apo
+    - func: limen.indicators.atr
+      params:
+        group: atr
+    - func: limen.indicators.avgprice
+      params:
+        group: avgprice
+    - func: limen.indicators.bbands
+      params:
+        group: bbands
+    - func: limen.indicators.body_pct
+      params:
+        group: body_pct
+    - func: limen.indicators.bollinger_bands
+      params:
+        group: bollinger_bands
+    - func: limen.indicators.bollinger_position
+      params:
+        group: bollinger_position
+    - func: limen.indicators.bop
+      params:
+        group: bop
+    - func: limen.indicators.cci
+      params:
+        group: cci
+    - func: limen.indicators.cdl2crows
+      params:
+        group: cdl2crows
+    - func: limen.indicators.cdl3blackcrows
+      params:
+        group: cdl3blackcrows
+    - func: limen.indicators.cdl3inside
+      params:
+        group: cdl3inside
+    - func: limen.indicators.cdl3linestrike
+      params:
+        group: cdl3linestrike
+    - func: limen.indicators.cdl3starsinsouth
+      params:
+        group: cdl3starsinsouth
+    - func: limen.indicators.cdl3whitesoldiers
+      params:
+        group: cdl3whitesoldiers
+    - func: limen.indicators.cdlabandonedbaby
+      params:
+        group: cdlabandonedbaby
+    - func: limen.indicators.cdladvancedblock
+      params:
+        group: cdladvancedblock
+    - func: limen.indicators.cdlbelthold
+      params:
+        group: cdlbelthold
+    - func: limen.indicators.cdlclosingmarubozu
+      params:
+        group: cdlclosingmarubozu
+    - func: limen.indicators.cdlconcealbabyswall
+      params:
+        group: cdlconcealbabyswall
+    - func: limen.indicators.cdlcounterattack
+      params:
+        group: cdlcounterattack
+    - func: limen.indicators.cdldarkcloudcover
+      params:
+        group: cdldarkcloudcover
+    - func: limen.indicators.cdldoji
+      params:
+        group: cdldoji
+    - func: limen.indicators.cdldragonflydoji
+      params:
+        group: cdldragonflydoji
+    - func: limen.indicators.cdlengulfing
+      params:
+        group: cdlengulfing
+    - func: limen.indicators.cdlgravestonedoji
+      params:
+        group: cdlgravestonedoji
+    - func: limen.indicators.cdlhammer
+      params:
+        group: cdlhammer
+    - func: limen.indicators.cdlhangingman
+      params:
+        group: cdlhangingman
+    - func: limen.indicators.cdlharami
+      params:
+        group: cdlharami
+    - func: limen.indicators.cdlharamicross
+      params:
+        group: cdlharamicross
+    - func: limen.indicators.cdlhighwave
+      params:
+        group: cdlhighwave
+    - func: limen.indicators.cdlhikkake
+      params:
+        group: cdlhikkake
+    - func: limen.indicators.cdlhikkakemod
+      params:
+        group: cdlhikkakemod
+    - func: limen.indicators.cdlhomingpigeon
+      params:
+        group: cdlhomingpigeon
+    - func: limen.indicators.cdlidentical3crows
+      params:
+        group: cdlidentical3crows
+    - func: limen.indicators.cdlinvertedhammer
+      params:
+        group: cdlinvertedhammer
+    - func: limen.indicators.cdlladderbottom
+      params:
+        group: cdlladderbottom
+    - func: limen.indicators.cdllongleggeddoji
+      params:
+        group: cdllongleggeddoji
+    - func: limen.indicators.cdllongline
+      params:
+        group: cdllongline
+    - func: limen.indicators.cdlmarubozu
+      params:
+        group: cdlmarubozu
+    - func: limen.indicators.cdlmatchinglow
+      params:
+        group: cdlmatchinglow
+    - func: limen.indicators.cdlmathold
+      params:
+        group: cdlmathold
+    - func: limen.indicators.cdlonneck
+      params:
+        group: cdlonneck
+    - func: limen.indicators.cdlpiercing
+      params:
+        group: cdlpiercing
+    - func: limen.indicators.cdlrickshawman
+      params:
+        group: cdlrickshawman
+    - func: limen.indicators.cdlrisefall3methods
+      params:
+        group: cdlrisefall3methods
+    - func: limen.indicators.cdlseparatinglines
+      params:
+        group: cdlseparatinglines
+    - func: limen.indicators.cdlshootingstar
+      params:
+        group: cdlshootingstar
+    - func: limen.indicators.cdlshortline
+      params:
+        group: cdlshortline
+    - func: limen.indicators.cdlspinningtop
+      params:
+        group: cdlspinningtop
+    - func: limen.indicators.cdlstalledpattern
+      params:
+        group: cdlstalledpattern
+    - func: limen.indicators.cdlsticksandwich
+      params:
+        group: cdlsticksandwich
+    - func: limen.indicators.cdltakuri
+      params:
+        group: cdltakuri
+    - func: limen.indicators.cdlthrusting
+      params:
+        group: cdlthrusting
+    - func: limen.indicators.cdltristar
+      params:
+        group: cdltristar
+    - func: limen.indicators.cdlunique3river
+      params:
+        group: cdlunique3river
+    - func: limen.indicators.cmo
+      params:
+        group: cmo
+    - func: limen.indicators.dema
+      params:
+        group: dema
+    - func: limen.indicators.ema
+      params:
+        group: ema
+    - func: limen.indicators.ht_dcperiod
+      params:
+        group: ht_dcperiod
+    - func: limen.indicators.ht_dcphase
+      params:
+        group: ht_dcphase
+    - func: limen.indicators.ht_phasor
+      params:
+        group: ht_phasor
+    - func: limen.indicators.ht_sine
+      params:
+        group: ht_sine
+    - func: limen.indicators.ht_trendline
+      params:
+        group: ht_trendline
+    - func: limen.indicators.ht_trendmode
+      params:
+        group: ht_trendmode
+    - func: limen.indicators.kama
+      params:
+        group: kama
+    - func: limen.indicators.linearreg
+      params:
+        group: linearreg
+    - func: limen.indicators.linearreg_angle
+      params:
+        group: linearreg_angle
+    - func: limen.indicators.linearreg_intercept
+      params:
+        group: linearreg_intercept
+    - func: limen.indicators.linearreg_slope
+      params:
+        group: linearreg_slope
+    - func: limen.indicators.ma
+      params:
+        group: ma
+    - func: limen.indicators.macd
+      params:
+        group: macd
+    - func: limen.indicators.macdext
+      params:
+        group: macdext
+    - func: limen.indicators.macdfix
+      params:
+        group: macdfix
+    - func: limen.indicators.mama
+      params:
+        group: mama
+    - func: limen.indicators.medprice
+      params:
+        group: medprice
+    - func: limen.indicators.mfi
+      params:
+        group: mfi
+    - func: limen.indicators.midpoint
+      params:
+        group: midpoint
+    - func: limen.indicators.midprice
+      params:
+        group: midprice
+    - func: limen.indicators.mom
+      params:
+        group: mom
+    - func: limen.indicators.natr
+      params:
+        group: natr
+    - func: limen.indicators.obv
+      params:
+        group: obv
+    - func: limen.indicators.ppo
+      params:
+        group: ppo
+    - func: limen.indicators.price_change_pct
+      params:
+        group: price_change_pct
+    - func: limen.indicators.returns
+      params:
+        group: returns
+    - func: limen.indicators.roc
+      params:
+        group: roc
+    - func: limen.indicators.rocp
+      params:
+        group: rocp
+    - func: limen.indicators.rocr
+      params:
+        group: rocr
+    - func: limen.indicators.rocr100
+      params:
+        group: rocr100
+    - func: limen.indicators.rolling_volatility
+      params:
+        group: rolling_volatility
+    - func: limen.indicators.rsi
+      params:
+        group: rsi
+    - func: limen.indicators.rsi_sma
+      params:
+        group: rsi_sma
+    - func: limen.indicators.sar
+      params:
+        group: sar
+    - func: limen.indicators.sarext
+      params:
+        group: sarext
+    - func: limen.indicators.sma
+      params:
+        group: sma
+    - func: limen.indicators.sma_deviation_std
+      params:
+        group: sma_deviation_std
+    - func: limen.indicators.stddev
+      params:
+        group: stddev
+    - func: limen.indicators.stoch
+      params:
+        group: stoch
+    - func: limen.indicators.stochastic_oscillator
+      params:
+        group: stochastic_oscillator
+    - func: limen.indicators.stochf
+      params:
+        group: stochf
+    - func: limen.indicators.stochrsi
+      params:
+        group: stochrsi
+    - func: limen.indicators.t3
+      params:
+        group: t3
+    - func: limen.indicators.tema
+      params:
+        group: tema
+    - func: limen.indicators.trange
+      params:
+        group: trange
+    - func: limen.indicators.trima
+      params:
+        group: trima
+    - func: limen.indicators.trix
+      params:
+        group: trix
+    - func: limen.indicators.tsf
+      params:
+        group: tsf
+    - func: limen.indicators.typprice
+      params:
+        group: typprice
+    - func: limen.indicators.ultosc
+      params:
+        group: ultosc
+    - func: limen.indicators.var
+      params:
+        group: var
+    - func: limen.indicators.wclprice
+      params:
+        group: wclprice
+    - func: limen.indicators.wilder_rsi
+      params:
+        group: wilder_rsi
+    - func: limen.indicators.willr
+      params:
+        group: willr
+    - func: limen.indicators.window_return
+      params:
+        group: window_return
+    - func: limen.indicators.wma
+      params:
+        group: wma
+    target:
+      name: label
+      class: limen.targets.NextBarUpTarget
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type:
+    - logreg
+    C:
+    - 0.5
+    random_state:
+    - 42
+    feature_groups:
+    - base|ad
+    - base|adosc
+    - base|apo
+    - base|atr
+    - base|avgprice
+    - base|bbands
+    - base|body_pct
+    - base|bollinger_bands
+    - base|bollinger_position
+    - base|bop
+    - base|cci
+    - base|cdl2crows
+    - base|cdl3blackcrows
+    - base|cdl3inside
+    - base|cdl3linestrike
+    - base|cdl3starsinsouth
+    - base|cdl3whitesoldiers
+    - base|cdlabandonedbaby
+    - base|cdladvancedblock
+    - base|cdlbelthold
+    - base|cdlclosingmarubozu
+    - base|cdlconcealbabyswall
+    - base|cdlcounterattack
+    - base|cdldarkcloudcover
+    - base|cdldoji
+    - base|cdldragonflydoji
+    - base|cdlengulfing
+    - base|cdlgravestonedoji
+    - base|cdlhammer
+    - base|cdlhangingman
+    - base|cdlharami
+    - base|cdlharamicross
+    - base|cdlhighwave
+    - base|cdlhikkake
+    - base|cdlhikkakemod
+    - base|cdlhomingpigeon
+    - base|cdlidentical3crows
+    - base|cdlinvertedhammer
+    - base|cdlladderbottom
+    - base|cdllongleggeddoji
+    - base|cdllongline
+    - base|cdlmarubozu
+    - base|cdlmatchinglow
+    - base|cdlmathold
+    - base|cdlonneck
+    - base|cdlpiercing
+    - base|cdlrickshawman
+    - base|cdlrisefall3methods
+    - base|cdlseparatinglines
+    - base|cdlshootingstar
+    - base|cdlshortline
+    - base|cdlspinningtop
+    - base|cdlstalledpattern
+    - base|cdlsticksandwich
+    - base|cdltakuri
+    - base|cdlthrusting
+    - base|cdltristar
+    - base|cdlunique3river
+    - base|cmo
+    - base|dema
+    - base|ema
+    - base|ht_dcperiod
+    - base|ht_dcphase
+    - base|ht_phasor
+    - base|ht_sine
+    - base|ht_trendline
+    - base|ht_trendmode
+    - base|kama
+    - base|linearreg
+    - base|linearreg_angle
+    - base|linearreg_intercept
+    - base|linearreg_slope
+    - base|ma
+    - base|macd
+    - base|macdext
+    - base|macdfix
+    - base|mama
+    - base|medprice
+    - base|mfi
+    - base|midpoint
+    - base|midprice
+    - base|mom
+    - base|natr
+    - base|obv
+    - base|ppo
+    - base|price_change_pct
+    - base|returns
+    - base|roc
+    - base|rocp
+    - base|rocr
+    - base|rocr100
+    - base|rolling_volatility
+    - base|rsi
+    - base|rsi_sma
+    - base|sar
+    - base|sarext
+    - base|sma
+    - base|sma_deviation_std
+    - base|stddev
+    - base|stoch
+    - base|stochastic_oscillator
+    - base|stochf
+    - base|stochrsi
+    - base|t3
+    - base|tema
+    - base|trange
+    - base|trima
+    - base|trix
+    - base|tsf
+    - base|typprice
+    - base|ultosc
+    - base|var
+    - base|wclprice
+    - base|wilder_rsi
+    - base|willr
+    - base|window_return
+    - base|wma
+uel:
+  output_path: compiled-helper-indicators
+  search_strategy:
+    type: grid
+  n_permutations: 117
+  prep_each_round: true
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true

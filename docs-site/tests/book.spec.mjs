@@ -19,9 +19,9 @@ test('reader command rejects substituted expected identities',()=>{
 test('complete research chapter',async({page})=>{
   await open(page);await expect(page.getByRole('heading',{level:1})).toHaveText('From a research question to a Sensor');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await expect(page.locator('figure.code')).toHaveCount(4);
-  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(4);
-  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
+  await expect(page.locator('figure.code')).toHaveCount(5);
+  await expect(page.getByRole('link',{name:'validation, inputs and tests',exact:true})).toHaveCount(5);
+  await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
   const typography=await page.locator('h1').evaluate(el=>{const s=getComputedStyle(el);return {family:s.fontFamily,weight:s.fontWeight,stretch:s.fontStretch};});
   expect(typography.family).toContain('Archivo Variable');expect(typography.weight).toBe('200');expect(typography.stretch).toBe('125%');
   expect(await page.evaluate(()=>document.fonts.check('400 17px "Archivo Variable"'))).toBe(true);
@@ -56,6 +56,14 @@ test('published routes agree with robots and sitemap while other products remain
   expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>new URL(match[1]).pathname).sort()).toEqual(routes.map(route=>route.url).sort());
   const htmlByUrl=new Map();
   for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
+  for(const [url,html] of htmlByUrl){
+    for(const match of html.matchAll(/href="([^"]+)"/g)){
+      const target=new URL(match[1].replaceAll('&amp;','&'),new URL(url,'https://docs.vaquum.fi'));
+      if(target.origin!=='https://docs.vaquum.fi'||!target.hash||!htmlByUrl.has(target.pathname))continue;
+      const anchor=decodeURIComponent(target.hash.slice(1));
+      expect(htmlByUrl.get(target.pathname),url+' → '+target.pathname+target.hash).toContain('id="'+anchor+'"');
+    }
+  }
   const decisions=await (await request.get('/limen/route-decisions.json')).json();
   expect(decisions).toEqual(JSON.parse(await fs.readFile(path.join(root,'docs-site/reader/route-decisions.json'),'utf8')));
   for(const item of decisions.legacy_routes){
@@ -195,7 +203,7 @@ test('reference lookup uses API names while the page keeps its narrative title',
   await trainer.click();
   await expect(page.getByRole('heading',{level:1})).toHaveText('Carry selected behavior into inference');
   const phone=test.info().project.name==='phone';
-  if(phone)await page.locator('.mobile-nav summary').click();
+  if(phone)await page.locator('.mobile-nav > summary').click();
   const navigation=page.locator(phone?'.mobile-nav':'.chapter-nav');
   await expect(navigation.getByRole('link',{name:'Log',exact:true})).toHaveAttribute('href','/limen/reference/log/');
   await expect(navigation.getByRole('link',{name:'Trainer and Sensor',exact:true})).toHaveAttribute('aria-current','page');
@@ -252,8 +260,8 @@ test('reading state is isolated by product identity',async({page})=>{
 test('without JavaScript both interfaces and proof links remain readable',async({browser})=>{
   const context=await browser.newContext({javaScriptEnabled:false,viewport:test.info().project.name==='phone'?{width:390,height:844}:{width:1440,height:1000}});
   const page=await context.newPage();await page.goto('http://127.0.0.1:4331/limen/');
-  await expect(page.locator('figure.code')).toHaveCount(4);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(2);
-  if(test.info().project.name==='phone'){await page.locator('.mobile-nav summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
+  await expect(page.locator('figure.code')).toHaveCount(5);await expect(page.getByRole('link',{name:'complete source',exact:true})).toHaveCount(3);
+  if(test.info().project.name==='phone'){await page.locator('.mobile-nav > summary').click();await expect(page.locator('.mobile-nav').getByRole('link',{name:'Python Research project',exact:true})).toBeVisible();}
   const reference=page.getByRole('link',{name:'Python Sensor construction',exact:true});await reference.click();await expect(page).toHaveURL(/reference\/trainer\/#python-construction$/);await expect(page.locator('h1')).toHaveText('Carry selected behavior into inference');await context.close();
 });
 
@@ -279,4 +287,39 @@ test('compiled project is authored and operated through YAML and CLI',async({pag
   expect(source).toContain('limen assess');expect(source).toContain('assessment:');expect(source).toContain('uel:');
   expect(source).not.toMatch(/python .*compiled-research|from limen import|UniversalExperimentLoop\(/);
   await expect(page.locator('figure.code').filter({hasText:'assessment:'}).getByRole('link',{name:'complete source',exact:true})).toBeVisible();
+});
+
+test('nested reference lookup keeps the original chapter return',async({page})=>{
+  await open(page);const opener=page.getByRole('link',{name:'Python Sensor construction',exact:true});await opener.click();
+  const panel=page.locator('[data-reference-dialog]');await expect(panel).toBeVisible();
+  await panel.getByRole('link',{name:'Cohort.from_python',exact:true}).click();
+  await expect(page).toHaveURL(/reference\/cohort\/#python-cohorts$/);await expect(panel).toBeVisible();
+  await page.getByRole('button',{name:'Return to chapter',exact:true}).click();
+  await expect(page).toHaveURL(/\/limen\/$/);await expect(panel).not.toBeVisible();await expect(opener).toBeFocused();
+});
+
+test('search indexes literal CLI flags and lands on their section',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Search',exact:true}).click();await page.getByRole('searchbox').fill('--reservation');
+  const results=page.locator('[data-search-dialog] ol a');await expect(results.first()).toBeVisible();
+  expect(await results.first().getAttribute('href')).toContain('#');
+  expect(await page.locator('[data-search-dialog] ol').innerText()).not.toMatch(/\]\([^)]*\.md/);
+  await results.first().click();await expect(page.locator(':target')).toBeInViewport();
+});
+
+test('interface choice hides only the other authoring examples and survives navigation',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
+  await expect(page.locator('figure[data-research-interface=python]').first()).toBeHidden();
+  await expect(page.locator('figure[data-research-interface=compiled]').first()).toBeVisible();
+  await page.reload();await expect(page.getByRole('button',{name:'Compiled Research',exact:true})).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Both interfaces',exact:true}).click();await expect(page.locator('figure[data-research-interface=python]').first()).toBeVisible();
+});
+
+test('long API headings and code fit at reading breakpoints',async({page})=>{
+  for(const width of [1440,1280,1024,640,390,320]){
+    await page.setViewportSize({width,height:900});
+    for(const route of ['parameter-search','foundational-sfds','reference-architectures']){
+      await page.goto('/limen/reference/packages/internals/'+route+'/');await page.evaluate(()=>document.fonts.ready);
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),width+' '+route).toBe(true);
+    }
+  }
 });

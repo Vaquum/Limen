@@ -18,6 +18,13 @@ from catalogue_tests import validate_test_reference
 EXECUTED_FENCE = r'<!-- example: (\S+) source=(\S+) region=(\S+) scenario=(\S+) interface=(\S+) role=executed -->\n```(?:python|bash|yaml)\n(.*?)\n```'
 OBSERVED_FENCE = r'<!-- example-output: (\S+) source=(\S+) scenario=(\S+) interface=(\S+) role=observed -->\n```json\n(.*?)\n```'
 REFERENCE_FENCE = r'<!-- reference: (\S+) source=(\S+) region=(\S+) role=(signature|definition|layout) -->\n```(?:python|python-fragment|text)\n(.*?)\n```'
+RESULT_MARKER = r'<!-- result: (\S+) interface=(python|compiled) scenario=(\S+) fields=([\w.\[\],]+) -->'
+COMPILED_DRIVERS = {
+    'selection': ('selection',), 'search': ('source_formats', 'preparation', 'helpers', 'targets', 'reducers', 'search', 'parallel', 'recording', 'models'),
+    'recovery': ('recovery',), 'walk_forward': ('walk_forward',), 'calibration': ('calibration',),
+    'execution': ('execution',), 'bars': ('bars',), 'allocation': ('allocation',),
+    'holdout': ('holdout',), 'command_line': ('command_line',),
+}
 
 
 def digest(value: bytes) -> str:
@@ -37,6 +44,15 @@ def package_reference(source: str, name: str) -> str:
         if kind == 'definition' and len(parts) == 1:
             matches += [node for node in scope if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == part for target in node.targets)]
             matches += [node for node in scope if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name) and node.target.id == part]
+        if len(matches) > 1 and kind == 'signature' and index == len(parts) - 1 and all(
+                isinstance(node, ast.FunctionDef) and any(
+                    isinstance(decorator, ast.Name) and decorator.id == 'property' or
+                    isinstance(decorator, ast.Attribute) and decorator.attr == 'setter'
+                    for decorator in node.decorator_list) for node in matches):
+            members = [deepcopy(node) for node in matches if isinstance(node, ast.FunctionDef)]
+            for member in members:
+                member.body = [ast.Expr(value=ast.Constant(value=Ellipsis))]
+            return ast.unparse(ast.fix_missing_locations(ast.Module(body=members, type_ignores=[]))) + '\n'
         if len(matches) != 1:
             raise ValueError('Missing or ambiguous reference symbol: ' + symbol)
         selected = matches[0]
@@ -104,6 +120,24 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
             raise ValueError('Example source escapes the repository')
         if interface == 'compiled' and path.suffix not in ('.yaml', '.sh', '.json'):
             raise ValueError(f'Wrong research interface: Compiled Research requires YAML and CLI source: {identity}')
+        if interface == 'compiled' and '/compiled-research/' in source:
+            driver = root / 'docs/examples/compiled-research/run.sh'
+            regions = COMPILED_DRIVERS.get(scenario, ())
+            if not regions:
+                raise ValueError('Unknown Compiled consuming scenario: ' + scenario)
+            commands = '\n'.join(region(driver, part) for part in regions)
+            relative = str(path.relative_to(root / 'docs/examples'))
+            if path == driver:
+                consumed = name in regions or name == '__file__'
+            elif scenario == 'holdout' and '/final' in relative:
+                consumed = relative.rsplit('/', 1)[0] + '/run.sh' in commands
+            elif scenario == 'command_line':
+                project_commands = (root / 'docs/examples/compiled-research/project.sh').read_text()
+                consumed = relative == 'compiled-research/project.sh' or relative in project_commands
+            else:
+                consumed = relative in commands
+            if not consumed:
+                raise ValueError('Example is not consumed by its Compiled scenario: ' + identity)
         canonical = region(path, name)
         if canonical != excerpt + '\n':
             raise ValueError(f'Documentation differs from executable source: {identity}')
@@ -119,6 +153,42 @@ def bindings(root: Path, document: Path) -> list[dict[str, str]]:
 
 def maintained_documents(root: Path) -> list[Path]:
     return sorted({root / 'README.md', *(root / 'docs').rglob('*.md'), *(root / 'limen').rglob('README.md')})
+
+
+def result_bindings(root: Path, document: Path, records=None):
+    text = document.read_text()
+    catalogue = json.loads((root / 'docs/examples/catalogue.json').read_text())
+    found = []
+    for match in re.finditer(RESULT_MARKER, text):
+        identity, interface, scenario, fields = match.groups()
+        key = interface + '/' + scenario
+        if key not in catalogue['scenario_details'] or any(not field or not all((part[:-2] if part.endswith('[]') else part).isidentifier() for part in field.split('.')) for field in fields.split(',')):
+            raise ValueError('Unknown current result or field: ' + identity)
+        if records is not None:
+            record = next(item for item in records if item['interface'] == interface and item['id'] == scenario)
+            path = (root / record['output_path']).resolve()
+            if not path.is_relative_to((root / '.docs-evidence').resolve()) or digest(path.read_bytes()) != record['output_sha256']:
+                raise ValueError('Current result identity differs: ' + identity)
+            value = json.loads(path.read_text())
+            def select(selected, parts, field):
+                if not parts:
+                    return selected
+                part = parts[0]
+                name = part[:-2] if part.endswith('[]') else part
+                if not isinstance(selected, dict) or name not in selected:
+                    raise ValueError('Missing current result field: ' + field)
+                selected = selected[name]
+                if part.endswith('[]'):
+                    if not isinstance(selected, list):
+                        raise ValueError('Current result field is not a row collection: ' + field)
+                    return [select(item, parts[1:], field) for item in selected]
+                return select(selected, parts[1:], field)
+            for field in fields.split(','):
+                select(value, field.split('.'), field)
+        found.append({'id': identity, 'interface': interface, 'scenario': scenario, 'fields': fields.split(',')})
+    if len(found) != text.count('<!-- result:') or len({item['id'] for item in found}) != len(found):
+        raise ValueError('Malformed or duplicate current result')
+    return found
 
 
 def validate_page_catalogue(root: Path, catalogue):
@@ -212,6 +282,7 @@ def validate_fences(root: Path, document: Path, *, interfaces: tuple[str, ...] =
     bindings(root, document)
     output_bindings(root, document)
     reference_bindings(root, document)
+    result_bindings(root, document)
     fence_lines, links = markdown_structure(root / 'docs-site', text)
     expected = sorted(text[:match.start()].count('\n') + 1 for pattern in (EXECUTED_FENCE, OBSERVED_FENCE, REFERENCE_FENCE)
                       for match in re.finditer(pattern, text, re.S))
@@ -338,6 +409,13 @@ def validate_model_catalogue(root, catalogue) -> None:
     if set(catalogue['model_families']) != {name for name in exports if name[0].islower()}:
         raise ValueError('Public model catalogue is incomplete')
     for family, entry in catalogue['model_families'].items():
+        if 'retained_execution' in entry:
+            from optional_models import verify
+            if 'limen.sfd.reference_architecture.' + family not in (root / entry['configuration']).read_text():
+                raise ValueError('Model definition differs from the public catalogue')
+            verify(root, json.loads((root / entry['retained_execution']).read_text()))
+            validate_test_reference(root, entry['test'])
+            continue
         if 'unproved' in entry:
             if entry['unproved'] not in catalogue['unproved'].values():
                 raise ValueError('Unproved model has no tracked execution boundary')
@@ -352,6 +430,8 @@ def validate_model_catalogue(root, catalogue) -> None:
 
 
 def validate_cli_catalogue(root, catalogue) -> None:
+    from catalogue_admission import validate_cli_contracts
+    validate_cli_contracts(root)
     from limen.cli.main import cli
     commands = set(cli.commands)
     if set(catalogue['cli_commands']) != commands:
@@ -380,11 +460,18 @@ def validate_evidence(record, root: Path, *, head: str, tree: str, version: str)
     validate_scenarios(record['validation']['scenarios'], catalogue_data, root)
     validate_model_catalogue(root, catalogue_data)
     validate_cli_catalogue(root, catalogue_data)
+    from schema_contracts import validate as validate_yaml_contracts
+    validate_yaml_contracts(root)
     validate_surface_catalogue(root, catalogue_data)
+    from catalogue_admission import validate_admission
+    validate_admission(root, json.loads((root / 'docs/examples/api-contracts.json').read_text()))
     contexts = validate_page_catalogue(root, catalogue_data)
     for page, scenarios in contexts.items():
         interfaces = tuple(sorted({catalogue_data['scenario_details'][name]['interface'] for name in scenarios}))
         validate_fences(root, root / page, interfaces=interfaces)
+    results = [item for document in maintained_documents(root) for item in result_bindings(root, document, record['validation']['scenarios'])]
+    if len({item['id'] for item in results}) != len(results):
+        raise ValueError('Duplicate current result across maintained documents')
     retained = json.loads((root / 'docs/examples/retained/selection.json').read_text())
     displays = {item['id']: item for item in record['displays']}
     if displays != {item['id']: item for item in retained['displays']}:

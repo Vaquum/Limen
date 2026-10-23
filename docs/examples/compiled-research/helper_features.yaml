@@ -1,0 +1,488 @@
+schema_version: '1.0'
+metadata:
+  name: book_helper-features
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-02-15'
+      val_start: '2024-02-15'
+      val_end: '2024-03-15'
+      test_start: '2024-03-15'
+      test_end: '2024-04-15'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: base
+    - func: limen.indicators.returns
+      params:
+        group: base
+    - func: limen.indicators.rolling_volatility
+      params:
+        column: returns
+        window: 12
+        group: base
+    - func: limen.indicators.bollinger_bands
+      params:
+        group: base
+    target:
+      name: label
+      class: limen.targets.NextBarUpTarget
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+    features:
+    - func: limen.features.absorption_intensity
+      params:
+        group: absorption_intensity
+    - func: limen.features.amihud_illiquidity
+      params:
+        group: amihud_illiquidity
+    - func: limen.features.atr_percent_sma
+      params:
+        group: atr_percent_sma
+    - func: limen.features.atr_sma
+      params:
+        group: atr_sma
+    - func: limen.features.body_to_range
+      params:
+        group: body_to_range
+    - func: limen.features.bulk_volume_classification
+      params:
+        group: bulk_volume_classification
+    - func: limen.features.calendar_time_features
+      params:
+        group: calendar_time_features
+    - func: limen.features.close_ma_distance_atr
+      params:
+        group: close_ma_distance_atr
+    - func: limen.features.close_position
+      params:
+        group: close_position
+    - func: limen.features.close_position_rolling
+      params:
+        group: close_position_rolling
+    - func: limen.features.close_to_extremes
+      params:
+        group: close_to_extremes
+    - func: limen.features.cusum_filter
+      params:
+        group: cusum_filter
+    - func: limen.features.cyclical_time_features
+      params:
+        group: cyclical_time_features
+    - func: limen.features.distance_from_high
+      params:
+        group: distance_from_high
+    - func: limen.features.distance_from_low
+      params:
+        group: distance_from_low
+    - func: limen.features.distance_from_ma
+      params:
+        group: distance_from_ma
+    - func: limen.features.dollar_bar_crash_reversal
+      params:
+        momentum_threshold_bps: 50.0
+        flow_z_threshold: 1.0
+        hold_minutes: 60
+        group: dollar_bar_crash_reversal
+    - func: limen.features.dollar_volume
+      params:
+        group: dollar_volume
+    - func: limen.features.downside_volatility_ratio
+      params:
+        group: downside_volatility_ratio
+    - func: limen.features.ema_alignment
+      params:
+        group: ema_alignment
+    - func: limen.features.fractional_diff
+      params:
+        d: 0.4
+        cols:
+        - close
+        threshold: 0.05
+        group: fractional_diff
+    - func: limen.features.gap_high
+      params:
+        group: gap_high
+    - func: limen.features.garman_klass_volatility
+      params:
+        group: garman_klass_volatility
+    - func: limen.features.ichimoku_cloud
+      params:
+        group: ichimoku_cloud
+    - func: limen.features.illiquidity_shock
+      params:
+        group: illiquidity_shock
+    - func: limen.features.is_funding_hour
+      params:
+        group: is_funding_hour
+    - func: limen.features.is_us_open_hour
+      params:
+        group: is_us_open_hour
+    - func: limen.features.jump_variation_proxy
+      params:
+        group: jump_variation_proxy
+    - func: limen.features.kaufman_efficiency_ratio
+      params:
+        group: kaufman_efficiency_ratio
+    - func: limen.features.kline_imbalance
+      params:
+        group: kline_imbalance
+    - func: limen.features.lag_column
+      params:
+        col: close
+        lag: 1
+        group: lag_column
+    - func: limen.features.lag_columns
+      params:
+        cols:
+        - close
+        - volume
+        lag: 1
+        group: lag_columns
+    - func: limen.features.lag_range
+      params:
+        col: close
+        start: 1
+        end: 3
+        group: lag_range
+    - func: limen.features.lag_range_cols
+      params:
+        cols:
+        - close
+        - volume
+        start: 1
+        end: 3
+        group: lag_range_cols
+    - func: limen.features.liquidity_drop
+      params:
+        group: liquidity_drop
+    - func: limen.features.liquidity_range
+      params:
+        group: liquidity_range
+    - func: limen.features.log_returns
+      params:
+        group: log_returns
+    - func: limen.features.maker_liquidity_share
+      params:
+        group: maker_liquidity_share
+    - func: limen.features.maker_volume_ratio
+      params:
+        group: maker_volume_ratio
+    - func: limen.features.maker_volume_share
+      params:
+        group: maker_volume_share
+    - func: limen.features.market_regime
+      params:
+        group: market_regime
+    - func: limen.features.micro_momentum
+      params:
+        group: micro_momentum
+    - func: limen.features.momentum_confirmation
+      params:
+        group: momentum_confirmation
+    - func: limen.features.momentum_periods
+      params:
+        group: momentum_periods
+    - func: limen.features.momentum_weight
+      params:
+        group: momentum_weight
+    - func: limen.features.narrow_range
+      params:
+        group: narrow_range
+    - func: limen.features.order_flow_imbalance
+      params:
+        group: order_flow_imbalance
+    - func: limen.features.parkinson_vol_of_vol
+      params:
+        group: parkinson_vol_of_vol
+    - func: limen.features.parkinson_volatility
+      params:
+        group: parkinson_volatility
+    - func: limen.features.position_in_candle
+      params:
+        group: position_in_candle
+    - func: limen.features.position_in_range
+      params:
+        group: position_in_range
+    - func: limen.features.price_lines
+      params:
+        max_duration_hours: 48
+        min_height_pct: 0.01
+        include_research_only: false
+        group: price_lines
+    - func: limen.features.price_range_position
+      params:
+        group: price_range_position
+    - func: limen.features.quantile_price_lines
+      params:
+        max_duration_hours: 48
+        min_height_pct: 0.01
+        include_research_only: false
+        group: quantile_price_lines
+    - func: limen.features.range_overlap
+      params:
+        group: range_overlap
+    - func: limen.features.range_pct
+      params:
+        group: range_pct
+    - func: limen.features.range_per_dollar_volume
+      params:
+        group: range_per_dollar_volume
+    - func: limen.features.realized_kurtosis
+      params:
+        group: realized_kurtosis
+    - func: limen.features.realized_semivariance
+      params:
+        group: realized_semivariance
+    - func: limen.features.realized_skewness
+      params:
+        group: realized_skewness
+    - func: limen.features.rejection_intensity
+      params:
+        group: rejection_intensity
+    - func: limen.features.relative_range_seasonality
+      params:
+        group: relative_range_seasonality
+    - func: limen.features.relative_volatility_seasonality
+      params:
+        group: relative_volatility_seasonality
+    - func: limen.features.relative_volume_seasonality
+      params:
+        group: relative_volume_seasonality
+    - func: limen.features.return_autocorrelation
+      params:
+        group: return_autocorrelation
+    - func: limen.features.return_per_dollar_volume
+      params:
+        group: return_per_dollar_volume
+    - func: limen.features.return_volatility_correlation
+      params:
+        group: return_volatility_correlation
+    - func: limen.features.returns_lags
+      params:
+        group: returns_lags
+    - func: limen.features.rogers_satchell_volatility
+      params:
+        group: rogers_satchell_volatility
+    - func: limen.features.rolling_zscore
+      params:
+        column: close
+        window: 12
+        group: rolling_zscore
+    - func: limen.features.sma_crossover
+      params:
+        group: sma_crossover
+    - func: limen.features.sma_ratios
+      params:
+        group: sma_ratios
+    - func: limen.features.spread
+      params:
+        group: spread
+    - func: limen.features.spread_percent
+      params:
+        group: spread_percent
+    - func: limen.features.stochastic_k_abs
+      params:
+        group: stochastic_k_abs
+    - func: limen.features.tail_event_intensity
+      params:
+        group: tail_event_intensity
+    - func: limen.features.taker_imbalance_ratio
+      params:
+        group: taker_imbalance_ratio
+    - func: limen.features.time_to_funding
+      params:
+        group: time_to_funding
+    - func: limen.features.trade_density
+      params:
+        group: trade_density
+    - func: limen.features.trade_imbalance
+      params:
+        group: trade_imbalance
+    - func: limen.features.trade_size_ratio
+      params:
+        group: trade_size_ratio
+    - func: limen.features.trend_coherence
+      params:
+        group: trend_coherence
+    - func: limen.features.trend_strength
+      params:
+        group: trend_strength
+    - func: limen.features.volatility_1h
+      params:
+        group: volatility_1h
+    - func: limen.features.volatility_of_volatility
+      params:
+        group: volatility_of_volatility
+    - func: limen.features.volatility_ratio
+      params:
+        group: volatility_ratio
+    - func: limen.features.volatility_spike
+      params:
+        group: volatility_spike
+    - func: limen.features.volatility_term_structure
+      params:
+        group: volatility_term_structure
+    - func: limen.features.volatility_weight
+      params:
+        group: volatility_weight
+    - func: limen.features.volume_ratio
+      params:
+        group: volume_ratio
+    - func: limen.features.volume_regime
+      params:
+        group: volume_regime
+    - func: limen.features.volume_spike
+      params:
+        group: volume_spike
+    - func: limen.features.volume_to_range
+      params:
+        group: volume_to_range
+    - func: limen.features.volume_trend
+      params:
+        group: volume_trend
+    - func: limen.features.volume_volatility_correlation
+      params:
+        group: volume_volatility_correlation
+    - func: limen.features.vpin
+      params:
+        group: vpin
+    - func: limen.features.vwap
+      params:
+        group: vwap
+    - func: limen.features.wick_imbalance
+      params:
+        group: wick_imbalance
+    - func: limen.features.wick_proportion
+      params:
+        group: wick_proportion
+    - func: limen.features.yang_zhang_volatility
+      params:
+        group: yang_zhang_volatility
+  params:
+    scaler_type:
+    - logreg
+    C:
+    - 0.5
+    random_state:
+    - 42
+    feature_groups:
+    - base|absorption_intensity
+    - base|amihud_illiquidity
+    - base|atr_percent_sma
+    - base|atr_sma
+    - base|body_to_range
+    - base|bulk_volume_classification
+    - base|calendar_time_features
+    - base|close_ma_distance_atr
+    - base|close_position
+    - base|close_position_rolling
+    - base|close_to_extremes
+    - base|cusum_filter
+    - base|cyclical_time_features
+    - base|distance_from_high
+    - base|distance_from_low
+    - base|distance_from_ma
+    - base|dollar_bar_crash_reversal
+    - base|dollar_volume
+    - base|downside_volatility_ratio
+    - base|ema_alignment
+    - base|fractional_diff
+    - base|gap_high
+    - base|garman_klass_volatility
+    - base|ichimoku_cloud
+    - base|illiquidity_shock
+    - base|is_funding_hour
+    - base|is_us_open_hour
+    - base|jump_variation_proxy
+    - base|kaufman_efficiency_ratio
+    - base|kline_imbalance
+    - base|lag_column
+    - base|lag_columns
+    - base|lag_range
+    - base|lag_range_cols
+    - base|liquidity_drop
+    - base|liquidity_range
+    - base|log_returns
+    - base|maker_liquidity_share
+    - base|maker_volume_ratio
+    - base|maker_volume_share
+    - base|market_regime
+    - base|micro_momentum
+    - base|momentum_confirmation
+    - base|momentum_periods
+    - base|momentum_weight
+    - base|narrow_range
+    - base|order_flow_imbalance
+    - base|parkinson_vol_of_vol
+    - base|parkinson_volatility
+    - base|position_in_candle
+    - base|position_in_range
+    - base|price_lines
+    - base|price_range_position
+    - base|quantile_price_lines
+    - base|range_overlap
+    - base|range_pct
+    - base|range_per_dollar_volume
+    - base|realized_kurtosis
+    - base|realized_semivariance
+    - base|realized_skewness
+    - base|rejection_intensity
+    - base|relative_range_seasonality
+    - base|relative_volatility_seasonality
+    - base|relative_volume_seasonality
+    - base|return_autocorrelation
+    - base|return_per_dollar_volume
+    - base|return_volatility_correlation
+    - base|returns_lags
+    - base|rogers_satchell_volatility
+    - base|rolling_zscore
+    - base|sma_crossover
+    - base|sma_ratios
+    - base|spread
+    - base|spread_percent
+    - base|stochastic_k_abs
+    - base|tail_event_intensity
+    - base|taker_imbalance_ratio
+    - base|time_to_funding
+    - base|trade_density
+    - base|trade_imbalance
+    - base|trade_size_ratio
+    - base|trend_coherence
+    - base|trend_strength
+    - base|volatility_1h
+    - base|volatility_of_volatility
+    - base|volatility_ratio
+    - base|volatility_spike
+    - base|volatility_term_structure
+    - base|volatility_weight
+    - base|volume_ratio
+    - base|volume_regime
+    - base|volume_spike
+    - base|volume_to_range
+    - base|volume_trend
+    - base|volume_volatility_correlation
+    - base|vpin
+    - base|vwap
+    - base|wick_imbalance
+    - base|wick_proportion
+    - base|yang_zhang_volatility
+uel:
+  output_path: compiled-helper-features
+  search_strategy:
+    type: grid
+  n_permutations: 100
+  prep_each_round: true
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true

@@ -1,6 +1,6 @@
 # `limen.calibration`
 
-> Calibrate model probabilities and choose decision thresholds inside manifest-driven experiments.
+> Calibrate fitted-model probabilities and choose decision thresholds in caller-owned Python or a declared Manifest.
 
 ## Canonical docs
 
@@ -54,7 +54,7 @@ calibration/
 
 ## Things to know
 
-- Calibration is configured on a manifest and resolved per experiment round.
+- Python callers use the fitting and prediction helpers directly; YAML declares the same choices for each native round.
 - Probability calibration and threshold optimization can be enabled independently.
 - Validation data is the fitting surface for calibrators and threshold choice.
 - `predict()` and `evaluate()` have different result-schema guarantees; see the canonical Calibration page before changing output fields.

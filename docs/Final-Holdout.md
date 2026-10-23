@@ -82,6 +82,14 @@ The CLI writes `final-report.json` beside the experiment results. It records the
 
 Local recorded files leave earlier external exposure unknown. Keep that classification beside any score: reservation protects this project's workflow, and cannot prove that the observations were never read elsewhere.
 
+## Read the current final result
+
+The Python result reports its 479 later next-bar decisions under the caller’s exclusion. The Compiled result reports its reserved rows and exposure classification. An `unknown` exposure history remains unknown even when local reservation enforcement passed.
+
+<!-- result: final-python-result interface=python scenario=holdout fields=assessment_rows,mean_net_return,fitting_cutoff,selection_cutoff -->
+
+<!-- result: final-compiled-result interface=compiled scenario=holdout fields=final_rows,exposure,event.schema_version -->
+
 ## Preserve the project
 
 Keep each guarded project's `limen.toml`, native holdout project marker, reservation history and assessment artifacts together. Copying only the result CSV does not preserve reservation or exposure evidence. Git backup follows ignore rules; preserve excluded holdout history separately.

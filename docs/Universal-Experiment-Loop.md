@@ -63,7 +63,7 @@ def search(data_dir, output):
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
     return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
-            'feedback': mixed_feedback(data_dir, output / 'feedback')}
+            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars)}
 ```
 
 Result availability follows the selected interface and retention policy:
@@ -101,13 +101,12 @@ sees only the first 1,440 bars. It selects the best validation return per window
 breaking ties by alpha, then reuses those exact evaluated models. The native
 Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
-The excerpt below is the project's selection function. Execute it through the project entry point above; the function uses helpers from its complete source file.
+The trial function below evaluates the four candidates and retains their fitted models. `run_research` then selects parameters and constructs Sensors from those same objects. Execute the project entry point above; the excerpt uses helpers from its complete source file.
 
 <!-- python-sensor-example -->
-<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=trials scenario=selection interface=python role=executed -->
 ```python
-def run_research(bars, experiment_name):
-    research = bars[:1440]
+def run_trials(research, experiment_name):
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
     retained = {}
 
@@ -125,21 +124,7 @@ def run_research(bars, experiment_name):
     # An absolute filename stem writes only this CSV; no persisted round artifacts.
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
-            ["window", "validation_net_return", "alpha"],
-            descending=[False, True, False],
-        ).unique(subset="window", keep="first", maintain_order=True)
-        .select("window", "alpha").to_dicts()
-    )
-    sensors = [
-        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
-                          params=p, fitting_cutoff=bars["datetime"][960],
-                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
-        for p in selected
-    ]
-    cohort = Cohort.from_python(sensors)
-    return cohort, uel, selected, retained
+    return uel, retained
 ```
 
 Each partition loses twelve warm-up rows and its final forward-label row:

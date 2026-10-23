@@ -19,7 +19,7 @@ Owns stateless DataFrame transforms. Does **not** own fitted feature scaling, hi
 
 | Entry point | Use case | Notes |
 |-------------|-------------|-------|
-| `shift_column_transform` | Forward-looking target column | Common inside manifest target blocks |
+| `shift_column_transform` | Forward-looking target column | Available inside caller-owned preparation |
 | `zscore_transform` | Frame-wide normalization step | Stateless per call |
 | `winsorize_transform`, `mad_transform`, `quantile_trim_transform` | Clipping or row filtering before modeling | These do not carry their own train-only state |
 
@@ -37,7 +37,7 @@ Owns stateless DataFrame transforms. Does **not** own fitted feature scaling, hi
 | `shift_column_transform.py` | Forward-looking target shifts |
 | `zscore_transform.py` | Stateless DataFrame normalization |
 | `winsorize_transform.py` | Percentile clipping |
-| `mad_transform.py` | MAD-based clipping |
+| `mad_transform.py` | Median absolute deviation scaling |
 | `quantile_trim_transform.py` | Quantile-based row trimming |
 
 <!-- reference: package-transforms-layout source=limen/transforms/README.md region=layout:package role=layout -->

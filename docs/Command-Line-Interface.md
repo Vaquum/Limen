@@ -127,6 +127,7 @@ Options:
 | `--dry-run` | validate and compile only; no permutations execute |
 | `--resume <results_dir>` | resume from a checkpoint directory; cannot be combined with a YAML file |
 | `--no-progress-bar` | disable the experiment progress bar |
+| `--workers <positive integer>` | override `uel.workers` for a run; on resume, override the saved worker count under the same parallel admission rules |
 
 The normal result directory contains:
 
@@ -231,3 +232,120 @@ Runtime boundaries:
 - [Universal Experiment Loop](Universal-Experiment-Loop.md)
 - [Trainer](Trainer.md)
 - [Developer Guidelines](Developer/README.md)
+
+## Complete argument and option index
+
+These tables come from the current Click declarations. Required values and positional arguments have no declared default. Omitted optional flags use the listed value; automatic help and version options are included. Path constraints are checked before command execution. The command descriptions above explain state changes and exit conditions.
+
+### `limen` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `--version` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show the version and exit. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen assess` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
+| `--results` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": false, "name": "directory", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional results. |
+| `--reservation` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Reservation identity returned by limen reserve. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen backup` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen commit` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
+| `--parent` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Parent manifest ID for lineage tracking (e.g. sha256:abc123...). |
+| `--message`, `-m` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Git commit message. Auto-generated if omitted. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen fork` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `manifest_ref` | `{"name": "text", "param_type": "String"}` | — | true | 1 | Positional manifest_ref. |
+| `name` | `{"name": "text", "param_type": "String"}` | — | false | 1 | Positional name. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen init` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `output` | `{"allow_dash": false, "dir_okay": true, "exists": false, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional output. |
+| `--template` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Template name to scaffold from (e.g. logreg_binary). |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen lineage` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `manifest_ref` | `{"name": "text", "param_type": "String"}` | — | true | 1 | Positional manifest_ref. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen list-templates` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen ls` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen new` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `project_name` | `{"name": "text", "param_type": "String"}` | — | true | 1 | Positional project_name. |
+| `--backup-remote` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Git remote URL for manifest store backup (can also be set interactively). |
+| `--from` | `{"name": "text", "param_type": "String"}` | `null` | false | 1 | Restore a project from a backup remote instead of the template. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen profile` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen reindex` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen reserve` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen run` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `target` | `{"name": "text", "param_type": "String"}` | — | false | -1 | Positional target. |
+| `--dry-run` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Validate and compile only — do not execute the experiment. |
+| `--resume` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": false, "name": "directory", "param_type": "Path", "readable": true, "writable": false}` | `null` | false | 1 | Resume from a checkpoint directory instead of starting fresh. |
+| `--no-progress-bar` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Disable the experiment progress bar. |
+| `--workers` | `{"clamp": false, "max": null, "max_open": false, "min": 1, "min_open": false, "name": "integer range", "param_type": "IntRange"}` | `null` | false | 1 | Concurrent rounds; overrides YAML, or uses saved settings with --resume. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |
+
+### `limen validate` options
+
+| Argument or option | Type and constraint | Default | Required | Cardinality | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| `yaml_file` | `{"allow_dash": false, "dir_okay": true, "exists": true, "file_okay": true, "name": "path", "param_type": "Path", "readable": true, "writable": false}` | — | true | 1 | Positional yaml_file. |
+| `--help` | `{"name": "boolean", "param_type": "Bool"}` | `false` | false | 1 | Show this message and exit. |

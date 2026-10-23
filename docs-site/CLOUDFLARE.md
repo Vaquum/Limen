@@ -1,6 +1,6 @@
 # Cloudflare deployment
 
-The retained predecessor Worker still serves [docs.vaquum.fi/limen/](https://docs.vaquum.fi/limen/). The replacement research reader and release-bound publisher live in Limen. Their first production cutover remains an acceptance obligation; candidate execution does not establish deployment.
+The Limen-owned research reader serves [docs.vaquum.fi/limen/](https://docs.vaquum.fi/limen/). Its public `publication.json` identifies the active release, source, wheel and sealed artifacts. Candidate execution alone does not establish deployment.
 
 ## Serving boundary
 
@@ -26,9 +26,9 @@ Enable Preview URLs for the `limen` Worker before staging. Its normal `workers.d
 
 Use a user-scoped Cloudflare API token restricted to the Limen account, with Workers Scripts Edit and Workers Builds Configuration Read. The latter permits the activation guard to inspect build triggers; it does not modify them. Store it as `CLOUDFLARE_DOCS_API_TOKEN` in the GitHub `documentation` environment. Do not commit or print the token.
 
-Before merging the first reader release, retain the current production Worker version and home-page digest. Open the `limen` Worker in Cloudflare, select **Settings → Builds → Disconnect**, and verify that its trigger inventory is empty. Disconnect only this Worker's repository integration. The existing Worker keeps serving; the account's Cloudflare GitHub application remains installed.
+The Limen Worker uses release-bound publication. Its independent Git build trigger must remain disconnected. The activation guard verifies the trigger inventory; other Workers and the account’s Cloudflare GitHub application are outside this product boundary.
 
-The publisher refuses activation while any independent trigger remains. A missing credential or failed guard preserves the existing production deployment. BOOK-LIMEN removes the obsolete renderer sources and build configuration before merge. Its merged release then supplies the actual PyPI wheel for proof and cutover. Parent #1045 remains open until the released site, public artifacts and rollback pass live acceptance.
+The publisher refuses activation while any independent trigger remains. A missing credential or failed guard preserves the existing production deployment. Every publication uses the actual PyPI wheel, matching projects and verified predecessor for rollback.
 
 ## Evidence and recovery
 

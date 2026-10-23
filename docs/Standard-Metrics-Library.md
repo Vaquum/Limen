@@ -91,6 +91,43 @@ Returns:
 
 This helper uses `safe_ovr_auc()` instead of calling raw multiclass AUC directly.
 
+### Recorded three-class evaluation
+
+The Python project's metric case fits a seven-neighbor classifier on recorded hourly returns. Its two class cutoffs and scaler fit on training only. Evaluation uses a later partition, preserving the fitted object. The proof independently computes precision/recall from counts and macro AUC from positive/negative score pairs, including ties. A population with no valid class comparison retains an unavailable AUC.
+
+<!-- example: metrics-python-three-classes source=docs/examples/python-research/metric_cases.py region=multiclass_evaluation scenario=search interface=python role=executed -->
+```python
+def evaluate_three_classes(raw):
+    def prepare(frame):
+        return frame.with_columns(
+            (pl.col('close') / pl.col('close').shift(6) - 1).alias('momentum'),
+            (pl.col('close').shift(-1) / pl.col('close') - 1).alias('next_return'),
+        ).drop_nulls(['momentum', 'next_return'])
+
+    train, evaluation = prepare(raw[:864]), prepare(raw[864:1152])
+    cutoffs = np.quantile(train['next_return'].to_numpy(), [.25, .75])
+    labels = [np.digitize(frame['next_return'].to_numpy(), cutoffs) for frame in (train, evaluation)]
+    fitted = make_pipeline(StandardScaler(), KNeighborsClassifier(n_neighbors=7))
+    fitted.fit(train.select('momentum'), labels[0])
+    state = learned_state(fitted)
+    probabilities = fitted.predict_proba(evaluation.select('momentum'))
+    predicted = fitted.predict(evaluation.select('momentum'))
+    metrics = multiclass_metrics({'y_test': labels[1]}, predicted, probabilities)
+    if learned_state(fitted) != state:
+        raise ValueError('Evaluation changed learned state in the three-class model')
+    missing_class = safe_ovr_auc(np.zeros(len(predicted), dtype=int), probabilities)
+    return {'cutoffs': cutoffs.tolist(), 'classes': fitted.classes_.tolist(),
+            'training_rows': train.height, 'evaluation_rows': evaluation.height,
+            'truth': labels[1].tolist(), 'predictions': predicted.tolist(),
+            'probabilities': probabilities.tolist(), 'metrics': metrics,
+            'missing_class_auc': None if np.isnan(missing_class) else float(missing_class),
+            'fitted_state_unchanged': True}
+```
+
+<!-- result: metrics-python-three-class-results interface=python scenario=search fields=multiclass.training_rows,multiclass.evaluation_rows,multiclass.metrics,multiclass.missing_class_auc -->
+
+Compiled Research has no built-in three-class architecture declaration. Its binary and continuous YAML families retain their actual task metrics; a callable metric helper does not add a CLI model family. The three-class case is ordinary Python Research.
+
 ## `continuous_metrics(data, preds)`
 
 <!-- reference: metrics-continuous_metrics source=limen/metrics/continuous_metrics.py region=signature:continuous_metrics role=signature -->
@@ -188,7 +225,7 @@ def probability_of_backtest_overfitting(returns_matrix: npt.NDArray[np.float64],
 
 Both interfaces can use these helpers without adopting the other interface's methodology:
 
-The Python calibration scenario calls the shared threshold optimizer with `balanced_metric`; its custom scorer remains caller-owned. The Compiled calibration scenario declares the same metric and reconstructs all four fitted modes. These are the same project sources used in the [calibration chapter](Calibration.md):
+The Python calibration scenario calls the shared threshold optimizer with `balanced_metric`; its custom scorer remains caller-owned. The Compiled calibration scenario declares the same metric and trains all four fitted modes. The separate `calibration_assessment.yaml` uses the native event-return objective and reconstructs all four modes through `limen assess`. The metric-comparison campaign and the event-return campaign answer different selection questions. These are the same project sources used in the [calibration chapter](Calibration.md):
 
 <!-- example: metrics-python-calibration source=docs/examples/python-research/scenarios.py region=calibration scenario=calibration interface=python role=executed -->
 ```python
@@ -197,7 +234,7 @@ def calibration(data_dir, output):
     params = {'window': 4, 'alpha': .1}
     train, validation = project.prep(bars, params).values()
     model = make_pipeline(StandardScaler(), LogisticRegression(C=1, random_state=42)).fit(train.select('momentum'), train['next_return'].to_numpy() > 0)
-    modes = []
+    modes, sensors = [], []
     for calibrate in (False, True):
         fitted = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method='sigmoid') if calibrate else model
         probabilities = fitted.predict_proba(validation.select('momentum'))[:, 1]
@@ -205,12 +242,25 @@ def calibration(data_dir, output):
             threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric) if tune else (.5, None)
             state = SimpleNamespace(model=fitted, threshold=threshold)
             sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows, state_id=f'sigmoid={calibrate};threshold={tune}', fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+            sensors.append(sensor)
             cohort = Cohort.from_python([sensor], aggregate='vote')
             tape = cohort.predict_all(bars[1428:1920])[12:]
             if any(point.prediction not in (0, 1) for point in tape):
                 raise ValueError('Classifier inference must provide a binary decision for every assessment row')
             modes.append({'calibrated': calibrate, 'tuned': tune, 'threshold': threshold, 'validation_score': score, 'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(), 'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
-    return {'modes': modes, 'validation_reused': True}
+    methods = []
+    for method in ('sigmoid', 'isotonic'):
+        calibrated = sklearn_probability_calibrator(model, validation.select('momentum'), validation['next_return'].to_numpy() > 0, method=method)
+        probabilities = calibrated.predict_proba(validation.select('momentum'))[:, 1]
+        threshold, score = grid_threshold_optimizer(validation['next_return'].to_numpy() > 0, probabilities, metric=balanced_metric)
+        state = SimpleNamespace(model=calibrated, threshold=threshold)
+        sensor = Sensor.from_python(fitted_state=state, params=params, infer=infer_classifier, map_output=lambda rows: rows,
+            state_id=method, fitting_cutoff=bars['datetime'][960], selection_cutoff=bars['datetime'][1440], output_id='next_bar_up')
+        tape = sensor.predict_all(bars[1428:1920])[12:]
+        methods.append({'method': method, 'calibrated': True, 'tuned': True, 'threshold': threshold, 'validation_score': score,
+            'validation_probabilities': probabilities.tolist(), 'validation_labels': (validation['next_return'].to_numpy() > 0).astype(int).tolist(),
+            'inference_rows': len(tape), 'positive_predictions': sum(point.prediction == 1 for point in tape)})
+    return {'probability_methods': methods, 'modes': modes, 'decisions': [{key: mode[key] for key in ('calibrated', 'tuned', 'threshold', 'inference_rows', 'positive_predictions')} for mode in modes], 'validation_reused': True, 'composition': compose_selected(sensors, bars)}
 ```
 
 <!-- example: metrics-compiled-calibration source=docs/examples/compiled-research/calibration.yaml region=calibration_config scenario=calibration interface=compiled role=executed -->
@@ -235,3 +285,164 @@ Keep the measured task, evaluation population and output units explicit when add
 - Continue to [Log](Log.md) for experiment-level analysis built on top of these low-level metrics.
 - Continue to [Benchmark](Benchmark.md) for the benchmark layer that uses reconstructed round outputs rather than these raw helper functions directly.
 - Continue to [Reference Architecture](Reference-Architecture.md) for the model layer that wraps these task metrics into richer evaluation payloads.
+
+## Callable contracts
+
+These entries give the exact public signatures and the source-owned argument, return and failure contracts. Use the project examples above for the research context; a signature is reference evidence, not a claim that every option ran in the base experiment.
+
+### `limen.metrics.balanced_metric`
+
+<!-- reference: api-limen-metrics-balanced-metric source=limen/metrics/balanced_metric.py region=signature:balanced_metric role=signature -->
+```python
+def balanced_metric(y_true: Any, y_pred: Any) -> float:
+    ...
+```
+
+Compute balanced precision metric that accounts for trade rate.
+
+Calculates precision * sqrt(trade_rate) to balance signal quality
+
+with trade frequency. Higher scores indicate better balance between
+
+accurate predictions and sufficient trading activity.
+
+| Argument | Contract |
+| --- | --- |
+| y_true | Ground truth binary labels |
+| y_pred | Predicted binary labels |
+
+**Returns:** float: Balanced metric score (0.0 if no positive predictions)
+
+### `limen.metrics.binary_metrics`
+
+<!-- reference: api-limen-metrics-binary-metrics source=limen/metrics/binary_metrics.py region=signature:binary_metrics role=signature -->
+```python
+def binary_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.integer[Any]], probs: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
+    ...
+```
+
+Compute binary classification metrics from predictions and probabilities.
+
+Degenerate one-class outcomes never crash: fpr is NaN when y_test has no
+
+negatives, and auc is NaN when y_test contains a single class, mirroring
+
+the safe_ovr_auc convention.
+
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true binary labels |
+| preds (`list`) | Predicted binary class labels |
+| probs (`list`) | Predicted class probabilities |
+
+**Returns:** dict: Dictionary containing recall, precision, fpr, auc, and accuracy metrics
+
+### `limen.metrics.continuous_metrics`
+
+<!-- reference: api-limen-metrics-continuous-metrics source=limen/metrics/continuous_metrics.py region=signature:continuous_metrics role=signature -->
+```python
+def continuous_metrics(data: dict[str, Any], preds: list[float] | npt.NDArray[np.floating[Any]]) -> dict[str, Any]:
+    ...
+```
+
+Compute regression metrics from continuous predictions.
+
+NOTE: This function is experimental and may change in future versions.
+
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true continuous values |
+| preds (`list`) | Predicted continuous values |
+
+**Returns:** dict: Dictionary containing bias, mae, rmse, r2, and mape metrics
+
+### `limen.metrics.deflated_sharpe_ratio`
+
+<!-- reference: api-limen-metrics-deflated-sharpe-ratio source=limen/metrics/deflated_sharpe_ratio.py region=signature:deflated_sharpe_ratio role=signature -->
+```python
+def deflated_sharpe_ratio(returns: npt.NDArray[np.float64], *, n_trials: int, trial_sharpe_variance: float) -> float:
+    ...
+```
+
+Return the per-bar DSR probability from Bailey and López de Prado (2014).
+
+[Bailey and López de Prado](https://www.davidhbailey.com/dhbpapers/deflated-sharpe.pdf), equation 2.
+
+Sharpe uses sample standard deviation; skew and Pearson kurtosis use
+
+centered population moments. Four observations and positive return
+
+variance are required. One trial has a zero selection benchmark.
+
+### `limen.metrics.multiclass_metrics`
+
+<!-- reference: api-limen-metrics-multiclass-metrics source=limen/metrics/multiclass_metrics.py region=signature:multiclass_metrics role=signature -->
+```python
+def multiclass_metrics(data: dict[str, Any], preds: list[int] | npt.NDArray[np.integer[Any]], probs: list[list[float]] | npt.NDArray[np.floating[Any]], average: str='macro') -> dict[str, Any]:
+    ...
+```
+
+Compute multiclass classification metrics from predictions and probabilities.
+
+| Argument | Contract |
+| --- | --- |
+| data (`dict`) | Data dictionary with 'y_test' key containing true class labels |
+| preds (`list`) | Predicted class labels |
+| probs (`list`) | Predicted class probabilities |
+| average (`str`) | Averaging strategy for precision and recall |
+
+**Returns:** dict: Dictionary containing precision, recall, auc, and accuracy metrics
+
+### `limen.metrics.probability_of_backtest_overfitting`
+
+<!-- reference: api-limen-metrics-probability-of-backtest-overfitting source=limen/metrics/probability_of_backtest_overfitting.py region=signature:probability_of_backtest_overfitting role=signature -->
+```python
+def probability_of_backtest_overfitting(returns_matrix: npt.NDArray[np.float64], *, n_blocks: int) -> float:
+    ...
+```
+
+Return CSCV logit mass at or below zero using per-bar Sharpe ranks.
+
+[Bailey and López de Prado](https://www.davidhbailey.com/dhbpapers/backtest-prob.pdf), algorithm 2.3.
+
+Rows are trials, columns synchronous bars. Equal contiguous blocks need
+
+at least two bars. In-sample ties select the first trial; out-of-sample
+
+ties receive their average ascending rank. Median ties count as overfit.
+
+### `limen.metrics.rule_based_metrics`
+
+<!-- reference: api-limen-metrics-rule-based-metrics source=limen/metrics/rule_based_metrics.py region=signature:rule_based_metrics role=signature -->
+```python
+def rule_based_metrics(positions: dict[str, npt.NDArray[np.integer[Any]]], backtest_results: dict[str, dict[str, float]], sharpe_std_threshold: float=0.5, sharpe_degradation_threshold: float=0.3) -> dict[str, Any]:
+    ...
+```
+
+Compute rule-based strategy metrics across train, val, and test splits.
+
+| Argument | Contract |
+| --- | --- |
+| positions (`dict`) | Per-split position arrays (0/1) keyed by 'train', 'val', 'test' |
+| backtest_results (`dict`) | Per-split backtest metric dicts keyed by 'train', 'val', 'test' |
+| sharpe_std_threshold (`float`) | Legacy parameter retained for call compatibility |
+| sharpe_degradation_threshold (`float`) | Legacy parameter retained for call compatibility |
+
+**Returns:** dict: Tier 1 position stats, Tier 2 backtest metrics per split, Tier 3 stability metrics
+
+### `limen.metrics.safe_ovr_auc`
+
+<!-- reference: api-limen-metrics-safe-ovr-auc source=limen/metrics/safe_ovr_auc.py region=signature:safe_ovr_auc role=signature -->
+```python
+def safe_ovr_auc(y_true: npt.NDArray[Any] | list[int] | list[str], probs: npt.NDArray[np.floating[Any]] | list[list[float]]) -> float:
+    ...
+```
+
+Compute one-vs-rest AUC safely handling missing classes.
+
+| Argument | Contract |
+| --- | --- |
+| y_true (`np.ndarray \| list[int] \| list[str]`) | True class labels, shape (n_samples,) |
+| probs (`np.ndarray \| list[list[float]]`) | Predicted probabilities, shape (n_samples, n_classes) |
+
+**Returns:** float: Mean AUC across all valid class comparisons, or NaN if no valid AUC calculations can be made
