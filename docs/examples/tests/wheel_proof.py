@@ -5,6 +5,7 @@ import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 import shlex
 import signal
 import tarfile
@@ -159,10 +160,14 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     acquisition = prove_acquisition(root, temporary, wheel, bundle, runtime_environment, inspect, run)
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
-    # Keep complete campaigns from competing for the same local scientific runtime.
+    # macOS imports compete under host load; Linux's locked CI runs disjoint campaigns together.
     run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
-    for name in ('python-all', 'compiled-all'):
-        run(shlex.split(canonical_commands[name]), cwd=project, env=runtime_environment, timeout=120)
+    with ThreadPoolExecutor(max_workers=1 if sys.platform == 'darwin' else 2) as executor:
+        executions = [executor.submit(run, shlex.split(canonical_commands[name]),
+                                     cwd=project, env=runtime_environment, timeout=120)
+                      for name in ('python-all', 'compiled-all')]
+        for execution in executions:
+            execution.result()
     for interface in ('python',):
         command = shlex.split(canonical_commands[interface + '-selection'])
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
@@ -215,3 +220,4 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             'native_outputs': {'path': str(native.relative_to(root)), 'sha256': native_sha},
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},
             'wheel_sha256': hashlib.sha256(wheel.read_bytes()).hexdigest()}
+from concurrent.futures import ThreadPoolExecutor
