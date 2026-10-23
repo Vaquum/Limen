@@ -57,6 +57,7 @@ test('published routes agree with robots and sitemap while other products remain
   const htmlByUrl=new Map();
   const built=JSON.parse(await fs.readFile(path.join(root,'docs-site/reader-build/build.json'),'utf8'));
   for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
+  const anchors=new Map([...htmlByUrl].map(([url,html])=>[url,new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]))]));
   for(const [url,html] of htmlByUrl){
     for(const match of html.matchAll(/href="([^"]+)"/g)){
       const target=new URL(match[1].replaceAll('&amp;','&'),new URL(url,'https://docs.vaquum.fi'));
@@ -64,7 +65,7 @@ test('published routes agree with robots and sitemap while other products remain
       expect(htmlByUrl.has(target.pathname)||Object.hasOwn(built.files,decodeURIComponent(target.pathname.replace(/^\/limen\//,''))),url+' → '+target.pathname).toBe(true);
       if(!target.hash||!htmlByUrl.has(target.pathname))continue;
       const anchor=decodeURIComponent(target.hash.slice(1));
-      expect(htmlByUrl.get(target.pathname),url+' → '+target.pathname+target.hash).toContain('id="'+anchor+'"');
+      expect(anchors.get(target.pathname).has(anchor),url+' → '+target.pathname+target.hash).toBe(true);
     }
   }
   const decisions=await (await request.get('/limen/route-decisions.json')).json();
@@ -78,7 +79,7 @@ test('published routes agree with robots and sitemap while other products remain
   for(const item of decisions.published_links){
     const replacement=new URL(item.replacement),html=htmlByUrl.get(replacement.pathname);
     expect(html,item.replacement).toBeDefined();
-    if(replacement.hash)expect(html,item.replacement).toContain('id="'+replacement.hash.slice(1)+'"');
+    if(replacement.hash)expect(anchors.get(replacement.pathname).has(replacement.hash.slice(1)),item.replacement).toBe(true);
   }
   const missing=await request.get('/limen/absent-chapter/');expect(missing.status()).toBe(404);expect(await missing.text()).toContain('Page unavailable');
   expect((await request.get('/another-product/')).status()).toBe(404);
