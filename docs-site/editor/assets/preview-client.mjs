@@ -11,7 +11,7 @@ function finish(cancel=false){
   element.contentEditable='false';element.removeAttribute('role');active=null;send('active',{active:false});return true;
 }
 function begin(element){
-  if(!enabled||active?.element===element)return;finish();const passage=mapped.get(element.dataset.editId);if(!passage)return;
+  if(!enabled||active?.element===element)return;if(!finish())return;const passage=mapped.get(element.dataset.editId);if(!passage)return;
   const links=[...element.querySelectorAll('a')].map(link=>({href:link.dataset.sourceHref||link.getAttribute('href'),title:link.getAttribute('title')}));
   active={element,passage,html:element.innerHTML,links,previous:element.dataset.draftVersion?[element.dataset.draftVersion]:[]};element.contentEditable='true';element.setAttribute('role','textbox');element.setAttribute('aria-label','Edit '+passage.type);element.focus({preventScroll:true});send('active',{active:true});
 }
@@ -32,7 +32,7 @@ document.addEventListener('focusout',event=>{if(active&&event.target===active.el
 addEventListener('message',async event=>{
   if(event.origin!==location.origin||event.source!==parent)return;
   const message=event.data;
-  if(message.type==='edit'){if(enabled!==message.enabled)finish();enabled=message.enabled;document.body.classList.toggle('prose-editing',enabled);for(const element of document.querySelectorAll('[data-edit-id]')){element.tabIndex=enabled?0:-1;element.setAttribute('aria-label',enabled?'Edit '+element.dataset.editType:element.dataset.editType);}}
+  if(message.type==='edit'){if(enabled!==message.enabled&&!finish())return;enabled=message.enabled;document.body.classList.toggle('prose-editing',enabled);for(const element of document.querySelectorAll('[data-edit-id]')){element.tabIndex=enabled?0:-1;element.setAttribute('aria-label',enabled?'Edit '+element.dataset.editType:element.dataset.editType);}}
   if(message.type==='finish'){const saved=finish();send('finished',{request:message.request,error:saved?null:'The active passage could not be saved; correct it before continuing'});}if(message.type==='undo-active')finish(true);
   if(message.type==='draft-saved'){const element=document.querySelector(`[data-edit-id="${message.passageId}"]`);if(element)element.dataset.draftVersion=message.id;}
   if(message.type==='drafts'){
@@ -47,5 +47,6 @@ addEventListener('message',async event=>{
 // Navigation must retain active edits before the frame unloads.
 document.addEventListener('click',event=>{if(!enabled&&event.target.closest('a'))finish();},true);
 addEventListener('limen-editor-flush',event=>{event.detail.saved=finish();});
+addEventListener('beforeunload',event=>{if(!finish()){event.preventDefault();event.returnValue='';}});
 addEventListener('pagehide',()=>finish());
 send('page',{page:data});
