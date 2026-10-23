@@ -29,7 +29,7 @@ export async function prepareAssets(directory,{fetchPublic=fetch,limit=MAX_ASSET
   const bytes=await readFile(path.join(directory,rollback.path));
   if(digest(bytes)!==rollback.sha256)throw new Error('Sealed rollback bytes changed');
   const url=`https://github.com/Vaquum/Limen/releases/download/${manifest.release}/${path.posix.basename(rollback.path)}`;
-  const response=await fetchPublic(url,{headers:{'User-Agent':'LimenDocsPublisher/1.0'}});
+  const response=await fetchPublic(url,{headers:{'User-Agent':'LimenDocsPublisher/1.0'},signal:AbortSignal.timeout(30000)});
   if(!response.ok||digest(Buffer.from(await response.arrayBuffer()))!==rollback.sha256)throw new Error('Anonymous Release rollback differs from the sealed bytes');
   await writeFile(path.join(directory,'_redirects'),`/${rollback.path} ${url} 302\n`,{flag:'wx'});
   await writeFile(path.join(directory,'.assetsignore'),`/${rollback.path}\n`,{flag:'wx'});
