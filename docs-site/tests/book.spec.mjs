@@ -299,10 +299,15 @@ test('search closes and reveals a passage in the current chapter, including the 
   }
 });
 
-test('modified source-line links open the actual permalink in another tab',async({page,context})=>{
+test('modified source-line links retain native navigation and open their permalink in another tab',async({page,context})=>{
   await open(page);const figure=page.locator('figure.code').first();
   const line=figure.locator('.line-number').first();
-  const opened=context.waitForEvent('page');await line.click({modifiers:['ControlOrMeta']});const linked=await opened;
+  const prevented=await line.evaluate(link=>['ctrlKey','metaKey','altKey'].map(modifier=>{
+    let prevented;document.addEventListener('click',event=>{prevented=event.defaultPrevented;event.preventDefault();},{once:true});
+    link.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,[modifier]:true}));return prevented;
+  }));
+  expect(prevented).toEqual([false,false,false]);
+  const opened=context.waitForEvent('page');await line.click({button:'middle'});const linked=await opened;
   await linked.bringToFront();await linked.waitForLoadState('domcontentloaded');
   await expect(linked).toHaveURL(/#code-1-L1$/);await expect(linked.locator('#code-1-L1')).toBeInViewport();
   expect(new URL(page.url()).hash).toBe('');await linked.close();

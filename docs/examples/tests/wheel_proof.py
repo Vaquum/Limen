@@ -1,4 +1,3 @@
-from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import csv
@@ -160,15 +159,10 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     acquisition = prove_acquisition(root, temporary, wheel, bundle, runtime_environment, inspect, run)
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
-    # Complete the first scientific import before starting the disjoint campaigns.
+    # Keep complete campaigns from competing for the same local scientific runtime.
     run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        # Bound each complete entry command separately from wheel setup and assertions.
-        executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
-                                           cwd=project, env=runtime_environment, timeout=120)
-                      for name in ('python-all', 'compiled-all')}
-        for execution in executions.values():
-            execution.result()
+    for name in ('python-all', 'compiled-all'):
+        run(shlex.split(canonical_commands[name]), cwd=project, env=runtime_environment, timeout=120)
     for interface in ('python',):
         command = shlex.split(canonical_commands[interface + '-selection'])
         summary = json.loads((project / f'results/{interface}/summary.json').read_text())
