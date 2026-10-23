@@ -5,6 +5,7 @@
   "license": "MIT",
   "engines": {"node": ">=22"},
   "scripts": {
+    "check:assets": "node --test prepare-assets.test.mjs",
     "security:audit": "node audit.mjs",
     "check:config": "wrangler versions upload --config wrangler.json --dry-run --outdir ../../.docs-evidence/publisher-dry-run"
   },
