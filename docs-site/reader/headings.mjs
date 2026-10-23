@@ -7,7 +7,8 @@ export function headingIdentities(tokens){
     const token=tokens[index];if(token.type!=='heading_open')continue;
     const text=tokens[index+1].content.replaceAll('`',''),stem=slug(text),count=seen.get(stem)||0;
     if(token.tag!=='h1')seen.set(stem,count+1);
-    const explicit=tokens[index-1]?.type==='html_block'?tokens[index-1].content.trim().match(anchorPattern):null;
+    const before=tokens[index-1]?.type==='html_block'?tokens[index-1]:tokens[index-1]?.type==='paragraph_close'&&tokens[index-2]?.type==='inline'?tokens[index-2]:null;
+    const explicit=before?.content.trim().match(anchorPattern);
     identities.set(index,{id:explicit?.[1]||(count?`${stem}-${count}`:stem),kind:explicit?.[2]||(/\bCompiled\b/.test(text)?'compiled':/\bPython\b/.test(text)?'python':'plain'),explicit:!!explicit});
   }
   return identities;

@@ -71,7 +71,8 @@ def _heading_ids(path: Path) -> set[str]:
         duplicate = seen.get(stem, 0)
         if token.tag != 'h1':
             seen[stem] = duplicate + 1
-        explicit = re.fullmatch(r'<a id="([^"<>]+)" data-reader-heading="(?:python|compiled|plain)"></a>\s*', tokens[index - 1].content.strip()) if index and tokens[index - 1].type == 'html_block' else None
+        before = tokens[index - 1] if index and tokens[index - 1].type == 'html_block' else tokens[index - 2] if index > 1 and tokens[index - 1].type == 'paragraph_close' and tokens[index - 2].type == 'inline' else None
+        explicit = re.fullmatch(r'<a id="([^"<>]+)" data-reader-heading="(?:python|compiled|plain)"></a>\s*', before.content.strip()) if before else None
         ids.add(explicit.group(1) if explicit else stem if duplicate == 0 else f'{stem}-{duplicate}')
     return ids
 

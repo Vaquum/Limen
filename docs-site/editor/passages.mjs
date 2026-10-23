@@ -32,7 +32,7 @@ export function passages(source,path,baseBlobSha){
   let row=null,cell=0;
   for(let index=0;index<tokens.length;index++){
     const token=tokens[index];if(token.type==='tr_open'){row=token.map;cell=0;}
-    if(token.type!=='inline')continue;
+    if(token.type!=='inline'||anchorPattern.test(token.content.trim()))continue;
     const parent=tokens[index-1],table=['th_open','td_open'].includes(parent?.type);
     if(!table&&!['heading_open','paragraph_open'].includes(parent?.type))continue;
     const map=table?row:parent.map;if(!map)continue;
