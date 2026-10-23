@@ -28,6 +28,12 @@ test('an invalid selected issue does not persist a poisoned operation',async()=>
   await assert.rejects(()=>openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID(),issue:999},state),/open Limen issue/);
   const fresh=await workspace(context.storage,context.github,user);assert.equal(fresh.operation,undefined);const result=await openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID()},fresh);assert.equal(result.number,200);
 });
+for(const merged of [false,true])test('a lost PR response followed by '+(merged?'merge and branch deletion':'closure')+' rotates the delivery',async()=>{
+  const context=await protocol();let state=await workspace(context.storage,context.github,user);state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/README.md'),state);
+  context.setLose('pr');await assert.rejects(()=>openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID()},state),/Response lost/);
+  context.pulls[0].state='closed';context.pulls[0].merged=merged;if(merged){context.refs.set('main',state.head);context.refs.delete(state.branch);}
+  const fresh=await workspace(context.storage,context.github,user);assert.notEqual(fresh.id,state.id);assert.equal(fresh.operation,undefined);assert.equal(fresh.created,false);assert.equal(context.counts.pr,1);
+});
 test('a concurrent origin advance releases the pending operation for refresh and another commit',async()=>{
   const context=await protocol();let state=await workspace(context.storage,context.github,user);state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/README.md'),state);
   const payload=await edit(context,state,'docs/Developer/Documentation-System.md'),transport=context.github.transport,advanced='b'.repeat(40);let moved=false;

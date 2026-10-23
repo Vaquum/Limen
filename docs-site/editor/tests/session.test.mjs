@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import worker,{EditorState} from '../worker.mjs';
 import {protocol,Storage} from './protocol.mjs';
+import {passages} from '../passages.mjs';
 const origin='https://limen-editor.vaquum.fi',root=origin+'/limen/edit/';
 test('actual handler binds single-use OAuth state/PKCE, rechecks permission and revokes copied session cookies',async()=>{
   const remote=await protocol(),objects=new Map(),originalFetch=globalThis.fetch;let verifier,revoked=false;
@@ -16,7 +17,13 @@ test('actual handler binds single-use OAuth state/PKCE, rechecks permission and 
     assert.equal(authorization.searchParams.get('code_challenge_method'),'S256');assert.ok(state);
     const callback=await worker.fetch(new Request(root+'auth/callback?state='+state+'&code=protocol-code',{headers:{Cookie:flowCookie}}),env);assert.equal(callback.status,302);assert.ok(verifier);const digest=Buffer.from(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))).toString('base64url');assert.equal(authorization.searchParams.get('code_challenge'),digest);
     const copied=callback.headers.getSetCookie().find(value=>value.startsWith('__Host-limen-session=')).split(';')[0],request=path=>new Request(root+path,{headers:{Cookie:copied}});
-    assert.equal((await worker.fetch(request('api/session'),env)).status,200);assert.equal((await worker.fetch(new Request(root+'auth/callback?state='+state+'&code=protocol-code',{headers:{Cookie:flowCookie}}),env)).status,403);
+    const signed=await worker.fetch(request('api/session'),env);assert.equal(signed.status,200);assert.equal((await worker.fetch(new Request(root+'auth/callback?state='+state+'&code=protocol-code',{headers:{Cookie:flowCookie}}),env)).status,403);
+    const workspace=(await signed.json()).workspace,source='docs/Developer/README.md',page=(await remote.github.pages(workspace.head)).find(page=>page.source===source),first=passages(page.markdown,source,page.blob).find(item=>item.type==='paragraph');
+    const post=(path,body)=>worker.fetch(new Request(root+'api/'+path,{method:'POST',headers:{Cookie:copied,Origin:origin,'Content-Type':'application/json'},body:JSON.stringify(body)}),env);
+    const committed=await post('commit',{workspace:workspace.id,expectedHead:workspace.head,operation:crypto.randomUUID(),patches:[{...first,newMarkdown:first.markdown+' Reviewed.'}]});assert.equal(committed.status,200);
+    const delivered=await committed.json(),current=(await remote.github.pages(delivered.head)).find(page=>page.source===source),original=passages(current.markdown,source,current.blob).find(item=>item.type==='paragraph'),files=new Map(remote.commits.get(delivered.head).files),advanced='b'.repeat(40);
+    files.set(source,current.markdown.slice(0,original.sourceRange.start)+'Upstream revised this passage.'+current.markdown.slice(original.sourceRange.end)+'\n\n'+original.originalText+'\n');remote.commits.set(advanced,{files,parents:[delivered.head],message:'docs: revise the original passage'});remote.refs.set(delivered.branch,advanced);
+    const refused=await post('reanchor',{patch:{...original,newMarkdown:'A local draft.'}});assert.equal(refused.status,409);assert.match((await refused.json()).error,/Source blob moved/);assert.equal(remote.counts.commit,1);
     remote.revoke();assert.equal((await worker.fetch(request('api/session'),env)).status,403);assert.equal((await worker.fetch(request('view/'),env)).status,403);
     const logout=await worker.fetch(new Request(root+'api/logout',{method:'POST',headers:{Cookie:copied,Origin:origin,'Content-Type':'application/json'},body:'{}'}),env);assert.equal(logout.status,200);assert.equal(revoked,true);assert.equal((await worker.fetch(request('api/session'),env)).status,401);
   }finally{globalThis.fetch=originalFetch;}

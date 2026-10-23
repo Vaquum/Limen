@@ -25,6 +25,7 @@ addEventListener('message',event=>{
     if(event.data.type==='page'){page=event.data.page;if(page.workspace!==auth.workspace.id)throw Error('The frame belongs to another delivery');const url=new URL(location.href);url.searchParams.set('route',page.route);history.replaceState(null,'',url);ready=false;restoreDrafts();update();}
     if(event.data.type==='drafts-applied'&&event.data.request===restoreRequest){ready=true;frame.dataset.restored=page.head;update();}
     if(event.data.type==='finished'){finishing.get(event.data.request)?.(event.data.error);finishing.delete(event.data.request);}
+    if(event.data.type==='edit-rejected'){$('[data-edit]').checked=event.data.enabled;lastEditState=event.data.enabled;}
     if(event.data.type==='draft'){const item=store.save(event.data.patch,event.data.previous);send('draft-saved',{passageId:event.data.passageId,id:item.id});say('Draft saved in this browser.');update();}
     if(event.data.type==='error'||event.data.type==='conflict')say(event.data.message);
     if(event.data.type==='active')$('[data-undo]').disabled=!event.data.active;

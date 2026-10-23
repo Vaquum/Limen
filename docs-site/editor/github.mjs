@@ -41,6 +41,10 @@ export async function workspace(storage,github,user,continuing){
     if(!state)state={id:crypto.randomUUID(),branch:pull.head.ref,head:pull.head.sha,base:pull.base.sha,created:true,pr:pull.number,continuing:true,files:[]};
     assert(state.branch===pull.head.ref,'Workspace does not match the selected PR');
   }
+  if(state?.operation?.kind==='pr'&&!state.pr){
+    const existing=await github.pulls(state.branch);assert(existing.length<=1,'Multiple PRs claim this delivery');
+    if(existing.length){const pull=existing[0];ownPull(pull,user,state.branch);assert(pull.body?.includes(`<!-- limen-editor workspace=${state.id} -->`),'PR does not identify this editing workspace');state.pr=pull.number;delete state.operation;}
+  }
   if(state?.pr){
     const pull=await github.pull(state.pr);ownPull(pull,user,state.branch);
     if(pull.state!=='open'){if(state.operation)state.closedHead=pull.head.sha;else state=null;}
