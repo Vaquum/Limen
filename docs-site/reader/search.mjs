@@ -7,7 +7,8 @@ export function initSearch(){
       catch(error){dialog.querySelector('[data-search-count]').textContent='Search is unavailable. Use the chapter and reference links.';announce('Search is unavailable.');console.error(error);}}
   }
   button.hidden=false;button.addEventListener('click',open);
-  dialog.querySelector('[data-search-close]').addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>opener?.focus());
+  dialog.querySelector('[data-search-close]').addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>opener?.focus({preventScroll:true}));
+  results.addEventListener('click',event=>{if(event.target.closest('a[href]')&&event.button===0&&!event.metaKey&&!event.ctrlKey&&!event.shiftKey&&!event.altKey)dialog.close();});
   dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();dialog.close();}});
   input.addEventListener('input',()=>{results.replaceChildren();if(!index)return;const query=input.value.trim().toLowerCase();if(query.length<2){dialog.querySelector('[data-search-count]').textContent='Type at least two letters.';return;}
     const terms=query.split(/\s+/);

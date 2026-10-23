@@ -28,14 +28,19 @@ export function initCode(root=document) {
       history.replaceState(history.state,'',numbers[low].getAttribute('href')+(low===high?'':'-L'+(high+1)));
     }
     numbers.forEach((number,index)=>{number.removeAttribute('aria-hidden');number.setAttribute('aria-label','Line '+(index+1));
-      number.addEventListener('click',event=>{event.preventDefault();selectLine(index,event.shiftKey);});
+      number.addEventListener('click',event=>{if(event.button!==0||event.metaKey||event.ctrlKey||event.altKey)return;event.preventDefault();selectLine(index,event.shiftKey);});
       number.addEventListener('keydown',event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){
         event.preventDefault();const next=Math.max(0,Math.min(numbers.length-1,index+(event.key==='ArrowDown'?1:-1)));selectLine(next,event.shiftKey);numbers[next].focus();
       }});
     });
-    const range=location.hash.match(new RegExp('^#'+figure.id.replace(/^reference-/,'')+'-L(\\d+)(?:-L(\\d+))?$'));
-    if(range){const low=Number(range[1])-1,high=Number(range[2]||range[1])-1;
-      if(low>=0&&high>=low&&high<numbers.length){start=low;selectLine(high,true);numbers[low].parentElement.scrollIntoView({block:'center'});}
+    function readRange(event){
+      numbers.forEach(number=>number.parentElement.classList.remove('selected-line'));
+      const range=location.hash.match(new RegExp('^#'+figure.id.replace(/^reference-/,'')+'-L(\\d+)(?:-L(\\d+))?$'));
+      if(range){const low=Number(range[1])-1,high=Number(range[2]||range[1])-1;
+        if(low>=0&&high>=low&&high<numbers.length){start=low;selectLine(high,true);if(event?.detail?.scroll!==false)numbers[low].parentElement.scrollIntoView({block:'center'});}
+      }
     }
+    figure.addEventListener('reader-code-range',readRange);readRange();
   }
 }
+export function revealCodeRange({scroll=true}={}){for(const figure of document.querySelectorAll('.code[data-enhanced]'))figure.dispatchEvent(new CustomEvent('reader-code-range',{detail:{scroll}}));}

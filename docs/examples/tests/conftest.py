@@ -77,8 +77,8 @@ def compiled_scenarios(monkeypatch):
 
 
 def pytest_collection_modifyitems(items):
-    # The isolated wheel process can run while independent reference checks execute.
-    items.sort(key=lambda item: 'research_proof' in item.fixturenames)
+    # Finish timed wheel campaigns before the model-heavy in-process checks.
+    items.sort(key=lambda item: 'research_proof' not in item.fixturenames)
 
 
 @pytest.fixture(scope='session', autouse=True)

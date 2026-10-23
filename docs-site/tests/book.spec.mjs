@@ -55,11 +55,14 @@ test('published routes agree with robots and sitemap while other products remain
   const routes=await (await request.get('/limen/routes.json')).json();
   expect([...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(match=>new URL(match[1]).pathname).sort()).toEqual(routes.map(route=>route.url).sort());
   const htmlByUrl=new Map();
+  const built=JSON.parse(await fs.readFile(path.join(root,'docs-site/reader-build/build.json'),'utf8'));
   for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
   for(const [url,html] of htmlByUrl){
     for(const match of html.matchAll(/href="([^"]+)"/g)){
       const target=new URL(match[1].replaceAll('&amp;','&'),new URL(url,'https://docs.vaquum.fi'));
-      if(target.origin!=='https://docs.vaquum.fi'||!target.hash||!htmlByUrl.has(target.pathname))continue;
+      if(target.origin!=='https://docs.vaquum.fi')continue;
+      expect(htmlByUrl.has(target.pathname)||Object.hasOwn(built.files,decodeURIComponent(target.pathname.replace(/^\/limen\//,''))),url+' → '+target.pathname).toBe(true);
+      if(!target.hash||!htmlByUrl.has(target.pathname))continue;
       const anchor=decodeURIComponent(target.hash.slice(1));
       expect(htmlByUrl.get(target.pathname),url+' → '+target.pathname+target.hash).toContain('id="'+anchor+'"');
     }
@@ -175,7 +178,7 @@ test('further Back navigation keeps the chapter passage chosen in history',async
   await page.emulateMedia({reducedMotion:'no-preference'});await open(page);
   await page.goto('/limen/#choose-who-owns-the-experiment');const earlier=page.url();
   await page.goto('/limen/#adopt-the-compiled-pipeline');const origin=page.url();
-  await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
+  await page.getByRole('link',{name:'Trainer',exact:true}).click();
   const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
   await dialog.dispatchEvent('pointerdown');
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(origin);
@@ -246,9 +249,79 @@ test('saved passages survive reload without overriding deep links',async({page})
   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('reader:limen:docs/Research-Book.md'))).not.toBeNull();
   await page.reload();await page.evaluate(()=>document.fonts.ready);await expect.poll(()=>page.evaluate(()=>scrollY)).toBeGreaterThan(300);
   await page.goto('/limen/#choose-who-owns-the-experiment');await expect(page.locator('#choose-who-owns-the-experiment')).toBeInViewport();
-  await page.addInitScript(()=>localStorage.setItem('reader:limen:docs/Research-Book.md',JSON.stringify({passage:'p-removed-passage',ratio:.5,interface:'python'})));
-  await page.goto('/limen/?revision=current');await expect(page.locator('[data-status]')).toContainText('no longer in this revision');
+  await page.addInitScript(()=>{localStorage.setItem('reader:limen:docs/Research-Book.md',JSON.stringify({passage:'p-removed-passage',ratio:.5,interface:'python'}));history.replaceState(null,'');});
+  await page.goto('/limen/?revision=current');await page.reload();await expect(page.locator('[data-status]')).toContainText('no longer in this revision');
   expect(await page.evaluate(()=>scrollY)).toBeLessThan(100);
+});
+
+test('page links start at the named chapter while reload and history retain their own passage',async({page})=>{
+  await page.goto('/limen/book/historical-data/');await page.evaluate(()=>document.fonts.ready);
+  await page.locator('main article p').last().scrollIntoViewIfNeeded();
+  const old=await page.evaluate(()=>scrollY);expect(old).toBeGreaterThan(300);
+  await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);
+  const link=page.getByRole('link',{name:'recorded observations',exact:true});
+  await link.scrollIntoViewIfNeeded();const origin=await page.evaluate(()=>scrollY);
+  await link.click();await expect(page).toHaveURL(/book\/historical-data\/$/);await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(100);
+  await expect(page.locator('h1')).toBeInViewport();
+  await page.goBack();await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-origin)).toBeLessThan(3);
+  await page.goForward();await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(()=>page.evaluate(()=>scrollY)).toBeLessThan(100);
+  await page.locator('main article p').last().scrollIntoViewIfNeeded();const continued=await page.evaluate(()=>scrollY);
+  await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-continued)).toBeLessThan(3);
+});
+
+test('same-page text links reveal a target hidden by the interface choice',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Python Research',exact:true}).click();
+  const target=page.locator('#adopt-the-compiled-pipeline');await expect(target).toBeHidden();
+  const contents=page.locator('.mobile-nav');
+  if(await contents.isVisible())await contents.locator('summary').click();
+  const link=page.locator('a[href="#adopt-the-compiled-pipeline"]').filter({visible:true}).first();
+  await link.click();await expect(target).toBeInViewport();
+  await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Python Research',exact:true}).click();await expect(target).toBeHidden();
+  await link.click();await expect(target).toBeInViewport();
+  await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+});
+
+test('search closes and reveals a passage in the current chapter, including the current fragment',async({page})=>{
+  await open(page);
+  for(let attempt=0;attempt<2;attempt++){
+    await page.getByRole('button',{name:'Python Research',exact:true}).click();
+    await page.getByRole('button',{name:'Search',exact:true}).click();
+    await page.getByRole('searchbox').fill('adopt the compiled pipeline');
+    await page.locator('[data-search-dialog] ol a').filter({hasText:'Adopt the Compiled pipeline'}).first().click();
+    await expect(page.locator('[data-search-dialog]')).not.toBeVisible();
+    await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
+    await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  }
+});
+
+test('modified source-line links retain native navigation and open their permalink in another tab',async({page,context})=>{
+  await open(page);const figure=page.locator('figure.code').first();
+  const line=figure.locator('.line-number').first();
+  const prevented=await line.evaluate(link=>['ctrlKey','metaKey','altKey'].map(modifier=>{
+    let prevented;document.addEventListener('click',event=>{prevented=event.defaultPrevented;event.preventDefault();},{once:true});
+    link.dispatchEvent(new MouseEvent('click',{bubbles:true,cancelable:true,[modifier]:true}));return prevented;
+  }));
+  expect(prevented).toEqual([false,false,false]);
+  const opened=context.waitForEvent('page');await line.click({button:'middle'});const linked=await opened;
+  await linked.bringToFront();await linked.waitForLoadState('domcontentloaded');
+  await expect(linked).toHaveURL(/#code-1-L1$/);await expect(linked.locator('#code-1-L1')).toBeInViewport();
+  expect(new URL(page.url()).hash).toBe('');await linked.close();
+});
+
+test('single-interface project links cannot inherit an empty authoring choice',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
+  await page.locator('main article').getByRole('link',{name:'Python project',exact:true}).last().click();
+  await expect(page.locator('figure.code[data-research-interface="python"]').first()).toBeVisible();
+  await expect(page.getByRole('button',{name:'Compiled Research',exact:true})).toBeDisabled();
+  await open(page);await page.getByRole('button',{name:'Python Research',exact:true}).click();
+  await page.locator('main article').getByRole('link',{name:'Compiled project',exact:true}).last().click();
+  await expect(page.locator('figure.code[data-research-interface="compiled"]').first()).toBeVisible();
+  await expect(page.getByRole('button',{name:'Python Research',exact:true})).toBeDisabled();
 });
 
 test('reading state is isolated by product identity',async({page})=>{
