@@ -1,6 +1,7 @@
 import limen.experiment._holdout_research as _holdout
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
+import limen.experiment._result_fields as _fields
 import csv
 import importlib.metadata
 import json
@@ -197,11 +198,12 @@ class UniversalExperimentLoop:
 
         '''Run manifest/custom rounds; MSQ owns sampling; manifests require prep_each_round=True.'''
 
+        if params is not None and self._search_strategy is None:
+            self.params = params()
+        domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params
+        _fields.validate_parameters(domains, context_params, self.manifest, legacy_details=maintain_details_in_params is True and self._search_strategy is None)
         validate_objective_reducers(self.manifest, self._pruning_strategies)
         if isinstance(self.manifest, RuleBasedManifest) and self.manifest.strategy is not None:
-            if params is not None and self._search_strategy is None:
-                self.params, params = params(), None
-            domains = self._search_strategy.domain.params if self._search_strategy is not None else self.params
             validate_temporal_conditions(self.manifest.strategy.conditions, domains | {key: [value] for key, value in (context_params or {}).items()})
         if type(record_execution) is not bool:
             raise ValueError('record_execution must be a bool')
@@ -266,9 +268,6 @@ class UniversalExperimentLoop:
                 raise ValueError(
                     'UniversalExperimentLoop prep_each_round must be True for manifest-driven SFDs.'
                 )
-
-        if params is not None:
-            self.params = params()
 
         if prep is not None:
             self.prep = prep
@@ -340,6 +339,7 @@ class UniversalExperimentLoop:
             if maintain_details_in_params is True:
                 round_params.pop('_experiment_details')
 
+            _fields.validate_result(round_params, round_results, succeeded=round_succeeded)
             if round_succeeded:
                 if retain_round_artifacts:
                     self._alignment.append(data_dict['_alignment'])
@@ -368,8 +368,7 @@ class UniversalExperimentLoop:
                     self.scalers.append(data_dict['_scaler'])
 
             _: Any = round_results.setdefault('strict_mode_error', None)
-            round_results['id'] = i
-            round_results['execution_time'] = time.time() - start_time
+            round_results.update(id=i, execution_time=time.time() - start_time)
 
             if retain_round_artifacts and round_succeeded:
                 self.round_params.append(round_params)
@@ -520,7 +519,7 @@ class UniversalExperimentLoop:
             metadata_path = self._experiment_dir / 'metadata.json'
             validate_walk_forward_resume(self.manifest, json.loads(metadata_path.read_text()) if metadata_path.exists() else {})
             expected = _storage.csv_prefix(round_data_path, checkpoint['metadata']['experiment_round'] + 1)
-            _storage.validate_prefix(round_data_path, expected)
+            _fields.validate_saved_successes(round_data_path, expected, checkpoint['metadata']['experiment_round'] + 1)
             if expected:
                 with _storage.open_text(round_data_path, limit=len(expected)) as stream:
                     for line in stream:
@@ -655,6 +654,7 @@ class UniversalExperimentLoop:
                     break
                 raise
 
+            _fields.validate_result(round_params | (context_params or {}), round_results, succeeded=round_succeeded)
             round_results['_warnings'] = (
                 json.dumps(list(dict.fromkeys([*replayed_warnings, *(str(w.message) for w in caught)])))
             )
@@ -682,8 +682,7 @@ class UniversalExperimentLoop:
             if post_processing and round_succeeded:
                 self._alignment.append(data_dict['_alignment'])
 
-            round_results['id'] = current_hash
-            round_results['execution_time'] = time.time() - start_time
+            round_results.update(id=current_hash, execution_time=time.time() - start_time)
 
             if post_processing and round_succeeded:
                 self.round_params.append(sfd_params)
