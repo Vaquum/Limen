@@ -234,3 +234,19 @@ def test_yaml_inventory_includes_conditional_leaves_and_nested_contracts():
     assert any(rule['path'] == 'sfd.manifest' and 'allocation' in rule.get('known', []) for rule in current['rules'])
     assert {rule['when'] for rule in current['rules']} >= {'always', 'sfd.manifest.type = ml', 'sfd.manifest.type = rule_based'}
     assert set(current['nested']['sfd.manifest.split_walk_forward']['fields']) == {'n_folds', 'test_bars', 'purge_bars', 'embargo_bars', 'anchored'}
+
+
+def test_export_resolution_rereads_changed_source_at_the_same_path(tmp_path):
+    from catalogue_admission import resolve
+    directory = tmp_path / 'limen'
+    directory.mkdir()
+    source = directory / 'roc.py'
+    original = (ROOT / 'limen/indicators/roc.py').read_text()
+    source.write_text(original)
+    assert resolve(tmp_path, 'limen.roc', 'roc')[1].args.defaults[-1].value == 10
+    changed = original.replace('period: int = 10', 'period: int = 20')
+    assert changed != original
+    source.write_text(changed)
+    assert resolve(tmp_path, 'limen.roc', 'roc')[1].args.defaults[-1].value == 20
+    source.write_text(original)
+    assert resolve(tmp_path, 'limen.roc', 'roc')[1].args.defaults[-1].value == 10
