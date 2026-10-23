@@ -1,3 +1,4 @@
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import csv
@@ -220,4 +221,3 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
             'native_outputs': {'path': str(native.relative_to(root)), 'sha256': native_sha},
             'bundle': {'path': str(bundle.relative_to(root)), 'sha256': bundle_sha},
             'wheel_sha256': hashlib.sha256(wheel.read_bytes()).hexdigest()}
-from concurrent.futures import ThreadPoolExecutor
