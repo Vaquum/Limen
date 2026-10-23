@@ -55,7 +55,7 @@ test('fragment history retains the reading position and a repeated link reveals 
   const python=page.locator('a[href="#own-the-python-methodology"]').filter({visible:true}).first();
   const compiled=page.locator('a[href="#adopt-the-compiled-pipeline"]').filter({visible:true}).first();
   await python.click();await page.waitForFunction(()=>history.state?.readerInterface==='python');
-  await page.evaluate(()=>new Promise(resolve=>{scrollBy(0,180);requestAnimationFrame(()=>requestAnimationFrame(resolve));}));
+  await page.evaluate(()=>new Promise(resolve=>{addEventListener('scrollend',resolve,{once:true});scrollBy(0,180);}));
   const before=await page.evaluate(()=>scrollY);
   await page.goto('/limen/#adopt-the-compiled-pipeline');await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
   await page.goBack();
