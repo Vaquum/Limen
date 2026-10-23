@@ -63,6 +63,7 @@ const links=tokens=>tokens.flatMap(token=>(token.children||[]).filter(child=>chi
 function safeInline(markdown,type){
   requireEdit(typeof markdown==='string'&&markdown.trim()&&Buffer.byteLength(markdown)<=20480,'Passage must contain between 1 byte and 20 KiB');
   requireEdit(!/\n\s*\n/.test(markdown),'New paragraphs are source work');
+  requireEdit(!/\]\(\s*<?(?:javascript|data):/i.test(markdown),'Unsafe link target');
   if(type!=='paragraph')requireEdit(!/[\r\n]/.test(markdown),'This passage must stay on one line');
   if(type==='summary'){requireEdit(!/[<>]/.test(markdown),'Summary text cannot introduce HTML');return [];}
   const parsed=md.parse(markdown,{});

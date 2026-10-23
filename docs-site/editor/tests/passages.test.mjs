@@ -29,7 +29,7 @@ test('repeated prose has distinct source identities',async()=>{
   const result=applyPatches(text,source,blob,[patch(items[1],'It composes:')]);assert.equal(result,text.slice(0,items[1].sourceRange.start)+'It composes:'+text.slice(items[1].sourceRange.end));
 });
 test('heading renames preserve old duplicate and interface destinations',async()=>{
-  const source='docs/Advanced-Search.md',text=await fs.readFile(path.join(root,source),'utf8'),mapped=passages(text,source,blob),chosen=mapped.find(item=>item.type==='heading'&&item.markdown.includes('Compiled'));assert.ok(chosen);
+  const source='docs/Research-Book.md',text=await fs.readFile(path.join(root,source),'utf8'),mapped=passages(text,source,blob),chosen=mapped.find(item=>item.type==='heading'&&item.markdown.includes('Compiled'));assert.ok(chosen);
   const result=applyPatches(text,source,blob,[patch(chosen,'The compiled search declaration')]),md=new MarkdownIt({html:true});
   assert.deepEqual([...headingIdentities(md.parse(result,{})).values()].map(item=>item.id),[...headingIdentities(md.parse(text,{})).values()].map(item=>item.id));assert.match(result,/data-reader-heading="compiled"/);
 });
