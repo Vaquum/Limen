@@ -2,7 +2,7 @@
 
 This page argues, requirement by requirement, why Limen meets its security requirements, and names the mechanical evidence for each argument. It is the entry point for judging Limen's security posture; [SECURITY.md](https://github.com/Vaquum/Limen/blob/main/SECURITY.md) defines how to report a suspected failure of any claim on this page.
 
-The [Python project](../examples/python-research/README.md) executes caller-owned functions and fitted state; the [Compiled project](../examples/compiled-research/README.md) resolves declared Python implementations through a Manifest. Both execute code in the operator's environment. Their recorded-input and artifact checks address integrity, not sandboxing.
+The [Python project](../examples/python-research/README.md) executes caller-owned functions and fitted state. The [Compiled project](../examples/compiled-research/README.md) is authored in YAML and run through the CLI; its declared components execute in the operator's environment. Their recorded-input and artifact checks address integrity, not sandboxing.
 
 ## Prerequisites
 
@@ -30,9 +30,9 @@ Evidence: the `Protect-Main` ruleset requires pull requests with non-author appr
 
 ## Requirement 2: released artifacts are exactly what CI built, and users can verify it
 
-Argument: no human hands touch the publish path, the build is reproducible, and every artifact ships with a cryptographic provenance trail a consumer can check independently.
+Argument: the workflow builds distributions from the resolved release tag with a fixed `SOURCE_DATE_EPOCH`, attests their bytes, and publishes those built distributions. Consumers can verify the source and artifact identities in the provenance independently.
 
-Evidence: release tags can be created only by the GitHub Actions integration under the `v*` tag ruleset; PyPI publication uses trusted publishing (OIDC) from the `pypi` environment with no long-lived token; distributions build with a fixed `SOURCE_DATE_EPOCH` and are attested with `actions/attest-build-provenance`; every GitHub release carries the wheel, sdist, CycloneDX `sbom.json`, the `provenance.intoto.jsonl` Sigstore bundle, and a SHA-256 digest block. Verification commands are documented in [Release Policy](Release-Policy.md). `tests/test_packaging_surface.py::test_supply_chain_surfaces` pins the pipeline's invariants.
+Evidence: the live `Protect-Release-Tags` rule blocks updates and deletion of `v*` tags without bypass; creation follows repository write permissions. Manual-release source admission runs from trusted `main` code before checkout of the triggering source. PyPI publication uses trusted publishing (OIDC) from the `pypi` environment with no long-lived token; distributions are attested with `actions/attest-build-provenance`; successful publication attaches the wheel, sdist, CycloneDX `sbom.json`, the `provenance.intoto.jsonl` Sigstore bundle, and a SHA-256 digest block to the GitHub release. Verification commands and partial-publication recovery are documented in [Release Policy](Release-Policy.md). `tests/test_packaging_surface.py::test_supply_chain_surfaces` pins the declared pipeline invariants; live repository settings require their separate API evidence.
 
 ## Requirement 3: known-vulnerable dependencies cannot enter or persist silently
 
@@ -42,7 +42,7 @@ Evidence: `.github/workflows/pr_checks_lint.yml` runs `governance/check_dependen
 
 ## Requirement 4: CI credentials follow least privilege and stay out of PR reach
 
-Argument: workflow tokens grant the minimum scope, third-party actions cannot drift, and checked-out credentials are not persisted, so PR-supplied code has no standing capability to escalate.
+Argument: pinned actions, job-level permissions and non-persisted checkout credentials limit the CI credential surfaces. Privileged manual-release admission uses trusted `main` code before loading the triggering source; these controls do not establish that arbitrary PR code is harmless.
 
 Evidence: every workflow declares least-privilege top-level `permissions:` with write scopes only at job level; every action reference is pinned to a full commit SHA; every checkout sets `persist-credentials: false` except the release tag push; CI tool installs use hash-checked locks under `requirements/ci/`, within the supported envelope in `requirements/constraints.txt`; tag names reach shell through `env:` indirection. All five invariants are pinned by `tests/test_packaging_surface.py::test_supply_chain_surfaces`.
 
