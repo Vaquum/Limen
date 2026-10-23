@@ -11,6 +11,7 @@ by ``pr_publish_pypi.yml`` once the distributions exist.
 """
 # ruff: noqa: T201, S607, S603, BLE001
 
+import argparse
 import json
 import os
 import re
@@ -67,7 +68,7 @@ def get_current_version() -> str:
 def get_previous_tag() -> str | None:
     """Return the most recent tag reachable from HEAD, if any."""
     result = subprocess.run(
-        ['git', 'describe', '--tags', '--abbrev=0'],
+        ['git', 'describe', '--tags', '--abbrev=0', '--exclude', '*-dispatch-*'],
         capture_output=True,
         text=True,
         check=False,
@@ -75,6 +76,31 @@ def get_previous_tag() -> str | None:
     if result.returncode != 0:
         return None
     return result.stdout.strip()
+
+
+def verify_release_trigger(root: Path, run: dict[str, object]) -> None:
+    """Require a successful manual release from the exact merged commit."""
+    head, repository = run.get('head_sha'), run.get('head_repository')
+    if (run.get('path') != '.github/workflows/pr_post_release.yml'
+            or run.get('event') != 'workflow_dispatch'
+            or run.get('conclusion') != 'success'
+            or not isinstance(repository, dict) or repository.get('full_name') != 'Vaquum/Limen'
+            or not isinstance(head, str) or not re.fullmatch('[0-9a-f]{40}', head)):
+        raise ValueError('Package publication requires the exact successful manual release source')
+
+    def git(*arguments: str) -> str:
+        return subprocess.check_output(['git', *arguments], cwd=root, text=True).strip()
+
+    git('merge-base', '--is-ancestor', head, 'origin/main')
+    branch = run.get('head_branch')
+    if branch == 'main':
+        return
+    version = re.search(r'^version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"',
+                        git('show', f'{head}:pyproject.toml'), re.M)
+    if version is None or branch != f'v{version.group(1)}-dispatch-{head}':
+        raise ValueError('Manual release tag must bind the package version and full merged commit')
+    if git('rev-parse', f'refs/tags/{branch}^{{commit}}') != head:
+        raise ValueError('Manual release tag points to another commit')
 
 
 def get_git_log_since(previous_tag: str | None) -> str:
@@ -405,4 +431,10 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Create a release or verify its publication trigger.')
+    parser.add_argument('--verify-trigger', type=Path)
+    arguments = parser.parse_args()
+    if arguments.verify_trigger is not None:
+        verify_release_trigger(Path.cwd(), json.loads(arguments.verify_trigger.read_text()))
+    else:
+        main()

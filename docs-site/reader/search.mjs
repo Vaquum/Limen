@@ -9,10 +9,11 @@ export function initSearch(){
   button.hidden=false;button.addEventListener('click',open);
   dialog.querySelector('[data-search-close]').addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>opener?.focus());
   dialog.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();dialog.close();}});
-  input.addEventListener('input',()=>{results.replaceChildren();if(!index)return;const query=input.value.trim().toLowerCase();if(query.length<2)return;
-    const found=index.map(page=>({...page,at:page.text.toLowerCase().indexOf(query)})).filter(page=>page.at>=0||page.title.toLowerCase().includes(query)).sort((a,b)=>Number(b.title.toLowerCase().includes(query))-Number(a.title.toLowerCase().includes(query))).slice(0,20);
-    for(const page of found){const li=document.createElement('li'),a=document.createElement('a'),p=document.createElement('p');a.href=page.route;a.textContent=page.title;p.textContent=page.text.slice(Math.max(0,page.at-48),Math.max(0,page.at-48)+180);li.append(a,p);results.append(li);}
-    dialog.querySelector('[data-search-count]').textContent=`${found.length} results`;
+  input.addEventListener('input',()=>{results.replaceChildren();if(!index)return;const query=input.value.trim().toLowerCase();if(query.length<2){dialog.querySelector('[data-search-count]').textContent='Type at least two letters.';return;}
+    const terms=query.split(/\s+/);
+    const matches=index.map(page=>{const label=(page.title+' '+(page.heading||'')).toLowerCase(),text=page.text.toLowerCase();return {...page,at:text.indexOf(terms[0]),score:terms.reduce((sum,term)=>sum+(label.includes(term)?4:0),0),matches:terms.every(term=>label.includes(term)||text.includes(term))};}).filter(page=>page.matches).sort((a,b)=>b.score-a.score||a.title.localeCompare(b.title));
+    for(const page of matches.slice(0,20)){const li=document.createElement('li'),a=document.createElement('a'),p=document.createElement('p'),context=document.createElement('small');a.href=page.route;a.textContent=page.title+(page.heading?' / '+page.heading:'');context.textContent=page.part;p.textContent=page.text.slice(Math.max(0,page.at-48),Math.max(0,page.at-48)+180);li.append(context,a,p);results.append(li);}
+    dialog.querySelector('[data-search-count]').textContent=matches.length>20?`Showing 20 of ${matches.length} passages`:`${matches.length} results`;
   });
   document.addEventListener('keydown',event=>{const editing=event.target.closest('input,textarea,select,[contenteditable]');if(!editing&&((event.key.toLowerCase()==='k'&&(event.metaKey||event.ctrlKey))||event.key==='/')){event.preventDefault();open();}});
 }

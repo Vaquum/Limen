@@ -39,6 +39,8 @@ Required merge checks verify version coherence, tests and package contracts. Rel
 
 ## Automated sequence
 
+To fix the reviewed source before dispatch, use a protected source-binding tag of the form `v<version>-dispatch-<full merged commit>`. It points to the reviewed commit on `main`; verify that the live `v*` tag rule forbids updates and deletion without bypass. The source-binding tag is excluded from previous-release selection. The existing `main` dispatch path also remains available.
+
 When dispatched, `pr_post_release.yml` installs the `release` extra and runs:
 
 | Step | Command |
@@ -52,14 +54,16 @@ The script:
 3. requires a matching `CHANGELOG.md` entry for the version and aborts before tagging when it is missing
 4. exits successfully if the local or remote `v<version>` tag already exists
 5. fetches `RELEASE_DOCS_URL`
-6. sends the guide and up to 100 commits since the latest tag to the configured Anthropic model
+6. sends the guide and up to 100 commits since the latest non-dispatch tag to the configured Anthropic model
 7. parses the model response as prose JSON (`release_name`, `release_notes`) and rejects any identifier deviation
 8. appends mechanical traceability to the notes: merged pull requests since the previous tag, the compare link, and the changelog anchor
 9. prints a preview, creates an annotated tag, pushes it to `origin`, and immediately runs `gh release create`
 
 There is no pause between the preview and publication. Do not run the script merely to preview notes.
 
-After the automated-release run completes, `pr_publish_pypi.yml` resolves and re-validates the released tag, waits until every validation check-run on the tagged commit is green, checks out the tag, guards that PyPI has never served the version's filenames, builds the wheel and sdist with fixed `SOURCE_DATE_EPOCH`, creates GitHub build-provenance attestations, and publishes to PyPI through trusted publishing from the `pypi` GitHub environment. After a successful publish it attaches the distributions, a CycloneDX `sbom.json`, and the `provenance.intoto.jsonl` attestation bundle to the GitHub release and appends their SHA-256 digests to the release body. Its `workflow_run` trigger resolves a tag only when the successful automated-release run's head commit is tagged; the `v*` tag ruleset ensures only that automation can create release tags. [Release Policy](Release-Policy.md) defines these controls.
+After the automated-release run completes, `pr_publish_pypi.yml` verifies its source through trusted `main` code before checking out that source. The run must identify the successful canonical manual workflow and a commit reachable from `origin/main`. A dispatch tag must match the full commit and the package version read from that commit. Published-release events retain their existing path.
+
+The publisher resolves and re-validates the stable release tag, waits until every validation check-run on the tagged commit is green, checks out the tag, guards that PyPI has never served the version's filenames, builds the wheel and sdist with fixed `SOURCE_DATE_EPOCH`, creates GitHub build-provenance attestations, and publishes to PyPI through trusted publishing from the `pypi` GitHub environment. After a successful publish it attaches the distributions, a CycloneDX `sbom.json`, and the `provenance.intoto.jsonl` attestation bundle to the GitHub release and appends their SHA-256 digests to the release body. The live `v*` tag rule blocks updates and deletion without bypass; creation follows repository write permissions. [Release Policy](Release-Policy.md) defines these controls.
 
 ## Inputs
 
@@ -81,6 +85,10 @@ Optional:
 The implemented workflows provide the tag, GitHub release, built distributions, GitHub provenance attestations (also attached as the `provenance.intoto.jsonl` release asset), release assets with a CycloneDX SBOM, SHA-256 digests in the release body, mechanical traceability (merged pull requests, compare link, changelog anchor), and the PyPI publication result. They do not generate a dependency-license report on the release or a maintainer sign-off record. Produce and attach those artifacts explicitly when the release policy requires them; do not infer their existence from a green publish workflow.
 
 If tag creation succeeds but GitHub release creation fails, rerunning with the unchanged version exits because the tag already exists. Repair that partial release deliberately rather than expecting the script to resume it.
+
+## Documentation publication acceptance
+
+Package publication and documentation activation are separate outcomes. The [documentation publisher](Documentation-System.md#publication-and-rollback) must execute both unchanged projects against the actual public wheel, retain matching source/input/environment identities, verify an inactive preview, then verify the anonymous production site and downloads. Keep the predecessor’s immutable publication and Worker version until acceptance finishes; failed activation restores and verifies it. Use the [deployment procedure](../../docs-site/CLOUDFLARE.md) for the current commands and receipts. A merged correction or successful upload does not establish a corrected public manual.
 
 ## Read next
 

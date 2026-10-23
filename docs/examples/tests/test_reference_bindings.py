@@ -147,3 +147,90 @@ def test_new_or_removed_pages_cannot_escape_the_complete_catalogue(monkeypatch):
     monkeypatch.setattr(check_evidence, 'maintained_documents', lambda root: [*original, root / 'docs/new-chapter.md'])
     with pytest.raises(ValueError, match='every maintained document exactly once'):
         validate_page_catalogue(ROOT, catalogue)
+
+
+def test_current_results_reject_wrong_scenarios_fields_and_changed_artifacts(tmp_path):
+    from check_evidence import result_bindings
+    document = tmp_path / 'result.md'
+    marker = '<!-- result: actual-selection interface=compiled scenario=selection fields=rounds -->'
+    document.write_text(marker)
+    assert result_bindings(ROOT, document)[0]['fields'] == ['rounds']
+    for invalid in (marker.replace('scenario=selection', 'scenario=unknown'), marker + '\n' + marker,
+                    marker.replace('fields=rounds', 'fields=rounds,,missing')):
+        document.write_text(invalid)
+        with pytest.raises(ValueError):
+            result_bindings(ROOT, document)
+    document.write_text(marker)
+    artifact = ROOT / '.docs-evidence/result-mutation-test.json'
+    artifact.parent.mkdir(exist_ok=True)
+    artifact.write_text('{"rounds": 2}')
+    record = {'interface': 'compiled', 'id': 'selection', 'output_path': str(artifact.relative_to(ROOT)),
+              'output_sha256': hashlib.sha256(artifact.read_bytes()).hexdigest()}
+    try:
+        assert result_bindings(ROOT, document, [record])
+        document.write_text(marker.replace('fields=rounds', 'fields=missing'))
+        with pytest.raises(ValueError, match='Missing current result field'):
+            result_bindings(ROOT, document, [record])
+        document.write_text(marker)
+        artifact.write_text('{"rounds": 3}')
+        with pytest.raises(ValueError, match='identity differs'):
+            result_bindings(ROOT, document, [record])
+    finally:
+        artifact.unlink()
+
+
+def test_every_declared_export_and_public_member_has_an_exact_reference():
+    from catalogue_admission import validate_admission
+    contracts = json.loads((ROOT / 'docs/examples/api-contracts.json').read_text())
+    validate_admission(ROOT, contracts)
+    changed = dict(contracts)
+    del changed['limen.Sensor.from_model']
+    with pytest.raises(ValueError, match='admission differs'):
+        validate_admission(ROOT, changed)
+    assert 'limen.Log.experiment_parameter_importance' in contracts
+    property_source = region(ROOT / 'limen/experiment/reducer/pruning_strategy.py', 'signature:PruningStrategy.active')
+    assert '@property' in property_source and '@active.setter' in property_source
+
+
+def test_current_result_row_projections_require_exact_artifacts_and_columns():
+    from check_evidence import result_bindings
+    document = ROOT / '.docs-evidence/result-projection-test.md'
+    artifact = ROOT / '.docs-evidence/result-projection-test.json'
+    document.parent.mkdir(exist_ok=True)
+    marker = '<!-- result: projection-test interface=compiled scenario=selection fields=rows[].score -->'
+    document.write_text(marker)
+    try:
+        for value, expected_error in (({'rows': [{'score': 1}, {'score': 2}]}, None),
+                                      ({'rows': [{'score': 1}, {}]}, 'Missing current result field'),
+                                      ({'rows': {'score': 1}}, 'not a row collection')):
+            artifact.write_text(json.dumps(value))
+            record = {'interface': 'compiled', 'id': 'selection', 'output_path': str(artifact.relative_to(ROOT)),
+                      'output_sha256': hashlib.sha256(artifact.read_bytes()).hexdigest()}
+            if expected_error is None:
+                assert result_bindings(ROOT, document, [record])[0]['fields'] == ['rows[].score']
+            else:
+                with pytest.raises(ValueError, match=expected_error):
+                    result_bindings(ROOT, document, [record])
+    finally:
+        document.unlink()
+        artifact.unlink()
+
+
+def test_every_cli_argument_option_default_and_type_matches_current_source():
+    from catalogue_admission import cli_contracts, validate_cli_contracts
+    validate_cli_contracts(ROOT)
+    text = (ROOT / 'docs/Command-Line-Interface.md').read_text()
+    for entries in cli_contracts().values():
+        for entry in entries:
+            assert all('`' + spelling + '`' in text for spelling in entry['spellings'])
+    workers = next(item for item in cli_contracts()['limen run'] if item['name'] == 'workers')
+    assert workers['default'] is None and workers['type']['min'] == 1
+
+
+def test_yaml_inventory_includes_conditional_leaves_and_nested_contracts():
+    from schema_contracts import inventory, validate
+    validate(ROOT)
+    current = inventory(ROOT)
+    assert any(rule['path'] == 'sfd.manifest' and 'allocation' in rule.get('known', []) for rule in current['rules'])
+    assert {rule['when'] for rule in current['rules']} >= {'always', 'sfd.manifest.type = ml', 'sfd.manifest.type = rule_based'}
+    assert set(current['nested']['sfd.manifest.split_walk_forward']['fields']) == {'n_folds', 'test_bars', 'purge_bars', 'embargo_bars', 'anchored'}

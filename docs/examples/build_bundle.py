@@ -8,6 +8,12 @@ import tarfile
 
 
 INPUTS = {
+    'recorded-hourly.csv': 'c763aa3bfd07c6e67754c14786f636e12085ba201fe2e91bf5d860133fbd7c7f',
+    'recorded-hourly.zip': '4bd430b7e839128cf688ee824ea02cfffcf637351493563d745050b189adb24c',
+    'recorded-hourly.arrow': 'b30dc10270712f5b12525d2991c4f401f65a9ce81890189f209eb681b4c350f5',
+    'recorded-exit-labels.parquet': 'f84c76293219100dd04ef27439ffeec360c4dd6364e15902a10a3fa2e9e73e87',
+    'recorded-risk-labels.parquet': 'ba8576a905ef322566bba95dacc709df0be4638eadcdd67b33f92f2281166eef',
+    'recorded-identity-labels.parquet': '1eac0d0021e89ce510ac1d59d1564228c68c82ab8e945cda5b4df6313b688e1b',
     'spot_1h_20240101_20240116.parquet': '170337b8e80843067b3934f194f304bb1e2697327e6784e70739811b3edfdadd',
     'recorded-funding.parquet': '59d48b719df4bdb3545c1e742128e4513d6aa3078645375e0dc0db92d845ab92',
 
@@ -54,7 +60,7 @@ def build(root: Path, output: Path) -> str:
         for path in (root / f'docs/examples/{interface}-research').rglob('*'):
             if path.is_file() and path.suffix in ('.py', '.yaml', '.md', '.sh', '.toml'):
                 entries[f'{interface}-research/{path.relative_to(root / f"docs/examples/{interface}-research")}'] = path.read_bytes()
-    for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json'):
+    for name in ('catalogue.json', 'evidence.schema.json', 'recorded_inputs.py', 'commands.json', 'acquire.sh'):
         entries[name] = (root / 'docs/examples' / name).read_bytes()
     for path in (root / 'docs/examples/retained').glob('*.json'):
         entries['retained/' + path.name] = path.read_bytes()

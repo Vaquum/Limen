@@ -12,7 +12,7 @@
 
 ## In the research projects
 
-The [Python project](../../docs/examples/python-research/README.md) supplies `params`, `prep` and `model` as ordinary caller-owned functions. The [Compiled project](../../docs/examples/compiled-research/README.md) uses a Manifest-backed SFD. The built-in definitions indexed here provide declared pipelines; a custom Python experiment owns its own functions and models.
+The [Python project](../../docs/examples/python-research/README.md) supplies `params`, `prep` and `model` as ordinary caller-owned functions. The [Compiled project](../../docs/examples/compiled-research/README.md) names its pipeline and model in YAML and runs them through the CLI. The Python modules indexed here implement those families. Editing them is optional component development, described in the contributor appendix.
 
 ## What this package owns
 
@@ -42,7 +42,7 @@ Does **not** own experiment execution, data retrieval, or the lower-level indica
 | Module or family | Responsibility |
 |---|---|
 | `foundational_sfd/` | Packaged SFDs with params + manifest |
-| `tabpfn_binary.py` | Optional |
+| `foundational_sfd/tabpfn_binary.py` | Optional TabPFN definition |
 | `reference_architecture/` | Model-function implementations and templates |
 
 <!-- reference: package-sfd-layout source=limen/sfd/README.md region=layout:package role=layout -->
@@ -59,7 +59,7 @@ sfd/
 
 - A foundational SFD owns the experiment shape, while the matching reference architecture owns the model training logic.
 - The lazy `tabpfn_binary` module and symbols are importable without the extra; constructing or training the TabPFN model requires `vaquum-limen[tabpfn]`.
-- The simplest path to a new SFD is to copy an existing foundational SFD, adjust `params()`, and modify the manifest chain.
+- Component authors can copy an existing foundational SFD, adjust `params()`, and modify its manifest chain. Compiled Research users select and configure the corresponding YAML template.
 - SFD modules are expected to stay cheap and stateless at import and manifest-construction time.
 
 ## Read next

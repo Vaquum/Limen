@@ -1,0 +1,53 @@
+import {test,expect} from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+const evidence=path.resolve('../.docs-evidence/browser');
+
+test('book, reference, developer and result surfaces meet automated WCAG checks',async({page})=>{
+  const results=[];
+  for(const route of ['/limen/','/limen/book/selected-behavior/','/limen/reference/trainer/','/limen/developer/documentation-system/']){
+    await page.goto(route);await page.evaluate(()=>document.fonts.ready);
+    const analysis=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
+    results.push({route,violations:analysis.violations});
+    expect(analysis.violations,route).toEqual([]);
+  }
+  await fs.mkdir(evidence,{recursive:true});
+  await fs.writeFile(path.join(evidence,test.info().project.name+'-accessibility.json'),JSON.stringify(results,null,2));
+});
+
+test('contents, tables and headings reflow through both layout transitions',async({page})=>{
+  const observations=[];
+  for(const width of [320,390,639,640,1023,1024,1440]){
+    await page.setViewportSize({width,height:1000});
+    await page.goto('/limen/reference/packages/internals/reference-architectures/');
+    await page.evaluate(()=>document.fonts.ready);
+    const measure=await page.evaluate(()=>({width:innerWidth,document:document.documentElement.scrollWidth,heading:document.querySelector('h1').getBoundingClientRect().right}));
+    observations.push(measure);expect(measure.document).toBeLessThanOrEqual(width);expect(measure.heading).toBeLessThanOrEqual(width);
+  }
+  await page.setViewportSize({width:1280,height:900});await page.goto('/limen/');
+  await page.evaluate(()=>{document.documentElement.style.zoom='2';});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await fs.writeFile(path.join(evidence,test.info().project.name+'-reflow.json'),JSON.stringify(observations,null,2));
+});
+
+test('code ranges and interface choice survive direct navigation',async({page})=>{
+  await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);
+  await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
+  await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  const figure=page.locator('figure.code[data-research-interface="compiled"]').first();
+  await figure.locator('.line-number').first().focus();await page.keyboard.press('Shift+ArrowDown');
+  await expect(figure.locator('.selected-line')).toHaveCount(2);
+  expect(new URL(page.url()).hash).toMatch(/-L1-L2$/);
+  await page.reload();await page.evaluate(()=>document.fonts.ready);
+  await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  await expect(page.locator('.selected-line')).toHaveCount(2);
+});
+
+test('long callable reference remains searchable and renders within the reading budget',async({page})=>{
+  await page.goto('/limen/reference/features/');await page.evaluate(()=>document.fonts.ready);
+  await expect(page.getByRole('heading',{name:'limen.features.fractional_diff',exact:true})).toBeVisible();
+  const timing=await page.evaluate(()=>{const navigation=performance.getEntriesByType('navigation')[0];return {dom_ready_ms:navigation.domContentLoadedEventEnd,nodes:document.querySelectorAll('*').length};});
+  expect(timing.dom_ready_ms).toBeLessThan(5000);
+  await fs.writeFile(path.join(evidence,test.info().project.name+'-long-reference.json'),JSON.stringify(timing,null,2));
+});

@@ -1,7 +1,7 @@
 # `limen.cli`
 
 New runs use compressed round artifacts; existing JSONL runs remain readable. See the [round storage format](../../docs/Universal-Experiment-Loop.md#round-storage-format).
-> Provide the `limen` shell command for YAML validation, profiling, execution, manifest storage, and project scaffolding.
+> Provide the `limen` shell command for YAML validation, profiling, execution, validation selection, final assessment, manifest storage and project scaffolding.
 
 ## Canonical docs
 
@@ -25,6 +25,7 @@ Does **not** own manifest semantics, experiment execution internals, model behav
 | `limen.cli.main:cli` | Click command group exported by the package script | Registered as the `limen` console script. |
 | `commands/validate.py` | YAML validation from the shell | Uses `limen.yaml` validation. |
 | `commands/profile.py` | Parameter-space and runtime profiling for YAML manifests | Fetches the configured data source and samples a covering array of permutations. |
+| `assessment.py` | Validation-selected Sensors/Cohorts and guarded final assessment | Registers `limen assess` and `limen reserve` |
 | `commands/run.py` | Execute a YAML experiment | Compiles YAML into a manifest and runs UEL with MSQ. |
 | `commands/resume.py` | Continue a saved YAML/MSQ run from a checkpoint | Used through `limen run --resume`. |
 | `commands/init.py` and `commands/list_templates.py` | Bundled template discovery or scaffolding | Reads `limen/yaml/templates`. |

@@ -32,6 +32,17 @@ These terms apply to the [Python project](examples/python-research/README.md), t
 | benchmark | Outcome analysis of retained research results. Confusion metrics and advisory walk-forward selection reports have different evidence requirements; neither creates statistical acceptance or an independent leaderboard. |
 | backtest | Evaluation under an explicit trading policy. Limen offers a snapshot ledger and an event execution engine; Python callers can supply their own backtester. State the execution assumptions and measured units. |
 
+## Observation and decision boundaries
+
+| Term | Meaning |
+| --- | --- |
+| fitting cutoff | Latest observation permitted to affect fitted model or preparation state. A later inference call does not extend it. |
+| selection cutoff | Latest observation permitted to affect the choice of candidate, threshold or membership. It can be later than fitting. |
+| qualification | An explicit check of whether a candidate or result meets declared conditions. Passing does not make reused validation observations untouched. |
+| final holdout | Observations excluded before research and used after the candidate is frozen. The native reservation records local exposure history; caller-owned exclusion records only what the caller actually enforces. |
+| availability time | Earliest time an observation or prediction can be used. A bar's timestamp alone does not prove that its closing value was already known. |
+| reconstruction | A validated refit and replay of recorded native behavior. It is different from retaining the original evaluated Python object and from restoring arbitrary model weights. |
+
 ## Implementation names
 
 `limen.experiment.manifest_core` contains the manifest implementations, and `limen.experiment.experiment_core` contains Universal Experiment Loop. These are module names, not a general `*_core` naming promise for other domains.

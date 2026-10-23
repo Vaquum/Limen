@@ -68,10 +68,9 @@ The ordinary MSQ path prepares data for every candidate using the Manifest's pre
 
 Python Research supplies `prep()` and `model()` directly. The complete project constructs its own parameter domain, evaluates caller-owned Ridge pipelines and retains those same fitted objects for inference:
 
-<!-- example: sfd-python-definition source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+<!-- example: sfd-python-definition source=docs/examples/python-research/research.py region=trials scenario=selection interface=python role=executed -->
 ```python
-def run_research(bars, experiment_name):
-    research = bars[:1440]
+def run_trials(research, experiment_name):
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
     retained = {}
 
@@ -89,21 +88,7 @@ def run_research(bars, experiment_name):
     # An absolute filename stem writes only this CSV; no persisted round artifacts.
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
-            ["window", "validation_net_return", "alpha"],
-            descending=[False, True, False],
-        ).unique(subset="window", keep="first", maintain_order=True)
-        .select("window", "alpha").to_dicts()
-    )
-    sensors = [
-        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
-                          params=p, fitting_cutoff=bars["datetime"][960],
-                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
-        for p in selected
-    ]
-    cohort = Cohort.from_python(sensors)
-    return cohort, uel, selected, retained
+    return uel, retained
 ```
 
 The function supplies caller-owned `prep` and `model` callables through a namespace. Its model returns an explicit validation net return and retains the exact fitted pipeline later wrapped in a Sensor. Use the complete project for its imports, feature/target preparation, fitting and input checks.

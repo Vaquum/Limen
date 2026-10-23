@@ -172,7 +172,7 @@ indicators/
 
 ## Things to know
 
-- Indicator functions accept a `pl.LazyFrame` and return that frame with one or more appended columns.
+- Indicator functions accept Polars frames and append their documented columns. Most preserve eager or lazy frame execution; consult the individual signature and required input columns.
 - Leading `null` rows are expected for rolling calculations. Manifest-driven prep drops them after the feature and indicator stage.
 - The public reference should be treated as the canonical list of exported helpers and output-column conventions.
 - TA-Lib-aligned indicators keep naming and behavior close to that surface where applicable.

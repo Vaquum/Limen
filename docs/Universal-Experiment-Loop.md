@@ -63,7 +63,7 @@ def search(data_dir, output):
         loop.run(str(output / name), n_permutations=4, workers=1, progress_bar=False)
         runs[name] = project.completed_log(loop).select('window', 'alpha', 'validation_net_return').to_dicts()
     return {'runs': runs, 'common_baselines': common_baselines(data_dir, output / 'common-baselines'), 'preparation': preparation(data_dir, output / 'preparation'), 'seed': 42, 'adaptive': adaptive_search(data_dir, output / 'adaptive'),
-            'feedback': mixed_feedback(data_dir, output / 'feedback')}
+            'feedback': mixed_feedback(data_dir, output / 'feedback'), 'helper_diagnostics': preparation_helpers(bars, data_dir, output / 'helpers'), 'target_diagnostics': label_diagnostics(bars, data_dir, output / 'targets'), 'analysis': analyze_candidates(bars, output / 'analysis'), 'input_formats': read_source_formats(data_dir), 'multiclass': evaluate_three_classes(bars), 'rules': evaluate_rules(bars)}
 ```
 
 Result availability follows the selected interface and retention policy:
@@ -101,13 +101,12 @@ sees only the first 1,440 bars. It selects the best validation return per window
 breaking ties by alpha, then reuses those exact evaluated models. The native
 Cohort averages their next-bar return forecasts without refitting or unit conversion.
 
-The excerpt below is the project's selection function. Execute it through the project entry point above; the function uses helpers from its complete source file.
+The trial function below evaluates the four candidates and retains their fitted models. `run_research` then selects parameters and constructs Sensors from those same objects. Execute the project entry point above; the excerpt uses helpers from its complete source file.
 
 <!-- python-sensor-example -->
-<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=experiment scenario=selection interface=python role=executed -->
+<!-- example: uel-python-selection source=docs/examples/python-research/research.py region=trials scenario=selection interface=python role=executed -->
 ```python
-def run_research(bars, experiment_name):
-    research = bars[:1440]
+def run_trials(research, experiment_name):
     space = {"window": [4, 12], "alpha": [0.1, 1.0]}
     retained = {}
 
@@ -125,21 +124,7 @@ def run_research(bars, experiment_name):
     # An absolute filename stem writes only this CSV; no persisted round artifacts.
     uel.run(experiment_name, n_permutations=4, workers=1,
             post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
-            ["window", "validation_net_return", "alpha"],
-            descending=[False, True, False],
-        ).unique(subset="window", keep="first", maintain_order=True)
-        .select("window", "alpha").to_dicts()
-    )
-    sensors = [
-        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
-                          params=p, fitting_cutoff=bars["datetime"][960],
-                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
-        for p in selected
-    ]
-    cohort = Cohort.from_python(sensors)
-    return cohort, uel, selected, retained
+    return uel, retained
 ```
 
 Each partition loses twelve warm-up rows and its final forward-label row:
@@ -244,6 +229,41 @@ Both caches belong to one sweep invocation and contain only successful work. Fit
 The recorded-data benchmark isolates the fitted-preparation extension: both campaigns use `factorize=True` and retain prediction reuse; the baseline clears only the fitted-preparation cache before each evaluation. It records actual target/scaler fits, stage timings, end-to-end elapsed time, peak process RSS and scientific-output digests. It uses fixed 2024 hourly observations, pinned splits and single-threaded LightGBM settings; its bounded workload makes no universal speedup claim.
 
 The maintained [factorized preparation probe](../tests/benchmark_factorized_preparation.py) records this comparison separately from the canonical project's scientific equivalence assertions.
+
+### Parameter and result names
+
+UEL flattens parameters and evaluated results into one row. At admission it checks
+both the effective parameter domain and `context_params`. A search strategy supplies
+the effective domain; legacy execution uses `self.params` after a `params()` override.
+Context values still take precedence over same-named domain values.
+
+These bookkeeping names belong to UEL and cannot be supplied by either caller
+parameters or a successful model result: `id`, `execution_time`, `strict_mode_error`,
+`_warnings`, `_convergence_warning`, `_dropped_features`, `_param_hash`, `_id`,
+`_round_index`, `_injected`, `_generation_index`, `_search_strategy`.
+The objective's `val_backtest_total_return` is additionally reserved for parameters
+while that objective is active; its evaluated result is valid. Legacy execution
+also reserves `_experiment_details` for parameters when `maintain_details_in_params=True`.
+
+On every successful round, UEL rejects overlap between the parameters merged into
+the row and retained result keys, even when their values are equal. Model artifacts
+`extras`, `models`, `_model` and `_preds` are extracted from the row and excluded from
+that comparison. Parameters named `extras` or `models` remain valid. Framework-created
+strict-mode failures and generated metadata retain their existing behavior.
+
+Collisions raise `ValueError` identifying sorted names and their sources. Static
+refusal happens before UEL output initialization or recovery writes. Dynamic refusal
+happens before the affected row reaches return tracks, CSV/round records, the log or
+feedback. Setup files and an earlier valid prefix may remain; use a fresh run after
+renaming a colliding contract. Recovery also refuses committed-range round identities
+without corresponding successful CSV occurrences before rewriting existing evidence.
+Supported duplicate and torn uncommitted tails retain their recovery behavior.
+
+This policy applies to legacy serial, MSQ serial (including factorized execution),
+and admitted parallel UEL runs. Standalone MSQ naming rules and propagation of
+nonreserved underscore context keys are unchanged. Protected runs keep the existing
+research-attempt lifecycle: prior provenance is preserved, and a refused new attempt
+is recorded as started then failed.
 
 ### SFD execution contract
 

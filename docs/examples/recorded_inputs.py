@@ -53,3 +53,27 @@ def trade_profile(data_dir, output):
     rows = [{**row, 'datetime': row['datetime'].isoformat()} for row in profile.to_dicts()]
     return {'trade_rows': trades.height, 'bars': rows, 'input_sha256': HASHES[TRADES], 'population': '90 recorded seconds for flow diagnostics; no compiled training population is asserted'}
 # endregion trade_profile
+
+
+# region target_label_inputs
+def target_label_inputs(data_dir):
+    """Derive software labels from recorded closes, independently within each declared split."""
+    from datetime import datetime, timezone
+    source = data_dir / 'spot_1h_20240101_20241231.parquet'
+    if hashlib.sha256(source.read_bytes()).hexdigest() != 'a634bbd4f3692fac7bc88512da588e7772f4bd1b749567606d5314e54d0adf72':
+        raise ValueError('Recorded hourly source changed before label derivation')
+    raw = pl.read_parquet(source).select('datetime', 'open', 'high', 'low', 'close', 'volume')
+    outputs = {name: [] for name in ('exit', 'risk', 'identity')}
+    for start, end in [('2024-01-01', '2024-02-15'), ('2024-02-15', '2024-03-15'), ('2024-03-15', '2024-04-15')]:
+        left, right = (datetime.fromisoformat(value).replace(tzinfo=timezone.utc) for value in (start, end))
+        frame = raw.filter(pl.col('datetime').is_between(left, right, closed='left'))
+        close, following, second = pl.col('close'), pl.col('close').shift(-1), pl.col('close').shift(-2)
+        outputs['exit'].append(frame.with_columns(
+            pl.when(following.is_not_null()).then(pl.lit('timeout')).otherwise(None).alias('exit_reason'),
+            (following / close - 1 - .0002).alias('exit_net_return')).filter(pl.col('exit_reason').is_not_null()))
+        outputs['risk'].append(frame.with_columns(
+            pl.when(second.is_not_null()).then(pl.max_horizontal(close, following, second) / close - 1).otherwise(None).alias('capturable_breakout'),
+            pl.when(second.is_not_null()).then(pl.min_horizontal(close, following, second) / close - 1).otherwise(None).alias('max_drawdown')))
+        outputs['identity'].append(frame.with_columns((following > close).cast(pl.UInt8).alias('label')))
+    return {name: pl.concat(parts) for name, parts in outputs.items()}
+# endregion target_label_inputs

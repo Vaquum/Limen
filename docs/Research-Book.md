@@ -6,7 +6,11 @@ These projects use recorded Bitcoin observations. Their results describe those o
 
 ## Prerequisites
 
-Use the recorded input bundle and its matching Limen wheel. The project pages state the working directory and optional dependencies. This chapter uses the selection scenario; search, recovery and assessment are separate decisions.
+Use Python 3.10–3.13 and the matching wheel and recorded project bundle. The acquisition steps below establish the environment and working directory for either interface.
+
+## Acquire the project
+
+Choose the [Python project](examples/python-research/README.md#acquire-the-matching-project) or [Compiled project](examples/compiled-research/README.md#acquire-the-matching-project). Each begins with the same digest-verified bundle and wheel acquisition, environment and working directory. You can follow either path independently. This chapter uses the small selection run; later chapters develop its decisions through named variants.
 
 ## Choose who owns the experiment
 
@@ -28,36 +32,9 @@ The Python project fits Ridge models to a momentum feature. Every candidate rece
 ```python
 def run_research(bars, experiment_name):
     research = bars[:1440]
-    space = {"window": [4, 12], "alpha": [0.1, 1.0]}
-    retained = {}
-
-    def model(data, round_params):
-        fitted = fit(data["train"], round_params)
-        forecasts = fitted.predict(data["validation"].select("momentum"))
-        score = backtest(data["validation"], forecasts)
-        retained[(round_params["window"], round_params["alpha"])] = fitted
-        return {"validation_net_return": score}
-
-    sfd = SimpleNamespace(params=lambda: space, prep=prep, model=model)
-    uel = UniversalExperimentLoop(
-        data=research, sfd=sfd, search_strategy=GridStrategy(ParamDomain(space))
-    )
-    # An absolute filename stem writes only this CSV; no persisted round artifacts.
-    uel.run(experiment_name, n_permutations=4, workers=1,
-            post_processing=False, progress_bar=False)
-    selected = (
-        completed_log(uel).sort(
-            ["window", "validation_net_return", "alpha"],
-            descending=[False, True, False],
-        ).unique(subset="window", keep="first", maintain_order=True)
-        .select("window", "alpha").to_dicts()
-    )
-    sensors = [
-        Sensor.from_model(retained[(p["window"], p["alpha"])], prepare=prepare_live,
-                          params=p, fitting_cutoff=bars["datetime"][960],
-                          selection_cutoff=bars["datetime"][1440], output_id="next_bar_return")
-        for p in selected
-    ]
+    uel, retained = run_trials(research, experiment_name)
+    selected = choose_parameters(uel)
+    sensors = selected_sensors(bars, selected, retained)
     cohort = Cohort.from_python(sensors)
     return cohort, uel, selected, retained
 ```
@@ -66,7 +43,18 @@ The selected Sensors wrap the same fitted pipelines that were evaluated. Preproc
 
 ## Adopt the Compiled pipeline
 
-The Compiled project declares its source, dates, preparation, model, search and selection in YAML. Run the unchanged definition with `limen run`, then use `limen assess` to reconstruct validation-selected Sensors and write Cohort predictions. The [complete project](examples/compiled-research/README.md) gives both commands and their artifacts.
+The Compiled project declares its source, dates, preparation, model, search and selection in YAML. Execute and assess the introductory declaration from the bundle root:
+
+<!-- example: book-compiled-first-command source=docs/examples/compiled-research/run.sh region=selection scenario=selection interface=compiled role=executed -->
+```bash
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
+```
+
+Its selection block fixes the validation ranking before assessment. `limen assess` reconstructs the selected Sensors and writes Cohort predictions; the [complete project](examples/compiled-research/README.md) explains their artifacts.
 
 <!-- example: compiled-selection source=docs/examples/compiled-research/selection.yaml region=assessment scenario=selection interface=compiled role=executed -->
 ```yaml
@@ -130,4 +118,4 @@ These are retained outputs of the identified successful run. The Python project 
 
 A result needs more than a score. Inspect its selected parameters, fitting and selection cutoffs, traded observations, costs and inference population. Python proves those choices through caller-owned assertions. Compiled Research supplies the evidence admitted by its declared pipeline and recording policy.
 
-Continue to [search](Advanced-Search.md), [backtesting](Backtest.md) and [inference](Trainer.md) when a decision needs more detail. The book develops those decisions; the references retain the exact names, defaults and failure conditions.
+Continue to [recorded observations](Historical-Data.md) to establish the data and clocks the experiment will consume. The Reference appendix retains the exact names, defaults and failure conditions.

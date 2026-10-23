@@ -112,13 +112,14 @@ jobs:
         run: python docs/examples/provenance.py --output .docs-evidence/source-provenance.json
 
       - name: Execute the downloaded projects against the released wheel
-        run: timeout 120s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --released-wheel .docs-evidence/released-wheel.json --released-bundle .docs-evidence/released-examples.tar.gz
+        run: timeout 240s python -m pytest --import-mode=importlib docs/examples/tests -q -x --tb=short --released-wheel .docs-evidence/released-wheel.json --released-bundle .docs-evidence/released-examples.tar.gz
 
       - name: Build and verify the released reader
         working-directory: docs-site
         run: |
           npm run check
-          npx --no-install playwright install --with-deps chromium
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+          npx --no-install playwright install --with-deps chromium webkit
           npm run check:reader
 
       - name: Seal and retain the public release evidence

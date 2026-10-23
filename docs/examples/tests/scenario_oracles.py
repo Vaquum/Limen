@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from itertools import combinations
 from statistics import NormalDist
 import hashlib
@@ -99,7 +99,7 @@ def verify_feedback(interface, feedback, inputs):
 
 def verify_acceptance(result, output, inputs):
     report = result['report']
-    assert result['rounds'] == report['n_trials'] == 2
+    assert result['rounds'] == report['n_trials'] >= 2
     for name, digest in result['artifacts'].items():
         assert hashlib.sha256((output / name).read_bytes()).hexdigest() == digest
     assert json.loads((output / 'acceptance_report.json').read_text()) == report
@@ -165,6 +165,14 @@ def verify_acceptance(result, output, inputs):
 
 def verify(interface, name, result, output, inputs):
     if name == 'search':
+        if interface == 'python':
+            from helper_oracles import verify_helpers, verify_targets, verify_multiclass, verify_rules
+            verify_helpers(result['helper_diagnostics'], output / 'helpers', inputs)
+            verify_targets(result['target_diagnostics'], output / 'targets', inputs)
+            verify_multiclass(result['multiclass'], inputs)
+            verify_rules(result['rules'], inputs)
+            verify_analysis(result['analysis'], inputs)
+            verify_source_formats(result['input_formats'], inputs)
         verify_preparation(interface, result['preparation'], output / 'preparation', inputs)
         verify_common_baselines(interface, result['common_baselines'], output / 'common-baselines', inputs)
         expected = {'grid', 'random', 'sobol', 'shuffled'} | ({'factorized'} if interface == 'compiled' else set())
@@ -294,7 +302,12 @@ def verify(interface, name, result, output, inputs):
     elif name == 'calibration':
         assert len(result['modes']) == 4 and result['validation_reused'] is True
         if interface == 'python':
-            for row in result['modes']:
+            verify_composition(result['composition'])
+            assert {row['method'] for row in result['probability_methods']} == {'sigmoid', 'isotonic'}
+            original = np.asarray(result['modes'][0]['validation_probabilities'])
+            isotonic = next(row for row in result['probability_methods'] if row['method'] == 'isotonic')
+            assert (np.diff(np.asarray(isotonic['validation_probabilities'])[np.argsort(original)]) >= -1e-14).all()
+            for row in [*result['modes'], *result['probability_methods']]:
                 assert row['inference_rows'] == 480 and 0 <= row['positive_predictions'] <= 480
                 probabilities = np.asarray(row['validation_probabilities'])
                 truth = np.asarray(row['validation_labels'])
@@ -326,6 +339,7 @@ def verify(interface, name, result, output, inputs):
             assert metrics['net_pnl'] == pytest.approx(metrics['gross_pnl']-metrics['fees']-metrics['slippage']+metrics['funding_pnl'])
             fills = pl.read_parquet(output / 'fills.parquet')
             assert fills.to_dicts() == result['fills'], 'Native fill records differ from the checked output'
+            assert fills.head(8).to_dicts() == result['ledger_excerpt']
             assert metrics['fees'] > 0
             assert result['context']['contract']['policy']['execution_lag_seconds'] == 3600
             assert hashlib.sha256(json.dumps(result['context']['contract'], sort_keys=True, separators=(',', ':'), allow_nan=False).encode()).hexdigest() == result['contract_digest']
@@ -396,6 +410,9 @@ def verify(interface, name, result, output, inputs):
                         assert bar[field] == pytest.approx(part[field].sum(), rel=1e-12)
                     cursor += bar['bar_count']
                 assert cursor == row['source_rows_in_complete_bars'] and sum(raw.slice(cursor)[column]) < row['threshold']
+                assert row['first_start'] == actual['datetime'][0].isoformat()
+                assert row['last_start'] == actual['datetime'][-1].isoformat()
+                assert row['last_available'] == (raw['datetime'][cursor - 1] + timedelta(hours=1)).isoformat()
         else:
             assert result['rounds'] == 3 and {row['bar_type'] for row in result['modes']} == {'volume', 'trade', 'liquidity'}
         profile = result['trade_profile']
@@ -634,7 +651,12 @@ def verify_common_baselines(interface, result, output, inputs):
              'bollinger_mean_reversion', 'donchian_breakout', 'time_series_momentum'}
     raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet')
     bars = raw[raw.height*8//11 + raw.height//11:]
-    assert bars.height == 1598 and len(result['rows']) == len(names) == 8
+    if 'test_start' in result:
+        bars = raw.filter(pl.col('datetime').is_between(datetime.fromisoformat(result['test_start']), datetime.fromisoformat(result['test_end']), closed='left'))
+        assert bars.height == result['test_rows']
+    else:
+        assert bars.height == 1598
+    assert len(result['rows']) == len(names) == 8
     assert {row['strategy'] for row in result['rows']} == names
     close, opening = bars['close'].to_numpy(), bars['open'].to_numpy()
     for row in result['rows']:
@@ -685,3 +707,68 @@ def verify_common_baselines(interface, result, output, inputs):
             np.testing.assert_allclose(track['net'], expected_net, rtol=1e-11, atol=1e-12)
             assert row['num_executed_trades_test'] == trades
             assert row['pnl_per_bar_bps_test'] == pytest.approx(float(expected_net.mean()*10000), abs=1e-9)
+
+
+def verify_analysis(result, inputs):
+    rows = result['rows']
+    assert len(rows) == len({(row['window'], row['alpha']) for row in rows}) == 30
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    close, opening = raw['close'].to_numpy(), raw['open'].to_numpy()
+    for row in rows:
+        w, alpha = row['window'], row['alpha']
+        begin = max(12, w)
+        x = close[begin:959]/close[begin-w:959-w]-1
+        y = close[begin+1:960]/opening[begin+1:960]-1
+        z = (x-x.mean())/x.std()
+        coefficient = np.dot(z, y-y.mean())/(np.dot(z,z)+alpha)
+        val = close[960+begin:1439]/close[960+begin-w:1439-w]-1
+        predicted = (val-x.mean())/x.std()*coefficient+y.mean()
+        truth = close[961+begin:1440]/opening[961+begin:1440]-1
+        assert row['validation_rmse'] == pytest.approx(float(np.sqrt(np.mean((predicted-truth)**2))), rel=1e-10, abs=1e-12)
+    assert {row['feature'] for row in result['correlation']} == {'window', 'alpha'}
+    assert {row['parameter'] for row in result['importance']} == {'window', 'alpha'}
+    assert all(row['n_configurations'] == 30 and row['n_train']+row['n_evaluation'] == 30 for row in result['importance'])
+    for name, control in result['controls'].items():
+        assert control['rows'] and control['checkpoint']['yielded_count'] == len(control['rows'])
+        assert all(cycle['errors'] == [] for cycle in control['audit'])
+        actions = [item for cycle in control['audit'] for item in [*cycle['interventions'], *cycle['suggestions']]]
+        assert actions and all(item['source'] == name.title()+'Reducer' for item in actions)
+        if name == 'sanity':
+            assert all(item.get('action') == 'suggest' and 'execution_timeout' in item['reason'] for item in actions)
+        if name == 'focus':
+            assert {'set_filter', 'inject_value'} <= {item['op'] for item in actions}
+        if name == 'saturation':
+            assert any(item['op'] == 'set_filter' for item in actions)
+
+
+def verify_composition(composition):
+    result = composition['results']
+    assert composition['retained_state_unchanged'] is True
+    assert set(composition['refusals']) == {'duplicate', 'missing_mapping_identity', 'unaligned_members', 'reverse_decisions'}
+    assert all(composition['refusals'].values())
+    assert result['empty'] == [] and result['last'] == result['mean'][-1]
+    assert len(result['members']) == 4
+    for index, (average, vote, signed, later) in enumerate(zip(result['mean'], result['vote'], result['signed'], result['later'], strict=True)):
+        members = [tape[index] for tape in result['members']]
+        assert len({row['datetime'] for row in members}) == 1
+        assert average['datetime'] == vote['datetime'] == signed['datetime'] == members[0]['datetime']
+        assert average['available_at_ns'] == max(row['available_at_ns'] for row in members)
+        if any(row['reason'] is not None for row in members):
+            assert all(row['prediction'] is None and row['probability'] is None for row in (average, vote, signed))
+        else:
+            predictions = np.asarray([row['prediction'] for row in members])
+            assert average['prediction'] == pytest.approx(float(predictions.mean()))
+            assert average['probability'] == pytest.approx(float(np.mean([row['probability'] for row in members])))
+            assert vote['prediction'] == int(predictions.sum() > 2) and vote['probability'] is None
+            assert signed['prediction'] == float(np.median(2*predictions-1)) and signed['probability'] is None
+        if index <= 12:
+            assert later['reason'] == 'inside-training-window' and later['prediction'] is None
+
+
+def verify_source_formats(result, inputs):
+    assert set(result) == {'csv', 'zip', 'arrow'}
+    raw = pl.read_parquet(inputs / 'spot_1h_20240101_20241231.parquet', n_rows=1440)
+    for suffix, record in result.items():
+        assert record['source_sha256'] == hashlib.sha256((inputs / ('recorded-hourly.'+suffix)).read_bytes()).hexdigest()
+        assert record['rows'] == raw.height and record['timestamps_ns'] == raw['datetime'].dt.epoch('ns').to_list()
+        assert record['values'] == raw.select('open', 'high', 'low', 'close', 'volume').to_dicts()

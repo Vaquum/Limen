@@ -10,7 +10,7 @@
 
 ## In the research projects
 
-Both projects run `recovery`. The [Python project](../../docs/examples/python-research/README.md) compares resumed results with an uninterrupted run; [Compiled project](../../docs/examples/compiled-research/README.md) retains reconstructible manifest metadata. Captured aggregate reads and row-level replay require different retained evidence, as the Log reference describes.
+The [Python project](../../docs/examples/python-research/README.md) fits thirty distinct configurations for parameter correlation and held-out surrogate importance. The [Compiled project](../../docs/examples/compiled-research/README.md) writes CSV/Parquet results and declared assessment reports through the CLI. Reading those artifacts does not require this Python API. The [Log reference](../../docs/Log.md) identifies which analyses accept saved aggregates and which need a live UEL with retained row evidence.
 
 ## What this package owns
 

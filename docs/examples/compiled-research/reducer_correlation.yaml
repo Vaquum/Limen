@@ -1,0 +1,91 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: book_reducer_correlation
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.window_return
+      params:
+        period: 1
+    target:
+      name: next_return
+      class: limen.targets.NextReturnTarget
+      transform_params:
+        periods: 1
+        scale: 100.0
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      class: limen.scalers.RobustScaler
+    reference_architecture: limen.sfd.reference_architecture.ridge_regressor
+    features:
+    - func: limen.features.lag_range
+      params:
+        col: ret_1
+        start: 0
+        end: 5
+  params:
+    alpha:
+    - 0.001
+    - 0.003
+    - 0.01
+    - 0.03
+    - 0.1
+    - 0.3
+    - 1.0
+    - 3.0
+    - 10.0
+    - 30.0
+    - 100.0
+    - 300.0
+    - 1000.0
+    - 3000.0
+    - 10000.0
+    - 30000.0
+    - 100000.0
+    - 300000.0
+    - 1000000.0
+    - 3000000.0
+    solver:
+    - svd
+uel:
+  output_path: compiled-reducer-correlation
+  n_permutations: 20
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  recording:
+    predictions: true
+    alignment: true
+    trade_ledger: true
+    fold_details: true
+  pruning_strategies:
+  - type: correlation
+    params:
+      metric: rmse
+      method: pearson
+      maximize: false
+      min_observations: 10
+      n_boot: 30
+      prune_threshold: 1.0
+      sign_stability_threshold: 0.0
+      random_state: 42
+  feedback_interval: 10
+# endregion declaration

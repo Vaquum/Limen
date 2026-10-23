@@ -165,6 +165,16 @@ entry count, backtest metrics, executed-trade count and mean compounded net
 PnL per executed trade. A strategy with no executed trades has a zero trade
 count and an undefined mean trade PnL; it is not evidence of a zero-risk return. The project summary keeps finite activity/mean-bar fields and the complete execution tracks, while the native artifacts retain their original metric values.
 
+## Current project results
+
+The Python comparison evaluates 1,598 hourly observations from its row-count partition, with 2 bp per one-bar trade. Its mean net return is a decimal per evaluated next bar:
+
+<!-- result: common-current-python interface=python scenario=search fields=common_baselines.rows[].strategy,common_baselines.rows[].mean_net_return -->
+
+The Compiled comparison evaluates the 1,464 hourly observations in November–December 2024, with 10 bp fee and 5 bp slippage per entry and exit. Its mean net PnL is in basis points per assessment bar; executed trade counts describe held-position episodes. The proof independently reconstructs the native net track and its costs. These populations and policies differ, so the two tables are not a performance ranking between interfaces.
+
+<!-- result: common-current-compiled interface=compiled scenario=search fields=common_baselines.rows[].strategy,common_baselines.rows[].num_executed_trades_test,common_baselines.rows[].pnl_per_bar_bps_test -->
+
 ## Recorded costed results: 2026-10-18
 
 The historical offline UEL campaign completed all eight candidates on the recorded 2024

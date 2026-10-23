@@ -22,6 +22,7 @@ Does **not** own indicators, higher-level features, manifests, or model training
 |-------------|-------------|-------|
 | `HistoricalData` | File-backed BTCUSDT spot klines or raw file ingestion | The main public class exported by `limen.data` |
 | `compute_data_bars()` | Aggregate kline rows into threshold bars before feature engineering | Used by manifests through `set_bar_formation()` |
+| `split_walk_forward()` | Expanding or rolling chronological folds | Explicit train/validation/test windows and step sizes |
 | `split_sequential()` | Ordered train/validation/test windows | Used by manifest-driven prep |
 | `split_data_to_prep_output()` | Standard `data_dict` structure | Converts split frames into model-ready keys like `x_train` and `y_test` without mutating the passed split list or column list |
 
@@ -36,11 +37,11 @@ Does **not** own indicators, higher-level features, manifests, or model training
 | Module or family | Responsibility |
 |---|---|
 | `historical_data.py` | HistoricalData class |
-| `binance_file_to_polars.py` | Binance archive download and parsing |
-| `standard_bars.py` | Threshold bar implementation |
-| `compute_data_bars.py` | Public bar-formation entry point |
-| `splits.py` | Train/validation/test split helpers |
-| `random_slice.py` | Random window slicing helper |
+| `_internal/binance_file_to_polars.py` | Binance archive download and parsing |
+| `bars/standard_bars.py` | Threshold bar implementation |
+| `utils/compute_data_bars.py` | Public bar-formation entry point |
+| `utils/splits.py` | Train/validation/test split helpers |
+| `utils/random_slice.py` | Random window slicing helper |
 
 <!-- reference: package-data-layout source=limen/data/README.md region=layout:package role=layout -->
 ```text

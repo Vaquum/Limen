@@ -1,0 +1,75 @@
+# region declaration
+schema_version: '1.0'
+metadata:
+  name: book_reducer_sanity
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_15m_20250101_20250531.parquet
+    split_dates:
+      train_start: '2025-01-01'
+      train_end: '2025-01-15'
+      val_start: '2025-01-15'
+      val_end: '2025-01-18'
+      test_start: '2025-01-18'
+      test_end: '2025-01-22'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: momentum
+    target:
+      name: quantile_flag
+      class: limen.targets.QuantileBinaryTarget
+      fit_params:
+        source_column: roc_1
+        quantile: 0.5
+      transform_params:
+        shift: -1
+    backtest:
+      fee_bps: 7.0
+      slip_bps: 3.0
+      notional_rate: 0.5
+    scaler:
+      class: limen.scalers.LogRegScaler
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+    calibration:
+      probability_calibration:
+        func: limen.calibration.sklearn_probability_calibrator
+        params:
+          method: sigmoid
+      threshold_function:
+        func: limen.calibration.grid_threshold_optimizer
+        params:
+          metric: limen.metrics.balanced_metric.balanced_metric
+  params:
+    C:
+    - 0.1
+    - 0.5
+    - 1.0
+    - 2.0
+    use_calibration:
+    - false
+    - true
+    use_threshold:
+    - false
+    - true
+uel:
+  output_path: compiled-reducer-sanity
+  n_permutations: 16
+  search_strategy:
+    type: grid
+  output_format: csv
+  checkpoint_interval: 1
+  pruning_strategies:
+  - type: sanity
+    params:
+      metric: val_score
+      min_observations: 2
+      nan_threshold: 0.75
+  feedback_interval: 4
+# endregion declaration

@@ -118,6 +118,7 @@ def research_proof(python_project, compiled_project, wheel_execution, request):
     request.config.stash[PROOF] = wheel
     return {'python': {'rounds': python_project[2][1].experiment_log.height},
             'compiled': {'rounds': wheel['summaries']['compiled']['summary']['rounds']},
+            'acquisition': wheel['acquisition'],
             'scenarios': wheel['scenario_reports']}
 
 

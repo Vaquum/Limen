@@ -2,13 +2,6 @@
 
 Changes to an indicator must preserve the values and clocks that a research decision uses. The [Python project](../examples/python-research/README.md) owns a decimal momentum expression; the [Compiled project](../examples/compiled-research/README.md) declares the package's percent-valued rate of change. Re-run their selection and inference assertions when changing shared preparation. Calculation timings answer a separate question from research results.
 
-The [Python project](../examples/python-research/README.md) owns its momentum
-calculation; the [Compiled project](../examples/compiled-research/README.md)
-consumes registered indicators such as ROC. Preparation optimizations must
-preserve each path's rows, warm-up, fitted-state boundaries and numerical
-meaning. The campaigns below measure particular recorded workloads separately
-from the projects' current execution proof.
-
 ## Prerequisites
 
 Use a Limen development checkout with its recorded fixtures and test dependencies. The historical measurements below identify their source revisions, data, interpreter and thread settings. Keep those identities when interpreting a replay; a timing measured on another host is another observation.

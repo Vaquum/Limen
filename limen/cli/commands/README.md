@@ -12,7 +12,7 @@ The [Compiled project](../../../docs/examples/compiled-research/README.md) `comm
 
 ## What this package owns
 
-Owns the implementation body behind each `limen` subcommand: argument handling, calls into `limen.yaml` and `limen.experiment`, and console output.
+Owns the implementation body behind the project and run subcommands: argument handling, calls into `limen.yaml` and `limen.experiment`, and console output.
 Does **not** own the Click command declarations (those live in `limen/cli/main.py`), manifest semantics, or experiment execution internals.
 
 ## Key entry points
@@ -26,6 +26,8 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | `init.py` / `new.py` / `list_templates.py` | Scaffold projects and discover bundled templates | Reads `limen/yaml/templates` |
 | `commit.py` / `ls.py` / `fork.py` / `lineage.py` / `backup.py` / `reindex.py` | Committed manifest storage and lineage | Operate on project-local `manifests/committed` state |
 
+`limen assess` and `limen reserve` are registered and implemented in the sibling `limen.cli.assessment` module. They are part of the public CLI; they are not handlers in this directory.
+
 ## Adjacent modules
 
 - `limen.cli.main` declares the Click group and registers every handler here.
@@ -37,6 +39,7 @@ Does **not** own the Click command declarations (those live in `limen/cli/main.p
 | Module or family | Responsibility |
 |---|---|
 | `_constants.py` | Shared command constants |
+| `_export_results.py` | Shared successful-run Parquet export |
 | `_load_yaml.py` | Shared YAML loading helper |
 | `run.py` | limen run |
 | `resume.py` | limen run --resume |
@@ -58,6 +61,7 @@ commands/
 ├── README.md
 ├── __init__.py
 ├── _constants.py
+├── _export_results.py
 ├── _load_yaml.py
 ├── backup.py
 ├── commit.py
@@ -78,7 +82,7 @@ commands/
 
 - Handlers should stay thin. YAML semantics belong in `limen.yaml` and execution semantics belong in `limen.experiment`.
 - Each handler returns a `bool` (or `None`) and prints its own operator-facing output; `main.py` maps that to the process exit code.
-- Modules prefixed with `_` (`_constants.py`, `_load_yaml.py`) are shared internals, not commands.
+- Modules prefixed with `_` are shared internals, not commands.
 
 ## Read next
 

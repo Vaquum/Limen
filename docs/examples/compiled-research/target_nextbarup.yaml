@@ -1,0 +1,57 @@
+schema_version: '1.0'
+metadata:
+  name: target_nextbarup
+  mode: development
+sfd:
+  manifest:
+    type: ml
+    data_source:
+      method: limen.data.HistoricalData.get_any_file
+      params:
+        file_path_or_url: inputs/spot_1h_20240101_20241231.parquet
+    split_dates:
+      train_start: '2024-01-01'
+      train_end: '2024-02-15'
+      val_start: '2024-02-15'
+      val_end: '2024-03-15'
+      test_start: '2024-03-15'
+      test_end: '2024-04-15'
+    indicators:
+    - func: limen.indicators.roc
+      params:
+        period: 1
+        group: base
+    - func: limen.indicators.returns
+      params:
+        group: base
+    - func: limen.indicators.rolling_volatility
+      params:
+        column: returns
+        window: 12
+        group: base
+    - func: limen.indicators.bollinger_bands
+      params:
+        group: base
+    target:
+      name: label
+      class: limen.targets.NextBarUpTarget
+    scaler:
+      from_params: scaler_type
+    reference_architecture: limen.sfd.reference_architecture.logreg_binary
+  params:
+    scaler_type:
+    - robust
+    C:
+    - 0.5
+    random_state:
+    - 42
+uel:
+  output_path: compiled-target-nextbarup
+  search_strategy:
+    type: grid
+  n_permutations: 1
+  prep_each_round: true
+  output_format: csv
+  recording:
+    predictions: true
+    alignment: true
