@@ -68,7 +68,7 @@ export function initInterfaces(){
       if(linked)choose(linked.dataset.researchInterface,{save:false});
       revealCodeRange();
       if(target){target.scrollIntoView({block:target.classList.contains('code-line')?'center':'start'});target.focus({preventScroll:true});}
-    }
+    }else revealCodeRange({scroll:false});
     history.replaceState({...history.state,readerInterface:document.body.dataset.interface},'',location.href);
   });
   addEventListener('popstate',event=>{

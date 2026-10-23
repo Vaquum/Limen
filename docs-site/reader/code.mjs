@@ -33,14 +33,14 @@ export function initCode(root=document) {
         event.preventDefault();const next=Math.max(0,Math.min(numbers.length-1,index+(event.key==='ArrowDown'?1:-1)));selectLine(next,event.shiftKey);numbers[next].focus();
       }});
     });
-    function readRange(){
+    function readRange(event){
       numbers.forEach(number=>number.parentElement.classList.remove('selected-line'));
       const range=location.hash.match(new RegExp('^#'+figure.id.replace(/^reference-/,'')+'-L(\\d+)(?:-L(\\d+))?$'));
       if(range){const low=Number(range[1])-1,high=Number(range[2]||range[1])-1;
-        if(low>=0&&high>=low&&high<numbers.length){start=low;selectLine(high,true);numbers[low].parentElement.scrollIntoView({block:'center'});}
+        if(low>=0&&high>=low&&high<numbers.length){start=low;selectLine(high,true);if(event?.detail?.scroll!==false)numbers[low].parentElement.scrollIntoView({block:'center'});}
       }
     }
     figure.addEventListener('reader-code-range',readRange);readRange();
   }
 }
-export function revealCodeRange(){for(const figure of document.querySelectorAll('.code[data-enhanced]'))figure.dispatchEvent(new Event('reader-code-range'));}
+export function revealCodeRange({scroll=true}={}){for(const figure of document.querySelectorAll('.code[data-enhanced]'))figure.dispatchEvent(new CustomEvent('reader-code-range',{detail:{scroll}}));}
