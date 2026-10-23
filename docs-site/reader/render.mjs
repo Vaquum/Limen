@@ -17,7 +17,7 @@ function documentText(markdown,{omitPreamble=false}={}){
   const at=tokens.findIndex(token=>token.type==='heading_open'&&token.tag==='h1');
   const removed=[];if(at>=0){removed.push(tokens[at].map);const before=tokens[at-1]?.type==='html_block'?tokens[at-1]:tokens[at-1]?.type==='paragraph_close'?tokens[at-2]:null;if(before&&anchorPattern.test(before.content.trim()))removed.push(before.map);if(omitPreamble)removed.push([0,tokens[at].map[0]]);}
   let first=at>=0?at+3:0;
-  while(tokens[first]?.type==='html_block'&&tokens[first].content.trim().startsWith('<!--'))first++;
+  while(true){if(tokens[first]?.type==='html_block'&&(tokens[first].content.trim().startsWith('<!--')||anchorPattern.test(tokens[first].content.trim()))){first++;continue;}if(tokens[first]?.type==='paragraph_open'&&anchorPattern.test(tokens[first+1]?.content.trim()||'')){first+=3;continue;}break;}
   if(tokens[first]?.type==='blockquote_open')first++;
   const paragraph=tokens[first]?.type==='paragraph_open'?tokens[first]:null;
   const inline=paragraph?tokens[first+1]:null;
