@@ -72,3 +72,6 @@ venv-codex
 .docs-evidence/
 docs-site/reader-build/
 docs-site/publisher/.wrangler/
+
+docs-site/editor-build/
+docs-site/editor/.wrangler/

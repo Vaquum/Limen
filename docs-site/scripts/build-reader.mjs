@@ -30,7 +30,7 @@ for(const scenario of evidence.validation.scenarios){const identity=scenario.int
 await fs.rm(output,{recursive:true,force:true});await fs.mkdir(path.join(output,'assets/fonts'),{recursive:true});
 for(const page of pages){const target=path.join(output,page.route,'index.html');await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,renderPage(page,pages,evidence,{results}));}
 await fs.writeFile(path.join(output,'404.html'),renderPage({source:null,route:'/404/',url:content.product.basePath+'/404/',part:'Book',title:'Page unavailable',markdown:'# Page unavailable\n\nThis address does not identify a page in the current book. [Return to the book]('+content.product.basePath+'/).\n'},pages,evidence));
-for(const name of ['main','motion','code','place','navigation','search','interfaces'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
+for(const name of ['headings','main','motion','code','place','navigation','search','interfaces'])await fs.copyFile(path.join(site,'reader',name+'.mjs'),path.join(output,'assets',name+'.mjs'));
 await fs.copyFile(path.join(site,'reader/book.css'),path.join(output,'assets/book.css'));
 await fs.copyFile(path.join(site,'src/security-headers.json'),path.join(output,'security-headers.json'));
 await fs.copyFile(path.join(site,'reader/route-decisions.json'),path.join(output,'route-decisions.json'));

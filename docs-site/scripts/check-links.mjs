@@ -2,19 +2,19 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import MarkdownIt from 'markdown-it';
-import {content,slug} from '../reader/render.mjs';
+import {content} from '../reader/render.mjs';
+
+import {headingIdentities} from '../reader/headings.mjs';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const md=new MarkdownIt({html:true}),pages=new Map(),broken=[];
 for(const [source,settings] of Object.entries(content.pages)){
   const tokens=md.parse(await fs.readFile(path.join(root,source),'utf8'),{});
-  const anchors=new Set(),seen=new Map(),links=[];let code=0;
+  const anchors=new Set(),identities=headingIdentities(tokens),links=[];let code=0;
   for(let index=0;index<tokens.length;index++){
     const token=tokens[index];
     if(token.type==='heading_open'){
-      const stem=slug(tokens[index+1].content.replaceAll('`','')),count=seen.get(stem)||0;
-      anchors.add(stem+(count?'-'+count:''));
-      if(token.tag!=='h1')seen.set(stem,count+1);
+      anchors.add(identities.get(index).id);
     }
     if(token.type==='fence'){
       code++;anchors.add('code-'+code);

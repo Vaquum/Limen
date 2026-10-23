@@ -7,7 +7,7 @@ export function initInterfaces(){
   if(!article||!control)return;
   // Only explicit authoring sections and executed examples are interface-specific.
   for(const heading of [...article.querySelectorAll('h2,h3,h4')].reverse()){
-    const text=heading.textContent,kind=/\bCompiled\b/.test(text)?'compiled':/\bPython\b/.test(text)?'python':null;
+    const text=heading.textContent,kind=heading.hasAttribute('data-heading-interface')?(heading.dataset.headingInterface==='plain'?null:heading.dataset.headingInterface):/\bCompiled\b/.test(text)?'compiled':/\bPython\b/.test(text)?'python':null;
     if(!kind)continue;
     const section=document.createElement('section');section.dataset.researchInterface=kind;
     heading.before(section);section.append(heading);

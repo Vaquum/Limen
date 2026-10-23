@@ -74,7 +74,9 @@ Beyond the gates, `audit_main_ruleset` re-checks the live ruleset on every push 
 
 Branch off `main`. Commit the first working increment and push to a remote branch of the same name, then **open the PR right away — before you run the gates locally, and never as a draft.** Opening it first starts CI immediately; run the local gate suite afterwards, keep working while GitHub runs the gates too, and don't wait for CI in the foreground. Never sit on local verification without an open PR; open a real PR or none.
 
-Each push re-runs every gate. Prefer new commits to amends — amends don't give you anything and they muddle the PR history. Keep one logical change per commit; don't batch unrelated changes together. Before you request review, read your own full diff in GitHub — catch what you'd flag in someone else's PR.
+The human documentation editor deliberately separates Commit from Open PR: writers may accumulate prose commits on its origin branch before opening a non-draft PR. Those branch-only commits have no PR-check result. This exception does not change agent implementation delivery or any merge gate.
+
+Each push to an open PR re-runs every gate. Prefer new commits to amends — amends don't give you anything and they muddle the PR history. Keep one logical change per commit; don't batch unrelated changes together. Before you request review, read your own full diff in GitHub — catch what you'd flag in someone else's PR.
 
 Merge unlocks when every required gate is green. Branches need not be up-to-date with `main`; rebase only to resolve a conflict or to pick up a main-side fix the PR needs.
 
