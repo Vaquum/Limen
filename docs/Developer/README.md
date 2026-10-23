@@ -1,6 +1,6 @@
 # Developer home
 
-This page routes Limen contribution work to the matching maintenance path before code, docs, or release metadata changes.
+Use the maintenance path that matches the change: code, documentation or release metadata\.
 
 Follow changes through the [Python project](../examples/python-research/README.md) and [Compiled project](../examples/compiled-research/README.md). They carry the shared source, documentation and execution contract; update the affected case with the behavior it explains.
 
