@@ -236,7 +236,7 @@ sh compiled-research/run.sh
 | `final-event/holdout.yaml` | Reserve a separate project and assess one selected Sensor under its frozen event contract, with schema-2 ledger evidence. |
 | `project.sh` | Validate, profile, scaffold, commit, fork, index, execute, back up and restore a campaign using installed CLI commands and a local Git remote. |
 
-The full `run.sh` runs this independent project lifecycle alongside the research campaigns in its own `results/compiled-project/` directory. It waits for that process and fails if either path fails. Each research definition still runs through the same YAML and CLI commands.
+The full `run.sh` runs the helper, target, reducer, source-format and recording diagnostics alongside the main research campaign. The independent project lifecycle owns `results/compiled-project/` and its local backup. Every branch has separate result directories; the script waits for all of them and fails if any branch fails. Each definition still runs through the same YAML and CLI commands.
 
 ## Source encodings
 

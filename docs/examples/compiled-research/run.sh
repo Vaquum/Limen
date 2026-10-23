@@ -1,22 +1,8 @@
 #!/bin/sh
 set -eu
 # Run from the downloaded bundle root, with its matching Limen wheel installed.
-# The independent lifecycle owns results/compiled-project and its local backup.
-sh compiled-research/project.sh &
-lifecycle_pid=$!
-trap 'wait "$lifecycle_pid"' 0
-# region selection
-limen validate compiled-research/selection.yaml
-limen profile compiled-research/selection.yaml
-limen run --dry-run compiled-research/selection.yaml
-limen run --no-progress-bar compiled-research/selection.yaml
-limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
-# endregion selection
-# region preparation
-limen run --no-progress-bar compiled-research/preparation.yaml
-limen run --no-progress-bar compiled-research/research.yaml
-limen assess compiled-research/research.yaml --results results/dev/compiled-research
-# endregion preparation
+# Diagnostics and lifecycle use disjoint output directories.
+diagnostics() {
 # region source_formats
 limen run --no-progress-bar \
   compiled-research/source_csv.yaml \
@@ -57,6 +43,30 @@ limen run --no-progress-bar \
   compiled-research/analysis.yaml \
   compiled-research/rule_contracts.yaml
 # endregion reducers
+# region recording
+limen run --no-progress-bar \
+  compiled-research/recording_lean.yaml \
+  compiled-research/recording_full.yaml \
+  compiled-research/recording_outputs.yaml
+# endregion recording
+}
+diagnostics &
+diagnostics_pid=$!
+sh compiled-research/project.sh &
+lifecycle_pid=$!
+trap 'wait "$diagnostics_pid" "$lifecycle_pid"' 0
+# region selection
+limen validate compiled-research/selection.yaml
+limen profile compiled-research/selection.yaml
+limen run --dry-run compiled-research/selection.yaml
+limen run --no-progress-bar compiled-research/selection.yaml
+limen assess compiled-research/selection.yaml --results results/dev/compiled-cli
+# endregion selection
+# region preparation
+limen run --no-progress-bar compiled-research/preparation.yaml
+limen run --no-progress-bar compiled-research/research.yaml
+limen assess compiled-research/research.yaml --results results/dev/compiled-research
+# endregion preparation
 # region search
 limen run --no-progress-bar \
   compiled-research/search.yaml \
@@ -69,12 +79,6 @@ limen run --no-progress-bar \
 limen run --no-progress-bar --workers 2 compiled-research/parallel.yaml
 limen run --no-progress-bar --resume results/dev/compiled-parallel --workers 2
 # endregion parallel
-# region recording
-limen run --no-progress-bar \
-  compiled-research/recording_lean.yaml \
-  compiled-research/recording_full.yaml \
-  compiled-research/recording_outputs.yaml
-# endregion recording
 # region recovery
 limen run --no-progress-bar compiled-research/recovery.yaml
 limen run --no-progress-bar --resume results/dev/compiled-recovery
@@ -118,6 +122,7 @@ sh compiled-research/final-event/run.sh
 # endregion holdout
 
 # region command_line
+wait "$diagnostics_pid"
 wait "$lifecycle_pid"
 trap - 0
 # endregion command_line
