@@ -76,7 +76,7 @@ export async function commit(storage,github,user,payload,state){
   let head=await github.head(state.branch,true);
   if(!head){assert(!state.created,'The delivery branch was removed');await github.request('repos/'+repository+'/git/refs',{method:'POST',body:{ref:'refs/heads/'+state.branch,sha:state.base}});head=state.base;}
   state.created=true;await storage.put('workspace',state);
-  if(head!==operation.expectedHead){assert(await commitMatches(github,state,operation,head),'The origin branch moved without this operation; drafts are retained');}
+  if(head!==operation.expectedHead){if(!await commitMatches(github,state,operation,head)){state.head=head;state.remoteHead=head;delete state.operation;await storage.put('workspace',state);throw new EditError('The origin branch advanced; Refresh to reconcile the retained drafts',409);}}
   else{
     const response=await github.request('graphql',{method:'POST',body:{query:'mutation($input:CreateCommitOnBranchInput!){createCommitOnBranch(input:$input){commit{oid url}}}',variables:{input:{branch:{repositoryNameWithOwner:repository,branchName:state.branch},expectedHeadOid:operation.expectedHead,message:{headline:'docs: revise documentation prose',body:'Limen-Edit-Operation: '+operation.id},fileChanges:{additions:operation.files.map(file=>({path:file.path,contents:Buffer.from(file.text).toString('base64')}))}}}}});
     if(response.errors)throw new EditError('Commit refused: '+response.errors.map(item=>item.message).join('; '),409);

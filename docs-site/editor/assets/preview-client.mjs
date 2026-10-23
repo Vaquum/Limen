@@ -3,12 +3,12 @@ const data=JSON.parse(document.querySelector('#editor-source').content.textConte
 let enabled=false,active=null,draftGeneration=0;
 const send=(type,extra={})=>parent.postMessage({type,...extra},location.origin);
 function finish(cancel=false){
-  if(!active)return;const {element,html,passage,links,previous}=active;
+  if(!active)return true;const {element,html,passage,links,previous}=active;
   try{
     if(cancel)element.innerHTML=html;
-    else if(element.innerHTML!==html){let newMarkdown=passage.type==='summary'?element.textContent:inlineMarkdown(element,{links});if(passage.type==='cell')newMarkdown=newMarkdown.replace(/(\\*)\|/g,(whole,slashes)=>slashes.length%2?whole:slashes+'\\|');send('draft',{patch:{path:data.path,baseBlobSha:data.blob,sourceRange:passage.sourceRange,originalText:passage.originalText,newMarkdown},previous,passageId:passage.id});element.dataset.drafted='true';}
-  }catch(error){element.innerHTML=html;send('error',{message:error.message});}
-  element.contentEditable='false';element.removeAttribute('role');active=null;send('active',{active:false});
+    else if(element.innerHTML!==html){let newMarkdown=passage.type==='summary'?element.textContent:inlineMarkdown(element,{links});if(passage.type==='cell')newMarkdown=newMarkdown.replace(/(\\*)\|/g,(whole,slashes)=>slashes.length%2?whole:slashes+'\\|');const detail={workspace:data.workspace,path:data.path,patch:{path:data.path,baseBlobSha:data.blob,sourceRange:passage.sourceRange,originalText:passage.originalText,newMarkdown},previous,passageId:passage.id};parent.dispatchEvent(new CustomEvent('limen-editor-draft',{detail}));if(detail.error)throw Error(detail.error);element.dataset.draftVersion=detail.saved;element.dataset.drafted='true';}
+  }catch(error){send('error',{message:error.message});return false;}
+  element.contentEditable='false';element.removeAttribute('role');active=null;send('active',{active:false});return true;
 }
 function begin(element){
   if(!enabled||active?.element===element)return;finish();const passage=mapped.get(element.dataset.editId);if(!passage)return;
@@ -46,5 +46,6 @@ addEventListener('message',async event=>{
 });
 // Navigation must retain active edits before the frame unloads.
 document.addEventListener('click',event=>{if(!enabled&&event.target.closest('a'))finish();},true);
+addEventListener('limen-editor-flush',event=>{event.detail.saved=finish();});
 addEventListener('pagehide',()=>finish());
 send('page',{page:data});

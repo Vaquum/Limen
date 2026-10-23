@@ -93,7 +93,7 @@ export function applyPatches(source,path,baseBlobSha,patches){
   const oldHeadings=[...headingIdentities(before).values()],newHeadings=[...headingIdentities(after).entries()],offsets=lineOffsets(changed),anchors=[];
   for(let index=0;index<newHeadings.length;index++){
     const [tokenIndex,identity]=newHeadings[index],old=oldHeadings[index];
-    if(identity.id!==old.id){requireEdit(!identity.explicit,'An explicit heading identity cannot change');anchors.push({at:offsets[after[tokenIndex].map[0]],text:`<a id="${old.id}" data-reader-heading="${old.kind}"></a>\n\n`});}
+    if(identity.id!==old.id||identity.kind!==old.kind){requireEdit(!identity.explicit,'An explicit heading identity cannot change');anchors.push({at:offsets[after[tokenIndex].map[0]],text:`<a id="${old.id}" data-reader-heading="${old.kind}"></a>\n\n`});}
   }
   for(const anchor of anchors.sort((a,b)=>b.at-a.at))changed=changed.slice(0,anchor.at)+anchor.text+changed.slice(anchor.at);
   requireEdit(new Set([...headingIdentities(md.parse(changed,{})).values()].map(item=>item.id)).size===oldHeadings.length,'Heading rename makes a destination ambiguous');

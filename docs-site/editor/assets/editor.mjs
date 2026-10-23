@@ -18,6 +18,7 @@ async function connect(){
     if(auth.workspace.operation)say('A remote operation needs reconciliation. Use '+(auth.workspace.operation.kind==='commit'?'Commit':'Open PR')+' to resume it.');
   }catch(error){say(error.message);const target=new URL('/limen/edit/auth/start',location.origin);target.searchParams.set('route',params.get('route')||'/');if(pr)target.searchParams.set('pr',pr);$('[data-signin]').href=target.href;}
 }
+addEventListener('limen-editor-draft',event=>{const data=event.detail;try{if(!auth||data.workspace!==auth.workspace.id||data.path!==page?.path)throw Error('The passage belongs to another delivery');const item=store.save(data.patch,data.previous);data.saved=item.id;say('Draft saved in this browser.');update();}catch(error){data.error=error.message;say('Draft storage failed: '+error.message);}});
 addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==frame.contentWindow||!store)return;
   try{
@@ -45,5 +46,5 @@ $('[data-logout]').onclick=()=>action(async()=>{
   const result=await api('logout',{});clearWriter(auth.user.id);frame.hidden=true;auth=null;store=null;say(result.revoked?'Signed out; GitHub authorization revoked.':'Signed out. GitHub token revocation failed; revoke the App authorization in GitHub settings.');$('[data-signin]').hidden=false;$('[data-logout]').hidden=true;for(const element of document.querySelectorAll('button,input'))element.disabled=true;
 });
 addEventListener('storage',event=>{if(auth&&event.key===`limen-editor:${auth.user.id}:signed-out`){frame.hidden=true;auth=null;store=null;say('Signed out in another tab.');return;}if(!store||!event.key?.startsWith(store.prefix))return;try{update();restoreDrafts();}catch(error){say('Draft storage failed: '+error.message);}});
-addEventListener('beforeunload',event=>{if(busy){event.preventDefault();event.returnValue='';}});
+addEventListener('beforeunload',event=>{const detail={saved:true};frame.contentWindow?.dispatchEvent(new CustomEvent('limen-editor-flush',{detail}));if(busy||!detail.saved){event.preventDefault();event.returnValue='';}});
 connect();

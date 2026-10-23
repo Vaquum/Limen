@@ -28,3 +28,10 @@ test('an invalid selected issue does not persist a poisoned operation',async()=>
   await assert.rejects(()=>openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID(),issue:999},state),/open Limen issue/);
   const fresh=await workspace(context.storage,context.github,user);assert.equal(fresh.operation,undefined);const result=await openPull(context.storage,context.github,user,{workspace:state.id,operation:crypto.randomUUID()},fresh);assert.equal(result.number,200);
 });
+test('a concurrent origin advance releases the pending operation for refresh and another commit',async()=>{
+  const context=await protocol();let state=await workspace(context.storage,context.github,user);state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/README.md'),state);
+  const payload=await edit(context,state,'docs/Developer/Documentation-System.md'),transport=context.github.transport,advanced='b'.repeat(40);let moved=false;
+  context.github.transport=async(url,options)=>{if(!moved&&url.includes('/git/ref/heads/')&&(await context.storage.get('workspace')).operation){moved=true;context.commits.set(advanced,{...context.commits.get(state.head),parents:[state.head],message:'docs: update another passage'});context.refs.set(state.branch,advanced);}return transport(url,options);};
+  await assert.rejects(()=>commit(context.storage,context.github,user,payload,state),/origin branch advanced/);state=await workspace(context.storage,context.github,user);assert.equal(state.operation,undefined);assert.equal(state.head,advanced);
+  state=await commit(context.storage,context.github,user,await edit(context,state,'docs/Developer/Documentation-System.md'),state);assert.equal(context.counts.commit,2);assert.notEqual(state.head,advanced);
+});

@@ -68,3 +68,7 @@ test('edited wraps, quoted introductions, nested lists, cells, references and su
     if(item.type==='summary')assert.match(changed,/<summary>Scope &lt; extent &amp; purpose<\/summary>/);
   }
 });
+test('capitalization-only heading edits retain their research interface',async()=>{
+  const source='docs/Research-Book.md',text=await fs.readFile(path.join(root,source),'utf8'),mapped=passages(text,source,blob),md=new MarkdownIt({html:true});
+  for(const word of ['Compiled','Python']){const item=mapped.find(item=>item.type==='heading'&&item.markdown.includes(word)),changed=applyPatches(text,source,blob,[patch(item,item.markdown.replace(word,word.toLowerCase()))]);assert.deepEqual([...headingIdentities(md.parse(changed,{})).values()].map(item=>[item.id,item.kind]),[...headingIdentities(md.parse(text,{})).values()].map(item=>[item.id,item.kind]));}
+});
