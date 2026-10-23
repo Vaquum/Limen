@@ -45,7 +45,8 @@ test('code ranges and interface choice survive direct navigation',async({page})=
 });
 
 test('fragment history retains the reading position and a repeated link reveals its interface',async({page})=>{
-  await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);
+  await page.goto('/limen/#adopt-the-compiled-pipeline');await page.evaluate(()=>document.fonts.ready);
+  await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
   const contents=page.locator('.mobile-nav');if(await contents.isVisible())await contents.locator('summary').click();
   const python=page.locator('a[href="#own-the-python-methodology"]').filter({visible:true}).first();
   const compiled=page.locator('a[href="#adopt-the-compiled-pipeline"]').filter({visible:true}).first();

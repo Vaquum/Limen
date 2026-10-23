@@ -49,6 +49,10 @@ export function initInterfaces(){
   const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1')):null;
   const linked=target?.closest('[data-research-interface]');
   choose(linked?.dataset.researchInterface||preferred,{save:false});
+  if(target&&navigationType()!=='back_forward'){
+    target.scrollIntoView({block:target.classList.contains('code-line')?'center':'start'});
+    target.focus({preventScroll:true});
+  }
   document.addEventListener('click',event=>{
     const link=event.target.closest('a[href]');
     if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||document.querySelector('dialog[open]'))return;
