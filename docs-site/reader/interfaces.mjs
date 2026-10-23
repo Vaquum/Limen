@@ -1,4 +1,4 @@
-import {announce,navigationType,resuming} from './place.mjs';
+import {announce,navigationType,resuming,restore} from './place.mjs';
 import {revealCodeRange} from './code.mjs';
 
 const choices=['both','python','compiled'];
@@ -73,7 +73,10 @@ export function initInterfaces(){
   });
   addEventListener('popstate',event=>{
     if(event.state?.readerReference||document.querySelector('dialog[open]'))return;
-    if(choices.includes(event.state?.readerInterface))choose(event.state.readerInterface,{save:false,record:false});
+    if(choices.includes(event.state?.readerInterface)){
+      choose(event.state.readerInterface,{save:false,record:false});
+      if(event.state.readerPlace)requestAnimationFrame(()=>restore(event.state.readerPlace));
+    }
   });
   control.hidden=false;
   control.addEventListener('click',event=>{const button=event.target.closest('[data-interface-choice]');if(button)choose(button.dataset.interfaceChoice,{move:true});});

@@ -41,6 +41,7 @@ export function initPlace(){
     const value=position();const maximum=document.documentElement.scrollHeight-innerHeight;
     if(progress)progress.style.setProperty('--progress',`${maximum>0?Math.max(0,Math.min(100,scrollY/maximum*100)):100}%`);
     if(!ready||!storageAvailable)return;
+    history.replaceState({...history.state,readerPlace:value},'',location.href);
     try{localStorage.setItem(key,JSON.stringify(value));}catch(error){storageAvailable=false;announce('Browser storage could not be written. Reading position is not being saved.');console.error(error);}
   }
   addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(save);},{passive:true});
