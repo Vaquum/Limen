@@ -15,7 +15,7 @@ export const pageLabel=page=>page.navigationTitle||page.title;
 function documentText(markdown,{omitPreamble=false}={}){
   const tokens=new MarkdownIt({html:true}).parse(markdown,{}),lines=markdown.split('\n');
   const at=tokens.findIndex(token=>token.type==='heading_open'&&token.tag==='h1');
-  const removed=[];if(at>=0){removed.push(tokens[at].map);if(omitPreamble)removed.push([0,tokens[at].map[0]]);}
+  const removed=[];if(at>=0){removed.push(tokens[at].map);const before=tokens[at-1]?.type==='html_block'?tokens[at-1]:tokens[at-1]?.type==='paragraph_close'?tokens[at-2]:null;if(before&&anchorPattern.test(before.content.trim()))removed.push(before.map);if(omitPreamble)removed.push([0,tokens[at].map[0]]);}
   let first=at>=0?at+3:0;
   while(tokens[first]?.type==='html_block'&&tokens[first].content.trim().startsWith('<!--'))first++;
   if(tokens[first]?.type==='blockquote_open')first++;
@@ -27,7 +27,8 @@ function documentText(markdown,{omitPreamble=false}={}){
   return {body:kept.map(line=>lines[line]).join('\n'),kept,introduction,introductionSource:inline?.content||''};
 }
 export function renderMarkdown(page,pages,evidence,results={},authoring){
-  const md=new MarkdownIt({html:true,linkify:false,typographer:false});const headings=[],seen=new Map();let codeCount=0,linkCount=0;
+  const md=new MarkdownIt({html:true,linkify:false,typographer:false});const headings=[],seen=new Map();let codeCount=0,linkCount=0,identities=new Map();
+  md.core.ruler.push('reader_heading_identities',state=>{identities=headingIdentities(state.tokens);});
   const htmlBlock=md.renderer.rules.html_block;
   if(authoring)authoring.configure(md);
   const previewHtml=md.renderer.rules.html_block;
@@ -47,7 +48,7 @@ export function renderMarkdown(page,pages,evidence,results={},authoring){
     if(!source)throw Error('Result has no source identity: '+match[1]);
     return `<figure class="result" data-research-interface="${match[2]}" id="${escape(match[1])}"><figcaption>${match[2]==='python'?'Python':'Compiled'} Research · ${escape(match[3])} · current execution</figcaption>${rows}<p class="status">${escape(content.product.name)} ${escape(evidence.package.version)} · <a href="${content.product.repository}/blob/${source.commit}/${escape(source.path)}">${source.commit.slice(0,8)}</a>${source.merged_pr?` · <a href="${escape(source.merged_pr)}">Merged source PR</a>`:' · candidate source'} · <a href="${content.product.basePath}/evidence/current.json">Validation and result digest</a> · <a href="${content.product.basePath}/evidence/${escape(evidence.native_outputs.path.split('/').at(-1))}">Native records</a></p></figure>`;
   };
-  md.renderer.rules.heading_open=(tokens,index,options,env,renderer)=>{const token=tokens[index],text=plainHeading(tokens[index+1]);const identity=headingIdentities(tokens).get(index),id=identity.id;token.attrSet('id',id);if(identity.explicit)token.attrSet('data-heading-interface',identity.kind);token.attrSet('tabindex','-1');if(token.tag==='h2')headings.push({title:text,id});return renderer.renderToken(tokens,index,options);};
+  md.renderer.rules.heading_open=(tokens,index,options,env,renderer)=>{const token=tokens[index],text=plainHeading(tokens[index+1]);const identity=identities.get(index),id=identity.id;token.attrSet('id',id);if(identity.explicit)token.attrSet('data-heading-interface',identity.kind);token.attrSet('tabindex','-1');if(token.tag==='h2')headings.push({title:text,id});return renderer.renderToken(tokens,index,options);};
   md.renderer.rules.paragraph_open=(tokens,index,options,env,renderer)=>{const text=tokens[index+1]?.content||'';if(anchorPattern.test(text.trim())){tokens[index+1].children=[];return '';}const id=`p-${hash(text).slice(0,12)}`;const count=seen.get(id)||0;seen.set(id,count+1);tokens[index].attrSet('id',count?`${id}-${count}`:id);tokens[index].attrSet('data-passage','');return renderer.renderToken(tokens,index,options);};
   md.renderer.rules.paragraph_close=(tokens,index,options,env,renderer)=>anchorPattern.test(tokens[index-1]?.content?.trim()||'')?'':renderer.renderToken(tokens,index,options);
   const originalLink=md.renderer.rules.link_open||((tokens,index,options,env,renderer)=>renderer.renderToken(tokens,index,options));
