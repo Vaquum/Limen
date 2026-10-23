@@ -24,6 +24,7 @@ jobs:
     permissions:
       contents: read
       checks: read
+      actions: read
     outputs:
       tag_name: ${{ steps.resolve.outputs.tag_name }}
 
