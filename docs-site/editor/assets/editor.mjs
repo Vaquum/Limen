@@ -28,7 +28,7 @@ addEventListener('message',event=>{
   }catch(error){say('Draft storage failed: '+error.message);}
 });
 $('button[data-refresh]').onclick=()=>action(async()=>{await flush();const updated=await api('session');if(updated.workspace.id!==auth.workspace.id){say('The previous delivery is closed. Download or discard its remaining drafts in Review, then reload for the next delivery.');return;}auth=updated;acknowledge();if(!auth.workspace.operation){for(const item of store.heads()){try{const result=await api('reanchor',{patch:item.patch});if(result.patch.baseBlobSha!==item.patch.baseBlobSha){store.save(result.patch,[]);store.undo(item.id);}}catch(error){say(error.message+' The original draft remains in Review.');}}}frame.contentWindow.location.reload();update();});
-$('[data-edit]').onchange=()=>lastEditState=$('[data-edit]').checked&&!busy;send('edit',{enabled:lastEditState});$('[data-undo]').onpointerdown=event=>{event.preventDefault();send('undo-active');};$('[data-undo]').onclick=()=>send('undo-active');$('[data-review]').onclick=()=>action(async()=>{await flush();review();});$('[data-close]').onclick=()=>$('[data-review-dialog]').close();
+$('[data-edit]').onchange=()=>update();$('[data-undo]').onpointerdown=event=>{event.preventDefault();send('undo-active');};$('[data-undo]').onclick=()=>send('undo-active');$('[data-review]').onclick=()=>action(async()=>{await flush();review();});$('[data-close]').onclick=()=>$('[data-review-dialog]').close();
 $('[data-commit]').onclick=()=>action(async()=>{
   await flush();
   if(store.conflicts())throw Error('Resolve competing drafts first');const items=store.heads(),existing=auth.workspace.operation;
