@@ -37,10 +37,14 @@ def validate_parameters(domain: Collection[str], context: Mapping[str, object] |
              'context': reserved.intersection(context or {})})
 
 
+def bookkeeping_names(result: Mapping[str, object]) -> frozenset[str]:
+    return _BOOKKEEPING.intersection(result)
+
+
 def validate_result(parameters: Mapping[str, object], result: Mapping[str, object],
                     *, succeeded: bool) -> None:
     if succeeded:
-        _reject({'result bookkeeping': _BOOKKEEPING.intersection(result),
+        _reject({'result bookkeeping': bookkeeping_names(result),
                  'round parameters/result': parameters.keys() & (result.keys() - _ARTIFACTS)})
 
 

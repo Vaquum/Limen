@@ -62,7 +62,8 @@ def _alter_result(original, owner, data, round_params, fault):
         if fault == 'metric':
             result['C'] = round_params['C']
         else:
-            result['strict_mode_error'] = 'caller supplied success status'
+            result.update(id='caller identity', execution_time=0, _warnings='caller warnings',
+                          strict_mode_error='caller supplied success status')
     return result
 
 
@@ -144,7 +145,7 @@ def test_later_collision_never_commits_the_affected_trial(mode, fault, tmp_path,
     if fault == 'metric':
         _assert_message(error, 'round parameters/result', ('C',))
     else:
-        _assert_message(error, 'result bookkeeping', ('strict_mode_error',))
+        _assert_message(error, 'result bookkeeping', ('_warnings', 'execution_time', 'id', 'strict_mode_error'))
     saved = _rows(path)
     assert len(saved) == 1
     assert float(saved[0]['C']) == 0.1
@@ -158,9 +159,8 @@ def test_later_collision_never_commits_the_affected_trial(mode, fault, tmp_path,
         assert set(loop.experiment_log['id'].cast(pl.String)) == identities
     if mode != 'legacy':
         assert [row['round_id'] for row in records(path)] == [saved[0]['id']]
-        assert feedback
-        assert all(log.height == 1 and log['C'].to_list() == [0.1] for log in feedback)
-        assert [row['round'] for row in records(path, 'audit.jsonl')] == [0]
+        assert feedback == []
+        assert not (path / 'audit.jsonl').exists()
 
 
 @pytest.mark.parametrize('mode', MODES)
