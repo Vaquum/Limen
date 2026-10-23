@@ -5,7 +5,16 @@ import {anchorPattern} from '../reader/headings.mjs';
 
 const prefix='/limen/edit/view';
 export const viewUrl=(page,pr)=>prefix+page.route+(pr?'?pr='+pr:'');
-export function inlinePreview(markdown,source){const md=new MarkdownIt({html:false}),env={};md.parse(source,env);return md.renderInline(markdown,env);}
+export function inlinePreview(markdown,page,pages,pr){
+  const md=new MarkdownIt({html:false}),env={};md.parse(page.markdown,env);
+  md.renderer.rules.link_open=(tokens,index,options,context,renderer)=>{
+    const token=tokens[index],href=token.attrGet('href');token.attrSet('data-source-href',href);
+    const prefix=content.product.repository+'/blob/main/',local=href.startsWith(prefix)?href.slice(prefix.length):href;
+    if(!/^(https?:|mailto:|#)/.test(local)){const target=new URL(local,href.startsWith(prefix)?'https://source.invalid/':'https://source.invalid/'+page.source),mapped=pages.find(item=>item.source===target.pathname.slice(1)||item.url===target.pathname);if(mapped)token.attrSet('href',viewUrl(mapped,pr)+target.hash);}
+    return renderer.renderToken(tokens,index,options);
+  };
+  return md.renderInline(markdown,env);
+}
 export function referenceIndex(pages){return {source:null,route:'/reference/',url:'/limen/reference/',part:'Reference',title:'Reference',markdown:'# Reference\n\nNames, parameters and boundaries of the two research interfaces.\n\n'+pages.filter(page=>page.part==='Reference').map(page=>'- ['+(page.navigationTitle||page.title)+']('+page.url+')').join('\n')};}
 function safeHtml(value){
   if(anchorPattern.test(value.trim()))return value;

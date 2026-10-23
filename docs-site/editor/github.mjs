@@ -93,7 +93,8 @@ export async function openPull(storage,github,user,payload,state){
   if(open.length){ownPull(open[0],user,state.branch);state.pr=open[0].number;delete state.operation;await storage.put('workspace',state);return {number:open[0].number,url:open[0].html_url};}
   assert(!existing.length,'This delivery already has a closed PR; refresh to start another');
   const marker=`<!-- limen-editor workspace=${state.id} -->`;
-  if(!state.operation){state.operation={kind:'pr',id:payload.operation,issue:payload.issue||null};await storage.put('workspace',state);}
+  let selected=null;if(payload.issue){assert(Number.isSafeInteger(payload.issue)&&payload.issue>0,'Choose a valid issue number');selected=await github.request('repos/'+repository+'/issues/'+payload.issue,{missing:true});assert(selected&&!selected.pull_request&&selected.state==='open','Choose a genuine open Limen issue');}
+  if(!state.operation){state.operation={kind:'pr',id:payload.operation,issue:selected?.number||null};await storage.put('workspace',state);}
   let issue;
   if(state.operation.issue){issue=await github.request('repos/'+repository+'/issues/'+state.operation.issue);assert(!issue.pull_request&&issue.state==='open','Choose a genuine open Limen issue');}
   else{
