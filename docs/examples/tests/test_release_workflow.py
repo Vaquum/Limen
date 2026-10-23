@@ -83,7 +83,8 @@ def test_an_older_queued_release_cannot_activate(monkeypatch):
         require_latest_release('v5.44.5')
 
 
-def test_failed_production_verification_restores_and_checks_the_previous_version(monkeypatch, tmp_path):
+@pytest.mark.parametrize('competing_deployment', [False, True])
+def test_failed_production_verification_restores_and_checks_the_previous_version(monkeypatch, tmp_path, competing_deployment):
     from verify_publication import sha256
     output = tmp_path / '.docs-evidence/deployment'
     output.mkdir(parents=True)
@@ -93,29 +94,37 @@ def test_failed_production_verification_restores_and_checks_the_previous_version
               'preview_url': 'https://preview.example.invalid/limen/', 'manifest_sha256': sha256(current),
               'previous': {'version_id': '9d51a409-ca8e-44ca-ab4d-7a0a3958e84d', 'home_sha256': sha256(previous), 'mode': 'legacy'}}
     (output / 'staged.json').write_text(json.dumps(staged))
+    state = {'version': staged['previous']['version_id']}
     operations = []
     monkeypatch.setattr('deploy_publication.require_disconnected_builds', lambda: operations.append('disconnected'))
     monkeypatch.setattr('deploy_publication.require_latest_release', lambda release: operations.append('latest'))
-    monkeypatch.setattr('deploy_publication.current_version', lambda *args: staged['previous']['version_id'])
+    monkeypatch.setattr('deploy_publication.current_version', lambda *args: state['version'])
     monkeypatch.setattr('deploy_publication.fetch', lambda url: current if 'preview.' in url else previous)
 
     def verify(url, release):
         operations.append('verify ' + url)
         if url == 'https://docs.vaquum.fi/limen/':
+            if competing_deployment:
+                state['version'] = 'separately-deployed-version'
             raise ValueError('injected production verification failure')
         return {'release': release}
 
     def deploy(wrangler, config, version, receipt):
         operations.append('deploy ' + version)
+        state['version'] = version
 
     monkeypatch.setattr('deploy_publication.verify', verify)
     monkeypatch.setattr('deploy_publication.deploy_version', deploy)
-    with pytest.raises(ValueError, match='injected production'):
+    with pytest.raises(ValueError, match='refuse automatic rollback' if competing_deployment else 'injected production'):
         activate(tmp_path, Path('wrangler'))
     assert operations == ['disconnected', 'latest', 'verify ' + staged['preview_url'], 'latest',
-                          'deploy ' + staged['version_id'], 'latest', 'verify https://docs.vaquum.fi/limen/',
-                          'deploy ' + staged['previous']['version_id']]
-    assert json.loads((output / 'rollback.json').read_text()) == staged['previous']
+                          'deploy ' + staged['version_id'], 'latest', 'verify https://docs.vaquum.fi/limen/'] + (
+                              [] if competing_deployment else ['deploy ' + staged['previous']['version_id']])
+    if competing_deployment:
+        assert state['version'] == 'separately-deployed-version'
+        assert not (output / 'rollback.json').exists()
+    else:
+        assert json.loads((output / 'rollback.json').read_text()) == staged['previous']
     assert not (output / 'accepted.json').exists()
 
 
@@ -358,6 +367,7 @@ deployment.current_version = lambda *args: state["version"]
 deployment.deploy_version = deploy
 deployment.fetch = publication_fetch
 deployment.verify = verification
+deployment.DEPLOYMENT_VERIFY_SECONDS = 0
 Path.write_text = retain
 deployment.activate(root, Path("isolated-control-plane"))
 '''

@@ -156,6 +156,11 @@ def verify_active(wrangler: Path, config: Path, version: str, release: str,
             print(f'Publication proof has not converged [{phase}, attempt {attempt}]: {error}', flush=True)
             if isinstance(error, PublicationHTTPError) and error.code != 404:
                 raise
+            if isinstance(error, ValueError) and not str(error).startswith((
+                'Publication belongs to another release', 'Production serves another publication manifest',
+                'The active site member differs from its sealed payload:', 'The deployed 404 differs from the sealed reader',
+            )):
+                raise
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 raise
@@ -195,6 +200,8 @@ def activate(root: Path, wrangler: Path):
             record_http_failure(output, 'activation', staged['release'], staged['version_id'], error)
         finally:
             try:
+                if current_version(wrangler, config) not in (staged['version_id'], previous['version_id']):
+                    raise ValueError('Another deployment changed production; refuse automatic rollback')
                 deploy_version(wrangler, config, previous['version_id'], output / 'rollback.ndjson')
                 if previous['mode'] == 'released':
                     verify_active(wrangler, config, previous['version_id'], previous['release'],
