@@ -104,12 +104,11 @@ class CheckpointManager:
              feedback_controller: FeedbackController | None = None,
              pruning_strategies: list[PruningStrategy] | None = None,
              failed_round_params: list[dict[str, object]] | None = None,
-             holdout_state: Mapping[str, object] | None = None) -> None:
+             holdout_binding: Mapping[str, object] | None = None) -> None:
 
         '''
-        NOTE: All state is written atomically to a single file via a
-        write-then-rename pattern. The previous checkpoint remains intact
-        until the new one is fully written.
+        All state uses one atomic write-then-rename. The previous
+        checkpoint remains intact until its replacement is complete.
 
         Args:
             checkpoint_dir (Path): Directory to write checkpoint file
@@ -122,6 +121,7 @@ class CheckpointManager:
             feedback_controller (FeedbackController | None): FeedbackController to checkpoint
             pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
             failed_round_params (list[dict[str, object]] | None): Committed parallel failure parameters
+            holdout_binding (Mapping | None): Validated binding/population envelope, or legacy unprotected None
 
         '''
 
@@ -145,9 +145,8 @@ class CheckpointManager:
 
         if failed_round_params is not None:
             checkpoint['failed_round_params'] = failed_round_params
-        if holdout_state is not None:
-            checkpoint['holdout_binding'] = holdout_state['binding']
-            checkpoint['holdout_population'] = holdout_state['population']
+        if holdout_binding is not None:
+            checkpoint.update(holdout_binding=holdout_binding['binding'], holdout_population=holdout_binding['population'])
 
         self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 

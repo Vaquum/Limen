@@ -1,11 +1,13 @@
 import copy
 import hashlib
+import gzip
 import json
 import logging
 import multiprocessing
 import sqlite3
 import time
 
+import polars as pl
 import pytest
 
 from limen.experiment import _holdout_history as history
@@ -182,6 +184,7 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, post_processing):
     config = _configuration(root)
     config['sfd']['params']['C'] = [0.5, 1.0, 2.0]
     config['uel']['n_permutations'] = 3
+    config['uel']['recording'] = dict.fromkeys(('predictions', 'alignment', 'trade_ledger', 'fold_details'), True)
     reservation_id = reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
     directory = root / 'results'
     loop = UniversalExperimentLoop(
@@ -210,6 +213,7 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, post_processing):
     assert [item['research_record_id'] for item in checkpoint['holdout_population']['completed']] == [
         item['holdout']['research_record_id'] for item in rounds
     ]
+    _checkpoint_boundaries(loop, config, checkpoint, metadata, monkeypatch, post_processing)
     source = rounds[0]['holdout']['source']
     forged_source = dict(source, admitted_sha256='changed-recorded-frame')
     with pytest.raises(ValueError, match='admitted source changed'):
@@ -303,3 +307,205 @@ def test_protected_checkpoint_binding(tmp_path, monkeypatch, post_processing):
     reserve_holdout(ordinary_root, '2024-01-05', '2024-01-06', interval_seconds=3600)
     with pytest.raises(ValueError, match='original saved project/population evidence'):
         Trainer(ordinary_dir, project_root=ordinary_root)
+
+
+def _artifact_state(directory):
+    return {path.relative_to(directory): (path.read_bytes(), path.stat().st_mtime_ns)
+            for path in directory.rglob('*') if path.is_file()}
+
+
+@pytest.mark.parametrize('protected', [True, False])
+@pytest.mark.parametrize('all_failed', [True, False])
+def test_checkpoint_leading_failed_population(tmp_path, monkeypatch, protected, all_failed):
+    from limen.experiment.errors import StrictModeError
+    root = _project(tmp_path / 'failures')
+    config = _configuration(root)
+    config['sfd']['params']['C'] = [0.5, 1.0, 2.0]
+    if protected:
+        reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    compiled = CompiledSFD(config, project_root=root)
+    seen = []
+    def select(frame):
+        seen.append(frame.height)
+        if len(seen) <= 2:
+            raise StrictModeError('recorded-data candidate rejected')
+        return frame
+    compiled.manifest().set_pre_split_data_selector(select)
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(sfd=compiled, project_root=root, experiment_dir=directory,
+        search_strategy=build_search_strategy(config), yaml_reference=config, checkpoint_interval=1)
+    first = []
+    save = loop._checkpoint
+    def capture(*args, **kwargs):
+        save(*args, **kwargs)
+        checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+        first.append(checkpoint)
+        if len(first) == 1:
+            assert len(checkpoint['holdout_population']['prefix']) == 2
+            assert checkpoint['holdout_population']['completed'] == []
+            assert not _round_storage.round_path(directory).exists()
+    monkeypatch.setattr(loop, '_checkpoint', capture)
+    loop.run('leading-failures', n_permutations=2 if all_failed else 3, progress_bar=False, post_processing=False)
+    assert first
+    assert len(seen) == (2 if all_failed else 3)
+    assert loop.experiment_log.height == (2 if all_failed else 3)
+    assert loop.experiment_log['strict_mode_error'].null_count() == (0 if all_failed else 1)
+    metadata = json.loads((directory / 'metadata.json').read_text())
+    checkpoint_binding.validate_checkpoint(directory, first[-1], metadata, history.bind(root), vars(loop.manifest).get('_holdout_source'))
+    if not all_failed:
+        checkpoint_binding.validate_checkpoint(directory, first[0], metadata, history.bind(root), vars(loop.manifest).get('_holdout_source'))
+        assert first[-1]['holdout_population']['completed'][0]['index'] == 2
+        assert set(pl.read_csv(directory / 'results.csv').columns) == set(loop.experiment_log.columns)
+
+
+def test_protected_trainer_split_preflight(tmp_path, monkeypatch):
+    from limen.targets.quantile_binary import QuantileBinaryTarget
+    from limen.scalers.logreg_scaler import LogRegScaler
+    root = _project(tmp_path / 'splits')
+    config = _configuration(root)
+    reserve_holdout(root, '2024-01-05', '2024-01-06', interval_seconds=3600)
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root,
+        search_strategy=build_search_strategy(config), yaml_reference=config, experiment_dir=directory)
+    loop.run('recorded', n_permutations=1, progress_bar=False, post_processing=False)
+    with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
+        entry = json.loads(next(stream))
+    trainer = Trainer(directory, project_root=root)
+    original = (directory / 'metadata.json').read_bytes()
+    with monkeypatch.context() as guard:
+        def no_fit(*args, **kwargs):
+            pytest.fail('population refusal must precede fitting')
+        guard.setattr(QuantileBinaryTarget, '__init__', no_fit)
+        guard.setattr(LogRegScaler, '__init__', no_fit)
+        dates = list(trainer._manifest.split_dates)
+        from datetime import date
+        dates[1] = date(2024, 1, 2)
+        trainer._manifest.set_split_dates(*dates)
+        before = _artifact_state(directory)
+        with pytest.raises(ValueError, match='selection/split geometry'):
+            trainer.train([entry['round_id']])
+        assert _artifact_state(directory) == before
+        metadata = json.loads(original)
+        metadata['yaml_reference']['sfd']['manifest']['split_dates']['train_end'] = '2024-01-02'
+        (directory / 'metadata.json').write_text(json.dumps(metadata))
+        before = _artifact_state(directory)
+        with pytest.raises(ValueError, match='selection/split geometry'):
+            Trainer(directory, project_root=root)
+        assert _artifact_state(directory) == before
+    (directory / 'metadata.json').write_bytes(original)
+    assert Trainer(directory, project_root=root).train([entry['round_id']])
+
+
+def test_zero_active_checkpoint_partial_selector(tmp_path):
+    from functools import partial
+    root = _project(tmp_path / 'zero-partial')
+    config = _configuration(root)
+    config['sfd']['params']['C'] = [0.5, 1.0]
+    compiled = CompiledSFD(config, project_root=root)
+    compiled.manifest().set_pre_split_data_selector(partial(pl.DataFrame.slice, offset=1))
+    directory = root / 'results'
+    loop = UniversalExperimentLoop(sfd=compiled, project_root=root, experiment_dir=directory,
+        search_strategy=build_search_strategy(config), yaml_reference=config, checkpoint_interval=1)
+    loop.run('partial-selector', n_permutations=2, progress_bar=False, post_processing=False)
+    checkpoint = json.loads((directory / 'checkpoint.json').read_text())
+    metadata = json.loads((directory / 'metadata.json').read_text())
+    assert checkpoint['holdout_binding']['cutoff_ns'] is None
+    assert checkpoint['holdout_binding']['project_id'] is None
+    before = _artifact_state(directory)
+    checkpoint_binding.validate_checkpoint(directory, checkpoint, metadata, history.bind(root))
+    assert _artifact_state(directory) == before
+
+
+def _checkpoint_boundaries(loop, config, checkpoint, metadata, monkeypatch, retain):
+    from datetime import date
+    from sklearn.linear_model import LogisticRegression
+    from limen.targets.quantile_binary import QuantileBinaryTarget
+    from limen.scalers.logreg_scaler import LogRegScaler
+    from limen.experiment._parallel_resume import restore_parallel
+    directory = loop._experiment_dir
+    root = research.binding_of(loop.manifest).root
+    restored = UniversalExperimentLoop(sfd=CompiledSFD(config, project_root=root), project_root=root,
+        search_strategy=build_search_strategy(config), yaml_reference=config, experiment_dir=directory,
+        checkpoint_interval=1)
+    for name in ('_record_execution', '_record_model_outputs', '_recording', '_factorize'):
+        setattr(restored, name, getattr(loop, name))
+    parts = restored._setup_msq_components(experiment_name='protected-checkpoint', n_permutations=3)
+    common = {key: parts[key] for key in ('content_hash', 'strategy_type', 'csv_path', 'round_data_path')}
+    def restore(kind):
+        args = (parts['msq'], parts['domain'], parts['feedback_controller'], parts['checkpoint_manager'])
+        if kind == 'serial':
+            return restored._restore_checkpoint_state(*args, **common, retain_round_artifacts=retain, context_params=None)
+        return restore_parallel(restored, *args, **common, failed_round_params=[], n_permutations=3)
+    assert restore('serial') == 2
+    assert restored.experiment_log.height == 2
+    if retain:
+        assert [row['holdout']['research_record_id'] for row in restored._alignment] == [
+            row['research_record_id'] for row in checkpoint['holdout_population']['completed']]
+    else:
+        assert restored._alignment == []
+    path = _round_storage.round_path(directory)
+    round_bytes = path.read_bytes()
+    checkpoint_bytes = (directory / 'checkpoint.json').read_bytes()
+    metadata_bytes = (directory / 'metadata.json').read_bytes()
+    def refused(pattern):
+        before = _artifact_state(directory)
+        for kind in ('serial', 'parallel'):
+            with pytest.raises(ValueError, match=pattern):
+                restore(kind)
+        assert _artifact_state(directory) == before
+    with monkeypatch.context() as guards:
+        def no_state(*args, **kwargs):
+            pytest.fail('holdout refusal must precede every state setter or artifact rewrite')
+        for owner, name in ((parts['domain'], 'set_state'), (parts['msq'], 'set_state'),
+                            (parts['feedback_controller'], 'set_state'), (restored._search_strategy, 'rebuild_seen_from_log'),
+                            (restored, '_truncate_round_data'), (restored, '_load_round_data')):
+            guards.setattr(owner, name, no_state)
+        for factory, method in ((QuantileBinaryTarget, '__init__'), (LogRegScaler, '__init__'), (LogisticRegression, 'fit')):
+            guards.setattr(factory, method, no_state)
+        for key in ('holdout_binding', 'holdout_population'):
+            corrupted = copy.deepcopy(checkpoint)
+            corrupted.pop(key)
+            (directory / 'checkpoint.json').write_text(json.dumps(corrupted))
+            refused('binding|population')
+        (directory / 'checkpoint.json').write_bytes(checkpoint_bytes)
+        encoded = [json.loads(line) for line in gzip.decompress(round_bytes).splitlines()]
+        for key in ('holdout', 'source', 'selected', 'splits', 'input_schema', 'model_schema'):
+            corrupted = copy.deepcopy(encoded)
+            if key == 'holdout':
+                corrupted[0].pop(key)
+            else:
+                corrupted[0]['holdout'].pop(key)
+            path.write_bytes(b''.join(gzip.compress((json.dumps(row) + '\n').encode()) for row in corrupted))
+            refused('evidence|source|membership|history')
+            before = _artifact_state(directory)
+            with pytest.raises(ValueError, match=r'evidence|source|membership|history'):
+                Trainer(directory, project_root=root).train([encoded[0]['round_id']])
+            assert _artifact_state(directory) == before
+        path.write_bytes(round_bytes)
+        saved_data = restored.data
+        restored.data = saved_data.drop('volume')
+        refused('admitted source')
+        before = _artifact_state(directory)
+        with pytest.raises(ValueError, match='admitted source'):
+            Trainer(directory, data=restored.data, project_root=root).train([encoded[0]['round_id']])
+        assert _artifact_state(directory) == before
+        restored.data = saved_data
+        dates = restored.manifest.split_dates
+        restored.manifest.set_split_dates(dates[0], date(2024, 1, 2), *dates[2:])
+        refused('selection/split geometry')
+        restored.manifest.set_split_dates(*dates)
+        before = _artifact_state(directory)
+        with pytest.raises(ValueError, match='Holdout'):
+            restored.run('protected-checkpoint', n_permutations=3, resume=True, progress_bar=False)
+        assert _artifact_state(directory) == before
+    # Existing protected V1 selected artifacts predate the checkpoint envelope.
+    legacy = copy.deepcopy(metadata)
+    legacy.pop('holdout_binding')
+    (directory / 'metadata.json').write_text(json.dumps(legacy))
+    ids = [row['round_id'] for row in checkpoint['holdout_population']['completed']]
+    before = _artifact_state(directory)
+    sensors = Trainer(directory, project_root=root).train(ids[:1])
+    assert sensors[0]._fitted_params['_holdout']['experiment_record_id'] == checkpoint['holdout_population']['completed'][0]['research_record_id']
+    assert sensors[0]._fitted_params['_holdout']['research_record_id'] != sensors[0]._fitted_params['_holdout']['experiment_record_id']
+    assert _artifact_state(directory) == before
+    (directory / 'metadata.json').write_bytes(metadata_bytes)

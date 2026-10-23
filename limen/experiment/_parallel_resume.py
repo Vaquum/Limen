@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import limen.experiment._round_storage as _storage
-import limen.experiment._holdout_checkpoint as _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._holdout_research as _holdout
 
 import csv
@@ -157,8 +157,8 @@ def restore_parallel(host: object, msq: MSQ, domain: ParamDomain,
     validate_objective_resume(manifest, metadata, csv_path)
     validate_walk_forward_resume(manifest, metadata)
     checkpoint = cast(dict[str, object], checkpoint_manager.validate(directory, content_hash=content_hash, strategy_type=strategy_type))
-    _holdout_checkpoint.validate_checkpoint(directory, checkpoint, metadata, _holdout.binding_of(manifest),
-                                            getattr(manifest, '_holdout_source', None))
+    _checkpoint_proof.validate_checkpoint(directory, checkpoint, metadata, _holdout.binding_of(manifest),
+                                            getattr(manifest, '_holdout_source', None), manifest, cast(pl.DataFrame, vars(host)['data']))
     frontier = _mapping(checkpoint['metadata'], 'checkpoint metadata')['experiment_round']
     if type(frontier) is not int or frontier < -1:
         raise ValueError('Cannot resume parallel run with invalid terminal frontier')

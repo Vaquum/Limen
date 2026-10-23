@@ -1,5 +1,5 @@
 import limen.experiment._holdout_research as _holdout
-from limen.experiment import _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _checkpoint_proof
 import limen.experiment._round_storage as _storage
 import limen.experiment._serial_resume as _serial
 import csv
@@ -706,7 +706,10 @@ class UniversalExperimentLoop:
             if round_succeeded:
                 csv_header = complete_failed_header(csv_path, csv_header, list(round_results), self.experiment_log)
             write_header = not csv_path.exists() or csv_path.stat().st_size == 0
-            if write_header and not round_succeeded:
+            if write_header and not round_succeeded and _holdout.binding_of(self.manifest) is not None:
+                self._flush_results(results_accumulator)
+                results_accumulator = []
+            if write_header and not round_succeeded and _holdout.binding_of(self.manifest) is None:
                 _pending_csv_rows.append(dict(round_results))
             else:
                 with csv_path.open('a', newline='') as f:
@@ -886,8 +889,8 @@ class UniversalExperimentLoop:
                                                       content_hash=content_hash, strategy_type=strategy_type)
         metadata_path = self._experiment_dir / 'metadata.json'
         metadata: dict[str, object] = json.loads(metadata_path.read_text()) if metadata_path.exists() else {}
-        _holdout_checkpoint.validate_checkpoint(self._experiment_dir, checkpoint_data, metadata, _holdout.binding_of(self.manifest),
-                                                getattr(self.manifest, '_holdout_source', None))
+        _checkpoint_proof.validate_checkpoint(self._experiment_dir, checkpoint_data, metadata, _holdout.binding_of(self.manifest),
+                                                getattr(self.manifest, '_holdout_source', None), self.manifest, self.data)
         if metadata.get('record_execution', False) != self._record_execution:
             raise ValueError('Cannot resume with a different record_execution setting')
         if metadata.get('record_model_outputs', False) != self._record_model_outputs:
@@ -1050,8 +1053,7 @@ class UniversalExperimentLoop:
 
         if holdout := _holdout.metadata(self.manifest):
             metadata['holdout'] = holdout
-        if (header := _holdout_checkpoint.binding_header(_holdout.binding_of(self.manifest))) is not None:
-            metadata['holdout_binding'] = header
+        metadata.update(_checkpoint_proof.metadata_binding(_holdout.binding_of(self.manifest)))
         with (experiment_dir / 'metadata.json').open('w') as f:
             json.dump(metadata, f, indent=2)
 
@@ -1065,16 +1067,10 @@ class UniversalExperimentLoop:
             return 'dev'
 
 
-    def _checkpoint(self,
-                    msq: MSQ | dict[str, object],
-                    domain: ParamDomain,
-                    checkpoint_dir: Path,
-                    checkpoint_manager: CheckpointManager,
-                    current_round: int,
-                    target_permutations: int,
-                    *,
-                    strategy_type: str,
-                    content_hash: str,
+    def _checkpoint(self, msq: MSQ | dict[str, object], domain: ParamDomain,
+                    checkpoint_dir: Path, checkpoint_manager: CheckpointManager,
+                    current_round: int, target_permutations: int, *,
+                    strategy_type: str, content_hash: str,
                     feedback_controller: FeedbackController | None = None,
                     pruning_strategies: list[PruningStrategy] | None = None,
                     failed_round_params: list[dict[str, object]] | None = None) -> None:
@@ -1085,7 +1081,7 @@ class UniversalExperimentLoop:
             strategy_type=strategy_type, content_hash=content_hash,
             feedback_controller=feedback_controller, pruning_strategies=pruning_strategies,
             failed_round_params=failed_round_params,
-            holdout_state=_holdout_checkpoint.checkpoint_state(checkpoint_dir, current_round, _holdout.binding_of(manifest),
+            holdout_binding=_checkpoint_proof.checkpoint_state(checkpoint_dir, current_round, _holdout.binding_of(manifest),
                                                                  getattr(manifest, '_holdout_source', None)),
         )
 
