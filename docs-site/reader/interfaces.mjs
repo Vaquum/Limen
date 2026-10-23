@@ -1,4 +1,4 @@
-import {announce,navigationType,resuming,remember} from './place.mjs';
+import {announce,navigationType,resuming} from './place.mjs';
 
 const choices=['both','python','compiled'];
 export function initInterfaces(){
@@ -55,7 +55,6 @@ export function initInterfaces(){
     if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||document.querySelector('dialog[open]'))return;
     const url=new URL(link.href);
     if(url.origin!==location.origin||url.pathname!==location.pathname||url.search!==location.search||!url.hash)return;
-    remember();
     const target=document.getElementById(decodeURIComponent(url.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
     const linked=target?.closest('[data-research-interface]');
     if(linked)choose(linked.dataset.researchInterface,{save:false,record:url.hash===location.hash});
@@ -70,7 +69,10 @@ export function initInterfaces(){
     }
     history.replaceState({...history.state,readerInterface:document.body.dataset.interface},'',location.href);
   });
-  addEventListener('reader-restore-interface',event=>choose(event.detail,{save:false,record:false}));
+  addEventListener('popstate',event=>{
+    if(event.state?.readerReference||document.querySelector('dialog[open]'))return;
+    if(choices.includes(event.state?.readerInterface))choose(event.state.readerInterface,{save:false,record:false});
+  });
   control.hidden=false;
   control.addEventListener('click',event=>{const button=event.target.closest('[data-interface-choice]');if(button)choose(button.dataset.interfaceChoice,{move:true});});
 }
