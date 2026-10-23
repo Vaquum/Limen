@@ -1,6 +1,6 @@
 import {draftStore,writerStores,clearWriter} from './drafts.mjs';
 const $=selector=>document.querySelector(selector),frame=$('[data-frame]'),status=$('[data-status]'),params=new URLSearchParams(location.search),pr=params.get('pr'),suffix=pr?'?pr='+pr:'';
-let auth,store,busy=false,page,ready=false,restoreRequest;
+let auth,store,busy=false,page,ready=false,restoreRequest,previewFailed=false;
 function restoreDrafts(){restoreRequest=crypto.randomUUID();send('drafts',{items:store.heads(),request:restoreRequest});}const finishing=new Map();
 function flush(){if(!ready)return Promise.resolve();const request=crypto.randomUUID();return new Promise((resolve,reject)=>{const timer=setTimeout(()=>{finishing.delete(request);reject(Error('The active passage could not be saved'));},5000);finishing.set(request,error=>{clearTimeout(timer);if(error)reject(Error(error));else resolve();});send('finish',{request});});}
 function acknowledge(){for(const receipt of Object.values(auth.workspace.receipts||{}))store.confirmed(receipt.drafts);}
@@ -9,7 +9,7 @@ async function api(path,body){const reply=await fetch('/limen/edit/api/'+path+su
 const send=(type,extra={})=>frame.contentWindow?.postMessage({type,...extra},location.origin);
 frame.addEventListener('load',()=>{
   const doc=frame.contentDocument;if(!auth||frame.hidden||doc?.querySelector('#editor-source'))return;
-  ready=false;let message='The authoring page could not be loaded';
+  ready=false;previewFailed=true;let message='The authoring page could not be loaded';
   if(doc?.contentType==='application/json'){try{message=JSON.parse(doc.querySelector('pre')?.textContent||doc.body.textContent).error||message;}catch(error){message+=': '+error.message;}}
   say(message);update();
 });
@@ -28,7 +28,7 @@ addEventListener('limen-editor-draft',event=>{const data=event.detail;try{if(!au
 addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==frame.contentWindow||!store)return;
   try{
-    if(event.data.type==='page'){page=event.data.page;if(page.workspace!==auth.workspace.id)throw Error('The frame belongs to another delivery');const url=new URL(location.href);url.searchParams.set('route',page.route);history.replaceState(null,'',url);ready=false;restoreDrafts();update();}
+    if(event.data.type==='page'){if(previewFailed){say('Authoring preview restored. Drafts remain in Review.');previewFailed=false;}page=event.data.page;if(page.workspace!==auth.workspace.id)throw Error('The frame belongs to another delivery');const url=new URL(location.href);url.searchParams.set('route',page.route);history.replaceState(null,'',url);ready=false;restoreDrafts();update();}
     if(event.data.type==='drafts-applied'&&event.data.request===restoreRequest){ready=true;frame.dataset.restored=page.head;update();}
     if(event.data.type==='finished'){finishing.get(event.data.request)?.(event.data.error);finishing.delete(event.data.request);}
     if(event.data.type==='edit-rejected'){$('[data-edit]').checked=event.data.enabled;lastEditState=event.data.enabled;}
