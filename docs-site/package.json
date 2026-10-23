@@ -14,7 +14,8 @@
     "serve": "node scripts/serve-reader.mjs",
     "check:reader": "node scripts/check-reader.mjs",
     "build:editor": "node scripts/build-editor.mjs",
-    "check:editor": "node --test editor/tests/*.test.mjs"
+    "check:editor": "node --test editor/tests/*.test.mjs",
+    "check:editor-browser": "node scripts/check-editor.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "5.3.0",

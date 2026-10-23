@@ -44,6 +44,7 @@ export function preview(page,pages,evidence,context){
   const byUrl=new Map(pages.map(item=>[item.url,item]));
   html=html.replace(/href="([^"<>]+)"/g,(original,href)=>{const [path,fragment]=href.split('#'),target=byUrl.get(path);return target?`href="${viewUrl(target,context.pr)}${fragment?'#'+fragment:''}"`:original;});
   html=html.replaceAll(' data-reference=""','').replaceAll('data-search="/limen/search.json"',`data-search="/limen/search.json${context.pr?'?pr='+context.pr:''}"`);
+  if(page.source)html=html.replace(content.product.repository+'/edit/main/'+page.source,content.product.repository+'/blob/'+context.state.head+'/'+page.source).replace('Edit this source</a>','View this source revision</a>');
   html=html.replaceAll('href="/limen/evidence/','href="https://docs.vaquum.fi/limen/evidence/').replaceAll('href="/limen/source/','href="https://docs.vaquum.fi/limen/source/');
   const data={path:page.source,blob:page.blob,head:context.state.head,workspace:context.state.id,route:page.route,pr:context.pr,passages:mapped};
   const banner=`<p class="authoring-identity">Authoring branch <code>${escape(context.state.branch)}</code> · ${escape(context.state.head.slice(0,8))}. Historical proof: Limen ${escape(evidence.package.version)} · ${escape(evidence.revision.head.slice(0,8))}. This branch has not been executed.</p>`;
