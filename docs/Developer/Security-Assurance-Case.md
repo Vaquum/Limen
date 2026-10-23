@@ -32,13 +32,13 @@ Evidence: the `Protect-Main` ruleset requires pull requests with non-author appr
 
 Argument: the workflow builds distributions from the resolved release tag with a fixed `SOURCE_DATE_EPOCH`, attests their bytes, and publishes those built distributions. Consumers can verify the source and artifact identities in the provenance independently.
 
-Evidence: the live `Protect-Release-Tags` rule blocks updates and deletion of `v*` tags without bypass; creation follows repository write permissions. Manual-release source admission runs from trusted `main` code before checkout of the triggering source. PyPI publication uses trusted publishing (OIDC) from the `pypi` environment with no long-lived token; distributions are attested with `actions/attest-build-provenance`; successful publication attaches the wheel, sdist, CycloneDX `sbom.json`, the `provenance.intoto.jsonl` Sigstore bundle, and a SHA-256 digest block to the GitHub release. Verification commands and partial-publication recovery are documented in [Release Policy](Release-Policy.md). `tests/test_packaging_surface.py::test_supply_chain_surfaces` pins the declared pipeline invariants; live repository settings require their separate API evidence.
+Evidence: the live `Protect-Release-Tags` rule blocks updates and deletion of `v*` tags without bypass; creation follows repository write permissions. Manual-release source admission runs from trusted `main` code before checkout of the triggering source. PyPI publication uses trusted publishing (OIDC) from the `pypi` environment with no long-lived PyPI token; distributions are attested with `actions/attest-build-provenance`; successful publication attaches the wheel, sdist, CycloneDX `sbom.json`, the `provenance.intoto.jsonl` Sigstore bundle, and a SHA-256 digest block to the GitHub release. Verification commands and partial-publication recovery are documented in [Release Policy](Release-Policy.md). `tests/test_packaging_surface.py::test_supply_chain_surfaces` pins the declared pipeline invariants; live repository settings require their separate API evidence.
 
-## Requirement 3: known-vulnerable dependencies cannot enter or persist silently
+## Requirement 3: declared runtime dependency findings require a disposition
 
-Argument: merge checks reject known dependency findings unless they have a recorded, time-limited exception. Scheduled updates provide continuing review pressure; these controls do not bound the time before an unknown vulnerability is discovered.
+Argument: merge checks reject known runtime dependency findings unless they have a recorded, time-limited exception. Scheduled updates provide continuing review pressure; these controls do not bound the time before an unknown vulnerability is discovered.
 
-Evidence: `.github/workflows/pr_checks_lint.yml` runs `governance/check_dependency_vulnerabilities.py` (pip-audit over the declared dependencies) as a required check; exceptions live in `.github/vuln_exceptions.json` with mandatory `id`, `reason`, and `expiry`, and expired exceptions fail again; Dependabot proposes weekly updates for the pip and github-actions ecosystems.
+Evidence: `.github/workflows/pr_checks_lint.yml` runs `governance/check_dependency_vulnerabilities.py` (pip-audit over `[project].dependencies`) as a required check; exceptions live in `.github/vuln_exceptions.json` with mandatory `id`, `reason`, and `expiry`, and expired exceptions fail again; Dependabot proposes weekly updates for the pip and github-actions ecosystems.
 
 ## Requirement 4: CI job permissions are explicit
 
