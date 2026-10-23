@@ -111,3 +111,40 @@ def test_manifest_digest_is_part_of_the_complete_acceptance(monkeypatch, active_
     assert deployment.verify_active(Path('wrangler'), Path('config'), 'selected-version', 'v5.46.2', digest, output, 'activation') == {'artifacts': 8}
     assert len(proofs) == 2
     assert calls == [('wait', 10)]
+
+
+def test_missing_route_wrapped_503_is_not_a_propagation_retry(monkeypatch, active_publication):
+    from test_publication_http import publication_failure_server
+    from verify_publication import verify_site
+    output, calls, digest = active_publication
+    with publication_failure_server() as (base, body, policy, requests):
+        def verify(*args):
+            verify_site(base + '/site/activation/', {'index.html': body, '404.html': body, 'security-headers.json': policy})
+
+        monkeypatch.setattr(deployment, 'verify', verify)
+        with pytest.raises(ValueError, match='deployed 404 differs') as caught:
+            deployment.verify_active(Path('wrangler'), Path('config'), 'selected-version', 'v5.46.2', digest, output, 'activation')
+        assert isinstance(caught.value.__cause__, PublicationHTTPError)
+        assert caught.value.__cause__.code == 503
+        assert calls == []
+        assert len(requests) == 3
+
+
+def test_rollback_home_digest_converges_with_the_other_proof(monkeypatch, active_publication):
+    output, calls, digest = active_publication
+    homes = iter([b'pre-propagation-home', b'retained-home'])
+    proofs = []
+
+    def fetch(url):
+        return next(homes) if url == deployment.ORIGIN else b'{"transport":"sealed-publication"}'
+
+    def verify(*args):
+        proofs.append(True)
+        return {'artifacts': 8}
+
+    monkeypatch.setattr(deployment, 'fetch', fetch)
+    monkeypatch.setattr(deployment, 'verify', verify)
+    assert deployment.verify_active(Path('wrangler'), Path('config'), 'selected-version', 'v5.46.1', digest,
+                                    output, 'rollback', home_sha256=sha256(b'retained-home')) == {'artifacts': 8}
+    assert len(proofs) == 2
+    assert calls == [('wait', 10)]

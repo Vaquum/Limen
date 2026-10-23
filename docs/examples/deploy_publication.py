@@ -140,7 +140,7 @@ def deploy_version(wrangler: Path, config: Path, version: str, output: Path) -> 
 
 
 def verify_active(wrangler: Path, config: Path, version: str, release: str,
-                  manifest_sha256: str, output: Path, phase: str):
+                  manifest_sha256: str, output: Path, phase: str, *, home_sha256: str | None = None):
     deadline = time.monotonic() + DEPLOYMENT_VERIFY_SECONDS
     attempt = 0
     while True:
@@ -151,14 +151,20 @@ def verify_active(wrangler: Path, config: Path, version: str, release: str,
             verified = verify(ORIGIN, release)
             if sha256(fetch(ORIGIN + 'publication.json')) != manifest_sha256:
                 raise ValueError('Production serves another publication manifest')
+            if home_sha256 is not None and sha256(fetch(ORIGIN)) != home_sha256:
+                raise ValueError('Rollback did not restore the retained home page')
         except (PublicationHTTPError, ValueError) as error:
             record_http_failure(output, f'{phase}-propagation-{attempt}', release, version, error)
             print(f'Publication proof has not converged [{phase}, attempt {attempt}]: {error}', flush=True)
-            if isinstance(error, PublicationHTTPError) and error.code != 404:
-                raise
+            cause: BaseException | None = error
+            while cause is not None:
+                if isinstance(cause, HTTPError) and cause.code != 404:
+                    raise
+                cause = cause.__cause__
             if isinstance(error, ValueError) and not str(error).startswith((
                 'Publication belongs to another release', 'Production serves another publication manifest',
                 'The active site member differs from its sealed payload:', 'The deployed 404 differs from the sealed reader',
+                'Rollback did not restore the retained home page',
             )):
                 raise
             remaining = deadline - time.monotonic()
@@ -205,8 +211,8 @@ def activate(root: Path, wrangler: Path):
                 deploy_version(wrangler, config, previous['version_id'], output / 'rollback.ndjson')
                 if previous['mode'] == 'released':
                     verify_active(wrangler, config, previous['version_id'], previous['release'],
-                                  previous['manifest_sha256'], output, 'rollback')
-                if sha256(fetch(ORIGIN)) != previous['home_sha256']:
+                                  previous['manifest_sha256'], output, 'rollback', home_sha256=previous['home_sha256'])
+                elif sha256(fetch(ORIGIN)) != previous['home_sha256']:
                     raise ValueError('Rollback did not restore the retained home page')
                 (output / 'rollback.json').write_text(json.dumps(previous, indent=2) + '\n')
             except Exception as rollback_error:
