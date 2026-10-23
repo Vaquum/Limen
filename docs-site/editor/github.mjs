@@ -45,7 +45,7 @@ export async function workspace(storage,github,user,continuing){
     if(pull.state!=='open'){assert(!state.operation,'Recover the pending operation before starting another delivery');state=null;}
   }
   if(!state){const head=await github.head('main'),id=crypto.randomUUID();state={id,branch:`codex/docs-edit-${user.id}-${id}`,base:head,head,created:false,files:[]};}
-  if(state.created){const head=await github.head(state.branch,true);assert(head,'The unmerged branch is missing; recover it in GitHub before continuing');state.remoteHead=head;}
+  if(state.created){const head=await github.head(state.branch,true);assert(head,'The unmerged branch is missing; recover it in GitHub before continuing');state.remoteHead=head;if(!state.operation)state.head=head;}
   await storage.put('workspace',state);return state;
 }
 async function commitMatches(github,state,operation,head){

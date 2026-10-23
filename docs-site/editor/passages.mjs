@@ -49,14 +49,22 @@ export function passages(source,path,baseBlobSha){
     const originalText=source.slice(start,end),sourceRange={start,end,lines:map,cell:column};
     result.push({id:digest(path+':'+baseBlobSha+':'+start+':'+originalText).slice(0,24),path,baseBlobSha,sourceRange,originalText,markdown:token.content,type:table?'cell':parent.tag==='h1'?'title':parent.type==='heading_open'?'heading':'paragraph',tag:parent.tag,prefix,tokenIndex:index,html:md.renderInline(token.content,env)});
   }
-  return result;
+  for(let index=0;index<tokens.length;index++)if(tokens[index].type==='html_block'){
+    const token=tokens[index];for(const match of token.content.matchAll(/<summary>([^<>\n]*)<\/summary>/g)){
+      const line=token.map[0]+token.content.slice(0,match.index).split('\n').length-1;if(protectedSet.has(line))continue;
+      const start=offsets[token.map[0]]+match.index+9,end=start+match[1].length,originalText=source.slice(start,end);
+      result.push({id:digest(path+':'+baseBlobSha+':'+start+':'+originalText).slice(0,24),path,baseBlobSha,sourceRange:{start,end,lines:[line,line+1],cell:null},originalText,markdown:originalText,type:'summary',tag:'summary',prefix:'',tokenIndex:index});
+    }
+  }
+  return result.sort((a,b)=>a.sourceRange.start-b.sourceRange.start);
 }
-const signature=tokens=>tokens.filter(token=>!(token.type==='html_block'&&anchorPattern.test(token.content.trim()))).map(token=>[token.type,token.tag,token.nesting,token.hidden,token.type==='fence'?token.info+'\n'+token.content:token.type==='html_block'?token.content:null]);
+const signature=tokens=>tokens.filter(token=>!(token.type==='html_block'&&anchorPattern.test(token.content.trim()))).map(token=>[token.type,token.tag,token.nesting,token.hidden,token.type==='fence'?token.info+'\n'+token.content:token.type==='html_block'?token.content.replace(/<summary>[^<>\n]*<\/summary>/g,'<summary></summary>'):null]);
 const links=tokens=>tokens.flatMap(token=>(token.children||[]).filter(child=>child.type==='link_open'||child.type==='image').map(child=>[child.type,child.attrGet('href')||child.attrGet('src'),child.attrGet('title')]));
 function safeInline(markdown,type){
   requireEdit(typeof markdown==='string'&&markdown.trim()&&Buffer.byteLength(markdown)<=20480,'Passage must contain between 1 byte and 20 KiB');
   requireEdit(!/\n\s*\n/.test(markdown),'New paragraphs are source work');
   if(type!=='paragraph')requireEdit(!/[\r\n]/.test(markdown),'This passage must stay on one line');
+  if(type==='summary'){requireEdit(!/[<>]/.test(markdown),'Summary text cannot introduce HTML');return [];}
   const parsed=md.parse(markdown,{});
   requireEdit(parsed.length===3&&parsed[0].type==='paragraph_open','A prose edit cannot introduce block structure');
   requireEdit(!parsed[1].children.some(token=>token.type==='html_inline'||token.type==='image'),'HTML and images are source work');

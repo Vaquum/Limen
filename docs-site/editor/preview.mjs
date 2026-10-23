@@ -14,9 +14,10 @@ function safeHtml(value){
   return escape(value);
 }
 export function preview(page,pages,evidence,context){
+  let sourceLines=[];
   const mapped=context.passages,authoring={
-    configure(md){md.renderer.rules.html_block=(tokens,index)=>safeHtml(tokens[index].content);md.renderer.rules.html_inline=(tokens,index)=>safeHtml(tokens[index].content);},
-    annotate(md,kept){md.core.ruler.push('editable_passages',state=>{
+    configure(md){md.renderer.rules.html_block=(tokens,index)=>{const token=tokens[index],safe=safeHtml(token.content);if(safe!==token.content)return safe;return safe.replace(/<summary>([^<>\n]*)<\/summary>/g,(whole,text,offset)=>{const line=sourceLines[token.map[0]+token.content.slice(0,offset).split('\n').length-1],passage=mapped.find(item=>item.type==='summary'&&item.sourceRange.lines[0]===line&&item.originalText===text);return passage?`<summary data-edit-id="${passage.id}" data-edit-type="summary">${text}</summary>`:whole;});};md.renderer.rules.html_inline=(tokens,index)=>safeHtml(tokens[index].content);},
+    annotate(md,kept){sourceLines=kept;md.core.ruler.push('editable_passages',state=>{
       let row=null,column=0;
       for(let index=0;index<state.tokens.length;index++){
         const token=state.tokens[index];if(token.type==='tr_open'){row=token.map;column=0;}if(token.type!=='inline')continue;

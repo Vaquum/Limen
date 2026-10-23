@@ -77,9 +77,9 @@ export default{
         if(typeof payload.operation!=='string'||!/^[\da-f-]{36}$/.test(payload.operation))throw new EditError('An operation UUID is required');
         return response(await rpc(env,auth.name,path.endsWith('/commit')?'commit':'pr',{token:auth.token,user:auth.user,continuing:continuing(url),payload}));
       }
-      if(path.startsWith(root+'view/')||path===root+'api/inline'||path==='/limen/search.json'){
-        const body=path===root+'api/inline'?await jsonBody(request,env.EDITOR_ORIGIN):null,auth=await editing(request,env,url),pages=await auth.github.pages(auth.state.head);
-        if(body){const page=pages.find(page=>page.source===body.patch?.path);if(!page)throw new EditError('Unknown prose source',403);applyPatches(page.markdown,page.source,page.blob,[body.patch]);return response({html:inlinePreview(body.patch.newMarkdown,page.markdown)});}
+      if(path.startsWith(root+'view/')||path===root+'api/inline'||path===root+'api/reanchor'||path==='/limen/search.json'){
+        const body=(path===root+'api/inline'||path===root+'api/reanchor')?await jsonBody(request,env.EDITOR_ORIGIN):null,auth=await editing(request,env,url),pages=await auth.github.pages(auth.state.head);
+        if(body){if(path.endsWith('/reanchor')){const source=pages.find(page=>page.source===body.patch?.path);if(!source)throw new EditError('Unknown prose source',403);const matches=passages(source.markdown,source.source,source.blob).filter(item=>item.originalText===body.patch.originalText);if(matches.length!==1)throw new EditError('Draft no longer has one unchanged source passage; reconcile it in Review',409);const patch={...body.patch,baseBlobSha:source.blob,sourceRange:matches[0].sourceRange};applyPatches(source.markdown,source.source,source.blob,[patch]);return response({patch,head:auth.state.head});}const page=pages.find(page=>page.source===body.patch?.path);if(!page)throw new EditError('Unknown prose source',403);applyPatches(page.markdown,page.source,page.blob,[body.patch]);return response({html:inlinePreview(body.patch.newMarkdown,page.markdown)});}
         if(path==='/limen/search.json')return response(authoringSearch(pages,continuing(url)));
         pages.push(referenceIndex(pages));
         const route='/'+path.slice((root+'view/').length),page=pages.find(page=>page.route===route);
