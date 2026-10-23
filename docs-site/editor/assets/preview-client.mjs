@@ -32,7 +32,7 @@ document.addEventListener('focusout',event=>{if(active&&event.target===active.el
 addEventListener('message',async event=>{
   if(event.origin!==location.origin||event.source!==parent)return;
   const message=event.data;
-  if(message.type==='edit'){finish();enabled=message.enabled;document.body.classList.toggle('prose-editing',enabled);for(const element of document.querySelectorAll('[data-edit-id]')){element.tabIndex=enabled?0:-1;element.setAttribute('aria-label',enabled?'Edit '+element.dataset.editType:element.dataset.editType);}}
+  if(message.type==='edit'){if(enabled!==message.enabled)finish();enabled=message.enabled;document.body.classList.toggle('prose-editing',enabled);for(const element of document.querySelectorAll('[data-edit-id]')){element.tabIndex=enabled?0:-1;element.setAttribute('aria-label',enabled?'Edit '+element.dataset.editType:element.dataset.editType);}}
   if(message.type==='finish'){finish();send('finished',{request:message.request});}if(message.type==='undo-active')finish(true);
   if(message.type==='draft-saved'){const element=document.querySelector(`[data-edit-id="${message.passageId}"]`);if(element)element.dataset.draftVersion=message.id;}
   if(message.type==='drafts'){

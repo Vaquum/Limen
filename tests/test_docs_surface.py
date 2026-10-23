@@ -1,5 +1,6 @@
 import ast
 import importlib
+from functools import lru_cache
 import json
 import re
 import subprocess
@@ -60,9 +61,14 @@ def _assert_fences_parse(language: str, parser: Callable[[str], object]) -> None
 
 
 def _heading_ids(path: Path) -> set[str]:
+    return set(_heading_ids_for_text(path.read_text(encoding='utf-8')))
+
+
+@lru_cache(maxsize=128)
+def _heading_ids_for_text(text: str) -> frozenset[str]:
     ids: set[str] = set()
     seen: dict[str, int] = {}
-    tokens = MarkdownIt().parse(path.read_text(encoding='utf-8'))
+    tokens = MarkdownIt().parse(text)
     for index, token in enumerate(tokens):
         if token.type != 'heading_open':
             continue
@@ -74,7 +80,7 @@ def _heading_ids(path: Path) -> set[str]:
         before = tokens[index - 1] if index and tokens[index - 1].type == 'html_block' else tokens[index - 2] if index > 1 and tokens[index - 1].type == 'paragraph_close' and tokens[index - 2].type == 'inline' else None
         explicit = re.fullmatch(r'<a id="([^"<>]+)" data-reader-heading="(?:python|compiled|plain)"></a>\s*', before.content.strip()) if before else None
         ids.add(explicit.group(1) if explicit else stem if duplicate == 0 else f'{stem}-{duplicate}')
-    return ids
+    return frozenset(ids)
 
 
 def test_documentation_corpus_is_fully_routed_into_the_site() -> None:

@@ -6,7 +6,8 @@ function acknowledge(){for(const receipt of Object.values(auth.workspace.receipt
 const say=text=>status.textContent=text;
 async function api(path,body){const reply=await fetch('/limen/edit/api/'+path+suffix,body?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{}),data=await reply.json();if(!reply.ok)throw Error(data.error);return data;}
 const send=(type,extra={})=>frame.contentWindow?.postMessage({type,...extra},location.origin);
-function update(){if(!store||!auth)return;const items=store.heads();$('[data-count]').textContent=items.length;$('[data-commit]').disabled=busy||(!items.length&&auth.workspace.operation?.kind!=='commit')||store.conflicts();$('[data-pr]').disabled=busy||!auth.workspace.created||items.length>0;$('[data-review]').disabled=false;$('[data-edit]').disabled=busy;if(store.conflicts())say('Competing tabs edited the same passage. Review and Undo the unwanted version before committing.');}
+let lastEditState;
+function update(){if(!store||!auth)return;const editing=$('[data-edit]').checked&&!busy;frame.inert=busy;if(editing!==lastEditState){lastEditState=editing;send('edit',{enabled:editing});}const items=store.heads();$('[data-count]').textContent=items.length;$('[data-commit]').disabled=busy||(!items.length&&auth.workspace.operation?.kind!=='commit')||store.conflicts();$('[data-pr]').disabled=busy||!auth.workspace.created||items.length>0;$('[data-review]').disabled=false;$('[data-edit]').disabled=busy;if(store.conflicts())say('Competing tabs edited the same passage. Review and Undo the unwanted version before committing.');}
 function review(){const list=$('[data-drafts]');list.replaceChildren();for(const item of store.heads()){const li=document.createElement('li'),name=document.createElement('p'),before=document.createElement('pre'),after=document.createElement('pre'),undo=document.createElement('button');name.textContent=item.patch.path;before.textContent=item.patch.originalText;after.textContent=item.patch.newMarkdown;undo.textContent='Undo this draft';undo.onclick=()=>{store.undo(item.id);review();update();frame.contentWindow.location.reload();};li.append(name,before,after,undo);list.append(li);}if(!$('[data-review-dialog]').open)$('[data-review-dialog]').showModal();}
 async function action(run){busy=true;update();try{await run();}catch(error){say(error.message+' Drafts are retained.');}finally{busy=false;update();}}
 async function connect(){
@@ -19,7 +20,7 @@ async function connect(){
 addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==frame.contentWindow||!store)return;
   try{
-    if(event.data.type==='page'){page=event.data.page;if(page.workspace!==auth.workspace.id)throw Error('The frame belongs to another delivery');const url=new URL(location.href);url.searchParams.set('route',page.route);history.replaceState(null,'',url);send('drafts',{items:store.heads()});send('edit',{enabled:$('[data-edit]').checked});}
+    if(event.data.type==='page'){page=event.data.page;if(page.workspace!==auth.workspace.id)throw Error('The frame belongs to another delivery');const url=new URL(location.href);url.searchParams.set('route',page.route);history.replaceState(null,'',url);send('drafts',{items:store.heads()});lastEditState=$('[data-edit]').checked&&!busy;send('edit',{enabled:lastEditState});}
     if(event.data.type==='finished'){finishing.get(event.data.request)?.();finishing.delete(event.data.request);}
     if(event.data.type==='draft'){const item=store.save(event.data.patch,event.data.previous);send('draft-saved',{passageId:event.data.passageId,id:item.id});say('Draft saved in this browser.');update();}
     if(event.data.type==='error'||event.data.type==='conflict')say(event.data.message);
@@ -27,7 +28,7 @@ addEventListener('message',event=>{
   }catch(error){say('Draft storage failed: '+error.message);}
 });
 $('button[data-refresh]').onclick=()=>action(async()=>{await flush();const updated=await api('session');if(updated.workspace.id!==auth.workspace.id){say('The previous delivery is closed. Download or discard its remaining drafts in Review, then reload for the next delivery.');return;}auth=updated;acknowledge();if(!auth.workspace.operation){for(const item of store.heads()){try{const result=await api('reanchor',{patch:item.patch});if(result.patch.baseBlobSha!==item.patch.baseBlobSha){store.save(result.patch,[]);store.undo(item.id);}}catch(error){say(error.message+' The original draft remains in Review.');}}}frame.contentWindow.location.reload();update();});
-$('[data-edit]').onchange=()=>send('edit',{enabled:$('[data-edit]').checked});$('[data-undo]').onpointerdown=event=>{event.preventDefault();send('undo-active');};$('[data-undo]').onclick=()=>send('undo-active');$('[data-review]').onclick=()=>action(async()=>{await flush();review();});$('[data-close]').onclick=()=>$('[data-review-dialog]').close();
+$('[data-edit]').onchange=()=>lastEditState=$('[data-edit]').checked&&!busy;send('edit',{enabled:lastEditState});$('[data-undo]').onpointerdown=event=>{event.preventDefault();send('undo-active');};$('[data-undo]').onclick=()=>send('undo-active');$('[data-review]').onclick=()=>action(async()=>{await flush();review();});$('[data-close]').onclick=()=>$('[data-review-dialog]').close();
 $('[data-commit]').onclick=()=>action(async()=>{
   await flush();
   if(store.conflicts())throw Error('Resolve competing drafts first');const items=store.heads(),existing=auth.workspace.operation;
