@@ -57,17 +57,19 @@ test('published routes agree with robots and sitemap while other products remain
   const htmlByUrl=new Map();
   const built=JSON.parse(await fs.readFile(path.join(root,'docs-site/reader-build/build.json'),'utf8'));
   for(const route of routes){const response=await request.get(route.url);expect(response.status(),route.url).toBe(200);expect(response.headers()['content-security-policy']).toContain("frame-ancestors 'none'");htmlByUrl.set(route.url,await response.text());}
-  const anchors=new Map([...htmlByUrl].map(([url,html])=>[url,new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match=>match[1]))]));
+  const anchors=new Map([...htmlByUrl].map(([url,html])=>[url,new Set([...html.matchAll(/\sid="([^"]+)"/g)].map(match=>match[1]))]));
+  const broken=[];
   for(const [url,html] of htmlByUrl){
     for(const match of html.matchAll(/href="([^"]+)"/g)){
       const target=new URL(match[1].replaceAll('&amp;','&'),new URL(url,'https://docs.vaquum.fi'));
       if(target.origin!=='https://docs.vaquum.fi')continue;
-      expect(htmlByUrl.has(target.pathname)||Object.hasOwn(built.files,decodeURIComponent(target.pathname.replace(/^\/limen\//,''))),url+' → '+target.pathname).toBe(true);
+      if(!htmlByUrl.has(target.pathname)&&!Object.hasOwn(built.files,decodeURIComponent(target.pathname.replace(/^\/limen\//,''))))broken.push(url+' → '+target.pathname);
       if(!target.hash||!htmlByUrl.has(target.pathname))continue;
       const anchor=decodeURIComponent(target.hash.slice(1));
-      expect(anchors.get(target.pathname).has(anchor),url+' → '+target.pathname+target.hash).toBe(true);
+      if(!anchors.get(target.pathname).has(anchor))broken.push(url+' → '+target.pathname+target.hash);
     }
   }
+  expect(broken).toEqual([]);
   const decisions=await (await request.get('/limen/route-decisions.json')).json();
   expect(decisions).toEqual(JSON.parse(await fs.readFile(path.join(root,'docs-site/reader/route-decisions.json'),'utf8')));
   for(const item of decisions.legacy_routes){
