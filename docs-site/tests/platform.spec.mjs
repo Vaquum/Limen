@@ -45,6 +45,10 @@ test('code ranges and interface choice survive direct navigation',async({page})=
 });
 
 test('fragment history retains the reading position and a repeated link reveals its interface',async({page})=>{
+  for(const [route,anchor]of [['/limen/developer/making-release/','documentation-publication-acceptance'],['/limen/reference/trainer/','python-construction']]){
+    await page.goto(route+'#'+anchor);await page.evaluate(()=>document.fonts.ready);
+    await expect(page.locator('#'+anchor)).toBeInViewport();
+  }
   await page.goto('/limen/#adopt-the-compiled-pipeline');await page.evaluate(()=>document.fonts.ready);
   await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
   const contents=page.locator('.mobile-nav');if(await contents.isVisible())await contents.locator('summary').click();
@@ -59,6 +63,7 @@ test('fragment history retains the reading position and a repeated link reveals 
   await page.getByRole('button',{name:'Python Research',exact:true}).click();
   await expect(page.locator('#adopt-the-compiled-pipeline')).toBeHidden();
   await compiled.click();await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
+  await page.goto('/limen/#own-the-python-methodology');await expect(page.locator('#own-the-python-methodology')).toBeInViewport();
 });
 
 test('long callable reference remains searchable and renders within the reading budget',async({page})=>{

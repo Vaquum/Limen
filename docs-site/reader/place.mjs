@@ -27,6 +27,10 @@ export function restore(place){
   document.body.dataset.interface=place.interface||'both';return true;
 }
 export function initPlace(){
+  if(location.hash&&navigationType()!=='back_forward'){
+    const target=document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
+    if(target){target.scrollIntoView({block:target.classList.contains('code-line')?'center':'start'});target.focus({preventScroll:true});}
+  }
   const resumed=navigationType()==='back_forward'?history.state?.readerPlace:null;
   if(resumed&&!location.hash)restore(resumed);
   else if(resuming()&&!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}

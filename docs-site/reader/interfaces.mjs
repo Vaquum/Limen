@@ -48,11 +48,8 @@ export function initInterfaces(){
   if(preferred!=='both'&&!available.has(preferred))preferred=[...available][0];
   const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1')):null;
   const linked=target?.closest('[data-research-interface]');
-  choose(linked?.dataset.researchInterface||preferred,{save:false});
-  if(target&&navigationType()!=='back_forward'){
-    target.scrollIntoView({block:target.classList.contains('code-line')?'center':'start'});
-    target.focus({preventScroll:true});
-  }
+  const entry=navigationType()==='back_forward'&&choices.includes(history.state?.readerInterface)?history.state.readerInterface:null;
+  choose(entry||linked?.dataset.researchInterface||preferred,{save:false});
   document.addEventListener('click',event=>{
     const link=event.target.closest('a[href]');
     if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||document.querySelector('dialog[open]'))return;
@@ -63,7 +60,14 @@ export function initInterfaces(){
     if(linked)choose(linked.dataset.researchInterface,{save:false,record:url.hash===location.hash});
   });
   addEventListener('hashchange',()=>{
-    if(!history.state?.readerReference)history.replaceState({...history.state,readerInterface:document.body.dataset.interface},'',location.href);
+    if(history.state?.readerReference||document.querySelector('dialog[open]'))return;
+    if(!choices.includes(history.state?.readerInterface)){
+      const target=document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      const linked=target?.closest('[data-research-interface]');
+      if(linked)choose(linked.dataset.researchInterface,{save:false});
+      if(target){target.scrollIntoView({block:'start'});target.focus({preventScroll:true});}
+    }
+    history.replaceState({...history.state,readerInterface:document.body.dataset.interface},'',location.href);
   });
   addEventListener('popstate',event=>{
     if(event.state?.readerReference||document.querySelector('dialog[open]'))return;
