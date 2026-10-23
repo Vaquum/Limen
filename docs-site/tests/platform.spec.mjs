@@ -54,7 +54,9 @@ test('fragment history retains the reading position and a repeated link reveals 
   const contents=page.locator('.mobile-nav');if(await contents.isVisible())await contents.locator('summary').click();
   const python=page.locator('a[href="#own-the-python-methodology"]').filter({visible:true}).first();
   const compiled=page.locator('a[href="#adopt-the-compiled-pipeline"]').filter({visible:true}).first();
-  await python.click();await page.evaluate(()=>scrollBy(0,180));const before=await page.evaluate(()=>scrollY);
+  await python.click();await page.waitForFunction(()=>history.state?.readerInterface==='python');
+  await page.evaluate(()=>new Promise(resolve=>{scrollBy(0,180);requestAnimationFrame(()=>requestAnimationFrame(resolve));}));
+  const before=await page.evaluate(()=>scrollY);
   await page.goto('/limen/#adopt-the-compiled-pipeline');await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
   await page.goBack();
   await expect(page.locator('[data-interface-choice="python"]')).toHaveAttribute('aria-pressed','true');

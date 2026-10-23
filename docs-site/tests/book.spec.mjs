@@ -303,6 +303,7 @@ test('modified source-line links open the actual permalink in another tab',async
   await open(page);const figure=page.locator('figure.code').first();
   const line=figure.locator('.line-number').first();
   const opened=context.waitForEvent('page');await line.click({modifiers:['ControlOrMeta']});const linked=await opened;
+  await linked.bringToFront();await linked.waitForLoadState('domcontentloaded');
   await expect(linked).toHaveURL(/#code-1-L1$/);await expect(linked.locator('#code-1-L1')).toBeInViewport();
   expect(new URL(page.url()).hash).toBe('');await linked.close();
 });
