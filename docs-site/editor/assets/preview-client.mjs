@@ -1,13 +1,13 @@
 import {inlineMarkdown} from './inline.mjs';
 const data=JSON.parse(document.querySelector('#editor-source').content.textContent),mapped=new Map(data.passages.map(item=>[item.id,item]));
-let enabled=false,active=null,draftGeneration=0;
+let enabled=false,active=null,draftGeneration=0,finishError=null;
 const send=(type,extra={})=>parent.postMessage({type,...extra},location.origin);
 function finish(cancel=false){
-  if(!active)return true;const {element,html,passage,links,previous}=active;
+  finishError=null;  if(!active)return true;const {element,html,passage,links,previous}=active;
   try{
     if(cancel)element.innerHTML=html;
     else if(element.innerHTML!==html){let newMarkdown=passage.type==='summary'?element.textContent:inlineMarkdown(element,{links});if(passage.type==='cell')newMarkdown=newMarkdown.replace(/(\\*)\|/g,(whole,slashes)=>slashes.length%2?whole:slashes+'\\|');const detail={workspace:data.workspace,path:data.path,patch:{path:data.path,baseBlobSha:data.blob,sourceRange:passage.sourceRange,originalText:passage.originalText,newMarkdown},previous,passageId:passage.id};parent.dispatchEvent(new CustomEvent('limen-editor-draft',{detail}));if(detail.error)throw Error(detail.error);element.dataset.draftVersion=detail.saved;element.dataset.drafted='true';}
-  }catch(error){send('error',{message:error.message});return false;}
+  }catch(error){finishError=error.message;send('error',{message:finishError});return false;}
   element.contentEditable='false';element.removeAttribute('role');active=null;send('active',{active:false});return true;
 }
 function begin(element){
@@ -33,7 +33,7 @@ addEventListener('message',async event=>{
   if(event.origin!==location.origin||event.source!==parent)return;
   const message=event.data;
   if(message.type==='edit'){if(enabled!==message.enabled&&!finish())return;enabled=message.enabled;document.body.classList.toggle('prose-editing',enabled);for(const element of document.querySelectorAll('[data-edit-id]')){element.tabIndex=enabled?0:-1;element.setAttribute('aria-label',enabled?'Edit '+element.dataset.editType:element.dataset.editType);}}
-  if(message.type==='finish'){const saved=finish();send('finished',{request:message.request,error:saved?null:'The active passage could not be saved; correct it before continuing'});}if(message.type==='undo-active')finish(true);
+  if(message.type==='finish'){const saved=finish();send('finished',{request:message.request,error:saved?null:finishError});}if(message.type==='undo-active')finish(true);
   if(message.type==='draft-saved'){const element=document.querySelector(`[data-edit-id="${message.passageId}"]`);if(element)element.dataset.draftVersion=message.id;}
   if(message.type==='drafts'){
     const generation=++draftGeneration;

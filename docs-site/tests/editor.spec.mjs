@@ -37,6 +37,6 @@ test('inline conversion retains literal entities, nested formatting, code delimi
 test('a failed active conversion blocks Refresh and Commit without losing the passage',async({page,request})=>{
   await signIn(page);await page.locator('[data-edit]').check();await change(page,'p[data-edit-id]',' Retained draft.');const active=page.frameLocator('[data-frame]').locator('p[data-edit-id]').nth(1);await active.click();await active.evaluate(element=>{const span=document.createElement('span');span.textContent=' Active unsupported formatting.';element.append(span);});
   await page.frameLocator('[data-frame]').locator('p[data-edit-id]').first().click();await expect(active).toHaveAttribute('contenteditable','true');
-  for(const name of ['Refresh','Commit']){await page.getByRole('button',{name,exact:true}).click();await expect(page.locator('[data-status]')).toContainText('could not be saved');await expect(active).toContainText('Active unsupported formatting.');await expect(active).toHaveAttribute('contenteditable','true');}
+  for(const name of ['Refresh','Commit']){await page.getByRole('button',{name,exact:true}).click();await expect(page.locator('[data-status]')).toContainText('unsupported inline formatting');await expect(active).toContainText('Active unsupported formatting.');await expect(active).toHaveAttribute('contenteditable','true');}
   expect((await (await control(request,{})).json()).counts.commit).toBe(0);
 });
