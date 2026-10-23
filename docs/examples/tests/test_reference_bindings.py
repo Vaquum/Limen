@@ -1,4 +1,5 @@
 from pathlib import Path
+import ast
 import os
 import json
 import hashlib
@@ -242,11 +243,12 @@ def test_export_resolution_rereads_changed_source_at_the_same_path(tmp_path):
     directory.mkdir()
     source = directory / 'roc.py'
     original = (ROOT / 'limen/indicators/roc.py').read_text()
-    source.write_text(original)
-    assert resolve(tmp_path, 'limen.roc', 'roc')[1].args.defaults[-1].value == 10
     changed = original.replace('period: int = 10', 'period: int = 20')
     assert changed != original
-    source.write_text(changed)
-    assert resolve(tmp_path, 'limen.roc', 'roc')[1].args.defaults[-1].value == 20
-    source.write_text(original)
-    assert resolve(tmp_path, 'limen.roc', 'roc')[1].args.defaults[-1].value == 10
+    for text, expected in ((original, 10), (changed, 20), (original, 10)):
+        source.write_text(text)
+        _, node = resolve(tmp_path, 'limen.roc', 'roc')
+        assert isinstance(node, ast.FunctionDef)
+        default = node.args.defaults[-1]
+        assert isinstance(default, ast.Constant)
+        assert default.value == expected
