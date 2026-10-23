@@ -139,6 +139,7 @@ def test_incomplete_github_response_retries_and_retains_exact_association(monkey
     calls, delays = [], []
 
     def run(command, **kwargs):
+        assert kwargs['timeout'] == 30
         calls.append(command)
         status, output, error = next(responses)
         return subprocess.CompletedProcess(command, status, output, error)

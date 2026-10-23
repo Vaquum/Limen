@@ -43,13 +43,14 @@ def merged_pull(commit, responses):
 def pull_associations(commit):
     command = ['gh', 'api', f'repos/Vaquum/Limen/commits/{commit}/pulls']
     for attempt in range(6):
-        response = subprocess.run(command, text=True, capture_output=True)
+        response = subprocess.run(command, text=True, capture_output=True, timeout=30)
         if response.returncode == 0:
             associations = json.loads(response.stdout)
             if not isinstance(associations, list):
                 raise ValueError('Source PR associations must be a JSON array: ' + commit)
             return associations
         if response.stderr.strip() != 'unexpected end of JSON input' or attempt == 5:
+            print(response.stderr.strip(), file=sys.stderr)
             raise subprocess.CalledProcessError(response.returncode, command, output=response.stdout, stderr=response.stderr)
         print(f'Incomplete GitHub response for {commit}; retry {attempt + 1}/5: {response.stderr.strip()}', file=sys.stderr)
         time.sleep(attempt + 1)
