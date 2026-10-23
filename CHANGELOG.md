@@ -1957,3 +1957,15 @@ Infer nullable allocation opportunity fields across all observed labels so late 
 - Preserve `market_regime` SMA alias bindings across equal, swapped, and overlapping periods.
 - Reject nonfinite replay metric changes before Sensor construction in Trainer.
 - Preserve lazy stochastic indicator execution during preparation.
+
+## [5.46.2] - 2026-10-23
+
+- Complete the research book, its canonical Python and YAML/CLI projects, callable/configuration references and responsive reader.
+- Preserve exact example bindings, independent recorded-data assertions and changing-source PR provenance through released-wheel publication.
+- Record isolated feedback-source errors without discarding the audit trail.
+- Exclude evaluation-only targets from live rule preparation.
+- Reject occupied CLI result directories before copying the submitted YAML.
+- Require native date-window ends on their source bar grid.
+- Preserve numeric metrics, parameter types and active filters across checkpoint recovery; reject unrestorable filters.
+- Export configured Parquet results after a successful CLI resume.
+- Admit valid representable frozen PBO partition counts.
