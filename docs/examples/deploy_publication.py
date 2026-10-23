@@ -14,6 +14,8 @@ from verify_publication import PublicationHTTPError, fetch, sha256, verify
 ACCOUNT = '758576157d0685fa4eb2aeaf16781577'
 ORIGIN = 'https://docs.vaquum.fi/limen/'
 DEPLOYMENT_SETTLE_SECONDS = 5
+DEPLOYMENT_VERIFY_SECONDS = 180
+DEPLOYMENT_VERIFY_INTERVAL = 10
 
 
 def record_http_failure(output: Path, phase: str, release: str | None, version: str, error: Exception) -> None:
@@ -137,6 +139,33 @@ def deploy_version(wrangler: Path, config: Path, version: str, output: Path) -> 
         raise ValueError('The active Worker version changed during deployment propagation')
 
 
+def verify_active(wrangler: Path, config: Path, version: str, release: str,
+                  manifest_sha256: str, output: Path, phase: str):
+    deadline = time.monotonic() + DEPLOYMENT_VERIFY_SECONDS
+    attempt = 0
+    while True:
+        if current_version(wrangler, config) != version:
+            raise ValueError('Another deployment changed the active Worker during verification')
+        attempt += 1
+        try:
+            verified = verify(ORIGIN, release)
+            if sha256(fetch(ORIGIN + 'publication.json')) != manifest_sha256:
+                raise ValueError('Production serves another publication manifest')
+        except (PublicationHTTPError, ValueError) as error:
+            record_http_failure(output, f'{phase}-propagation-{attempt}', release, version, error)
+            print(f'Publication proof has not converged [{phase}, attempt {attempt}]: {error}', flush=True)
+            if isinstance(error, PublicationHTTPError) and error.code != 404:
+                raise
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise
+            time.sleep(min(DEPLOYMENT_VERIFY_INTERVAL, remaining))
+        else:
+            if current_version(wrangler, config) != version:
+                raise ValueError('Another deployment changed the active Worker during verification')
+            return verified
+
+
 def activate(root: Path, wrangler: Path):
     output = root / '.docs-evidence/deployment'
     staged = json.loads((output / 'staged.json').read_text())
@@ -157,9 +186,8 @@ def activate(root: Path, wrangler: Path):
     try:
         deploy_version(wrangler, config, staged['version_id'], output / 'activation.ndjson')
         require_latest_release(staged['release'])
-        verified = verify(ORIGIN, staged['release'])
-        if sha256(fetch(ORIGIN + 'publication.json')) != staged['manifest_sha256']:
-            raise ValueError('Production serves another publication manifest')
+        verified = verify_active(wrangler, config, staged['version_id'], staged['release'],
+                                 staged['manifest_sha256'], output, 'activation')
         require_latest_release(staged['release'])
     except Exception as error:
         print('Activation or production verification failed; restore and verify the previous Worker version.')
@@ -168,12 +196,11 @@ def activate(root: Path, wrangler: Path):
         finally:
             try:
                 deploy_version(wrangler, config, previous['version_id'], output / 'rollback.ndjson')
+                if previous['mode'] == 'released':
+                    verify_active(wrangler, config, previous['version_id'], previous['release'],
+                                  previous['manifest_sha256'], output, 'rollback')
                 if sha256(fetch(ORIGIN)) != previous['home_sha256']:
                     raise ValueError('Rollback did not restore the retained home page')
-                if previous['mode'] == 'released':
-                    verify(ORIGIN, previous['release'])
-                    if sha256(fetch(ORIGIN + 'publication.json')) != previous['manifest_sha256']:
-                        raise ValueError('Rollback restored another publication envelope')
                 (output / 'rollback.json').write_text(json.dumps(previous, indent=2) + '\n')
             except Exception as rollback_error:
                 record_http_failure(output, 'rollback', previous.get('release'), previous['version_id'], rollback_error)
