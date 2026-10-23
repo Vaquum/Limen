@@ -65,7 +65,7 @@ function safeInline(markdown,type){
   requireEdit(!/\n\s*\n/.test(markdown),'New paragraphs are source work');
   requireEdit(!/\]\(\s*<?(?:javascript|data):/i.test(markdown),'Unsafe link target');
   if(type!=='paragraph')requireEdit(!/[\r\n]/.test(markdown),'This passage must stay on one line');
-  if(type==='summary'){requireEdit(!/[<>]/.test(markdown),'Summary text cannot introduce HTML');return [];}
+  if(type==='summary')return [];
   const parsed=md.parse(markdown,{});
   requireEdit(parsed.length===3&&parsed[0].type==='paragraph_open','A prose edit cannot introduce block structure');
   requireEdit(!parsed[1].children.some(token=>token.type==='html_inline'||token.type==='image'),'HTML and images are source work');
@@ -82,8 +82,9 @@ export function applyPatches(source,path,baseBlobSha,patches){
     if(patch.newMarkdown===target.markdown){edits.push({start:target.sourceRange.start,end:target.sourceRange.end,text:target.originalText});continue;}
     safeInline(patch.newMarkdown,target.type);
     const env={};md.parse(source,env);const oldInline=md.parseInline(target.markdown,env),newInline=md.parseInline(patch.newMarkdown,env);
-    requireEdit(JSON.stringify(links(oldInline))===JSON.stringify(links(newInline)),'Adding or retargeting links is source work');
-    const text=patch.newMarkdown.split('\n').map((line,index)=>index?target.prefix+line:line).join('\n');
+    if(target.type!=='summary')requireEdit(JSON.stringify(links(oldInline))===JSON.stringify(links(newInline)),'Adding or retargeting links is source work');
+    const replacement=target.type==='summary'?patch.newMarkdown.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'):patch.newMarkdown;
+    const text=replacement.split('\n').map((line,index)=>index?target.prefix+line:line).join('\n');
     edits.push({start:target.sourceRange.start,end:target.sourceRange.end,text});
   }
   let changed=source;for(const edit of edits.sort((a,b)=>b.start-a.start))changed=changed.slice(0,edit.start)+edit.text+changed.slice(edit.end);

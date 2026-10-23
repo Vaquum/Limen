@@ -6,7 +6,7 @@ import 'prismjs/components/prism-bash.js';
 import 'prismjs/components/prism-json.js';
 import {createHash} from 'node:crypto';
 import CONTENT from './content.json' with {type:'json'};
-import {slug,headingIdentities,anchorPattern} from './headings.mjs';
+import {slug,headingIdentities,anchorPattern,plainHeading} from './headings.mjs';
 export const content=CONTENT;
 export {slug} from './headings.mjs';
 export const hash=value=>createHash('sha256').update(value).digest('hex');
@@ -47,7 +47,7 @@ export function renderMarkdown(page,pages,evidence,results={},authoring){
     if(!source)throw Error('Result has no source identity: '+match[1]);
     return `<figure class="result" data-research-interface="${match[2]}" id="${escape(match[1])}"><figcaption>${match[2]==='python'?'Python':'Compiled'} Research · ${escape(match[3])} · current execution</figcaption>${rows}<p class="status">${escape(content.product.name)} ${escape(evidence.package.version)} · <a href="${content.product.repository}/blob/${source.commit}/${escape(source.path)}">${source.commit.slice(0,8)}</a>${source.merged_pr?` · <a href="${escape(source.merged_pr)}">Merged source PR</a>`:' · candidate source'} · <a href="${content.product.basePath}/evidence/current.json">Validation and result digest</a> · <a href="${content.product.basePath}/evidence/${escape(evidence.native_outputs.path.split('/').at(-1))}">Native records</a></p></figure>`;
   };
-  md.renderer.rules.heading_open=(tokens,index,options,env,renderer)=>{const token=tokens[index],text=tokens[index+1].content.replaceAll('`','');const identity=headingIdentities(tokens).get(index),id=identity.id;token.attrSet('id',id);if(identity.explicit)token.attrSet('data-heading-interface',identity.kind);token.attrSet('tabindex','-1');if(token.tag==='h2')headings.push({title:text,id});return renderer.renderToken(tokens,index,options);};
+  md.renderer.rules.heading_open=(tokens,index,options,env,renderer)=>{const token=tokens[index],text=plainHeading(tokens[index+1]);const identity=headingIdentities(tokens).get(index),id=identity.id;token.attrSet('id',id);if(identity.explicit)token.attrSet('data-heading-interface',identity.kind);token.attrSet('tabindex','-1');if(token.tag==='h2')headings.push({title:text,id});return renderer.renderToken(tokens,index,options);};
   md.renderer.rules.paragraph_open=(tokens,index,options,env,renderer)=>{const text=tokens[index+1]?.content||'';if(anchorPattern.test(text.trim())){tokens[index+1].children=[];return '';}const id=`p-${hash(text).slice(0,12)}`;const count=seen.get(id)||0;seen.set(id,count+1);tokens[index].attrSet('id',count?`${id}-${count}`:id);tokens[index].attrSet('data-passage','');return renderer.renderToken(tokens,index,options);};
   md.renderer.rules.paragraph_close=(tokens,index,options,env,renderer)=>anchorPattern.test(tokens[index-1]?.content?.trim()||'')?'':renderer.renderToken(tokens,index,options);
   const originalLink=md.renderer.rules.link_open||((tokens,index,options,env,renderer)=>renderer.renderToken(tokens,index,options));

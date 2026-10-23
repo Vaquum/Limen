@@ -6,7 +6,7 @@ function finish(cancel=false){
   if(!active)return;const {element,html,passage,links,previous}=active;
   try{
     if(cancel)element.innerHTML=html;
-    else if(element.innerHTML!==html){let newMarkdown=passage.type==='summary'?element.textContent.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'):inlineMarkdown(element,{links});if(passage.type==='cell')newMarkdown=newMarkdown.replace(/(\\*)\|/g,(whole,slashes)=>slashes.length%2?whole:slashes+'\\|');send('draft',{patch:{path:data.path,baseBlobSha:data.blob,sourceRange:passage.sourceRange,originalText:passage.originalText,newMarkdown},previous,passageId:passage.id});element.dataset.drafted='true';}
+    else if(element.innerHTML!==html){let newMarkdown=passage.type==='summary'?element.textContent:inlineMarkdown(element,{links});if(passage.type==='cell')newMarkdown=newMarkdown.replace(/(\\*)\|/g,(whole,slashes)=>slashes.length%2?whole:slashes+'\\|');send('draft',{patch:{path:data.path,baseBlobSha:data.blob,sourceRange:passage.sourceRange,originalText:passage.originalText,newMarkdown},previous,passageId:passage.id});element.dataset.drafted='true';}
   }catch(error){element.innerHTML=html;send('error',{message:error.message});}
   element.contentEditable='false';element.removeAttribute('role');active=null;send('active',{active:false});
 }

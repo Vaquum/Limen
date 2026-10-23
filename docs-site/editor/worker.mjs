@@ -1,7 +1,7 @@
 import {GitHub,workspace,commit,openPull} from './github.mjs';
 import {EditError,passages,applyPatches} from './passages.mjs';
 import {random,challenge,seal,unseal,cookie,readCookie,headers,response,exactOrigin,jsonBody} from './security.mjs';
-import {hash} from '../reader/render.mjs';
+import {hash,escape} from '../reader/render.mjs';
 import {preview,inlinePreview,referenceIndex,authoringSearch} from './preview.mjs';
 
 const root='/limen/edit/';
@@ -81,7 +81,7 @@ export default{
       }
       if(path.startsWith(root+'view/')||path===root+'api/inline'||path===root+'api/reanchor'||path==='/limen/search.json'){
         const body=(path===root+'api/inline'||path===root+'api/reanchor')?await jsonBody(request,env.EDITOR_ORIGIN):null,auth=await editing(request,env,url),pages=await auth.github.pages(auth.state.head);
-        if(body){if(path.endsWith('/reanchor')){const source=pages.find(page=>page.source===body.patch?.path);if(!source)throw new EditError('Unknown prose source',403);const matches=passages(source.markdown,source.source,source.blob).filter(item=>item.originalText===body.patch.originalText);if(matches.length!==1)throw new EditError('Draft no longer has one unchanged source passage; reconcile it in Review',409);const patch={...body.patch,baseBlobSha:source.blob,sourceRange:matches[0].sourceRange};applyPatches(source.markdown,source.source,source.blob,[patch]);return response({patch,head:auth.state.head});}const page=pages.find(page=>page.source===body.patch?.path);if(!page)throw new EditError('Unknown prose source',403);applyPatches(page.markdown,page.source,page.blob,[body.patch]);return response({html:inlinePreview(body.patch.newMarkdown,page,pages,continuing(url))});}
+        if(body){if(path.endsWith('/reanchor')){const source=pages.find(page=>page.source===body.patch?.path);if(!source)throw new EditError('Unknown prose source',403);const matches=passages(source.markdown,source.source,source.blob).filter(item=>item.originalText===body.patch.originalText);if(matches.length!==1)throw new EditError('Draft no longer has one unchanged source passage; reconcile it in Review',409);const patch={...body.patch,baseBlobSha:source.blob,sourceRange:matches[0].sourceRange};applyPatches(source.markdown,source.source,source.blob,[patch]);return response({patch,head:auth.state.head});}const page=pages.find(page=>page.source===body.patch?.path);if(!page)throw new EditError('Unknown prose source',403);applyPatches(page.markdown,page.source,page.blob,[body.patch]);const target=passages(page.markdown,page.source,page.blob).find(item=>item.sourceRange.start===body.patch.sourceRange.start);return response({html:target.type==='summary'?escape(body.patch.newMarkdown):inlinePreview(body.patch.newMarkdown,page,pages,continuing(url))});}
         if(path==='/limen/search.json')return response(authoringSearch(pages,continuing(url)));
         pages.push(referenceIndex(pages));
         const route='/'+path.slice((root+'view/').length),page=pages.find(page=>page.route===route);

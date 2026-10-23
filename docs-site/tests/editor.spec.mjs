@@ -2,7 +2,7 @@ import {test,expect} from '@playwright/test';
 const origin=process.env.EDITOR_TEST_ORIGIN||'https://127.0.0.1:4335';
 const control=(request,body)=>request.post(origin+'/__test/control',{data:body});
 async function signIn(page){
-  await page.route('https://github.com/login/oauth/authorize**',route=>{const url=new URL(route.request().url()),callback=new URL('/limen/edit/auth/callback',origin);callback.searchParams.set('state',url.searchParams.get('state'));callback.searchParams.set('code','browser-protocol-code');return route.fulfill({status:302,headers:{Location:callback.href},body:''});});
+  await page.route('**/limen/edit/auth/start*',async route=>{const response=await route.fetch({maxRedirects:0});expect(response.status()).toBe(302);const url=new URL(response.headers().location);expect(url.origin).toBe('https://github.com');const callback=new URL('/limen/edit/auth/callback',origin);callback.searchParams.set('state',url.searchParams.get('state'));callback.searchParams.set('code','browser-protocol-code');await route.fulfill({status:302,headers:{...response.headers(),location:callback.href},body:''});});
   await page.goto(origin+'/limen/edit/?route=/developer/');await page.getByRole('link',{name:'Sign in with GitHub'}).click();await expect(page.locator('[data-frame]')).toBeVisible();await expect(page.frameLocator('[data-frame]').locator('[data-edit-id]').first()).toBeVisible();
 }
 async function change(page,selector,words){const target=page.frameLocator('[data-frame]').locator(selector).first();await target.click();await target.press('End');await target.pressSequentially(words);await target.press('Enter');await expect(page.locator('[data-count]')).not.toHaveText('0');return target;}
