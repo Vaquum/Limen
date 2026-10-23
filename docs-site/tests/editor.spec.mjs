@@ -3,12 +3,18 @@ import CONTENT from '../reader/content.json' with {type:'json'};
 const developerRoute=CONTENT.pages['docs/Developer/README.md'].route;
 const origin=process.env.EDITOR_TEST_ORIGIN||'https://127.0.0.1:4335';
 const control=(request,body)=>request.post(origin+'/__test/control',{data:body});
-async function signIn(page){
+async function signIn(page,route=developerRoute){
   await page.route('**/limen/edit/auth/start*',async route=>{const response=await route.fetch({maxRedirects:0});expect(response.status()).toBe(302);const url=new URL(response.headers().location);expect(url.origin).toBe('https://github.com');const callback=new URL('/limen/edit/auth/callback',origin);callback.searchParams.set('state',url.searchParams.get('state'));callback.searchParams.set('code','browser-protocol-code');await route.fulfill({status:302,headers:{...response.headers(),location:callback.href},body:''});});
-  await page.goto(origin+'/limen/edit/?route='+encodeURIComponent(developerRoute));await page.getByRole('link',{name:'Sign in with GitHub'}).click();await expect(page.locator('[data-frame]')).toBeVisible();await expect(page.frameLocator('[data-frame]').locator('[data-edit-id]').first()).toBeVisible();await expect(page.locator('[data-edit]')).toBeEnabled();
+  await page.goto(origin+'/limen/edit/?route='+encodeURIComponent(route));await page.getByRole('link',{name:'Sign in with GitHub'}).click();await expect(page.locator('[data-frame]')).toBeVisible();await expect(page.frameLocator('[data-frame]').locator('[data-edit-id]').first()).toBeVisible();await expect(page.locator('[data-edit]')).toBeEnabled();
 }
 async function change(page,selector,words){const target=page.frameLocator('[data-frame]').locator(selector).first();await target.click();await target.press('End');await target.pressSequentially(words);await target.press('Enter');await expect(page.locator('[data-count]')).not.toHaveText('0');return target;}
 test.beforeEach(async({request})=>{await control(request,{action:'reset'});});
+test('the research book retains code tools, interface selection and search while its examples stay read-only',async({page})=>{
+  const errors=[];page.on('pageerror',error=>errors.push(error.message));await signIn(page,'/');const book=page.frameLocator('[data-frame]');
+  await book.getByRole('button',{name:'Compiled Research',exact:true}).click();await expect(book.getByRole('heading',{name:'Own the Python methodology',exact:true})).toBeHidden();const code=book.locator('.code:visible').first();await expect(code.getByRole('button',{name:'Copy',exact:true})).toBeVisible();const wrap=code.getByRole('button',{name:'Wrap',exact:true});await wrap.click();await expect(wrap).toHaveAttribute('aria-pressed','false');
+  await page.locator('[data-edit]').check();await code.locator('pre').click();await expect(book.locator('.code [contenteditable="true"]')).toHaveCount(0);await page.locator('[data-edit]').uncheck();
+  await book.getByRole('button',{name:'Search',exact:true}).click();await book.locator('#search').fill('Sensor');await expect(book.locator('[data-search-dialog] ol a').first()).toBeVisible();await book.getByRole('button',{name:'Close',exact:true}).click();expect(errors).toEqual([]);
+});
 for(const kind of ['unavailable','redirect'])test('a '+kind+' evidence response disables editing and exposes its failure',async({page,request})=>{
   await signIn(page);await page.locator('[data-edit]').check();await change(page,'p[data-edit-id]',' Retained through evidence failure.');await control(request,{action:'evidence-failure',kind});await page.reload();await expect(page.locator('[data-status]')).toContainText('Published evidence is unavailable');await expect(page.locator('[data-edit]')).toBeDisabled();await expect(page.getByRole('button',{name:'Commit',exact:true})).toBeDisabled();
   expect((await (await control(request,{})).json()).counts.commit).toBe(0);
