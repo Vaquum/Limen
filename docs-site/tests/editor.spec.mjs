@@ -3,7 +3,7 @@ const origin=process.env.EDITOR_TEST_ORIGIN||'https://127.0.0.1:4335';
 const control=(request,body)=>request.post(origin+'/__test/control',{data:body});
 async function signIn(page){
   await page.route('**/limen/edit/auth/start*',async route=>{const response=await route.fetch({maxRedirects:0});expect(response.status()).toBe(302);const url=new URL(response.headers().location);expect(url.origin).toBe('https://github.com');const callback=new URL('/limen/edit/auth/callback',origin);callback.searchParams.set('state',url.searchParams.get('state'));callback.searchParams.set('code','browser-protocol-code');await route.fulfill({status:302,headers:{...response.headers(),location:callback.href},body:''});});
-  await page.goto(origin+'/limen/edit/?route=/developer/');await page.getByRole('link',{name:'Sign in with GitHub'}).click();await expect(page.locator('[data-frame]')).toBeVisible();await expect(page.frameLocator('[data-frame]').locator('[data-edit-id]').first()).toBeVisible();
+  await page.goto(origin+'/limen/edit/?route=/developer/');await page.getByRole('link',{name:'Sign in with GitHub'}).click();await expect(page.locator('[data-frame]')).toBeVisible();await expect(page.frameLocator('[data-frame]').locator('[data-edit-id]').first()).toBeVisible();await expect(page.locator('[data-edit]')).toBeEnabled();
 }
 async function change(page,selector,words){const target=page.frameLocator('[data-frame]').locator(selector).first();await target.click();await target.press('End');await target.pressSequentially(words);await target.press('Enter');await expect(page.locator('[data-count]')).not.toHaveText('0');return target;}
 test.beforeEach(async({request})=>{await control(request,{action:'reset'});});
@@ -14,7 +14,7 @@ test('two pages, two commits and one PR preserve the cumulative writer journey',
 });
 test('storage updates cannot replace the words being actively revised',async({page})=>{
   await signIn(page);await page.locator('[data-edit]').check();const target=await change(page,'p[data-edit-id]',' First revision.');await target.click();await target.press('End');await target.pressSequentially(' Still typing');const before=await target.textContent();
-  await page.evaluate(()=>dispatchEvent(new StorageEvent('storage',{key:'reader:limen-authoring:any:place',newValue:'{}'})));await expect(target).toHaveText(before);await target.press('Escape');await expect(target).not.toContainText('Still typing');
+  await page.evaluate(()=>new Promise(resolve=>{const request=crypto.randomUUID(),items=[];for(let at=0;at<localStorage.length;at++){const key=localStorage.key(at);if(key.includes(':draft:'))items.push(JSON.parse(localStorage.getItem(key)));}const listener=event=>{if(event.data.type==='drafts-applied'&&event.data.request===request){removeEventListener('message',listener);resolve();}};addEventListener('message',listener);document.querySelector('[data-frame]').contentWindow.postMessage({type:'drafts',items,request},location.origin);}));await expect(target).toHaveText(before);await target.press('Escape');await expect(target).not.toContainText('Still typing');
 });
 test('lost commit replies reconcile on reload without retaining committed drafts',async({page,request})=>{
   await signIn(page);await page.locator('[data-edit]').check();await change(page,'p[data-edit-id]',' Retained revision.');

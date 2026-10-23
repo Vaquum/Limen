@@ -41,6 +41,7 @@ addEventListener('message',async event=>{
       const element=document.querySelector(`[data-edit-id="${passage.id}"]`);if(!element||active?.element===element)continue;
       try{const reply=await fetch('/limen/edit/api/inline'+(data.pr?'?pr='+data.pr:''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({patch:item.patch})}),result=await reply.json();if(!reply.ok)throw Error(result.error);if(generation!==draftGeneration||active?.element===element)continue;element.innerHTML=result.html;element.dataset.drafted='true';element.dataset.draftVersion=item.id;}catch(error){send('error',{message:error.message});}
     }
+    send('drafts-applied',{request:message.request});
   }
 });
 // Navigation must retain active edits before the frame unloads.
