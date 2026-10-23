@@ -352,3 +352,9 @@ def test_public_risk_and_install_contracts_remain_visible() -> None:
     assert 'credited in the release notes' in security
     assert 'provenance.intoto.jsonl' in security
     assert 'gh attestation verify' in security
+
+
+def test_shared_editor_heading_identities() -> None:
+    vectors = json.loads(_read('docs-site/editor/tests/heading-vectors.json'))
+    for vector in vectors:
+        assert _heading_ids_for_text(vector['markdown']) == frozenset(vector['ids'])

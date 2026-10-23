@@ -59,3 +59,12 @@ test('externally supplied HTML is inert in an authenticated authoring render',as
   const pages=[page,{source:'docs/Research-Book.md',title:'Book',part:'Book',bookOrder:0,url:'/limen/'},{source:null,route:'/reference/',title:'Reference',url:'/limen/reference/'}],evidence={package:{version:'5.46.2'},revision:{head:blob},sources:[],displays:[],validation:{scenarios:[]}};
   const html=preview(page,pages,evidence,{passages:passages(markdown,source,blob),state:{id:'workspace',branch:'prose',head:blob},pr:null});assert.ok(!html.includes('<img src=x'));assert.ok(!html.includes('<script>alert'));assert.match(html,/&lt;img src=x/);assert.match(html,/branch has not been executed/);
 });
+test('edited wraps, quoted introductions, nested lists, cells, references and summaries preserve their source surroundings',()=>{
+  const source='docs/Developer/README.md',text='# Title\n\n> Quoted introduction\n> with **emphasis**.\n\n- Parent\n  - Nested `code` and [label][ref]\n\nHard wrapped\nparagraph with two spaces.  \nAnd a hard break.\n\n| Value | Meaning |\n| --- | --- |\n| `a\\|b` | &amp; and **bold** |\n\n[ref]: ../Research-Book.md "Book title"\n\n<details>\n<summary>Scope &amp; purpose</summary>\n\nDetail.\n\n</details>\n',mapped=passages(text,source,blob);
+  for(const item of mapped){
+    const value=item.type==='summary'?'Scope < extent & purpose':item.markdown.replace('Quoted','Revised').replace('Nested','Inner').replace('Hard wrapped','Soft wrapped').replace('Meaning','Definition').replace('**bold**','**clear**');
+    const changed=applyPatches(text,source,blob,[patch(item,value)]);
+    assert.ok(changed.startsWith(text.slice(0,item.sourceRange.start)));assert.ok(changed.endsWith(text.slice(item.sourceRange.end)));assert.equal(passages(changed,source,blob).length,mapped.length);
+    if(item.type==='summary')assert.match(changed,/<summary>Scope &lt; extent &amp; purpose<\/summary>/);
+  }
+});
