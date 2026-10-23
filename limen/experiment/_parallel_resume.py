@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import limen.experiment._round_storage as _storage
-from limen.experiment import _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _holdout_checkpoint
 import limen.experiment._holdout_research as _holdout
 
 import csv

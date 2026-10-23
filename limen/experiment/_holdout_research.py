@@ -14,7 +14,7 @@ import sys
 
 import polars as pl
 
-from limen.experiment import _holdout_checkpoint
+import limen.experiment._holdout_checkpoint as _holdout_checkpoint
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
 from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec
 from limen.experiment._resolve_trade_policy import holdout_structural
