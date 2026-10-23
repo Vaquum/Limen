@@ -322,10 +322,7 @@ def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
     import json
     import subprocess
 
-    spec = importlib.util.spec_from_file_location('verify_release_trigger', ROOT / 'scripts/verify_release_trigger.py')
-    assert spec is not None and spec.loader is not None
-    trigger = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(trigger)
+    trigger = _load_create_release()
 
     def git(*arguments):
         return subprocess.check_output(['git', *arguments], cwd=tmp_path, text=True).strip()
@@ -348,25 +345,25 @@ def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
     run = {'path': '.github/workflows/pr_post_release.yml', 'event': 'workflow_dispatch',
            'conclusion': 'success', 'head_repository': {'full_name': 'Vaquum/Limen'},
            'head_sha': head, 'head_branch': tag}
-    trigger.verify_trigger(tmp_path, run)
-    trigger.verify_trigger(tmp_path, dict(run, head_branch='main'))
+    trigger.verify_release_trigger(tmp_path, run)
+    trigger.verify_release_trigger(tmp_path, dict(run, head_branch='main'))
     record = tmp_path / 'run.json'
     record.write_text(json.dumps(run))
     # Exercise the same file-input entry path used by the publisher.
-    trigger.verify_trigger(tmp_path, json.loads(record.read_text()))
+    subprocess.run([sys.executable, str(ROOT / 'scripts/create_release.py'), '--verify-trigger', str(record)], cwd=tmp_path, check=True)
     for field, bad in [('path', '.github/workflows/other.yml'), ('event', 'push'),
                        ('conclusion', 'failure'), ('head_repository', {'full_name': 'other/Limen'}),
                        ('head_sha', predecessor), ('head_branch', 'codex/other'),
                        ('head_branch', f'v5.46.3-dispatch-{head}'),
                        ('head_branch', f'v5.46.2-dispatch-{predecessor}')]:
         with pytest.raises(ValueError):
-            trigger.verify_trigger(tmp_path, dict(run, **{field: bad}))
+            trigger.verify_release_trigger(tmp_path, dict(run, **{field: bad}))
     git('tag', '-f', tag, predecessor)
     with pytest.raises(ValueError, match='another commit'):
-        trigger.verify_trigger(tmp_path, run)
+        trigger.verify_release_trigger(tmp_path, run)
     git('tag', '-f', tag, head)
     git('update-ref', 'refs/remotes/origin/main', predecessor)
     with pytest.raises(subprocess.CalledProcessError):
-        trigger.verify_trigger(tmp_path, run)
+        trigger.verify_release_trigger(tmp_path, run)
     monkeypatch.chdir(tmp_path)
     assert _load_create_release().get_previous_tag() == 'v5.46.1'

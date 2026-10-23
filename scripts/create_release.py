@@ -77,6 +77,33 @@ def get_previous_tag() -> str | None:
     return result.stdout.strip()
 
 
+def verify_release_trigger(root: Path, run: dict[str, object]) -> None:
+    """Require a successful manual release from the exact merged commit."""
+    head, repository = run.get('head_sha'), run.get('head_repository')
+    if (run.get('path') != '.github/workflows/pr_post_release.yml'
+            or run.get('event') != 'workflow_dispatch'
+            or run.get('conclusion') != 'success'
+            or not isinstance(repository, dict) or repository.get('full_name') != 'Vaquum/Limen'
+            or not isinstance(head, str) or not re.fullmatch('[0-9a-f]{40}', head)):
+        raise ValueError('Package publication requires the exact successful manual release source')
+
+    def git(*arguments: str) -> str:
+        return subprocess.check_output(['git', *arguments], cwd=root, text=True).strip()
+
+    if git('rev-parse', 'HEAD') != head:
+        raise ValueError('Package publication requires the exact successful manual release source')
+    git('merge-base', '--is-ancestor', head, 'origin/main')
+    branch = run.get('head_branch')
+    if branch == 'main':
+        return
+    version = re.search(r'^version\s*=\s*"([0-9]+\.[0-9]+\.[0-9]+)"',
+                        (root / 'pyproject.toml').read_text(), re.M)
+    if version is None or branch != f'v{version.group(1)}-dispatch-{head}':
+        raise ValueError('Manual release tag must bind the package version and full merged commit')
+    if git('rev-parse', f'refs/tags/{branch}^{{commit}}') != head:
+        raise ValueError('Manual release tag points to another commit')
+
+
 def get_git_log_since(previous_tag: str | None) -> str:
     """Get git log since the previous tag, limited to prevent context overflow."""
     rev_range = [f'{previous_tag}..HEAD'] if previous_tag else []
@@ -405,4 +432,7 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == '--verify-trigger':
+        verify_release_trigger(Path.cwd(), json.loads(Path(sys.argv[2]).read_text()))
+    else:
+        main()

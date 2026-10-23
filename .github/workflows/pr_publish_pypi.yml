@@ -50,7 +50,7 @@ jobs:
           RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
         run: |
           gh api "repos/Vaquum/Limen/actions/runs/$RELEASE_RUN_ID" > /tmp/manual-release-run.json
-          python scripts/verify_release_trigger.py /tmp/manual-release-run.json
+          python scripts/create_release.py --verify-trigger /tmp/manual-release-run.json
 
       - name: Resolve released tag
         id: resolve
