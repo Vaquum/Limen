@@ -1,4 +1,4 @@
-import {announce,resuming} from './place.mjs';
+import {announce,navigationType,resuming} from './place.mjs';
 
 const choices=['both','python','compiled'];
 export function initInterfaces(){
@@ -18,13 +18,15 @@ export function initInterfaces(){
   }
   const key=`reader:${document.body.dataset.product}:interface`;
   if(!article.querySelector('[data-research-interface]'))return;
-  function choose(value,{save=true,move=false}={}){
-    if(!choices.includes(value))return;
+  const available=new Set([...article.querySelectorAll('[data-research-interface]')].map(node=>node.dataset.researchInterface));
+  function choose(value,{save=true,move=false,record=true}={}){
+    if(!choices.includes(value)||(value!=='both'&&!available.has(value)))return;
     const anchor=[...article.querySelectorAll('[data-passage]')].filter(node=>node.getClientRects().length&&node.getBoundingClientRect().top<=130).at(-1);
     const top=anchor?.getBoundingClientRect().top||0;
     document.body.dataset.interface=value;
     for(const node of article.querySelectorAll('[data-research-interface]'))node.hidden=value!=='both'&&node.dataset.researchInterface!==value;
-    for(const button of control.querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.dataset.interfaceChoice===value));
+    for(const button of control.querySelectorAll('button')){button.setAttribute('aria-pressed',String(button.dataset.interfaceChoice===value));button.disabled=button.dataset.interfaceChoice!=='both'&&!available.has(button.dataset.interfaceChoice);}
+    if(record)history.replaceState({...history.state,readerInterface:value},'',location.href);
     if(move&&anchor){
       if(anchor.getClientRects().length)scrollBy({top:anchor.getBoundingClientRect().top-top,behavior:'instant'});
       else {
@@ -42,16 +44,26 @@ export function initInterfaces(){
     const saved=localStorage.getItem(`reader:${document.body.dataset.product}:${document.body.dataset.content}`);
     if(resuming()&&!location.hash&&saved){const place=JSON.parse(saved);if(choices.includes(place.interface))preferred=place.interface;}
   }catch(error){announce('The saved interface choice could not be read.');console.error(error);}
-  if(resuming()&&!location.hash&&choices.includes(history.state?.readerPlace?.interface))preferred=history.state.readerPlace.interface;
+  if(navigationType()==='back_forward'&&!location.hash&&choices.includes(history.state?.readerPlace?.interface))preferred=history.state.readerPlace.interface;
+  if(preferred!=='both'&&!available.has(preferred))preferred=[...available][0];
   const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1')):null;
   const linked=target?.closest('[data-research-interface]');
   choose(linked?.dataset.researchInterface||preferred,{save:false});
-  addEventListener('hashchange',()=>{
-    if(document.querySelector('dialog[open]'))return;
-    const target=document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
+  document.addEventListener('click',event=>{
+    const link=event.target.closest('a[href]');
+    if(!link||event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||document.querySelector('dialog[open]'))return;
+    const url=new URL(link.href);
+    if(url.origin!==location.origin||url.pathname!==location.pathname||url.search!==location.search||!url.hash)return;
+    const target=document.getElementById(decodeURIComponent(url.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
     const linked=target?.closest('[data-research-interface]');
-    if(linked)choose(linked.dataset.researchInterface,{save:false});
-    if(target){target.scrollIntoView({block:'start'});target.focus({preventScroll:true});}
+    if(linked)choose(linked.dataset.researchInterface,{save:false,record:url.hash===location.hash});
+  });
+  addEventListener('hashchange',()=>{
+    if(!history.state?.readerReference)history.replaceState({...history.state,readerInterface:document.body.dataset.interface},'',location.href);
+  });
+  addEventListener('popstate',event=>{
+    if(event.state?.readerReference||document.querySelector('dialog[open]'))return;
+    if(choices.includes(event.state?.readerInterface))choose(event.state.readerInterface,{save:false,record:false});
   });
   control.hidden=false;
   control.addEventListener('click',event=>{const button=event.target.closest('[data-interface-choice]');if(button)choose(button.dataset.interfaceChoice,{move:true});});

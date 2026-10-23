@@ -44,6 +44,22 @@ test('code ranges and interface choice survive direct navigation',async({page})=
   await expect(page.locator('.selected-line')).toHaveCount(2);
 });
 
+test('fragment history retains the reading position and a repeated link reveals its interface',async({page})=>{
+  await page.goto('/limen/');await page.evaluate(()=>document.fonts.ready);
+  const contents=page.locator('.mobile-nav');if(await contents.isVisible())await contents.locator('summary').click();
+  const python=page.locator('a[href="#own-the-python-methodology"]').filter({visible:true}).first();
+  const compiled=page.locator('a[href="#adopt-the-compiled-pipeline"]').filter({visible:true}).first();
+  await python.click();await page.evaluate(()=>scrollBy(0,180));const before=await page.evaluate(()=>scrollY);
+  await compiled.click();await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
+  await page.goBack();
+  await expect(page.locator('[data-interface-choice="python"]')).toHaveAttribute('aria-pressed','true');
+  await expect.poll(async()=>Math.abs(await page.evaluate(()=>scrollY)-before)).toBeLessThan(3);
+  await page.goForward();await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Python Research',exact:true}).click();
+  await expect(page.locator('#adopt-the-compiled-pipeline')).toBeHidden();
+  await compiled.click();await expect(page.locator('#adopt-the-compiled-pipeline')).toBeInViewport();
+});
+
 test('long callable reference remains searchable and renders within the reading budget',async({page})=>{
   await page.goto('/limen/reference/features/');await page.evaluate(()=>document.fonts.ready);
   await expect(page.getByRole('heading',{name:'limen.features.fractional_diff',exact:true})).toBeVisible();

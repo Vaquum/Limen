@@ -178,7 +178,7 @@ test('further Back navigation keeps the chapter passage chosen in history',async
   await page.emulateMedia({reducedMotion:'no-preference'});await open(page);
   await page.goto('/limen/#choose-who-owns-the-experiment');const earlier=page.url();
   await page.goto('/limen/#adopt-the-compiled-pipeline');const origin=page.url();
-  await page.getByRole('link',{name:'Python Sensor construction',exact:true}).click();
+  await page.getByRole('link',{name:'Trainer',exact:true}).click();
   const dialog=page.locator('[data-reference-dialog]');await expect(dialog).toBeVisible();
   await dialog.dispatchEvent('pointerdown');
   await page.evaluate(()=>history.back());await expect(page).toHaveURL(origin);
@@ -281,6 +281,20 @@ test('same-page text links reveal a target hidden by the interface choice',async
   const link=page.locator('a[href="#adopt-the-compiled-pipeline"]').filter({visible:true}).first();
   await link.click();await expect(target).toBeInViewport();
   await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+  await page.getByRole('button',{name:'Python Research',exact:true}).click();await expect(target).toBeHidden();
+  await link.click();await expect(target).toBeInViewport();
+  await expect(page.locator('[data-interface-choice="compiled"]')).toHaveAttribute('aria-pressed','true');
+});
+
+test('single-interface project links cannot inherit an empty authoring choice',async({page})=>{
+  await open(page);await page.getByRole('button',{name:'Compiled Research',exact:true}).click();
+  await page.locator('main article').getByRole('link',{name:'Python project',exact:true}).last().click();
+  await expect(page.locator('figure.code[data-research-interface="python"]').first()).toBeVisible();
+  await expect(page.getByRole('button',{name:'Compiled Research',exact:true})).toBeDisabled();
+  await open(page);await page.getByRole('button',{name:'Python Research',exact:true}).click();
+  await page.locator('main article').getByRole('link',{name:'Compiled project',exact:true}).last().click();
+  await expect(page.locator('figure.code[data-research-interface="compiled"]').first()).toBeVisible();
+  await expect(page.getByRole('button',{name:'Python Research',exact:true})).toBeDisabled();
 });
 
 test('reading state is isolated by product identity',async({page})=>{

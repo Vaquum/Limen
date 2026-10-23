@@ -3,7 +3,8 @@ const content=document.body.dataset.content;
 const key=`reader:${product}:${content}`;
 const status=document.querySelector('[data-status]');
 let storageAvailable=true;
-export const resuming=()=>['reload','back_forward'].includes(performance.getEntriesByType('navigation')[0]?.type);
+export const navigationType=()=>performance.getEntriesByType('navigation')[0]?.type;
+export const resuming=()=>['reload','back_forward'].includes(navigationType());
 export function announce(message){if(status)status.textContent=message;}
 export function position(){
   const passages=[...document.querySelectorAll('main article [data-passage]')].filter(node=>node.getClientRects().length);
@@ -26,7 +27,7 @@ export function restore(place){
   document.body.dataset.interface=place.interface||'both';return true;
 }
 export function initPlace(){
-  const resumed=resuming()?history.state?.readerPlace:null;
+  const resumed=navigationType()==='back_forward'?history.state?.readerPlace:null;
   if(resumed&&!location.hash)restore(resumed);
   else if(resuming()&&!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
   let frame=0, ready=false;
