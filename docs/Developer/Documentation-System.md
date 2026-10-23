@@ -1,6 +1,6 @@
 # Documentation system contract
 
-Limen's documentation is a research book built around two complete, executable projects: Python Research and Compiled Research. Chapters develop those projects; Reference and Developer provide the detail needed to use and maintain them.
+Limen's documentation is a research book built around two complete, executable projects\. Python Research uses Python functions; Compiled Research uses YAML and CLI commands\. Chapters develop those projects; Reference and Developer provide the detail needed to use and maintain them\.
 
 This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md) establishes the delivery laws. Documentation must describe current behavior and make the evidence behind its examples inspectable.
 
