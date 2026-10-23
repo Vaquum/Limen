@@ -57,7 +57,7 @@ async function commitMatches(github,state,operation,head){
 }
 export async function commit(storage,github,user,payload,state){
   assert(payload.workspace===state.id,'This draft belongs to another delivery');
-  if(state.receipt?.operation===payload.operation)return {...state,receipt:state.receipt};
+  if(state.receipts?.[payload.operation])return {...state,receipt:state.receipts[payload.operation]};
   if(!state.operation){
     assert(payload.expectedHead===state.head&&(!state.remoteHead||state.remoteHead===state.head),'The origin branch moved; refresh and reconcile drafts');
     assert(Array.isArray(payload.patches)&&payload.patches.length>0&&payload.patches.length<=512,'Commit requires 1–512 passages');
@@ -83,7 +83,7 @@ export async function commit(storage,github,user,payload,state){
     assert(await commitMatches(github,state,operation,head),'GitHub commit read-back differs from the submitted prose');
   }
   const receipt={operation:operation.id,head,drafts:operation.drafts,files:operation.files.map(file=>file.path)};
-  state.head=head;state.files=[...new Set([...state.files,...receipt.files])];state.receipt=receipt;delete state.operation;delete state.remoteHead;await storage.put('workspace',state);return {...state,receipt};
+  state.head=head;state.files=[...new Set([...state.files,...receipt.files])];state.receipt=receipt;state.receipts={...state.receipts,[operation.id]:receipt};delete state.operation;delete state.remoteHead;await storage.put('workspace',state);return {...state,receipt};
 }
 export async function openPull(storage,github,user,payload,state){
   assert(payload.workspace===state.id&&state.created,'Commit the prose before opening a PR');assert(!state.operation||state.operation.kind==='pr','Recover the pending commit first');
