@@ -281,7 +281,7 @@ The reader must support sequential reading, direct reference lookup, search and 
 
 A reference excursion preserves its originating chapter, passage, interface and keyboard focus. Returning must restore those, not merely reopen the chapter at its top. Browser history and explicit return controls must agree.
 
-Saved reading position is local and scoped by product and content identity. Prove save/reload, isolation between products on one origin, and changed or removed passages. A stale position must not silently restore into unrelated text. Deep links retain their own target. Notes, annotations, accounts and reader analytics are outside this delivery.
+Saved reading position is local and scoped by product and content identity. Reload and browser history restore the relevant entry; an ordinary page link opens at the destination's beginning. Prove save/reload, Back/Forward, isolation between products on one origin, and changed or removed passages. A stale position must not silently restore into unrelated text. Deep links retain their own target, revealing its interface when needed. Notes, annotations, accounts and reader analytics are outside this delivery.
 
 Code controls preserve exact source when copying, exclude line-number gutters, retain indentation and expose language, full source and provenance. Long code and tables must remain usable on a phone without horizontal page overflow.
 

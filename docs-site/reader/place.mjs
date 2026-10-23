@@ -3,6 +3,7 @@ const content=document.body.dataset.content;
 const key=`reader:${product}:${content}`;
 const status=document.querySelector('[data-status]');
 let storageAvailable=true;
+export const resuming=()=>['reload','back_forward'].includes(performance.getEntriesByType('navigation')[0]?.type);
 export function announce(message){if(status)status.textContent=message;}
 export function position(){
   const passages=[...document.querySelectorAll('main article [data-passage]')].filter(node=>node.getClientRects().length);
@@ -25,9 +26,9 @@ export function restore(place){
   document.body.dataset.interface=place.interface||'both';return true;
 }
 export function initPlace(){
-  const resumed=history.state?.readerPlace;
+  const resumed=resuming()?history.state?.readerPlace:null;
   if(resumed&&!location.hash)restore(resumed);
-  else if(!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
+  else if(resuming()&&!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
   let frame=0, ready=false;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ready=true;save();}));
   const progress=document.querySelector('.reading-progress');
@@ -38,6 +39,6 @@ export function initPlace(){
     try{localStorage.setItem(key,JSON.stringify(value));}catch(error){storageAvailable=false;announce('Browser storage could not be written. Reading position is not being saved.');console.error(error);}
   }
   addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(save);},{passive:true});
-  addEventListener('pagehide',save);save();
+  addEventListener('pagehide',()=>{save();if(!history.state?.readerReference)history.replaceState({...history.state,readerPlace:position()},'',location.href);});save();
   addEventListener('reader-interface-change',save);
 }

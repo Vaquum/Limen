@@ -1,4 +1,4 @@
-import {announce} from './place.mjs';
+import {announce,resuming} from './place.mjs';
 
 const choices=['both','python','compiled'];
 export function initInterfaces(){
@@ -40,12 +40,19 @@ export function initInterfaces(){
   let preferred=document.body.dataset.interface;
   try{preferred=localStorage.getItem(key)||preferred;
     const saved=localStorage.getItem(`reader:${document.body.dataset.product}:${document.body.dataset.content}`);
-    if(!location.hash&&saved){const place=JSON.parse(saved);if(choices.includes(place.interface))preferred=place.interface;}
+    if(resuming()&&!location.hash&&saved){const place=JSON.parse(saved);if(choices.includes(place.interface))preferred=place.interface;}
   }catch(error){announce('The saved interface choice could not be read.');console.error(error);}
-  if(!location.hash&&choices.includes(history.state?.readerPlace?.interface))preferred=history.state.readerPlace.interface;
+  if(resuming()&&!location.hash&&choices.includes(history.state?.readerPlace?.interface))preferred=history.state.readerPlace.interface;
   const target=location.hash?document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1')):null;
   const linked=target?.closest('[data-research-interface]');
   choose(linked?.dataset.researchInterface||preferred,{save:false});
+  addEventListener('hashchange',()=>{
+    if(document.querySelector('dialog[open]'))return;
+    const target=document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
+    const linked=target?.closest('[data-research-interface]');
+    if(linked)choose(linked.dataset.researchInterface,{save:false});
+    if(target){target.scrollIntoView({block:'start'});target.focus({preventScroll:true});}
+  });
   control.hidden=false;
   control.addEventListener('click',event=>{const button=event.target.closest('[data-interface-choice]');if(button)choose(button.dataset.interfaceChoice,{move:true});});
 }
