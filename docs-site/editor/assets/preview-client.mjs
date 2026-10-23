@@ -1,5 +1,6 @@
 import {inlineMarkdown} from './inline.mjs';
 const data=JSON.parse(document.querySelector('#editor-source').content.textContent),mapped=new Map(data.passages.map(item=>[item.id,item]));
+const originalHtml=new Map([...document.querySelectorAll('[data-edit-id]')].map(element=>[element.dataset.editId,element.innerHTML]));
 let enabled=false,active=null,draftGeneration=0,finishError=null;
 const send=(type,extra={})=>parent.postMessage({type,...extra},location.origin);
 function finish(cancel=false){
@@ -37,6 +38,8 @@ addEventListener('message',async event=>{
   if(message.type==='draft-saved'){const element=document.querySelector(`[data-edit-id="${message.passageId}"]`);if(element)element.dataset.draftVersion=message.id;}
   if(message.type==='drafts'){
     const generation=++draftGeneration;
+    const retained=new Set(message.items.filter(item=>item.patch.path===data.path).map(item=>data.passages.find(passage=>passage.baseBlobSha===item.patch.baseBlobSha&&passage.sourceRange.start===item.patch.sourceRange.start&&passage.originalText===item.patch.originalText)?.id));
+    for(const element of document.querySelectorAll('[data-drafted]'))if(active?.element!==element&&!retained.has(element.dataset.editId)){element.innerHTML=originalHtml.get(element.dataset.editId);delete element.dataset.drafted;delete element.dataset.draftVersion;}
     for(const item of message.items){if(item.patch.path!==data.path)continue;const passage=data.passages.find(passage=>passage.baseBlobSha===item.patch.baseBlobSha&&passage.sourceRange.start===item.patch.sourceRange.start&&passage.originalText===item.patch.originalText);if(!passage){send('conflict',{message:'A draft no longer matches this source blob. It remains available in Review.'});continue;}
       const element=document.querySelector(`[data-edit-id="${passage.id}"]`);if(!element||active?.element===element)continue;
       try{const reply=await fetch('/limen/edit/api/inline'+(data.pr?'?pr='+data.pr:''),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({patch:item.patch})}),result=await reply.json();if(!reply.ok)throw Error(result.error);if(generation!==draftGeneration||active?.element===element)continue;element.innerHTML=result.html;element.dataset.drafted='true';element.dataset.draftVersion=item.id;}catch(error){send('error',{message:error.message});}

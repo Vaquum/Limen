@@ -34,7 +34,7 @@ addEventListener('message',event=>{
     if(event.data.type==='edit-rejected'){$('[data-edit]').checked=event.data.enabled;lastEditState=event.data.enabled;}
     if(event.data.type==='draft'){const item=store.save(event.data.patch,event.data.previous);send('draft-saved',{passageId:event.data.passageId,id:item.id});say('Draft saved in this browser.');update();}
     if(event.data.type==='error'||event.data.type==='conflict')say(event.data.message);
-    if(event.data.type==='active')$('[data-undo]').disabled=!event.data.active;
+    if(event.data.type==='active'){$('[data-undo]').disabled=!event.data.active;if(!event.data.active)restoreDrafts();}
   }catch(error){say('Draft storage failed: '+error.message);}
 });
 $('button[data-refresh]').onclick=()=>action(async()=>{await flush();const updated=await api('session');if(updated.workspace.id!==auth.workspace.id){say('The previous delivery is closed. Download or discard its remaining drafts in Review, then reload for the next delivery.');return;}auth=updated;acknowledge();if(!auth.workspace.operation){for(const item of store.heads()){try{const result=await api('reanchor',{patch:item.patch});if(result.patch.baseBlobSha!==item.patch.baseBlobSha){store.save(result.patch,[]);store.undo(item.id);}}catch(error){say(error.message+' The original draft remains in Review.');}}}frame.contentWindow.location.reload();update();});

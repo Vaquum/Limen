@@ -5,7 +5,13 @@ import MarkdownIt from 'markdown-it';
 import {headingIdentities} from '../../reader/headings.mjs';
 import {renderMarkdown} from '../../reader/render.mjs';
 import {searchEntries} from '../../reader/search-index.mjs';
+import {compatibilityMarkdown} from '../../scripts/render-compat-input.mjs';
 const vectors=JSON.parse(await fs.readFile(new URL('./heading-vectors.json',import.meta.url),'utf8'));
+test('compatibility uses current excerpts and removes only generated heading annotations outside code',()=>{
+  const anchor='<a id="retained" data-reader-heading="compiled"></a>',source=anchor+'\n\n## Revised heading\n\n```html\n'+anchor+'\n```\n\nCurrent **prose** and `source`.\n';
+  assert.equal(compatibilityMarkdown(source),source.slice(anchor.length+1));
+  for(const vector of vectors){const before=new MarkdownIt({html:true}).parse(vector.markdown,{}),after=new MarkdownIt({html:true}).parse(compatibilityMarkdown(vector.markdown),{});assert.deepEqual(after.filter(token=>token.type==='heading_open').map(token=>token.tag),before.filter(token=>token.type==='heading_open').map(token=>token.tag));}
+});
 test('renderer, source-fragment rule and search retain the shared heading identities',()=>{
   for(const vector of vectors){
     const identities=[...headingIdentities(new MarkdownIt({html:true}).parse(vector.markdown,{})).values()];assert.deepEqual(identities.map(item=>item.id),vector.ids);assert.deepEqual(identities.map(item=>item.kind),vector.kinds);
