@@ -2,6 +2,7 @@ import {spawnSync,execFileSync} from 'node:child_process';
 import fs from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import path from 'node:path';
+import net from 'node:net';
 import {parseArgs} from 'node:util';
 import {hash} from '../reader/render.mjs';
 const root=path.resolve(process.cwd(),'..');
@@ -18,6 +19,10 @@ if(built.head!==head||built.tested_commit!==tested||built.tree!==tree||built.evi
 for(const [name,expected] of Object.entries(built.files))if(hash(await fs.readFile(path.join('reader-build',name)))!==expected)throw Error('Built reader member changed: '+name);
 let js=0,css=0;for(const name of await fs.readdir('reader-build/assets')){if(name.endsWith('.mjs'))js+=gzipSync(await fs.readFile(path.join('reader-build/assets',name))).length;if(name.endsWith('.css'))css+=gzipSync(await fs.readFile(path.join('reader-build/assets',name))).length;}
 if(js>60*1024||css>24*1024)throw Error(`Reader asset budget exceeded: JS ${js}, CSS ${css}`);
-const started=performance.now();const result=spawnSync(process.execPath,['node_modules/@playwright/test/cli.js','test'],{stdio:'inherit',timeout:180000});
+const reservation=net.createServer();
+await new Promise((resolve,reject)=>{reservation.once('error',reject);reservation.listen(0,'127.0.0.1',resolve);});
+const port=reservation.address().port;
+await new Promise((resolve,reject)=>reservation.close(error=>error?reject(error):resolve()));
+const started=performance.now();const result=spawnSync(process.execPath,['node_modules/@playwright/test/cli.js','test'],{stdio:'inherit',timeout:180000,env:{...process.env,READER_PORT:String(port)}});
 if(result.error)throw result.error;if(result.status!==0)throw Error(`Reader browser proof failed: ${result.status}`);
 console.log(`Reader proof passed in ${((performance.now()-started)/1000).toFixed(2)}s; JS ${js}B gzip, CSS ${css}B gzip.`);
