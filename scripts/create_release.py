@@ -67,7 +67,7 @@ def get_current_version() -> str:
 def get_previous_tag() -> str | None:
     """Return the most recent tag reachable from HEAD, if any."""
     result = subprocess.run(
-        ['git', 'describe', '--tags', '--abbrev=0'],
+        ['git', 'describe', '--tags', '--abbrev=0', '--exclude', '*-dispatch-*'],
         capture_output=True,
         text=True,
         check=False,

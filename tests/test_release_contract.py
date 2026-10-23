@@ -316,3 +316,57 @@ def test_release_tag_authority_and_traceability() -> None:
     first_release = module.build_traceability('v0.1.0', None, [], 'anchor')
     assert 'Compare:' not in first_release
     assert 'Merged pull requests:' not in first_release
+
+
+def test_manual_release_requires_the_exact_merged_source(tmp_path, monkeypatch):
+    import json
+    import subprocess
+
+    spec = importlib.util.spec_from_file_location('verify_release_trigger', ROOT / 'scripts/verify_release_trigger.py')
+    assert spec is not None and spec.loader is not None
+    trigger = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(trigger)
+
+    def git(*arguments):
+        return subprocess.check_output(['git', *arguments], cwd=tmp_path, text=True).strip()
+
+    git('init', '-q')
+    git('config', 'user.name', 'Release contract')
+    git('config', 'user.email', 'release@example.test')
+    (tmp_path / 'pyproject.toml').write_text('[project]\nversion = "5.46.2"\n')
+    git('add', '.')
+    git('commit', '-qm', 'Release predecessor')
+    git('tag', 'v5.46.1')
+    predecessor = git('rev-parse', 'HEAD')
+    (tmp_path / 'release.txt').write_text('Reviewed release source\n')
+    git('add', '.')
+    git('commit', '-qm', 'Release candidate')
+    head = git('rev-parse', 'HEAD')
+    git('update-ref', 'refs/remotes/origin/main', head)
+    tag = f'v5.46.2-dispatch-{head}'
+    git('tag', tag)
+    run = dict(path='.github/workflows/pr_post_release.yml', event='workflow_dispatch',
+               conclusion='success', head_repository=dict(full_name='Vaquum/Limen'),
+               head_sha=head, head_branch=tag)
+    trigger.verify_trigger(tmp_path, run)
+    trigger.verify_trigger(tmp_path, dict(run, head_branch='main'))
+    record = tmp_path / 'run.json'
+    record.write_text(json.dumps(run))
+    # Exercise the same file-input entry path used by the publisher.
+    trigger.verify_trigger(tmp_path, json.loads(record.read_text()))
+    for field, bad in [('path', '.github/workflows/other.yml'), ('event', 'push'),
+                       ('conclusion', 'failure'), ('head_repository', dict(full_name='other/Limen')),
+                       ('head_sha', predecessor), ('head_branch', 'codex/other'),
+                       ('head_branch', f'v5.46.3-dispatch-{head}'),
+                       ('head_branch', f'v5.46.2-dispatch-{predecessor}')]:
+        with pytest.raises(ValueError):
+            trigger.verify_trigger(tmp_path, dict(run, **{field: bad}))
+    git('tag', '-f', tag, predecessor)
+    with pytest.raises(ValueError, match='another commit'):
+        trigger.verify_trigger(tmp_path, run)
+    git('tag', '-f', tag, head)
+    git('update-ref', 'refs/remotes/origin/main', predecessor)
+    with pytest.raises(subprocess.CalledProcessError):
+        trigger.verify_trigger(tmp_path, run)
+    monkeypatch.chdir(tmp_path)
+    assert _load_create_release().get_previous_tag() == 'v5.46.1'
