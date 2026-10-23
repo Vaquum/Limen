@@ -68,8 +68,8 @@ export default{
       }
       if(path===root+'api/logout'&&request.method==='POST'){
         await jsonBody(request,env.EDITOR_ORIGIN);const auth=await session(request,env,{permission:false});await rpc(env,'auth','delete',{id:'session:'+auth.id});
-        let revoked;try{revoked=await fetch('https://api.github.com/applications/'+env.GITHUB_CLIENT_ID+'/token',{method:'DELETE',headers:{Authorization:'Basic '+Buffer.from(env.GITHUB_CLIENT_ID+':'+env.GITHUB_CLIENT_SECRET).toString('base64'),'Content-Type':'application/json','User-Agent':'Limen-docs-editor'},body:JSON.stringify({access_token:auth.token})});}catch(error){return response({ok:true,revoked:false,error:'Session invalidated; provider revocation failed'},200,{'Set-Cookie':cookie('session','',0)});}
-        return response({ok:true,revoked:revoked.ok},200,{'Set-Cookie':cookie('session','',0)});
+        let revoked;try{revoked=await fetch('https://api.github.com/applications/'+env.GITHUB_CLIENT_ID+'/token',{method:'DELETE',headers:{Authorization:'Basic '+Buffer.from(env.GITHUB_CLIENT_ID+':'+env.GITHUB_CLIENT_SECRET).toString('base64'),'Content-Type':'application/json','User-Agent':'Limen-docs-editor',Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10'},body:JSON.stringify({access_token:auth.token})});}catch(error){return response({ok:true,revoked:false,error:'Session invalidated; provider revocation failed'},200,{'Set-Cookie':cookie('session','',0)});}
+        return response({ok:true,revoked:revoked.ok,revocationStatus:revoked.status},200,{'Set-Cookie':cookie('session','',0)});
       }
       if(path===root+'api/session'){
         const auth=await editing(request,env,url);return response({user:auth.user,workspace:auth.state,origin:env.EDITOR_ORIGIN});

@@ -9,7 +9,7 @@ test('actual handler binds single-use OAuth state/PKCE, rechecks permission and 
   const env={EDITOR_ORIGIN:origin,GITHUB_CLIENT_ID:'test-client',GITHUB_CLIENT_SECRET:'test-client-secret',SESSION_KEY:Buffer.alloc(32,9).toString('base64'),EDITOR_STATE:{idFromName:name=>name,get(name){if(!objects.has(name))objects.set(name,new EditorState({storage:new Storage()}));return {fetch:(url,init)=>objects.get(name).fetch(new Request(url,init))};}}};
   globalThis.fetch=async(url,options)=>{
     if(String(url)==='https://github.com/login/oauth/access_token'){const body=JSON.parse(options.body);verifier=body.code_verifier;return new Response(JSON.stringify({access_token:'technical-protocol-token'}));}
-    if(String(url).endsWith('/applications/test-client/token')){revoked=true;return new Response(null,{status:204});}
+    if(String(url).endsWith('/applications/test-client/token')){assert.equal(options.headers['X-GitHub-Api-Version'],'2026-03-10');assert.equal(options.headers.Accept,'application/vnd.github+json');revoked=true;return new Response(null,{status:204});}
     return remote.transport(url,options);
   };
   try{
@@ -25,6 +25,6 @@ test('actual handler binds single-use OAuth state/PKCE, rechecks permission and 
     files.set(source,current.markdown.slice(0,original.sourceRange.start)+'Upstream revised this passage.'+current.markdown.slice(original.sourceRange.end)+'\n\n'+original.originalText+'\n');remote.commits.set(advanced,{files,parents:[delivered.head],message:'docs: revise the original passage'});remote.refs.set(delivered.branch,advanced);
     const refused=await post('reanchor',{patch:{...original,newMarkdown:'A local draft.'}});assert.equal(refused.status,409);assert.match((await refused.json()).error,/Source blob moved/);assert.equal(remote.counts.commit,1);
     remote.revoke();assert.equal((await worker.fetch(request('api/session'),env)).status,403);assert.equal((await worker.fetch(request('view/'),env)).status,403);
-    const logout=await worker.fetch(new Request(root+'api/logout',{method:'POST',headers:{Cookie:copied,Origin:origin,'Content-Type':'application/json'},body:'{}'}),env);assert.equal(logout.status,200);assert.equal(revoked,true);assert.equal((await worker.fetch(request('api/session'),env)).status,401);
+    const logout=await worker.fetch(new Request(root+'api/logout',{method:'POST',headers:{Cookie:copied,Origin:origin,'Content-Type':'application/json'},body:'{}'}),env);assert.equal(logout.status,200);assert.deepEqual(await logout.json(),{ok:true,revoked:true,revocationStatus:204});assert.equal(revoked,true);assert.equal((await worker.fetch(request('api/session'),env)).status,401);
   }finally{globalThis.fetch=originalFetch;}
 });
