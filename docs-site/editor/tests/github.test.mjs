@@ -1,9 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {workspace,commit,openPull,repository} from '../github.mjs';
+import {GitHub,workspace,commit,openPull,repository} from '../github.mjs';
 import {passages} from '../passages.mjs';
 import {protocol,Storage,user} from './protocol.mjs';
 async function edit(context,state,source){const pages=await context.github.pages(state.head),page=pages.find(page=>page.source===source),passage=passages(page.markdown,source,page.blob).find(item=>item.type==='paragraph');return {workspace:state.id,expectedHead:state.head,operation:crypto.randomUUID(),patches:[{...passage,newMarkdown:'Reviewed '+passage.markdown,draftId:crypto.randomUUID()}]};}
+test('the default transport preserves the Worker fetch receiver',async()=>{
+  const context=await protocol(),original=globalThis.fetch;
+  globalThis.fetch=function(url,options){assert.equal(this,globalThis);return context.transport(url,options);};
+  try{assert.deepEqual(await new GitHub('protocol-test-token').writer(),user);}finally{globalThis.fetch=original;}
+});
 for(const lost of ['ref','commit','issue','pr'])test('recover a lost '+lost+' response, commit another page and open exactly one cumulative PR',async()=>{
   const context=await protocol();let state=await workspace(context.storage,context.github,user),first=await edit(context,state,'docs/Developer/README.md');
   if(lost==='ref'||lost==='commit'){context.setLose(lost);await assert.rejects(()=>commit(context.storage,context.github,user,first,state),/Response lost/);state=await workspace(context.storage,context.github,user);}

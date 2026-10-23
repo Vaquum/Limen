@@ -4,7 +4,7 @@ import CONTENT from '../reader/content.json' with {type:'json'};
 
 export const repository='Vaquum/Limen';
 export class GitHub{
-  constructor(token,transport=fetch){this.token=token;this.transport=transport;}
+  constructor(token,transport=(url,options)=>globalThis.fetch(url,options)){this.token=token;this.transport=transport;}
   async request(path,{method='GET',body,missing=false}={}){
     const response=await this.transport('https://api.github.com/'+path,{method,headers:{Authorization:'Bearer '+this.token,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10','User-Agent':'Limen-docs-editor',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})});
     if(missing&&response.status===404)return null;
