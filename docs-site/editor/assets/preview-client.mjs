@@ -50,6 +50,6 @@ addEventListener('message',async event=>{
 // Navigation must retain active edits before the frame unloads.
 document.addEventListener('click',event=>{if(!enabled&&event.target.closest('a'))finish();},true);
 addEventListener('limen-editor-flush',event=>{event.detail.saved=finish();});
-addEventListener('beforeunload',event=>{if(!finish()){event.preventDefault();event.returnValue='';}});
+addEventListener('beforeunload',event=>{if(!finish()){event.preventDefault();event.returnValue='';}else parent.dispatchEvent(new CustomEvent('limen-editor-loading'));});
 addEventListener('pagehide',()=>finish());
 send('page',{page:data});

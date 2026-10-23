@@ -102,13 +102,15 @@ export async function openPull(storage,github,user,payload,state){
   const marker=`<!-- limen-editor workspace=${state.id} -->`;
   let selected=null;if(payload.issue){assert(Number.isSafeInteger(payload.issue)&&payload.issue>0,'Choose a valid issue number');selected=await github.request('repos/'+repository+'/issues/'+payload.issue,{missing:true});assert(selected&&!selected.pull_request&&selected.state==='open','Choose a genuine open Limen issue');}
   if(!state.operation){state.operation={kind:'pr',id:payload.operation,issue:selected?.number||null};await storage.put('workspace',state);}
+  else if(selected&&state.operation.issue!==selected.number){state.operation.issue=selected.number;await storage.put('workspace',state);}
   let issue;
-  if(state.operation.issue){issue=await github.request('repos/'+repository+'/issues/'+state.operation.issue);assert(!issue.pull_request&&issue.state==='open','Choose a genuine open Limen issue');}
+  if(state.operation.issue)issue=await github.request('repos/'+repository+'/issues/'+state.operation.issue);
   else{
     issue=await github.issueByMarker(user.login,marker);
     if(!issue)issue=await github.request('repos/'+repository+'/issues',{method:'POST',body:{title:'docs: revise documentation prose',body:'Revise existing prose in:\n\n'+state.files.map(path=>'- `'+path+'`').join('\n')+'\n\nPreserve examples and source contracts; validate through the normal documentation and package checks.\n\n'+marker}});
-    assert(issue.state==='open','This delivery’s tracking issue is closed');state.operation.issue=issue.number;await storage.put('workspace',state);
   }
+  if(issue.pull_request||issue.state!=='open'){delete state.operation;await storage.put('workspace',state);throw new EditError('The tracking issue closed; choose an open Limen issue. Existing commits and drafts are retained.',409);}
+  state.operation.issue=issue.number;await storage.put('workspace',state);
   const pull=await github.request('repos/'+repository+'/pulls',{method:'POST',body:{title:'docs: revise documentation prose',head:state.branch,base:'main',draft:false,body:'Revise existing documentation prose. The commits on this branch are cumulative; verification and review follow the normal repository gates. Public documentation changes with the next package release.\n\nCloses #'+issue.number+'\n\n'+marker}});
   ownPull(pull,user,state.branch);state.pr=pull.number;delete state.operation;await storage.put('workspace',state);return {number:pull.number,url:pull.html_url};
 }
