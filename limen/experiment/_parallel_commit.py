@@ -13,6 +13,7 @@ from limen.experiment._objective_run import objective_frame
 from limen.experiment._objective_run import run_objective
 from limen.experiment._objective_run import validate_objective_header
 from limen.experiment._parallel_worker import RoundPayload
+from limen.experiment._result_fields import validate_result
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.experiment.manifest_core import Manifest
 
@@ -105,12 +106,13 @@ class ParallelCommit:
         index, identity = round_params['_round_index'], round_params['_id']
         if not isinstance(index, int) or isinstance(index, bool) or not isinstance(identity, str):
             raise ValueError('Parallel occurrence requires an integer index and string identity')
+        parameters = round_params | {key: value for key, value in payload.parameters.items() if not key.startswith('_')}
+        validate_result(parameters, payload.results, succeeded=payload.succeeded)
         row = dict(payload.results)
         predictions = row.pop('_preds', [])
         for key in ('models', '_model', 'extras'):
             _ = row.pop(key, None)
-        row.update(round_params)
-        row.update({key: value for key, value in payload.parameters.items() if not key.startswith('_')})
+        row.update(parameters)
         row['id'] = identity
         row['execution_time'] = payload.elapsed
         row['_warnings'] = json.dumps(payload.warnings)

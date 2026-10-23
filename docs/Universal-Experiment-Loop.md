@@ -230,6 +230,41 @@ The recorded-data benchmark isolates the fitted-preparation extension: both camp
 
 The maintained [factorized preparation probe](../tests/benchmark_factorized_preparation.py) records this comparison separately from the canonical project's scientific equivalence assertions.
 
+### Parameter and result names
+
+UEL flattens parameters and evaluated results into one row. At admission it checks
+both the effective parameter domain and `context_params`. A search strategy supplies
+the effective domain; legacy execution uses `self.params` after a `params()` override.
+Context values still take precedence over same-named domain values.
+
+These bookkeeping names belong to UEL and cannot be supplied by either caller
+parameters or a successful model result: `id`, `execution_time`, `strict_mode_error`,
+`_warnings`, `_convergence_warning`, `_dropped_features`, `_param_hash`, `_id`,
+`_round_index`, `_injected`, `_generation_index`, `_search_strategy`.
+The objective's `val_backtest_total_return` is additionally reserved for parameters
+while that objective is active; its evaluated result is valid. Legacy execution
+also reserves `_experiment_details` for parameters when `maintain_details_in_params=True`.
+
+On every successful round, UEL rejects overlap between the parameters merged into
+the row and retained result keys, even when their values are equal. Model artifacts
+`extras`, `models`, `_model` and `_preds` are extracted from the row and excluded from
+that comparison. Parameters named `extras` or `models` remain valid. Framework-created
+strict-mode failures and generated metadata retain their existing behavior.
+
+Collisions raise `ValueError` identifying sorted names and their sources. Static
+refusal happens before UEL output initialization or recovery writes. Dynamic refusal
+happens before the affected row reaches return tracks, CSV/round records, the log or
+feedback. Setup files and an earlier valid prefix may remain; use a fresh run after
+renaming a colliding contract. Recovery also refuses committed-range round identities
+without corresponding successful CSV occurrences before rewriting existing evidence.
+Supported duplicate and torn uncommitted tails retain their recovery behavior.
+
+This policy applies to legacy serial, MSQ serial (including factorized execution),
+and admitted parallel UEL runs. Standalone MSQ naming rules and propagation of
+nonreserved underscore context keys are unchanged. Protected runs keep the existing
+research-attempt lifecycle: prior provenance is preserved, and a refused new attempt
+is recorded as started then failed.
+
 ### SFD execution contract
 
 On the ordinary MSQ path, UEL calls the SFD's preparation and model functions for each candidate. Manifest-driven SFDs supply these functions through their manifest. Custom SFDs supply them directly and require explicit `data=`. Configure candidate values in the strategy's `ParamDomain`; configure custom functions in the SFD. The `factorize` option above has a separate, narrower manifest-only contract.
