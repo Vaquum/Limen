@@ -70,6 +70,7 @@ experiment/
 ├── _grid_resume.py
 ├── _holdout_assessment.py
 ├── _holdout_attempts.py
+├── _holdout_checkpoint.py
 ├── _holdout_events.py
 ├── _holdout_freeze.py
 ├── _holdout_history.py
@@ -124,3 +125,9 @@ experiment/
 - [Advanced Search](../../docs/Advanced-Search.md)
 - [Reducers And Feedback](../../docs/Reducers-And-Feedback.md)
 - [Experiment Manifest](../../docs/Experiment-Manifest.md)
+
+### Checkpoint protection evidence
+
+Project-bound research checkpoints retain an explicit version-1 protection header in both `checkpoint.json` and `metadata.json`, including a null cutoff when no reservation is active. Their saved population retains source evidence, ordered terminal occurrences, and the completed rounds' original source, selection, split, schema, and SQL-history witnesses. Serial and parallel restoration validate this evidence before restoring state or rewriting artifacts. This private prerequisite does not enable public protected resume or parallel execution.
+
+Trainer requires genuine completed protected experiment lineage before fitting. Valid earlier version-1 protected selections do not need a retroactive checkpoint header. For a legacy Python manifest whose actual local source differs from its saved YAML, SQL-validated source evidence supplies the local-source declaration for reconstruction; the reloaded admitted data and split geometry must still match exactly. The derived Sensor reference reflects that source without rewriting the saved experiment artifacts.

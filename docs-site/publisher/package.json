@@ -9,5 +9,6 @@
     "security:audit": "node audit.mjs",
     "check:config": "wrangler versions upload --config wrangler.json --dry-run --outdir ../../.docs-evidence/publisher-dry-run"
   },
-  "dependencies": {"wrangler": "4.151.2"}
+  "dependencies": {"wrangler": "4.151.2"},
+  "overrides": {"undici": "7.30.1"}
 }

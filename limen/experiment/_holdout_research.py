@@ -14,6 +14,7 @@ import sys
 
 import polars as pl
 
+import limen.experiment._holdout_checkpoint as _checkpoint_proof
 from limen.experiment._holdout_history import ProjectBinding, admission, bind, check_binding, finish_research, start_research
 from limen.experiment._holdout_source import Bounds, SourceEvidence, SourceManifest, admit_frame, frame_evidence, load_admitted_source, record_geometry, replay_witness, source_spec
 from limen.experiment._resolve_trade_policy import holdout_structural
@@ -56,7 +57,7 @@ _CURRENT: ContextVar[_Operation | None] = ContextVar('holdout_operation', defaul
 
 
 def binding_of(manifest: object) -> ProjectBinding | None:
-    return cast(ProjectBinding | None, vars(manifest).get('_holdout_binding'))
+    return cast(ProjectBinding | None, vars(manifest).get('_holdout_binding') if manifest is not None else None)
 
 
 def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding | None:
@@ -297,16 +298,17 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
     attrs = cast(dict[str, object], vars(host))
     manifest = cast(ResearchManifest, attrs['_manifest'])
     binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
-    saved = cast(Mapping[str, object], attrs['_metadata']).get('holdout')
-    if isinstance(saved, Mapping):
-        saved = cast(Mapping[str, object], saved)
-        if binding is None or any(saved.get(key) != value for key, value in (
-            ('project_id', binding.project_id), ('reservation_revision', binding.revision),
-            ('cutoff_ns', binding.cutoff_ns), ('interval_seconds', binding.interval_seconds))):
-            raise ValueError('Holdout Trainer metadata binding/revision changed')
+    _checkpoint_proof.validate_trainer(binding, cast(Mapping[str, object], attrs['_metadata']), cast(Mapping[str, object], attrs['_round_data']))
+    if data is None and binding is not None and binding.cutoff_ns is not None and (source := _checkpoint_proof.trainer_source(manifest, cast(Mapping[str, object], attrs['_round_data']))):
+        reference = copy.deepcopy(cast(dict[str, object], attrs['_yaml_reference']))
+        cast(dict[str, object], cast(Mapping[str, object], reference['sfd'])['manifest'])['data_source'] = source
+        attrs['_yaml_reference'] = reference
     with operation(manifest, 'trainer'):
         frame = admit(manifest, data if data is not None else manifest.fetch_data(), force_caller=data is not None)
         if binding is not None and binding.cutoff_ns is not None:
+            _checkpoint_proof.validate_trainer(binding, cast(Mapping[str, object], attrs['_metadata']),
+                                                 cast(Mapping[str, object], attrs['_round_data']),
+                                                 cast(SourceEvidence, vars(manifest)['_holdout_source']), manifest, frame)
             attrs['_holdout_training_frame'] = frame
         return frame
 
@@ -316,14 +318,9 @@ def trainer_round(manifest: object, expected: Mapping[str, object]) -> None:
     if binding is None or binding.cutoff_ns is None:
         return
     vars(manifest)['_holdout_round_id'] = expected.get('round_id')
-    recorded = expected.get('holdout')
-    if isinstance(recorded, Mapping):
-        recorded = cast(Mapping[str, object], recorded)
-        if recorded.get('project_id') != binding.project_id or recorded.get('reservation_revision') != binding.revision:
-            raise ValueError('Holdout Trainer round binding/revision changed')
-        vars(manifest)['_holdout_experiment_record'] = recorded.get('research_record_id')
-    else:
-        vars(manifest)['_holdout_experiment_record'] = None
+    vars(manifest)['_holdout_experiment_record'] = _checkpoint_proof.validate_trainer_round(binding, expected.get('round_id'), expected.get('holdout'))
+    if (op := _CURRENT.get()) is not None:
+        op.replay_witness = cast(Mapping[str, object], expected['holdout'])
 
 
 def train_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_T, _P], _R]:
@@ -335,6 +332,8 @@ def train_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
             attrs['_data'] = admit(manifest, cast(pl.DataFrame, attrs['_data']), force_caller=attrs['_data'] is not attrs.get('_holdout_training_frame'))
             if binding_of(manifest) is not None:
                 attrs['_holdout_training_frame'] = attrs['_data']
+            _checkpoint_proof.validate_trainer(binding_of(manifest), cast(Mapping[str, object], attrs['_metadata']),
+                                               cast(Mapping[str, object], attrs['_round_data']), manifest=manifest, raw=attrs['_data'])
             return func(host, *args, **kwargs)
     return guarded
 

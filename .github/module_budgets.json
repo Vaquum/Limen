@@ -494,6 +494,7 @@
   "limen/experiment/_holdout_events.py": 120,
   "limen/experiment/_holdout_attempts.py": 240,
   "limen/experiment/_holdout_assessment.py": 300,
+  "limen/experiment/_holdout_checkpoint.py": 160,
   "limen/experiment/_holdout_report.py": 300,
   "limen/features/volatility_barriers.py": 80,
   "limen/experiment/_dynamic_barriers.py": 200,

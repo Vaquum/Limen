@@ -1,6 +1,7 @@
 import hashlib
 import json
 import logging
+from collections.abc import Mapping
 from datetime import datetime
 from datetime import timezone
 from pathlib import Path
@@ -102,12 +103,12 @@ class CheckpointManager:
              content_hash: str,
              feedback_controller: FeedbackController | None = None,
              pruning_strategies: list[PruningStrategy] | None = None,
-             failed_round_params: list[dict[str, object]] | None = None) -> None:
+             failed_round_params: list[dict[str, object]] | None = None,
+             holdout_binding: Mapping[str, object] | None = None) -> None:
 
         '''
-        NOTE: All state is written atomically to a single file via a
-        write-then-rename pattern. The previous checkpoint remains intact
-        until the new one is fully written.
+        All state uses one atomic write-then-rename. The previous
+        checkpoint remains intact until its replacement is complete.
 
         Args:
             checkpoint_dir (Path): Directory to write checkpoint file
@@ -120,6 +121,7 @@ class CheckpointManager:
             feedback_controller (FeedbackController | None): FeedbackController to checkpoint
             pruning_strategies (list[PruningStrategy] | None): PruningStrategy instances to checkpoint
             failed_round_params (list[dict[str, object]] | None): Committed parallel failure parameters
+            holdout_binding (Mapping | None): Validated binding/population envelope, or legacy unprotected None
 
         '''
 
@@ -136,17 +138,15 @@ class CheckpointManager:
         }
 
         if feedback_controller is not None:
-            checkpoint['feedback_controller_state'] = (
-                feedback_controller.get_state()
-            )
+            checkpoint['feedback_controller_state'] = feedback_controller.get_state()
 
         if pruning_strategies is not None:
-            checkpoint['pruning_strategy_states'] = [
-                ps.get_state() for ps in pruning_strategies
-            ]
+            checkpoint['pruning_strategy_states'] = [ps.get_state() for ps in pruning_strategies]
 
         if failed_round_params is not None:
             checkpoint['failed_round_params'] = failed_round_params
+        if holdout_binding is not None:
+            checkpoint.update(holdout_binding=holdout_binding['binding'], holdout_population=holdout_binding['population'])
 
         self._write_json(Path(checkpoint_dir) / 'checkpoint.json', checkpoint)
 
