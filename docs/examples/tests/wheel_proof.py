@@ -6,6 +6,7 @@ import math
 import os
 from pathlib import Path
 import subprocess
+import sys
 import shlex
 import signal
 import tarfile
@@ -160,14 +161,14 @@ Path(sys.argv[1]).write_text(json.dumps(info))'''
     acquisition = prove_acquisition(root, temporary, wheel, bundle, runtime_environment, inspect, run)
     summaries, commands, scenario_reports = {}, {}, {}
     assert json.loads((project / 'commands.json').read_text()) == canonical_commands
-    # Complete the first scientific import before starting the disjoint campaigns.
+    # macOS imports compete under host load; Linux's locked CI runs disjoint campaigns together.
     run(shlex.split(canonical_commands['python-selection']), cwd=project, env=runtime_environment)
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        # Bound each complete entry command separately from wheel setup and assertions.
-        executions = {name: executor.submit(run, shlex.split(canonical_commands[name]),
-                                           cwd=project, env=runtime_environment, timeout=120)
-                      for name in ('python-all', 'compiled-all')}
-        for execution in executions.values():
+    with ThreadPoolExecutor(max_workers=1 if sys.platform == 'darwin' else 2) as executor:
+        executions = [executor.submit(run, shlex.split(canonical_commands[name]),
+                                     cwd=project, env=runtime_environment,
+                                     timeout=240 if sys.platform == 'darwin' and name == 'compiled-all' else 120)
+                      for name in ('python-all', 'compiled-all')]
+        for execution in executions:
             execution.result()
     for interface in ('python',):
         command = shlex.split(canonical_commands[interface + '-selection'])

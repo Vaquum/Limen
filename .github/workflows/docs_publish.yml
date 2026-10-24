@@ -1,6 +1,12 @@
 name: Publish Research Book
 
 on:
+  workflow_dispatch:
+    inputs:
+      package_publish_run:
+        description: 'Successful canonical Publish Package to PyPI run to prove and publish'
+        required: true
+        type: string
   workflow_run:
     workflows: ['Publish Package to PyPI']
     types: [completed]
@@ -16,7 +22,7 @@ concurrency:
 jobs:
   publish:
     name: Prove and Publish Released Documentation
-    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository
+    if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: documentation
@@ -36,7 +42,7 @@ jobs:
 
       - name: Verify the triggering publishing workflow
         env:
-          PUBLISH_RUN_ID: ${{ github.event.workflow_run.id }}
+          PUBLISH_RUN_ID: ${{ github.event.workflow_run.id || inputs.package_publish_run }}
         run: |
           gh api "repos/Vaquum/Limen/actions/runs/$PUBLISH_RUN_ID" > /tmp/package-publish-run.json
           python - <<'PY'
@@ -48,12 +54,15 @@ jobs:
               raise SystemExit('Only the successful canonical package-publishing run can publish documentation')
           PY
 
+      - name: Retain the trusted provider asset adapter
+        run: cp docs-site/publisher/prepare-assets.mjs "$RUNNER_TEMP/limen-prepare-assets.mjs"
+
       - name: Download that exact run's published-package identity
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: released-docs-identity
           path: .docs-evidence/package-publication
-          run-id: ${{ github.event.workflow_run.id }}
+          run-id: ${{ github.event.workflow_run.id || inputs.package_publish_run }}
           github-token: ${{ github.token }}
 
       - name: Set up the policy-pinned research interpreter
@@ -64,7 +73,7 @@ jobs:
       - name: Resolve the merged release tag
         id: release
         env:
-          PUBLISH_RUN_ID: ${{ github.event.workflow_run.id }}
+          PUBLISH_RUN_ID: ${{ github.event.workflow_run.id || inputs.package_publish_run }}
         run: python docs/examples/release_identity.py read --receipt .docs-evidence/package-publication/identity.json --run-id "$PUBLISH_RUN_ID" --github-output "$GITHUB_OUTPUT"
 
       - name: Checkout the exact published source
@@ -128,6 +137,7 @@ jobs:
         run: |
           python docs/examples/publication.py --release "$RELEASE_TAG"
           python docs/examples/release_assets.py publication --release "$RELEASE_TAG"
+          node "$RUNNER_TEMP/limen-prepare-assets.mjs" docs-site/reader-build
 
       - name: Upload and anonymously verify an inactive Worker version
         env:

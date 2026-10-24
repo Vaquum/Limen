@@ -13,4 +13,4 @@ const assets={async fetch(request){const url=new URL(request.url),name=decodeURI
   catch(error){if(error.code==='ENOENT'||error.code==='ENOTDIR')return new Response(await fs.readFile(path.join(output,'404.html')),{status:404,headers:{'Content-Type':mime['.html']}});throw error;}
 }};
 const server=http.createServer(async(incoming,outgoing)=>{try{const response=await worker.fetch(new Request(`http://127.0.0.1:${port}${incoming.url}`,{method:incoming.method}),{ASSETS:assets});outgoing.writeHead(response.status,Object.fromEntries(response.headers));outgoing.end(Buffer.from(await response.arrayBuffer()));}catch(error){console.error(error);outgoing.writeHead(500);outgoing.end('Reader server failed');}});
-server.listen(port,'127.0.0.1',()=>console.log(`Research book: http://127.0.0.1:${port}/limen/`));
+server.listen(port,'127.0.0.1',()=>{const actual=server.address().port;console.log(`Research book: http://127.0.0.1:${actual}/limen/`);if(process.send)process.send({port:actual});});

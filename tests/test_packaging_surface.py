@@ -280,7 +280,7 @@ def test_supply_chain_surfaces() -> None:
     assert re.fullmatch(r'\d+\.\d+\.\d+', markdown_it_pin)
     assert site_package['overrides']['markdown-it'] == '$markdown-it'
     assert site_package['scripts']['build'] == 'node scripts/build-reader.mjs'
-    assert site_package['scripts']['check'] == 'npm run lint && npm run build'
+    assert site_package['scripts']['check'] == 'npm run lint && npm run check:editor && npm run build:editor && npm run build && node scripts/check-render-compat.mjs'
     site_lock = json.loads((ROOT / 'docs-site' / 'package-lock.json').read_text(encoding='utf-8'))
     assert site_lock['packages']['']['dependencies'] == site_package['dependencies']
     assert not any('@docusaurus/' in key or 'docusaurus-search-local' in key for key in site_lock['packages'])

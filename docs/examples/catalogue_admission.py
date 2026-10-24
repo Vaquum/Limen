@@ -1,6 +1,12 @@
 """Resolve declared exports to their exact reference contracts without importing backends."""
 import ast
+from functools import lru_cache
 from pathlib import Path
+
+
+@lru_cache(maxsize=512)
+def _source_tree(source: str):
+    return ast.parse(source)
 
 
 def module_path(root: Path, module: str) -> Path:
@@ -14,7 +20,7 @@ def resolve(root, module, symbol, seen=()):
     source = module_path(root, module)
     if not source.is_file():
         raise ValueError('Public export has no package source: ' + module + '.' + symbol)
-    tree = ast.parse(source.read_text())
+    tree = _source_tree(source.read_text())
     for node in tree.body:
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)) and node.name == symbol:
             return source, node
@@ -47,7 +53,7 @@ def declared_contracts(root: Path):
     for source in sorted((root / 'limen').rglob('*.py')):
         if any(part.startswith('_') and part != '__init__.py' for part in source.relative_to(root).parts):
             continue
-        tree = ast.parse(source.read_text())
+        tree = _source_tree(source.read_text())
         declarations = [node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == '__all__' for target in node.targets)]
         if not declarations:
             continue

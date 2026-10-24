@@ -3,6 +3,8 @@ const content=document.body.dataset.content;
 const key=`reader:${product}:${content}`;
 const status=document.querySelector('[data-status]');
 let storageAvailable=true;
+export const navigationType=()=>performance.getEntriesByType('navigation')[0]?.type;
+export const resuming=()=>['reload','back_forward'].includes(navigationType());
 export function announce(message){if(status)status.textContent=message;}
 export function position(){
   const passages=[...document.querySelectorAll('main article [data-passage]')].filter(node=>node.getClientRects().length);
@@ -25,9 +27,13 @@ export function restore(place){
   document.body.dataset.interface=place.interface||'both';return true;
 }
 export function initPlace(){
-  const resumed=history.state?.readerPlace;
+  if(location.hash&&navigationType()!=='back_forward'){
+    const target=document.getElementById(decodeURIComponent(location.hash.slice(1)).replace(/-L(\d+)-L\d+$/,'-L$1'));
+    if(target){target.scrollIntoView({block:target.classList.contains('code-line')?'center':'start'});target.focus({preventScroll:true});}
+  }
+  const resumed=navigationType()==='back_forward'?history.state?.readerPlace:null;
   if(resumed&&!location.hash)restore(resumed);
-  else if(!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
+  else if(resuming()&&!location.hash){try{const raw=localStorage.getItem(key);if(raw)restore(JSON.parse(raw));}catch(error){storageAvailable=false;announce('Browser storage could not be read. Reading position is unavailable.');console.error(error);}}
   let frame=0, ready=false;
   requestAnimationFrame(()=>requestAnimationFrame(()=>{ready=true;save();}));
   const progress=document.querySelector('.reading-progress');
@@ -38,6 +44,9 @@ export function initPlace(){
     try{localStorage.setItem(key,JSON.stringify(value));}catch(error){storageAvailable=false;announce('Browser storage could not be written. Reading position is not being saved.');console.error(error);}
   }
   addEventListener('scroll',()=>{if(!frame)frame=requestAnimationFrame(save);},{passive:true});
-  addEventListener('pagehide',save);save();
+  function keepEntry(){if(!document.querySelector('dialog[open]')&&!history.state?.readerReference)history.replaceState({...history.state,readerPlace:position()},'',location.href);}
+  addEventListener('scrollend',keepEntry);
+  document.addEventListener('click',keepEntry,{capture:true});
+  addEventListener('pagehide',()=>{save();keepEntry();});save();
   addEventListener('reader-interface-change',save);
 }

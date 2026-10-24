@@ -1,11 +1,15 @@
 import ast
 import importlib
+from functools import lru_cache
 import json
 import re
 import subprocess
 from collections.abc import Callable, Iterator
 from datetime import date
 from pathlib import Path
+import unicodedata
+
+from markdown_it import MarkdownIt
 from urllib.parse import unquote
 
 try:
@@ -57,19 +61,28 @@ def _assert_fences_parse(language: str, parser: Callable[[str], object]) -> None
 
 
 def _heading_ids(path: Path) -> set[str]:
+    return set(_heading_ids_for_text(path.read_text(encoding='utf-8')))
+
+
+@lru_cache(maxsize=128)
+def _heading_ids_for_text(text: str) -> frozenset[str]:
     ids: set[str] = set()
     seen: dict[str, int] = {}
-    for line in path.read_text(encoding='utf-8').splitlines():
-        match = re.match(r'^#{1,6}\s+(.+?)\s*#*$', line)
-        if match is None:
+    tokens = MarkdownIt().parse(text)
+    for index, token in enumerate(tokens):
+        if token.type != 'heading_open':
             continue
-        heading = re.sub(r'\[([^]]+)]\([^)]+\)', r'\1', match.group(1))
-        heading = heading.replace('`', '')
-        slug = re.sub(r'[^\w\- ]', '', heading.lower()).strip().replace(' ', '-')
-        duplicate = seen.get(slug, 0)
-        seen[slug] = duplicate + 1
-        ids.add(slug if duplicate == 0 else f'{slug}-{duplicate}')
-    return ids
+        heading = tokens[index + 1].content.replace('`', '')
+        if token.tag == 'h1':
+            heading = ''.join(child.content if child.type in ('text', 'code_inline', 'image') else ' ' if child.type in ('softbreak', 'hardbreak') else '' for child in tokens[index + 1].children or [])
+        stem = ''.join(char for char in heading if unicodedata.category(char)[0] in 'LN' or char in '_- ').strip().lower().replace(' ', '-')
+        duplicate = seen.get(stem, 0)
+        if token.tag != 'h1':
+            seen[stem] = duplicate + 1
+        before = tokens[index - 1] if index and tokens[index - 1].type == 'html_block' else tokens[index - 2] if index > 1 and tokens[index - 1].type == 'paragraph_close' and tokens[index - 2].type == 'inline' else None
+        explicit = re.fullmatch(r'<a id="([^"<>]+)" data-reader-heading="(?:python|compiled|plain)"></a>\s*', before.content.strip()) if before else None
+        ids.add(explicit.group(1) if explicit else stem if duplicate == 0 else f'{stem}-{duplicate}')
+    return frozenset(ids)
 
 
 def test_documentation_corpus_is_fully_routed_into_the_site() -> None:
@@ -341,3 +354,9 @@ def test_public_risk_and_install_contracts_remain_visible() -> None:
     assert 'credited in the release notes' in security
     assert 'provenance.intoto.jsonl' in security
     assert 'gh attestation verify' in security
+
+
+def test_shared_editor_heading_identities() -> None:
+    vectors = json.loads(_read('docs-site/editor/tests/heading-vectors.json'))
+    for vector in vectors:
+        assert _heading_ids_for_text(vector['markdown']) == frozenset(vector['ids'])

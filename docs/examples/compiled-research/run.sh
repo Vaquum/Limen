@@ -49,6 +49,29 @@ limen run --no-progress-bar \
   compiled-research/recording_full.yaml \
   compiled-research/recording_outputs.yaml
 # endregion recording
+# region execution
+limen run --no-progress-bar \
+  compiled-research/execution.yaml \
+  compiled-research/funded.yaml
+# endregion execution
+# region bars
+limen run --no-progress-bar compiled-research/bars.yaml
+# endregion bars
+# region allocation
+limen run --no-progress-bar \
+  compiled-research/allocation.yaml \
+  compiled-research/allocation_ml.yaml \
+  compiled-research/allocation_funded.yaml
+# endregion allocation
+# region models
+limen run --no-progress-bar \
+  compiled-research/common_strategies.yaml \
+  compiled-research/family_ridge_regressor.yaml \
+  compiled-research/family_dlinear_regressor.yaml \
+  compiled-research/family_xgboost_regressor.yaml \
+  compiled-research/family_random_binary.yaml \
+  compiled-research/family_direction_sizing.yaml
+# endregion models
 }
 diagnostics &
 diagnostics_pid=$!
@@ -93,29 +116,6 @@ limen run --no-progress-bar compiled-research/calibration.yaml compiled-research
 limen assess compiled-research/calibration_assessment.yaml --results results/dev/compiled-calibration-assessment
 limen assess compiled-research/calibration_isotonic.yaml --results results/dev/compiled-calibration-isotonic
 # endregion calibration
-# region execution
-limen run --no-progress-bar \
-  compiled-research/execution.yaml \
-  compiled-research/funded.yaml
-# endregion execution
-# region bars
-limen run --no-progress-bar compiled-research/bars.yaml
-# endregion bars
-# region allocation
-limen run --no-progress-bar \
-  compiled-research/allocation.yaml \
-  compiled-research/allocation_ml.yaml \
-  compiled-research/allocation_funded.yaml
-# endregion allocation
-# region models
-limen run --no-progress-bar \
-  compiled-research/common_strategies.yaml \
-  compiled-research/family_ridge_regressor.yaml \
-  compiled-research/family_dlinear_regressor.yaml \
-  compiled-research/family_xgboost_regressor.yaml \
-  compiled-research/family_random_binary.yaml \
-  compiled-research/family_direction_sizing.yaml
-# endregion models
 # region holdout
 sh compiled-research/final/run.sh
 sh compiled-research/final-event/run.sh

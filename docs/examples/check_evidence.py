@@ -31,7 +31,7 @@ def digest(value: bytes) -> str:
     return hashlib.sha256(value).hexdigest()
 
 
-@lru_cache(maxsize=512)
+@lru_cache(maxsize=4096)
 def package_reference(source: str, name: str) -> str:
     kind, symbol = name.split(':', 1)
     parts = symbol.split('.')

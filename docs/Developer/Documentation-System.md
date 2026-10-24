@@ -1,6 +1,6 @@
 # Documentation system contract
 
-Limen's documentation is a research book built around two complete, executable projects: Python Research and Compiled Research. Chapters develop those projects; Reference and Developer provide the detail needed to use and maintain them.
+Limen's documentation is a research book built around two complete, executable projects\. Python Research uses Python functions; Compiled Research uses YAML and CLI commands\. Chapters develop those projects; Reference and Developer provide the detail needed to use and maintain them\.
 
 This contract governs the documentation in this repository. The [README](../../README.md) establishes its language and research narrative. [CLAUDE.md](../../CLAUDE.md) establishes the delivery laws. Documentation must describe current behavior and make the evidence behind its examples inspectable.
 
@@ -281,7 +281,7 @@ The reader must support sequential reading, direct reference lookup, search and 
 
 A reference excursion preserves its originating chapter, passage, interface and keyboard focus. Returning must restore those, not merely reopen the chapter at its top. Browser history and explicit return controls must agree.
 
-Saved reading position is local and scoped by product and content identity. Prove save/reload, isolation between products on one origin, and changed or removed passages. A stale position must not silently restore into unrelated text. Deep links retain their own target. Notes, annotations, accounts and reader analytics are outside this delivery.
+Saved reading position is local and scoped by product and content identity. Reload and browser history restore the relevant entry; an ordinary page link opens at the destination's beginning. Prove save/reload, Back/Forward, isolation between products on one origin, and changed or removed passages. A stale position must not silently restore into unrelated text. Deep links retain their own target, revealing its interface when needed. Notes, annotations, accounts and reader analytics are outside this delivery.
 
 Code controls preserve exact source when copying, exclude line-number gutters, retain indentation and expose language, full source and provenance. Long code and tables must remain usable on a phone without horizontal page overflow.
 
@@ -360,3 +360,15 @@ The [TabPFN project command](../examples/compiled-research/README.md#optional-mo
 To regenerate, provision a separate supported environment with the matching non-editable Limen wheel and its `data,tabpfn` extras. Use TabPFN 6.4.1 and the recorded environment as the reproduction baseline. Unpack the exact canonical bundle in a fresh directory, then invoke `docs/examples/optional_models.py` with `--root` pointing to the clean tested checkout, `--project` to that bundle root and `--output docs/examples/retained/tabpfn.json`. Put the matching environment's `limen` first on `PATH`. The capture command verifies that the installed package is outside the checkout and byte-identical to its Python source, runs the unchanged shell/YAML command, validates the genuine outputs and writes a new timestamped observation. Commit that observation with the affected sources and rerun the ordinary documentation proof.
 
 The recorded run is CPU, one ensemble, Python 3.12 and macOS ARM64. Its source/version equality check is current validation of that observation; ordinary CI does not download and run the optional model again. Other devices, dependency environments and stochastic replay require their own execution evidence. Keep that distinction visible wherever this result is cited.
+
+## Prose editing
+
+Authoring is configured separately from the released book at `limen-editor.vaquum.fi/limen/edit/`. Activation remains tracked in [issue #1207](https://github.com/Vaquum/Limen/issues/1207). GitHub sign-in requires current write permission on Vaquum/Limen. Read the branch and revision shown there before editing; the public book may identify an earlier package release.
+
+Edit existing words in place, then use Review to inspect drafts across pages. Commit sends those drafts to an origin branch. Further commits accumulate on that branch. Open PR includes the committed changes and starts the normal checks and review. Local Undo does not revert a remote commit. Code examples, recorded results and structural changes remain source work.
+
+The implementation is configured by `docs-site/editor/wrangler.json`. Build authoring assets with `npm run build:editor` in `docs-site`; deploy a clean reviewed revision with the locked Wrangler in `docs-site/publisher`. Git build triggers remain disconnected. Staging and production use separate Workers, domains, Durable Object storage and secrets. Neither deployment activates or replaces the released public book.
+
+The GitHub App needs Metadata read and Contents, Pull requests and Issues write for Limen only; it needs no Workflows permission. Configure `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and an independent base64-encoded 32-byte `SESSION_KEY` as Worker secrets in each environment. The callback is the corresponding authoring origin followed by `/limen/edit/auth/callback`. Installation is an explicit maintainer authorization. Until installation and remote acceptance are recorded in issue #1207, this source configuration does not establish a live editor.
+
+Sessions are server-owned and expire after one hour. Sign-out invalidates the session before requesting GitHub token revocation. Rotation of the session key invalidates existing sessions. Drafts belong to the signed-in writer and delivery, and persist only in that browser. Commit or download pending prose before explicitly discarding it at sign-out. A moved source, missing branch or conflicting PR requires reconciliation; the editor never force-pushes or merges on the writer's behalf.

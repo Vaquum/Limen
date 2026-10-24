@@ -23,8 +23,9 @@ from limen.yaml.profiler import profile
 from tests.test_holdout_research import _configuration, _project, _FIXTURE
 
 
-def _profile_reservation_worker(root, pipe):
+def _profile_reservation_worker(root, pipe, busy_timeout):
     pipe.send(('ready', history._BUSY_TIMEOUT_SECONDS))
+    history._BUSY_TIMEOUT_SECONDS = busy_timeout
     while pipe.recv() != 'stop':
         started = time.monotonic()
         try:
@@ -68,7 +69,9 @@ def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
     fitted = []
     context = multiprocessing.get_context('spawn')
     parent, child = context.Pipe()
-    worker = context.Process(target=_profile_reservation_worker, args=(root, child))
+    # Prove the production wait once; the other paths prove the same lock and cleanup.
+    busy_timeout = history._BUSY_TIMEOUT_SECONDS if (kind, failure, binding) == ('ml', None, 'explicit') else 0.2
+    worker = context.Process(target=_profile_reservation_worker, args=(root, child, busy_timeout))
     worker.start()
     child.close()
 
@@ -80,7 +83,7 @@ def _profile_admission(tmp_path, monkeypatch, kind, failure, binding):
         parent.send('reserve')
         assert parent.poll(30)
         status, message, elapsed = parent.recv()
-        assert status == 'blocked' and 'locked' in message and elapsed >= 4.5
+        assert status == 'blocked' and 'locked' in message and elapsed >= busy_timeout * 0.9
         assert not (root / 'manifests/holdout.sqlite3').exists()
 
     def fetch():
