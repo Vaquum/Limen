@@ -2,10 +2,11 @@
 
 Upstream pins two posted guideline artifacts (`VAQUUM_PR_GUIDELINE.md` and
 `VAQUUM_REPO_SPECIFICS.md`) by digest. This repository does not carry those
-files: its rulebook is the constitution plus the reviewer brief, and both are
-adopted from upstream rather than authored here. What matters is that the
-three surfaces exist, that exactly one of them is canonical, and that the
-other two route to it rather than restating it.
+files: its rulebook is the constitution, adopted from upstream rather than
+authored here, with AGENTS.md routing to it. The former reviewer brief
+(`.github/copilot-instructions.md`) was removed by owner decision and must
+not return. What matters is that the two surfaces exist, that exactly one
+of them is canonical, and that the other routes to it rather than restating it.
 """
 
 from __future__ import annotations
@@ -36,15 +37,12 @@ def test_agents_file_routes_to_the_constitution_without_restating_it() -> None:
     assert AGENTS.is_file()
     text = AGENTS.read_text(encoding='utf-8')
     assert '[CLAUDE.md](CLAUDE.md)' in text
-    assert '.github/copilot-instructions.md' in text
     assert len(text.splitlines()) < 20, 'AGENTS.md should route, not restate'
 
 
-def test_review_brief_is_the_adopted_one() -> None:
-    """Verify the reviewer brief is the full brief rather than a stub."""
-    assert REVIEW_BRIEF.is_file()
-    text = REVIEW_BRIEF.read_text(encoding='utf-8')
-    assert '# PR review guideline' in text
-    assert 'catastrophe' in text
-    assert 'mediocre' in text
-    assert len(text.splitlines()) > 50, 'the brief must not regress to a stub'
+def test_review_brief_stays_removed() -> None:
+    """Verify the removed reviewer brief does not return.
+
+    Removed by owner decision: no automated reviewer brief may exist.
+    """
+    assert not REVIEW_BRIEF.exists()
