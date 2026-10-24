@@ -16,6 +16,7 @@ import numpy as np
 import numpy.typing as npt
 import polars as pl
 
+import limen.experiment._holdout_composition as _composition
 from limen.experiment.errors import StrictModeError
 from limen.experiment.convergence_report import convergence_warning
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest
@@ -164,7 +165,7 @@ class FactorizedRounds:
         self.intervention_path = intervention_path
         self._check_interventions()
         self.manifest = manifest
-        self.data = data.clone()
+        self.data, self._source = _composition.snapshot(manifest, data)
         self.prep, self.model = prep, model
         self.record_execution, self.record_model_outputs = record_execution, record_model_outputs
         self.cache: dict[str, _Cached] = {}
@@ -179,7 +180,7 @@ class FactorizedRounds:
         if set(params) != set(self.domain) or any(not any(type(value) is type(admitted) and value == admitted for admitted in self.domain[key]) for key, value in params.items()):
             _fail('candidate is outside the preflight domain')
         key = json.dumps({k: v for k, v in params.items() if k not in self.axes}, sort_keys=True, default=str)
-        entry = self.cache.pop(key, None)
+        entry = _composition.signal_cache(self.manifest, self.data, self._source, self.cache, key)
         if entry is None:
             prep_key: str | None = None
             fitted: dict[str, object] = {}
@@ -226,8 +227,8 @@ class FactorizedRounds:
             converged_warning = bool(convergence_warning(caught, True))
             if self.preparation is not None and prep_key is not None:
                 if prep_key not in self.preparation.cache and len(self.preparation.cache) >= _CACHE_LIMIT:
-                    del self.preparation.cache[next(iter(self.preparation.cache))]
-                self.preparation.cache[prep_key] = fitted
+                    _composition.evict_fitted(self.preparation.cache, self.preparation.proofs)
+                _composition.remember_fitted(self.preparation, prep_key, fitted, data, self.data)
             if len(self.cache) >= _CACHE_LIMIT:
                 del self.cache[next(iter(self.cache))]
             self.cache[key] = _Cached(evidence, {name: value for name, value in result.items() if name != '_model'}, recorded, positions, converged_warning)
@@ -270,4 +271,4 @@ class FactorizedRounds:
                 result = {name: fresh.get(name, value)
                           for name, value in entry.result.items()}
         recorded = list(dict.fromkeys([*entry.warnings, *(str(w.message) for w in caught)]))
-        return data, result, recorded, entry.convergence or bool(convergence_warning(caught, True))
+        return _composition.signal_result(self.manifest, self.data, data, result, recorded, entry.convergence, caught)

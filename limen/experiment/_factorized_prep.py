@@ -11,6 +11,7 @@ from typing import cast
 
 import polars as pl
 
+import limen.experiment._holdout_composition as _composition
 from limen.experiment.manifest_core import MLManifest, make_fitted_scaler
 from limen.features.lagged_features import lag_range
 from limen.indicators.window_return import window_return
@@ -51,7 +52,6 @@ def supports_preparation(manifest: MLManifest) -> bool:
 class FittedPreparation:
     def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
                  references: Callable[[object, str], bool]) -> None:
-        super().__init__()
         self.manifest = manifest
         if manifest.architecture_function is None:
             raise ValueError('Fitted preparation requires an architecture')
@@ -60,20 +60,20 @@ class FittedPreparation:
         self.names = frozenset(name for name in domain if name not in axes and (
             name not in inspect.signature(manifest.architecture_function).parameters or any(references(value, name) for value in consumers)))
         self.cache: dict[str, dict[str, object]] = {}
+        self.proofs: dict[str, dict[str, object]] = {}
 
     def prepare(self, raw: pl.DataFrame, params: dict[str, object],
                 prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
         key = json.dumps({name: params[name] for name in self.names}, sort_keys=True, default=str)
-        saved = self.cache.pop(key, None)
-        if saved is not None:
-            self.cache[key] = saved
+        saved = _composition.prepared_cache(self.cache, self.proofs, self.manifest, raw, key)
         prepare_fitted = cast(Callable[..., dict[str, object]], vars(MLManifest)['_prepare_data_with_fitted'])
         data = (prep(raw, round_params=params) if saved is None else
                 prepare_fitted(self.manifest, raw, params, copy.deepcopy(saved)))
         artifacts = data.get('_fitted_params')
         if not isinstance(artifacts, dict):
             raise ValueError('Factorized preparation requires fitted artifact evidence')
-        fitted = cast(dict[str, object], artifacts)
+        fitted = _composition.fitted_artifacts(self.manifest, data, cast(dict[str, object], artifacts),
+                                                self.proofs.get(key) if saved is not None else None)
         if any(type(value) not in (RobustScaler, NextReturnTarget, QuantileBinaryTarget)
                for value in fitted.values()):
             raise ValueError('Factorized preparation contains an unsupported fitted artifact')

@@ -517,5 +517,6 @@
   "limen/cli/assessment.py": 150,
   "limen/yaml/_assessment_spec.py": 90,
   "limen/experiment/_filter_resume.py": 110,
-  "limen/experiment/_result_fields.py": 60
+  "limen/experiment/_result_fields.py": 60,
+  "limen/experiment/_holdout_composition.py": 220
 }
