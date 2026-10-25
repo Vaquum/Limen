@@ -64,6 +64,10 @@ def projections(manifest: Manifest, domain: Mapping[str, list[object]]) -> list[
                 for component in SCALER_REGISTRY.values():
                     add(component, {**state['_static'], **dynamic}, activation=active)
         config = manifest.prediction_calibration_config
+        if config is None and manifest.architecture_function is not None:
+            parameter = inspect.signature(manifest.architecture_function).parameters.get('prediction_calibration_config')
+            if parameter is not None and parameter.default is not inspect.Parameter.empty:
+                config = parameter.default
         if config is not None:
             add(config.calibration_func, config.calibration_params, activation={'use_calibration'} & set(domain))
             add(config.threshold_func, config.threshold_params, activation={'use_threshold'} & set(domain))

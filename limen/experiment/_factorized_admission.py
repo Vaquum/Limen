@@ -74,7 +74,8 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
     if manifest.resolve_trade_policy(params) is not None:
         raise ValueError('factorize requires snapshot execution, not event execution')
     function = manifest.architecture_function
-    declaration = _stage('architecture', function, manifest.resolve_model_kwargs(params), axes)
+    model_kwargs = manifest.resolve_model_kwargs(params)
+    declaration = _stage('architecture', function, model_kwargs, axes)
     if declaration.prediction_kind is None and declaration.replay is None:
         raise ValueError('factorize requires stage architecture: declare prediction kind or economic replay')
     for index, entry in enumerate(manifest.feature_transforms):
@@ -91,6 +92,11 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
     if isinstance(manifest, MLManifest):
         _scaler(manifest, params, axes)
         config = manifest.prediction_calibration_config
+        if config is None:
+            supplied = model_kwargs.get('prediction_calibration_config')
+            if supplied is not None and not isinstance(supplied, core.CalibrationConfig):
+                raise ValueError('factorize requires a declared calibration configuration')
+            config = supplied
         if config is not None:
             config = config.resolve(params)
             signature = inspect.signature(cast(Callable[..., object], function))

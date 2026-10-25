@@ -1,6 +1,7 @@
 import copy
 import warnings
 from dataclasses import replace
+from functools import partial
 from types import SimpleNamespace
 
 import numpy as np
@@ -137,6 +138,21 @@ def test_factorized_preflight_projects_only_eligibility_inputs(monkeypatch):
     config['sfd']['params'].update({f'unexposed_resource_alias_{index}': list(range(10)) for index in range(5)})
     _rounds(config)
     assert 0 < len(calls) <= 500
+
+
+def test_factorized_partial_calibration_requires_declared_callbacks():
+    from limen.experiment import CalibrationConfig
+    from limen.experiment._factorized_admission import validate_domain
+    from limen.sfd.reference_architecture.logreg_binary import logreg_binary
+
+    config = _configuration('logreg')
+    rounds = _rounds(config)
+    def undeclared(*_args, **_kwargs):
+        raise AssertionError('Preflight must reject before callback execution')
+    bound = CalibrationConfig(threshold_func=undeclared)
+    rounds.manifest.with_reference_architecture(partial(logreg_binary, prediction_calibration_config=bound))
+    with pytest.raises(ValueError, match=r'threshold.*missing deterministic reuse declaration'):
+        _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
 
 
 @pytest.mark.parametrize('fees', [[4., 9.], [9., 4.]])
