@@ -1102,6 +1102,21 @@ def test_protected_native_and_derived_sources(bar_type, secondary, tmp_path, mon
             assert _artifact_state(directory) == before
             assert counts['target'] == counts['scaler'] == counts['model'] == 0
         manifest.set_bar_formation(form, **options)
+        # Invalid arrival declaration uses a recorded close; fitting never consumes it.
+        starts = raw['datetime'].dt.epoch('ns')
+        arrivals = (starts + 3600_000_000_000).to_list()
+        positions = {stamp: index for index, stamp in enumerate(starts)}
+        group = next(group for item in formation['partitions'] for group in item['members'] if len(group) > 1)
+        arrivals[positions[group[0]]] = arrivals[positions[group[-1]] + 1]
+        timed = raw.with_columns(starts.alias('start_ns'), (starts + 3600_000_000_000).alias('end_ns'),
+            starts.alias('open_available_at_ns'), pl.Series('available_at_ns', arrivals))
+        with source_operation(manifest), monkeypatch.context() as guarded:
+            counts = _instrument(guarded)
+            before = _artifact_state(directory)
+            with pytest.raises(ValueError, match='complete constituent availability'):
+                manifest.prepare_data(timed, params.copy())
+            assert _artifact_state(directory) == before
+            assert counts['target'] == counts['scaler'] == counts['model'] == 0
     with source_operation(manifest), research.operation(manifest, 'replay') as replay:
         replay.replay_witness = proof
         repeated = manifest.prepare_data(prefix, params.copy())
@@ -1141,7 +1156,7 @@ def _independent_role_clocks(root, config, params, binding):
     quarter.write_parquet(quarter_path)
     configured = replace(config, funding=None, execution_data_source=DataSourceConfig(config.execution_data_source.method, {'file_path_or_url': str(quarter_path)}))
     current = replace(binding, cutoff_ns=history.utc_day('2025-01-05'))
-    native_identity = _identity(DataSourceConfig(HistoricalData.get_spot_klines, {'kline_size': 900}), params, current)
+    native_identity = _identity(DataSourceConfig(HistoricalData.get_spot_klines, {'kline_size': '{execution_interval}'}), dict(params, execution_interval=900), current)
     assert native_identity['declaration']['kline_size'] == 900
     frames, witness = _roles(configured, params, current, None)
     assert (frames[0]['end_ns'] - frames[0]['start_ns']).unique().to_list() == [900_000_000_000]
