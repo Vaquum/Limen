@@ -1,5 +1,6 @@
 import limen.experiment._round_storage as _storage
 import limen.experiment._fold_evidence as _promotion
+import limen.experiment._holdout_folds as _holdout_folds
 import copy
 import json
 import math
@@ -123,6 +124,7 @@ def _average(records: list[dict[str, object]]) -> dict[str, object]:
 
 
 class WalkForwardRun:
+    @_holdout_folds.construction
     def __init__(self, manifest: Manifest, raw: pl.DataFrame, directory: Path, *, promotion: bool | dict[str, object] = False) -> None:
         super().__init__()
         if not isinstance(manifest.split_walk_forward, WalkForwardConfig):
