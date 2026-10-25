@@ -11,12 +11,15 @@ from click.testing import CliRunner
 from threadpoolctl import threadpool_limits
 
 from docs.examples.tests.helper_oracles import verify_rules
+from limen import __version__
 from limen.cli.main import cli
 from limen.experiment import UniversalExperimentLoop
-from limen.experiment.manifest_core import _resolve_params
+from limen.experiment.family_acceptance_report import family_acceptance_report
+from limen.experiment.manifest_core import DataSourceResolver, _resolve_params
 from limen.yaml import CompiledSFD, build_search_strategy, parse, validate
 from limen.yaml.config import round_trip_yaml
 from limen.yaml.rules import ParamCoverage
+from limen.yaml.store import commit_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet'
@@ -323,6 +326,8 @@ def test_context_overrides_still_work_without_changing_declared_domain(bars, tmp
     ({'backtest': {'product': {'quantity_step': '{C}'}}}, 'backtest.product.quantity_step'),
     ({'allocation': {'params': {'nested': [{'size': '{C}'}]}}}, 'allocation.params.nested[0].size'),
     ({'backtest': {'funding': {'params': {'rate': '{C}'}}}}, 'backtest.funding.params.rate'),
+    ({'backtest': {'execution_data_source': {'params': {'file_path_or_url': '{C}'}}}}, 'backtest.execution_data_source.params.file_path_or_url'),
+    ({'backtest': {'funding': {'data_source': {'params': {'options': [{'file_path_or_url': '{C}'}]}}}}}, 'backtest.funding.data_source.params.options[0].file_path_or_url'),
     ({'backtest': {'barrier_features': {'params': {'window': '{C}'}}}}, 'backtest.barrier_features.params.window'),
 ])
 def test_lookup_locations_report_the_actual_consumer(manifest, path):
@@ -331,3 +336,125 @@ def test_lookup_locations_report_the_actual_consumer(manifest, path):
     assert len(errors) == 1
     assert errors[0].path == 'sfd.manifest.' + path
     assert "'C' is not defined" in errors[0].message
+
+
+@pytest.mark.parametrize('template,declared,column', [
+    ('roc_{{C}}', {}, 'roc_{C}'),
+    ('roc_{{{C}}}', {'C': [3]}, 'roc_{3}'),
+    ('roc_{{C}}_{D}', {'D': [3]}, 'roc_{C}_3'),
+])
+def test_escaped_and_live_target_fields_match_recorded_preparation(bars, template, declared, column):
+    config = _config()
+    config['sfd']['params'].update(declared)
+    config['sfd']['manifest']['target'] = {'name': 'label', 'class': 'limen.targets.ThresholdBinaryTarget',
+        'fit_params': {'source_column': template, 'threshold': 0}, 'transform_params': {'shift': 0}}
+    assert validate(config).valid
+    recorded = bars.with_columns(((pl.col('close') / pl.col('close').shift(3) - 1) * 100).alias(column))
+    compiled = CompiledSFD(config)
+    params = {name: values[0] for name, values in compiled.params().items()}
+    assert _resolve_params({'source_column': template}, params)['source_column'] == column
+    prepared = compiled.manifest().prepare_data(recorded, params)
+    expected = recorded.with_columns((pl.col(column) > 0).cast(pl.UInt8).alias('expected'))
+    aligned = prepared['price_data_for_backtest'].select('datetime').join(expected, on='datetime')
+    np.testing.assert_array_equal(prepared['y_test'].to_numpy().ravel(), aligned['expected'].to_numpy())
+    assert len(prepared['y_test']) == 744
+
+
+def _trade_source_config(role):
+    config = _config()
+    manifest = config['sfd']['manifest']
+    manifest['split_dates'] = {'train_start': '2024-01-01', 'train_end': '2024-01-04',
+        'val_start': '2024-01-04', 'val_end': '2024-01-06', 'test_start': '2024-01-06', 'test_end': '2024-01-08'}
+    backtest = {'product': {'kind': 'linear_perpetual', 'instrument': 'BTCUSDT',
+        'base_currency': 'BTC', 'quote_currency': 'USDT', 'quantity_step': 1e-9, 'min_notional': 0.0},
+        'fee_bps': 0.0, 'slip_bps': 0.0, 'source_interval_seconds': 3600}
+    source = {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': '{source_path}'}}
+    if role == 'execution':
+        backtest['execution_data_source'] = source
+        return_path = 'sfd.manifest.backtest.execution_data_source.params.file_path_or_url'
+    else:
+        backtest['funding'] = {'preset': 'binance_btcusdt', 'data_source': source}
+        return_path = 'sfd.manifest.backtest.funding.data_source.params.file_path_or_url'
+    manifest['backtest'] = backtest
+    return config, return_path
+
+
+@pytest.mark.parametrize('role', ['execution', 'funding'])
+@pytest.mark.parametrize('command', [('validate',), ('run', '--dry-run'), ('run', '--no-progress-bar')])
+def test_missing_trade_source_reference_precedes_io_and_writes(tmp_path, monkeypatch, role, command):
+    config, expected_path = _trade_source_config(role)
+    result = validate(config)
+    assert [(error.path, error.message) for error in result.errors] == [(expected_path,
+        "Manifest references '{source_path}' but 'source_path' is not defined in sfd.params")]
+    path = tmp_path / 'config.yaml'
+    with path.open('w') as stream:
+        round_trip_yaml().dump(config, stream)
+    before = {str(p): p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
+
+    def forbidden(*args, **kwargs):
+        raise AssertionError('Invalid trade reference reached compilation or source loading')
+
+    monkeypatch.setattr(CompiledSFD, '__init__', forbidden)
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(forbidden))
+    outcome = CliRunner().invoke(cli, [*command, str(path)])
+    assert outcome.exit_code == 1 and expected_path in outcome.output
+    assert before == {str(p): p.read_bytes() for p in tmp_path.rglob('*') if p.is_file()}
+
+
+@pytest.mark.parametrize('role', ['execution', 'funding'])
+def test_declared_trade_source_reference_loads_real_observations(bars, tmp_path, monkeypatch, role):
+    from tests.test_fixed_trade_sources import _funding_frame
+
+    config, _ = _trade_source_config(role)
+    path = tmp_path / f'recorded-{role}.parquet'
+    recorded = _funding_frame() if role == 'funding' else bars.with_columns(pl.lit(3600).alias('base_interval'))
+    recorded.write_parquet(path)
+    config['sfd']['params']['source_path'] = [str(path)]
+    assert validate(config).valid
+    calls = []
+    original = DataSourceResolver.resolve
+
+    def load(source):
+        calls.append(dict(source.params))
+        return original(source)
+
+    monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(load))
+    compiled = CompiledSFD(config)
+    prepared = compiled.manifest().prepare_data(bars, {key: values[0] for key, values in compiled.params().items()})
+    assert calls == [{'file_path_or_url': str(path)}]
+    inputs = prepared['_trade_context'].partitions[2]
+    assert inputs.observations.height > 0
+    if role == 'funding':
+        assert inputs.funding_events.height > 0
+    else:
+        expected = bars.filter(pl.col('datetime').dt.epoch('ns') == inputs.observations['start_ns'][0])
+        assert inputs.observations['open'][0] == expected['open'][0]
+
+
+@pytest.mark.parametrize('name', ['token', 'entry_return'])
+def test_literal_model_source_survives_recorded_cli_and_family_report(tmp_path, monkeypatch, name):
+    from tests.test_walk_forward_uel import _bars, _config as walk_forward_config
+
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / 'limen.toml').write_text('')
+    source = tmp_path / f'recorded_{{{name}}}.parquet'
+    _bars().write_parquet(source)
+    config = walk_forward_config()
+    config['metadata']['limen_version'] = __version__
+    config['sfd']['manifest']['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file',
+        'params': {'file_path_or_url': str(source)}}
+    config['uel'].update(record_execution=True, recording={'alignment': True, 'fold_details': True})
+    manifest = tmp_path / 'family.yaml'
+    with manifest.open('w') as stream:
+        round_trip_yaml().dump(config, stream)
+    identity, _ = commit_manifest(manifest, tmp_path)
+    outcome = CliRunner().invoke(cli, ['run', '--no-progress-bar', 'manifest://' + identity])
+    assert outcome.exit_code == 0, outcome.output
+    paths = [path.parent for path in (tmp_path / 'results').rglob('metadata.json')]
+    assert len(paths) == 1
+    before = {str(p): (p.read_bytes(), p.stat().st_mtime_ns) for p in paths[0].rglob('*') if p.is_file()}
+    report = family_acceptance_report(paths, project_root=tmp_path)
+    assert report['coverage']['unavailable'] == 0
+    assert report['comparisons'][0]['n_trials'] == 2
+    assert all(trial['evidence']['source']['params'] == {'file_path_or_url': str(source)} for trial in report['trials'])
+    assert before == {str(p): (p.read_bytes(), p.stat().st_mtime_ns) for p in paths[0].rglob('*') if p.is_file()}

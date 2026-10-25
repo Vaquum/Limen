@@ -6,7 +6,7 @@ from limen.experiment._resolve_backtest_config import BACKTEST_KEYS
 from limen.experiment._resolve_trade_policy import TRADE_NUMBERS
 
 __all__: list[str] = []
-_REFERENCE = re.compile(r'\{(\w+)\}')
+_REFERENCE = re.compile(r'\{\{|\}\}|\{(\w+)\}')
 
 
 def _mapping(value: object) -> Mapping[str, object]:
@@ -16,8 +16,9 @@ def _mapping(value: object) -> Mapping[str, object]:
 def _collect(value: object, path: str, found: dict[str, str], *, embedded: bool) -> None:
     if isinstance(value, str):
         for match in _REFERENCE.finditer(value):
-            if embedded or match.group(0) == value:
-                _ = found.setdefault(match.group(1), path)
+            name = match.group(1)
+            if name is not None and (embedded or match.group(0) == value):
+                _ = found.setdefault(name, path)
     elif isinstance(value, Mapping):
         for key, item in cast(Mapping[str, object], value).items():
             _collect(item, f'{path}.{key}', found, embedded=embedded)
@@ -64,6 +65,8 @@ def lookup_references(manifest: Mapping[str, object], declared: Collection[str])
     for path, values in (
         ('allocation.params', _mapping(manifest.get('allocation')).get('params')),
         ('backtest.funding.params', _mapping(backtest.get('funding')).get('params')),
+        ('backtest.execution_data_source.params', _mapping(backtest.get('execution_data_source')).get('params')),
+        ('backtest.funding.data_source.params', _mapping(_mapping(backtest.get('funding')).get('data_source')).get('params')),
         ('backtest.barrier_features.params', _mapping(backtest.get('barrier_features')).get('params')),
     ):
         _collect(values, f'sfd.manifest.{path}', found, embedded=False)

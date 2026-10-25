@@ -35,9 +35,12 @@ field before data loading or execution. Unknown and `**kwargs` architecture
 signatures suppress only unused-parameter warnings; declaration and `include_if`
 checks still apply.
 
-Literal source paths, transform group names and build-time `params_override`
-values retain their literal meaning. Native transform parameters preserve exact
-parameter-name lookup precedence and underscore-prefixed literals. Direct Python
+Model-source paths, transform group names and build-time `params_override`
+values retain their literal meaning, including in family evidence. Separate
+execution and funding source parameters use exact `{name}` lookups and require
+declared candidates. Escaped brace pairs remain literal; a live inner field such
+as `roc_{{{period}}}` still requires `period`. Native transform parameters preserve
+exact parameter-name lookup precedence and underscore-prefixed literals. Direct Python
 Manifest/UEL calls may still supply values through `context_params`; a declared
 YAML experiment must be complete without that external context. The existing
 identifier-reference grammar is unchanged.

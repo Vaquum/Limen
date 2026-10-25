@@ -11,7 +11,7 @@
       "symbol": "holdout_spec"
     },
     "sfd.manifest": {
-      "sha256": "210ffb101a2b9b47197c98b4241f60b5c668055e17c7b2f31bfee78a2d2a54ae",
+      "sha256": "3f027471e8a0cf85171ee38185a2d6e0a459cc8a0249580fdaa7269ae2bb8685",
       "source": "limen/yaml/_parameter_refs.py",
       "symbol": "lookup_references"
     },
