@@ -175,14 +175,14 @@ def test_ridge_yaml_experiment_reconstructs(tmp_path, monkeypatch, market_bars):
     }
     config['sfd']['params'] = {key: [values[0]] for key, values in ridge_sfd.params().items()}
     config['sfd']['params']['alpha'] = [0.1, 1.0, 1_000_000.0]
-    experiment_dir = tmp_path / 'experiment'
-    config['uel'].update(n_permutations=3, output_path=str(experiment_dir))
+    experiment_dir = tmp_path / 'results/dev/experiment'
+    config['uel'].update(n_permutations=3, output_path='experiment')
     yaml_path = tmp_path / 'ridge.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)
 
     monkeypatch.setattr(DataSourceResolver, 'resolve', staticmethod(_recorded_data_source))
-    assert run_experiment(yaml_path, progress_bar=False)
+    assert run_experiment(yaml_path, results_base=tmp_path, progress_bar=False)
     entries = [json.loads(line) for line in _storage.text(_storage.round_path(experiment_dir)).splitlines()]
     assert len(entries) == 3
     log = pl.read_csv(experiment_dir / 'results.csv')

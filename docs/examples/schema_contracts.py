@@ -6,6 +6,15 @@ from pathlib import Path
 
 # Open parameter mappings delegate to the named callable's argument contract.
 NESTED = {
+    'uel': ('limen/yaml/rules.py', 'UelSpec'),
+    'metadata': ('limen/yaml/_metadata_spec.py', 'check_metadata'),
+    'sfd.manifest.required_columns': ('limen/experiment/_required_columns.py', 'column_issue'),
+    'schema_version': ('limen/yaml/_schema_version.py', 'schema_errors'),
+    'sfd.manifest': ('limen/yaml/_parameter_refs.py', 'lookup_references'),
+    'sfd.params': ('limen/yaml/rules.py', 'ParamCoverage'),
+    'sfd.manifest.strict_mode': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
+    'sfd.params.use_calibration[]': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
+    'sfd.params.use_threshold[]': ('limen/yaml/_boolean_spec.py', 'BooleanControlsSpec'),
     'sfd.manifest.split_walk_forward': ('limen/experiment/_walk_forward_split.py', 'WalkForwardConfig'),
     'sfd.manifest.backtest.product': ('limen/experiment/_resolve_trade_policy.py', 'ProductConfig'),
     'sfd.manifest.backtest.funding': ('limen/experiment/_resolve_trade_policy.py', 'FundingConfig'),
@@ -16,6 +25,7 @@ NESTED = {
     'sfd.manifest.strategy.conditions[]': ('limen/yaml/rules.py', 'ConditionsList'),
     'uel.intra_callback': ('limen/yaml/_callback_spec.py', 'callback_error'),
     'uel.recording': ('limen/experiment/_recording.py', 'parse_recording'),
+    'uel.output_path': ('limen/cli/commands/_results_dir.py', 'admit_output'),
     'assessment': ('limen/yaml/_assessment_spec.py', 'assessment_spec'),
     'holdout': ('limen/yaml/_assessment_spec.py', 'holdout_spec'),
 }

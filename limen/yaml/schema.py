@@ -35,6 +35,7 @@ ML_MANIFEST_OPTIONAL = {
 
 RULE_BASED_MANIFEST_REQUIRED = {'strategy'}
 RULE_BASED_MANIFEST_OPTIONAL: set[str] = set()
+RULE_YAML_REJECTIONS = {key: f"Field '{key}' is unsupported in rule_based YAML and would be discarded" for key in ('target', 'bar_formation')}
 
 DATA_SOURCE_REQUIRED = {'method'}
 DATA_SOURCE_OPTIONAL = {'params'}

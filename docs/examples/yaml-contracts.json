@@ -10,6 +10,21 @@
       "source": "limen/yaml/_assessment_spec.py",
       "symbol": "holdout_spec"
     },
+    "metadata": {
+      "sha256": "6e9b1285b52a21ed1a5074419bde46df488397dbc0e7c0420607ea42fa9699f3",
+      "source": "limen/yaml/_metadata_spec.py",
+      "symbol": "check_metadata"
+    },
+    "schema_version": {
+      "sha256": "c979966f0648bb6121bfd7ef41f5c7075c4d811362df3db5ae4fbb6cc729455b",
+      "source": "limen/yaml/_schema_version.py",
+      "symbol": "schema_errors"
+    },
+    "sfd.manifest": {
+      "sha256": "3f027471e8a0cf85171ee38185a2d6e0a459cc8a0249580fdaa7269ae2bb8685",
+      "source": "limen/yaml/_parameter_refs.py",
+      "symbol": "lookup_references"
+    },
     "sfd.manifest.acceptance": {
       "sha256": "b5051d8f5249da538f9f7d6c426d95fbaff977704898ebff8c18976ee0314cc5",
       "source": "limen/experiment/_acceptance_settings.py",
@@ -114,6 +129,11 @@
       "source": "limen/yaml/_objective_spec.py",
       "symbol": "_read_objective"
     },
+    "sfd.manifest.required_columns": {
+      "sha256": "b0ff6f84ef669d43d17b331a096b4feb5cdeb40acae8063dfc50962d2fa14483",
+      "source": "limen/experiment/_required_columns.py",
+      "symbol": "column_issue"
+    },
     "sfd.manifest.split_walk_forward": {
       "fields": {
         "anchored": {
@@ -146,10 +166,40 @@
       "source": "limen/yaml/rules.py",
       "symbol": "ConditionsList"
     },
+    "sfd.manifest.strict_mode": {
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec"
+    },
+    "sfd.params": {
+      "sha256": "9c216780eab58e212046df3f3507cc74026e78b8a80e46627d24bb653a7e2947",
+      "source": "limen/yaml/rules.py",
+      "symbol": "ParamCoverage"
+    },
+    "sfd.params.use_calibration[]": {
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec"
+    },
+    "sfd.params.use_threshold[]": {
+      "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
+      "source": "limen/yaml/_boolean_spec.py",
+      "symbol": "BooleanControlsSpec"
+    },
+    "uel": {
+      "sha256": "bf0e81720b06a91e860226b1acbb3717c1720d291a95cda6cba148fdb570e71e",
+      "source": "limen/yaml/rules.py",
+      "symbol": "UelSpec"
+    },
     "uel.intra_callback": {
       "sha256": "48785c958e64c6c0654e95c5e4ab69d86869485e8862ff0a53ec80bbbe348547",
       "source": "limen/yaml/_callback_spec.py",
       "symbol": "callback_error"
+    },
+    "uel.output_path": {
+      "sha256": "047d83f057f1bb74ff52544cb6ae36bcae71207a95714c961d26aafbd3cafd7d",
+      "source": "limen/cli/commands/_results_dir.py",
+      "symbol": "admit_output"
     },
     "uel.recording": {
       "sha256": "11bce069aedda297881b0414663a770a98183ebbc7c012fb322d429edf8fbd6d",
@@ -158,12 +208,6 @@
     }
   },
   "rules": [
-    {
-      "kind": "Required",
-      "path": "schema_version",
-      "type": "str",
-      "when": "always"
-    },
     {
       "kind": "Required",
       "path": "metadata",
@@ -547,6 +591,10 @@
         "type"
       ],
       "path": "sfd.manifest",
+      "rejected": {
+        "bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded",
+        "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"
+      },
       "severity": "warning",
       "when": "sfd.manifest.type = rule_based"
     },

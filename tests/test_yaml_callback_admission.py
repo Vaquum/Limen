@@ -119,9 +119,11 @@ def test_genuine_stored_callback_uri_refuses_without_mutation(tmp_path, monkeypa
 
 
 @pytest.mark.parametrize('value', ('this.path.does.not.resolve', None))
-def test_legacy_cli_resume_refuses_before_checkpoint_or_scientific_writes(tmp_path, monkeypatch, value):
+@pytest.mark.parametrize('schema_version', ('1.0', '999.0'))
+def test_legacy_cli_resume_refuses_before_checkpoint_or_scientific_writes(tmp_path, monkeypatch, value, schema_version):
     root = tmp_path / 'project'
     reference = _project(root)
+    reference['schema_version'] = schema_version
     reference['uel']['intra_callback'] = value
     reference['uel']['feedback_interval'] = 1
     directory = root / 'saved-native-run'
@@ -153,8 +155,12 @@ def test_legacy_cli_resume_refuses_before_checkpoint_or_scientific_writes(tmp_pa
     monkeypatch.setattr('limen.experiment.checkpoint_manager.CheckpointManager.load', forbidden)
     result = CliRunner().invoke(cli, ['run', '--resume', str(directory), '--no-progress-bar'])
     assert result.exit_code == 1, result.output
-    assert 'uel.intra_callback' in result.output
-    assert 'UniversalExperimentLoop(intra_callback=' in result.output
+    if schema_version == '1.0':
+        assert 'uel.intra_callback' in result.output
+        assert 'UniversalExperimentLoop(intra_callback=' in result.output
+    else:
+        assert "schema_version: Unsupported schema_version '999.0'" in result.output
+        assert 'intra_callback' not in result.output
     assert calls == []
     assert _snapshot(root) == before
 

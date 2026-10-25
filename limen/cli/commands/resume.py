@@ -7,21 +7,17 @@ import click
 from limen.cli.commands._export_results import export_results
 from limen.experiment.checkpoint_manager import CheckpointManager
 from limen.experiment.experiment_core import UniversalExperimentLoop
-from limen.yaml.compiler import CompiledSFD
-from limen.yaml.compiler import build_pruning_strategies
-from limen.yaml.compiler import build_search_strategy
+from limen.yaml.compiler import CompiledSFD, build_pruning_strategies, build_search_strategy
 from limen.yaml.config import is_mapping
 from limen.yaml._callback_spec import callback_error
+from limen.yaml._schema_version import schema_errors
 
 
 def run_resume(results_dir: Path, progress_bar: bool = True,
                workers: int | None = None) -> bool:
 
-    '''
-    Reconstruct the saved manifest/search and continue to its checkpoint target.
-    Omitted workers reuses saved resources; legacy metadata means one worker.
-
-    '''
+    '''Admit saved schema and continue to its checkpoint target.
+    Omitted workers reuse saved resources; legacy metadata means one worker.'''
 
     click.echo(f"Resuming from {results_dir} ...")
 
@@ -29,6 +25,11 @@ def run_resume(results_dir: Path, progress_bar: bool = True,
     if metadata is None:
         return False
     yaml_reference = metadata['yaml_reference']
+    version_errors = schema_errors(yaml_reference)
+    error = f'schema_version: {version_errors[0].message}' if version_errors else callback_error(yaml_reference)
+    if error:
+        click.secho(f'  ✗ {error}', fg='red')
+        return False
     effective_workers = metadata.get('workers', 1) if workers is None else workers
 
     target_permutations = _load_target_permutations(results_dir)
@@ -118,9 +119,7 @@ def _load_resume_metadata(results_dir: Path) -> dict[str, Any] | None:
         click.secho("  ✗ 'yaml_reference' is missing 'metadata.name' — cannot identify experiment.", fg='red')
         return None
 
-    if error := callback_error(yaml_reference):
-        click.secho(f'  ✗ {error}', fg='red')
-    return None if error else metadata
+    return metadata
 
 
 def _load_target_permutations(results_dir: Path) -> int | None:

@@ -342,9 +342,7 @@ def test_with_params_override_split_config_clears_split_dates() -> None:
     `with_params_override(split_config=...)` must clear any
     previously-pinned `split_dates` so the ratio override actually
     takes effect downstream. Without this, `_resolve_split` would
-    keep using `split_dates` and the override would silently no-op
-    (e.g. `Trainer.train_sensors` passing `(1, 0, 0)` to retrain
-    sensors on the full data set).
+    keep using `split_dates` and a caller-owned ratio override would silently no-op.
     '''
     base = MLManifest().set_split_dates(
         datetime(2024, 1, 1), datetime(2024, 7, 1),
@@ -613,12 +611,13 @@ def test_native_date_unused_source_refusal_is_fatal_in_python_uel(
         loop.run('native-date-ends', n_permutations=1, prep_each_round=True, progress_bar=False)
 
 
-def test_native_date_refusal_is_fatal_in_cli(native_date_frames, tmp_path):
+def test_native_date_refusal_is_fatal_in_cli(native_date_frames, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     config = _native_date_yaml()
     config['sfd']['manifest']['data_source']['params']['kline_size'] = 3600
     config['sfd']['manifest']['params_override'] = {'kline_size': 25200}
     config['sfd']['manifest']['split_dates']['train_end'] = '2025-01-15'
-    config['uel']['output_path'] = str(tmp_path / 'results')
+    config['uel']['output_path'] = 'native-results'
     yaml_path = tmp_path / 'native.yaml'
     with yaml_path.open('w') as handle:
         YAML().dump(config, handle)

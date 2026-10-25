@@ -98,7 +98,7 @@ The [event-contract variant](Final-Holdout.md#preserve-event-economics) declares
 
 ### `limen validate <yaml_file>`
 
-Runs YAML parsing plus structural validation. It checks required top-level blocks, schema version, `metadata.mode`, manifest type, supported output formats, search strategy values, `split_dates`, parameter lists, and resolvability of `limen.*` dotted references.
+Runs YAML parsing plus structural validation. It checks required top-level blocks, schema version, `metadata.mode` and optional metadata shapes, manifest type, supported output formats, search strategy values, `split_dates`, parameter lists, and resolvability of `limen.*` dotted references.
 
 Exit behavior:
 
@@ -185,6 +185,14 @@ Options:
 
 Copies a committed manifest into `manifests/` as a development-mode working file and records the source as `lineage.parent_id`. When `name` is omitted, it prompts with an auto-incremented default (e.g. `<parent>_v2`). On the next `limen commit`, the parent lineage is preserved automatically.
 
+Before creating the working copy, forking verifies the document actually copied:
+its canonical content and stored `lineage.id` must match the full source filename
+ID. This also applies to Python `fork_manifest` callers and changes made while
+the CLI name prompt is open. An integrity failure leaves the destination absent.
+Formatting and excluded lineage metadata may differ without changing identity;
+the child's lineage contains only its verified immediate `parent_id`. This is a
+content-integrity check, not proof of historical authenticity.
+
 ### `limen lineage <manifest_id>`
 
 Walks the `parent_id` chain from a committed manifest to its root and prints it root-first, with the target manifest marked.
@@ -213,7 +221,10 @@ Committed manifest URIs may use a full `manifest://sha256:<64-hex>` ID or an una
 
 Set `uel.output_format: parquet` to also write `results.parquet` after successful execution. A successful `--resume` uses this setting from the saved YAML and writes or refreshes the file in the supplied results directory, including when no new rounds run. Rejected or interrupted resumes leave any existing Parquet file unchanged.
 
-Set `uel.output_path` to override the default output directory for direct YAML runs. Committed manifest URI runs ignore `uel.output_path` and always use the hash/timestamp path under the project `results` directory.
+Set `uel.output_path` to a relative template within the direct run's mode directory;
+see the [output destination contract](Experiment-Manifest.md#output-destinations)
+for containment, relocation and resume behavior. Committed manifest URI runs
+ignore it and use the hash/timestamp path under the project `results` directory.
 
 ## Validation Boundaries
 
