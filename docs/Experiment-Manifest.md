@@ -25,6 +25,26 @@ Mappings used as YAML keys are rejected during parsing, with the key's line and
 column in the parse error. Manifest fields use named keys; nested mappings remain
 available as values.
 
+Every `{name}` used as a round-parameter lookup must have a candidate list in
+`sfd.params`, including lookups in inactive transforms. Architecture defaults and
+implicit controls such as `feature_groups` or `auto_pca` do not declare a lookup.
+For example, an indicator period of `{C}` requires `sfd.params.C`; declaring it
+also overrides the model's `C` setting. Use a distinct name when those settings
+should vary independently. Missing declarations fail validation at the consumer's
+field before data loading or execution. Unknown and `**kwargs` architecture
+signatures suppress only unused-parameter warnings; declaration and `include_if`
+checks still apply.
+
+Model-source paths, transform group names and build-time `params_override`
+values retain their literal meaning, including in family evidence. Separate
+execution and funding source parameters use exact `{name}` lookups and require
+declared candidates. Escaped brace pairs remain literal; a live inner field such
+as `roc_{{{period}}}` still requires `period`. Native transform parameters preserve
+exact parameter-name lookup precedence and underscore-prefixed literals. Direct Python
+Manifest/UEL calls may still supply values through `context_params`; a declared
+YAML experiment must be complete without that external context. The existing
+identifier-reference grammar is unchanged.
+
 This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 
 <!-- example: manifest-selection source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
@@ -1432,6 +1452,8 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |
+| `sfd.params` | Forward declarations and Boolean `include_if` domains; unused warnings require a known closed architecture signature. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
 | `sfd.manifest.strict_mode` | Optional Boolean; explicit null is invalid. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
 | `sfd.params.use_calibration[]` | Boolean candidates on ML manifests; omitted control defaults to true. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
 | `sfd.params.use_threshold[]` | Boolean candidates on ML manifests; omitted control defaults to true. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |

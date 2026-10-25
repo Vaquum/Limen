@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T20:50:17.815677+00:00",
-  "execution_checkout_head": "6fdb22ded6f41bd3e63b5dcbd006adeae05bcedd",
+  "observed_at": "2026-10-25T21:03:17.810054+00:00",
+  "execution_checkout_head": "a55fef8d66f5848695b2febbf832445bab7ef647",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -86,7 +86,7 @@
     "experiment/_factorized_prep.py": "70aab60358be819dae223a46a9d8fc7e90a658068b4bbfc9de3e91c550e04ffc",
     "experiment/_factorized_projection.py": "43d960e06e58cb737f2858d92f96387af7255b92d105dfe90fd9167803b3d576",
     "experiment/_factorized_replay.py": "633cfbbd7171436b12acdc592a7a588019c92987da54cf2184edf219350f07df",
-    "experiment/_family_evidence.py": "641ad9d9d9e2d75f4aeef8de65c049867c1be042e41e8316eaf80b0cf0afe34f",
+    "experiment/_family_evidence.py": "f9518e6689fd19a2ec9061bb5ebc6b5c50c6d704cca39bb853d762d979eab9a2",
     "experiment/_filter_resume.py": "20b88268556d73a961ff1a73993b4e6af6ab7182d27f8ef927eda28579c496f6",
     "experiment/_fixed_trade_sources.py": "45fc5add853c9e3643200102a727e89f58cfa77c928e838592539603fdb3613d",
     "experiment/_fold_evidence.py": "f8e2ffd3e6e27006abf766a016cc3783cff7f52f9d9cadb4919f79cb61c84ee5",
@@ -503,6 +503,7 @@
     "yaml/_boolean_spec.py": "ceb327e05a67c9a413e499a6c8fe2a00af607e3a671f0cc757e8329d86e687ed",
     "yaml/_feature_shim_spec.py": "bed2f7cf08d3f4587ce836b548d8c73540d3801699432519a57ee507ff8f2d07",
     "yaml/_objective_spec.py": "16932a3cefd7d60347560baeb1733fd4862569cbb51bcfdf9ed7292050ae5467",
+    "yaml/_parameter_refs.py": "58cb7a8c6b08c9f46feaf58fbfef9cf35fd0a110543882904cbc89e73b2f6796",
     "yaml/_parser_yaml.py": "6a0813bead7e69136d3ea635884cd024e81d0d8e6b8ea41190d6c7eda791659a",
     "yaml/_recording_spec.py": "2bce42e979d2ae59f633f418b60c526d09609269243a4c1493d6c8b2be954ad3",
     "yaml/_temporal_spec.py": "25a2be761c47bca3a7f79e4dbd9d557c94b60e2fc64605a91e0805327db83cc5",
@@ -512,7 +513,7 @@
     "yaml/parser.py": "2fa2c1ab9192ce75779cd8844f204faee29731e1e3d4ac53318fd688a4451ed2",
     "yaml/profiler.py": "155ca2669b56e0372c8f14171d50a9962dc84619295fc37b54a2666009c85abf",
     "yaml/resolver.py": "42cef9263cfa84e7df66200a86c532c25ec3cd023b22ce481865c4c5d79108df",
-    "yaml/rules.py": "4878da62eab4fa62e95d2419f1d81f109abb4fe0b7ac2889dd5e5cb43340d84d",
+    "yaml/rules.py": "2ab10c4b1aafa70ab6dc5d38ad65ed7d46085d0546dec4babf6dc96cad4edd34",
     "yaml/schema.py": "897af12426a9acacb05eef668fd834fcfb34563c38b20e1e331a87fa1eca0a72",
     "yaml/store.py": "6f7c1e4b645d3fdf38758f6d80ad9ad8b909441386be3cb2864360b56891098c",
     "yaml/validator.py": "936b0ed33f25627d9f04ac2028b24d7682963877f6ae31b23985ff44adbf81c0"

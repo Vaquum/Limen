@@ -10,6 +10,11 @@
       "source": "limen/yaml/_assessment_spec.py",
       "symbol": "holdout_spec"
     },
+    "sfd.manifest": {
+      "sha256": "3f027471e8a0cf85171ee38185a2d6e0a459cc8a0249580fdaa7269ae2bb8685",
+      "source": "limen/yaml/_parameter_refs.py",
+      "symbol": "lookup_references"
+    },
     "sfd.manifest.acceptance": {
       "sha256": "b5051d8f5249da538f9f7d6c426d95fbaff977704898ebff8c18976ee0314cc5",
       "source": "limen/experiment/_acceptance_settings.py",
@@ -150,6 +155,11 @@
       "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
       "source": "limen/yaml/_boolean_spec.py",
       "symbol": "BooleanControlsSpec"
+    },
+    "sfd.params": {
+      "sha256": "9c216780eab58e212046df3f3507cc74026e78b8a80e46627d24bb653a7e2947",
+      "source": "limen/yaml/rules.py",
+      "symbol": "ParamCoverage"
     },
     "sfd.params.use_calibration[]": {
       "sha256": "09ce9a61237870d7240d6fa1cd51143a596c3e398a7cbdee85f9c90f031095e9",
