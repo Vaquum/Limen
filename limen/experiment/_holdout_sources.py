@@ -99,6 +99,8 @@ def _roles(config: BacktestConfig | None, params: Mapping[str, object], binding:
             if ((times['end_ns'] < times['start_ns']) | (times['available_at_ns'] < times['end_ns'])
                     | (times['open_available_at_ns'] < times['start_ns']) | (times['open_available_at_ns'] > times['available_at_ns'])).any() or (times['start_ns'].diff().drop_nulls() < 0).any():
                 raise ValueError('Protected execution source has invalid causal clocks or observation order')
+            if ((times['end_ns'] <= binding.cutoff_ns) & (times['available_at_ns'] > binding.cutoff_ns)).any():
+                raise ValueError('Protected execution availability crosses the reserved cutoff')
             selected = (times['end_ns'] <= binding.cutoff_ns) & (times['available_at_ns'] <= binding.cutoff_ns) & (times['open_available_at_ns'] <= binding.cutoff_ns)
             clocks = {name: values.filter(selected).to_list() for name, values in times.items()}
             clock = 'complete-observation-and-availability'
