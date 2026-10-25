@@ -1,6 +1,95 @@
+import copy
+from pathlib import Path
+
+import numpy as np
+import polars as pl
+import pytest
+
 from limen.experiment.param_domain import ParamDomain
 from limen.experiment.msq import MSQ, FilterExhaustedError
-from limen.experiment.param_search import GridStrategy
+from limen.experiment.param_search import GridStrategy, RandomStrategy
+
+
+_INVALID_CAPS = (True, False, 0, -1, 1.5, 2.0, float('nan'), float('inf'), '3', np.int64(3))
+_CAP_IDS = ('true', 'false', 'zero', 'negative', 'fractional', 'integral-float', 'nan', 'infinity', 'string', 'numpy-integer')
+
+
+class _IntCap(int):
+    __slots__ = ()
+
+
+@pytest.fixture(scope='module')
+def recorded_choices():
+    return pl.read_parquet(Path(__file__).parent / 'fixtures/spot_1h_20240101_20241231.parquet', n_rows=32)['close'].unique(maintain_order=True).head(4).to_list()
+
+
+@pytest.mark.parametrize('cap', _INVALID_CAPS, ids=_CAP_IDS)
+def test_invalid_cap_refused_before_iteration(cap, recorded_choices):
+    domain = ParamDomain({'threshold': recorded_choices})
+    strategy = GridStrategy(domain)
+    before = copy.deepcopy(strategy.get_state())
+    with pytest.raises(ValueError, match='n_permutations must be a positive non-bool int or None'):
+        MSQ(strategy, domain, n_permutations=cap)
+    assert strategy.get_state() == before
+
+
+@pytest.mark.parametrize('cap', _INVALID_CAPS, ids=_CAP_IDS)
+def test_invalid_restored_cap_leaves_queue_unchanged(cap, recorded_choices):
+    queue, _ = _make_msq({'threshold': recorded_choices}, n_permutations=3)
+    next(queue)
+    before = copy.deepcopy(queue.get_state())
+    invalid = copy.deepcopy(before)
+    invalid.update(n_permutations=cap, yielded_count=99)
+    with pytest.raises(ValueError, match='n_permutations must be a positive non-bool int or None'):
+        queue.set_state(invalid)
+    assert queue.get_state() == before
+
+
+@pytest.mark.parametrize('cap', (None, 1, 3, 100, _IntCap(2)))
+def test_valid_caps_preserve_natural_grid_exhaustion(cap, recorded_choices):
+    queue, _ = _make_msq({'threshold': recorded_choices}, n_permutations=cap)
+    rows = list(queue)
+    assert len(rows) == (len(recorded_choices) if cap is None else min(cap, len(recorded_choices)))
+
+
+def test_legacy_state_without_cap_restores_none(recorded_choices):
+    queue, _ = _make_msq({'threshold': recorded_choices}, n_permutations=1)
+    state = queue.get_state()
+    state.pop('n_permutations')
+    queue.set_state(state)
+    assert queue.get_state()['n_permutations'] is None
+    assert len(list(queue)) == len(recorded_choices)
+
+
+@pytest.mark.parametrize('strategy_type', (GridStrategy, RandomStrategy))
+def test_cap_above_initial_domain_binds_after_growth(strategy_type, recorded_choices):
+    domain = ParamDomain({'threshold': recorded_choices[:1]})
+    queue = MSQ(strategy_type(domain, seed=42), domain, n_permutations=3)
+    rows = [next(queue)]
+    for value in recorded_choices[1:]:
+        assert queue.inject_value('threshold', value)
+    rows.extend(queue)
+    assert len(rows) == 3
+    assert len({row['threshold'] for row in rows}) == 3
+    assert [row['_round_index'] for row in rows] == [0, 1, 2]
+    queue.inject({'threshold': recorded_choices[-1]}, prioritize=True)
+    assert queue.priority_queue_size == 1
+    with pytest.raises(StopIteration):
+        next(queue)
+    assert queue.yielded_count == 3
+
+
+@pytest.mark.parametrize('cap', (True, 0, 1.5))
+def test_invalid_uel_cap_creates_no_experiment_artifacts(cap, tmp_path):
+    from tests.test_experiment_core_msq import _make_uel
+
+    directory = tmp_path / 'run'
+    loop, strategy, _ = _make_uel(experiment_dir=directory)
+    before = copy.deepcopy(strategy.get_state())
+    with pytest.raises(ValueError, match='n_permutations must be a positive non-bool int or None'):
+        loop.run('invalid_cap', n_permutations=cap, progress_bar=False)
+    assert not directory.exists()
+    assert strategy.get_state() == before
 
 
 def _make_msq(params=None, n_permutations=None):
