@@ -14,6 +14,7 @@ NESTED = {
     'sfd.manifest.objective': ('limen/yaml/_objective_spec.py', '_read_objective'),
     'sfd.manifest.acceptance': ('limen/experiment/_acceptance_settings.py', 'read_acceptance'),
     'sfd.manifest.strategy.conditions[]': ('limen/yaml/rules.py', 'ConditionsList'),
+    'uel.intra_callback': ('limen/yaml/_callback_spec.py', 'callback_error'),
     'uel.recording': ('limen/experiment/_recording.py', 'parse_recording'),
     'assessment': ('limen/yaml/_assessment_spec.py', 'assessment_spec'),
     'holdout': ('limen/yaml/_assessment_spec.py', 'holdout_spec'),
@@ -31,8 +32,8 @@ def inventory(root: Path):
                 visit(settings['_rules'], settings['_condition_path'] + ' = ' + str(settings['_condition_value']))
             elif kind in ('Required', 'OneOf', 'NoUnknownKeys', 'Resolvable', 'FuncList', 'SingleFuncBlock', 'ParamKeyFields'):
                 entry = {'kind': kind, 'path': settings['_path'], 'when': condition}
-                for name in ('_known', '_choices', '_fields', '_severity'):
-                    if name in settings:
+                for name in ('_known', '_choices', '_fields', '_severity', '_rejected'):
+                    if name in settings and (name != '_rejected' or settings[name]):
                         value = settings[name]
                         entry[name[1:]] = sorted(value) if isinstance(value, (set, tuple)) else value
                 if kind == 'Required':

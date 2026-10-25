@@ -75,9 +75,7 @@ UEL_OPTIONAL = {
     'output_format',
     'output_path',
 }
-UEL_YAML_REJECTIONS = {
-    'intra_callback': 'YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention',
-}
+UEL_YAML_REJECTIONS = {'intra_callback': 'YAML does not execute intra_callback. Remove the declaration and use UniversalExperimentLoop(intra_callback=<callable(log, msq)>); see https://github.com/Vaquum/Limen/blob/main/docs/Developer/Pruning-Strategies.md#manual-intervention'}
 SEARCH_STRATEGY_REQUIRED = {'type'}
 SEARCH_STRATEGY_OPTIONAL = {'seed', 'shuffle'}
 PRUNING_STRATEGY_REQUIRED = {'type'}

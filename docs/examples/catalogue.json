@@ -2079,7 +2079,6 @@
           "checkpoint_interval",
           "factorize",
           "feedback_interval",
-          "intra_callback",
           "output_format",
           "output_path",
           "prep_each_round",

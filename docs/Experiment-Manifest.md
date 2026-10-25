@@ -1428,7 +1428,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
 | `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |
 | `uel.output_format` | OneOf | `always` | {"choices": ["csv", "parquet"]} |
-| `uel` | NoUnknownKeys | `always` | {"known": ["checkpoint_interval", "factorize", "feedback_interval", "intra_callback", "n_permutations", "output_format", "output_path", "prep_each_round", "pruning_strategies", "record_execution", "record_model_outputs", "recording", "search_strategy", "workers"], "severity": "warning"} |
+| `uel` | NoUnknownKeys | `always` | {"known": ["checkpoint_interval", "factorize", "feedback_interval", "n_permutations", "output_format", "output_path", "prep_each_round", "pruning_strategies", "record_execution", "record_model_outputs", "recording", "search_strategy", "workers"], "severity": "warning"} |
 
 ### Nested contracts
 

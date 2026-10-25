@@ -120,8 +120,7 @@ def _load_resume_metadata(results_dir: Path) -> dict[str, Any] | None:
 
     if error := callback_error(yaml_reference):
         click.secho(f'  ✗ {error}', fg='red')
-        return None
-    return metadata
+    return None if error else metadata
 
 
 def _load_target_permutations(results_dir: Path) -> int | None:
