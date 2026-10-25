@@ -1,6 +1,6 @@
 import copy
 import warnings
-from dataclasses import replace
+from dataclasses import fields, replace
 from functools import partial
 from types import SimpleNamespace
 
@@ -11,8 +11,22 @@ from sklearn.exceptions import ConvergenceWarning
 from limen.experiment import ReuseContract, declare_reuse
 from limen.experiment._factorized_key import parameter_key
 from limen.sfd.reference_architecture.ridge_regressor import ridge_regressor
+from limen.scalers import RobustScaler
+from limen.targets import QuantileBinaryTarget
 from tests.test_factorize_equivalence import _numeric_equal
 from tests.test_factorized_preparation import _config, _loop, _run, _science, _rounds, _params
+
+
+class DeclaredTarget(QuantileBinaryTarget):
+    """Caller-owned target with the recorded quantile transformation."""
+
+
+class DeclaredScaler(RobustScaler):
+    """Caller-owned scaler with the recorded robust transformation."""
+
+
+declare_reuse(DeclaredTarget, ReuseContract(lambda settings: None, validation_keys=()))
+declare_reuse(DeclaredScaler, ReuseContract(lambda settings: None, validation_keys=()))
 
 
 def _configuration(case):
@@ -46,12 +60,30 @@ def _configuration(case):
     return config
 
 
-@pytest.mark.parametrize('case', ['ridge', 'ridge_rank', 'ridge_pca', 'registry', 'target', 'logreg', 'calibration', 'xgboost'])
+@pytest.mark.parametrize('case', ['ridge', 'ridge_rank', 'ridge_pca', 'registry', 'target', 'caller_target', 'caller_scaler', 'logreg', 'calibration', 'xgboost'])
 def test_recorded_factorized_manifest_contract(case, tmp_path, monkeypatch):
     config = _configuration(case)
-    ordinary = _loop(copy.deepcopy(config), tmp_path / 'ordinary')
+    def loop(configuration, path):
+        if not case.startswith('caller_'):
+            return _loop(configuration, path)
+        from limen.experiment import UniversalExperimentLoop
+        from limen.experiment.param_domain import ParamDomain
+        from limen.experiment.param_search import GridStrategy
+        from limen.yaml.compiler import build_manifest
+        from tests.test_factorized_preparation import _bars
+
+        manifest = build_manifest(configuration)
+        if case == 'caller_target':
+            manifest.target_class_config = replace(manifest.target_class_config, target_class=DeclaredTarget)
+        else:
+            manifest.set_scaler(DeclaredScaler)
+        domain = configuration['sfd']['params']
+        sfd = SimpleNamespace(__name__='declared_native_reuse', params=lambda: domain, manifest=lambda: manifest)
+        return UniversalExperimentLoop(sfd=sfd, data=_bars(), experiment_dir=path,
+                                       search_strategy=GridStrategy(ParamDomain(domain)), checkpoint_interval=1, feedback_interval=1)
+    ordinary = loop(copy.deepcopy(config), tmp_path / 'ordinary')
     _run(ordinary, enabled=False)
-    reused = _loop(copy.deepcopy(config), tmp_path / 'reused')
+    reused = loop(copy.deepcopy(config), tmp_path / 'reused')
     calls = []
     # Count the original execution boundary without replacing its declaration.
     from limen.experiment import _factorize
@@ -153,6 +185,35 @@ def test_factorized_partial_calibration_requires_declared_callbacks():
     rounds.manifest.with_reference_architecture(partial(logreg_binary, prediction_calibration_config=bound))
     with pytest.raises(ValueError, match=r'threshold.*missing deterministic reuse declaration'):
         _ = validate_domain(rounds.manifest, config['sfd']['params'], rounds.axes)
+
+
+def test_factorized_override_refuses_before_preparation():
+    from limen.experiment import MLManifest
+    from limen.experiment._factorized_admission import validate_domain
+
+    config = _config()
+    original = _rounds(config).manifest
+    class Changed(MLManifest):
+        def prepare_data(self, raw_data, round_params):
+            raise AssertionError('The overridden preparation must never execute')
+    manifest = Changed(**{field.name: copy.deepcopy(getattr(original, field.name)) for field in fields(original) if field.init})
+    with pytest.raises(ValueError, match='original manifest preparation'):
+        _ = validate_domain(manifest, config['sfd']['params'], frozenset({'fee'}))
+
+
+def test_factorized_custom_rule_requires_complete_economic_replay():
+    from limen.experiment._factorized_admission import validate_domain
+    from tests.fixtures.factorize.generate import manifest as rule_configuration
+    from limen.yaml.compiler import build_manifest
+
+    config = rule_configuration('rule_based')
+    manifest = build_manifest(config)
+    def different_rule(data, **params):
+        raise AssertionError('A custom rule without replay must refuse before execution')
+    declare_reuse(different_rule, ReuseContract(lambda settings: None, validation_keys=(), consumes=(), prediction_kind='binary'))
+    manifest.with_reference_architecture(different_rule)
+    with pytest.raises(ValueError, match='custom rule economics require explicit replay'):
+        _ = validate_domain(manifest, config['sfd']['params'], frozenset({'fee'}))
 
 
 @pytest.mark.parametrize('fees', [[4., 9.], [9., 4.]])

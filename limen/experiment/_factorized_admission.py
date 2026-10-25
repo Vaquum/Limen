@@ -8,7 +8,7 @@ from typing import cast
 
 from limen.experiment._factorized_contract import ReuseContract
 from limen.experiment._factorized_key import parameter_key
-from limen.experiment._factorized_native import contract_for
+from limen.experiment._factorized_native import contract_for, native_rule
 from limen.experiment._factorized_projection import projections
 from limen.experiment.manifest_core import MLManifest, Manifest, RuleBasedManifest, make_fitted_scaler
 from limen.scalers import SCALER_REGISTRY, RobustScaler
@@ -69,6 +69,9 @@ def _scaler(manifest: MLManifest, params: dict[str, object], axes: frozenset[str
 
 
 def validate_candidate(manifest: Manifest, params: dict[str, object], axes: frozenset[str]) -> ReuseContract:
+    owner = MLManifest if isinstance(manifest, MLManifest) else RuleBasedManifest
+    if any(getattr(type(manifest), name, None) is not getattr(owner, name, None) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
+        raise ValueError('factorize requires the original manifest preparation and model methods')
     if manifest.split_walk_forward is not None or manifest.allocation_config is not None or getattr(manifest, 'objective', None) is not None:
         raise ValueError('factorize requires independent snapshot execution without folds, allocation or objective')
     if manifest.resolve_trade_policy(params) is not None:
@@ -76,6 +79,8 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
     function = manifest.architecture_function
     model_kwargs = manifest.resolve_model_kwargs(params)
     declaration = _stage('architecture', function, model_kwargs, axes)
+    if isinstance(manifest, RuleBasedManifest) and not native_rule(function) and declaration.replay is None:
+        raise ValueError('factorize stage architecture: custom rule economics require explicit replay')
     if declaration.prediction_kind is None and declaration.replay is None:
         raise ValueError('factorize requires stage architecture: declare prediction kind or economic replay')
     for index, entry in enumerate(manifest.feature_transforms):

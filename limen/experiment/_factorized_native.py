@@ -14,6 +14,12 @@ def native_threads() -> AbstractContextManager[object]:
     return limit(limits=1)
 
 
+def native_rule(component: object) -> bool:
+    while isinstance(component, partial):
+        component = component.func
+    return component is vars(import_module('limen.sfd.reference_architecture.rule_based'))['rule_based']
+
+
 def _pure(_params: Mapping[str, object]) -> None:
     return None
 
