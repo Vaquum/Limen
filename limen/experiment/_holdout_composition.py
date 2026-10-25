@@ -86,7 +86,7 @@ def prepared_cache(cache: dict[str, dict[str, object]], proofs: dict[str, dict[s
     if saved is None:
         _ = proofs.pop(key, None)
         return None
-    if binding is not None and binding.cutoff_ns is not None:
+    if key in proofs or (binding is not None and binding.cutoff_ns is not None):
         _check(manifest, raw, _mapping(proofs.get(key)))
     _ = cache.pop(key)
     cache[key] = saved

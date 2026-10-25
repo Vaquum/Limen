@@ -614,6 +614,15 @@ def test_protected_factorized_provenance(kind, tmp_path, monkeypatch):
         with pytest.raises(ValueError, match='source population changed'):
             rounds.evaluate(candidates[0].copy())
         rounds.data = raw
+    saved_binding = vars(manifest).pop('_holdout_binding')
+    try:
+        if rounds.preparation is not None:
+            with pytest.raises(ValueError, match='cannot become unprotected'):
+                rounds.preparation.prepare(raw, candidates[0].copy(), rounds.prep)
+        with pytest.raises(ValueError, match='binding changed'):
+            rounds.evaluate(candidates[0].copy())
+    finally:
+        vars(manifest)['_holdout_binding'] = saved_binding
     release_holdout(root, reservation)
     if rounds.preparation is not None:
         with pytest.raises(ValueError, match='revision changed'):
