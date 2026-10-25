@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T09:16:11.529082+00:00",
-  "execution_checkout_head": "71c51fa672c2130bbc5eeb25975fa9658dfd43ff",
+  "observed_at": "2026-10-25T09:42:21.638661+00:00",
+  "execution_checkout_head": "4c8999010bcd8be716ddda313287b770d9f83119",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -84,7 +84,7 @@
     "experiment/_factorized_native.py": "93b20850fb24b4763ea1eb0b627e54fac227abc4f6364ff8c56d8a20e86a9a65",
     "experiment/_factorized_prep.py": "f1bdd4e0f9492815b21c85c2579033b9b6bad4c834ec027fc4973614c01b8c04",
     "experiment/_factorized_projection.py": "43d960e06e58cb737f2858d92f96387af7255b92d105dfe90fd9167803b3d576",
-    "experiment/_factorized_replay.py": "daefe9c719c54e55c01ce72dc2bdcc494d43ed8659555d22e2c3cc6f4678755e",
+    "experiment/_factorized_replay.py": "633cfbbd7171436b12acdc592a7a588019c92987da54cf2184edf219350f07df",
     "experiment/_family_evidence.py": "641ad9d9d9e2d75f4aeef8de65c049867c1be042e41e8316eaf80b0cf0afe34f",
     "experiment/_filter_resume.py": "20b88268556d73a961ff1a73993b4e6af6ab7182d27f8ef927eda28579c496f6",
     "experiment/_fixed_trade_sources.py": "45fc5add853c9e3643200102a727e89f58cfa77c928e838592539603fdb3613d",
