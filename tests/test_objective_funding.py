@@ -63,6 +63,8 @@ def test_quoted_funding_covers_partial_validation_interval():
     assert ledger.metrics['funding_pnl'] == pytest.approx(expected)
     assert scorer(data['y_val'], predictions) == ledger.metrics['total_return']
     assert ledger.funding['end_ns'].max() == original.partition_end_ns
+    assert original.sources[-1].identity == 'funding:partition:1'
+    assert scorer.inputs.sources[-1].identity == 'objective:validation:funding'
     assert scorer.inputs.sources[-1].checksum != original.sources[-1].checksum
 
 

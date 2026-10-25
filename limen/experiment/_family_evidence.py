@@ -1,6 +1,6 @@
 import csv
 import json
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -12,14 +12,11 @@ import numpy.typing as npt
 import polars as pl
 
 import limen.experiment._round_storage as storage
-from limen.experiment import manifest_core
 from limen.backtest.trade_contract import JsonValue, contract_digest
 from limen.yaml.config import round_trip_yaml
 from limen.yaml.store import STORE_RELATIVE, canonical_manifest_id, is_full_manifest_id
 
 __all__: list[str] = []
-
-_resolve_params = cast(Callable[[dict[str, object], dict[str, object]], dict[str, object]], vars(manifest_core)['_resolve_params'])
 
 
 class EvidenceUnavailableError(ValueError):
@@ -185,7 +182,7 @@ def _evidence(metadata: Mapping[str, object], record: Mapping[str, object], valu
     if source is not None:
         source = mapping(source, 'data source')
         source_params = source.get('params')
-        source = {**source, 'params': _resolve_params(mapping({} if source_params is None else source_params, 'data-source parameters'), params)}
+        source = {**source, 'params': mapping({} if source_params is None else source_params, 'data-source parameters')}
     folds = record.get('folds')
     if folds is None:
         raise EvidenceUnavailableError('Recorded fold evidence is missing')
