@@ -12,8 +12,8 @@ import numpy.typing as npt
 import polars as pl
 
 from limen.cohort.sfc import BUILTIN_SELECTORS, Selector
-from limen.cohort._round_sources import RoundSources
-from limen.cohort._fold_sources import FoldSources, bind_native_output, select_sources
+from limen.cohort._round_sources import RoundSources, architecture_identity, same_architecture
+from limen.cohort._fold_sources import FoldSources, bind_native_output, mixed_outputs, select_sources
 from limen.inference._fold_sensor import reject_legacy_members
 from limen.inference.sensor import BarPrediction, PredictionReason, Sensor
 from limen.cohort._python_cohort import Aggregate, CohortMap, CohortPrepare, HistoryT, PythonCohortBase, cohort_fields
@@ -84,6 +84,8 @@ class Cohort:
             self.cohort_id = None
             self._members = []
             self._round_sources = selected
+            if self.architecture_id.startswith('mixed-binary-v1:'):
+                self.supports_probabilities = self.aggregation_mode = None
             return
 
         if experiment_id is None and experiment_log_path is None:
@@ -189,19 +191,25 @@ class Cohort:
         self._members: list[Any] = []
         self.member_ids = [(self.manifest_id, pid) for pid in selected_ids]
         self.source_metadata = {experiment_dir: metadata}
+        self._selected_architectures = {pid: self._extract_architecture_id(round_entries[pid], metadata) for pid in selected_ids}
+        if self.architecture_id.startswith('mixed-binary-v1:'):
+            if not isinstance(self.manifest_id, str) or not self.manifest_id.strip():
+                raise ValueError('Mixed Cohort requires a known selected manifest_id')
+            self.supports_probabilities = self.aggregation_mode = None
 
     def set_members(self, members: list[Any]) -> None:
 
         if not members:
             raise ValueError('Cohort members must be a non-empty list.')
+        mixed = self.architecture_id.startswith('mixed-binary-v1:')
         reject_legacy_members(members, qualified_folds=getattr(self._round_sources, 'qualified_folds', False) is True)
 
         if self._round_sources is not None:
             bound = self._round_sources.bind(members)
             if not isinstance(self._round_sources, FoldSources):
-                bind_native_output(self, bound, self._architecture_supports_probabilities(self.architecture_id))
+                bind_native_output(self, bound, self._architecture_supports_probabilities(self.architecture_id), self._round_sources.architectures)
             assert self.aggregation_mode is not None
-            payload = json.dumps(self._round_sources.identity(self.aggregation_mode), sort_keys=True)
+            payload = json.dumps(self._round_sources.identity(self.aggregation_mode) | ({'binary_contracts': vars(self)['_mixed_policy']} if mixed else {}), sort_keys=True)
             self._members = bound
             self.cohort_id = f'{SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
             return
@@ -220,6 +228,8 @@ class Cohort:
                 raise ValueError('Each cohort member must expose permutation_id for binding.')
 
             pid = self._normalize_permutation_id(member.permutation_id)
+            if mixed and (pid not in self._selected_architectures or getattr(member, 'manifest_id', None) != self.manifest_id or not hasattr(member, 'round_params')):
+                raise ValueError('Mixed Cohort requires each selected member manifest_id and architecture')
             if pid in by_pid:
                 raise ValueError(
                     'Cohort members must have unique permutation_id values.')
@@ -231,10 +241,8 @@ class Cohort:
                     {'round_params': member.round_params},
                     self.metadata,
                 )
-                if arch.strip().lower() != self.architecture_id.strip().lower():
-                    raise ValueError(
-                        'Bound members must match cohort architecture_id.'
-                    )
+                if not same_architecture(arch, self._selected_architectures[pid] if mixed else self.architecture_id):
+                    raise ValueError('Bound members must match cohort architecture_id.')
 
             member_mid = getattr(member, 'manifest_id', None)
             if member_mid is not None:
@@ -251,8 +259,9 @@ class Cohort:
                 f'Cohort Missing bound members for permutation_ids: {missing}'
             )
 
-        self._members = [by_pid[pid] for pid in self.permutation_ids]
-        bind_native_output(self, self._members, self._architecture_supports_probabilities(self.architecture_id))
+        bound = [by_pid[pid] for pid in self.permutation_ids]
+        bind_native_output(self, bound, self._architecture_supports_probabilities(self.architecture_id), [self._selected_architectures[pid] for pid in self.permutation_ids])
+        self._members = bound
 
         payload = json.dumps(
             {
@@ -260,7 +269,7 @@ class Cohort:
                 'architecture_id': self.architecture_id,
                 'manifest_id': self.manifest_id,
                 'permutation_ids': sorted(self.permutation_ids),
-            },
+            } | ({'binary_contracts': vars(self)['_mixed_policy']} if mixed else {}),
             sort_keys=True,
         )
         self.cohort_id = f'{SHA256_PREFIX}{hashlib.sha256(payload.encode()).hexdigest()}'
@@ -363,6 +372,9 @@ class Cohort:
             worst = max(blocking, key=lambda b: self._REASON_PRIORITY.get(b.reason, -1) if b.reason is not None else -1)
             return BarPrediction(datetime=dt, prediction=None, probability=None, reason=worst.reason)
 
+        if self.architecture_id.startswith('mixed-binary-v1:'):
+            valid_bars = mixed_outputs(self, member_bars)
+
         if self.aggregation_mode == 'probability_weighted':
             if any(b.probability is None for b in valid_bars):
                 raise ValueError(
@@ -398,7 +410,7 @@ class Cohort:
     def _fallback_vote_threshold(self) -> float:
 
         arch = self.architecture_id.strip().lower()
-        if 'regressor' in arch and not getattr(self._round_sources, 'qualified_folds', False):
+        if not arch.startswith('mixed-binary-v1:') and 'regressor' in arch and not getattr(self._round_sources, 'qualified_folds', False):
             return 0.0
         return Cohort._VOTE_THRESHOLD
 
@@ -512,17 +524,7 @@ class Cohort:
                                      round_entries: dict[str, dict[str, Any]],
                                      metadata: dict[str, Any]) -> str:
 
-        architecture_ids = {
-            cls._extract_architecture_id(round_entries[pid], metadata)
-            for pid in selected_ids
-        }
-
-        if len(architecture_ids) != 1:
-            raise ValueError(
-                'Cohort All selected permutation_ids must belong to the same architecture.'
-            )
-
-        return next(iter(architecture_ids))
+        return architecture_identity({cls._extract_architecture_id(round_entries[pid], metadata) for pid in selected_ids})
 
     @classmethod
     def _extract_architecture_id(cls, round_entry: Mapping[str, object], metadata: Mapping[str, object]) -> str:
