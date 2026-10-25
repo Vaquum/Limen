@@ -34,7 +34,7 @@ def replay(manifest: Manifest, contract: ReuseContract, result: Mapping[str, obj
            record_execution: bool) -> dict[str, object]:
     apply_costs = cast(Callable[..., None], vars(Manifest)['_apply_backtest_cost'])
     apply_costs(manifest, data, params)
-    scientific = copy.deepcopy(dict(result))
+    scientific = copy.deepcopy({name: value for name, value in result.items() if name != '_model'})
     if contract.replay is not None:
         return contract.replay(scientific, data, params)
     if positions is None:
