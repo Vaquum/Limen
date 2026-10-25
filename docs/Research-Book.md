@@ -2,21 +2,23 @@
 
 A model can fit the past and still fail as a trading signal. The research question is what remains after chronological selection, declared costs and the handoff to inference. Limen lets you own that methodology in Python, or adopt the declared pipeline through Compiled Research.
 
-These projects use recorded Bitcoin observations. Their results describe those observations and decisions; they do not establish future returns. The same research question does not require identical models or make unlike evaluation populations comparable.
+The projects presented in the following pages use recorded Bitcoin observations available through Limen\. Their results describe those observations and decisions; they do not establish future returns\.
 
 ## Prerequisites
 
-Use Python 3.10–3.13 and the matching wheel and recorded project bundle. The acquisition steps below establish the environment and working directory for either interface.
+Use Python 3\.10–3\.13 and the matching wheel and recorded project bundle\. The acquisition steps below establish the environment and working directory for either Python or Compiled research interface provided by Limen\.
 
 ## Acquire the project
 
-Choose the [Python project](examples/python-research/README.md#acquire-the-matching-project) or [Compiled project](examples/compiled-research/README.md#acquire-the-matching-project). Each begins with the same digest-verified bundle and wheel acquisition, environment and working directory. You can follow either path independently. This chapter uses the small selection run; later chapters develop its decisions through named variants.
+Choose the [Python project](<examples/python-research/README.md#acquire-the-matching-project>) or [Compiled project](<examples/compiled-research/README.md#acquire-the-matching-project>)\. Each begins with the same digest\-verified bundle and wheel acquisition, environment and working directory\. You can follow either path independently\. This chapter uses a small selection run; later chapters develop its decisions through named variants\.
 
-## Choose who owns the experiment
+<a id="choose-who-owns-the-experiment" data-reader-heading="plain"></a>
+
+## Choose the research interface
 
 Python Research keeps data, preparation, fitting, backtesting and selection in your functions. Compiled Research records the Manifest definition and applies its configured checks. Compiled Research is authored in YAML and executed through the CLI.
 
-Both paths use UEL and MSQ internally. Python Research owns ordinary Python functions; Compiled Research owns YAML files and CLI commands. Read [the two interfaces](../README.md#two-interfaces-different-purposes) before deciding which responsibility you want Limen to carry.
+Both paths use the same machinery internally\. Python Research owns ordinary Python functions; Compiled Research owns YAML files and CLI commands\. Read [the two interfaces](<../README.md#two-interfaces-different-purposes>) before deciding which responsibility you want Limen to carry on your behalf and the degree of freedom you want to enjoy\.
 
 ## Begin with recorded observations
 
