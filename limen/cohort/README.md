@@ -71,8 +71,8 @@ The artifact-backed constructor follows these rules:
 
 - Construct from exactly one experiment source (`experiment_id` or `experiment_log_path`)
 - Validate explicit or selector-produced `permutation_ids`
-- Enforce single-architecture selection
-- Infer aggregation mode from architecture capability:
+- Bind each member to its selected source and architecture; admit mixed declared binary outputs
+- Infer homogeneous aggregation from architecture capability; bind mixed aggregation from native binary declarations:
   - `probability_weighted` when probability output is supported
   - `majority_vote` fallback otherwise
 - `predict(raw_klines)` returns one `BarPrediction` for the last bar

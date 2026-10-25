@@ -110,7 +110,7 @@ def _member_state(sensor: Sensor) -> tuple[object, ...]:
 
 def state_digest(selection: Sensor | Cohort) -> str:
     state = tuple(_member_state(item) for item in members(selection))
-    aggregate = ('sensor',) if type(selection) is Sensor else (cast(Cohort, selection).aggregation_mode, cast(Cohort, selection).member_ids, getattr(selection, '_VOTE_THRESHOLD', None))
+    aggregate = ('sensor',) if type(selection) is Sensor else (cast(Cohort, selection).aggregation_mode, cast(Cohort, selection).member_ids, getattr(selection, '_VOTE_THRESHOLD', None), *((vars(selection)['_mixed_policy'],) if vars(selection).get('_mixed_policy') is not None else ()))
     return sha256(pickle.dumps((state, aggregate), protocol=5)).hexdigest()
 
 
@@ -308,7 +308,7 @@ def owned_copy(selection: Sensor | Cohort) -> Sensor | Cohort:
     if type(selection) is Cohort:
         result = copy.copy(selection)
         vars(result).clear()
-        vars(result).update(_members=copied, member_ids=copy.deepcopy(selection.member_ids), aggregation_mode=selection.aggregation_mode, architecture_id=selection.architecture_id)
+        vars(result).update(_members=copied, member_ids=copy.deepcopy(selection.member_ids), aggregation_mode=selection.aggregation_mode, architecture_id=selection.architecture_id, _mixed_policy=copy.deepcopy(vars(selection).get('_mixed_policy')))
     if _copy_witness(result) != before:
         raise ValueError('Holdout fitted-state copy changed selected state')
     return result

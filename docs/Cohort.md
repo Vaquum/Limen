@@ -216,7 +216,7 @@ new constructor or distinct rounds spread across several directories:
 | Identity field | Value |
 |---|---|
 | `aggregation_mode` | Bound Cohort aggregation mode |
-| `architecture_id` | Shared architecture identifier |
+| `architecture_id` | Shared or canonical mixed binary architecture identifier |
 | `manifest_id` | Sole distinct manifest identifier |
 | `permutation_ids` | Sorted round IDs from selected member pairs |
 
@@ -225,7 +225,7 @@ Several distinct manifests in ordinary-only selections use:
 | Identity field | Value |
 |---|---|
 | `aggregation_mode` | Bound Cohort aggregation mode |
-| `architecture_id` | Shared architecture identifier |
+| `architecture_id` | Shared or canonical mixed binary architecture identifier |
 | `rounds` | Sorted member pairs, encoded as JSON lists |
 
 Paths and selection/binding order do not enter the hash. It identifies selected
@@ -234,7 +234,7 @@ artifact lineage, not distinct learned models or code/dependency semantics.
 
 ### Compatibility
 
-The `rounds` form requires one architecture, the same configured source method
+The `rounds` form requires the same configured source method
 and identity-defining parameters (including instrument/file and base cadence),
 and the same effective selected-round bar type and applied formation function
 and arguments. Only `start_date_limit` and `end_date_limit` are excluded from
@@ -271,7 +271,7 @@ For native API integration, three-element selections identify folds; ordinary se
 
 Fold-containing `member_ids` retain caller order and mix `(manifest_id, permutation_id, fold, provenance_digest)` with ordinary `(manifest_id, permutation_id)` pairs. The digest is the Sensor's raw 64-character hexadecimal selected-artifact digest. Same trial, distinct folds are distinct members. Duplicate keys reject across copies and aliases; different evidence for the same trial/fold raises `Cohort evidence conflict`. Binding checks every member key, architecture and native binary declaration before matching fold count and exact selected-artifact digest. A wrong digest cannot bind by matching the trial/fold key alone. Transparent attribute-forwarding wrappers may bind; hiding fold identity cannot convert a fold Sensor into an ordinary member.
 
-All members must share the configured source method and parameters except date bounds, the actual architecture function and the effective bar formation. Fold members additionally share original campaign source digest, row count, timestamp extent, interval and split declaration; serial/parallel recording origin alone does not create incompatibility. Ordinary members need no invented historical fingerprint. Each Sensor retains its own preprocessing and guards, and live output clocks must align.
+All members must share the configured source method and parameters except date bounds, and the effective bar formation. Different architecture functions may compose when their fitted models declare compatible binary outputs. Fold members additionally share original campaign source digest, row count, timestamp extent, interval and split declaration; serial/parallel recording origin alone does not create incompatibility. Ordinary members need no invented historical fingerprint. Each Sensor retains its own preprocessing and guards, and live output clocks must align.
 
 Every member's fitted native model must declare immutable `inference_output = ('binary', bool_probabilities)` and binary prediction mode. Continuous, signed and undeclared meanings reject. If every member promises probabilities, aggregation is `probability_weighted`; otherwise it is `majority_vote`. Both retain the existing binary threshold 0.5. Fold-containing cohorts require this declaration. Ordinary binding also uses a unanimous native binary declaration when present; otherwise it retains the construction-time architecture heuristic. Rule Sensors therefore use majority voting without fabricated probabilities. Rebinding recalculates the mode before computing cohort identity. An aggregate remains inference-only and carries no execution contract.
 
@@ -281,7 +281,7 @@ Fold-containing identity uses this payload with Python's default JSON separators
 
 | Identity field | Value |
 |---|---|
-| `architecture_id` | Shared architecture identifier |
+| `architecture_id` | Shared or canonical mixed binary architecture identifier |
 | `aggregation_mode` | Mode established by bound native model declarations |
 | `members` | Sorted tagged ordinary/fold identity rows |
 
@@ -372,7 +372,9 @@ backtest columns are unavailable.
 
 ### Architecture consistency rule
 
-All selected permutation IDs must resolve to the same architecture identifier. Mixed-architecture selection raises `ValueError`.
+Mixed architecture selections remain unbound until every fitted member declares immutable `inference_output = ('binary', bool_probabilities)` and binary prediction mode. Each member must match its own selected source and architecture. If every member promises probabilities, the cohort averages probabilities; otherwise it votes on binary decisions. Every actionable mixed-member decision must be numeric 0 or 1, and every promised probability must be finite and in [0, 1], including in vote mode. Existing timestamp, blocking and sensor-error precedence applies.
+
+A mixed cohort uses a canonical `mixed-binary-v1:` architecture identifier. Its cohort identity also includes the source-qualified assignment of architectures and probability promises. Reduction follows canonical member order; selection and binding order do not change the result. An invalid rebind preserves the previous valid membership and policy. Frozen supported cohorts own and digest the same policy.
 
 ## Binding members
 
@@ -393,7 +395,7 @@ successful binding populates `cohort.cohort_id`.
 
 ## Aggregation modes
 
-Aggregation mode is selected at construction based on architecture capability hints.
+Homogeneous ordinary cohorts select their initial aggregation mode from architecture capability hints. Mixed cohorts select their mode from every fitted member’s binary declaration at binding.
 For YAML CLI runs, Cohort reads each source's `metadata.json["yaml_reference"]`
 to recover `reference_architecture`; this keeps `sfd_module: yaml:<name>` bundles
 compatible with Trainer-reconstructed Sensors. Weight is equal per selected
@@ -475,7 +477,7 @@ source/bar compatibility and every member's guards still apply.
 - no bound members at inference raises `RuntimeError`
 - healthy member lists of different lengths or participating timestamp mismatches raise `ValueError`
 - when a member returns `sensor-error` for a bar, it is excluded from aggregation for that bar; only when all members return `sensor-error` does the cohort return `reason='sensor-error'`
-- ordinary-only architecture capability detection remains hint-based; fold-containing cohorts require native binary model declarations
+- homogeneous ordinary cohorts retain architecture capability hints; mixed and fold-containing cohorts require native binary model declarations
 - selectors that depend on `results.csv` raise if the required columns are missing
 
 ## Read next
