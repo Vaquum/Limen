@@ -244,7 +244,7 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
         return None, data, cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'prep', None)), cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'model', None))
     reference = cast(Mapping[str, object], getattr(sfd, '_yaml', {}))
     config = cast(Mapping[str, object], reference.get('uel', {}))
-    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=manifest.split_walk_forward is not None)
+    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None)
     if manifest.architecture_function is None:
         raise ValueError('UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.')
     with operation(manifest, 'experiment'):
