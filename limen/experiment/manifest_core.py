@@ -2010,11 +2010,11 @@ def capture_model_inputs(data: Mapping[str, object]) -> dict[str, object]:
             value = data[name]
             try:
                 frame = value if isinstance(value, pl.DataFrame) else value.to_frame() if isinstance(value, pl.Series) else pl.DataFrame(np.asarray(value), orient='row')
+                columns = cast(list[str], data.get('_feature_names', []))
+                if columns and not isinstance(value, (pl.DataFrame, pl.Series)):
+                    frame.columns = columns[1:-1] if name.startswith('x_') else columns[-1:]
             except (TypeError, ValueError, pl.exceptions.PolarsError) as exc:
                 raise HoldoutEvidenceError(f'Protected model inputs cannot be recovered: {name}') from exc
-            columns = cast(list[str], data.get('_feature_names', []))
-            if columns and not isinstance(value, (pl.DataFrame, pl.Series)):
-                frame.columns = columns[1:-1] if name.startswith('x_') else columns[-1:]
             result[name] = witness(frame)
     result['feature_names'] = copy.deepcopy(data.get('_feature_names'))
     result['strategy'] = copy.deepcopy(data.get('strategy'))

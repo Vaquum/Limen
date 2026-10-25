@@ -1337,13 +1337,15 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
             if kind == 'ml':
                 assert 'recorded_squared' in prepared['x_train'].columns
                 assert proof['model_schema'][-1]['name'] == 'recorded_squared'
-            for bad in ('foreign', 'matrix', 'prediction', 'strategy', 'pipeline', 'missing', 'carrier', 'round'):
+            for bad in ('foreign', 'matrix', 'shape', 'prediction', 'strategy', 'pipeline', 'missing', 'carrier', 'round'):
                 copied = copy.deepcopy(prepared)
                 owner = protected
                 if bad == 'foreign':
                     owner = CompiledSFD(copy.deepcopy(config), project_root=root).manifest()
                 elif bad == 'matrix':
                     copied['train' if kind == 'rule' else 'x_train'] = copied['train' if kind == 'rule' else 'x_train'].reverse()
+                elif bad == 'shape':
+                    copied['x_train'] = np.asarray(copied['x_train'])[:, :-1]
                 elif bad == 'prediction':
                     copied['x_test'] = copied['x_test'][::-1] if kind == 'rule' else copied['x_test'].reverse()
                 elif bad == 'strategy':
