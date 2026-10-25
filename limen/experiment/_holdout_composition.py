@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 from collections.abc import Mapping
+from contextvars import ContextVar
 from typing import Protocol
 import warnings
 
@@ -25,7 +26,8 @@ _HEADER = ('project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds'
 class _Prepared(Protocol):
     cache: dict[str, dict[str, object]]
     proofs: dict[str, dict[str, object]]
-    manifest: object
+    @property
+    def manifest(self) -> object: ...
 
 
 def _mapping(value: object) -> Mapping[str, object]:
@@ -40,8 +42,8 @@ def _binding(manifest: object) -> ProjectBinding | None:
         return None
     check_binding(binding)
     if binding.cutoff_ns is not None:
-        op = _holdout._CURRENT.get()
-        if op is None or op.manifest is not manifest or op.binding != binding:
+        op = cast(ContextVar[object | None], vars(_holdout)['_CURRENT']).get()
+        if op is None or vars(op)['manifest'] is not manifest or vars(op)['binding'] != binding:
             raise ValueError('Protected factorized reuse requires a held research operation')
     return binding
 
@@ -70,7 +72,7 @@ def _check(manifest: object, raw: pl.DataFrame, proof: Mapping[str, object]) -> 
         raise ValueError('Factorized holdout reuse lacks original research record')
     saved = research_record(binding, identity)
     original_proof = dict(proof)
-    original_proof.pop('reuse', None)
+    _ = original_proof.pop('reuse', None)
     if (saved['role'] != 'experiment' or saved['state'] != 'completed'
             or saved['revision'] != binding.revision
             or json.loads(str(saved['provenance_json'])) != original_proof):
@@ -82,11 +84,11 @@ def prepared_cache(cache: dict[str, dict[str, object]], proofs: dict[str, dict[s
     binding = _binding(manifest)
     saved = cache.get(key)
     if saved is None:
-        proofs.pop(key, None)
+        _ = proofs.pop(key, None)
         return None
     if binding is not None and binding.cutoff_ns is not None:
         _check(manifest, raw, _mapping(proofs.get(key)))
-    cache.pop(key)
+    _ = cache.pop(key)
     cache[key] = saved
     return saved
 
@@ -124,7 +126,7 @@ def remember_fitted(owner: _Prepared, key: str, fitted: dict[str, object],
     if binding is not None and binding.cutoff_ns is not None and key not in owner.proofs:
         proof = _mapping(_mapping(data['_alignment']).get('holdout'))
         original = dict(proof)
-        original.pop('reuse', None)
+        _ = original.pop('reuse', None)
         _check(owner.manifest, raw, original)
         owner.proofs[key] = copy.deepcopy(original)
     owner.cache[key] = fitted
@@ -133,7 +135,7 @@ def remember_fitted(owner: _Prepared, key: str, fitted: dict[str, object],
 def evict_fitted(cache: dict[str, dict[str, object]], proofs: dict[str, dict[str, object]]) -> None:
     key = next(iter(cache))
     del cache[key]
-    proofs.pop(key, None)
+    _ = proofs.pop(key, None)
 
 
 def snapshot(manifest: object, raw: pl.DataFrame

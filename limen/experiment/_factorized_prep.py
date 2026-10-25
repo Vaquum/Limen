@@ -24,6 +24,7 @@ __all__ = ['FittedPreparation', 'supports_preparation']
 class FittedPreparation:
     def __init__(self, manifest: MLManifest, domain: Mapping[str, list[object]], axes: frozenset[str],
                  references: Callable[[object, str], bool]) -> None:
+        super().__init__()
         self.manifest = manifest
         if manifest.architecture_function is None:
             raise ValueError('Fitted preparation requires an architecture')
@@ -34,7 +35,6 @@ class FittedPreparation:
         self.cache: dict[str, dict[str, object]] = {}
         self.proofs: dict[str, dict[str, object]] = {}
         self.warning_cache: dict[str, list[warnings.WarningMessage]] = {}
-        self.pending_warnings: list[warnings.WarningMessage] = []
 
     def prepare(self, raw: pl.DataFrame, params: dict[str, object],
                 prep: Callable[..., dict[str, object]]) -> tuple[dict[str, object], str, dict[str, object]]:
@@ -50,7 +50,7 @@ class FittedPreparation:
         finally:
             for warning in [*(self.warning_cache[key] if saved is not None else []), *caught]:
                 warnings.warn(str(warning.message), warning.category, stacklevel=2)
-        self.pending_warnings = list(caught) if saved is None else self.warning_cache[key]
+        self.pending_warnings: list[warnings.WarningMessage] = list(caught) if saved is None else self.warning_cache[key]
         artifacts = data.get('_fitted_params')
         if not isinstance(artifacts, dict):
             raise ValueError('Factorized preparation requires fitted artifact evidence')
