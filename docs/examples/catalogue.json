@@ -719,6 +719,12 @@
           ],
           "RuleBasedManifest": [
             "compiled"
+          ],
+          "ReuseContract": [
+            "compiled"
+          ],
+          "declare_reuse": [
+            "compiled"
           ]
         }
       },
