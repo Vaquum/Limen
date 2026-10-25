@@ -1,4 +1,5 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._boolean_spec import BooleanControlsSpec
 from dataclasses import dataclass, field
 from typing import Any
 from typing import cast
@@ -93,6 +94,7 @@ _TOP_LEVEL_ENGINE = RuleEngine(cast(list[Rule], [
 _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 
     SchemaVersion(VERSION),
+    BooleanControlsSpec(),
 
     Required('metadata.name', str),
     NameSlug(),

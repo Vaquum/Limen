@@ -221,13 +221,14 @@ def validate_member(sensor: Sensor, locator: Mapping[str, object] | None) -> dic
     if effective.decoder_lookback != 1 or effective.bar_formation is not None or effective.split_walk_forward is not None or effective.test_data_source_config is not None or effective.data_dict_extension is not None or effective.split_dates is None or any(type(item) is not date for item in effective.split_dates):
         raise ValueError('Holdout requires ordinary dated native binary inference')
     params = cast(dict[str, object], vars(sensor)['_round_params'])
+    use_calibration, use_threshold = _manifest_controls(effective, params)
     events.check_frozen_backtest(effective.backtest_config, params)
     resolved = effective.prediction_calibration_config
     expected = None
-    if resolved is not None and (params.get('use_calibration', True) or params.get('use_threshold', True)):
+    if resolved is not None and (use_calibration or use_threshold):
         declared = resolved.resolve(params)
-        expected = CalibrationConfig(calibration_func=declared.calibration_func if params.get('use_calibration', True) else None,
-            calibration_params=declared.calibration_params, threshold_func=declared.threshold_func if params.get('use_threshold', True) else None, threshold_params=declared.threshold_params)
+        expected = CalibrationConfig(calibration_func=declared.calibration_func if use_calibration else None,
+            calibration_params=declared.calibration_params, threshold_func=declared.threshold_func if use_threshold else None, threshold_params=declared.threshold_params)
     if normalized(config) != normalized(expected):
         raise ValueError('Holdout fitted calibration differs from declared configuration')
     proof = provenance(sensor)
@@ -357,3 +358,4 @@ def frozen_parts(handle: FrozenHoldoutSelection) -> tuple[tuple[Sensor | Cohort,
     if any(value is None for value in parts):
         raise ValueError('Holdout handle was not initialized by freeze_holdout_selection')
     return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None], dict[str, object], str, str, Lock], parts)
+from limen.experiment._boolean_controls import _manifest_controls
