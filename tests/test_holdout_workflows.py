@@ -1427,8 +1427,8 @@ def test_recorded_protected_workflows(case, tmp_path, monkeypatch):
         config['sfd']['params']['n_estimators'] = [4, 8]
         config['uel']['n_permutations'] = 2
     if case == 'search_affecting_hook':
-        config['sfd']['params']['n_estimators'] = [4, 8, 12]
-        config['uel']['n_permutations'] = 2
+        config['sfd']['params']['n_estimators'] = [4, 8, 12, 16]
+        config['uel']['n_permutations'] = 3
     if 'rule' in case:
         body = config['sfd']['manifest']
         body.update(type='rule_based', indicators=[], features=[], reference_architecture='limen.sfd.reference_architecture.rule_based.rule_based',
@@ -1471,6 +1471,10 @@ def test_recorded_protected_workflows(case, tmp_path, monkeypatch):
         record = history.research_record(history.bind(root), proof['research_record_id'])
         assert record['state'] == 'completed' and record['revision'] == proof['reservation_revision']
         assert json.loads(record['provenance_json']) == proof
+        if case == 'useful_extension':
+            assert proof['model_schema'][-1]['name'] == 'recorded_squared'
+        if 'formation' in case:
+            assert proof['workflow']['formation']['active'] == (case == 'active_formation')
         if case.startswith('eligible_'):
             _public_assessment(root, case)
 
@@ -1542,7 +1546,7 @@ def _public_recorded_case(case, root, config, raw, monkeypatch=None):
         else:
             loop.run('public-prefix', **options)
         if case == 'search_affecting_hook':
-            assert set(loop.experiment_log['n_estimators']) <= {4, 8}
+            assert set(loop.experiment_log['n_estimators']) == {4, 8, 16}
     with _round_storage.open_text(_round_storage.round_path(directory)) as stream:
         records = [json.loads(line) for line in stream]
     assert len(records) == reference['uel']['n_permutations'] and all(row.get('preds') or row.get('folds') for row in records)
@@ -1559,12 +1563,16 @@ def _public_recorded_case(case, root, config, raw, monkeypatch=None):
     metrics = [{key: row[key] for key in log.columns if key not in (*reference['sfd']['params'], 'id', '_round_index', 'strict_mode_error', 'execution_time', '_warnings', '_convergence_warning')} for row in log.to_dicts()]
     if case == 'qualified_fold_refit_and_log':
         from limen.log.log import Log
+        from tests.test_factorize_equivalence import _numeric_equal
         identity = records[0]['round_id']
         sensor = Trainer(directory, project_root=root).train([identity], fold=0)[0]
         if 'holdout' in records[0]:
             assert sensor._fitted_params['_holdout']['experiment_record_id'] == records[0]['folds'][0]['holdout']['research_record_id']
         captured = Log(uel_object=loop).experiment_backtest_results()
         assert captured[['id', 'fold']].to_dict('records') == [{'id': row['round_id'], 'fold': k} for row in records for k in range(2)]
+        for actual, saved in zip(captured.to_dict('records'), [fold for row in records for fold in row['folds']], strict=True):
+            _numeric_equal({key: value for key, value in actual.items() if key not in ('id', 'fold')},
+                {key: saved['results']['backtest_' + key if 'backtest_' + key in saved['results'] else key + '_test'] for key in captured.columns if key not in ('id', 'fold')})
     predictions = [[fold['preds'] for fold in row['folds']] if row.get('folds') else row['preds'] for row in records]
     return metrics, predictions, records[0].get('holdout')
 
