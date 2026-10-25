@@ -700,9 +700,11 @@
           "MLManifest",
           "Manifest",
           "RandomStrategy",
+          "ReuseContract",
           "RuleBasedManifest",
           "STRATEGY_REGISTRY",
-          "UniversalExperimentLoop"
+          "UniversalExperimentLoop",
+          "declare_reuse"
         ],
         "reference": "limen/experiment/README.md",
         "interface_overrides": {
@@ -716,6 +718,12 @@
             "compiled"
           ],
           "RuleBasedManifest": [
+            "compiled"
+          ],
+          "ReuseContract": [
+            "compiled"
+          ],
+          "declare_reuse": [
             "compiled"
           ]
         }

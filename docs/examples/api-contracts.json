@@ -1289,6 +1289,11 @@
     "symbol": "RandomStrategy.set_state",
     "role": "signature"
   },
+  "limen.experiment.ReuseContract": {
+    "source": "limen/experiment/_factorized_contract.py",
+    "symbol": "ReuseContract",
+    "role": "signature"
+  },
   "limen.experiment.RuleBasedManifest": {
     "source": "limen/experiment/manifest_core.py",
     "symbol": "RuleBasedManifest",
@@ -1337,6 +1342,11 @@
   "limen.experiment.UniversalExperimentLoop.run": {
     "source": "limen/experiment/experiment_core.py",
     "symbol": "UniversalExperimentLoop.run",
+    "role": "signature"
+  },
+  "limen.experiment.declare_reuse": {
+    "source": "limen/experiment/_factorized_contract.py",
+    "symbol": "declare_reuse",
     "role": "signature"
   },
   "limen.experiment.acceptance_report.acceptance_report": {

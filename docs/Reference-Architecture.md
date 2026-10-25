@@ -102,7 +102,7 @@ feature-name warnings when a frame-trained model later receives arrays in Sensor
 Backend errors and warnings continue to propagate. This boundary applies to the
 same model calls in serial and worker execution; it adds no execution mode or
 preparation reuse. The ordinary per-permutation path remains the default, and
-existing factorized-model admission is unchanged.
+factorized snapshot admission follows its explicit [reuse contract](Universal-Experiment-Loop.md#reuse-declarations).
 
 ## The Built-In Model Classes
 

@@ -70,7 +70,7 @@ def inventory(root: Path):
         exports[module] = context(interfaces, topic(module)) | {'source': str(source.relative_to(root)), 'entry_point': module,
                                                              'names': names, 'reference': str(reference.relative_to(root))}
         overrides = {'limen': ['MLManifest', 'Manifest', 'ReconstructionError', 'RuleBasedManifest', 'Trainer', 'sfd'],
-                     'limen.experiment': ['CalibrationConfig', 'MLManifest', 'Manifest', 'RuleBasedManifest'],
+                     'limen.experiment': ['CalibrationConfig', 'MLManifest', 'Manifest', 'ReuseContract', 'RuleBasedManifest', 'declare_reuse'],
                      'limen.inference': ['ReconstructionError', 'Trainer'],
                      'limen.sfd.reference_architecture': ['DirectionSizingModel', 'direction_sizing'],
                      'limen.targets': ['TradeOutcomeTarget']}

@@ -520,5 +520,11 @@
   "limen/cli/assessment.py": 150,
   "limen/yaml/_assessment_spec.py": 90,
   "limen/experiment/_filter_resume.py": 110,
-  "limen/experiment/_result_fields.py": 60
+  "limen/experiment/_result_fields.py": 60,
+  "limen/experiment/_factorized_contract.py": 100,
+  "limen/experiment/_factorized_native.py": 130,
+  "limen/experiment/_factorized_admission.py": 220,
+  "limen/experiment/_factorized_key.py": 100,
+  "limen/experiment/_factorized_replay.py": 100,
+  "limen/experiment/_factorized_projection.py": 110
 }

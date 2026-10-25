@@ -256,6 +256,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.experiment.RandomStrategy.get_state`](Public-API.md#limenexperimentrandomstrategyget_state) | `signature` | `limen/experiment/param_search/random_strategy.py` |
 | [`limen.experiment.RandomStrategy.on_domain_changed`](Public-API.md#limenexperimentrandomstrategyon_domain_changed) | `signature` | `limen/experiment/param_search/random_strategy.py` |
 | [`limen.experiment.RandomStrategy.set_state`](Public-API.md#limenexperimentrandomstrategyset_state) | `signature` | `limen/experiment/param_search/random_strategy.py` |
+| [`limen.experiment.ReuseContract`](Universal-Experiment-Loop.md#reuse-declarations) | `signature` | `limen/experiment/_factorized_contract.py` |
 | [`limen.experiment.RuleBasedManifest`](Public-API.md#limenrulebasedmanifest) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.RuleBasedManifest.prepare_data`](Public-API.md#limenrulebasedmanifestprepare_data) | `signature` | `limen/experiment/manifest_core.py` |
 | [`limen.experiment.RuleBasedManifest.sensor_input_prep`](Public-API.md#limenrulebasedmanifestsensor_input_prep) | `signature` | `limen/experiment/manifest_core.py` |
@@ -267,6 +268,7 @@ Use the subject references for methodology, defaults, units, state, outputs and 
 | [`limen.experiment.UniversalExperimentLoop.fold_results`](Public-API.md#limenuniversalexperimentloopfold_results) | `signature` | `limen/experiment/experiment_core.py` |
 | [`limen.experiment.UniversalExperimentLoop.interrupted`](Public-API.md#limenuniversalexperimentloopinterrupted) | `signature` | `limen/experiment/experiment_core.py` |
 | [`limen.experiment.UniversalExperimentLoop.run`](Universal-Experiment-Loop.md#run-contract) | `signature` | `limen/experiment/experiment_core.py` |
+| [`limen.experiment.declare_reuse`](Universal-Experiment-Loop.md#reuse-declarations) | `signature` | `limen/experiment/_factorized_contract.py` |
 | [`limen.experiment.acceptance_report.acceptance_report`](Public-API.md#limenexperimentacceptance_reportacceptance_report) | `signature` | `limen/experiment/acceptance_report.py` |
 | [`limen.experiment.acceptance_report.read_acceptance`](Public-API.md#limenexperimentacceptance_reportread_acceptance) | `signature` | `limen/experiment/_acceptance_settings.py` |
 | [`limen.experiment.convergence_report.convergence_header`](Public-API.md#limenexperimentconvergence_reportconvergence_header) | `signature` | `limen/experiment/convergence_report.py` |
