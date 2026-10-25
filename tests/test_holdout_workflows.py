@@ -1336,7 +1336,7 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
             if kind == 'ml':
                 assert 'recorded_squared' in prepared['x_train'].columns
                 assert proof['model_schema'][-1]['name'] == 'recorded_squared'
-            for bad in ('foreign', 'matrix', 'pipeline', 'missing', 'round'):
+            for bad in ('foreign', 'matrix', 'pipeline', 'missing', 'carrier', 'round'):
                 copied = copy.deepcopy(prepared)
                 owner = protected
                 if bad == 'foreign':
@@ -1348,6 +1348,8 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
                     owner.set_split_config(4, 1, 2)
                 elif bad == 'missing':
                     copied.pop('holdout')
+                elif bad == 'carrier':
+                    copied['_alignment']['holdout'] = dict(copied['holdout'], research_record_id='foreign')
                 else:
                     vars(protected)['_holdout_round_id'] = 'changed-round'
                 with monkeypatch.context() as guarded:

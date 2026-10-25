@@ -232,7 +232,7 @@ def extend(manifest: object, data: dict[str, object], splits: list[pl.DataFrame]
         data['_holdout_carriers'] = [frame.clone() for frame in splits]
     data = extension(data_dict=data, split_data=splits, round_params=dict(params), fitted_params=dict(fitted))
     if protected:
-        if not isinstance(data, dict):
+        if not isinstance(cast(object, data), dict):
             raise HoldoutEvidenceError('Protected extension must return its prepared data dictionary')
         try:
             carriers = data.pop('_holdout_carriers', None)
