@@ -17,7 +17,7 @@ from limen.experiment.reducer.registry import REDUCER_REGISTRY
 from limen.yaml.config import is_list
 from limen.yaml.config import is_mapping
 from limen.yaml.errors import ResolutionError
-from limen.yaml._objective_spec import apply_objective, objective_reducer_params, read_objective
+from limen.yaml._objective_spec import apply_objective, objective_reducer_params
 from limen.yaml.resolver import resolve
 
 
@@ -54,8 +54,7 @@ def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
     if manifest_type == 'ml':
         return apply_objective(_build_ml_manifest(m), yaml_dict)
     if manifest_type == 'rule_based':
-        _ = read_objective(yaml_dict)
-        return _build_rule_based_manifest(m)
+        return apply_objective(_build_rule_based_manifest(m), yaml_dict)
     raise ValueError(f"Unknown manifest type '{manifest_type}'")
 
 

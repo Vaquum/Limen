@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Hashable, Mapping
 from contextlib import AbstractContextManager
 from functools import lru_cache, partial
 from importlib import import_module
@@ -94,7 +94,4 @@ def contract_for(component: object) -> ReuseContract | None:
         return explicit
     if isinstance(component, partial):
         return contract_for(component.func)
-    try:
-        return _contracts().get(component)
-    except TypeError as exc:
-        raise ValueError('Stateful callable instances require an explicit reuse declaration') from exc
+    return _contracts().get(component) if isinstance(component, Hashable) else None

@@ -15,11 +15,10 @@ METADATA_OPTIONAL = {'author', 'created_at', 'description', 'tags', 'limen_versi
 SFD_REQUIRED = {'manifest', 'params'}
 
 MANIFEST_REQUIRED = {'type', 'data_source', 'reference_architecture'}
-MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'split_walk_forward', 'indicators', 'backtest', 'allocation'}
+MANIFEST_OPTIONAL_SHARED = {'required_columns', 'split_dates', 'split_walk_forward', 'indicators', 'backtest', 'allocation', 'objective'}
 
 ML_MANIFEST_REQUIRED = {'target'}
 ML_MANIFEST_OPTIONAL = {
-    'objective',
     'pre_split_data_selector',
     'bar_formation',
     'features', 'feature_shims',

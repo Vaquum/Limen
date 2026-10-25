@@ -15,7 +15,7 @@ import polars as pl
 import limen.experiment.manifest_core as _manifest_core
 
 from limen.backtest.trade_contract import TradeInputs, TradeLedger
-from limen.experiment.manifest_core import Manifest, MLManifest
+from limen.experiment.manifest_core import Manifest
 from limen.experiment._walk_forward_split import WalkForwardConfig, read_walk_forward_config
 from limen.log._permutation_returns import TrialReturnsWriter
 
@@ -130,7 +130,7 @@ class WalkForwardRun:
         self.manifest, self.raw, self.config = manifest, raw, manifest.split_walk_forward
         self.promotion = _promotion.start(manifest, raw, promotion)
         if manifest.pre_split_data_selector is None:
-            self._preflight(raw, require_validation=isinstance(manifest, MLManifest) and manifest.objective is not None)
+            self._preflight(raw, require_validation=getattr(manifest, 'objective', None) is not None)
         self.writer = TrialReturnsWriter(directory)
         self.rows: list[dict[str, object]] = []
 
