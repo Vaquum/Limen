@@ -3,11 +3,10 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 import json
+import math
 from numbers import Real
 from pathlib import Path
 from typing import Protocol, TypeVar, cast
-
-import numpy as np
 
 from limen.cohort._round_sources import RoundSource, RoundSources, architecture_identity, same_architecture
 from limen.experiment import manifest_core
@@ -143,9 +142,9 @@ def mixed_outputs(owner: Owner, bars: Sequence[Bar]) -> list[Bar]:
         if getattr(bar, 'reason', None) == 'sensor-error':
             continue
         decision, probability = getattr(bar, 'prediction', None), getattr(bar, 'probability', None)
-        if isinstance(decision, bool) or not isinstance(decision, Real) or not np.isfinite(decision) or decision not in (0, 1):
+        if isinstance(decision, bool) or not isinstance(decision, Real) or not math.isfinite(float(decision)) or decision not in (0, 1):
             raise ValueError(f'Cohort member {member_id}: mixed binary decisions must be finite numeric 0 or 1')
-        if promises[member_id] and (isinstance(probability, bool) or not isinstance(probability, Real) or not np.isfinite(probability) or not 0 <= probability <= 1):
+        if promises[member_id] and (isinstance(probability, bool) or not isinstance(probability, Real) or not math.isfinite(float(probability)) or not 0 <= float(probability) <= 1):
             raise ValueError(f'Cohort member {member_id}: promised probability must be finite and in [0, 1]')
         result.append(bar)
     return result
@@ -287,7 +286,8 @@ class FoldSources:
         for key, member in bound.items():
             source, context = self._member_sources[key], self._selected[key]
             params = getattr(member, 'round_params', None)
-            if not is_mapping(params) or not same_architecture(self._architecture({'round_params': params}, source.metadata), self._architectures[key]):
+            metadata = {'yaml_reference': getattr(member, '_yaml_reference', None)} if self.architecture_id.startswith('mixed-binary-v1:') else source.metadata
+            if not is_mapping(params) or not same_architecture(self._architecture({'round_params': params}, metadata), self._architectures[key]):
                 raise ValueError(f'Cohort member {key}: bound architecture must match its source')
             try:
                 native = model_witness(getattr(member, '_model', None))

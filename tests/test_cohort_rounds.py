@@ -369,8 +369,9 @@ def test_rounds_reject_incompatible_sources_and_bars(cohort_campaigns, tmp_path)
         Cohort(rounds=[(first.directory, first.ids[0]), (source, second.ids[0])])
     architecture = _copy_campaign(second, tmp_path / 'architecture')
     _edit_metadata(architecture, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(reference_architecture='limen.sfd.reference_architecture.lightgbm_binary'))
+    changed = Cohort(rounds=[(first.directory, first.ids[0]), (architecture, second.ids[0])])
     with pytest.raises(ValueError, match='architecture'):
-        Cohort(rounds=[(first.directory, first.ids[0]), (architecture, second.ids[0])])
+        changed.set_members([first.sensors[0], second.sensors[0]])
     walk_forward = _copy_campaign(second, tmp_path / 'walk_forward')
     _edit_metadata(walk_forward, lambda metadata: metadata['yaml_reference']['sfd']['manifest'].update(split_walk_forward={'n_folds': 2, 'test_bars': 24, 'purge_bars': 1, 'embargo_bars': 1, 'anchored': True}))
     with pytest.raises(ValueError, match=r'walk.forward|fold'):

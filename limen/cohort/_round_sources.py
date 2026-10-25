@@ -18,7 +18,7 @@ def architecture_identity(architectures: set[str]) -> str:
 
 
 def same_architecture(actual: str, expected: str) -> bool:
-    return actual.strip().lower() == expected.strip().lower() or resolve(actual) is resolve(expected)
+    return actual.strip().lower() == expected.strip().lower() or (actual.startswith('limen.') and expected.startswith('limen.') and resolve(actual) is resolve(expected))
 
 __all__ = ['RoundSources']
 
@@ -133,7 +133,8 @@ class RoundSources(Generic[Source]):
             params = getattr(member, 'round_params', None)
             if not is_mapping(params):
                 raise ValueError(f'Cohort member {key}: round_params are required for architecture binding.')
-            if not same_architecture(self._architecture({'round_params': params}, source.metadata), self._architectures[key]):
+            metadata = {'yaml_reference': getattr(member, '_yaml_reference', None)} if self.architecture_id.startswith('mixed-binary-v1:') else source.metadata
+            if not same_architecture(self._architecture({'round_params': params}, metadata), self._architectures[key]):
                 raise ValueError(f'Cohort member {key}: bound architecture must match its source.')
             bound[key] = member
         missing = [key for key in self.member_ids if key not in bound]

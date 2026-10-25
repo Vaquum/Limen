@@ -231,15 +231,14 @@ class Cohort:
             if mixed and (pid not in self._selected_architectures or getattr(member, 'manifest_id', None) != self.manifest_id or not hasattr(member, 'round_params')):
                 raise ValueError('Mixed Cohort requires each selected member manifest_id and architecture')
             if pid in by_pid:
-                raise ValueError(
-                    'Cohort members must have unique permutation_id values.')
+                raise ValueError('Cohort members must have unique permutation_id values.')
 
             by_pid[pid] = member
 
             if hasattr(member, 'round_params'):
                 arch = self._extract_architecture_id(
                     {'round_params': member.round_params},
-                    self.metadata,
+                    {'yaml_reference': getattr(member, '_yaml_reference', None)} if mixed else self.metadata,
                 )
                 if not same_architecture(arch, self._selected_architectures[pid] if mixed else self.architecture_id):
                     raise ValueError('Bound members must match cohort architecture_id.')
@@ -255,9 +254,7 @@ class Cohort:
 
         missing = [pid for pid in self.permutation_ids if pid not in by_pid]
         if missing:
-            raise ValueError(
-                f'Cohort Missing bound members for permutation_ids: {missing}'
-            )
+            raise ValueError(f'Cohort Missing bound members for permutation_ids: {missing}')
 
         bound = [by_pid[pid] for pid in self.permutation_ids]
         bind_native_output(self, bound, self._architecture_supports_probabilities(self.architecture_id), [self._selected_architectures[pid] for pid in self.permutation_ids])
