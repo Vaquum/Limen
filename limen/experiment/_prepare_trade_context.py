@@ -107,7 +107,7 @@ def _bar_support(raw: pl.DataFrame, bars: pl.DataFrame, prices: pl.DataFrame) ->
     if any(dtype != pl.Int64 for dtype in timing.dtypes) or timing.null_count().sum_horizontal()[0]:
         raise ValueError('Native support requires complete integer UTC nanosecond clocks')
     if ((prices['start_ns'] > prices['end_ns']) | (prices['open_available_at_ns'] < prices['start_ns']) | (prices['available_at_ns'] < prices['end_ns']) | (prices['available_at_ns'] < prices['open_available_at_ns'])).any():
-        raise ValueError('Native support requires causal interval and availability clocks')
+        raise ValueError('Native support requires source availability at or after interval end and causal interval/open clocks')
     if (prices['start_ns'].slice(1) < prices['end_ns'].head(-1)).any():
         raise ValueError('Native support intervals overlap or are out of order')
     times = raw['datetime'].dt.epoch('ns')
