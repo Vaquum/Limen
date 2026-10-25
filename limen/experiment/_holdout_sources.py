@@ -144,7 +144,10 @@ def _formation(manifest: object, native: list[pl.DataFrame], formed: list[pl.Dat
                 raise ValueError('Protected formation lost its actual native constituents')
             previous = start + count
             members.append(cast(list[int], times[start:previous]))
-            last_available.append(max(cast(list[int], available[start:previous])))
+            complete = max(cast(list[int], available[start:previous]))
+            if complete != available[previous - 1]:
+                raise ValueError('Protected formation requires complete constituent availability at its native execution clock')
+            last_available.append(complete)
         partitions.append({'native': _frame(before), 'derived': _frame(after), 'members': members,
             'last_available_ns': last_available})
     return {'active': active, 'bar_type': params.get('bar_type', 'base'), 'partitions': partitions,
