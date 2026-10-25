@@ -46,7 +46,7 @@ def assessment_case(tmp_path_factory):
     config = _configuration(root)
     reservation = reserve_holdout(root, '2024-01-05', '2024-01-07', interval_seconds=3600)
     trained, sources = [], []
-    for architecture in ('logreg', 'lightgbm', 'warmup', 'earlier_test'):
+    for architecture in ('logreg', 'lightgbm', 'warmup', 'earlier_test', 'pca'):
         current = copy.deepcopy(config)
         if architecture == 'logreg':
             current['sfd']['manifest']['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}}, 'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer'}}
@@ -59,6 +59,10 @@ def assessment_case(tmp_path_factory):
             current['sfd']['manifest']['target']['fit_params']['source_column'] = 'roc_30'
         elif architecture == 'earlier_test':
             current['sfd']['manifest']['split_dates'] = dict(zip(('train_start', 'train_end', 'val_start', 'val_end', 'test_start', 'test_end'), ('2024-01-01', '2024-01-02', '2024-01-02', '2024-01-03', '2024-01-03', '2024-01-04'), strict=True))
+        elif architecture == 'pca':
+            current['sfd']['manifest']['indicators'].append({'func': 'limen.indicators.roc', 'params': {'period': 3}})
+            current['sfd']['manifest']['pca_compression'] = {}
+            current['sfd']['params'].update(scaler_type=['robust'], auto_pca=[True], pca_k=[1])
         else:
             current['sfd']['manifest']['reference_architecture'] = 'limen.sfd.reference_architecture.lightgbm_binary'
             current['sfd']['params'] = {'scaler_type': ['logreg'], 'n_estimators': [3], 'num_leaves': [3], 'n_jobs': [1], 'early_stopping_rounds': [0], 'verbosity': [-1]}
@@ -204,6 +208,31 @@ def test_holdout_frozen_causal_assessment(assessment_case):
     assert not thread.is_alive() and failures.message is None
     failures.emit(logging.LogRecord('limen.inference.sensor', logging.WARNING, __file__, 0, 'owned', (), None))
     assert failures.message == 'owned'
+
+
+def test_protected_pca_final_assessment(assessment_case):
+    root, _, trained, _ = assessment_case
+    sensor = trained[4][0]
+    assert sensor._round_params['scaler_type'] == 'robust'
+    assert sensor._fitted_params['_pca_n_components'] == 1
+    probe = pl.read_parquet(Path(sensor._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(120)
+    predictions = sensor.predict_all(probe)
+    assert any(prediction.reason is None for prediction in predictions)
+    paths = ('sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform',
+             'sklearn.preprocessing.RobustScaler.fit', 'sklearn.preprocessing.RobustScaler.fit_transform',
+             'sklearn.linear_model.LogisticRegression.fit', 'limen.targets.QuantileBinaryTarget.__init__')
+    with ExitStack() as stack:
+        guards = [stack.enter_context(patch(path, side_effect=AssertionError('Final assessment must not fit'))) for path in paths]
+        assert owned_copy(sensor).predict_all(probe) == predictions
+        frozen = _freeze(sensor)
+        report = _report(frozen, assessment_case)
+        assert report['state'] == 'completed'
+        assert read_holdout_report(root, report['attempt_id']) == report
+        assert sensor.predict_all(probe) == predictions
+        for guard in guards:
+            guard.assert_not_called()
+    with patch.dict(sensor._fitted_params, {'_undeclared': object()}), pytest.raises(ValueError, match='undeclared fitted state'):
+        _freeze(sensor)
 
 
 def _attempt_worker(root, reservation, pipe):
@@ -437,6 +466,14 @@ def test_holdout_freeze_rejects_mutated_threshold_transform(assessment_case, mon
     monkeypatch.setattr(ThresholdBinaryTarget.transform, '__defaults__', (0,))
     with pytest.raises(ValueError, match='threshold target'):
         _threshold_freeze(trained[0][0])
+
+
+@pytest.mark.parametrize('name', ['use_calibration', 'use_threshold'])
+def test_holdout_freeze_rejects_non_boolean_control(assessment_case, monkeypatch, name):
+    sensor = assessment_case[2][0][0]
+    monkeypatch.setitem(sensor._round_params, name, 'false')
+    with pytest.raises(ValueError, match=rf'{name} must be a bool'):
+        _freeze(sensor)
 
 
 def test_holdout_threshold_transform_pinned():

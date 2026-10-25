@@ -98,7 +98,7 @@ The [event-contract variant](Final-Holdout.md#preserve-event-economics) declares
 
 ### `limen validate <yaml_file>`
 
-Runs YAML parsing plus structural validation. It checks required top-level blocks, schema version, `metadata.mode`, manifest type, supported output formats, search strategy values, `split_dates`, parameter lists, and resolvability of `limen.*` dotted references.
+Runs YAML parsing plus structural validation. It checks required top-level blocks, schema version, `metadata.mode` and optional metadata shapes, manifest type, supported output formats, search strategy values, `split_dates`, parameter lists, and resolvability of `limen.*` dotted references.
 
 Exit behavior:
 
