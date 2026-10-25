@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Literal, Protocol, TypedDict, cast
 from collections.abc import Callable
 from itertools import pairwise
+from contextvars import ContextVar
 import limen.data.historical_data as _historical
 
 import numpy as np
@@ -32,6 +33,7 @@ _spot_dataset_repo_for_kline_size = cast(Callable[[int, str], str], vars(_histor
 
 _NATIVE = frozenset((60, 900, 1800, 3600, 7200, 14400))
 _GET_FILE, _GET_SPOT = HistoricalData.get_any_file, HistoricalData.get_spot_klines
+source_workflow_active: ContextVar[bool] = ContextVar('holdout_source_workflow', default=False)
 
 
 class Bounds(TypedDict):

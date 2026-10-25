@@ -66,6 +66,8 @@ def finish_prepare_setup(manifest: SetupManifest, raw_splits: list[pl.DataFrame]
     frozen = cast(FrozenTradeSources | None, getattr(manifest, '_frozen_trade_sources', None))
     if callable(frozen):
         frozen = frozen(manifest.backtest_config, round_params)
+    from limen.experiment._holdout_sources import verify_sources
+    frozen = verify_sources(manifest, raw_splits, splits, round_params, frozen)
     trade = None
     if policy is not None and manifest.backtest_config is not None:
         from limen.experiment._dynamic_barriers import dynamic_barriers, prepare_barriers
