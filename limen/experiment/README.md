@@ -59,7 +59,13 @@ experiment/
 ├── _column_shims.py
 ├── _dynamic_barriers.py
 ├── _factorize.py
+├── _factorized_admission.py
+├── _factorized_contract.py
+├── _factorized_key.py
+├── _factorized_native.py
 ├── _factorized_prep.py
+├── _factorized_projection.py
+├── _factorized_replay.py
 ├── _family_evidence.py
 ├── _filter_resume.py
 ├── _fixed_trade_sources.py

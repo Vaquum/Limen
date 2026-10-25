@@ -31,13 +31,21 @@ def _configuration(case):
         config['sfd']['params']['scaler_type'] = ['rank_gauss']
     elif case == 'target':
         manifest['target'] = {'name': 'up', 'class': 'limen.targets.NextBarUpTarget'}
-    elif case == 'logreg':
+    elif case in ('logreg', 'calibration'):
         manifest['reference_architecture'] = 'limen.sfd.reference_architecture.logreg_binary'
         config['sfd']['params'] = {'lookback': [2], 'quantile': [0.5], 'fee': [4., 9.], 'C': [0.1, 1.], 'solver': ['lbfgs'], 'n_jobs': [1], 'max_iter': [1000]}
+        if case == 'calibration':
+            manifest['calibration'] = {'probability_calibration': {'func': 'limen.calibration.sklearn_probability_calibrator', 'params': {'method': 'sigmoid'}},
+                                       'threshold_function': {'func': 'limen.calibration.grid_threshold_optimizer', 'params': {'threshold_min': 0.4, 'threshold_max': 0.6, 'threshold_step': 0.1}}}
+    elif case == 'xgboost':
+        manifest['reference_architecture'] = 'limen.sfd.reference_architecture.xgboost_regressor'
+        config['sfd']['params'] = {'lookback': [2], 'quantile': [0.5], 'fee': [4., 9.], 'n_estimators': [4, 8], 'n_jobs': [1], 'random_state': [42],
+                                 'device': ['cpu'], 'tree_method': ['hist'], 'grow_policy': ['depthwise'], 'sampling_method': ['uniform'], 'booster': ['gbtree'],
+                                 'num_parallel_tree': [1], 'subsample': [1.], 'colsample_bytree': [1.], 'colsample_bylevel': [1.], 'colsample_bynode': [1.], 'early_stopping_rounds': [None]}
     return config
 
 
-@pytest.mark.parametrize('case', ['ridge', 'ridge_rank', 'ridge_pca', 'registry', 'target', 'logreg'])
+@pytest.mark.parametrize('case', ['ridge', 'ridge_rank', 'ridge_pca', 'registry', 'target', 'logreg', 'calibration', 'xgboost'])
 def test_recorded_factorized_manifest_contract(case, tmp_path, monkeypatch):
     config = _configuration(case)
     ordinary = _loop(copy.deepcopy(config), tmp_path / 'ordinary')

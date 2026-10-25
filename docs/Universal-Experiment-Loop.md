@@ -220,9 +220,41 @@ Set `uel.factorize: true` in YAML or `run(..., factorize=True)`. The existing gr
 
 Omitted or `false` retains fresh preparation, model fitting and prediction for every permutation, including repeated identical parameters. Default execution remains sequential. Factorization changes which computations repeat, not the experiment's round order or full-permutation identities.
 
-The switch supports unshuffled grids and [seeded version-2 shuffled grids](Advanced-Search.md#seeded-finite-traversal) with independent backtest-only axes, built-in deterministic DLinear, deterministic single-thread LightGBM, or shipped rule-based snapshot architectures. Fitted preparation reuse is limited to the already supported deterministic targets and a statically declared built-in `RobustScaler`; dynamic/custom scalers and PCA remain unsupported. A change to any preparation dependency requires a fresh fit, including a model parameter also referenced by a feature, target or scaler declaration. Prepared frames and fitted models are never retained in the preparation cache.
+Unshuffled and seeded version-2 shuffled grids support declared deterministic snapshot pipelines. Native predicates admit fixed-Cholesky Ridge, deterministic full-sample LightGBM, configured CPU XGBoost, supported logistic solvers, DLinear and rules. Numerical work runs under one native thread. Reuse keeps the original continuous predictions and uses their positive direction only for snapshot execution. Economic fields are recomputed for every fee/slippage/notional/barrier candidate.
 
-Ambiguous dependencies, stochastic settings, callbacks, pruning, event execution, calibration, walk-forward, custom architectures and `workers > 1` fail explicitly before UEL artifact writes. Context overrides pass the same admission checks; intervention files and candidates outside the admitted domain reject. Factorization does not silently substitute ordinary execution.
+Deterministic exported numerical transforms, targets and scalers share the same admission boundary. A random target requires an explicit integer seed. Registry-selected scalers, conditional transforms, PCA and active calibration can participate when their actual components are declared and independent of economic axes. Only the previously proved target/RobustScaler path reuses fitted preparation across different model keys; other admitted paths prepare afresh per signal key. Prepared feature matrices and fitted models are not retained automatically.
+
+Pruning, loop callbacks, overridden pipelines, event execution, objectives, allocation, walk-forward and multiple workers remain outside this snapshot method. Missing active declarations, unsafe settings, economic dependencies, interventions and candidates outside the admitted domain fail explicitly. Inactive components need no declaration. Initial admission failures precede UEL artifact writes; observed invalid output or replay failures preserve the already committed successful prefix.
+
+#### Reuse declarations
+
+A caller attaches `declare_reuse(component, ReuseContract(...))` to its feature, target, scaler, selector, extension or architecture. Local callables and validators work in this invocation; no worker transport is involved.
+
+<!-- reference: uel-reuse-contract source=limen/experiment/_factorized_contract.py region=signature:ReuseContract role=signature -->
+```python
+@dataclass(frozen=True)
+class ReuseContract:
+    validate: Callable[[Mapping[str, object]], None]
+    parameter_keys: tuple[str, ...] = ()
+    validation_keys: tuple[str, ...] | None = None
+    consumes: tuple[str, ...] | None = None
+    prediction_kind: Literal['binary', 'continuous'] | None = None
+    replay: Callable[[Mapping[str, object], Mapping[str, object], Mapping[str, object]], dict[str, object]] | None = None
+    replay_inputs: tuple[str, ...] = ()
+```
+
+<!-- reference: uel-declare-reuse source=limen/experiment/_factorized_contract.py region=signature:declare_reuse role=signature -->
+```python
+def declare_reuse(component: object, contract: ReuseContract) -> None:
+    ...
+```
+
+`validate` receives effective settings and raises `ValueError` for an unproved combination. `parameter_keys` names required settings; `validation_keys` names every setting the validator reads, or defaults to all delivered settings. Eligibility preflight enumerates those joint projections and activation selectors. Every drawn candidate is checked again before fitting.
+
+`consumes` names scientific input paths; its default includes every delivered setting. Declare a smaller set only when the computation is independent of the others. The author owns the truth of the determinism and dependency declarations. An architecture declares `prediction_kind='binary'` or `'continuous'` for native snapshot replay, or supplies `replay(scientific, data, params)` to recompute its own economic fields. `replay_inputs` names additional prepared values needed by that callback. Each callback receives an isolated copy captured before model computation; mutation cannot change later cache hits.
+
+Native Ridge requires `solver='cholesky'`, `positive=False`, `copy_X=True`. LightGBM retains its full-row/full-column, integer-seed, deterministic single-thread requirements. Logistic regression requires `n_jobs=1`; stochastic solvers also require an integer seed. XGBoost requires CPU histogram trees, depthwise uniform full sampling, one tree per iteration, one thread and an integer seed. Unseeded models and unfrozen optional weights remain unproved.
+
 
 Both caches belong to one sweep invocation and contain only successful work. Fitted artifacts are copied before use by another round. The prediction cache retains predictions, price/provenance and recording evidence; each cache retains at most **128 entries**, evicting the least recently used entry. Hits refresh recency; evicted keys recompute on their next access. Prediction entries include copied fitted-preparation evidence, so this is 128 prediction entries plus 128 separate preparation entries, not 128 fitted objects total or a byte/RSS limit. Source observations, active-round work, domain/seen-set and result/log growth remain separate costs. Reuse fits a key once while resident; shuffled prefixes may provide few hits and eviction may repeat work without changing scientific outputs. Independent runs each own these costs. Log post-processing and resumed invocations retain ordinary reconstruction work. CLI resume reads the effective setting from metadata; caches restart empty. Strict-mode failures consume a terminal candidate, retain a nonempty failure marker and have no successful prediction record; recovery joins only successful occurrences. No automatic retry or recovery before the first existing checkpoint is added. Changing YAML `factorize` changes canonical manifest identity but never full-permutation round IDs.
 

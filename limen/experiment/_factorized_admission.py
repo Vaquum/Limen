@@ -102,6 +102,8 @@ def validate_candidate(manifest: Manifest, params: dict[str, object], axes: froz
             ):
                 if component is not None and active:
                     _ = _stage(name, component, arguments, axes)
+                    if callable(arguments.get('metric')):
+                        _ = _stage(name + '.metric', arguments['metric'], {}, axes)
         if manifest.data_dict_extension is not None:
             _ = _stage('data_dict_extension', manifest.data_dict_extension, params, axes)
     elif not isinstance(manifest, RuleBasedManifest) or manifest.strategy is None or target is not None:
