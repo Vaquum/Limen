@@ -1257,6 +1257,7 @@ def recorded_consumed_feature(data_dict, split_data, round_params, fitted_params
         data_dict['y_' + suffix] = frame[label]
         carriers.append(frame)
     data_dict['_feature_names'] = carriers[0].columns
+    data_dict['train'] = carriers[0].drop('datetime')
     if '_holdout_carriers' in data_dict:
         data_dict['_holdout_carriers'] = carriers
     return data_dict
@@ -1336,13 +1337,15 @@ def _direct_consumption_lineage(tmp_path, monkeypatch):
             if kind == 'ml':
                 assert 'recorded_squared' in prepared['x_train'].columns
                 assert proof['model_schema'][-1]['name'] == 'recorded_squared'
-            for bad in ('foreign', 'matrix', 'pipeline', 'missing', 'carrier', 'round'):
+            for bad in ('foreign', 'matrix', 'prediction', 'pipeline', 'missing', 'carrier', 'round'):
                 copied = copy.deepcopy(prepared)
                 owner = protected
                 if bad == 'foreign':
                     owner = CompiledSFD(copy.deepcopy(config), project_root=root).manifest()
                 elif bad == 'matrix':
                     copied['train' if kind == 'rule' else 'x_train'] = copied['train' if kind == 'rule' else 'x_train'].reverse()
+                elif bad == 'prediction':
+                    copied['x_test'] = copied['x_test'][::-1] if kind == 'rule' else copied['x_test'].reverse()
                 elif bad == 'pipeline':
                     owner = copy.deepcopy(protected)
                     owner.set_split_config(4, 1, 2)

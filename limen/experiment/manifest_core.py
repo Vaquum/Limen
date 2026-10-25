@@ -2004,7 +2004,7 @@ def _finalize_to_data_dict(
 def capture_model_inputs(data: Mapping[str, object]) -> dict[str, object]:
     witness = cast(Callable[[pl.DataFrame], dict[str, object]], vars(import_module('limen.experiment._holdout_sources'))['_frame'])
     result: dict[str, object] = {}
-    names = ('train', 'val', 'test') if 'train' in data else ('x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test')
+    names = ('x_train', 'y_train', 'x_val', 'y_val', 'x_test', 'y_test', 'train', 'val', 'test')
     for name in (*names, 'price_data_for_backtest'):
         if name in data:
             value = data[name]
