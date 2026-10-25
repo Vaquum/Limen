@@ -109,8 +109,8 @@ assessment:
 # endregion declaration
 ```
 
-`schema_version` identifies the Limen YAML contract. Only the exact string
-`"1.0"` is supported. Missing, null, non-string and unequal values fail at
+`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema.
+Only the exact string `"1.0"` is supported. Missing, null, non-string and unequal values fail at
 `schema_version` before current-schema fields are interpreted. Values are not
 trimmed, coerced or compared as package release versions. No older supported
 schema exists, so there is no migration transform. `metadata.limen_version`
