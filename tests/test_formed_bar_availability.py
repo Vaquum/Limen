@@ -1,4 +1,5 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import polars as pl
 import pytest
@@ -9,7 +10,9 @@ from limen.backtest.trade_execution import trade_execution
 from limen.data.bars import volume_bars
 from limen.experiment._prepare_trade_context import normalize_observations, prepare_trade_context, sensor_decisions
 from limen.experiment._resolve_trade_policy import BacktestConfig, ProductConfig, resolve_trade_policy
-from limen.experiment.manifest_core import DataSourceConfig
+from limen.experiment.manifest_core import DataSourceConfig, MLManifest, RuleBasedManifest
+from limen.targets import IdentityTarget
+from tests.test_elapsed_trade_exits import _ticks
 
 
 @pytest.fixture(scope='module')
@@ -140,3 +143,89 @@ def test_ambiguous_support_is_not_guessed(recorded, fault):
     for produce in (lambda: _prepare(raw, execution, bars=invalid), lambda: sensor_decisions(raw, invalid)):
         with pytest.raises(ValueError, match=r'support|membership'):
             produce()
+
+
+@pytest.mark.parametrize('kind', ('ml', 'rule'))
+def test_active_formation_matches_manifest_and_sensor_clocks(recorded, kind):
+    source = pl.read_parquet(Path(__file__).parent / 'fixtures/spot_15m_20250101_20250531.parquet', n_rows=120)
+    execution = normalize_observations(source, interval_seconds=900)
+    raw = source.hstack(execution.select('start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'))
+    delayed = _delay(raw, raw['available_at_ns'][4])
+    manifest = MLManifest() if kind == 'ml' else RuleBasedManifest().with_strategy(
+        [{'id': 'up', 'type': 'relative', 'column': 'high', 'operator': '>', 'other_column': 'open'}], 'up')
+    manifest.set_data_source(lambda: delayed, params={'kline_size': 900}).set_split_config(6, 2, 2)
+    manifest.with_target_label('close', IdentityTarget)
+    manifest.set_bar_formation(volume_bars, volume_threshold=500)
+    manifest.set_backtest_config(prediction_mode='target_exposure',
+        product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0),
+        execution_data_source=DataSourceConfig(lambda: execution))
+    params = {'bar_type': 'volume'}
+    prepared = manifest.prepare_data(delayed, params)
+    context = prepared['_trade_context']
+    native_train = delayed.head(context.native_support[0].height)
+    sensor, _ = manifest.sensor_input_prep(native_train, prepared['_fitted_params'], params)
+    expected = context.model_rows[0].select('datetime', 'available_at_ns')
+    actual = sensor.select('datetime', pl.col('__trade_available_at_ns__').alias('available_at_ns'))
+    assert actual.equals(expected)
+    assert actual['available_at_ns'][0] >= delayed['available_at_ns'][0]
+    assert all(name not in sensor.columns for name in ('native_first', 'native_last', 'start_ns', 'end_ns', 'open_available_at_ns', 'available_at_ns'))
+    invalid = _delay(raw, raw['available_at_ns'][-1] + 1)
+    with patch('limen.targets.IdentityTarget.__init__', side_effect=AssertionError('Invalid timing reached target fitting')), pytest.raises(ValueError, match='Derived decisions'):
+        manifest.prepare_data(invalid, params)
+
+
+def test_custom_formation_cannot_hide_a_constituent(recorded):
+    raw, execution = recorded
+    called = []
+
+    def hidden_selection(frame):
+        called.append(True)
+        return volume_bars(frame.filter(pl.int_range(pl.len()) != 2), volume_threshold=500)
+
+    manifest = MLManifest().set_data_source(lambda: raw, params={'kline_size': 900}).set_split_config(6, 2, 2)
+    manifest.with_target_label('close', IdentityTarget).set_bar_formation(hidden_selection)
+    manifest.set_backtest_config(prediction_mode='target_exposure',
+        product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0),
+        execution_data_source=DataSourceConfig(lambda: execution))
+    with pytest.raises(ValueError, match='recoverable contiguous native support'):
+        manifest.prepare_data(raw, {'bar_type': 'custom'})
+    assert called == []
+
+
+def test_recorded_point_support_uses_integer_nanosecond_maxima():
+    inputs, _ = _ticks()
+    points = inputs.observations.head(6)
+    raw = points.with_columns(pl.from_epoch('start_ns', time_unit='ns').dt.replace_time_zone('UTC').alias('datetime'))
+    paired = pl.DataFrame([
+        {'datetime': raw['datetime'][index], 'bar_count': 2, 'open': raw['open'][index],
+         'high': raw['high'].slice(index, 2).max(), 'low': raw['low'].slice(index, 2).min(), 'close': raw['close'][index + 1]}
+        for index in (0, 2, 4)])
+    delayed = _delay(raw, points['available_at_ns'][2])
+    context, _ = _prepare(delayed, inputs.observations, bars=paired)
+    assert context.model_rows[0]['available_at_ns'][0] == points['available_at_ns'][2]
+    assert sensor_decisions(delayed, paired)['__trade_available_at_ns__'].equals(context.model_rows[0]['available_at_ns'], check_names=False)
+    ledger = trade_execution(with_predictions(context.partitions[0], [1.0] * paired.height), context.policy)
+    assert ledger.fills['time_ns'][0] == points['available_at_ns'][2]
+    assert ledger.fills['reference_price'][0] == points['close'][2]
+
+
+@pytest.mark.parametrize('role', ('start', 'end'))
+def test_recorded_gap_and_ordered_clocks_keep_their_native_values(recorded, role):
+    original, execution = recorded
+    # A declared omission preserves the actual intervals on either side.
+    raw = original.filter(pl.int_range(pl.len()) != 2)
+    if role == 'end':
+        raw = raw.with_columns(pl.from_epoch('end_ns', time_unit='ns').dt.replace_time_zone('UTC').alias('datetime'))
+    formed = volume_bars(raw, volume_threshold=500)
+    decisions = sensor_decisions(raw, formed, timestamp_role=role)
+    native_positions = {instant: index for index, instant in enumerate(raw['datetime'].dt.epoch('ns'))}
+    last = [native_positions[instant] + count - 1 for instant, count in zip(formed['datetime'].dt.epoch('ns'), formed['bar_count'], strict=True)]
+    assert decisions['__trade_available_at_ns__'].to_list() == [raw['available_at_ns'][index] for index in last]
+    config = BacktestConfig(prediction_mode='target_exposure', source_timestamp_role=role,
+        source_interval_seconds=900 if role == 'end' else None,
+        product=ProductConfig('linear_perpetual', 'BTCUSDT', 'BTC', 'USDT', 1e-9, 0),
+        execution_data_source=DataSourceConfig(lambda: execution))
+    policy = resolve_trade_policy(config, {})
+    context = prepare_trade_context(config, policy, [raw], [formed], {}, frozen_sources=(execution, None))
+    assert context.model_rows[0]['available_at_ns'].equals(decisions['__trade_available_at_ns__'], check_names=False)
+    assert context.partitions[0].partition_end_ns == original['available_at_ns'][-1]

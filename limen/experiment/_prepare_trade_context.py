@@ -97,7 +97,7 @@ def normalize_observations(data: pl.DataFrame, *, interval_seconds: object = Non
 def admit_formation(function: Callable[..., object]) -> None:
     from limen.data.bars import liquidity_bars, trade_bars, volume_bars
     if function not in (liquidity_bars, trade_bars, volume_bars):
-        raise ValueError('Event execution requires a standard formation with recoverable contiguous native support')
+        raise ValueError('Event execution requires recoverable contiguous native support and constituent counts from a standard formation')
 
 
 def _bar_support(raw: pl.DataFrame, bars: pl.DataFrame, prices: pl.DataFrame) -> pl.DataFrame:
@@ -115,6 +115,9 @@ def _bar_support(raw: pl.DataFrame, bars: pl.DataFrame, prices: pl.DataFrame) ->
         raise ValueError('Native support requires unique ordered source identities')
     positions = {value: index for index, value in enumerate(times)}
     counts = bars['bar_count'].to_list() if 'bar_count' in bars.columns else [1] * bars.height
+    available = cast(list[int], prices['available_at_ns'].to_list())
+    values = {name: cast(list[float], prices[name].to_list()) for name in ('open', 'high', 'low', 'close')}
+    formed_values = {name: bars[name].to_list() for name in values if name in bars.columns}
     rows: list[dict[str, object]] = []
     previous = 0
     for row, (instant, count) in enumerate(zip(bars['datetime'].dt.epoch('ns'), counts, strict=True)):
@@ -122,11 +125,10 @@ def _bar_support(raw: pl.DataFrame, bars: pl.DataFrame, prices: pl.DataFrame) ->
         if first is None or type(count) is not int or count < 1 or first < previous or first + count > prices.height:
             raise ValueError('Model bar has no recoverable nonoverlapping native membership')
         last = first + count
-        support = prices.slice(first, count)
-        expected = (support['open'][0], support['high'].max(), support['low'].min(), support['close'][-1])
-        if any(name in bars.columns and bars[name][row] != value for name, value in zip(('open', 'high', 'low', 'close'), expected, strict=True)):
+        expected = {'open': values['open'][first], 'high': max(values['high'][first:last]), 'low': min(values['low'][first:last]), 'close': values['close'][last - 1]}
+        if any(column[row] != expected[name] for name, column in formed_values.items()):
             raise ValueError('Model bar disagrees with its contiguous native support')
-        rows.append({'native_first': first, 'native_last': last - 1, 'available_at_ns': int(cast(int, support['available_at_ns'].max()))})
+        rows.append({'native_first': first, 'native_last': last - 1, 'available_at_ns': max(available[first:last])})
         previous = last
     result = pl.DataFrame(rows)
     if not result['available_at_ns'].is_sorted() or result['available_at_ns'].max() > prices['available_at_ns'][-1]:
