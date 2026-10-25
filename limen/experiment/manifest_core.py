@@ -1,7 +1,7 @@
 import limen.experiment._allocation as _allocation_stage
 import limen.experiment._fold_partitions as _partitions
 import limen.experiment._holdout_research as _holdout
-from limen.experiment._boolean_controls import _boolean, _manifest_controls
+from limen.experiment._boolean_controls import boolean, manifest_controls
 from limen.backtest.trade_contract import TradeInputs, TradePolicy
 from limen.experiment._holdout_history import HoldoutEvidenceError
 from limen.experiment._walk_forward_split import WalkForwardConfig, resolve_walk_forward_split as _walk_forward_split, validate_fold_splits as _validate_fold_splits
@@ -822,7 +822,7 @@ class MLManifest(Manifest):
     from limen.experiment._column_shims import prepare_column_shims as _prepare_column_shims, set_feature_shims
 
     def __post_init__(self) -> None:
-        _ = _boolean(self.strict_mode, 'strict_mode')
+        _ = boolean(self.strict_mode, 'strict_mode')
 
     def set_objective(self, metric: str = 'backtest_total_return', direction: str = 'maximize') -> 'MLManifest':
         self.objective = ObjectiveConfig(metric, direction)
@@ -854,7 +854,7 @@ class MLManifest(Manifest):
 
         '''Require a Boolean controlling unexpected-null errors after CCO dislodgement.'''
 
-        self.strict_mode = _boolean(strict_mode, 'strict_mode')
+        self.strict_mode = boolean(strict_mode, 'strict_mode')
         return self
 
 
@@ -1119,7 +1119,7 @@ class MLManifest(Manifest):
     def run_model(self, data: dict[str, Any], round_params: dict[str, Any]) -> dict[str, Any]:
 
 
-        _ = _manifest_controls(self, round_params)
+        _ = manifest_controls(self, round_params)
         return _run_objective_model(self, data, round_params)
 
     def sensor_input_prep(
@@ -1873,7 +1873,7 @@ def _run_prepare_setup(
 ) -> tuple[list[pl.DataFrame], list[datetime] | list[int], pl.DataFrame | None, list[pl.DataFrame] | None, PreparedTradeContext | None]:
 
     from limen.experiment._manifest_preparation import admit_native_date_ends, finish_prepare_setup
-    _ = _manifest_controls(manifest, round_params)
+    _ = manifest_controls(manifest, round_params)
     admit_native_date_ends(manifest.split_dates, manifest.data_source_config, manifest.test_data_source_config)
     _allocation_stage.admit(manifest, round_params)
     raw_data = _holdout.admit(manifest, raw_data)
@@ -1893,7 +1893,7 @@ def _run_prepare_setup(
 
 
 def _requires_fold_validation(manifest: Manifest, round_params: Mapping[str, object]) -> bool:
-    use_calibration, use_threshold = _manifest_controls(manifest, round_params)
+    use_calibration, use_threshold = manifest_controls(manifest, round_params)
     if getattr(manifest, 'objective', None) is not None:
         return True
     if not isinstance(manifest, MLManifest):

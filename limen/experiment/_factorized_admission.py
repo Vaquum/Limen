@@ -7,7 +7,7 @@ from types import CodeType, FunctionType
 from typing import cast
 
 from limen.experiment._factorized_contract import ReuseContract
-from limen.experiment._boolean_controls import _manifest_controls
+from limen.experiment._boolean_controls import manifest_controls
 from limen.experiment._factorized_key import parameter_key
 from limen.experiment._factorized_native import contract_for, native_rule
 from limen.experiment._factorized_projection import parameter_references, projections
@@ -70,7 +70,7 @@ def _scaler(manifest: MLManifest, params: dict[str, object], axes: frozenset[str
 
 
 def validate_candidate(manifest: Manifest, params: dict[str, object], axes: frozenset[str]) -> ReuseContract:
-    use_calibration, use_threshold = _manifest_controls(manifest, params)
+    use_calibration, use_threshold = manifest_controls(manifest, params)
     if type(manifest) not in (MLManifest, RuleBasedManifest) or any(name in vars(manifest) for name in ('prepare_data', '_prepare_data_with_fitted', 'run_model')):
         raise ValueError('factorize requires the original manifest preparation and model methods')
     if manifest.split_walk_forward is not None or manifest.allocation_config is not None or getattr(manifest, 'objective', None) is not None:

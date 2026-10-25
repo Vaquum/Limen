@@ -1,4 +1,6 @@
 from __future__ import annotations
+from limen.experiment._boolean_controls import manifest_controls
+from limen.experiment._validation_calibration import resolve_config
 
 from collections.abc import Callable, Iterable, Mapping
 import copy
@@ -29,7 +31,7 @@ from limen.experiment import _holdout_history as history
 from limen.experiment._holdout_source import source_spec
 from limen.experiment._holdout_report import digest, normalized
 from limen.experiment._column_shims import FittedColumnShims
-from limen.experiment.manifest_core import CalibrationConfig, MLManifest
+from limen.experiment.manifest_core import MLManifest
 from limen.inference.sensor import Sensor, contract_digest
 from limen.sfd.reference_architecture.lightgbm_binary import LightGBMBinary
 from limen.sfd.reference_architecture.logreg_binary import LogRegBinary
@@ -221,14 +223,10 @@ def validate_member(sensor: Sensor, locator: Mapping[str, object] | None) -> dic
     if effective.decoder_lookback != 1 or effective.bar_formation is not None or effective.split_walk_forward is not None or effective.test_data_source_config is not None or effective.data_dict_extension is not None or effective.split_dates is None or any(type(item) is not date for item in effective.split_dates):
         raise ValueError('Holdout requires ordinary dated native binary inference')
     params = cast(dict[str, object], vars(sensor)['_round_params'])
-    use_calibration, use_threshold = _manifest_controls(effective, params)
+    _ = manifest_controls(effective, params)
     events.check_frozen_backtest(effective.backtest_config, params)
     resolved = effective.prediction_calibration_config
-    expected = None
-    if resolved is not None and (use_calibration or use_threshold):
-        declared = resolved.resolve(params)
-        expected = CalibrationConfig(calibration_func=declared.calibration_func if use_calibration else None,
-            calibration_params=declared.calibration_params, threshold_func=declared.threshold_func if use_threshold else None, threshold_params=declared.threshold_params)
+    expected = None if resolved is None else resolve_config(resolved, params)
     if normalized(config) != normalized(expected):
         raise ValueError('Holdout fitted calibration differs from declared configuration')
     proof = provenance(sensor)
@@ -358,4 +356,3 @@ def frozen_parts(handle: FrozenHoldoutSelection) -> tuple[tuple[Sensor | Cohort,
     if any(value is None for value in parts):
         raise ValueError('Holdout handle was not initialized by freeze_holdout_selection')
     return cast(tuple[tuple[Sensor | Cohort, NextBarUpTarget | NextBarDownTarget | ThresholdBinaryTarget | None], dict[str, object], str, str, Lock], parts)
-from limen.experiment._boolean_controls import _manifest_controls

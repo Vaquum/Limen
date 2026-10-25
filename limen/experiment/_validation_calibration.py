@@ -13,7 +13,7 @@ from limen.calibration._objective_threshold import validate_probabilities
 from limen.experiment._objective_optimizer import ObjectiveOptimizer
 from limen.calibration.pipeline import CalibrationConfigProtocol
 from limen.experiment._validation_decisions import Scorer
-from limen.experiment._boolean_controls import _calibration_controls
+from limen.experiment._boolean_controls import calibration_controls
 
 __all__: list[str] = []
 _DEFAULT_THRESHOLD = 0.5
@@ -32,7 +32,7 @@ def _closed_scorer(_labels: object, _predictions: object) -> float:
 
 
 def resolve_config(value: object, params: dict[str, object]) -> CalibrationConfigProtocol | None:
-    use_calibration, use_threshold = _calibration_controls(params)
+    use_calibration, use_threshold = calibration_controls(params)
     if not use_calibration and not use_threshold:
         return None
     kind = vars(import_module('limen.experiment.manifest_core'))['CalibrationConfig']

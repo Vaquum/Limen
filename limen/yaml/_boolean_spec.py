@@ -3,7 +3,7 @@ from typing import cast
 
 from ruamel.yaml.scalarbool import ScalarBoolean
 
-from limen.experiment._boolean_controls import _boolean, _CALIBRATION_CONTROLS
+from limen.experiment._boolean_controls import boolean, CALIBRATION_CONTROLS
 from limen.yaml.errors import YAMLError
 
 __all__: list[str] = []
@@ -21,7 +21,7 @@ def _normalize_controls(config: Mapping[str, object]) -> None:
     if isinstance(manifest.get('strict_mode'), ScalarBoolean):
         manifest['strict_mode'] = bool(manifest['strict_mode'])
     params = _mapping(sfd.get('params'))
-    for name in _CALIBRATION_CONTROLS:
+    for name in CALIBRATION_CONTROLS:
         values = params.get(name)
         if isinstance(values, list):
             params[name] = [bool(value) if isinstance(value, ScalarBoolean) else value for value in cast(list[object], values)]
@@ -36,12 +36,19 @@ class BooleanControlsSpec:
             return
         controls = [('sfd.manifest.strict_mode', manifest['strict_mode'])] if 'strict_mode' in manifest else []
         params = _mapping(sfd.get('params'))
-        for name in _CALIBRATION_CONTROLS:
+        for name in CALIBRATION_CONTROLS:
             values = params.get(name)
             if isinstance(values, list):
                 controls.extend((f'sfd.params.{name}[{index}]', value) for index, value in enumerate(cast(list[object], values)))
         for path, value in controls:
             try:
-                _ = _boolean(value, path)
+                _ = boolean(value, path)
             except ValueError as exc:
                 errors.append(YAMLError(message=str(exc), path=path))
+
+
+def admit_controls(config: dict[str, object]) -> None:
+    errors: list[YAMLError] = []
+    BooleanControlsSpec().check(config, errors, [])
+    if errors:
+        raise ValueError('; '.join(error.message for error in errors))

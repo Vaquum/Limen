@@ -1,5 +1,5 @@
 from limen.yaml._backtest_spec import apply_backtest
-from limen.yaml._boolean_spec import _normalize_controls
+from limen.yaml._boolean_spec import admit_controls
 from limen.experiment._allocation import apply_yaml as apply_allocation
 from limen.experiment._holdout_research import initialize_compiled, cached_manifest
 import inspect
@@ -49,7 +49,7 @@ def build_manifest(yaml_dict: dict[str, Any]) -> Manifest:
 
     '''Build the declared ML or rule-based manifest.'''
 
-    _normalize_controls(yaml_dict)
+    admit_controls(yaml_dict)
     m = yaml_dict['sfd']['manifest']
     manifest_type = m['type']
 
@@ -279,7 +279,7 @@ class CompiledSFD:
 
         super().__init__()
 
-        _normalize_controls(yaml_dict)
+        admit_controls(yaml_dict)
         self._yaml, self._holdout_project_root, self.__name__ = initialize_compiled(yaml_dict, project_root)
         self._manifest_cache: Manifest | None = None
 
@@ -322,7 +322,7 @@ def build_search_strategy(yaml_dict: dict[str, Any]) -> RandomStrategy | GridStr
 
     '''Build the declared search, requiring a literal seed for shuffled YAML grids.'''
 
-    _normalize_controls(yaml_dict)
+    admit_controls(yaml_dict)
     uel_cfg = _uel_config(yaml_dict)
     sfd_cfg: dict[str, Any] = yaml_dict.get('sfd') or {}
     strategy_cfg = uel_cfg.get('search_strategy', {})

@@ -7,7 +7,7 @@ from typing import cast
 import limen.experiment._round_storage as _storage
 
 from limen.experiment._objective_run import run_objective
-from limen.experiment._boolean_controls import _control_domain
+from limen.experiment._boolean_controls import control_domain
 
 __all__: list[str] = []
 
@@ -28,7 +28,7 @@ def _reject(collisions: Mapping[str, Collection[str]]) -> None:
 
 def validate_parameters(domain: Mapping[str, list[object]], context: Mapping[str, object] | None,
                         manifest: object, *, legacy_details: bool) -> None:
-    _control_domain(manifest, domain, context)
+    control_domain(manifest, domain, context)
     reserved = set(_BOOKKEEPING)
     objective = run_objective(manifest)
     if objective is not None:

@@ -439,6 +439,14 @@ def test_holdout_freeze_rejects_mutated_threshold_transform(assessment_case, mon
         _threshold_freeze(trained[0][0])
 
 
+@pytest.mark.parametrize('name', ['use_calibration', 'use_threshold'])
+def test_holdout_freeze_rejects_non_boolean_control(assessment_case, monkeypatch, name):
+    sensor = assessment_case[2][0][0]
+    monkeypatch.setitem(sensor._round_params, name, 'false')
+    with pytest.raises(ValueError, match=rf'{name} must be a bool'):
+        _freeze(sensor)
+
+
 def test_holdout_threshold_transform_pinned():
     from limen.experiment import _holdout_freeze as freeze_mod
     assert ThresholdBinaryTarget in freeze_mod._FITTED_TYPES
