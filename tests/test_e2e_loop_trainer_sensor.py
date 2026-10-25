@@ -205,8 +205,8 @@ def test_e2e_label_control_trainer_sensor() -> None:
     ):
         recorded = historical_data.HistoricalData().get_any_file(str(_FIXTURE_PATH))
         assert recorded.height == 14496
-        exp_dir = Path(tmpdir) / 'label_control'
-        exp_dir.mkdir()
+        exp_dir = Path(tmpdir) / 'results/dev/label_control'
+        exp_dir.mkdir(parents=True)
 
         with TemporaryDirectory() as yaml_dir, patch('click.echo'), patch('click.secho'):
             yaml_path = Path(yaml_dir) / 'label_control.yaml'
@@ -218,9 +218,9 @@ def test_e2e_label_control_trainer_sensor() -> None:
                 f'file_path_or_url: "{_FIXTURE_PATH}"',
             ).replace(
                 'output_format: csv',
-                f'output_format: csv\n  output_path: "{exp_dir}"',
+                'output_format: csv\n  output_path: label_control',
             ))
-            ok = run_experiment(yaml_path)
+            ok = run_experiment(yaml_path, results_base=Path(tmpdir))
 
         assert ok
         assert (exp_dir / 'results.csv').exists()

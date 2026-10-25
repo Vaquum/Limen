@@ -263,7 +263,8 @@ def test_recorded_objective_folds(rule, tmp_path):
 
 
 @pytest.mark.parametrize('rule', [False, True])
-def test_recorded_objective_lifecycle(rule, tmp_path):
+def test_recorded_objective_lifecycle(rule, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
     from click.testing import CliRunner
     from limen.cli.main import cli
     from tests.test_record_model_outputs import ROOT
@@ -271,8 +272,8 @@ def test_recorded_objective_lifecycle(rule, tmp_path):
     config = _rule_config('maximize') if rule else objective_config(calibrated=False)
     config['sfd']['manifest']['data_source'] = {'method': 'limen.data.HistoricalData.get_any_file', 'params': {'file_path_or_url': str(ROOT / 'tests/fixtures/spot_1h_20240101_20241231.parquet')}}
     config['sfd']['manifest']['backtest']['source_interval_seconds'] = 3600
-    directory = tmp_path / 'results'
-    config['uel'].update(output_path=str(directory), n_permutations=1)
+    directory = tmp_path / 'results/dev/objective'
+    config['uel'].update(output_path='objective', n_permutations=1)
     path = tmp_path / 'objective.yaml'
     path.write_text(json.dumps(config))
     runner = CliRunner()

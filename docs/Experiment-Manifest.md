@@ -25,6 +25,26 @@ Mappings used as YAML keys are rejected during parsing, with the key's line and
 column in the parse error. Manifest fields use named keys; nested mappings remain
 available as values.
 
+Every `{name}` used as a round-parameter lookup must have a candidate list in
+`sfd.params`, including lookups in inactive transforms. Architecture defaults and
+implicit controls such as `feature_groups` or `auto_pca` do not declare a lookup.
+For example, an indicator period of `{C}` requires `sfd.params.C`; declaring it
+also overrides the model's `C` setting. Use a distinct name when those settings
+should vary independently. Missing declarations fail validation at the consumer's
+field before data loading or execution. Unknown and `**kwargs` architecture
+signatures suppress only unused-parameter warnings; declaration and `include_if`
+checks still apply.
+
+Model-source paths, transform group names and build-time `params_override`
+values retain their literal meaning, including in family evidence. Separate
+execution and funding source parameters use exact `{name}` lookups and require
+declared candidates. Escaped brace pairs remain literal; a live inner field such
+as `roc_{{{period}}}` still requires `period`. Native transform parameters preserve
+exact parameter-name lookup precedence and underscore-prefixed literals. Direct Python
+Manifest/UEL calls may still supply values through `context_params`; a declared
+YAML experiment must be complete without that external context. The existing
+identifier-reference grammar is unchanged.
+
 This is the Compiled project's complete selection definition. From the unpacked recorded-input bundle root, the command above writes `results/dev/compiled-cli`; the YAML supplies every execution choice:
 
 <!-- example: manifest-selection source=docs/examples/compiled-research/selection.yaml region=__file__ scenario=selection interface=compiled role=executed -->
@@ -109,7 +129,46 @@ assessment:
 # endregion declaration
 ```
 
-`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema. The current schema version is `1.0`; validation warns when a manifest uses a different string, but compatibility is governed by the Python validator and compiler in this repository.
+`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema.
+Only the exact string `"1.0"` is supported. Missing, null, non-string and unequal values fail at
+`schema_version` before current-schema fields are interpreted. Values are not
+trimmed, coerced or compared as package release versions. No older supported
+schema exists, so there is no migration transform. `metadata.limen_version`
+records a package release independently; an older compatible release remains
+admissible.
+
+This policy applies to programmatic `validate` and CLI validation, profile,
+commit, reserve, assess, dry-run and run, including stored `manifest://` documents
+and the saved YAML used by CLI resume. An unsupported saved schema is refused
+before reconstruction or artifact changes. Direct `CompiledSFD` and
+`build_manifest` calls require prevalidated input; they do not rerun validation.
+Trainer/Sensor and other scientific read-back paths retain that reconstruction
+boundary. This rule does not change unrelated integer schema versions in saved
+reports or checkpoints.
+
+Optional author metadata fields may be omitted; explicit `null` also means absence. Non-null values
+follow these contracts; validation rejects malformed shapes at the field or tag
+item before fresh CLI compilation or artifact publication.
+
+| Field | Admitted value |
+| --- | --- |
+| `metadata.author` | Nonblank string. |
+| `metadata.description` | String, including an empty string. |
+| `metadata.tags` | List of nonblank strings. Empty lists and duplicates are allowed; names and order are preserved. |
+| `metadata.created_at` | Quoted real calendar date `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM:SS` with optional 1–6 fractional digits and optional `Z` or `±HH:MM` offset. |
+| `metadata.limen_version` | Quoted [Python package-version string](https://packaging.python.org/en/latest/specifications/version-specifiers/#appendix-parsing-version-strings-with-regular-expressions), including release, pre/post/dev and local forms and `0+unknown`. No whitespace padding or installed-version comparison. |
+
+Quote author-created dates and timestamps, for example `created_at: "2025-10-25"`.
+Unquoted YAML dates/timestamps are native objects that cannot enter the run's JSON
+reference unchanged; validation rejects them with a quoting hint. Validation
+preserves every declaration value. The author's optional timestamp is independent
+of the runtime timestamp written to `metadata.json`; its timezone may be omitted.
+Old and future package-version metadata do not establish schema compatibility.
+
+These shapes apply to programmatic validation and fresh CLI admission, including
+stored URI execution. Committed content identities are unchanged. Direct
+prevalidated compilation and scientific reconstruction retain their existing
+boundary.
 
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
@@ -125,19 +184,48 @@ The `uel` block configures how the experiment runs. `n_permutations` is required
 | `search_strategy.seed` | int | none | candidate-generation seed; required, non-boolean and nonnegative for Sobol |
 | `search_strategy.shuffle` | bool | `false` | grid-only seeded finite permutation; true requires an integer `seed`; see [seeded traversal](Advanced-Search.md#seeded-finite-traversal) |
 | `prep_each_round` | bool | `true` | compatibility setting; ordinary CLI/MSQ execution always prepares each candidate |
-| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes |
+| `checkpoint_interval` | int | `1000` | rounds between checkpoint writes; positive non-boolean integer |
 | `record_execution` | bool | `false` | record test snapshot series and unscaled market returns; see [UEL recording](Universal-Experiment-Loop.md#record-execution) |
 | `record_model_outputs` | bool | `false` | record test probabilities and boosting iteration counts; see [UEL recording](Universal-Experiment-Loop.md#record-model-outputs) |
 | `recording` | mapping of bool | all groups `false` | choose saved predictions, alignment arrays, event ledger and fold details; resume requires applicable groups; see [UEL recording policy](Universal-Experiment-Loop.md#recording-policy) |
 | `factorize` | bool | `false` | reuse deterministic snapshot signal work across independent backtest-only grid axes; see [UEL](Universal-Experiment-Loop.md) |
-| `feedback_interval` | int | `100` | rounds between feedback-controller triggers |
+| `feedback_interval` | int | `100` | rounds between feedback-controller triggers; positive non-boolean integer |
 | `pruning_strategies` | list | none | reducers that run during feedback cycles; each item has `type` (a reducer key) and optional `params` |
 | `output_format` | `csv` or `parquet` | `csv` | `parquet` also writes `results.parquet`; `results.csv` is always written |
-| `output_path` | str | `{name}_{datetime}` | output-directory template; `{name}` and `{datetime}` are substituted, and it is ignored for committed-manifest URI runs |
+| `output_path` | str | `{name}_{datetime}` | relative output-directory template; see [output destinations](#output-destinations); ignored for committed-manifest URI runs |
 
 NOTE: `search_strategy.seed` seeds random sampling, Sobol sampling or a grid with `shuffle: true`. An unshuffled grid keeps its declared enumeration order. The traversal seed does not seed models. Sobol always uses scrambling and rejects additional strategy fields; see [Sobol's mapping and resume contract](Advanced-Search.md#seeded-sobol-sampling).
 
 `pruning_strategies` declares reducers that fire every `feedback_interval` rounds during a run — see [Reducers And Feedback](Reducers-And-Feedback.md) for the reducer catalog, YAML syntax, and tuning.
+
+### Output destinations
+
+For direct YAML runs, `uel.output_path` is relative to `results/dev` in development
+and `results` in production, beneath the invocation's current working directory.
+`{name}` and `{datetime}` are substituted without rewriting the saved template.
+The expanded path must be relative and resolve to a strict descendant of that
+mode directory. Absolute paths, escapes through parent components or existing
+symlinks, and paths naming the mode directory itself are rejected before
+compilation or project writes, including with `--dry-run`.
+
+Nested paths, contained parent components and aliases within the mode directory
+remain valid. Both the mode root and destination are resolved, so a configured
+symlinked results root is supported; execution uses the checked canonical path.
+This checks the existing filesystem layout, not concurrent filesystem mutation.
+Static `limen validate` cannot establish this filesystem-context containment.
+
+Relocate direct-run output through the invocation's working directory or a
+symlinked results root. Python callers may pass an explicit `results_base` to
+`run_experiment`; its `results[/dev]` directory becomes the authorized mode root.
+The YAML file's location does not change cwd-relative output or source paths.
+
+Committed-manifest URI runs ignore the template and keep the project-root
+`results[/dev]/<id8>/<timestamp>` layout, including from a project subdirectory.
+Invoking the stored YAML by file path uses direct-YAML admission instead.
+Explicit `--resume` uses the selected saved directory, including relocated runs
+whose legacy YAML contains an absolute template. The copied YAML, metadata and
+manifest identity retain the declared template. Occupied-run refusal still
+precedes YAML copying.
 
 ### Parallel rounds
 
@@ -643,6 +731,17 @@ See [Data Bars](Data-Bars.md) for the supported bar types and output schema.
 
 Declare the downstream columns that bar preparation must retain. After any configured bar formation completes, or directly for base bars, preparation first reads `datetime`, whether or not it was declared; its absence raises Polars `ColumnNotFoundError`. If that read succeeds, any missing declared column raises `AssertionError` under both normal Python and `python -O`.
 
+An explicit setter or YAML `required_columns` declaration must be a nonempty list
+of distinct nonblank strings. Non-list values and non-string entries raise
+`TypeError` at the native setter; empty, blank or duplicate entries raise
+`ValueError`. YAML validation locates the field or offending item, and compilation
+uses the same admission. An explicit `null` is rejected; omit the declaration to
+keep the default without additional membership requirements. Names retain exact
+case, padding and order; blank means empty or whitespace-only. The setter stores
+an owned list copy, so later caller-list edits do not change the declaration.
+Constructor field overrides and direct attribute assignment retain their existing
+behavior outside these setter/YAML declaration checks.
+
 <!-- reference: manifest-required-bars source=limen/experiment/manifest_core.py region=signature:Manifest.set_required_bar_columns role=signature -->
 ```python
 def set_required_bar_columns(self, columns: list[str]) -> 'Manifest':
@@ -868,6 +967,8 @@ Checkpoint A also runs on the training split, where there is no CCO block.
 
 `strict_mode=False` (default) — the same detection runs, but logs a `WARNING` instead of raising. Training continues and the final `drop_nulls()` silently removes the affected rows.
 
+The native constructor, setter and YAML declaration require a Boolean. Strings (including `"false"`), numeric values and explicit null raise configuration errors before preparation. YAML Boolean anchors and aliases are accepted. Missing strict mode remains false.
+
 All foundational ML SFDs and YAML templates ship with `strict_mode=True`. New SFDs should follow the same convention — silent drops during search can mask data quality problems that only appear under specific scaler or param combinations.
 
 ## PCA Compression
@@ -1057,6 +1158,8 @@ uel:
 This is the shape used by the bundled `dollar_bar_crash_reversal` template. `RuleBasedStrategy` evaluates the position with the declared costs and reports `pnl_per_trade_bps_{split}` with its `num_executed_trades_{split}` denominator in addition to the generic snapshot metrics.
 
 ### Restrictions
+
+Rule-based YAML rejects `target` and `bar_formation` whenever either key is present, including null. The compiler would otherwise discard them. This admission also applies to saved references reconstructed by resume, Trainer, cohorts and workers. Native rule manifests still support target generation and explicitly active bar formation. Other ML-only YAML fields retain their existing warnings pending the separate closed-block admission repair.
 
 Rule-based manifests cannot use scalers or feature ablation. Both will raise `ValueError` at data-preparation time:
 
@@ -1373,7 +1476,6 @@ The index follows the current validator, including its conditional rules. `Requi
 
 | Path | Rule | Condition | Contract |
 | --- | --- | --- | --- |
-| `schema_version` | Required | `always` | {"type": "str"} |
 | `metadata` | Required | `always` | {"type": "dict"} |
 | `sfd` | Required | `always` | {"type": "dict"} |
 | `uel` | Required | `always` | {"type": "dict"} |
@@ -1415,7 +1517,7 @@ The index follows the current validator, including its conditional rules. `Requi
 | `sfd.manifest.strategy.entry` | Required | `sfd.manifest.type = rule_based` | {"type": "str"} |
 | `sfd.manifest.indicators` | FuncList | `sfd.manifest.type = rule_based` | {} |
 | `sfd.manifest.strategy` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["conditions", "entry"], "severity": "warning"} |
-| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "objective", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "severity": "warning"} |
+| `sfd.manifest` | NoUnknownKeys | `sfd.manifest.type = rule_based` | {"known": ["acceptance", "allocation", "backtest", "data_source", "indicators", "objective", "reference_architecture", "required_columns", "split_dates", "split_walk_forward", "strategy", "type"], "rejected": {"bar_formation": "Field 'bar_formation' is unsupported in rule_based YAML and would be discarded", "target": "Field 'target' is unsupported in rule_based YAML and would be discarded"}, "severity": "warning"} |
 | `uel.n_permutations` | Required | `always` | {"type": "int"} |
 | `uel.search_strategy.type` | OneOf | `always` | {"choices": ["grid", "random", "sobol"]} |
 | `uel.search_strategy` | NoUnknownKeys | `always` | {"known": ["seed", "shuffle", "type"], "severity": "warning"} |
@@ -1428,6 +1530,15 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `uel` | Optional field types, positive feedback/checkpoint intervals (including rejection of anchored YAML booleans), search controls and finite execution budgets. | [UelSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
+| `metadata` | Optional string, tag-list, quoted date/time and package-version shapes; null means absence. | [check_metadata](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_metadata_spec.py) |
+| `sfd.manifest.required_columns` | Explicit nonempty list of distinct nonblank strings; omission preserves the default and null is rejected. | [column_issue](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_required_columns.py) |
+| `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
+| `sfd.manifest` | Actual round-parameter lookup locations; literal fields keep their native meaning. | [lookup_references](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_parameter_refs.py) |
+| `sfd.params` | Forward declarations and Boolean `include_if` domains; unused warnings require a known closed architecture signature. | [ParamCoverage](https://github.com/Vaquum/Limen/blob/main/limen/yaml/rules.py) |
+| `sfd.manifest.strict_mode` | Optional Boolean; explicit null is invalid. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
+| `sfd.params.use_calibration[]` | Boolean candidates on ML manifests; omitted control defaults to true. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
+| `sfd.params.use_threshold[]` | Boolean candidates on ML manifests; omitted control defaults to true. | [BooleanControlsSpec](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_boolean_spec.py) |
 | `sfd.manifest.split_walk_forward` | `n_folds`: `int`, required; `test_bars`: `int`, required; `purge_bars`: `int`, required; `embargo_bars`: `int`, required; `anchored`: `bool`, required | [WalkForwardConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_walk_forward_split.py) |
 | `sfd.manifest.backtest.product` | `kind`: `Literal['cash_spot', 'linear_perpetual']`, required; `instrument`: `str`, required; `base_currency`: `str`, required; `quote_currency`: `str`, required; `quantity_step`: `float \| str`, required; `min_notional`: `float \| str`, required; `initial_margin_fraction`: `float \| str`, default `1.0`; `maintenance_margin_fraction`: `float \| str`, default `0.0` | [ProductConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
 | `sfd.manifest.backtest.funding` | `adapter`: `FundingAdapter`, default `funding_adapter`; `adapter_version`: `str`, default `ADAPTER_VERSION`; `preset`: `str \| None`, default `None`; `params`: `dict[str, object]`, default `field(default_factory=dict[str, object])`; `data_source`: `SourceConfig \| None`, default `None` | [FundingConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |

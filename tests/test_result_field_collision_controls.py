@@ -104,10 +104,7 @@ def test_msq_validates_its_effective_domain(tmp_path):
     loop = _loop('msq', config, tmp_path)
     loop.params = {'id': ['inactive SFD declaration']}
 
-    def unused_override():
-        raise AssertionError('MSQ applied the legacy params override')
-
-    _run(loop, 'msq', params=unused_override)
+    _run(loop, 'msq')
     assert len(records(tmp_path)) == 2
     assert all(row['id'] != 'inactive SFD declaration' for row in _rows(tmp_path))
 

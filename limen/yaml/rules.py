@@ -1,4 +1,7 @@
 from limen.yaml._backtest_spec import check_backtest_spec as _check_backtest_spec
+from ruamel.yaml.scalarbool import ScalarBoolean
+from limen.experiment._required_columns import column_issue
+from limen.yaml._parameter_refs import lookup_references
 from limen.experiment._walk_forward_split import read_walk_forward_config
 import inspect
 import math
@@ -254,13 +257,14 @@ class NoUnknownKeys:
 
     '''All keys at path must be in the known set; extras become warnings or errors depending on severity.'''
 
-    def __init__(self, path: str, known: set[str], severity: str = 'warning') -> None:
+    def __init__(self, path: str, known: set[str], severity: str = 'warning', *, rejected: dict[str, str] | None = None) -> None:
 
         super().__init__()
 
         self._path = path
         self._known = known
         self._severity = severity
+        self._rejected = rejected or {}
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -271,12 +275,11 @@ class NoUnknownKeys:
         if not found or not is_mapping(value):
             return
         for key in value:
-            if key not in self._known:
+            if key in self._rejected:
+                errors.append(YAMLError(message=self._rejected[key], path=f'{self._path}.{key}'))
+            elif key not in self._known:
                 target = warnings if self._severity == 'warning' else errors
-                target.append(YAMLError(
-                    message=f"Unknown field '{key}'",
-                    path=f"{self._path}.{key}",
-                ))
+                target.append(YAMLError(message=f"Unknown field '{key}'", path=f"{self._path}.{key}"))
 
 
 class When:
@@ -335,7 +338,7 @@ class WarnIfPresent:
 
 class SchemaVersion:
 
-    '''schema_version must be a string; warn if it differs from current_version.'''
+    '''Require the exact supported manifest schema version.'''
 
     def __init__(self, current_version: str) -> None:
         super().__init__()
@@ -345,7 +348,7 @@ class SchemaVersion:
     def check(self,
               yaml_dict: dict[str, Any],
               errors: list[YAMLError],
-              warnings: list[YAMLError]) -> None:
+              _warnings: list[YAMLError]) -> None:
 
         version = yaml_dict.get('schema_version')
         if not isinstance(version, str):
@@ -356,8 +359,8 @@ class SchemaVersion:
             ))
             return
         if version != self._version:
-            warnings.append(YAMLError(
-                message=f"schema_version '{version}' != current version '{self._version}'",
+            errors.append(YAMLError(
+                message=f"Unsupported schema_version '{version}'; this Limen supports '{self._version}'",
                 path='schema_version',
                 suggestion=f'Update schema_version to "{self._version}"',
             ))
@@ -494,7 +497,7 @@ class SingleFuncBlock:
 
 class RequiredColumnsSpec:
 
-    '''When required_columns is present, it must be a non-empty list of strings.'''
+    '''Admit explicit nonempty lists of distinct nonblank column names.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -502,22 +505,15 @@ class RequiredColumnsSpec:
               _warnings: list[YAMLError]) -> None:
 
         manifest = _get_manifest(yaml_dict)
-        cols = manifest.get('required_columns')
-        if cols is None:
+        if 'required_columns' not in manifest:
             return
-        if not is_list(cols):
+        if issue := column_issue(manifest['required_columns']):
+            index, message, _ = issue
             errors.append(YAMLError(
-                message=f"'required_columns' must be a list (got {type(cols).__name__})",
-                path='sfd.manifest.required_columns',
-                suggestion="Use a list of column name strings, e.g. required_columns: [open, high, low, close]",
+                message=message,
+                path='sfd.manifest.required_columns' + (f'[{index}]' if index is not None else ''),
+                suggestion='Use distinct nonblank column names, or omit required_columns to use the default',
             ))
-            return
-        for i, item in enumerate(cols):
-            if not isinstance(item, str):
-                errors.append(YAMLError(
-                    message=f"'required_columns[{i}]' must be a string (got {type(item).__name__})",
-                    path=f'sfd.manifest.required_columns[{i}]',
-                ))
 
 
 class DecoderLookbackSpec:
@@ -957,14 +953,8 @@ class CalibrationCrossRef:
 
 class ParamCoverage:
 
-    '''
-    Cross-validate sfd.params against manifest {param_name} references.
-
-    Forward check (errors): every {ref} in the manifest must be defined in sfd.params.
-    Reverse check (warnings): every key in sfd.params must be referenced in the manifest,
-    architecture signature, or a meta-param implied by a manifest block.
-
-    NOTE: If the architecture accepts **kwargs coverage cannot be determined — check is skipped.
+    '''Require declared round lookups; warn about provably unused parameters.
+    Unknown or **kwargs signatures suppress only the reverse warning.
     '''
 
     def check(self,
@@ -978,11 +968,9 @@ class ParamCoverage:
         manifest: dict[str, Any] = sfd.get('manifest') or {}
         manifest_refs = self._extract_param_refs(manifest)
 
-        if not sfd_params and not manifest_refs:
-            return
-
         arch_path = manifest.get('reference_architecture')
         arch_params: set[str] = set()
+        open_signature = False
         if isinstance(arch_path, str) and is_resolvable(arch_path):
             try:
                 sig = inspect.signature(resolve(arch_path))
@@ -990,10 +978,11 @@ class ParamCoverage:
                     if name == 'data':
                         continue
                     if param.kind == inspect.Parameter.VAR_KEYWORD:
-                        return
-                    arch_params.add(name)
+                        open_signature = True
+                    else:
+                        arch_params.add(name)
             except (TypeError, ValueError):
-                return
+                open_signature = True
 
         meta_params: set[str] = set()
         if manifest.get('calibration'):
@@ -1037,14 +1026,16 @@ class ParamCoverage:
                         suggestion=f"Change '{key}' values to [true] or [true, false]",
                     ))
 
-        for ref in sorted(manifest_refs):
-            if ref not in sfd_params and ref not in arch_params and ref not in meta_params:
+        for ref, path in sorted(lookup_references(manifest, sfd_params).items()):
+            if ref not in sfd_params:
                 errors.append(YAMLError(
                     message=f"Manifest references '{{{ref}}}' but '{ref}' is not defined in sfd.params",
-                    path='sfd.manifest',
-                    suggestion=f"Add '{ref}' to sfd.params",
+                    path=path,
+                    suggestion=f"Add '{ref}' to sfd.params" + (f"; this also overrides architecture '{ref}', or use a distinct parameter name" if ref in arch_params else ''),
                 ))
 
+        if open_signature:
+            return
         valid = manifest_refs | arch_params | meta_params
 
         for key in sfd_params:
@@ -1141,6 +1132,7 @@ class BacktestCostSpec:
         _check_backtest_spec(yaml_dict, errors)
 
 
+_UEL_INTERVALS = ('feedback_interval', 'checkpoint_interval')
 _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
     ('workers', int, None),
     ('record_execution', bool, None),
@@ -1156,7 +1148,7 @@ _UEL_TYPE_CHECKS: list[tuple[str, type, str | None]] = [
 
 class UelSpec:
 
-    '''Type checks for optional uel fields that the CLI assumes are specific types.'''
+    '''Check optional uel types and positive execution intervals.'''
 
     def check(self,
               yaml_dict: dict[str, Any],
@@ -1192,16 +1184,16 @@ class UelSpec:
             if field not in uel:
                 continue
             value = uel[field]
-            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)):
+            if not isinstance(value, expected) or (expected is int and isinstance(value, bool)) or (field in _UEL_INTERVALS and isinstance(value, ScalarBoolean)):
                 errors.append(YAMLError(
                     message=f"'uel.{field}' must be a {expected.__name__} (got {type(value).__name__})",
                     path=f'uel.{field}',
                     suggestion=suggestion,
                 ))
-            elif field == 'workers' and value <= 0:
+            elif (field == 'workers' or field in _UEL_INTERVALS) and value <= 0:
                 errors.append(YAMLError(
-                    message="'uel.workers' must be a positive integer",
-                    path='uel.workers',
+                    message=f"'uel.{field}' must be a positive integer",
+                    path=f'uel.{field}',
                 ))
 
         strategy = uel.get('search_strategy')
