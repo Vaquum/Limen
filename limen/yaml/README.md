@@ -87,7 +87,7 @@ yaml/
 
 - `schema_version` is currently `1.0`.
 - YAML manifests are the canonical operator-facing experiment definition; Python builders are the extension-equivalent surface.
-- YAML validation rejects `sfd.manifest.test_data_source`; runtime date limits come from `split_dates`.
+- YAML validation rejects `sfd.manifest.test_data_source`; see the [source/split profiling contract](../../docs/Command-Line-Interface.md#limen-profile-yaml_file).
 - The resolver only treats `limen.*` references as supported dotted references.
 - Store functions back `limen commit`, `limen ls`, and committed-manifest URI runs.
 

@@ -146,23 +146,23 @@ def profile_cmd(yaml_file: Path) -> None:
 
     \b
     Always computed:
-      - Total permutations and complexity rating (low / medium / high / extreme)
-      - Per-parameter value counts
+      - Total permutations, complexity rating and per-parameter value counts
 
     \b
     Runtime sampling:
-      Validated CLI YAML rejects test_data_source, so runtime sampling is
-      skipped for ordinary CLI manifests. Static permutation-space profiling
-      still runs.
+      Loads the effective compiled data_source and attempts preparation/model
+      evaluation for a covering array, independently of uel.n_permutations.
+      Timings exclude source loading. Profiling may fetch remote data and fit
+      models; split windows and holdout admission/cutoffs apply. No experiment
+      result CSV is written; holdout research history may be written.
 
     \b
-    Exits 0 on success, 1 on validation or compilation failure.
-    Sampling errors are non-fatal and reported in the output.
+    Collected load/sample errors are reported and may exit 0 with no completions.
+    Validation, compilation, protection and unexpected errors exit 1.
 
     \b
     Examples:
       limen profile experiment.yaml
-      limen profile limen/yaml/templates/logreg_binary.yaml
     '''
 
     from limen.cli.commands.profile import run_profile
