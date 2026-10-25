@@ -95,7 +95,8 @@ def admit_frame(frame: pl.DataFrame, *, interval: int, lower_ns: int | None, upp
                          | (pl.col('open_available_at_ns') < pl.col('start_ns'))
                          | (pl.col('open_available_at_ns') > pl.col('available_at_ns'))).any()).item():
             raise ValueError('Holdout native source clocks disagree with complete causal support')
-        frame = frame.filter(pl.col('available_at_ns') <= upper_ns)
+        if frame.select(((clock + step <= upper_ns) & (pl.col('available_at_ns') > upper_ns)).any()).item():
+            raise ValueError('Holdout native source availability crosses the reserved cutoff')
     frame = frame.filter((clock + step <= upper_ns) & (clock >= lower_ns if lower_ns is not None else pl.lit(True)))
     if frame.is_empty():
         raise ValueError('Holdout admission has no complete native bars')
