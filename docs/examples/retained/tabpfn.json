@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T06:55:25.728028+00:00",
-  "execution_checkout_head": "10bc386c43cf4bd3dad531fa82e1a64168279162",
+  "observed_at": "2026-10-25T07:01:57.654718+00:00",
+  "execution_checkout_head": "0b2b8c3364cf543544319caf455ca211eaed64b2",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -53,7 +53,7 @@
     "cohort/__init__.py": "4998518bc4babb211f3bea2677c9d8eb01bc011097542a2a5a8f04d2a7c2d4ae",
     "cohort/_fold_sources.py": "af7bb5f82cd2e4fad9577e8ff00e48d1416be0ae489687edc9f33131009f7ebb",
     "cohort/_python_cohort.py": "bb829ee456133a6026ab5ea79704f34db3707d7428cf3c6ae4b47b86c50491f5",
-    "cohort/_round_sources.py": "7b24c546584dc4bd82ee2d4cabe9c38574a03252224453bdbdde086282c29767",
+    "cohort/_round_sources.py": "13e8998924285a008c68b294c27ed150eb99bdaca8f2975ae8bcbd561d0fb3b8",
     "cohort/cohort.py": "0da2b13a11fd6b62bd22be9dee232531407f90c3d5251f21fe3b74050bb56e39",
     "cohort/sfc/__init__.py": "50e268d450d7f520621183de06f2da2f6478016868a3b3a8307e275e4fd62398",
     "cohort/sfc/all.py": "f5798a5518d1e9112d29ecae6384c9ec1baad69a5f3c20bdfa04e2859d02742a",
