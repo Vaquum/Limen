@@ -185,6 +185,14 @@ Options:
 
 Copies a committed manifest into `manifests/` as a development-mode working file and records the source as `lineage.parent_id`. When `name` is omitted, it prompts with an auto-incremented default (e.g. `<parent>_v2`). On the next `limen commit`, the parent lineage is preserved automatically.
 
+Before creating the working copy, forking verifies the document actually copied:
+its canonical content and stored `lineage.id` must match the full source filename
+ID. This also applies to Python `fork_manifest` callers and changes made while
+the CLI name prompt is open. An integrity failure leaves the destination absent.
+Formatting and excluded lineage metadata may differ without changing identity;
+the child's lineage contains only its verified immediate `parent_id`. This is a
+content-integrity check, not proof of historical authenticity.
+
 ### `limen lineage <manifest_id>`
 
 Walks the `parent_id` chain from a committed manifest to its root and prints it root-first, with the target manifest marked.
