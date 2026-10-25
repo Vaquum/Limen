@@ -31,6 +31,10 @@ _SCHEMA = (
 )
 
 
+class HoldoutEvidenceError(ValueError):
+    """A protected operation cannot establish its current research evidence."""
+
+
 @dataclass(frozen=True)
 class ProjectBinding:
     root: Path
@@ -194,8 +198,12 @@ def bind(*hints: str | Path | None) -> ProjectBinding | None:
 
 
 def check_binding(binding: ProjectBinding) -> None:
-    if read_binding(binding.root) != binding:
-        raise ValueError('Holdout reservation revision changed; construct a new research object')
+    try:
+        current = read_binding(binding.root)
+    except ValueError as exc:
+        raise HoldoutEvidenceError(str(exc)) from exc
+    if current != binding:
+        raise HoldoutEvidenceError('Holdout reservation revision changed; construct a new research object')
 
 
 def reserve_holdout(project_root: str | Path, start: str, end: str, *, interval_seconds: int) -> str:

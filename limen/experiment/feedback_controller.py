@@ -13,11 +13,13 @@ from limen.experiment.reducer.filter_types import FILTER_BUILDERS
 from limen.experiment.reducer.pruning_strategy import ACTION_SUGGEST
 from limen.experiment.reducer.pruning_strategy import PruningStrategy
 from limen.experiment.param_search.search_strategy import SearchStrategy
+import limen.experiment._holdout_composition as _protected
 
 logger = logging.getLogger(__name__)
 
 
 def _error_entry(source: str, error: Exception) -> dict[str, str]:
+    _protected.propagate(error)
     return {'source': source, 'error': str(error), 'traceback': traceback.format_exc()}
 
 
@@ -159,7 +161,7 @@ class FeedbackController:
         for name, collector, needs_dispatch in sources:
             self._run_source(
                 name, collector, needs_dispatch,
-                msq, all_interventions, errors,
+                msq, all_interventions, errors, current_round,
             )
 
         applied = [i for i in all_interventions if i.get('action') != ACTION_SUGGEST]
@@ -181,7 +183,7 @@ class FeedbackController:
                     needs_dispatch: bool,
                     msq: MSQ,
                     all_interventions: list[dict[str, Any]],
-                    errors: list[dict[str, str]]) -> None:
+                    errors: list[dict[str, str]], current_round: int) -> None:
 
         '''
         Execute a single feedback source with error isolation.
@@ -197,6 +199,7 @@ class FeedbackController:
 
         '''
 
+        before = len(msq.intervention_log)
         try:
             interventions = collector()
             if needs_dispatch:
@@ -205,6 +208,7 @@ class FeedbackController:
                         self._apply_intervention(msq, intervention)
             all_interventions.extend(interventions)
         except _SOURCE_ERRORS as e:
+            _protected.feedback_failure(self, e, name, msq, all_interventions, errors, current_round, before)
             logger.warning('%s failed: %s', name, e)
             errors.append(_error_entry(name, e))
 

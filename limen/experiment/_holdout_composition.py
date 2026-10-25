@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import copy
 import json
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
 from typing import Protocol
+import traceback
 import warnings
 
 from limen.experiment.convergence_report import convergence_warning
@@ -16,13 +17,31 @@ from typing import Literal, TypeVar, cast
 import polars as pl
 
 import limen.experiment._holdout_research as _holdout
-from limen.experiment._holdout_history import ProjectBinding, check_binding, research_record
+from limen.experiment._holdout_history import HoldoutEvidenceError, ProjectBinding, check_binding, research_record
 from limen.experiment._holdout_source import frame_evidence
 
 __all__: list[str] = []
 _T = TypeVar('_T')
 _HEADER = ('project_id', 'reservation_revision', 'cutoff_ns', 'interval_seconds')
 WorkerAuthority = tuple[ProjectBinding, dict[str, object] | None, str | None]
+
+
+def propagate(error: Exception) -> None:
+    if isinstance(error, HoldoutEvidenceError):
+        raise error
+
+
+def feedback_failure(controller: object, error: Exception, name: str, msq: object,
+                     interventions: list[dict[str, object]], errors: list[dict[str, str]], current_round: int, before: int) -> None:
+    if not isinstance(error, HoldoutEvidenceError):
+        return
+    partial = [dict(entry, source=name) for entry in cast(list[dict[str, object]], getattr(msq, 'intervention_log'))[before:]]
+    entries = [*interventions, *partial]
+    write = cast(Callable[..., None], getattr(controller, '_write_audit_entry'))
+    write(current_round, [item for item in entries if item.get('action') != 'suggest'],
+          [*errors, {'source': name, 'error': str(error), 'traceback': traceback.format_exc()}], msq,
+          suggestions=[item for item in entries if item.get('action') == 'suggest'])
+    raise error
 
 
 class _Prepared(Protocol):
