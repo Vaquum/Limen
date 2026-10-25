@@ -109,7 +109,22 @@ assessment:
 # endregion declaration
 ```
 
-`schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema. The current schema version is `1.0`; validation warns when a manifest uses a different string, but compatibility is governed by the Python validator and compiler in this repository.
+`schema_version` identifies the Limen YAML contract. Only the exact string
+`"1.0"` is supported. Missing, null, non-string and unequal values fail at
+`schema_version` before current-schema fields are interpreted. Values are not
+trimmed, coerced or compared as package release versions. No older supported
+schema exists, so there is no migration transform. `metadata.limen_version`
+records a package release independently; an older compatible release remains
+admissible.
+
+This policy applies to programmatic `validate` and CLI validation, profile,
+commit, reserve, assess, dry-run and run, including stored `manifest://` documents
+and the saved YAML used by CLI resume. An unsupported saved schema is refused
+before reconstruction or artifact changes. Direct `CompiledSFD` and
+`build_manifest` calls require prevalidated input; they do not rerun validation.
+Trainer/Sensor and other scientific read-back paths retain that reconstruction
+boundary. This rule does not change unrelated integer schema versions in saved
+reports or checkpoints.
 
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
@@ -1373,7 +1388,6 @@ The index follows the current validator, including its conditional rules. `Requi
 
 | Path | Rule | Condition | Contract |
 | --- | --- | --- | --- |
-| `schema_version` | Required | `always` | {"type": "str"} |
 | `metadata` | Required | `always` | {"type": "dict"} |
 | `sfd` | Required | `always` | {"type": "dict"} |
 | `uel` | Required | `always` | {"type": "dict"} |
@@ -1428,6 +1442,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `schema_version` | Required string, exactly `"1.0"`; checked before interpreting the current-schema body. | [schema_errors](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_schema_version.py) |
 | `sfd.manifest.split_walk_forward` | `n_folds`: `int`, required; `test_bars`: `int`, required; `purge_bars`: `int`, required; `embargo_bars`: `int`, required; `anchored`: `bool`, required | [WalkForwardConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_walk_forward_split.py) |
 | `sfd.manifest.backtest.product` | `kind`: `Literal['cash_spot', 'linear_perpetual']`, required; `instrument`: `str`, required; `base_currency`: `str`, required; `quote_currency`: `str`, required; `quantity_step`: `float \| str`, required; `min_notional`: `float \| str`, required; `initial_margin_fraction`: `float \| str`, default `1.0`; `maintenance_margin_fraction`: `float \| str`, default `0.0` | [ProductConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
 | `sfd.manifest.backtest.funding` | `adapter`: `FundingAdapter`, default `funding_adapter`; `adapter_version`: `str`, default `ADAPTER_VERSION`; `preset`: `str \| None`, default `None`; `params`: `dict[str, object]`, default `field(default_factory=dict[str, object])`; `data_source`: `SourceConfig \| None`, default `None` | [FundingConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |

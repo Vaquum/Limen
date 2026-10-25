@@ -1,4 +1,5 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._schema_version import schema_errors
 from dataclasses import dataclass, field
 from typing import Any
 from typing import cast
@@ -30,7 +31,6 @@ from limen.yaml.rules import Rule
 from limen.yaml.rules import RuleEngine
 from limen.yaml.rules import ScalerSpec
 from limen.yaml.rules import SingleFuncBlock
-from limen.yaml.rules import SchemaVersion
 from limen.yaml.rules import UelSpec
 from limen.yaml.rules import SfdParams
 from limen.yaml.rules import SplitSpec
@@ -69,7 +69,6 @@ from limen.yaml.schema import VALID_MANIFEST_TYPES
 from limen.yaml.schema import VALID_MODES
 from limen.yaml.schema import VALID_OUTPUT_FORMATS
 from limen.yaml.schema import VALID_SEARCH_STRATEGY_TYPES
-from limen.yaml.schema import VERSION
 
 
 @dataclass
@@ -189,19 +188,11 @@ _MAIN_ENGINE = RuleEngine(cast(list[Rule], [
 ]))
 
 
-def _schema_errors(yaml_dict: dict[str, object]) -> list[YAMLError]:
-    errors: list[YAMLError] = []
-    Required('schema_version', str, suggestion=f'Set schema_version: "{VERSION}"').check(yaml_dict, errors, [])
-    if not errors:
-        SchemaVersion(VERSION).check(yaml_dict, errors, [])
-    return errors
-
-
 def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
 
     '''Collect YAML errors and warnings; validity requires no errors.'''
 
-    errors = _schema_errors(yaml_dict)
+    errors = schema_errors(yaml_dict)
     warnings: list[YAMLError] = []
     if errors:
         return ValidationResult(valid=False, errors=errors)
