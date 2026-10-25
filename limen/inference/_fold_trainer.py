@@ -10,6 +10,7 @@ import polars as pl
 
 from limen.backtest.trade_contract import JsonValue
 import limen.experiment._fold_evidence as evidence
+import limen.experiment._holdout_folds as protection
 from limen.experiment._walk_forward_run import WalkForwardRun
 from limen.experiment.manifest_core import Manifest
 import limen.inference._fold_metrics as _metrics
@@ -31,6 +32,13 @@ class Source:
     experiment_dir: Path
     yaml_reference: dict[str, object]
     manifest_id: str | None
+
+
+def restore_ratio(manifest: Manifest, metadata: Mapping[str, object]) -> None:
+    ratios = cast(list[int], metadata['walk_forward_validation_ratio'])
+    if len(ratios) != _VALIDATION_RATIO_FIELDS or any(type(value) is not int for value in ratios):
+        raise ValueError('invalid saved validation ratio')
+    _ = manifest.set_split_config(ratios[0], ratios[1], manifest.split_config[2])
 
 
 def train(owner: object, ids: list[str], fold: int | None) -> list[Sensor] | None:
@@ -72,10 +80,7 @@ def _one(host: Source, pid: str, fold: int) -> Sensor:
             if other.get('campaign_source_digest') != original['digest']:
                 raise ValueError('competing trial campaign source identity changed')
         manifest = copy.deepcopy(host.manifest)
-        ratios = cast(list[int], host.metadata['walk_forward_validation_ratio'])
-        if len(ratios) != _VALIDATION_RATIO_FIELDS or any(type(value) is not int for value in ratios):
-            raise ValueError('invalid saved validation ratio')
-        _ = manifest.set_split_config(ratios[0], ratios[1], manifest.split_config[2])
+        restore_ratio(manifest, host.metadata)
         if list(manifest.split_config[:2]) != trial['validation_ratio']:
             raise ValueError('validation ratio changed')
         params = dict(cast(Mapping[str, object], expected['round_params']))
@@ -96,33 +101,34 @@ def _one(host: Source, pid: str, fold: int) -> Sensor:
         capture = cast(dict[str, object], vars(manifest)['_fold_capture'])
         capture['expected'] = witness
         raw = cast(pl.DataFrame, prepared_trial['_walk_forward_raw'])
-        data = manifest.prepare_data(raw, params)
-        partitions = evidence.checked(data.get('_fold_partitions'))
-        if any(partitions[key] != witness[key] for key in ('raw', 'retained')):
-            raise ValueError('fold partitions changed before model fit')
-        raw_parts = cast(Mapping[str, Mapping[str, object]], partitions['raw'])
-        support = [end - 1 for name in ('fit', 'validation') for _, end in cast(list[list[int]], raw_parts[name]['segments'])]
-        times = cast(list[int], data['_fold_selected_times'])
-        cutoff = max(times[index] for index in support) + cast(int, original['interval_ns'])
-        if cutoff != witness['fitting_cutoff_ns']:
-            raise ValueError('fitting cutoff disagrees with raw fit/validation support')
-        data['_record_execution'] = True
-        data['_record_model_outputs'] = bool(host.metadata.get('record_model_outputs'))
-        result = manifest.run_model(data, params)
-        model = result.get('_model')
-        if model is None:
-            raise ValueError('selected fold did not return a fitted native inference model')
-        model = cast(ReferenceModel, model)
-        selected = cast(Mapping[str, object], cast(list[object], expected['folds'])[fold])
-        policy = cast(Mapping[str, bool], host.metadata['recording'])
-        _metrics.bindings(selected, data, witness, model, policy)
-        _metrics.validate(cast(Mapping[str, object], selected['results']), result, model.deterministic)
-        _metrics.stable_model(model, data)
-        context['results'] = copy.deepcopy(selected['results'])
-        return _FoldSensor(context, yaml_reference=host.yaml_reference, model=model,
-                                    fitted_params=cast(dict[str, object], data.get('_fitted_params', {})),
-                                    round_params=params, permutation_id=pid, manifest_id=host.manifest_id,
-                                    trade_contract=cast(Mapping[str, JsonValue] | None, data.get('trade_contract')))
+        with protection.trainer(manifest, expected, fold):
+            data = manifest.prepare_data(raw, params)
+            partitions = evidence.checked(data.get('_fold_partitions'))
+            if any(partitions[key] != witness[key] for key in ('raw', 'retained')):
+                raise ValueError('fold partitions changed before model fit')
+            raw_parts = cast(Mapping[str, Mapping[str, object]], partitions['raw'])
+            support = [end - 1 for name in ('fit', 'validation') for _, end in cast(list[list[int]], raw_parts[name]['segments'])]
+            times = cast(list[int], data['_fold_selected_times'])
+            cutoff = max(times[index] for index in support) + cast(int, original['interval_ns'])
+            if cutoff != witness['fitting_cutoff_ns']:
+                raise ValueError('fitting cutoff disagrees with raw fit/validation support')
+            data['_record_execution'] = True
+            data['_record_model_outputs'] = bool(host.metadata.get('record_model_outputs'))
+            result = manifest.run_model(data, params)
+            model = result.get('_model')
+            if model is None:
+                raise ValueError('selected fold did not return a fitted native inference model')
+            model = cast(ReferenceModel, model)
+            selected = cast(Mapping[str, object], cast(list[object], expected['folds'])[fold])
+            policy = cast(Mapping[str, bool], host.metadata['recording'])
+            _metrics.bindings(selected, data, witness, model, policy)
+            _metrics.validate(cast(Mapping[str, object], selected['results']), result, model.deterministic)
+            _metrics.stable_model(model, data)
+            context['results'] = copy.deepcopy(selected['results'])
+            return _FoldSensor(context, yaml_reference=host.yaml_reference, model=model,
+                                        fitted_params=cast(dict[str, object], data.get('_fitted_params', {})),
+                                        round_params=params, permutation_id=pid, manifest_id=host.manifest_id,
+                                        trade_contract=cast(Mapping[str, JsonValue] | None, data.get('trade_contract')))
     except (KeyError, IndexError, TypeError, ValueError, AttributeError) as exc:
         raise ReconstructionError(f'Permutation {pid}, fold {fold}: {exc}') from exc
 

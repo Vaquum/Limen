@@ -73,7 +73,7 @@ def bind_manifest(manifest: object, *hints: str | Path | None) -> ProjectBinding
 
 def reject_modes(manifest: object, *, workers: object = 1, factorize: object = False,
                  resume: object = False, callbacks: tuple[object, ...] = (), test_mode: bool = False,
-                 profile: bool = False) -> None:
+                 profile: bool = False, walk_forward: object = False) -> None:
     binding = binding_of(manifest)
     if binding is None or binding.cutoff_ns is None:
         return
@@ -82,7 +82,7 @@ def reject_modes(manifest: object, *, workers: object = 1, factorize: object = F
         raise ValueError('Holdout research requires a built-in manifest')
     model = cast(ResearchManifest, manifest)
     if (workers != 1 or bool(factorize) or bool(resume) or profile or any(value is not None for value in callbacks)
-            or model.split_walk_forward is not None or model.bar_formation is not None
+            or bool(walk_forward) or model.bar_formation is not None
             or (test_mode and model.test_data_source_config is not None)
             or getattr(model, 'data_dict_extension', None) is not None):
         raise ValueError('Holdout research refuses profile, resume, parallel/factorized/walk-forward, alternate test source and callbacks')
@@ -205,6 +205,7 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
     def guarded(manifest: _T, *args: _P.args, **kwargs: _P.kwargs) -> _R:
         if binding_of(manifest) is None:
             _ = bind_manifest(manifest)
+        reject_modes(manifest, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None and getattr(manifest, '_walk_forward_fold', None) is None)
         parent = _CURRENT.get()
         with operation(manifest, parent.role if parent is not None else 'experiment') as op:
             result = func(manifest, *args, **kwargs)
@@ -212,6 +213,8 @@ def preparation(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate
                 data = cast(dict[str, object], result)
                 if getattr(manifest, 'strategy', None) is not None:
                     op.provenance['schema_reason'] = 'rule-based-no-fitted-model'
+                if op.role == 'trainer' and op.replay_witness is not None and 'workflow' in op.replay_witness:
+                    op.provenance['workflow'] = copy.deepcopy(op.replay_witness['workflow'])
                 provenance = copy.deepcopy(op.provenance)
                 alignment = cast(dict[str, object], data['_alignment'])
                 alignment['holdout'] = provenance
@@ -241,7 +244,7 @@ def initialize_loop(host: object, sfd: object, data: pl.DataFrame | None, *, tes
         return None, data, cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'prep', None)), cast(Callable[..., dict[str, object]] | None, getattr(sfd, 'model', None))
     reference = cast(Mapping[str, object], getattr(sfd, '_yaml', {}))
     config = cast(Mapping[str, object], reference.get('uel', {}))
-    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode)
+    reject_modes(manifest, workers=config.get('workers', 1), factorize=config.get('factorize', False), test_mode=test_mode, walk_forward=getattr(manifest, 'split_walk_forward', None) is not None)
     if manifest.architecture_function is None:
         raise ValueError('UniversalExperimentLoop Manifest without architecture_function is not supported. Use .with_reference_architecture(func) in your manifest.')
     with operation(manifest, 'experiment'):
@@ -275,7 +278,7 @@ def run_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenate[_
         call = cast(Mapping[str, object], values.arguments)
         with operation(manifest, 'experiment'):
             reject_modes(manifest, workers=call.get('workers') or getattr(host, '_workers', 1), factorize=call.get('factorize'), resume=call.get('resume'),
-                         callbacks=(*[call.get(name) for name in ('params', 'prep', 'model')], getattr(host, '_intra_callback', None)))
+                         callbacks=(*[call.get(name) for name in ('params', 'prep', 'model')], getattr(host, '_intra_callback', None)), walk_forward=getattr(manifest, 'split_walk_forward', None) is not None)
             binding = binding_of(manifest)
             if binding is not None and binding.cutoff_ns is not None:
                 attrs = cast(dict[str, object], vars(host))
@@ -299,6 +302,8 @@ def initialize_trainer(host: object, data: pl.DataFrame | None, *, project_root:
     manifest = cast(ResearchManifest, attrs['_manifest'])
     binding = bind_manifest(manifest, project_root, cast(Path, attrs['_experiment_dir']))
     _checkpoint_proof.validate_trainer(binding, cast(Mapping[str, object], attrs['_metadata']), cast(Mapping[str, object], attrs['_round_data']))
+    if binding is not None and binding.cutoff_ns is not None and manifest.split_walk_forward is not None:
+        cast(Callable[[object, Mapping[str, object]], None], vars(sys.modules['limen.inference._fold_trainer'])['restore_ratio'])(manifest, cast(Mapping[str, object], attrs['_metadata']))
     if data is None and binding is not None and binding.cutoff_ns is not None and (source := _checkpoint_proof.trainer_source(manifest, cast(Mapping[str, object], attrs['_round_data']))):
         reference = copy.deepcopy(cast(dict[str, object], attrs['_yaml_reference']))
         cast(dict[str, object], cast(Mapping[str, object], reference['sfd'])['manifest'])['data_source'] = source
@@ -344,6 +349,9 @@ def replay_guard(func: Callable[Concatenate[_T, _P], _R]) -> Callable[Concatenat
         manifest = getattr(host, 'manifest', None)
         if manifest is None:
             return func(host, *args, **kwargs)
+        folds = getattr(host, 'fold_results', None)
+        if isinstance(folds, pl.DataFrame) and not folds.is_empty():
+            return func(host, *args, **kwargs)
         with operation(manifest, 'replay') as op:
             attrs = cast(dict[str, object], vars(host))
             raw = attrs.get('data')
@@ -372,6 +380,11 @@ def bind_round(manifest: object, provenance: Mapping[str, object], round_id: str
     return value
 
 
+def fold_trial(host: object, record: dict[str, object]) -> dict[str, object]:
+    from limen.experiment._holdout_folds import trial_record
+    return trial_record(host, record)
+
+
 _Y = TypeVar('_Y', bound=Mapping[str, object])
 
 
@@ -392,16 +405,8 @@ def cached_manifest(host: object, builder: Callable[[_Y], _T]) -> _T:
 def prepare_walk_forward(host: object, raw: pl.DataFrame, round_params: Mapping[str, object] | None,
                          resolve_params: Callable[[Mapping[str, object], Mapping[str, object]], dict[str, object]],
                          requires_validation: Callable[..., bool]) -> dict[str, object]:
-    manifest = getattr(host, 'manifest', None)
-    reject_modes(manifest)
-    params = dict(round_params or {})
-    selector = getattr(manifest, 'pre_split_data_selector', None)
-    if selector is not None:
-        func, base = cast(tuple[Callable[..., pl.DataFrame], Mapping[str, object]], selector)
-        raw = func(raw, **resolve_params(base, params))
-    preflight = cast(Callable[..., None], getattr(host, '_preflight', None))
-    preflight(raw, require_validation=requires_validation(manifest, params))
-    return {'_walk_forward_params': params, '_walk_forward_raw': raw}
+    from limen.experiment._holdout_folds import prepare
+    return prepare(host, raw, round_params, resolve_params, requires_validation)
 
 
 def selected_input(manifest: object, raw: pl.DataFrame) -> pl.DataFrame:
