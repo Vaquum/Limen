@@ -1,6 +1,6 @@
 {
-  "observed_at": "2026-10-25T10:21:05.402337+00:00",
-  "execution_checkout_head": "35f2724413f2d7f060087768df74a897338b7bda",
+  "observed_at": "2026-10-25T10:27:04.898442+00:00",
+  "execution_checkout_head": "13f64399339752e16f2ce7d255d88fbd28eb7d86",
   "package_version": "5.46.2",
   "package_sources": {
     "__init__.py": "b5a0a6e9f55a7d6d68bb07437839d7162bee116fc1b176886633d95b23acae74",
@@ -102,7 +102,7 @@
     "experiment/_holdout_freeze.py": "bd88804f1286c55b0d0d8df2627ad2eef81858e7d65e0c0fb2906211c1f28ed0",
     "experiment/_holdout_history.py": "b8a14936e030e16c2307a2556fb8d97873fde69e1e0a8da31ed8378f674fbb90",
     "experiment/_holdout_report.py": "bc5dfb1b184a67f284ff504851a20c27ce208496b1022bb95f7e76a87a16b4d5",
-    "experiment/_holdout_research.py": "19b15fc0db39bd80dcb902a4a2bab381092564991d1b2847c879baf4b3f7d961",
+    "experiment/_holdout_research.py": "5346f9089585506a69b607d744444a3df0c57a164c70b27b92a3f30aa9319e05",
     "experiment/_holdout_source.py": "211a0f6239ecba588e219c5595987d7f2b1ce6985ac0de32807b784ccf01dcc3",
     "experiment/_manifest_preparation.py": "4c804d2db5ea113ae6070a27b1a4ecd1f197b9c54508050824e6d268676f81f8",
     "experiment/_objective.py": "4438ce310e4833ab90391cee8d421b8f58e02fcecf29f801c292311804fe6df5",
