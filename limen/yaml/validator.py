@@ -1,4 +1,5 @@
 from limen.yaml._assessment_spec import check_assessment
+from limen.yaml._metadata_spec import check_metadata
 from dataclasses import dataclass, field
 from typing import Any
 from typing import cast
@@ -204,6 +205,7 @@ def validate(yaml_dict: dict[str, Any]) -> ValidationResult:
     if errors:
         return ValidationResult(valid=False, errors=errors, warnings=warnings)
 
+    check_metadata(yaml_dict, errors)
     check_assessment(yaml_dict, errors)
     check_objective_spec(yaml_dict, errors)
     _MAIN_ENGINE.run(yaml_dict, errors, warnings)
