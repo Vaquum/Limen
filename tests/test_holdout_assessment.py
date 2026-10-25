@@ -218,22 +218,21 @@ def test_protected_pca_final_assessment(assessment_case):
     probe = pl.read_parquet(Path(sensor._yaml_reference['sfd']['manifest']['data_source']['params']['file_path_or_url'])).head(120)
     predictions = sensor.predict_all(probe)
     assert any(prediction.reason is None for prediction in predictions)
-    assert owned_copy(sensor).predict_all(probe) == predictions
-    frozen = _freeze(sensor)
     paths = ('sklearn.decomposition.PCA.fit', 'sklearn.decomposition.PCA.fit_transform',
              'sklearn.preprocessing.RobustScaler.fit', 'sklearn.preprocessing.RobustScaler.fit_transform',
              'sklearn.linear_model.LogisticRegression.fit', 'limen.targets.QuantileBinaryTarget.__init__')
     with ExitStack() as stack:
         guards = [stack.enter_context(patch(path, side_effect=AssertionError('Final assessment must not fit'))) for path in paths]
+        assert owned_copy(sensor).predict_all(probe) == predictions
+        frozen = _freeze(sensor)
         report = _report(frozen, assessment_case)
+        assert report['state'] == 'completed'
+        assert read_holdout_report(root, report['attempt_id']) == report
+        assert sensor.predict_all(probe) == predictions
         for guard in guards:
             guard.assert_not_called()
-    assert report['state'] == 'completed'
-    assert read_holdout_report(root, report['attempt_id']) == report
-    assert sensor.predict_all(probe) == predictions
-    with patch.dict(sensor._fitted_params, {'_undeclared': object()}):
-        with pytest.raises(ValueError, match='undeclared fitted state'):
-            _freeze(sensor)
+    with patch.dict(sensor._fitted_params, {'_undeclared': object()}), pytest.raises(ValueError, match='undeclared fitted state'):
+        _freeze(sensor)
 
 
 def _attempt_worker(root, reservation, pipe):
