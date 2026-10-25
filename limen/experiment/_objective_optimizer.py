@@ -44,6 +44,8 @@ class ObjectiveOptimizer:
     maximize: bool
     rows: int
     evaluated: dict[bytes, float] = field(default_factory=dict[bytes, float])
+    selection: tuple[npt.NDArray[np.float64], float] | None = None
+    labels: npt.NDArray[np.float64] | None = None
 
     def score(self, labels: object, predictions: object) -> float:
         result = self.scorer(labels, predictions)
@@ -51,12 +53,15 @@ class ObjectiveOptimizer:
         return result
 
     def __call__(self, y_val: object, val_proba: object, **params: object) -> tuple[float, float]:
+        if self.labels is not None and not np.array_equal(np.asarray(y_val), self.labels, equal_nan=True):
+            raise ValueError('Objective threshold selection must use the original ordered validation labels')
         probabilities = validate_probabilities(val_proba).copy()
         if probabilities.size != self.rows:
             raise ValueError('Objective optimizer probabilities do not match validation rows')
         if params.get('metric') is not self.scorer or params.get('_objective_maximize') is not self.maximize:
             raise ValueError('Objective optimizer metric/direction changed')
         self.evaluated.clear()
+        self.selection = None
         labels = cast(npt.NDArray[np.generic] | pl.Series, y_val)
         result = cast(object, self.optimizer(labels, probabilities.copy(), **{**params, 'metric': self.score}))
         pair = cast(tuple[object, ...], result)
@@ -68,4 +73,5 @@ class ObjectiveOptimizer:
         if decisions.tobytes() not in self.evaluated or not np.isclose(score, expected, rtol=1e-9, atol=1e-12):
             raise ValueError('Objective optimizer must score its selected validation decisions with the declared objective')
         self.evaluated.clear()
+        self.selection = (probabilities, threshold)
         return threshold, score

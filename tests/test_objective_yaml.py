@@ -73,14 +73,13 @@ def test_misplaced_objective_is_an_error(location):
         build_manifest(yaml_dict)
 
 
-def test_rule_based_objective_is_rejected():
+def test_rule_based_objective_is_accepted():
     yaml_dict = _configuration('rule_based')
     yaml_dict['sfd']['manifest']['objective'] = {'metric': 'backtest_total_return', 'direction': 'maximize'}
     result = validate(yaml_dict)
-    assert not result.valid
-    assert any('ML manifest' in error.message for error in result.errors)
-    with pytest.raises(ValueError, match='ML manifest'):
-        build_manifest(yaml_dict)
+    assert result.valid
+    assert not any('objective' in warning.message for warning in result.warnings)
+    assert build_manifest(yaml_dict).objective.as_dict() == yaml_dict['sfd']['manifest']['objective']
 
 
 @pytest.mark.parametrize('direction', ['maximize', 'minimize'])
