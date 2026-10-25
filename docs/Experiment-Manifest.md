@@ -111,6 +111,30 @@ assessment:
 
 `schema_version` is the internal Limen YAML contract marker, not a published JSON Schema or editor schema. The current schema version is `1.0`; validation warns when a manifest uses a different string, but compatibility is governed by the Python validator and compiler in this repository.
 
+Optional author metadata fields may be omitted; explicit `null` also means absence. Non-null values
+follow these contracts; validation rejects malformed shapes at the field or tag
+item before fresh CLI compilation or artifact publication.
+
+| Field | Admitted value |
+| --- | --- |
+| `metadata.author` | Nonblank string. |
+| `metadata.description` | String, including an empty string. |
+| `metadata.tags` | List of nonblank strings. Empty lists and duplicates are allowed; names and order are preserved. |
+| `metadata.created_at` | Quoted real calendar date `YYYY-MM-DD`, or `YYYY-MM-DDTHH:MM:SS` with optional 1–6 fractional digits and optional `Z` or `±HH:MM` offset. |
+| `metadata.limen_version` | Quoted [Python package-version string](https://packaging.python.org/en/latest/specifications/version-specifiers/#appendix-parsing-version-strings-with-regular-expressions), including release, pre/post/dev and local forms and `0+unknown`. No whitespace padding or installed-version comparison. |
+
+Quote author-created dates and timestamps, for example `created_at: "2025-10-25"`.
+Unquoted YAML dates/timestamps are native objects that cannot enter the run's JSON
+reference unchanged; validation rejects them with a quoting hint. Validation
+preserves every declaration value. The author's optional timestamp is independent
+of the runtime timestamp written to `metadata.json`; its timezone may be omitted.
+Old and future package-version metadata do not establish schema compatibility.
+
+These shapes apply to programmatic validation and fresh CLI admission, including
+stored URI execution. Committed content identities are unchanged. Direct
+prevalidated compilation and scientific reconstruction retain their existing
+boundary.
+
 `uel.n_permutations` is a positive integer execution budget. YAML validation rejects bool, zero, negative, and over-budget values before execution.
 
 ### The `uel` Execution Block
@@ -1428,6 +1452,7 @@ These parsers impose additional conditions beyond the field lists. Their source 
 
 | Root | Fields or contract | Authority |
 | --- | --- | --- |
+| `metadata` | Optional string, tag-list, quoted date/time and package-version shapes; null means absence. | [check_metadata](https://github.com/Vaquum/Limen/blob/main/limen/yaml/_metadata_spec.py) |
 | `sfd.manifest.split_walk_forward` | `n_folds`: `int`, required; `test_bars`: `int`, required; `purge_bars`: `int`, required; `embargo_bars`: `int`, required; `anchored`: `bool`, required | [WalkForwardConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_walk_forward_split.py) |
 | `sfd.manifest.backtest.product` | `kind`: `Literal['cash_spot', 'linear_perpetual']`, required; `instrument`: `str`, required; `base_currency`: `str`, required; `quote_currency`: `str`, required; `quantity_step`: `float \| str`, required; `min_notional`: `float \| str`, required; `initial_margin_fraction`: `float \| str`, default `1.0`; `maintenance_margin_fraction`: `float \| str`, default `0.0` | [ProductConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |
 | `sfd.manifest.backtest.funding` | `adapter`: `FundingAdapter`, default `funding_adapter`; `adapter_version`: `str`, default `ADAPTER_VERSION`; `preset`: `str \| None`, default `None`; `params`: `dict[str, object]`, default `field(default_factory=dict[str, object])`; `data_source`: `SourceConfig \| None`, default `None` | [FundingConfig](https://github.com/Vaquum/Limen/blob/main/limen/experiment/_resolve_trade_policy.py) |

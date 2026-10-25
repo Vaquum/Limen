@@ -10,6 +10,11 @@
       "source": "limen/yaml/_assessment_spec.py",
       "symbol": "holdout_spec"
     },
+    "metadata": {
+      "sha256": "6e9b1285b52a21ed1a5074419bde46df488397dbc0e7c0420607ea42fa9699f3",
+      "source": "limen/yaml/_metadata_spec.py",
+      "symbol": "check_metadata"
+    },
     "sfd.manifest.acceptance": {
       "sha256": "b5051d8f5249da538f9f7d6c426d95fbaff977704898ebff8c18976ee0314cc5",
       "source": "limen/experiment/_acceptance_settings.py",

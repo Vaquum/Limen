@@ -8,18 +8,18 @@ from limen.yaml.schema import METADATA_OPTIONAL
 
 __all__: list[str] = []
 
-_CREATED = re.compile(
-    r'[0-9]{4}-[0-9]{2}-[0-9]{2}'
-    r'(?:T[0-9]{2}:[0-5][0-9]:[0-5][0-9](?:\.(?P<fraction>[0-9]{1,6}))?'
-    r'(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])?)?'
-)
+_CREATED = re.compile(r'''
+    [0-9]{4}-[0-9]{2}-[0-9]{2}
+    (?:T[0-9]{2}:[0-5][0-9]:[0-5][0-9](?:\.(?P<fraction>[0-9]{1,6}))?
+    (?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])?)?
+''', re.VERBOSE)
 # PyPA component spellings; this check never normalizes or compares versions.
-_VERSION = re.compile(
-    r'v?(?:[0-9]+!)?[0-9]+(?:\.[0-9]+)*'
-    r'(?:[-_.]?(?:a|b|c|rc|alpha|beta|pre|preview)[-_.]?[0-9]*)?'
-    r'(?:(?:-[0-9]+)|(?:[-_.]?(?:post|rev|r)[-_.]?[0-9]*))?'
-    r'(?:[-_.]?dev[-_.]?[0-9]*)?(?:\+[a-z0-9]+(?:[-_.][a-z0-9]+)*)?', re.IGNORECASE | re.ASCII,
-)
+_VERSION = re.compile(r'''
+    v?(?:[0-9]+!)?[0-9]+(?:\.[0-9]+)*
+    (?:[-_.]?(?:a|b|c|rc|alpha|beta|pre|preview)[-_.]?[0-9]*)?
+    (?:(?:-[0-9]+)|(?:[-_.]?(?:post|rev|r)[-_.]?[0-9]*))?
+    (?:[-_.]?dev[-_.]?[0-9]*)?(?:\+[a-z0-9]+(?:[-_.][a-z0-9]+)*)?
+''', re.IGNORECASE | re.ASCII | re.VERBOSE)
 
 
 def _created_at(value: object) -> bool:
